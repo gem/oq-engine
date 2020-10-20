@@ -414,12 +414,11 @@ class ClassicalCalculator(base.HazardCalculator):
             g = len(gsims_by_trt[trt])
             return src.weight * g
 
-        logging.info('Weighting the sources')
         totweight = 0
         for sg in src_groups:
             for src in sg:
                 totweight += srcweight(src)
-                if src.code == b'C' and src.num_ruptures > 10_000:
+                if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
                            'ruptures with complex_fault_mesh_spacing={} km')
                     spc = oq.complex_fault_mesh_spacing
