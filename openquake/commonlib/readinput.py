@@ -716,7 +716,7 @@ def _get_cachedir(oq, full_lt, h5=None):
     smap = parallel.Starmap(calc_weight, h5=h5)
     for g, sg in enumerate(csm.src_groups):
         for s, src in enumerate(sg):
-            if hasattr(src, 'loc'):  # point source, fast
+            if src.code in b'PX':  # fast sources
                 src.weight
             else:  # other source, submit
                 smap.submit((g, s, src))
