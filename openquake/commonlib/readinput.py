@@ -689,9 +689,9 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def calc_weight(g, s, src, mon):
+def count_ruptures(g, s, src, mon):
     """
-    Compute the weight of source `s` belonging to group `g`
+    Compute the number of ruptures of source `s` belonging to group `g`
     """
     src.weight
     return {(g, s): src}
@@ -713,7 +713,7 @@ def _get_cachedir(oq, full_lt, h5=None):
     if not csm.src_groups:  # everything was filtered away
         return csm
     logging.info('Weighting the sources')
-    smap = parallel.Starmap(calc_weight, h5=h5)
+    smap = parallel.Starmap(count_ruptures, h5=h5)
     for g, sg in enumerate(csm.src_groups):
         for s, src in enumerate(sg):
             if src.code in b'AC':  # slow source
