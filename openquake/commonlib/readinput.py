@@ -689,6 +689,14 @@ def get_full_lt(oqparam):
     return full_lt
 
 
+def calc_weight(g, s, src, mon):
+    """
+    Compute the weight of source `s` belonging to group `g`
+    """
+    src.weight
+    return {(g, s): src}
+
+
 def _get_cachedir(oq, full_lt, h5=None):
     # read the composite source model from the cache
     if not os.path.exists(oq.cachedir):
@@ -702,10 +710,18 @@ def _get_cachedir(oq, full_lt, h5=None):
             csm.full_lt = full_lt
             return csm
     csm = get_csm(oq, full_lt, h5)
+    if not csm.src_groups:  # everything was filtered away
+        return csm
     logging.info('Weighting the sources')
-    for sg in csm.src_groups:
-        for src in sg:
-            src.weight  # cache .num_ruptures
+    smap = parallel.Starmap(calc_weight, h5=h5)
+    for g, sg in enumerate(csm.src_groups):
+        for s, src in enumerate(sg):
+            if src.code in b'PX':  # fast sources
+                src.weight
+            else:  # other source, submit
+                smap.submit((g, s, src))
+    for (g, s), src in smap.reduce().items():
+        csm.src_groups[g].sources[s] = src
     logging.info('Saving %s', fname)
     with open(fname, 'wb') as f:
         pickle.dump(csm, f)

@@ -25,7 +25,7 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general
-from openquake.hazardlib import nrml, sourceconverter, calc, InvalidFile
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.hazardlib.lt import apply_uncertainties
 
 TWO16 = 2 ** 16  # 65,536
