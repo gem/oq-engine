@@ -595,7 +595,7 @@ hazard_uhs-std.csv
                               shift_hypo='false')
 
     def test_case_45(self):
-        # this is a test for MMI
+        # this is a test for MMI with disagg_by_src
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
 
     def test_case_46(self):
