@@ -157,6 +157,11 @@ class EngineServerTestCase(unittest.TestCase):
 
         extract_url = '/v1/calc/%s/extract/' % job_id
 
+        # check eids_by_gsim
+        resp = self.c.get(extract_url + 'eids_by_gsim')
+        dic = dict(loadnpz(resp.streaming_content))
+        self.assertEqual(len(dic['[AtkinsonBoore2003SInter]']), 6)
+
         # check extract/composite_risk_model.attrs
         url = extract_url + 'composite_risk_model.attrs'
         self.assertEqual(self.c.get(url).status_code, 200)
