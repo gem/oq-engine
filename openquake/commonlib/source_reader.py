@@ -140,7 +140,6 @@ def get_csm(oq, full_lt, h5=None):
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
     groups = _build_groups(full_lt, smdict)
-    check_dupl_ids(groups)
 
     # checking the changes
     changes = sum(sg.changes for sg in groups)
@@ -251,6 +250,7 @@ def _get_csm(full_lt, groups):
             src._wkt = src.wkt()
             idx += 1
     src_groups.extend(atomic)
+    check_dupl_ids(src_groups)
     return CompositeSourceModel(full_lt, src_groups)
 
 
