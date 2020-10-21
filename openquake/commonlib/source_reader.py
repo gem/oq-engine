@@ -59,27 +59,21 @@ def read_source_model(fname, converter, monitor):
     return {fname: sm}
 
 
-def check_dupl_ids(smdict):
-    """
-    Print a warning in case of duplicate source IDs referring to different
-    sources
-    """
+# NB: called after the .checksum has been stored in reduce_sources
+def _check_dupl_ids(src_groups):
     sources = general.AccumDict(accum=[])
-    for sm in smdict.values():
-        for sg in sm.src_groups:
-            for src in sg.sources:
-                sources[src.source_id].append(src)
+    for sg in src_groups:
+        for src in sg.sources:
+            sources[src.source_id].append(src)
     first = True
     for src_id, srcs in sources.items():
-        if len(srcs) > 1:  # duplicate IDs must have all the same checksum
-            checksums = set()
-            for src in srcs:
-                dic = {k: v for k, v in vars(src).items()
-                       if k not in 'grp_id samples'}
-                checksums.add(zlib.adler32(pickle.dumps(dic, protocol=4)))
-            if len(checksums) > 1 and first:
-                logging.warning('There are multiple different sources with the'
-                                ' same ID %s', srcs)
+        if len(srcs) > 1:
+            # duplicate IDs with different checksums, see cases 11, 13, 20
+            for i, src in enumerate(srcs):
+                src.source_id = '%s;%d' % (src.source_id, i)
+            if first:
+                logging.warning('There are multiple different sources with'
+                                ' the same ID %s', srcs)
                 first = False
 
 
@@ -135,7 +129,6 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
-    check_dupl_ids(smdict)
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
@@ -201,7 +194,8 @@ def reduce_sources(sources_with_same_id):
     """
     out = []
     for src in sources_with_same_id:
-        dic = {k: v for k, v in vars(src).items() if k not in 'grp_id samples'}
+        dic = {k: v for k, v in vars(src).items()
+               if k not in 'source_id grp_id samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
@@ -246,6 +240,7 @@ def _get_csm(full_lt, groups):
             src._wkt = src.wkt()
             idx += 1
     src_groups.extend(atomic)
+    _check_dupl_ids(src_groups)
     return CompositeSourceModel(full_lt, src_groups)
 
 
