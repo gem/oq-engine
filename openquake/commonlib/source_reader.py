@@ -59,16 +59,15 @@ def read_source_model(fname, converter, monitor):
     return {fname: sm}
 
 
-def check_dupl_ids(smdict):
+def check_dupl_ids(src_groups):
     """
     Print a warning in case of duplicate source IDs referring to different
     sources
     """
     sources = general.AccumDict(accum=[])
-    for sm in smdict.values():
-        for sg in sm.src_groups:
-            for src in sg.sources:
-                sources[src.source_id].append(src)
+    for sg in src_groups:
+        for src in sg.sources:
+            sources[src.source_id].append(src)
     first = True
     for src_id, srcs in sources.items():
         if len(srcs) > 1:  # duplicate IDs must have all the same checksum
@@ -140,8 +139,8 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
-    check_dupl_ids(smdict)
     groups = _build_groups(full_lt, smdict)
+    check_dupl_ids(groups)
 
     # checking the changes
     changes = sum(sg.changes for sg in groups)
