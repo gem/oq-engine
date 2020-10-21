@@ -1028,14 +1028,14 @@ def _get(dstore, name):
 
 
 @extract.add('events')
-def extract_events(dstore, dummy=None):
+def extract_relevant_events(dstore, dummy=None):
     """
     Extract the relevant events
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/events
     """
     events = dstore['events'][:]
-    if 'relevant_events' not in dstore:  # engine < 3.10
+    if 'relevant_events' not in dstore:
         return events
     rel_events = dstore['relevant_events'][:]
     return events[rel_events]
@@ -1357,7 +1357,7 @@ def extract_eids_by_gsim(dstore, what):
     """
     rlzs = dstore['full_lt'].get_realizations()
     gsims = [str(rlz.gsim_rlz.value[0]) for rlz in rlzs]
-    evs = extract_events(dstore)
+    evs = extract_relevant_events(dstore)
     df = pandas.DataFrame({'id': evs['id'], 'rlz_id': evs['rlz_id']})
     for r, evs in df.groupby('rlz_id'):
         yield gsims[r], numpy.array(evs['id'])
