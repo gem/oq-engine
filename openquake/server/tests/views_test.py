@@ -95,6 +95,7 @@ class EngineServerTestCase(unittest.TestCase):
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 return
+        # to avoid issues on Jenkins
         raise unittest.SkipTest('Timeout waiting for %s' % running_calcs)
 
     def postzip(self, archive):
