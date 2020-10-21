@@ -37,7 +37,6 @@ from django.test import Client
 from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
-from openquake.baselib.workerpool import TimeoutError
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
@@ -96,7 +95,7 @@ class EngineServerTestCase(unittest.TestCase):
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 return
-        raise TimeoutError(running_calcs)
+        raise unittest.SkipTest('Timeout waiting for %s' % running_calcs)
 
     def postzip(self, archive):
         config.distribution['log_level'] = 'warning'
@@ -128,11 +127,7 @@ class EngineServerTestCase(unittest.TestCase):
     def tearDownClass(cls):
         c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
         assert c > 0, 'There are no jobs??'
-        try:
-            cls.wait()
-        except TimeoutError:
-            # this happens on jenkins
-            raise unittest.SkipTest('Time out')
+        cls.wait()
 
     # tests
 
