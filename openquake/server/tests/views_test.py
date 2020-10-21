@@ -115,10 +115,6 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if os.environ.get('JENKINS_URL'):
-            # skip because it is breaking with a TimeOutError
-            # https://ci.openquake.org/job/master_oq-engine/5420/console
-            raise unittest.SkipTest
         assert get_status() == 'running'
         cls.job_ids = []
         env = os.environ.copy()
@@ -132,7 +128,11 @@ class EngineServerTestCase(unittest.TestCase):
     def tearDownClass(cls):
         c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
         assert c > 0, 'There are no jobs??'
-        cls.wait()
+        try:
+            cls.wait()
+        except TimeoutError:
+            # this happens on jenkins
+            raise unittest.SkipTest('Time out')
 
     # tests
 
