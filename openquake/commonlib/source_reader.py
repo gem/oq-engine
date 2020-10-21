@@ -59,32 +59,22 @@ def read_source_model(fname, converter, monitor):
     return {fname: sm}
 
 
-def check_dupl_ids(src_groups):
-    """
-    Print a warning in case of duplicate source IDs referring to different
-    sources
-    """
+# NB: called after the .checksum has been stored in reduce_sources
+def _check_dupl_ids(src_groups):
     sources = general.AccumDict(accum=[])
     for sg in src_groups:
         for src in sg.sources:
             sources[src.source_id].append(src)
     first = True
     for src_id, srcs in sources.items():
-        if len(srcs) > 1:  # duplicate IDs must have all the same checksum
-            checksums = []
-            for src in srcs:
-                dic = {k: v for k, v in vars(src).items()
-                       if k not in 'grp_id samples'}
-                checksums.append(zlib.adler32(pickle.dumps(dic, protocol=4)))
-            if len(set(checksums)) > 1:
-                # fix duplicate source IDs, for instance in case_13
-                for i, src in enumerate(srcs):
-                    src.source_id = '%s;%d' % (src.source_id, i)
-                    src.checksum = checksums[i]
-                if first:
-                    logging.warning('There are multiple different sources with'
-                                    ' the same ID %s', srcs)
-                    first = False
+        if len(srcs) > 1:
+            # duplicate IDs with different checksums, see cases 11, 13, 20
+            for i, src in enumerate(srcs):
+                src.source_id = '%s;%d' % (src.source_id, i)
+            if first:
+                logging.warning('There are multiple different sources with'
+                                ' the same ID %s', srcs)
+                first = False
 
 
 def get_csm(oq, full_lt, h5=None):
@@ -250,7 +240,7 @@ def _get_csm(full_lt, groups):
             src._wkt = src.wkt()
             idx += 1
     src_groups.extend(atomic)
-    check_dupl_ids(src_groups)
+    _check_dupl_ids(src_groups)
     return CompositeSourceModel(full_lt, src_groups)
 
 
