@@ -28,6 +28,8 @@ import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
+import pandas
+
 from openquake.baselib import config, hdf5, general
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
@@ -1026,7 +1028,7 @@ def _get(dstore, name):
 
 
 @extract.add('events')
-def extract_events(dstore, dummy):
+def extract_events(dstore, dummy=None):
     """
     Extract the relevant events
     Example:
@@ -1344,6 +1346,22 @@ def extract_ruptures(dstore, what):
             comment = None
         writers.write_csv(bio, arr, header=header, comment=comment)
     return bio.getvalue()
+
+
+@extract.add('eids_by_gsim')
+def extract_eids_by_gsim(dstore, what):
+    """
+    Returns a dictionary gsim -> event_ids for the first TRT
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/eids_by_gsim
+    """
+    rlzs = dstore['full_lt'].get_realizations()
+    gsims = [str(rlz.gsim_rlz.value[0]) for rlz in rlzs]
+    evs = extract_events(dstore)
+    df = pandas.DataFrame({'id': evs['id'], 'rlz_id': evs['rlz_id']})
+    for r, evs in df.groupby('rlz_id'):
+        yield gsims[r], numpy.array(evs['id'])
+
 
 # #####################  extraction from the WebAPI ###################### #
 
