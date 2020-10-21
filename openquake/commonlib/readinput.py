@@ -977,7 +977,15 @@ tag2code = {'ar': b'A',
             'no': b'N'}
 
 
+# tested in commands_test
 def reduce_sm(paths, source_ids):
+    """
+    :param paths: list of source_model.xml files
+    :param source_ids: dictionary src_id -> array[src_id, code]
+    :returns: dictionary with keys good, total, model, path, xmlns
+
+    NB: duplicate sources are not removed from the XML
+    """
     if isinstance(source_ids, dict):  # in oq reduce_sm
         def ok(src_node):
             code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]
