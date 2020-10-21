@@ -1,8 +1,24 @@
   [Michele Simionato]
-  * Restored tiling in large classical calculations
+  * Added an entry point /extract/eids_by_gsim for the QGIS plugin
+  * Internal: automatically convert the source IDs into unique IDs
+  * Changed scenario calculations to depend on the `ses_seed`, not the
+    `random_seed`
+  * Added check on the versions of numpy, scipy and pandas between master and
+    workers
+  * Added a check for large seed dependency in the GMFs and an estimate of the
+    portfolio error due to the seed dependency
+
+  [Viktor Polak]
+  * Added fpeak site parameter
+  * Added the Hassani and Atkinson (2020) GMPE
 
   [Marco Pagani]
   * Added a check on DEFINED_FOR_REFERENCE_VELOCITY when using amplification
+
+python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
+
+  [Matteo Nastasi]
+  * Add info to doc about OpenQuake manual path for linux and mac installers
 
   [Laurentiu Danciu and Athanasios Papadopoulos]
   * Implemented intensity prediction equations for use in the Swiss Risk Model.
@@ -44,6 +60,8 @@
   [Michele Simionato]
   * Changed event based full enumeration to be consistent with sampling
   * Changed the GMF storage to be more pandas-friendly
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Sun, 18 Oct 2020 19:55:40 +0000
 
 python3-oq-engine (3.10.0-1~xenial01) xenial; urgency=low
 

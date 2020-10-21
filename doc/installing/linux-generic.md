@@ -29,14 +29,14 @@ Requirements are:
 
 ## Install packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/linux/oq-engine/openquake-setup-linux64-3.10.0-1.run using any browser
+Download the installer from https://downloads.openquake.org/pkgs/linux/oq-engine/openquake-setup-linux64-3.10.1-1.run using any browser
 
 From a terminal run
 
 ```bash
 cd Downloads
-chmod +x openquake-setup-linux64-3.10.0-1.run
-./openquake-setup-linux64-3.10.0-1.run
+chmod +x openquake-setup-linux64-3.10.1-1.run
+./openquake-setup-linux64-3.10.1-1.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`.
 
@@ -51,8 +51,9 @@ Do you want to make the 'oq' command available by default? [y/n]: y
 Installation completed. To enable it run 'source /home/auser/openquake/env.sh'
 ```
 
-The demo files are located in `~/openquake/share/openquake/engine/demos`.
+The demo files are located in `~/openquake/share/openquake/engine/demos` for standard installations or `__custom_folder__/share/openquake/engine/demos` if a different folder is specified during installation.
 
+The OpenQuake manual is located in `~/openquake/share/doc/OpenQuake manual.pdf` for standard installations or `__custom_folder__/share/doc/OpenQuake manual.pdf` if a different folder is specified during installation.
 
 ### Upgrade from a previous installation
 

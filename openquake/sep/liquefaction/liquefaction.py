@@ -1,5 +1,22 @@
-from typing import Union
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2020, GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Union
 import numpy as np
 
 
@@ -64,7 +81,7 @@ def zhu_magnitude_correction_factor(mag: float):
     Corrects the liquefaction probabilty equations based on the magnitude
     of the causative earthquake.
     """
-    return (mag ** 2.56) / (10 ** 2.24)
+    return mag ** 2.56 / 10 ** 2.24
 
 
 def zhu_liquefaction_probability_general(
@@ -84,7 +101,7 @@ def zhu_liquefaction_probability_general(
     Reference: Zhu et al., 2015, 'A Geospatial Liquefaction Model for Rapid
     Response and Loss Estimation', Earthquake Spectra, 31(3), 1813-1837.
 
-    :param pga: 
+    :param pga:
         Peak Ground Acceleration, measured in g
     :param mag:
         Magnitude of causative earthquake (moment or work scale)
@@ -98,15 +115,11 @@ def zhu_liquefaction_probability_general(
         Probability of liquefaction at the site.
     """
     pga_scale = pga * zhu_magnitude_correction_factor(mag)
-    Xg = (
-        np.log(pga_scale)
-        + cti_coeff * cti
-        + vs30_coeff * np.log(vs30)
-        + intercept
-    )
-
+    Xg = (np.log(pga_scale)
+          + cti_coeff * cti
+          + vs30_coeff * np.log(vs30)
+          + intercept)
     prob_liq = 1.0 / (1.0 + np.exp(-Xg))
-
     return prob_liq
 
 
@@ -121,12 +134,10 @@ def hazus_magnitude_correction_factor(
     Corrects the liquefaction probabilty equations based on the magnitude
     of the causative earthquake.
     """
-    return (
-        m3_coeff * (mag ** 3)
-        + m2_coeff * (mag ** 2)
-        + m1_coeff * mag
-        + intercept
-    )
+    return (m3_coeff * (mag ** 3)
+            + m2_coeff * (mag ** 2)
+            + m1_coeff * mag
+            + intercept)
 
 
 def hazus_groundwater_correction_factor(
@@ -193,7 +204,7 @@ def hazus_liquefaction_probability(
     For more information, see the HAZUS-MH MR5 Earthquake Model Technical
     Manual (https://www.hsdl.org/?view&did=12760), section 4-21.
 
-    :param pga: 
+    :param pga:
         Peak Ground Acceleration, measured in g
     :param mag:
         Magnitude of causative earthquake (moment or work scale)
@@ -219,32 +230,25 @@ def hazus_liquefaction_probability(
         Defaults to `True` following the HAZUS methods.
     """
     groundwater_corr = hazus_groundwater_correction_factor(
-        groundwater_depth, unit="m"
-    )
+        groundwater_depth, unit="m")
     mag_corr = hazus_magnitude_correction_factor(mag)
 
     if isinstance(liq_susc_cat, str):
         liq_susc_prob = hazus_conditional_liquefaction_probability(
-            pga, liq_susc_cat
-        )
+            pga, liq_susc_cat)
         if do_map_proportion_correction:
             map_unit_proportion = LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[
-                liq_susc_cat
-            ]
+                liq_susc_cat]
         else:
             map_unit_proportion = 1.0
     else:
         liq_susc_prob = hazus_conditional_liquefaction_probability(
-            pga, liq_susc_cat
-        )
+            pga, liq_susc_cat)
 
         if do_map_proportion_correction:
             map_unit_proportion = np.array(
-                [
-                    LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[lsc]
-                    for lsc in liq_susc_cat
-                ]
-            )
+                [LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[lsc]
+                 for lsc in liq_susc_cat])
         else:
             map_unit_proportion = 1.0
 

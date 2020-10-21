@@ -28,6 +28,8 @@ import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
+import pandas
+
 from openquake.baselib import config, hdf5, general
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
@@ -63,8 +65,12 @@ def dumps(dic):
     for k, v in dic.items():
         if isinstance(v, numpy.ndarray):
             new[k] = v.tolist()
+        elif isinstance(v, list) and v and isinstance(v[0], INT):
+            new[k] = [int(x) for x in v]
+        elif isinstance(v, list) and v and isinstance(v[0], FLOAT):
+            new[k] = [float(x) for x in v]
         elif isinstance(v, FLOAT):
-            new[k] = int(v)
+            new[k] = float(v)
         elif isinstance(v, INT):
             new[k] = int(v)
         else:
@@ -537,7 +543,7 @@ def extract_sources(dstore, what):
     codes = qdict.get('code', None)
     if codes is not None:
         codes = [code.encode('utf8') for code in codes]
-    fields = 'source_id code multiplicity num_sites eff_ruptures'
+    fields = 'source_id code num_sites eff_ruptures'
     info = dstore['source_info'][()][fields.split()]
     wkt = dstore['source_wkt'][()]
     arrays = []
@@ -731,12 +737,12 @@ def extract_agg_curves(dstore, what):
     attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
     attrs['return_period'] = list(rps)
     attrs['kind'] = kinds
-    attrs['units'] = units  # used by the QGIS plugin
+    attrs['units'] = list(units)  # used by the QGIS plugin
     for tagname, tagvalue in zip(tagnames, tagvalues):
         attrs[tagname] = [tagvalue]
     if tagnames:
         arr = arr.reshape(arr.shape + (1,) * len(tagnames))
-    return ArrayWrapper(arr, attrs)
+    return ArrayWrapper(arr, dict(json=dumps(attrs)))
 
 
 @extract.add('agg_losses')
@@ -778,9 +784,9 @@ def extract_agg_damages(dstore, what):
         for the given tags
     """
     loss_type, tags = get_loss_type_tags(what)
-    if 'avg_damages-rlzs' in dstore:  # scenario_damage
+    if 'damages-rlzs' in dstore:  # scenario_damage
         lti = dstore['oqparam'].lti[loss_type]
-        losses = dstore['avg_damages-rlzs'][:, :, lti]
+        losses = dstore['damages-rlzs'][:, :, lti]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags)
@@ -915,11 +921,11 @@ def build_damage_array(data, damage_dt):
     return dmg
 
 
-@extract.add('avg_damages-rlzs')
+@extract.add('damages-rlzs')
 def extract_damages_npz(dstore, what):
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    data = dstore['avg_damages-rlzs']
+    data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
         damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
@@ -1022,14 +1028,14 @@ def _get(dstore, name):
 
 
 @extract.add('events')
-def extract_events(dstore, dummy):
+def extract_relevant_events(dstore, dummy=None):
     """
     Extract the relevant events
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/events
     """
     events = dstore['events'][:]
-    if 'relevant_events' not in dstore:  # engine < 3.10
+    if 'relevant_events' not in dstore:
         return events
     rel_events = dstore['relevant_events'][:]
     return events[rel_events]
@@ -1054,6 +1060,21 @@ def extract_event_info(dstore, eidx):
         yield key, val
     yield 'rlzi', rlzi
     yield 'gsim', repr(gsim)
+
+
+@extract.add('extreme_event')
+def extract_extreme_event(dstore, eidx):
+    """
+    Extract information about the given event index.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/extreme_event
+    """
+    arr = dstore['gmf_data/gmv_0'][()]
+    idx = arr.argmax()
+    eid = dstore['gmf_data/eid'][idx]
+    dic = dict(extract_event_info(dstore, eid))
+    dic['gmv'] = arr[idx]
+    return dic
 
 
 @extract.add('ruptures_within')
@@ -1168,7 +1189,7 @@ def extract_disagg_by_src(dstore, what):
     arr['src_id'] = src_id
     arr['poe'] = poe
     arr.sort(order='poe')
-    return ArrayWrapper(arr[::-1], dict(json=json.dumps(f)))
+    return ArrayWrapper(arr[::-1], dict(json=dumps(f)))
 
 
 @extract.add('disagg_layer')
@@ -1325,6 +1346,22 @@ def extract_ruptures(dstore, what):
             comment = None
         writers.write_csv(bio, arr, header=header, comment=comment)
     return bio.getvalue()
+
+
+@extract.add('eids_by_gsim')
+def extract_eids_by_gsim(dstore, what):
+    """
+    Returns a dictionary gsim -> event_ids for the first TRT
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/eids_by_gsim
+    """
+    rlzs = dstore['full_lt'].get_realizations()
+    gsims = [str(rlz.gsim_rlz.value[0]) for rlz in rlzs]
+    evs = extract_relevant_events(dstore)
+    df = pandas.DataFrame({'id': evs['id'], 'rlz_id': evs['rlz_id']})
+    for r, evs in df.groupby('rlz_id'):
+        yield gsims[r], numpy.array(evs['id'])
+
 
 # #####################  extraction from the WebAPI ###################### #
 

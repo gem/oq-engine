@@ -34,7 +34,7 @@ from openquake.hazardlib.source.rupture import EBRupture
 from openquake.hazardlib.geo.mesh import surface_to_array
 from openquake.commonlib import calc, util, logs, readinput, logictree
 from openquake.risklib.riskinput import str2rsi
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.calculators.getters import (
     GmfGetter, gen_rupture_getters, sig_eps_dt, time_dt)
 from openquake.calculators.classical import ClassicalCalculator
@@ -184,10 +184,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 for m in range(M):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
                                 data['gmv'][:, m])
-                for m in range(M):
-                    for sec_out in sec_outputs:
-                        hdf5.extend(self.datastore[f'gmf_data/{sec_out}_{m}'],
-                                    data[sec_out][:, m])
+                for sec_out in sec_outputs:
+                    hdf5.extend(self.datastore[f'gmf_data/{sec_out}'],
+                                data[sec_out])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(data)
@@ -230,9 +229,8 @@ class EventBasedCalculator(base.HazardCalculator):
             ngmfs = oq.number_of_ground_motion_fields
             self.gsims = readinput.get_gsims(oq)
             self.cmaker = ContextMaker(
-                '*', self.gsims,
-                {'maximum_distance': oq.maximum_distance,
-                 'filter_distance': oq.filter_distance})
+                '*', self.gsims, {'maximum_distance': oq.maximum_distance,
+                                  'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
             mesh = surface_to_array(rup.surface).transpose(1, 2, 0).flatten()
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
@@ -336,13 +334,21 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def post_execute(self, result):
         oq = self.oqparam
-        if not oq.ground_motion_fields and not oq.hazard_curves_from_gmfs:
+        if (not result or not oq.ground_motion_fields and not
+                oq.hazard_curves_from_gmfs):
             return
         N = len(self.sitecol.complete)
         M = len(oq.imtls)  # 0 in scenario
         L = len(oq.imtls.array)
         L1 = L // (M or 1)
-        if result and oq.hazard_curves_from_gmfs:
+        # check seed dependency
+        if 'gmf_data' in self.datastore:
+            logging.info('Checking GMFs')
+            err = views.view('gmf_error', self.datastore)
+            if err > .05:
+                logging.warning('Your results are expected to have a large '
+                                'dependency from ses_seed')
+        if oq.hazard_curves_from_gmfs:
             rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations

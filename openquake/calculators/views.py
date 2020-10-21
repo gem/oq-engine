@@ -24,6 +24,7 @@ import operator
 import functools
 import collections
 import numpy
+import pandas
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
@@ -155,7 +156,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     """
     Returns the slowest sources
     """
-    info = dstore['source_info']['source_id', 'code', 'multiplicity',
+    info = dstore['source_info']['source_id', 'code',
                                  'calc_time', 'num_sites', 'eff_ruptures']
     info = info[info['eff_ruptures'] > 0]
     info.sort(order='calc_time')
@@ -353,6 +354,12 @@ def view_portfolio_losses(token, dstore):
     return rst_table(array, fmt='%.5E')
 
 
+def _indices(N, n):
+    # returns n blocks of indices in the range 0 .. N-1
+    for i in range(n):
+        yield numpy.arange(i, N, n)
+
+
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
     """
@@ -362,8 +369,12 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     G = getattr(oq, 'number_of_ground_motion_fields', 1)
     R = dstore['full_lt'].get_num_rlzs()
-    means = dstore['losses_by_event']['loss'].sum(axis=0) / R / G
-    return rst_table([means], oq.loss_names)
+    loss = dstore['losses_by_event']['loss']  # shape (E, L)
+    means = loss.sum(axis=0) / R / G
+    sums = [loss[idxs].sum(axis=0) for idxs in _indices(len(loss), 10)]
+    errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
+    rows = [['mean'] + list(means), ['error'] + list(errors)]
+    return(rst_table(rows, ['loss'] + oq.loss_names))
 
 
 @view.add('portfolio_damage')
@@ -373,12 +384,12 @@ def view_portfolio_damage(token, dstore):
     extracted from the average damages
     """
     # dimensions assets, stat, loss_types, dmg_state
-    if 'avg_damages-stats' in dstore:
-        attrs = dstore.getitem('avg_damages-stats').attrs
-        arr = dstore.sel('avg_damages-stats', stat='mean').sum(axis=(0, 1))
+    if 'damages-stats' in dstore:
+        attrs = dstore.getitem('damages-stats').attrs
+        arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
     else:
-        attrs = dstore.getitem('avg_damages-rlzs').attrs
-        arr = dstore.sel('avg_damages-rlzs', rlz=0).sum(axis=(0, 1))
+        attrs = dstore.getitem('damages-rlzs').attrs
+        arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))
     rows = [[lt] + list(row) for lt, row in zip(attrs['loss_type'], arr)]
     return rst_table(rows, ['loss_type'] + list(attrs['dmg_state']))
 
@@ -676,6 +687,66 @@ def view_gmf(token, dstore):
     df = dstore.read_df('gmf_data', 'sid')
     gmf = df.groupby(df.index).mean()
     return str(gmf)
+
+
+def get_gmv0(dstore):
+    # returns dict gmf_error, extreme_ruptures
+    eids = dstore['gmf_data/eid'][:]
+    gmvs = dstore['gmf_data/gmv_0'][:]
+    sids = dstore['gmf_data/sid'][:]
+    df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
+    return df
+
+
+@view.add('gmf_error')
+def view_gmf_error(token, dstore):
+    """
+    Display a gmf relative error for seed dependency
+    """
+    df = get_gmv0(dstore)
+    numpy.random.seed(42)  # default_rng does not work with numpy 1.16
+    eids = numpy.array(df.index)
+    numpy.random.shuffle(eids)
+    res = df.groupby(eids % 10)['gmv_0'].sum()
+    return res.std() / res.mean()
+
+
+class GmpeExtractor(object):
+    def __init__(self, dstore):
+        full_lt = dstore['full_lt']
+        self.trt_by_grp = full_lt.trt_by_grp
+        self.gsim_by_trt = full_lt.gsim_by_trt
+        self.rlzs = full_lt.get_realizations()
+
+    def extract(self, grp_ids, rlz_ids):
+        out = []
+        for grp_id, rlz_id in zip(grp_ids, rlz_ids):
+            trt = self.trt_by_grp[grp_id]
+            out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
+        return out
+
+
+@view.add('extreme_gmvs')
+def view_extreme_gmvs(token, dstore):
+    """
+    Display table of extreme GMVs with fields (eid, gmv_0, sid, rlz. rup)
+    """
+    if ':' in token:
+        maxgmv = float(token.split(':')[1])
+    else:
+        maxgmv = 10  # 10g is default value defining extreme GMVs
+    imt0 = list(dstore['oqparam'].imtls)[0]
+    if imt0.startswith(('PGA', 'SA(')):
+        gmpe = GmpeExtractor(dstore)
+        df = get_gmv0(dstore)
+        extreme_df = df[df.gmv_0 > maxgmv].copy()
+        ev = dstore['events'][()][extreme_df.index]
+        extreme_df['rlz'] = ev['rlz_id']
+        extreme_df['rup'] = ev['rup_id']
+        grp_ids = dstore['ruptures']['grp_id'][extreme_df.rup]
+        extreme_df['gmpe'] = gmpe.extract(grp_ids, ev['rlz_id'])
+        return extreme_df.sort_values('gmv_0').groupby('sid').head(1)
+    return 'Could not do anything for ' + imt0
 
 
 @view.add('mean_disagg')

@@ -33,6 +33,7 @@ from openquake.commonlib.calc import gmvs_to_poes
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.calculators.getters import get_gmfgetter
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import case_18 as gmpe_tables
@@ -296,6 +297,10 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/rup_data.csv', fname, delta=1E-5)
 
+        # test get_gmfgetter
+        gg = get_gmfgetter(self.calc.datastore, rup_id=0)
+        self.assertEqual(len(gg.get_hazard()), 1)  # 1 rlz
+
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
@@ -469,8 +474,8 @@ class EventBasedTestCase(CalculatorTestCase):
         # cali landslide simplified
         self.run_calc(case_26.__file__, 'job_land.ini')
         df = self.calc.datastore.read_df('gmf_data', 'sid')
-        pd_mean = df[df.prob_disp_0 > 0].prob_disp_0.mean()
-        nd_mean = df[df.newmark_disp_0 > 0].newmark_disp_0.mean()
+        pd_mean = df[df.prob_disp > 0].prob_disp.mean()
+        nd_mean = df[df.newmark_disp > 0].newmark_disp.mean()
         self.assertGreater(pd_mean, 0)
         self.assertGreater(nd_mean, 0)
 
@@ -478,7 +483,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
         df = self.calc.datastore.read_df('gmf_data', 'sid')
-        pd_mean = df[df.liq_prob_0 > 0].liq_prob_0.mean()
+        pd_mean = df[df.liq_prob > 0].liq_prob.mean()
         self.assertGreater(pd_mean, 0)
 
     def test_overflow(self):

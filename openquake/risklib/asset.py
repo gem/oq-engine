@@ -104,8 +104,8 @@ class CostCalculator(object):
                 unit = 'people'
             else:
                 unit = self.units[lt]
-            lst.append(encode(unit))
-        return numpy.array(lst)
+            lst.append(unit)
+        return lst
 
     def __toh5__(self):
         loss_types = sorted(self.cost_types)

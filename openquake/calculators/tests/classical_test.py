@@ -314,10 +314,8 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
-        arr = self.calc.datastore['source_info'][:]
-        mul = dict(arr[['source_id', 'multiplicity']])
-        self.assertEqual(mul['A'], 2)  # different, multiplicity > 1
-        self.assertEqual(mul['B'], 1)  # duplicates
+        ids = self.calc.datastore['source_info']['source_id']
+        numpy.testing.assert_equal(ids, ['A;0', 'A;1', 'B'])
 
     def test_case_18(self):  # GMPEtable
         self.assert_curves_ok(
@@ -374,28 +372,15 @@ hazard_uhs-std.csv
         # there are 3 sources x 12 sm_rlzs
         [sg] = self.calc.csm.src_groups  # 1 source group with 7 sources
         self.assertEqual(len(sg), 7)
-        tbl = []
-        for src in sg:
-            tbl.append((src.source_id, src.checksum) + src.grp_ids)
-        tbl.sort()
-        '''
-        self.assertEqual(tbl,
-                         [['CHAR1', 1020111046, 2, 5, 8, 11],
-                          ['CHAR1', 1117683992, 0, 3, 6, 9],
-                          ['CHAR1', 1442321585, 1, 4, 7, 10],
-                          ['COMFLT1', 2221824602, 3, 4, 5, 9, 10, 11],
-                          ['COMFLT1', 3381942518, 0, 1, 2, 6, 7, 8],
-                          ['SFLT1', 4233779789, 6, 7, 8, 9, 10, 11],
-                          ['SFLT1', 4256912415, 0, 1, 2, 3, 4, 5]])
-        '''
         dupl = sum(len(src.grp_ids) - 1 for src in sg)
         self.assertEqual(dupl, 29)  # there are 29 duplicated sources
 
         # another way to look at the duplicated sources; protects against
         # future refactorings breaking the pandas readability of source_info
         df = self.calc.datastore.read_df('source_info', 'source_id')
-        dic = dict(df['multiplicity'])
-        self.assertEqual(dic, {'CHAR1': 3, 'COMFLT1': 2, 'SFLT1': 2})
+        numpy.testing.assert_equal(
+            list(df.index), ['CHAR1;0', 'CHAR1;1', 'CHAR1;2', 'COMFLT1;0',
+                             'COMFLT1;1', 'SFLT1;0', 'SFLT1;1'])
 
         # check pandas readability of hcurves-rlzs and hcurves-stats
         df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')
