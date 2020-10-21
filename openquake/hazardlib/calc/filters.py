@@ -28,6 +28,7 @@ from scipy.spatial import cKDTree, distance
 
 from openquake.baselib import general
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib import site
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
@@ -301,6 +302,16 @@ class SourceFilter(object):
             sf.slc = slice(tile.sids[0], tile.sids[-1] + 1)
             out.append(sf)
         return out
+
+    def reduce(self, factor=100):
+        """
+        Reduce the SourceFilter to a subset of sites
+        """
+        idxs = numpy.arange(0, len(self.sitecol), factor)
+        sc = object.__new__(site.SiteCollection)
+        sc.array = self.sitecol[idxs]
+        sc.complete = self.sitecol.complete
+        return self.__class__(sc, self.integration_distance)
 
     def get_rectangle(self, src):
         """

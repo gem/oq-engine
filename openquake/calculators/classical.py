@@ -126,22 +126,17 @@ def classical_split_filter(srcs, gsims, params, monitor):
             print(msg)
 
 
-def preclassical(srcs, gsims, params, monitor):
+def preclassical(srcs, srcfilter, monitor):
     """
     Split and prefilter the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     pmap = AccumDict(accum=0)
-    with monitor("splitting/filtering sources"):
-        srcfilter = monitor.read('srcfilter')
-        splits, _stime = split_sources(srcs)
     totrups = 0
     maxradius = 0
-    for src in splits:
+    for src, nsites in srcfilter.filter(srcs):
         t0 = time.time()
         totrups += src.num_ruptures
-        if srcfilter.get_close_sites(src) is None:
-            continue
         if hasattr(src, 'radius'):  # for point sources
             maxradius = max(maxradius, src.radius)
         dt = time.time() - t0
@@ -149,9 +144,10 @@ def preclassical(srcs, gsims, params, monitor):
             [src.num_ruptures, src.nsites, dt])
         for grp_id in src.grp_ids:
             pmap[grp_id] += 0
-    return dict(pmap=pmap, calc_times=calc_times, rup_data={},
-                extra=dict(task_no=monitor.task_no, totrups=totrups,
-                           trt=src.tectonic_region_type, maxradius=maxradius))
+    trt = [] if totrups == 0 else [src.tectonic_region_type]
+    return dict(pmap=pmap, calc_times=calc_times, rup_data=AccumDict(),
+                extra=AccumDict(dict(task_no=monitor.task_no, totrups=totrups,
+                                     trt=trt)))
 
 
 def store_ctxs(dstore, rdt, dic):
@@ -669,6 +665,16 @@ class PreCalculator(ClassicalCalculator):
     ruptures
     """
     core_task = preclassical
+
+    def execute(self):
+        oq = self.oqparam
+        minifilter = self.src_filter().reduce()
+        ct = oq.concurrent_tasks or 1
+        srcs = self.csm.get_sources()
+        res = parallel.Starmap.apply(preclassical, (srcs, minifilter),
+                                     concurrent_tasks=ct,
+                                     h5=self.datastore.hdf5).reduce()
+        print(res)
 
 
 def build_hazard(pgetter, N, hstats, individual_curves,
