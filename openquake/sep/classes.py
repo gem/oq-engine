@@ -169,7 +169,7 @@ class HazusVerticalSettlement(SecondaryPeril):
     def prepare(self, sites):
         pass
 
-    def compute(self, mag, imt, gmf, sites):
+    def compute(self, mag, imt_gmf, sites):
         return [hazus_vertical_settlement(sites.liq_susc_cat,
                 return_unit=self.return_unit)]
 
