@@ -37,8 +37,8 @@ class ChaoEtAl2020SInter(GMPE):
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
-    #: Supported intensity measure types are spectral acceleration,
-    #: peak ground acceleration and peak ground velocity
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
+
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGD, PGV, SA])
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
@@ -47,9 +47,9 @@ class ChaoEtAl2020SInter(GMPE):
         const.StdDev.INTRA_EVENT
     ])
 
-    REQUIRES_DISTANCES = {'rrup', 'ztor'}
+    REQUIRES_DISTANCES = {'rrup'}
 
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
 
@@ -79,16 +79,18 @@ class ChaoEtAl2020SInter(GMPE):
         C = self.COEFFS[imt]
 
         s = self.CONSTANTS
-        med = np.zeros(len(mag))
+        # TODO: mix vs30measured with vs30
+        med = np.zeros(len(sites.vs30))
 
-        med += self._ftype(C, fault)
-        med += (ztor - self.CONST_FAULT['href']) * C['c14' + self.SUFFIX]
-        med += (mag - s['mag_ref']) * C['c8' + self.SBCR]
-        med += (5 - mag) * np.heaviside(5 - mag, 0.5) * C['c11' + self.SBCR]
+        med += self._ftype(C, rup)
+        med += (rup.ztor - self.CONST_FAULT['href']) * C['c14' + self.SUFFIX]
+        med += (rup.mag - s['mag_ref']) * C['c8' + self.SBCR]
+        med += (5 - rup.mag) * np.heaviside(5 - rup.mag, 0.5) \
+            * C['c11' + self.SBCR]
         med += self._fh(C, rup.mag, dists.rrup)
 
-        med += (Rrup - s['rrup_ref']) * C['c21' + self.SBCR]
-        med += self._ffault(C, mag)
+        med += (dists.rrup - s['rrup_ref']) * C['c21' + self.SBCR]
+        med += self._ffault(C, rup.mag)
         med += C['c6'] * self.aftershocks + C['c7'] * self.manila
         med += self._fvs30(C, sites)
 
@@ -181,8 +183,9 @@ class ChaoEtAl2020SInter(GMPE):
         self.geology True for KS17 (inferred)
         self.geology False for Receiver Function (inferred)
         """
+
         return np.where(np.isnan(sites.vs30measured),
-                        C['27'] if self.geology else C['c28'],
+                        C['c27'] if self.geology else C['c28'],
                         C['c26'])
 
     def _fz1pt0(self, C, sites):
@@ -204,7 +207,7 @@ class ChaoEtAl2020SInter(GMPE):
             * np.heaviside(mag - self.MC, 0.5))
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    imt    c1                  c2                  c3                  c4_if               c4_is               c6                  c7                 c8_cr              c8_sb               c10                 c11_cr              c11_sb              c13                 c14_cr              c14_if              c14_is              c17_cr              c17_sb             c19_cr             c20_sb              c21_cr              c21_sb              c23                 c24                c25                 c26                 c27                 c28                 c29_if              c29_is             tau1_cr            tau2_cr            tau1_sb            tau2_sb            phiss1_cr          phiss2_cr          phiss1_sb          phiss2_sb          phis2s
+    imt    c1                  c2                  c3                  c4_if               c4_is               c6                  c7                 c8_cr              c8_sb               c10                 c11_cr              c11_sb              c13                 c14_cr              c14_if              c14_is              c17_cr              c17_sb             c19_cr             c19_sb              c21_cr              c21_sb              c23                 c24                c25                 c26                 c27                 c28                 c29_if              c29_is             tau1_cr            tau2_cr            tau1_sb            tau2_sb            phiss1_cr          phiss2_cr          phiss1_sb          phiss2_sb          phis2s
     pga   -0.5192892547128840 -0.6150055029113330 -0.6487900726643910 -0.5859618870941580  0.2995078226527580 -0.1252895878217900  0.1860213693406720 0.4128529204313240 0.6654099729223670 -0.1376176044286790 -0.0000003768045793 -0.0000002632651801 -0.0000003479033210  0.0325013808122898  0.0188003326071965  0.0066214814780273 -1.3033352051553600 -1.4222150700864700 0.3874353293578060 0.1816390684494260 -0.0034295741595448 -0.0034489780547407 -2.5525572055834000 -0.4820755783830470 0.0636111092153052 -0.5680621936097360 -0.6441908224323110 -0.6148407238174470 -0.4944663117848010 -0.4948250053327020 0.3674988948492440 0.3156766103555770 0.2747114934261350 0.5404436414423900 0.5284243730959070 0.4400249261948010 0.4358918335042310 0.4982604989025690 0.3435860891378130
     0.01  -0.5185435292277630 -0.6139978370809050 -0.6485291075803880 -0.5838899830711630  0.3025167286045810 -0.1244749736423930  0.1818440946548220 0.4133627969553290 0.6662082185566420 -0.1377874122648280 -0.0000016455914614 -0.0000010168484829 -0.0000015396189431  0.0325478379384533  0.0187424764459864  0.0065978989650052 -1.3050707375477800 -1.4244518028964800 0.3865358127626830 0.1799727376957520 -0.0034138067537784 -0.0034249196892139 -2.5491215932210800 -0.4817847143782920 0.0637979244436324 -0.5671019863928200 -0.6430624549208040 -0.6134855454872920 -0.4962061562087430 -0.5019638690208290 0.3672959719907850 0.3154146574183840 0.2733100640145130 0.5413688232186000 0.5279530156395120 0.4402345932395540 0.4366852410606870 0.4979773327789170 0.3437466383316600
     0.02  -0.4925935193382860 -0.5849494939894080 -0.6149768931486030 -0.5994558769715950  0.2896423927820520 -0.1255022048822760  0.1913815871815020 0.3989282252665750 0.6316076153041100 -0.1329759746961010 -0.0010277552092071 -0.0000007415198554 -0.0000009243529219  0.0330191056515263  0.0184348278192339  0.0069331416349393 -1.3381199569179700 -1.4144452691294700 0.3918303510961290 0.1909212976216070 -0.0031761225955272 -0.0036500842576487 -2.5020049297189400 -0.4722757215196650 0.0649888427251637 -0.5300330753401030 -0.6092543141804070 -0.5783932279622350 -0.4567832202723850 -0.4843335992997120 0.3672096025203770 0.3193604175283950 0.2727371846461310 0.5590662841638730 0.5212490565944880 0.4457229793375830 0.4284446929672800 0.4997055429236690 0.3492753254041860
