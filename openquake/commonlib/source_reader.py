@@ -72,15 +72,20 @@ def check_dupl_ids(smdict):
     first = True
     for src_id, srcs in sources.items():
         if len(srcs) > 1:  # duplicate IDs must have all the same checksum
-            checksums = set()
+            checksums = []
             for src in srcs:
                 dic = {k: v for k, v in vars(src).items()
                        if k not in 'grp_id samples'}
-                checksums.add(zlib.adler32(pickle.dumps(dic, protocol=4)))
-            if len(checksums) > 1 and first:
-                logging.warning('There are multiple different sources with the'
-                                ' same ID %s', srcs)
-                first = False
+                checksums.append(zlib.adler32(pickle.dumps(dic, protocol=4)))
+            if len(set(checksums)) > 1:
+                # fix duplicate source IDs, for instance in case_13
+                for i, src in enumerate(srcs):
+                    src.source_id = '%s;%d' % (src.source_id, i)
+                    src.checksum = checksums[i]
+                if first:
+                    logging.warning('There are multiple different sources with'
+                                    ' the same ID %s', srcs)
+                    first = False
 
 
 def get_csm(oq, full_lt, h5=None):
@@ -201,7 +206,8 @@ def reduce_sources(sources_with_same_id):
     """
     out = []
     for src in sources_with_same_id:
-        dic = {k: v for k, v in vars(src).items() if k not in 'grp_id samples'}
+        dic = {k: v for k, v in vars(src).items()
+               if k not in 'source_id grp_id samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():

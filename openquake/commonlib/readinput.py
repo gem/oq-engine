@@ -68,15 +68,14 @@ source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('gidx', numpy.uint16),            # 1
     ('code', (numpy.string_, 1)),      # 2
-    ('multiplicity', numpy.uint32),    # 3
-    ('calc_time', numpy.float32),      # 4
-    ('num_sites', numpy.uint32),       # 5
-    ('eff_ruptures', numpy.uint32),    # 6
-    ('checksum', numpy.uint32),        # 7
-    ('serial', numpy.uint32),          # 8
-    ('trti', numpy.uint8),             # 9
+    ('calc_time', numpy.float32),      # 3
+    ('num_sites', numpy.uint32),       # 4
+    ('eff_ruptures', numpy.uint32),    # 5
+    ('checksum', numpy.uint32),        # 6
+    ('serial', numpy.uint32),          # 7
+    ('trti', numpy.uint8),             # 8
 ])
-MULTIPLICITY, SERIAL = 3, 8
+SERIAL = 7
 
 
 class DuplicatedPoint(Exception):
@@ -754,14 +753,10 @@ def get_composite_source_model(oqparam, h5=None):
         if hasattr(sg, 'mags'):  # UCERF
             mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
-            if src.source_id in data:
-                multiplicity = data[src.source_id][MULTIPLICITY] + 1
-            else:
-                multiplicity = 1
-                ns += 1
+            ns += 1
             src.gidx = gidx[tuple(src.grp_ids)]
             row = [src.source_id, src.gidx, src.code,
-                   multiplicity, 0, 0, 0, src.checksum, src.serial or ns,
+                   0, 0, 0, src.checksum, src.serial or ns,
                    full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
