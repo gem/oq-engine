@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Speedup the preclassical calculator
+  * Speeding up the preclassical calculator
   * Added an entry point /extract/eids_by_gsim for the QGIS plugin
   * Internal: automatically convert the source IDs into unique IDs
   * Changed scenario calculations to depend on the `ses_seed`, not the
