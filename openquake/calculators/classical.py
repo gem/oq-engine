@@ -100,7 +100,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
         with monitor("splitting sources"):
             for src in srcs:
                 if src.weight > maxw or src.num_ruptures > 10_000:
-                    splits.extend(split_sources(src)[0])
+                    splits.extend(split_sources([src])[0])
                 else:
                     splits.append(src)
     for sf in sf_tiles:
@@ -110,10 +110,8 @@ def classical_split_filter(srcs, gsims, params, monitor):
             continue
         blocks = list(block_splitter(
             sources, maxw, operator.attrgetter('weight')))
-        if nt == 1 and len(blocks) == 1:
-            yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
-            break
-        for block in blocks:
+        yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
+        for block in blocks[:-1]:
             yield classical1, block, gsims, params, sf.slc
         msg = 'produced %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
