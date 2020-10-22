@@ -96,14 +96,9 @@ def classical_split_filter(srcs, gsims, params, monitor):
     if nt > 1 or params['split_sources'] is False:
         splits = srcs
     else:
-        splits, heavy = [], []
         with monitor("splitting sources"):
-            for src in srcs:
-                if src.weight <= maxw:
-                    splits.append(src)
-                else:
-                    heavy.append(src)
-            splits.extend(split_sources(heavy)[0])
+            # by splitting everything I have a better weight
+            splits, _ = split_sources(srcs)
     for sf in sf_tiles:
         sources = [src for src, _idx in sf.filter(splits)]
         if not sources:
