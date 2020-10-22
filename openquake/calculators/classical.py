@@ -315,6 +315,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.calculation_mode == 'preclassical':
             self.store_source_info(calc_times)
             self.datastore['full_lt'] = self.csm.full_lt
+            self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
 
         self.update_source_info(calc_times)
