@@ -92,13 +92,17 @@ def classical_split_filter(srcs, gsims, params, monitor):
     srcfilter = monitor.read('srcfilter')
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
-    maxw = params['max_weight']
+    maxw = params['max_weight'] / 2
     if nt > 1 or params['split_sources'] is False:
         splits = srcs
     else:
+        splits = []
         with monitor("splitting sources"):
-            # by splitting everything I have a better weight
-            splits, _ = split_sources(srcs)
+            for src in srcs:
+                if src.weight > maxw or src.num_ruptures > 10_000:
+                    splits.extend(split_sources(src)[0])
+                else:
+                    splits.append(src)
     for sf in sf_tiles:
         sources = [src for src, _idx in sf.filter(splits)]
         if not sources:
