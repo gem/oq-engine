@@ -126,32 +126,19 @@ def classical_split_filter(srcs, gsims, params, monitor):
             print(msg)
 
 
-def preclassical(srcs, gsims, params, monitor):
+def preclassical(srcs, srcfilter, monitor):
     """
     Split and prefilter the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
-    pmap = AccumDict(accum=0)
-    with monitor("splitting/filtering sources"):
-        srcfilter = monitor.read('srcfilter')
-        splits, _stime = split_sources(srcs)
-    totrups = 0
-    maxradius = 0
-    for src in splits:
+    for src in srcs:
         t0 = time.time()
-        totrups += src.num_ruptures
-        if srcfilter.get_close_sites(src) is None:
+        sites = srcfilter.get_close_sites(src)
+        if sites is None:
             continue
-        if hasattr(src, 'radius'):  # for point sources
-            maxradius = max(maxradius, src.radius)
         dt = time.time() - t0
-        calc_times[src.source_id] += F32(
-            [src.num_ruptures, src.nsites, dt])
-        for grp_id in src.grp_ids:
-            pmap[grp_id] += 0
-    return dict(pmap=pmap, calc_times=calc_times, rup_data={},
-                extra=dict(task_no=monitor.task_no, totrups=totrups,
-                           trt=src.tectonic_region_type, maxradius=maxradius))
+        calc_times[src.source_id] += F32([src.num_ruptures, len(sites), dt])
+    return calc_times
 
 
 def store_ctxs(dstore, rdt, dic):
@@ -448,10 +435,7 @@ class ClassicalCalculator(base.HazardCalculator):
                                   max_num_grp_ids, humansize(pmapbytes)))
 
         C = oq.concurrent_tasks or 1
-        if oq.calculation_mode == 'preclassical':
-            f1 = f2 = preclassical
-            C *= 50  # use more tasks because there will be slow tasks
-        elif oq.disagg_by_src or oq.is_ucerf():
+        if oq.disagg_by_src or oq.is_ucerf():
             C *= 5  # use more tasks, especially in UCERF
             f1, f2 = classical1, classical1
         else:
@@ -669,6 +653,17 @@ class PreCalculator(ClassicalCalculator):
     ruptures
     """
     core_task = preclassical
+
+    def execute(self):
+        oq = self.oqparam
+        srcfilter = self.src_filter()
+        srcs = self.csm.get_sources()
+        calc_times = parallel.Starmap.apply(
+            preclassical, (srcs, srcfilter),
+            concurrent_tasks=oq.concurrent_tasks * 5 or 1,
+            weight=operator.attrgetter('weight'),
+            h5=self.datastore.hdf5).reduce()
+        self.store_source_info(calc_times)
 
 
 def build_hazard(pgetter, N, hstats, individual_curves,

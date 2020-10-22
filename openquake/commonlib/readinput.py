@@ -71,11 +71,10 @@ source_info_dt = numpy.dtype([
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
     ('eff_ruptures', numpy.uint32),    # 5
-    ('checksum', numpy.uint32),        # 6
-    ('serial', numpy.uint32),          # 7
-    ('trti', numpy.uint8),             # 8
+    ('serial', numpy.uint32),          # 6
+    ('trti', numpy.uint8),             # 7
 ])
-SERIAL = 7
+SERIAL = 6
 
 
 class DuplicatedPoint(Exception):
@@ -756,7 +755,7 @@ def get_composite_source_model(oqparam, h5=None):
             ns += 1
             src.gidx = gidx[tuple(src.grp_ids)]
             row = [src.source_id, src.gidx, src.code,
-                   0, 0, 0, src.checksum, src.serial or ns,
+                   0, 0, 0, src.serial or ns,
                    full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
