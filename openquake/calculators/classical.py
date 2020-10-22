@@ -128,7 +128,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
 
 def preclassical(srcs, srcfilter, monitor):
     """
-    Split and prefilter the sources
+    Prefilter and weight the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     for src in srcs:
@@ -136,6 +136,7 @@ def preclassical(srcs, srcfilter, monitor):
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             continue
+        src.weight
         dt = time.time() - t0
         calc_times[src.source_id] += F32([src.num_ruptures, len(sites), dt])
     return calc_times
