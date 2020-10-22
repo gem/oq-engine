@@ -110,9 +110,9 @@ def classical_split_filter(srcs, gsims, params, monitor):
             continue
         blocks = list(block_splitter(
             sources, maxw, operator.attrgetter('weight')))
-        yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
         for block in blocks[:-1]:
             yield classical1, block, gsims, params, sf.slc
+        yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
         msg = 'produced %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
         try:
