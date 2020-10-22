@@ -92,7 +92,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     srcfilter = monitor.read('srcfilter')
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
-    maxw = params['max_weight'] / 3
+    maxw = params['max_weight'] / len(gsims)
     if nt > 1 or params['split_sources'] is False:
         splits = srcs
     else:
@@ -475,7 +475,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 nb = len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
-                                  len(block), block.weight)
+                                  len(block), sum(src.weight for src in block))
                     smap.submit((block, gsims, param), f2)
 
             w = sum(src.weight for src in sg)
