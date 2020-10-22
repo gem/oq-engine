@@ -92,7 +92,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     srcfilter = monitor.read('srcfilter')
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
-    maxw = params['max_weight'] / 2
+    maxw = params['max_weight'] / 3
     if nt > 1 or params['split_sources'] is False:
         splits = srcs
     else:
@@ -407,15 +407,10 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         src_groups = self.csm.src_groups
-
-        def srcweight(src):
-            g = len(gsims_by_trt[src.tectonic_region_type])
-            return src.weight * g
-
         totweight = 0
         for sg in src_groups:
             for src in sg:
-                totweight += srcweight(src)
+                totweight += src.weight
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
                            'ruptures with complex_fault_mesh_spacing={} km')
@@ -473,17 +468,17 @@ class ClassicalCalculator(base.HazardCalculator):
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
-                        else block_splitter(sg, max_weight * ntiles,
-                                            srcweight, sort=True))
+                        else block_splitter(sg, 2*max_weight * ntiles,
+                                            operator.attrgetter('weight'),
+                                            sort=True))
                 blocks = list(blks)
                 nb = len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
-                                  len(block),
-                                  sum(srcweight(src) for src in block))
+                                  len(block), block.weight)
                     smap.submit((block, gsims, param), f2)
 
-            w = sum(srcweight(src) for src in sg)
+            w = sum(src.weight for src in sg)
             logging.info('TRT = %s', sg.trt)
             it = sorted(oq.maximum_distance.ddic[sg.trt].items())
             md = '%s->%d ... %s->%d' % (it[0] + it[-1])
