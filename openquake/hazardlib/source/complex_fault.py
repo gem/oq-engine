@@ -241,7 +241,6 @@ class ComplexFaultSource(ParametricSeismicSource):
         mag_rates = self.get_annual_occurrence_rates()
         for i, (mag, rate) in enumerate(mag_rates):
             src = copy.copy(self)
-            del src._nr
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]
             for s in split(src):
