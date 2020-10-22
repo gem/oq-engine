@@ -128,7 +128,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
 
 def preclassical(srcs, srcfilter, monitor):
     """
-    Split and prefilter the sources
+    Prefilter and weight the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     for src in srcs:
@@ -136,6 +136,7 @@ def preclassical(srcs, srcfilter, monitor):
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             continue
+        src.weight
         dt = time.time() - t0
         calc_times[src.source_id] += F32([src.num_ruptures, len(sites), dt])
     return calc_times
@@ -169,7 +170,7 @@ def store_ctxs(dstore, rdt, dic):
                 dstore.hdf5.save_vlen(n, zs)
 
 
-@base.calculators.add('classical', 'ucerf_classical')
+@base.calculators.add('classical', 'preclassical', 'ucerf_classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
@@ -303,13 +304,25 @@ class ClassicalCalculator(base.HazardCalculator):
         tectonic region type.
         """
         oq = self.oqparam
-        psd = oq.pointsource_distance
         if oq.hazard_calculation_id and not oq.compare_with_classical:
             with util.read(self.oqparam.hazard_calculation_id) as parent:
                 self.full_lt = parent['full_lt']
             self.calc_stats()  # post-processing
             return {}
 
+        srcfilter = self.src_filter()
+        srcs = self.csm.get_sources()
+        calc_times = parallel.Starmap.apply(
+            preclassical, (srcs, srcfilter),
+            concurrent_tasks=oq.concurrent_tasks or 1,
+            h5=self.datastore.hdf5).reduce()
+
+        if oq.calculation_mode == 'preclassical':
+            self.store_source_info(calc_times)
+            self.datastore['full_lt'] = self.csm.full_lt
+            return
+
+        self.update_source_info(calc_times)
         mags = self.datastore['source_mags']  # by TRT
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
@@ -317,6 +330,7 @@ class ClassicalCalculator(base.HazardCalculator):
         mags_by_trt = {}
         for trt in mags:
             mags_by_trt[trt] = mags[trt][()]
+        psd = oq.pointsource_distance
         if psd is not None:
             psd.interp(mags_by_trt)
             for trt, dic in psd.ddic.items():
@@ -644,27 +658,6 @@ def make_hmap_png(hmap, lons, lats):
     bio = io.BytesIO()
     plt.savefig(bio, format='png')
     return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
-
-
-@base.calculators.add('preclassical')
-class PreCalculator(ClassicalCalculator):
-    """
-    Calculator to filter the sources and compute the number of effective
-    ruptures
-    """
-    core_task = preclassical
-
-    def execute(self):
-        oq = self.oqparam
-        srcfilter = self.src_filter()
-        srcs = self.csm.get_sources()
-        calc_times = parallel.Starmap.apply(
-            preclassical, (srcs, srcfilter),
-            concurrent_tasks=oq.concurrent_tasks * 5 or 1,
-            weight=operator.attrgetter('weight'),
-            h5=self.datastore.hdf5).reduce()
-        self.store_source_info(calc_times)
-        self.datastore['full_lt'] = self.csm.full_lt
 
 
 def build_hazard(pgetter, N, hstats, individual_curves,

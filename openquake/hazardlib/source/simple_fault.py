@@ -298,9 +298,10 @@ class SimpleFaultSource(ParametricSeismicSource):
         if len(mag_rates) == 1:  # not splittable
             yield self
             return
+        if not hasattr(self, '_nr'):
+            self.count_ruptures()
         for i, (mag, rate) in enumerate(mag_rates):
             src = copy.copy(self)
-            del src._nr
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]
             yield src
