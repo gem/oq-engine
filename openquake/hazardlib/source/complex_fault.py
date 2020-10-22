@@ -235,6 +235,8 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.rupture_mesh_spacing = spacing
 
     def __iter__(self):
+        if not hasattr(self, '_nr'):
+            self.count_ruptures()
         if self.num_ruptures <= MINWEIGHT:
             yield self  # not splittable
             return
