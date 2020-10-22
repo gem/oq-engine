@@ -92,25 +92,25 @@ def classical_split_filter(srcs, gsims, params, monitor):
     srcfilter = monitor.read('srcfilter')
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
-
-    def weight(src, N=len(srcfilter.sitecol.complete)):
-        n = 10 * numpy.sqrt(src.nsites / N)
-        return src.weight * params['rescale_weight'] * n
-
-    # NB: splitting all the sources improves the distribution significantly,
-    # compared to splitting only the big sources
+    maxw = params['max_weight']
     if nt > 1 or params['split_sources'] is False:
         splits = srcs
     else:
+        splits, heavy = [], []
         with monitor("splitting sources"):
-            splits, _stime = split_sources(srcs)
+            for src in srcs:
+                if src.weight <= maxw:
+                    splits.append(src)
+                else:
+                    heavy.append(src)
+            splits.extend(split_sources(heavy)[0])
     for sf in sf_tiles:
         sources = [src for src, _idx in sf.filter(splits)]
         if not sources:
             yield {'pmap': {}}
             continue
-        maxw = params['max_weight']
-        blocks = list(block_splitter(sources, maxw, weight))
+        blocks = list(block_splitter(
+            sources, maxw, operator.attrgetter('weight')))
         if nt == 1 and len(blocks) == 1:
             yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
             break
@@ -411,8 +411,7 @@ class ClassicalCalculator(base.HazardCalculator):
         src_groups = self.csm.src_groups
 
         def srcweight(src):
-            trt = src.tectonic_region_type
-            g = len(gsims_by_trt[trt])
+            g = len(gsims_by_trt[src.tectonic_region_type])
             return src.weight * g
 
         totweight = 0
