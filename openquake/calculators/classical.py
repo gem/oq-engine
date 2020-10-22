@@ -92,7 +92,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     srcfilter = monitor.read('srcfilter')
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
-    maxw = params['max_weight'] / len(gsims)
+    maxw = params['max_weight'] / numpy.sqrt(len(gsims))
     if nt > 1 or params['split_sources'] is False:
         splits = srcs
     else:
