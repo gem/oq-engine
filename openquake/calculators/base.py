@@ -909,8 +909,7 @@ class HazardCalculator(BaseCalculator):
             row[EFF_RUPTURES] += arr[0]
             row[NUM_SITES] += arr[1]
             row[CALC_TIME] += arr[2]
-        rows = self.csm.source_info.values()
-        recs = [tuple(row) for row in rows]
+        recs = [tuple(row) for row in self.csm.source_info.values()]
         hdf5.extend(self.datastore['source_info'],
                     numpy.array(recs, readinput.source_info_dt))
 

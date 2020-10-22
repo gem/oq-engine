@@ -656,10 +656,10 @@ class PreCalculator(ClassicalCalculator):
 
     def execute(self):
         oq = self.oqparam
-        minifilter = self.src_filter().reduce()
+        srcfilter = self.src_filter()
         srcs = self.csm.get_sources()
         calc_times = parallel.Starmap.apply(
-            preclassical, (srcs, minifilter),
+            preclassical, (srcs, srcfilter),
             concurrent_tasks=oq.concurrent_tasks * 5 or 1,
             weight=operator.attrgetter('weight'),
             h5=self.datastore.hdf5).reduce()

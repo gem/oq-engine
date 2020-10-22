@@ -303,6 +303,7 @@ class SourceFilter(object):
             out.append(sf)
         return out
 
+    # not used right now
     def reduce(self, factor=100):
         """
         Reduce the SourceFilter to a subset of sites
