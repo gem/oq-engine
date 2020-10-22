@@ -440,13 +440,12 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(MAXMEMORY % (T, num_levels, max_num_gsims,
                                   max_num_grp_ids, humansize(pmapbytes)))
 
-        C = oq.concurrent_tasks or 1
+        C = oq.concurrent_tasks * 5 or 1
         if oq.disagg_by_src or oq.is_ucerf():
-            C *= 5  # use more tasks, especially in UCERF
             f1, f2 = classical1, classical1
         else:
             f1, f2 = classical1, classical_split_filter
-        max_weight = max(min(totweight / C, oq.max_weight), oq.min_weight)
+        max_weight = max(totweight / C, oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
         param = dict(
