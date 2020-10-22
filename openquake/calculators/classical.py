@@ -131,23 +131,14 @@ def preclassical(srcs, srcfilter, monitor):
     Split and prefilter the sources
     """
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
-    pmap = AccumDict(accum=0)
-    totrups = 0
-    maxradius = 0
-    for src, nsites in srcfilter.filter(srcs):
+    for src in srcs:
         t0 = time.time()
-        totrups += src.num_ruptures
-        if hasattr(src, 'radius'):  # for point sources
-            maxradius = max(maxradius, src.radius)
+        sites = srcfilter.get_close_sites(src)
+        if sites is None:
+            continue
         dt = time.time() - t0
-        calc_times[src.source_id] += F32(
-            [src.num_ruptures, src.nsites, dt])
-        for grp_id in src.grp_ids:
-            pmap[grp_id] += 0
-    trt = [] if totrups == 0 else [src.tectonic_region_type]
-    return dict(pmap=pmap, calc_times=calc_times, rup_data=AccumDict(),
-                extra=AccumDict(dict(task_no=monitor.task_no, totrups=totrups,
-                                     trt=trt)))
+        calc_times[src.source_id] += F32([src.num_ruptures, len(sites), dt])
+    return calc_times
 
 
 def store_ctxs(dstore, rdt, dic):
@@ -444,10 +435,7 @@ class ClassicalCalculator(base.HazardCalculator):
                                   max_num_grp_ids, humansize(pmapbytes)))
 
         C = oq.concurrent_tasks or 1
-        if oq.calculation_mode == 'preclassical':
-            f1 = f2 = preclassical
-            C *= 50  # use more tasks because there will be slow tasks
-        elif oq.disagg_by_src or oq.is_ucerf():
+        if oq.disagg_by_src or oq.is_ucerf():
             C *= 5  # use more tasks, especially in UCERF
             f1, f2 = classical1, classical1
         else:
@@ -669,12 +657,13 @@ class PreCalculator(ClassicalCalculator):
     def execute(self):
         oq = self.oqparam
         minifilter = self.src_filter().reduce()
-        ct = oq.concurrent_tasks or 1
         srcs = self.csm.get_sources()
-        res = parallel.Starmap.apply(preclassical, (srcs, minifilter),
-                                     concurrent_tasks=ct,
-                                     h5=self.datastore.hdf5).reduce()
-        print(res)
+        calc_times = parallel.Starmap.apply(
+            preclassical, (srcs, minifilter),
+            concurrent_tasks=oq.concurrent_tasks * 5 or 1,
+            weight=operator.attrgetter('weight'),
+            h5=self.datastore.hdf5).reduce()
+        self.store_source_info(calc_times)
 
 
 def build_hazard(pgetter, N, hstats, individual_curves,

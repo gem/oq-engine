@@ -57,7 +57,7 @@ F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
-NUM_SOURCES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5, 6
+CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
