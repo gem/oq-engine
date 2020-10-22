@@ -664,6 +664,7 @@ class PreCalculator(ClassicalCalculator):
             weight=operator.attrgetter('weight'),
             h5=self.datastore.hdf5).reduce()
         self.store_source_info(calc_times)
+        self.datastore['full_lt'] = self.csm.full_lt
 
 
 def build_hazard(pgetter, N, hstats, individual_curves,

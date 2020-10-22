@@ -162,17 +162,15 @@ def sel(dset, filterdict):
     return dset[tuple(lst)]
 
 
-def dset2df(dset, index, filterdict):
+def dset2df(dset, indexfield, filterdict):
     """
     Converts an HDF5 dataset with an attribute shape_descr into a Pandas
     dataframe. NB: this is very slow for large datasets.
     """
     arr = sel(dset, filterdict)
     shape_descr = python3compat.decode(dset.attrs['shape_descr'])
-    out = []
     tags = []
     idxs = []
-    dtlist = []
     for dim in shape_descr:
         values = _range(dset.attrs[dim])
         if dim in filterdict:
@@ -182,16 +180,17 @@ def dset2df(dset, index, filterdict):
             values = [val]
         else:
             idxs.append(range(len(values)))
-        if isinstance(values[0], str):  # like the loss_type
-            dt = '<S16'
-        else:
-            dt = type(values[0])
-        dtlist.append((dim, dt))
         tags.append(values)
-    dtlist.append(('value', dset.dtype))
+    dic = general.AccumDict(accum=[])
+    index = []
     for idx, vals in zip(itertools.product(*idxs), itertools.product(*tags)):
-        out.append(vals + (arr[idx],))
-    return pandas.DataFrame.from_records(numpy.array(out, dtlist), index)
+        for field, val in zip(shape_descr, vals):
+            if field == indexfield:
+                index.append(val)
+            else:
+                dic[field].append(val)
+        dic['value'].append(arr[idx])
+    return pandas.DataFrame(dic, index)
 
 
 class DataStore(collections.abc.MutableMapping):

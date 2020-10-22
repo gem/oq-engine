@@ -595,8 +595,29 @@ hazard_uhs-std.csv
                               shift_hypo='false')
 
     def test_case_45(self):
-        # this is a test for MMI
+        # this is a test for MMI with disagg_by_src
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
+        df = self.calc.datastore.read_df('disagg_by_src', 'src_id')
+        self.assertEqual(str(df), '''\
+      site_id  rlz_id  imt  lvl         value
+b'1'        0       0  MMI    0  5.512676e-05
+b'2'        0       0  MMI    0  2.811387e-05
+b'1'        0       0  MMI    1  7.374010e-07
+b'2'        0       0  MMI    1  0.000000e+00
+b'1'        0       0  MMI    2  0.000000e+00
+b'2'        0       0  MMI    2  0.000000e+00
+b'1'        0       0  MMI    3  0.000000e+00
+b'2'        0       0  MMI    3  0.000000e+00
+b'1'        0       0  MMI    4  0.000000e+00
+b'2'        0       0  MMI    4  0.000000e+00
+b'1'        0       0  MMI    5  0.000000e+00
+b'2'        0       0  MMI    5  0.000000e+00
+b'1'        0       0  MMI    6  0.000000e+00
+b'2'        0       0  MMI    6  0.000000e+00
+b'1'        0       0  MMI    7  0.000000e+00
+b'2'        0       0  MMI    7  0.000000e+00
+b'1'        0       0  MMI    8  0.000000e+00
+b'2'        0       0  MMI    8  0.000000e+00''')
 
     def test_case_46(self):
         # SMLT with applyToBranches
