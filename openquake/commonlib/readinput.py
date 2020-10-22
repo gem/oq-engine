@@ -687,14 +687,6 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def count_ruptures(g, s, src, mon):
-    """
-    Compute the number of ruptures of source `s` belonging to group `g`
-    """
-    src.weight
-    return {(g, s): src}
-
-
 def _get_cachedir(oq, full_lt, h5=None):
     # read the composite source model from the cache
     if not os.path.exists(oq.cachedir):
@@ -710,16 +702,6 @@ def _get_cachedir(oq, full_lt, h5=None):
     csm = get_csm(oq, full_lt, h5)
     if not csm.src_groups:  # everything was filtered away
         return csm
-    logging.info('Weighting the sources')
-    smap = parallel.Starmap(count_ruptures, h5=h5)
-    for g, sg in enumerate(csm.src_groups):
-        for s, src in enumerate(sg):
-            if src.code in b'AC':  # slow source
-                smap.submit((g, s, src))
-            else:  # fast source
-                src.weight
-    for (g, s), src in smap.reduce().items():
-        csm.src_groups[g].sources[s] = src
     logging.info('Saving %s', fname)
     with open(fname, 'wb') as f:
         pickle.dump(csm, f)
