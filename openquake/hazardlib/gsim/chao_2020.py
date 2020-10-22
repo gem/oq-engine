@@ -79,7 +79,6 @@ class ChaoEtAl2020SInter(GMPE):
         C = self.COEFFS[imt]
 
         s = self.CONSTANTS
-        # TODO: mix vs30measured with vs30
         med = np.zeros(len(sites.vs30))
 
         med += self._ftype(C, rup)
@@ -96,7 +95,7 @@ class ChaoEtAl2020SInter(GMPE):
 
         sa1180 = np.exp(med + math.log(1180/s['vs30_ref']) * C['c24'])
         med += self._fc(C, imt, sites.vs30, sa1180)
-        med += np.log(sites.vs30 / s['vs30_ref'])
+        med += np.log(sites.vs30 / s['vs30_ref']) * C['c24']
         med += self._fz1pt0(C, sites)
 
         stddevs = self.get_stddevs(C, rup.mag, stddev_types)
@@ -147,7 +146,7 @@ class ChaoEtAl2020SInter(GMPE):
             c = 2.4
 
         return (-1.5 * np.log(vs30 / s['vs30_ref']) - np.log(sa1180 + c)
-            + np.log(sa1180 + c * (vs30 / s['vs30_ref']) ** 1.5)) \
+                + np.log(sa1180 + c * (vs30 / s['vs30_ref']) ** 1.5)) \
             * np.heaviside(s['vs30_ref'] - vs30, 0.5) * C['c23']
 
     def _ffault(self, C, mag):
@@ -158,7 +157,7 @@ class ChaoEtAl2020SInter(GMPE):
             + (mag - self.MC) * np.heaviside(mag - self.MC, 0.5) \
             * C['c29' + self.SUFFIX]
 
-    def _ftype(self, C, fault):
+    def _ftype(self, C, rup):
         """
         Factor based on the type of fault.
         """
@@ -169,9 +168,9 @@ class ChaoEtAl2020SInter(GMPE):
         Factors using `h` (coefficients 17-22).
         """
         s = self.CONSTANTS
-        h = self._h(mag)
-        hf = np.log((rrup ** s['n'] + h ** s['n']) ** (1 / s['n']) \
-            / (s['rrup_ref'] ** s['n'] + h ** s['n']) ** (1 / s['n'])) \
+        h = self._hm(mag)
+        hf = np.log((rrup ** s['n'] + h ** s['n']) ** (1 / s['n'])
+                    / (s['rrup_ref'] ** s['n'] + h ** s['n']) ** (1 / s['n']))
 
         return hf * C['c17' + self.SBCR] \
             + hf * C['c19' + self.SBCR] * (self._c19a(mag) - s['mag_ref'])
@@ -184,27 +183,29 @@ class ChaoEtAl2020SInter(GMPE):
         self.geology False for Receiver Function (inferred)
         """
 
-        return np.where(np.isnan(sites.vs30measured),
-                        C['c27'] if self.geology else C['c28'],
-                        C['c26'])
+        return np.where(sites.vs30measured, C['c26'],
+                        C['c27'] if self.geology else C['c28'])
 
     def _fz1pt0(self, C, sites):
         """
         z1pt0 factor.
         """
+        result = np.zeros_like(sites.z1pt0)
+        idx = sites.z1pt0 >= 0
+        if sum(idx) == 0:
+            return result
+
         z1pt0_ref = np.exp(-4.08 / 2 * np.log((sites.vs30 ** 2 + 355.4 ** 2)
                                               / (1750 ** 2 + 355.4 ** 2)))
+        result[idx] = np.log(sites.z1pt0[idx] / z1pt0_ref) * C['c25']
+        return result
 
-        return np.log(np.where(np.isnan(sites.z1pt0),
-                               1, sites.z1pt0 / z1pt0_ref)) \
-            * C['c25']
-
-    def _h(self, mag):
+    def _hm(self, mag):
         """
         H factor for coefficients 17-22.
         """
-        return 10 * np.exp(self.CONST_FAULT['C4'] * (mag - self.MC) \
-            * np.heaviside(mag - self.MC, 0.5))
+        return 10 * np.exp(self.CONST_FAULT['C4'] * (mag - self.MC)
+                           * np.heaviside(mag - self.MC, 0.5))
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt    c1                  c2                  c3                  c4_if               c4_is               c6                  c7                 c8_cr              c8_sb               c10                 c11_cr              c11_sb              c13                 c14_cr              c14_if              c14_is              c17_cr              c17_sb             c19_cr             c19_sb              c21_cr              c21_sb              c23                 c24                c25                 c26                 c27                 c28                 c29_if              c29_is             tau1_cr            tau2_cr            tau1_sb            tau2_sb            phiss1_cr          phiss2_cr          phiss1_sb          phiss2_sb          phis2s
@@ -258,24 +259,24 @@ class ChaoEtAl2020Asc(ChaoEtAl2020SInter):
     """
 
     # add rake to determine fault style in _ftype()
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'ztor'}
 
     def _ffault(self, C, mag):
         """
         Other fault specific factors.
         """
-        return (mag - self.CONSTANTS['mag_ref']) ** 2 - (mag - self.MC) ** 2 \
-            * np.heaviside(mag - self.MC, 0.5) * C['c10']
+        return ((mag - self.CONSTANTS['mag_ref']) ** 2 - (mag - self.MC) ** 2
+                * np.heaviside(mag - self.MC, 0.5)) * C['c10']
 
-    def _ftype(self, C, fault):
+    def _ftype(self, C, rup):
         """
         Factor based on the type of fault.
         """
         # use fault.rake to determine fault type
-        if 30 <= fault.rake <= 150:
+        if 30 <= rup.rake <= 150:
             # reverse
             return C['c1']
-        if -150 <= fault.rake <= -30:
+        if -150 <= rup.rake <= -30:
             # normal
             return C['c3']
         # strike-slip
@@ -287,7 +288,7 @@ class ChaoEtAl2020Asc(ChaoEtAl2020SInter):
         """
         return mag
 
-    def _h(self, mag):
+    def _hm(self, mag):
         """
         H factor for coefficients 17-22.
         """
