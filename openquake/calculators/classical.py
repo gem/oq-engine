@@ -112,7 +112,6 @@ def classical_split_filter(srcs, gsims, params, monitor):
             sources, maxw, operator.attrgetter('weight')))
         for block in blocks[:-1]:
             yield classical1, block, gsims, params, sf.slc
-        yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
         msg = 'produced %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
         try:
@@ -121,6 +120,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
         except Exception:
             # a foreign key error in case of `oq run` is expected
             print(msg)
+        yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
 
 
 def preclassical(srcs, srcfilter, monitor):
