@@ -248,6 +248,8 @@ class ChaoEtAl2020SSlab(ChaoEtAl2020SInter):
     Chao et al. (2020) for Subduction Slab.
     """
 
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
     CONST_FAULT = {'C4': 0.2, 'href': 35}
 
     SUFFIX = "_is"
@@ -257,6 +259,8 @@ class ChaoEtAl2020Asc(ChaoEtAl2020SInter):
     """
     Chao et al. (2020) for Crustal.
     """
+
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     # add rake to determine fault style in _ftype()
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'ztor'}
