@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in `oq prepare_site_model` when sites.csv is
+    the same as the vs30.csv file and there is a grid spacing
   * Speeding up the preclassical calculator
   * Added an entry point /extract/eids_by_gsim for the QGIS plugin
   * Internal: automatically convert the source IDs into unique IDs
