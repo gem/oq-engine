@@ -54,7 +54,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        nsites_factor = numpy.ceil(self.nsites / 100)
+        nsites_factor = min(numpy.ceil(self.nsites / 100), 10)
         if hasattr(self, 'nodal_plane_distribution'):
             rescale = len(self.nodal_plane_distribution.data) * len(
                 self.hypocenter_distribution.data)

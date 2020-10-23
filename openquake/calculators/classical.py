@@ -315,12 +315,12 @@ class ClassicalCalculator(base.HazardCalculator):
             h5=self.datastore.hdf5).reduce()
 
         if oq.calculation_mode == 'preclassical':
-            self.store_source_info(calc_times)
+            self.store_source_info(calc_times, nsites=True)
             self.datastore['full_lt'] = self.csm.full_lt
             self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
 
-        self.update_source_info(calc_times)
+        self.update_source_info(calc_times, nsites=True)
         mags = self.datastore['source_mags']  # by TRT
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
@@ -441,7 +441,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(MAXMEMORY % (T, num_levels, max_num_gsims,
                                   max_num_grp_ids, humansize(pmapbytes)))
 
-        C = oq.concurrent_tasks * 5 or 1
+        C = oq.concurrent_tasks * (5 if totweight > 1E6 else 1) or 1
         if oq.disagg_by_src or oq.is_ucerf():
             f1, f2 = classical1, classical1
         else:

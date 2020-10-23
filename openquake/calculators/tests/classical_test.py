@@ -555,7 +555,7 @@ hazard_uhs-std.csv
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1).csv',
             'hazard_curve-mean-SA(0.5).csv', 'hazard_curve-mean-SA(2.0).csv',
-            'hazard_map-mean.csv'], case_39.__file__, delta=1E-5)
+            'hazard_map-mean.csv'], case_39.__file__, delta=2E-5)
 
     def test_case_40(self):
         # NGA East

@@ -896,7 +896,7 @@ class HazardCalculator(BaseCalculator):
                                                   oq.inputs['job_ini'])
             logging.warning(msg)
 
-    def update_source_info(self, calc_times):
+    def update_source_info(self, calc_times, nsites=False):
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
@@ -904,18 +904,18 @@ class HazardCalculator(BaseCalculator):
         for src_id, arr in calc_times.items():
             src_id = re.sub(r':\d+$', '', src_id)
             row = self.csm.source_info[src_id]
-            row[EFF_RUPTURES] += arr[0]
-            row[NUM_SITES] += arr[1]
             row[CALC_TIME] += arr[2]
-            if 'classical' in self.oqparam.calculation_mode:
+            if nsites:
+                row[EFF_RUPTURES] += arr[0]
+                row[NUM_SITES] += arr[1]
                 srcs[row[SERIAL]].num_ruptures = int(arr[0])
                 srcs[row[SERIAL]].nsites = int(arr[1])
 
-    def store_source_info(self, calc_times):
+    def store_source_info(self, calc_times, nsites=False):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        self.update_source_info(calc_times)
+        self.update_source_info(calc_times, nsites)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         hdf5.extend(self.datastore['source_info'],
                     numpy.array(recs, readinput.source_info_dt))
