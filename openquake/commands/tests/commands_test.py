@@ -562,6 +562,10 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         sc = prepare_site_model([], [vs30_csv], [vs30_csv],
                                 True, True, False, 0, 5, output)
 
+        # test sites_csv == vs30_csv and grid spacing
+        sc = prepare_site_model([], [vs30_csv], [vs30_csv],
+                                True, True, False, 10, 5, output)
+
 
 class ReduceSourceModelTestCase(unittest.TestCase):
 
