@@ -92,7 +92,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     srcfilter = monitor.read('srcfilter')
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
-    maxw = params['max_weight'] / len(gsims)
+    maxw = params['max_weight'] / 2
     if nt > 1 or params['split_sources'] is False:
         splits = srcs
     else:
@@ -410,6 +410,7 @@ class ClassicalCalculator(base.HazardCalculator):
         totweight = 0
         for sg in src_groups:
             for src in sg:
+                src.ngsims = len(gsims_by_trt[src.tectonic_region_type])
                 totweight += src.weight
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '

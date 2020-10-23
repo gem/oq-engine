@@ -58,8 +58,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if hasattr(self, 'nodal_plane_distribution'):
             rescale = len(self.nodal_plane_distribution.data) * len(
                 self.hypocenter_distribution.data)
-            return self.num_ruptures * nsites_factor / rescale
-        return self.num_ruptures * nsites_factor
+        else:
+            rescale = 1
+        return self.num_ruptures * self.ngsims * nsites_factor / rescale
 
     @property
     def grp_ids(self):

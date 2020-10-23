@@ -577,8 +577,7 @@ class PmapMaker(object):
                     rups = self._get_rups([src], sites)
                     ctxs = self._make_ctxs(rups, sites, gidx, grp_ids)
                     self._update_pmap(ctxs)
-            self.calc_times[src_id] += numpy.array(
-                [self.numrups, self.numsites, time.time() - t0])
+            self.calc_times[src_id] += numpy.array([0, 0, time.time() - t0])
         return AccumDict((grp_id, ~p if self.rup_indep else p)
                          for grp_id, p in self.pmap.items())
 
@@ -602,7 +601,7 @@ class PmapMaker(object):
                 p *= src.mutex_weight
                 self.pmap[grp_id] += p
             self.calc_times[src.source_id] += numpy.array(
-                [self.numrups, self.numsites, time.time() - t0])
+                [0, 0, time.time() - t0])
         return self.pmap
 
     def dictarray(self, ctxs):
