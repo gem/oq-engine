@@ -441,7 +441,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(MAXMEMORY % (T, num_levels, max_num_gsims,
                                   max_num_grp_ids, humansize(pmapbytes)))
 
-        C = oq.concurrent_tasks * (5 if totweight > 1E6 else 1) or 1
+        C = oq.concurrent_tasks * (5 if totweight > oq.max_weight else 1) or 1
         if oq.disagg_by_src or oq.is_ucerf():
             f1, f2 = classical1, classical1
         else:

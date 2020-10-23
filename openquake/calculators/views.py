@@ -163,7 +163,6 @@ def view_slow_sources(token, dstore, maxrows=20):
     data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names])
     for name in info.dtype.names:
         data[name] = info[name]
-    data['num_sites'] /= data['eff_ruptures']
     return rst_table(data[::-1][:maxrows])
 
 
