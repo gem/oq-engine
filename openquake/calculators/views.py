@@ -163,7 +163,6 @@ def view_slow_sources(token, dstore, maxrows=20):
     data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names])
     for name in info.dtype.names:
         data[name] = info[name]
-    data['num_sites'] /= data['eff_ruptures']
     return rst_table(data[::-1][:maxrows])
 
 
@@ -462,11 +461,12 @@ def stats(name, array, *extras):
     Returns statistics from an array of numbers.
 
     :param name: a descriptive string
-    :returns: (name, mean, std, min, max, len)
+    :returns: (name, mean, rel_std, min, max, len)
     """
-    std = numpy.nan if len(array) == 1 else numpy.std(array, ddof=1)
-    return (name, numpy.mean(array), std,
-            numpy.min(array), numpy.max(array), len(array)) + extras
+    avg = numpy.mean(array)
+    std = 'nan' if len(array) == 1 else '%d%%' % (numpy.std(array) / avg * 100)
+    return (name, avg, std, numpy.min(array), numpy.max(array),
+            len(array)) + extras
 
 
 @view.add('num_units')

@@ -112,6 +112,8 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         logging.info('Building ruptures')
+        for src in self.csm.get_sources():
+            src.nsites = 1  # avoid 0 weight
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures

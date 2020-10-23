@@ -92,31 +92,30 @@ def classical_split_filter(srcs, gsims, params, monitor):
     srcfilter = monitor.read('srcfilter')
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
-
-    def weight(src, N=len(srcfilter.sitecol.complete)):
-        n = 10 * numpy.sqrt(src.nsites / N)
-        return src.weight * params['rescale_weight'] * n
-
-    # NB: splitting all the sources improves the distribution significantly,
-    # compared to splitting only the big sources
+    maxw = params['max_weight'] / 2
+    splits = []
     if nt > 1 or params['split_sources'] is False:
-        splits = srcs
+        sources = srcs
     else:
+        sources = []
         with monitor("splitting sources"):
-            splits, _stime = split_sources(srcs)
+            for src in srcs:
+                if src.weight > maxw or src.num_ruptures > 10_000:
+                    splits.append(src.source_id)
+                    for s, _ in srcfilter.filter(split_sources([src])[0]):
+                        sources.append(s)
+                else:
+                    sources.append(src)
+    if splits:  # produce more subtasks
+        maxw /= 5
+    msg = 'split %s; ' % (' '.join(splits) or 'nothing')
     for sf in sf_tiles:
-        sources = [src for src, _idx in sf.filter(splits)]
         if not sources:
             yield {'pmap': {}}
             continue
-        maxw = params['max_weight']
-        blocks = list(block_splitter(sources, maxw, weight))
-        if nt == 1 and len(blocks) == 1:
-            yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
-            break
-        for block in blocks:
-            yield classical1, block, gsims, params, sf.slc
-        msg = 'produced %d subtask(s) with mean weight %d' % (
+        blocks = list(block_splitter(
+            sources, maxw, operator.attrgetter('weight')))
+        msg += 'producing %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
         try:
             logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
@@ -124,6 +123,9 @@ def classical_split_filter(srcs, gsims, params, monitor):
         except Exception:
             # a foreign key error in case of `oq run` is expected
             print(msg)
+        for block in blocks[:-1]:
+            yield classical1, block, gsims, params, sf.slc
+        yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
 
 
 def preclassical(srcs, srcfilter, monitor):
@@ -318,12 +320,12 @@ class ClassicalCalculator(base.HazardCalculator):
             h5=self.datastore.hdf5).reduce()
 
         if oq.calculation_mode == 'preclassical':
-            self.store_source_info(calc_times)
+            self.store_source_info(calc_times, nsites=True)
             self.datastore['full_lt'] = self.csm.full_lt
             self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
 
-        self.update_source_info(calc_times)
+        self.update_source_info(calc_times, nsites=True)
         mags = self.datastore['source_mags']  # by TRT
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
@@ -410,16 +412,11 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         src_groups = self.csm.src_groups
-
-        def srcweight(src):
-            trt = src.tectonic_region_type
-            g = len(gsims_by_trt[trt])
-            return src.weight * g
-
         totweight = 0
         for sg in src_groups:
             for src in sg:
-                totweight += srcweight(src)
+                src.ngsims = len(gsims_by_trt[src.tectonic_region_type])
+                totweight += src.weight
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
                            'ruptures with complex_fault_mesh_spacing={} km')
@@ -451,11 +448,10 @@ class ClassicalCalculator(base.HazardCalculator):
 
         C = oq.concurrent_tasks or 1
         if oq.disagg_by_src or oq.is_ucerf():
-            C *= 5  # use more tasks, especially in UCERF
             f1, f2 = classical1, classical1
         else:
             f1, f2 = classical1, classical_split_filter
-        max_weight = max(min(totweight / C, oq.max_weight), oq.min_weight)
+        max_weight = max(totweight / C, oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
         param = dict(
@@ -477,17 +473,17 @@ class ClassicalCalculator(base.HazardCalculator):
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
-                        else block_splitter(sg, max_weight * ntiles,
-                                            srcweight, sort=True))
+                        else block_splitter(sg, 2 * max_weight * ntiles,
+                                            operator.attrgetter('weight'),
+                                            sort=True))
                 blocks = list(blks)
                 nb = len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
-                                  len(block),
-                                  sum(srcweight(src) for src in block))
+                                  len(block), sum(src.weight for src in block))
                     smap.submit((block, gsims, param), f2)
 
-            w = sum(srcweight(src) for src in sg)
+            w = sum(src.weight for src in sg)
             logging.info('TRT = %s', sg.trt)
             it = sorted(oq.maximum_distance.ddic[sg.trt].items())
             md = '%s->%d ... %s->%d' % (it[0] + it[-1])

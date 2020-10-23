@@ -36,7 +36,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
-    nsites = 1  # set when filtering the source
+    nsites = 0  # set when filtering the source
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
@@ -54,11 +54,13 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
+        nsites_factor = bool(self.nsites)
         if hasattr(self, 'nodal_plane_distribution'):
             rescale = len(self.nodal_plane_distribution.data) * len(
                 self.hypocenter_distribution.data)
-            return self.num_ruptures / rescale
-        return self.num_ruptures
+        else:
+            rescale = 1
+        return self.num_ruptures * self.ngsims * nsites_factor / rescale
 
     @property
     def grp_ids(self):
