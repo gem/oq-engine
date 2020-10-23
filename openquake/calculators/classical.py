@@ -107,7 +107,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
                 else:
                     sources.append(src)
     if splits:  # produce more subtasks
-        maxw /= 2
+        maxw /= 5
     msg = 'split %s; ' % (' '.join(splits) or 'nothing')
     for sf in sf_tiles:
         if not sources:
@@ -115,7 +115,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
             continue
         blocks = list(block_splitter(
             sources, maxw, operator.attrgetter('weight')))
-        msg += 'produced %d subtask(s) with mean weight %d' % (
+        msg += 'producing %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
         try:
             logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
