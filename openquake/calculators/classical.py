@@ -110,11 +110,11 @@ def classical_split_filter(srcs, gsims, params, monitor):
         maxw /= 5
     msg = 'split %s; ' % (' '.join(splits) or 'nothing')
     for sf in sf_tiles:
-        if not sources:
-            yield {'pmap': {}}
-            continue
         blocks = list(block_splitter(
             sources, maxw, operator.attrgetter('weight')))
+        if not blocks:
+            yield {'pmap': {}}
+            continue
         msg += 'producing %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
         try:
