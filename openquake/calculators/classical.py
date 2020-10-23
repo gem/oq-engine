@@ -106,6 +106,8 @@ def classical_split_filter(srcs, gsims, params, monitor):
                         sources.append(s)
                 else:
                     sources.append(src)
+    if splits:  # produce more subtasks
+        maxw /= 2
     msg = 'split %s; ' % (' '.join(splits) or 'nothing')
     for sf in sf_tiles:
         if not sources:
@@ -113,8 +115,6 @@ def classical_split_filter(srcs, gsims, params, monitor):
             continue
         blocks = list(block_splitter(
             sources, maxw, operator.attrgetter('weight')))
-        for block in blocks[:-1]:
-            yield classical1, block, gsims, params, sf.slc
         msg += 'produced %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
         try:
@@ -123,6 +123,8 @@ def classical_split_filter(srcs, gsims, params, monitor):
         except Exception:
             # a foreign key error in case of `oq run` is expected
             print(msg)
+        for block in blocks[:-1]:
+            yield classical1, block, gsims, params, sf.slc
         yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
 
 
@@ -444,7 +446,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(MAXMEMORY % (T, num_levels, max_num_gsims,
                                   max_num_grp_ids, humansize(pmapbytes)))
 
-        C = oq.concurrent_tasks * (2 if totweight > oq.max_weight else 1) or 1
+        C = oq.concurrent_tasks or 1
         if oq.disagg_by_src or oq.is_ucerf():
             f1, f2 = classical1, classical1
         else:
