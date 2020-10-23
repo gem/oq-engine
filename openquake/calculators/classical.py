@@ -93,6 +93,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
     maxw = params['max_weight'] / 2
+    splits = []
     if nt > 1 or params['split_sources'] is False:
         sources = srcs
     else:
@@ -100,11 +101,12 @@ def classical_split_filter(srcs, gsims, params, monitor):
         with monitor("splitting sources"):
             for src in srcs:
                 if src.weight > maxw or src.num_ruptures > 10_000:
-                    print('splitting', src)
+                    splits.append(src.source_id)
                     for s, _ in srcfilter.filter(split_sources([src])[0]):
                         sources.append(s)
                 else:
                     sources.append(src)
+    msg = 'split %s; ' % (' '.join(splits) or 'nothing')
     for sf in sf_tiles:
         if not sources:
             yield {'pmap': {}}
@@ -113,7 +115,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
             sources, maxw, operator.attrgetter('weight')))
         for block in blocks[:-1]:
             yield classical1, block, gsims, params, sf.slc
-        msg = 'produced %d subtask(s) with mean weight %d' % (
+        msg += 'produced %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
         try:
             logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
@@ -442,7 +444,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(MAXMEMORY % (T, num_levels, max_num_gsims,
                                   max_num_grp_ids, humansize(pmapbytes)))
 
-        C = oq.concurrent_tasks or 1
+        C = oq.concurrent_tasks * (2 if totweight > oq.max_weight else 1) or 1
         if oq.disagg_by_src or oq.is_ucerf():
             f1, f2 = classical1, classical1
         else:
