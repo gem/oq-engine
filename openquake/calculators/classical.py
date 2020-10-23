@@ -100,6 +100,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
         with monitor("splitting sources"):
             for src in srcs:
                 if src.weight > maxw or src.num_ruptures > 10_000:
+                    print('splitting', src)
                     for s, _ in srcfilter.filter(split_sources([src])[0]):
                         sources.append(s)
                 else:
