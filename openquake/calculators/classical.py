@@ -94,17 +94,17 @@ def classical_split_filter(srcs, gsims, params, monitor):
     nt = len(sf_tiles)
     maxw = params['max_weight'] / 2
     if nt > 1 or params['split_sources'] is False:
-        splits = srcs
+        sources = srcs
     else:
-        splits = []
+        sources = []
         with monitor("splitting sources"):
             for src in srcs:
                 if src.weight > maxw or src.num_ruptures > 10_000:
-                    splits.extend(split_sources([src])[0])
+                    for s, _ in srcfilter.filter(split_sources([src])[0]):
+                        sources.append(s)
                 else:
-                    splits.append(src)
+                    sources.append(src)
     for sf in sf_tiles:
-        sources = [src for src, _idx in sf.filter(splits)]
         if not sources:
             yield {'pmap': {}}
             continue
