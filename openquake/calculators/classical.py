@@ -556,7 +556,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     # avoid saving PoEs == 1
                     arr = base.fix_ones(pmap).array(self.N)
                     slc = slice_by_grp['grp-%02d' % key]
-                    self.datastore['_poes'][:, :, slc] = arr
+                    size = slc.stop - slc.start
+                    # check size in oq-risk-tests eb2cl
+                    self.datastore['_poes'][:, :, slc] = arr[:, :, :size]
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
