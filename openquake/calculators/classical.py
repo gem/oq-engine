@@ -109,7 +109,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
                     sources.append(src)
     if splits:  # produce more subtasks
         maxw /= 5
-    msg = 'split %s; ' % (' '.join(splits) or 'nothing')
+    msg = 'split %s; ' % ' '.join(splits) if splits else ''
     for sf in sf_tiles:
         blocks = list(block_splitter(
             sources, maxw, operator.attrgetter('weight')))

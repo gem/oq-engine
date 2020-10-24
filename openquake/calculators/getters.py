@@ -185,7 +185,7 @@ class PmapGetter(object):
                 pcurves[rlzi] |= c
         return pcurves
 
-    def get_hcurves(self, pmap_by_grp_id, rlzs_by_grp):
+    def get_hcurves(self, pmap_by_grp_id, rlzs_by_grp):  # in disagg_by_src
         """
         :param pmap_by_grp_id: a dictionary of ProbabilityMaps by group ID
         :returns: an array of PoEs of shape (N, R, M, L)
