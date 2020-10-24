@@ -549,13 +549,12 @@ class ClassicalCalculator(base.HazardCalculator):
                 if isinstance(key, str):  # disagg_by_src
                     serial = self.csm.source_info[key][readinput.SERIAL]
                     self.datastore['disagg_by_src'][..., serial] = (
-                        pgetter.get_hcurves(
-                            {'grp-%02d' % gid: pmap[gid] for gid in pmap}))
+                        pgetter.get_hcurves(pmap, rlzs_by_grp))
                 elif pmap:  # pmap can be missing if the group is filtered away
                     # key is the group ID
                     trt = self.full_lt.trt_by_grp[key]
-                    base.fix_ones(pmap)  # avoid saving PoEs == 1
-                    arr = pmap.array(self.N)
+                    # avoid saving PoEs == 1
+                    arr = base.fix_ones(pmap).array(self.N)
                     slc = slice_by_grp['grp-%02d' % key]
                     self.datastore['_poes'][:, :, slc] = arr
                     extreme = max(
