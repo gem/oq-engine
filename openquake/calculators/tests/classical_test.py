@@ -258,7 +258,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # test sampling use the right number of gsims by looking at
         # the poes datasets which have shape (N, L, G)
         G = 1  # and not 2
-        self.calc.datastore['poes/grp-00'].array.shape[-1] == G
+        self.calc.datastore['poes/grp-00'].shape[-1] == G
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources

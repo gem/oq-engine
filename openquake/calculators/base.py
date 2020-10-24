@@ -538,14 +538,15 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.datastore['poes/grp-00'] = fix_ones(readinput.pmap)
+            poes = fix_ones(readinput.pmap).array(len(haz_sitecol))
+            self.datastore['poes/grp-00'] = poes
             self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             with hdf5.File(self.datastore.tempname, 'a') as t:
                 t['oqparam'] = oq
                 t['rlzs_by_grp'] = fake.get_rlzs_by_grp()
-                t['poes/grp-00'] = fix_ones(readinput.pmap)
+                t['poes/grp-00'] = poes
             self.realizations = fake.get_realizations()
             self.save_crmodel()
         elif oq.hazard_calculation_id:
