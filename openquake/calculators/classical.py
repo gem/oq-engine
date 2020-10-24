@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
+import os
 import re
 import time
 import copy
@@ -326,6 +327,14 @@ class ClassicalCalculator(base.HazardCalculator):
             return
 
         self.update_source_info(calc_times, nsites=True)
+        # if OQ_SAMPLE_SOURCES is set extract one source for group
+        ss = os.environ.get('OQ_SAMPLE_SOURCES')
+        if ss:
+            for sg in self.csm.src_groups:
+                if not sg.atomic:
+                    srcs = [src for src in sg if src.nsites]
+                    sg.sources = srcs[0]
+
         mags = self.datastore['source_mags']  # by TRT
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
