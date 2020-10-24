@@ -375,6 +375,7 @@ class ClassicalCalculator(base.HazardCalculator):
         size = numpy.prod(poes_shape) * 8
         logging.info('Required %s for the ProbabilityMaps', humansize(size))
         self.datastore['rlzs_by_grp'] = rlzs_by_grp
+        self.datastore.create_dset('_poes', F64, poes_shape)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
@@ -539,15 +540,6 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
         slice_by_grp = getters.get_slice_by_grp(rlzs_by_grp)
-        G_ = sum(len(vals) for vals in rlzs_by_grp.values())
-        poes_shape = (self.N, len(oq.imtls.array), G_)
-        dset = self.datastore.create_dset('_poes', F64, poes_shape)
-        if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
-            with hdf5.File(self.datastore.tempname, 'a') as cache:
-                cache['oqparam'] = oq
-                cache['rlzs_by_grp'] = rlzs_by_grp
-                if '_poes' not in cache:
-                    cache.create_dataset('_poes', poes_shape, F64)
         data = []
         weights = [rlz.weight for rlz in self.realizations]
         pgetter = getters.PmapGetter(
@@ -565,10 +557,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
                     arr = pmap.array(self.N)
                     slc = slice_by_grp['grp-%02d' % key]
-                    dset[:, :, slc] = arr
-                    if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
-                        with hdf5.File(self.datastore.tempname, 'a') as cache:
-                            cache['_poes'][:, :, slc] = arr
+                    self.datastore['_poes'][:, :, slc] = arr
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
@@ -576,7 +565,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id is None and '_poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
-            self.datastore.swmr_on()
+            self.datastore.swmr_on()  # needed
             self.calc_stats()
 
     def calc_stats(self):
