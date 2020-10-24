@@ -91,12 +91,13 @@ class CollapseTestCase(unittest.TestCase):
             weights.append(weight)
         for i, src in enumerate(srcs):
             src.id = i
+        N = len(self.srcfilter.sitecol.complete)
         res = classical(srcs, self.srcfilter, self.gsims,
                         dict(imtls=self.imtls, truncation_level2=2,
                              collapse_level=2))
         pmap = res['pmap']
         effrups = sum(nr for nr, ns, dt in res['calc_times'].values())
-        curves = [pmap[grp_id].array[0, :, 0] for grp_id in sorted(pmap)]
+        curves = [pmap[grp_id].array(N)[0, :, 0] for grp_id in sorted(pmap)]
         mean = numpy.average(curves, axis=0, weights=weights)
         return mean, srcs, effrups, weights
 
