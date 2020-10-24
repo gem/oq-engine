@@ -546,8 +546,6 @@ class HazardCalculator(BaseCalculator):
             self.datastore['rlzs_by_grp'] = fake.get_rlzs_by_grp()
             with hdf5.File(self.datastore.tempname, 'a') as t:
                 t['oqparam'] = oq
-                t['rlzs_by_grp'] = fake.get_rlzs_by_grp()
-                t['_poes'] = poes
             self.realizations = fake.get_realizations()
             self.save_crmodel()
             self.datastore.swmr_on()
@@ -999,8 +997,6 @@ class RiskCalculator(HazardCalculator):
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
-            elif kind == 'poe':
-                dstore = self.datastore
             else:
                 dstore = self.datastore
             meth = getattr(self, '_gen_riskinputs_' + kind)

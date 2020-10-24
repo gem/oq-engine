@@ -542,12 +542,6 @@ class ClassicalCalculator(base.HazardCalculator):
         slice_by_grp = getters.get_slice_by_grp(rlzs_by_grp)
         G_ = sum(len(vals) for vals in rlzs_by_grp.values())
         poes_shape = (self.N, len(oq.imtls.array), G_)
-        if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
-            with hdf5.File(self.datastore.tempname, 'a') as cache:
-                cache['oqparam'] = oq
-                cache['rlzs_by_grp'] = rlzs_by_grp
-                if '_poes' not in cache:
-                    cache.create_dataset('_poes', poes_shape, F64)
         data = []
         weights = [rlz.weight for rlz in self.realizations]
         pgetter = getters.PmapGetter(
@@ -566,9 +560,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     arr = pmap.array(self.N)
                     slc = slice_by_grp['grp-%02d' % key]
                     self.datastore['_poes'][:, :, slc] = arr
-                    if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
-                        with hdf5.File(self.datastore.tempname, 'a') as cache:
-                            cache['_poes'][:, :, slc] = arr
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
@@ -576,6 +567,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id is None and '_poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
+            self.datastore.swmr_on()  # needed
             self.calc_stats()
 
     def calc_stats(self):
