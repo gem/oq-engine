@@ -73,7 +73,7 @@ def get_slice_by_grp(rlzs_by_grp):
     """
     dic = {}  # grp -> slice
     start = 0
-    for grp, allrlzs in rlzs_by_grp.items():
+    for grp, allrlzs in sorted(rlzs_by_grp.items()):  # NB: sorting!
         ngsims = len(allrlzs)
         dic[grp] = slice(start, start + ngsims)
         start += ngsims
