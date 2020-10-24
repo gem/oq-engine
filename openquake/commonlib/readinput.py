@@ -721,12 +721,7 @@ def get_composite_source_model(oqparam, h5=None):
     if oqparam.cachedir and not oqparam.is_ucerf():
         csm = _get_cachedir(oqparam, full_lt, h5)
     else:
-        csm = get_csm(oqparam, full_lt, h5)
-    ss = float(os.environ.get('OQ_SAMPLE_SOURCES', 0))
-    if ss:
-        for sg in csm.src_groups:
-            if not sg.atomic:
-                sg.sources = random_filter(sg, ss) or sg.sources[0]
+        csm = get_csm(oqparam, full_lt,  h5)
     grp_ids = csm.get_grp_ids()
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
     if oqparam.is_event_based():
