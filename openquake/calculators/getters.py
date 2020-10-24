@@ -73,7 +73,7 @@ def get_slice_by_grp(rlzs_by_grp):
     """
     dic = {}  # grp -> slice
     start = 0
-    for grp in sorted(rlzs_by_grp, key=lambda grp: int(grp[4:])):
+    for grp in rlzs_by_grp:
         ngsims = len(rlzs_by_grp[grp])
         dic[grp] = slice(start, start + ngsims)
         start += ngsims
@@ -161,9 +161,10 @@ class PmapGetter(object):
         self.init()
         assert self.sids is not None
         pmap = probability_map.ProbabilityMap(len(self.imtls.array), 1)
-        for g, rlzis in enumerate(self.rlzs_by_g):
+        for g, rlzis in enumerate(self.rlzs_by_g):  # the rlzs are disjoint
             if rlzi in rlzis:
                 pmap |= self._pmap.extract(g)
+                break
         return pmap
 
     def get_pcurves(self, sid):  # used in classical
