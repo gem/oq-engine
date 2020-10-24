@@ -375,6 +375,7 @@ class ClassicalCalculator(base.HazardCalculator):
         size = numpy.prod(poes_shape) * 8
         logging.info('Required %s for the ProbabilityMaps', humansize(size))
         self.datastore['rlzs_by_grp'] = rlzs_by_grp
+        self.datastore.create_dset('_poes', F64, poes_shape)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
@@ -541,7 +542,6 @@ class ClassicalCalculator(base.HazardCalculator):
         slice_by_grp = getters.get_slice_by_grp(rlzs_by_grp)
         G_ = sum(len(vals) for vals in rlzs_by_grp.values())
         poes_shape = (self.N, len(oq.imtls.array), G_)
-        dset = self.datastore.create_dset('_poes', F64, poes_shape)
         if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
             with hdf5.File(self.datastore.tempname, 'a') as cache:
                 cache['oqparam'] = oq
@@ -565,7 +565,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
                     arr = pmap.array(self.N)
                     slc = slice_by_grp['grp-%02d' % key]
-                    dset[:, :, slc] = arr
+                    self.datastore['_poes'][:, :, slc] = arr
                     if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
                         with hdf5.File(self.datastore.tempname, 'a') as cache:
                             cache['_poes'][:, :, slc] = arr
