@@ -21,9 +21,7 @@ import unittest
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.probability_map import combine
 from openquake.hazardlib.contexts import read_ctxs
-from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -64,25 +62,6 @@ class DisaggregationTestCase(CalculatorTestCase):
              'rlz-0-SA(0.025)-sid-0-poe-1_Mag_Dist.csv'],
             case_1.__file__,
             fmt='csv')
-
-        # disaggregation by source group
-        rlzs = self.calc.datastore['full_lt'].get_realizations()
-        ws = [rlz.weight for rlz in rlzs]
-        sids = self.calc.sitecol.sids
-        oq = self.calc.oqparam
-        pgetter = getters.PmapGetter(self.calc.datastore, ws, sids,
-                                     oq.imtls, oq.poes)
-        pgetter.init()
-        pmaps = []
-        for grp in self.calc.datastore['rlzs_by_grp']:
-            pmaps.append(pgetter.get_mean(grp))
-        # make sure that the combination of the contributions is okay
-        pmap = pgetter.get_mean()  # total mean map
-        cmap = combine(pmaps)  # combination of the mean maps per source group
-        for sid in pmap:
-            numpy.testing.assert_almost_equal(pmap[sid].array, cmap[sid].array)
-
-        check_disagg_by_src(self.calc.datastore)
 
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations

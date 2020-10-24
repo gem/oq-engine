@@ -162,10 +162,8 @@ class PmapGetter(object):
         assert self.sids is not None
         pmap = probability_map.ProbabilityMap(len(self.imtls.array), 1)
         for g, rlzis in enumerate(self.rlzs_by_g):
-            for r in rlzis:
-                if r == rlzi:
-                    pmap |= self._pmap.extract(g)
-                    break
+            if rlzi in rlzis:
+                pmap |= self._pmap.extract(g)
         return pmap
 
     def get_pcurves(self, sid):  # used in classical
@@ -201,7 +199,7 @@ class PmapGetter(object):
                         res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
         return res.reshape(self.N, self.R, self.M, -1)
 
-    def get_mean(self, grp=None):
+    def get_mean(self):
         """
         Compute the mean curve as a ProbabilityMap
 
@@ -212,14 +210,12 @@ class PmapGetter(object):
         self.init()
         if len(self.weights) == 1:  # one realization
             # the standard deviation is zero
-            pmap = self.get(0, grp)
+            pmap = self.get(0)
             for sid, pcurve in pmap.items():
                 array = numpy.zeros(pcurve.array.shape)
                 array[:, 0] = pcurve.array[:, 0]
                 pcurve.array = array
             return pmap
-        elif grp:
-            raise NotImplementedError('multiple realizations')
         L = len(self.imtls.array)
         pmap = probability_map.ProbabilityMap.build(L, 1, self.sids)
         for sid in self.sids:
