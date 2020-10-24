@@ -123,14 +123,12 @@ class PmapGetter(object):
         self._pmap_by_grp = {}
         if 'poes' in dstore:
             # build probability maps restricted to the given sids
-            ok_sids = set(self.sids)
+            ok_sids = self.sids
             for grp, dset in dstore['poes'].items():
-                ds = dset['array']
-                L, G = ds.shape[1:]
+                L, G = dset.shape[1:]
                 pmap = probability_map.ProbabilityMap(L, G)
-                for idx, sid in enumerate(dset['sids'][()]):
-                    if sid in ok_sids:
-                        pmap[sid] = probability_map.ProbabilityCurve(ds[idx])
+                for sid, arr in zip(ok_sids, dset[ok_sids]):
+                    pmap[sid] = probability_map.ProbabilityCurve(arr)
                 self._pmap_by_grp[grp] = pmap
                 self.nbytes += pmap.nbytes
         dstore.close()

@@ -721,7 +721,7 @@ def get_composite_source_model(oqparam, h5=None):
     if oqparam.cachedir and not oqparam.is_ucerf():
         csm = _get_cachedir(oqparam, full_lt, h5)
     else:
-        csm = get_csm(oqparam, full_lt, h5)
+        csm = get_csm(oqparam, full_lt,  h5)
     grp_ids = csm.get_grp_ids()
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
     if oqparam.is_event_based():

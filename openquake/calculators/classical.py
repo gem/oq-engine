@@ -556,10 +556,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     base.fix_ones(pmap)  # avoid saving PoEs == 1
                     trt = self.full_lt.trt_by_grp[key]
                     name = 'poes/grp-%02d' % key
-                    self.datastore[name] = pmap
+                    self.datastore[name] = arr = pmap.array(self.N)
                     if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
                         with hdf5.File(self.datastore.tempname, 'a') as cache:
-                            cache[name] = pmap
+                            cache[name] = arr
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
@@ -567,6 +567,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id is None and 'poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
+            self.datastore.swmr_on()
             self.calc_stats()
 
     def calc_stats(self):

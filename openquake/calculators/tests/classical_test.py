@@ -124,10 +124,6 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini')
 
-        # check view_pmap for a single realization
-        got = view('pmap:grp-00', self.calc.datastore)
-        self.assertEqual(got, '<ProbabilityMap 1, 4, 1>')
-
         # check view inputs
         lines = view('inputs', self.calc.datastore).splitlines()
         self.assertEqual(len(lines), 9)
@@ -258,7 +254,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # test sampling use the right number of gsims by looking at
         # the poes datasets which have shape (N, L, G)
         G = 1  # and not 2
-        self.calc.datastore['poes/grp-00'].array.shape[-1] == G
+        self.calc.datastore['poes/grp-00'].shape[-1] == G
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
