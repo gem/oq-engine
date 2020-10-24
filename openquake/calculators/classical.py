@@ -317,7 +317,7 @@ class ClassicalCalculator(base.HazardCalculator):
         calc_times = parallel.Starmap.apply(
             preclassical, (srcs, srcfilter),
             concurrent_tasks=oq.concurrent_tasks or 1,
-            h5=self.datastore.hdf5).reduce()
+            num_cores=oq.num_cores, h5=self.datastore.hdf5).reduce()
 
         if oq.calculation_mode == 'preclassical':
             self.store_source_info(calc_times, nsites=True)
