@@ -74,7 +74,7 @@ class DisaggregationTestCase(CalculatorTestCase):
                                      oq.imtls, oq.poes)
         pgetter.init()
         pmaps = []
-        for grp in sorted(self.calc.datastore['poes']):
+        for grp in self.calc.datastore['rlzs_by_grp']:
             pmaps.append(pgetter.get_mean(grp))
         # make sure that the combination of the contributions is okay
         pmap = pgetter.get_mean()  # total mean map

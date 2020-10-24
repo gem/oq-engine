@@ -371,7 +371,8 @@ class ClassicalCalculator(base.HazardCalculator):
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
         G_ = sum(len(vals) for vals in rlzs_by_grp.values())
-        size = self.N * len(oq.imtls.array) * G_ * 8
+        poes_shape = (self.N, len(oq.imtls.array), G_)  # NLG
+        size = numpy.prod(poes_shape) * 8
         logging.info('Required %s for the ProbabilityMaps', humansize(size))
         self.datastore['rlzs_by_grp'] = rlzs_by_grp
         self.datastore.swmr_on()
@@ -536,10 +537,17 @@ class ClassicalCalculator(base.HazardCalculator):
         if nr:  # few sites, log the number of ruptures per magnitude
             logging.info('%s', nr)
         oq = self.oqparam
+        rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
+        slice_by_grp = getters.get_slices_by_grp(rlzs_by_grp)
+        G_ = sum(len(vals) for vals in rlzs_by_grp.values())
+        poes_shape = (self.N, len(oq.imtls.array), G_)
+        dset = self.datastore.create_dset('_poes', F64, poes_shape)
         if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
             with hdf5.File(self.datastore.tempname, 'a') as cache:
                 cache['oqparam'] = oq
-                cache['rlzs_by_grp'] = self.full_lt.get_rlzs_by_grp()
+                cache['rlzs_by_grp'] = rlzs_by_grp
+                if '_poes' not in cache:
+                    cache.create_dataset('_poes', poes_shape, F64)
         data = []
         weights = [rlz.weight for rlz in self.realizations]
         pgetter = getters.PmapGetter(
@@ -553,18 +561,19 @@ class ClassicalCalculator(base.HazardCalculator):
                             {'grp-%02d' % gid: pmap[gid] for gid in pmap}))
                 elif pmap:  # pmap can be missing if the group is filtered away
                     # key is the group ID
-                    base.fix_ones(pmap)  # avoid saving PoEs == 1
                     trt = self.full_lt.trt_by_grp[key]
-                    name = 'poes/grp-%02d' % key
-                    self.datastore[name] = arr = pmap.array(self.N)
+                    base.fix_ones(pmap)  # avoid saving PoEs == 1
+                    arr = pmap.array(self.N)
+                    slc = slice_by_grp['grp-%02d' % key]
+                    dset[:, :, slc] = arr
                     if oq.calculation_mode.endswith(('risk', 'damage', 'bcr')):
                         with hdf5.File(self.datastore.tempname, 'a') as cache:
-                            cache[name] = arr
+                            cache['_poes'][:, :, slc] = arr
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
                     data.append((key, trt, extreme))
-        if oq.hazard_calculation_id is None and 'poes' in self.datastore:
+        if oq.hazard_calculation_id is None and '_poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
             self.datastore.swmr_on()
