@@ -914,6 +914,7 @@ class GsimLogicTree(object):
                 _toml = toml.dumps({'AvgGMPE': kwargs})
                 gsim = AvgGMPE(**kwargs)
                 gsim._toml = _toml
+                new.values[trt] = [gsim]
                 branch = BranchTuple(trt, bs_id, gsim, sum(weights), True)
                 new.branches.append(branch)
             else:
