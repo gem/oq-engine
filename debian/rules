@@ -20,7 +20,7 @@ bd=openquake/bin
 
 BIONIC_DEP =
 BIONIC_REC =
-XENIAL_DEP =
+XENIAL_DEP = oq-python3.8-distutils
 XENIAL_REC =
 
 ifeq ($(shell lsb_release --codename --short),bionic)
