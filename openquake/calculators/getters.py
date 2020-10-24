@@ -67,7 +67,7 @@ def sig_eps_dt(imts):
     return numpy.dtype(lst)
 
 
-def get_slices_by_grp(rlzs_by_grp):
+def get_slice_by_grp(rlzs_by_grp):
     """
     :returns: a dictionary 'grp-XX' -> slice
     """
@@ -131,13 +131,13 @@ class PmapGetter(object):
         dstore = hdf5.File(self.filename, 'r')
         self.rlzs_by_grp = {grp: dset[()] for grp, dset in
                             dstore['rlzs_by_grp'].items()}
-        slices_by_grp = get_slices_by_grp(self.rlzs_by_grp)
+        slice_by_grp = get_slice_by_grp(self.rlzs_by_grp)
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
         dset = dstore['_poes']  # NLG_
         L = dset.shape[1]
-        for grp, slc in slices_by_grp.items():
+        for grp, slc in slice_by_grp.items():
             G = slc.stop - slc.start
             pmap = probability_map.ProbabilityMap(L, G)
             for sid, arr in zip(self.sids, dset[self.sids, :, slc]):

@@ -538,7 +538,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('%s', nr)
         oq = self.oqparam
         rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
-        slice_by_grp = getters.get_slices_by_grp(rlzs_by_grp)
+        slice_by_grp = getters.get_slice_by_grp(rlzs_by_grp)
         G_ = sum(len(vals) for vals in rlzs_by_grp.values())
         poes_shape = (self.N, len(oq.imtls.array), G_)
         dset = self.datastore.create_dset('_poes', F64, poes_shape)
