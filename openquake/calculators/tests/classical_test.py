@@ -124,10 +124,6 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini')
 
-        # check view_pmap for a single realization
-        got = view('pmap:grp-00', self.calc.datastore)
-        self.assertEqual(got, '<ProbabilityMap 1, 4, 1>')
-
         # check view inputs
         lines = view('inputs', self.calc.datastore).splitlines()
         self.assertEqual(len(lines), 9)

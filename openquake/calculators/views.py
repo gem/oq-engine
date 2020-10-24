@@ -801,21 +801,6 @@ def view_elt(token, dstore):
     return rst_table(tbl, header)
 
 
-@view.add('pmap')
-def view_pmap(token, dstore):
-    """
-    Display the mean ProbabilityMap associated to a given source group name
-    """
-    grp = token.split(':')[1]  # called as pmap:grp
-    pmap = {}
-    rlzs = dstore['full_lt'].get_realizations()
-    weights = [rlz.weight for rlz in rlzs]
-    pgetter = getters.PmapGetter(dstore, weights, dstore['sitecol'].sids,
-                                 dstore['oqparam'].imtls)
-    pmap = pgetter.get_mean(grp)
-    return str(pmap)
-
-
 @view.add('bad_ruptures')
 def view_bad_ruptures(token, dstore):
     """
