@@ -726,7 +726,7 @@ def get_composite_source_model(oqparam, h5=None):
     if ss:
         for sg in csm.src_groups:
             if not sg.atomic:
-                sg.sources = random_filter(sg, ss)
+                sg.sources = random_filter(sg, ss) or sg.sources[0]
     grp_ids = csm.get_grp_ids()
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
     if oqparam.is_event_based():
