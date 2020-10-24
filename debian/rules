@@ -24,15 +24,30 @@ XENIAL_DEP =
 XENIAL_REC =
 
 ifeq ($(shell lsb_release --codename --short),bionic)
+	BUILD_DEPENDS=
 	DEPENDS = -Vdist:Depends="$(BIONIC_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(BIONIC_REC)"
 else ifeq ($(shell lsb_release --codename --short),xenial)
+	BUILD_DEPENDS=, oq-python3.8-distutils
 	DEPENDS = -Vdist:Depends="$(XENIAL_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(XENIAL_REC)"
 else
+	BUILD_DEPENDS=
 	DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
 endif
+
+control-file:
+	sed -e "s/@BUILD_DEPENDS@/$(BUILD_DEPENDS)/g" \
+	        debian/control.in \
+	      > debian/control.tmp
+	[ -e debian/control ] \
+	  && cmp -s debian/control debian/control.tmp \
+	  && rm -f debian/control.tmp && exit 0; \
+	  mv debian/control.tmp debian/control
+
+override_dh_clean: control-file
+	dh_clean
 
 override_dh_auto_build:
 	/opt/openquake/bin/python3 setup.py build --force
