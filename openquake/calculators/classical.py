@@ -540,8 +540,6 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
         slice_by_grp = getters.get_slice_by_grp(rlzs_by_grp)
-        G_ = sum(len(vals) for vals in rlzs_by_grp.values())
-        poes_shape = (self.N, len(oq.imtls.array), G_)
         data = []
         weights = [rlz.weight for rlz in self.realizations]
         pgetter = getters.PmapGetter(
