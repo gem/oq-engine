@@ -67,6 +67,19 @@ def sig_eps_dt(imts):
     return numpy.dtype(lst)
 
 
+def get_slices_by_grp(rlzs_by_grp):
+    """
+    :returns: a dictionary 'grp-XX' -> slice
+    """
+    dic = {}  # grp -> slice
+    start = 0
+    for grp, allrlzs in rlzs_by_grp.items():
+        ngsims = len(allrlzs)
+        dic[grp] = slice(start, start + ngsims)
+        start += ngsims
+    return dic
+
+
 class PmapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
@@ -118,6 +131,7 @@ class PmapGetter(object):
         dstore = hdf5.File(self.filename, 'r')
         self.rlzs_by_grp = {grp: dset[()] for grp, dset in
                             dstore['rlzs_by_grp'].items()}
+        slice_by_grp = get_slices_by_grp(self.rlzs_by_grp)
 
         # populate _pmap_by_grp
         self._pmap_by_grp = {}
@@ -126,6 +140,8 @@ class PmapGetter(object):
             ok_sids = self.sids
             for grp, dset in dstore['poes'].items():
                 L, G = dset.shape[1:]
+                slc = slice_by_grp[grp]
+                assert slc.stop - slc.start == G, slc
                 pmap = probability_map.ProbabilityMap(L, G)
                 for sid, arr in zip(ok_sids, dset[ok_sids]):
                     pmap[sid] = probability_map.ProbabilityCurve(arr)
