@@ -576,7 +576,6 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id is None and '_poes' in self.datastore:
             self.datastore['disagg_by_grp'] = numpy.array(
                 sorted(data), grp_extreme_dt)
-            self.datastore.swmr_on()
             self.calc_stats()
 
     def calc_stats(self):
