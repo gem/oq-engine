@@ -199,15 +199,6 @@ class ClassicalTestCase(CalculatorTestCase):
              'quantile_curve-0.9.csv'],
             case_11.__file__)
 
-        # checking PmapGetter.get_pcurve
-        pgetter = PmapGetter(self.calc.datastore, self.calc.weights,
-                             self.calc.sitecol.sids, self.calc.oqparam.imtls)
-        poes = pgetter.get_hcurves(pgetter.init())[0]
-        mean = self.calc.datastore.sel('hcurves-stats', stat='mean', sid=0)
-        mean2 = poes.T @ numpy.array([w['weight'] for w in self.calc.weights])
-        aac(mean2.flat, mean.flat)
-        check_disagg_by_src(self.calc.datastore)
-
     def test_case_12(self):
         # test Modified GMPE
         self.assert_curves_ok(
