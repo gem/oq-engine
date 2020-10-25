@@ -148,21 +148,6 @@ class PmapGetter(object):
         """
         return self.get_pcurves(self.sids[0])
 
-    def get(self, rlzi):
-        """
-        :param rlzi: a realization index
-        :returns: the hazard curves for the given realization
-        """
-        self.init()
-        pmap = probability_map.ProbabilityMap(len(self.imtls.array), 1)
-        for g, rlzis in enumerate(self.rlzs_by_g):
-            # disaggregation case_master is sensitive to the logic here
-            for r in rlzis:
-                if r == rlzi:
-                    pmap |= self._pmap.extract(g)
-                    break
-        return pmap
-
     def get_pcurves(self, sid):  # used in classical
         """
         :returns: a list of R probability curves with shape L

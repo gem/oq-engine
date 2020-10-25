@@ -217,12 +217,12 @@ class DisaggregationCalculator(base.HazardCalculator):
         :returns: a list of Z arrays of PoEs
         """
         poes = []
+        pcurves = self.pgetter.get_pcurves(sid)
         for z, rlz in enumerate(rlzs):
-            pmap = self.pgetter.get(rlz)
-            if z == 0 and sid in pmap:
-                self.curves.append(pmap[sid].array[:, 0])
-            poes.append(pmap[sid].convert(self.oqparam.imtls)
-                        if sid in pmap else None)
+            pc = pcurves[rlz]
+            if z == 0:
+                self.curves.append(pc.array[:, 0])
+            poes.append(pc.convert(self.oqparam.imtls))
         return poes
 
     def full_disaggregation(self):
