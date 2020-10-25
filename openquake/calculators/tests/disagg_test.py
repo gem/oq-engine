@@ -167,7 +167,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
         self.assertEqual(haz[1], 0.18757115242025785)
-        
+
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')

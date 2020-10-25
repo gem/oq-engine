@@ -374,7 +374,7 @@ class ClassicalCalculator(base.HazardCalculator):
         poes_shape = (self.N, len(oq.imtls.array), G_)  # NLG
         size = numpy.prod(poes_shape) * 8
         logging.info('Required %s for the ProbabilityMaps', humansize(size))
-        self.datastore['rlzs_by_grp'] = rlzs_by_grp
+        self.datastore['rlzs_by_g'] = sum(rlzs_by_grp.values(), [])
         self.datastore.create_dset('_poes', F64, poes_shape)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5

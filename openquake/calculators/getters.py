@@ -128,12 +128,7 @@ class PmapGetter(object):
         if hasattr(self, '_pmap'):  # already initialized
             return self._pmap
         dstore = hdf5.File(self.filename, 'r')
-        rlzs_by_grp = {grp: dset[()] for grp, dset in
-                       dstore['rlzs_by_grp'].items()}
-        self.rlzs_by_g = []
-        for allrlzs in rlzs_by_grp.values():
-            for rlzs in allrlzs:
-                self.rlzs_by_g.append([int(r) for r in rlzs])
+        self.rlzs_by_g = dstore['rlzs_by_g'][()]
 
         # populate _pmap
         dset = dstore['_poes']  # NLG_
@@ -159,12 +154,13 @@ class PmapGetter(object):
         :returns: the hazard curves for the given realization
         """
         self.init()
-        assert self.sids is not None
         pmap = probability_map.ProbabilityMap(len(self.imtls.array), 1)
-        for g, rlzis in enumerate(self.rlzs_by_g):  # the rlzs are disjoint
-            if rlzi in rlzis:
-                pmap |= self._pmap.extract(g)
-                break
+        for g, rlzis in enumerate(self.rlzs_by_g):
+            # disaggregation case_master is sensitive to the logic here
+            for r in rlzis:
+                if r == rlzi:
+                    pmap |= self._pmap.extract(g)
+                    break
         return pmap
 
     def get_pcurves(self, sid):  # used in classical
