@@ -1366,7 +1366,7 @@ class FullLogicTree(object):
             for grp_id in self.grp_ids(sm.ordinal):
                 grp = 'grp-%02d' % grp_id
                 dic[grp] = list(self.get_rlzs_by_gsim(grp_id).values())
-        return dic  # grp_id -> lists of rlzi
+        return {grp_id: dic[grp_id] for grp_id in sorted(dic)}
 
     def get_rlzs_by_gsim_list(self, list_of_grp_ids):
         """

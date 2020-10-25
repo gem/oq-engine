@@ -73,8 +73,8 @@ def get_slice_by_grp(rlzs_by_grp):
     """
     dic = {}  # grp -> slice
     start = 0
-    for grp, allrlzs in sorted(rlzs_by_grp.items()):  # NB: sorting!
-        ngsims = len(allrlzs)
+    for grp in rlzs_by_grp:
+        ngsims = len(rlzs_by_grp[grp])
         dic[grp] = slice(start, start + ngsims)
         start += ngsims
     return dic
@@ -99,7 +99,6 @@ class PmapGetter(object):
         self.poes = poes
         self.num_rlzs = len(weights)
         self.eids = None
-        self.nbytes = 0
         self.sids = sids
 
     @property
@@ -126,26 +125,20 @@ class PmapGetter(object):
         """
         Read the poes and set the .data attribute with the hazard curves
         """
-        if hasattr(self, '_pmap_by_grp'):  # already initialized
-            return self._pmap_by_grp
+        if hasattr(self, '_pmap'):  # already initialized
+            return self._pmap
         dstore = hdf5.File(self.filename, 'r')
-        self.rlzs_by_grp = {grp: dset[()] for grp, dset in
-                            dstore['rlzs_by_grp'].items()}
-        slice_by_grp = get_slice_by_grp(self.rlzs_by_grp)
+        self.rlzs_by_g = dstore['rlzs_by_g'][()]
 
-        # populate _pmap_by_grp
-        self._pmap_by_grp = {}
+        # populate _pmap
         dset = dstore['_poes']  # NLG_
-        L = dset.shape[1]
-        for grp, slc in slice_by_grp.items():
-            G = slc.stop - slc.start
-            pmap = probability_map.ProbabilityMap(L, G)
-            for sid, arr in zip(self.sids, dset[self.sids, :, slc]):
-                pmap[sid] = probability_map.ProbabilityCurve(arr)
-            self._pmap_by_grp[grp] = pmap
-            self.nbytes += pmap.nbytes
+        L, G = dset.shape[1:]
+        self._pmap = probability_map.ProbabilityMap.build(L, G, self.sids)
+        for sid, array in zip(self.sids, dset[self.sids]):
+            self._pmap[sid].array = array
+        self.nbytes = self._pmap.nbytes
         dstore.close()
-        return self._pmap_by_grp
+        return self._pmap
 
     # used in risk calculation where there is a single site per getter
     def get_hazard(self, gsim=None):
@@ -155,59 +148,40 @@ class PmapGetter(object):
         """
         return self.get_pcurves(self.sids[0])
 
-    def get(self, rlzi, grp=None):
-        """
-        :param rlzi: a realization index
-        :param grp: None (all groups) or a string of the form "grp-XX"
-        :returns: the hazard curves for the given realization
-        """
-        self.init()
-        assert self.sids is not None
-        pmap = probability_map.ProbabilityMap(len(self.imtls.array), 1)
-        grps = [grp] if grp is not None else sorted(self._pmap_by_grp)
-        for grp in grps:
-            for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
-                for r in rlzis:
-                    if r == rlzi:
-                        pmap |= self._pmap_by_grp[grp].extract(gsim_idx)
-                        break
-        return pmap
-
-    def get_pcurves(self, sid, pmap_by_grp=()):  # used in classical
+    def get_pcurves(self, sid):  # used in classical
         """
         :returns: a list of R probability curves with shape L
         """
-        if not pmap_by_grp:
-            pmap_by_grp = self.init()
+        pmap = self.init()
         pcurves = [probability_map.ProbabilityCurve(numpy.zeros((self.L, 1)))
                    for _ in range(self.num_rlzs)]
-        for grp, pmap in pmap_by_grp.items():
-            try:
-                pc = pmap[sid]
-            except KeyError:  # no hazard for sid
-                continue
-            for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
-                c = probability_map.ProbabilityCurve(pc.array[:, [gsim_idx]])
-                for rlzi in rlzis:
-                    pcurves[rlzi] |= c
+        try:
+            pc = pmap[sid]
+        except KeyError:  # no hazard for sid
+            return pcurves
+        for g, rlzis in enumerate(self.rlzs_by_g):
+            c = probability_map.ProbabilityCurve(pc.array[:, [g]])
+            for rlzi in rlzis:
+                pcurves[rlzi] |= c
         return pcurves
 
-    def get_hcurves(self, pmap_by_grp):
+    def get_hcurves(self, pmap_by_grp_id, rlzs_by_grp):  # in disagg_by_src
         """
-        :param pmap_by_grp: a dictionary of ProbabilityMaps by group
+        :param pmap_by_grp_id: a dictionary of ProbabilityMaps by group ID
         :returns: an array of PoEs of shape (N, R, M, L)
         """
         self.init()
         res = numpy.zeros((self.N, self.R, self.L))
-        for grp, pmap in pmap_by_grp.items():
+        for grp_id, pmap in pmap_by_grp_id.items():
+            rlzs = rlzs_by_grp['grp-%02d' % grp_id]
             for sid, pc in pmap.items():
-                for gsim_idx, rlzis in enumerate(self.rlzs_by_grp[grp]):
+                for gsim_idx, rlzis in enumerate(rlzs):
                     poes = pc.array[:, gsim_idx]
                     for rlz in rlzis:
                         res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
         return res.reshape(self.N, self.R, self.M, -1)
 
-    def get_mean(self, grp=None):
+    def get_mean(self):
         """
         Compute the mean curve as a ProbabilityMap
 
@@ -218,14 +192,12 @@ class PmapGetter(object):
         self.init()
         if len(self.weights) == 1:  # one realization
             # the standard deviation is zero
-            pmap = self.get(0, grp)
+            pmap = self.get(0)
             for sid, pcurve in pmap.items():
                 array = numpy.zeros(pcurve.array.shape)
                 array[:, 0] = pcurve.array[:, 0]
                 pcurve.array = array
             return pmap
-        elif grp:
-            raise NotImplementedError('multiple realizations')
         L = len(self.imtls.array)
         pmap = probability_map.ProbabilityMap.build(L, 1, self.sids)
         for sid in self.sids:

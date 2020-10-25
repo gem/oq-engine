@@ -109,7 +109,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
                     sources.append(src)
     if splits:  # produce more subtasks
         maxw /= 5
-    msg = 'split %s; ' % (' '.join(splits) or 'nothing')
+    msg = 'split %s; ' % ' '.join(splits) if splits else ''
     for sf in sf_tiles:
         blocks = list(block_splitter(
             sources, maxw, operator.attrgetter('weight')))
@@ -374,7 +374,7 @@ class ClassicalCalculator(base.HazardCalculator):
         poes_shape = (self.N, len(oq.imtls.array), G_)  # NLG
         size = numpy.prod(poes_shape) * 8
         logging.info('Required %s for the ProbabilityMaps', humansize(size))
-        self.datastore['rlzs_by_grp'] = rlzs_by_grp
+        self.datastore['rlzs_by_g'] = sum(rlzs_by_grp.values(), [])
         self.datastore.create_dset('_poes', F64, poes_shape)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
@@ -549,15 +549,16 @@ class ClassicalCalculator(base.HazardCalculator):
                 if isinstance(key, str):  # disagg_by_src
                     serial = self.csm.source_info[key][readinput.SERIAL]
                     self.datastore['disagg_by_src'][..., serial] = (
-                        pgetter.get_hcurves(
-                            {'grp-%02d' % gid: pmap[gid] for gid in pmap}))
+                        pgetter.get_hcurves(pmap, rlzs_by_grp))
                 elif pmap:  # pmap can be missing if the group is filtered away
                     # key is the group ID
                     trt = self.full_lt.trt_by_grp[key]
-                    base.fix_ones(pmap)  # avoid saving PoEs == 1
-                    arr = pmap.array(self.N)
+                    # avoid saving PoEs == 1
+                    arr = base.fix_ones(pmap).array(self.N)
                     slc = slice_by_grp['grp-%02d' % key]
-                    self.datastore['_poes'][:, :, slc] = arr
+                    size = slc.stop - slc.start
+                    # check size in oq-risk-tests eb2cl
+                    self.datastore['_poes'][:, :, slc] = arr[:, :, :size]
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)

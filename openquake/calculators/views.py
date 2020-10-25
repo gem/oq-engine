@@ -465,8 +465,8 @@ def stats(name, array, *extras):
     """
     avg = numpy.mean(array)
     std = 'nan' if len(array) == 1 else '%d%%' % (numpy.std(array) / avg * 100)
-    return (name, avg, std, numpy.min(array), numpy.max(array),
-            len(array)) + extras
+    return (name, len(array), avg, std,
+            numpy.min(array), numpy.max(array)) + extras
 
 
 @view.add('num_units')
@@ -490,7 +490,7 @@ def view_assets_by_site(token, dstore):
     """
     taxonomies = dstore['assetcol/tagcol/taxonomy'][()]
     assets_by_site = dstore['assetcol'].assets_by_site()
-    data = ['taxonomy mean stddev min max num_sites num_assets'.split()]
+    data = ['taxonomy num_assets mean stddev min max num_sites'.split()]
     num_assets = AccumDict()
     for assets in assets_by_site:
         num_assets += {k: [len(v)] for k, v in group_array(
@@ -544,7 +544,7 @@ def view_task_info(token, dstore):
         data.sort(order='duration')
         return rst_table(data)
 
-    data = ['operation-duration mean stddev min max outputs'.split()]
+    data = ['operation-duration outputs mean stddev min max'.split()]
     for task, arr in group_array(task_info[()], 'taskname').items():
         val = arr['duration']
         if len(val):

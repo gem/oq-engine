@@ -543,7 +543,8 @@ class HazardCalculator(BaseCalculator):
             self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
-            self.datastore['rlzs_by_grp'] = fake.get_rlzs_by_grp()
+            self.datastore['rlzs_by_g'] = sum(
+                fake.get_rlzs_by_grp().values(), [])
             with hdf5.File(self.datastore.tempname, 'a') as t:
                 t['oqparam'] = oq
             self.realizations = fake.get_realizations()
