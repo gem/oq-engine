@@ -331,8 +331,7 @@ class SourceModelLogicTree(object):
         self.validate_filters(branchset_node, uncertainty_type, filters)
 
         filters = self.parse_filters(branchset_node, uncertainty_type, filters)
-        branchset = BranchSet(uncertainty_type, filters)
-        branchset.ordinal = len(self.bsetdict)
+        branchset = BranchSet(uncertainty_type, len(self.bsetdict), filters)
         self.bsetdict[attrs.pop('branchSetID')] = attrs
         self.validate_branchset(branchset_node, depth, branchset)
 
@@ -643,9 +642,9 @@ class SourceModelLogicTree(object):
         for rec in array:
             # NB: it is important to keep the order of the branchsets
             acc[rec['branchset']].append(rec)
-        for bsid, rows in acc.items():
+        for ordinal, (bsid, rows) in enumerate(acc.items()):
             utype = rows[0]['utype']
-            bset = BranchSet(utype, [])  # TODO: filters
+            bset = BranchSet(utype, ordinal, [])  # TODO: filters
             bset.id = bsid
             for row in rows:
                 br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])
