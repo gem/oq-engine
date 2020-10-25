@@ -86,6 +86,9 @@ class AbrahamsonEtAl2015SInter(GMPE):
     #: interface events
     REQUIRES_DISTANCES = {'rrup'}
 
+    #: Reference soil conditions (bottom of page 29)
+    DEFINED_FOR_REFERENCE_VELOCITY = 1000
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ergodic = kwargs.get('ergodic', True)
