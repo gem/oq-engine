@@ -324,7 +324,6 @@ class SourceModelLogicTree(object):
         can have child branchsets (if there is one on the next level).
         """
         attrs = branchset_node.attrib.copy()
-        self.bsetdict[attrs.pop('branchSetID')] = attrs
         uncertainty_type = branchset_node.attrib.get('uncertaintyType')
         filters = dict((filtername, branchset_node.attrib.get(filtername))
                        for filtername in self.FILTERS
@@ -333,6 +332,8 @@ class SourceModelLogicTree(object):
 
         filters = self.parse_filters(branchset_node, uncertainty_type, filters)
         branchset = BranchSet(uncertainty_type, filters)
+        branchset.ordinal = len(self.bsetdict)
+        self.bsetdict[attrs.pop('branchSetID')] = attrs
         self.validate_branchset(branchset_node, depth, branchset)
 
         self.parse_branches(branchset_node, branchset)
@@ -412,7 +413,8 @@ class SourceModelLogicTree(object):
         """
         if self.num_samples:
             # random sampling of the logic tree
-            probs = random(self.num_samples, self.seed, self.sampling_method)
+            probs = random((self.num_samples, len(self.bsetdict)),
+                           self.seed, self.sampling_method)
             ordinal = 0
             for branches in self.root_branchset.sample(
                     probs, self.sampling_method):
