@@ -324,7 +324,6 @@ class SourceModelLogicTree(object):
         can have child branchsets (if there is one on the next level).
         """
         attrs = branchset_node.attrib.copy()
-        self.bsetdict[attrs.pop('branchSetID')] = attrs
         uncertainty_type = branchset_node.attrib.get('uncertaintyType')
         filters = dict((filtername, branchset_node.attrib.get(filtername))
                        for filtername in self.FILTERS
@@ -332,7 +331,8 @@ class SourceModelLogicTree(object):
         self.validate_filters(branchset_node, uncertainty_type, filters)
 
         filters = self.parse_filters(branchset_node, uncertainty_type, filters)
-        branchset = BranchSet(uncertainty_type, filters)
+        branchset = BranchSet(uncertainty_type, len(self.bsetdict), filters)
+        self.bsetdict[attrs.pop('branchSetID')] = attrs
         self.validate_branchset(branchset_node, depth, branchset)
 
         self.parse_branches(branchset_node, branchset)
@@ -412,7 +412,8 @@ class SourceModelLogicTree(object):
         """
         if self.num_samples:
             # random sampling of the logic tree
-            probs = random(self.num_samples, self.seed, self.sampling_method)
+            probs = random((self.num_samples, len(self.bsetdict)),
+                           self.seed, self.sampling_method)
             ordinal = 0
             for branches in self.root_branchset.sample(
                     probs, self.sampling_method):
@@ -641,9 +642,9 @@ class SourceModelLogicTree(object):
         for rec in array:
             # NB: it is important to keep the order of the branchsets
             acc[rec['branchset']].append(rec)
-        for bsid, rows in acc.items():
+        for ordinal, (bsid, rows) in enumerate(acc.items()):
             utype = rows[0]['utype']
-            bset = BranchSet(utype, [])  # TODO: filters
+            bset = BranchSet(utype, ordinal, filters=[])  # TODO: filters
             bset.id = bsid
             for row in rows:
                 br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])
@@ -1206,15 +1207,11 @@ class FullLogicTree(object):
     @property
     def trt_by_grp(self):
         """
-        :returns: a dictionary grp_id -> trt
+        :returns: a list of TRTs, one for each grp_id
         """
-        trt_by_grp = []
-        n = len(self.sm_rlzs)
+        e = len(self.sm_rlzs)
         trts = list(self.gsim_lt.values)
-        for smodel in self.sm_rlzs:
-            for grp_id in self.grp_ids(smodel.ordinal):
-                trt_by_grp.append((grp_id, trts[grp_id // n]))
-        return dict(sorted(trt_by_grp))
+        return [trts[grp_id // e] for grp_id in range(e*len(trts))]
 
     @property
     def seed(self):
@@ -1247,7 +1244,8 @@ class FullLogicTree(object):
         """
         :returns: grp_id
         """
-        return self.trti[trt] * len(self.sm_rlzs) + int(eri)
+        gid = self.trti[trt] * len(self.sm_rlzs) + int(eri)
+        return gid
 
     def grp_ids(self, eri):
         """

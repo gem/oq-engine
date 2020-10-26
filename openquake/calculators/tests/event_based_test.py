@@ -438,7 +438,7 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_23.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                              delta=1E-6)
+                              delta=1E-4)
         sio = io.StringIO()
         write_csv(sio, self.calc.datastore.getitem('sitecol'))
         tmp = gettemp(sio.getvalue())

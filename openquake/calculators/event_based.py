@@ -321,7 +321,7 @@ class EventBasedCalculator(base.HazardCalculator):
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in self.datastore:
             return acc
-        if oq.ground_motion_fields and oq.minimum_intensity:
+        if oq.ground_motion_fields:
             eids = self.datastore['gmf_data/eid'][:]
             rel_events = numpy.unique(eids)
             e = len(rel_events)

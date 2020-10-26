@@ -420,7 +420,8 @@ hazard_uhs-std.csv
         ], case_22.__file__, delta=1E-6)
 
     def test_case_23(self):  # filtering away on TRT
-        self.assert_curves_ok(['hazard_curve.csv'], case_23.__file__)
+        self.assert_curves_ok(['hazard_curve.csv'],
+                              case_23.__file__, delta=1e-5)
         checksum = self.calc.datastore['/'].attrs['checksum32']
         self.assertEqual(checksum, 3309200309)
 

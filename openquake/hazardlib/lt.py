@@ -506,27 +506,30 @@ class BranchSet(object):
             Stable Shallow Crust, etc.) the uncertainty applies to. This
             filter is required for all branchsets in GMPE logic tree.
     """
-    def __init__(self, uncertainty_type, filters=None, collapsed=False):
-        self.branches = []
+    def __init__(self, uncertainty_type, ordinal=0, filters=None,
+                 collapsed=False):
         self.uncertainty_type = uncertainty_type
+        self.ordinal = ordinal
         self.filters = filters or {}
         self.collapsed = collapsed
+        self.branches = []
 
     def sample(self, probabilities, sampling_method):
         """
         :param num_samples: the number of samples
-        :param probabilities: random numbers in the range 0..1
+        :param probabilities: (Ns, Nb) random numbers in the range 0..1
         :param sampling_method: the sampling method used
         :returns: a list of num_samples lists of branches
         """
         out = []
-        for x in probabilities:
+        for probs in probabilities:  # probs has a value for each branchset
             branchset = self
             branches = []
             while branchset is not None:
                 if branchset.collapsed:
                     branch = branchset.branches[0]
                 else:
+                    x = probs[branchset.ordinal]
                     [branch] = sample(branchset.branches, [x], sampling_method)
                 branches.append(branch)
                 branchset = branch.bset
