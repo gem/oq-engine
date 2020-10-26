@@ -15,39 +15,39 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
-from openquake.hazardlib.gsim.sera_2020_craton import SERA2020Craton
+from openquake.hazardlib.gsim.eshm20_craton import ESHM20Craton
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 MAX_DISCREP = 0.01
 
 
-class SERA2019CratonTestCaseMean(BaseGSIMTestCase):
-    GSIM_CLASS = SERA2020Craton
+class ESHM20CratonTestCaseMean(BaseGSIMTestCase):
+    GSIM_CLASS = ESHM20Craton
 
     def test_mean(self):
-        self.check("sera_craton/SERA_CRATON_MEAN_MEDIAN_MODEL.csv",
+        self.check("eshm20_craton/ESHM20_CRATON_MEAN_MEDIAN_MODEL.csv",
                    max_discrep_percentage=MAX_DISCREP)
 
     def test_std_total(self):
-        self.check("sera_craton/SERA_CRATON_TOTAL_STDDEV_NONERGODIC.csv",
+        self.check("eshm20_craton/ESHM20_CRATON_TOTAL_STDDEV_NONERGODIC.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    ergodic=False)
 
 
-class SERA2019CratonTestCasePlus1Sigma(BaseGSIMTestCase):
-    GSIM_CLASS = SERA2020Craton
+class ESHM20CratonTestCasePlus1Sigma(BaseGSIMTestCase):
+    GSIM_CLASS = ESHM20Craton
 
     def test_mean(self):
-        self.check("sera_craton/SERA_CRATON_MEAN_PLUS1SIGMA_MODEL.csv",
+        self.check("eshm20_craton/ESHM20_CRATON_MEAN_PLUS1SIGMA_MODEL.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    epsilon=1.0)
 
 
-class SERA2019CratonErgodicTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = SERA2020Craton
+class ESHM20CratonErgodicTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ESHM20Craton
 
     def test_std_total(self):
-        self.check("sera_craton/SERA_CRATON_TOTAL_STDDEV_ERGODIC.csv",
+        self.check("eshm20_craton/ESHM20_CRATON_TOTAL_STDDEV_ERGODIC.csv",
                    max_discrep_percentage=MAX_DISCREP,
                    ergodic=True)

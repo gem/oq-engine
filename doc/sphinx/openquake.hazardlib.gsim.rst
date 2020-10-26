@@ -530,6 +530,14 @@ edwards_fah_2013f_coeffs
     :undoc-members:
     :show-inheritance:
 
+eshm20_craton
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.eshm20_craton
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 faccioli_2010
 ---------------------------------------------
 
@@ -871,14 +879,6 @@ sera_amplification_models
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.sera_amplification_models
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-sera_2019_craton
--------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.sera_2020_craton
     :members:
     :undoc-members:
     :show-inheritance:
