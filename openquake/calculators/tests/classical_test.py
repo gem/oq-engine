@@ -162,8 +162,10 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__)
 
-        # exercising extract/mean_std_curves
-        # extract(self.calc.datastore, 'mean_std_curves')
+        # checking the individual hazard maps are nonzero
+        iml = self.calc.datastore.sel(
+            'hmaps-rlzs', imt="PGA", site_id=0).squeeze()
+        aac(iml, [0.167078, 0.134646], atol=.0001)  # for the two realizations
 
         # exercise the warning for no output when mean_hazard_curves='false'
         self.run_calc(
