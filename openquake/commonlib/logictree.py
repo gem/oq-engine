@@ -1207,15 +1207,11 @@ class FullLogicTree(object):
     @property
     def trt_by_grp(self):
         """
-        :returns: a dictionary grp_id -> trt
+        :returns: a list of TRTs, one for each grp_id
         """
-        trt_by_grp = []
-        n = len(self.sm_rlzs)
+        e = len(self.sm_rlzs)
         trts = list(self.gsim_lt.values)
-        for smodel in self.sm_rlzs:
-            for grp_id in self.grp_ids(smodel.ordinal):
-                trt_by_grp.append((grp_id, trts[grp_id // n]))
-        return dict(sorted(trt_by_grp))
+        return [trts[grp_id // e] for grp_id in range(e*len(trts))]
 
     @property
     def seed(self):
@@ -1248,7 +1244,8 @@ class FullLogicTree(object):
         """
         :returns: grp_id
         """
-        return self.trti[trt] * len(self.sm_rlzs) + int(eri)
+        gid = self.trti[trt] * len(self.sm_rlzs) + int(eri)
+        return gid
 
     def grp_ids(self, eri):
         """
