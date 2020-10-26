@@ -644,7 +644,7 @@ class SourceModelLogicTree(object):
             acc[rec['branchset']].append(rec)
         for ordinal, (bsid, rows) in enumerate(acc.items()):
             utype = rows[0]['utype']
-            bset = BranchSet(utype, ordinal, [])  # TODO: filters
+            bset = BranchSet(utype, ordinal, filters=[])  # TODO: filters
             bset.id = bsid
             for row in rows:
                 br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])

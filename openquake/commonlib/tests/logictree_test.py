@@ -1413,7 +1413,7 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         self.assertEqual(inc_point_source.mfd.occurrence_rates[1], 0.1)
         uncertainty, value = ('incrementalMFDAbsolute',
                               (8.5, 0.1, [0.05, 0.01]))
-        branchset = logictree.BranchSet(uncertainty, {})
+        branchset = logictree.BranchSet(uncertainty)
         lt.apply_uncertainty(
             branchset.uncertainty_type, inc_point_source, value)
         self.assertEqual(inc_point_source.mfd.min_mag, 8.5)
