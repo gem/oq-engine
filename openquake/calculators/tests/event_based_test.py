@@ -484,7 +484,11 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_26.__file__, 'job_liq.ini')
         df = self.calc.datastore.read_df('gmf_data', 'sid')
         pd_mean = df[df.liq_prob > 0].liq_prob.mean()
-        self.assertGreater(pd_mean, 0)
+        lat_spread_mean = df.lat_spread.mean()
+        vert_settle_mean = df.vert_settlement.mean()
+        self.assertGreater(pd_mean, 0.) 
+        self.assertGreater(lat_spread_mean, 0.)
+        self.assertGreater(vert_settle_mean, 0.)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

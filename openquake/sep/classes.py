@@ -25,6 +25,8 @@ from openquake.sep.liquefaction.liquefaction import (
     hazus_liquefaction_probability, zhu_liquefaction_probability_general)
 from openquake.sep.liquefaction.lateral_spreading import (
     hazus_lateral_spreading_displacement)
+from openquake.sep.liquefaction.vertical_settlement import(
+    hazus_vertical_settlement)
 
 
 class SecondaryPeril(metaclass=abc.ABCMeta):
@@ -156,6 +158,20 @@ class HazusLateralSpreading(SecondaryPeril):
                     mag=mag, pga=gmf, liq_susc_cat=sites.liq_susc_cat,
                     return_unit=self.return_unit))
         return out
+
+
+class HazusVerticalSettlement(SecondaryPeril):
+    outputs = ['vert_settlement']
+
+    def __init__(self, return_unit='m'):
+        self.return_unit = return_unit
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt_gmf, sites):
+        return [hazus_vertical_settlement(sites.liq_susc_cat,
+                return_unit=self.return_unit)]
 
 
 class ZhuLiquefactionGeneral(SecondaryPeril):
