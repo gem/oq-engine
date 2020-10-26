@@ -557,7 +557,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     arr = base.fix_ones(pmap).array(self.N)
                     slc = slice_by_grp['grp-%02d' % key]
                     size = slc.stop - slc.start
-                    # check size in oq-risk-tests eb2cl
+                    # size is needed in test case_56
                     self.datastore['_poes'][:, :, slc] = arr[:, :, :size]
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
