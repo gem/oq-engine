@@ -448,6 +448,8 @@ class ClassicalCalculator(base.HazardCalculator):
         max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
         max_num_grp_ids = max(
             len(grp_ids) for grp_ids in self.datastore['grp_ids'])
+        if max_num_grp_ids > 2:
+            logging.warning('max_num_grp_ids=%d', max_num_grp_ids)
         num_levels = len(oq.imtls.array)
         pmapbytes = T * num_levels * max_num_gsims * max_num_grp_ids * 8
         if pmapbytes > TWO32:
@@ -486,6 +488,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         if oq.disagg_by_src
                         else block_splitter(sg, 2 * max_weight * ntiles,
                                             operator.attrgetter('weight'),
+                                            key=operator.attrgetter('grp_id'),
                                             sort=True))
                 blocks = list(blks)
                 nb = len(blocks)
