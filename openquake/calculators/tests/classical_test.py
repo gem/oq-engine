@@ -24,6 +24,7 @@ from openquake.hazardlib import lt
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.calculators.getters import get_slice_by_grp
 from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
@@ -754,7 +755,24 @@ b'2'        0       0  MMI    8  0.000000e+00''')
         self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
 
     def test_case_56(self):
-        # test with latin sampling
+        # test with oversampling
+        # there are 6 potential paths 1A 1B 1C 2A 2B 2C
+        # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
+        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2 
         self.run_calc(case_56.__file__, 'job.ini', concurrent_tasks='0')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
+
+        self.calc.datastore['_poes'].shape
+        full_lt = self.calc.datastore['full_lt']
+        rlzs_by_grp = full_lt.get_rlzs_by_grp()
+        numpy.testing.assert_equal(
+            rlzs_by_grp['grp-00'], [[1, 3, 5], [2], [0, 4]])
+        numpy.testing.assert_equal(
+            rlzs_by_grp['grp-01'], [[7, 9], [6, 8]])
+        # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
+        slc0, slc1 = get_slice_by_grp(rlzs_by_grp)
+        [(trt, gsims)] = full_lt.get_gsims_by_trt().items()
+        self.assertEqual(len(gsims), 3)
+        # this is a case where slc1 is shorter than len(gsims)
+        # affects the logic in Classical.post_execute
