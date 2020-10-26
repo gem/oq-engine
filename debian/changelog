@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed bug in source model logic tree sampling with more than 2 branchsets
   * Fixed a bug in `oq prepare_site_model` when sites.csv is
     the same as the vs30.csv file and there is a grid spacing
   * Speeding up the preclassical calculator
