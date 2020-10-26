@@ -24,7 +24,6 @@ from openquake.hazardlib import lt
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.getters import PmapGetter
 from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
@@ -418,7 +417,8 @@ hazard_uhs-std.csv
         ], case_22.__file__, delta=1E-6)
 
     def test_case_23(self):  # filtering away on TRT
-        self.assert_curves_ok(['hazard_curve.csv'], case_23.__file__)
+        self.assert_curves_ok(['hazard_curve.csv'],
+                              case_23.__file__, delta=1e-5)
         checksum = self.calc.datastore['/'].attrs['checksum32']
         self.assertEqual(checksum, 3309200309)
 
