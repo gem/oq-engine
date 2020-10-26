@@ -35,7 +35,6 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
-from openquake.calculators import getters
 from openquake.calculators.extract import extract, FLOAT, INT
 
 F32 = numpy.float32
@@ -511,7 +510,7 @@ def view_required_params_per_trt(token, dstore):
     """
     full_lt = dstore['full_lt']
     tbl = []
-    for grp_id, trt in sorted(full_lt.trt_by_grp.items()):
+    for grp_id, trt in enumerate(full_lt.trt_by_grp):
         gsims = full_lt.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
