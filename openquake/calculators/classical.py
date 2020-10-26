@@ -699,6 +699,9 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     pmap_by_kind = {}
     if R > 1 and individual_curves or not hstats:
         pmap_by_kind['hcurves-rlzs'] = [ProbabilityMap(L) for r in range(R)]
+        if poes:
+            pmap_by_kind['hmaps-rlzs'] = [
+                ProbabilityMap(M, P) for r in range(R)]
     if hstats:
         pmap_by_kind['hcurves-stats'] = [ProbabilityMap(L) for r in range(S)]
         if poes:
@@ -727,6 +730,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
                 for pmap, pc in zip(pmap_by_kind['hcurves-rlzs'], pcurves):
                     pmap[sid] = pc
                 if poes:
-                    pmap_by_kind['hmaps-rlzs'] = [
-                        calc.make_hmap(pc, imtls, poes, sid) for pc in pcurves]
+                    for r, pc in enumerate(pcurves):
+                        hmap = calc.make_hmap(pc, imtls, poes, sid)
+                        pmap_by_kind['hmaps-rlzs'][r].update(hmap)
     return pmap_by_kind
