@@ -126,7 +126,8 @@ def classical_split_filter(srcs, gsims, params, monitor):
             print(msg)
         for block in blocks[:-1]:
             yield classical1, block, gsims, params, sf.slc
-        yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
+        res = classical1(blocks[-1], gsims, params, sf.slc, monitor)
+        yield res
 
 
 def preclassical(srcs, srcfilter, monitor):
@@ -192,16 +193,18 @@ class ClassicalCalculator(base.HazardCalculator):
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
-        if not dic['pmap']:
+        pmap = dic['pmap']
+        extra = dic['extra']
+        if not pmap:
             return acc
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
-            acc[dic['extra']['source_id']] = dic['pmap']
+            acc[extra['source_id']] = {
+                grp_id: pmap for grp_id in extra['grp_ids']}
 
-        trt = dic['extra'].pop('trt')
-        self.maxradius = max(self.maxradius, dic['extra'].pop('maxradius'))
+        trt = extra.pop('trt')
+        self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
-            extra = dic['extra']
             self.totrups += extra['totrups']
             d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
             self.calc_times += d
@@ -215,7 +218,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     eff_sites += rec[1] / rec[0]
             self.by_task[extra['task_no']] = (
                 eff_rups, eff_sites, sorted(srcids))
-            for grp_id, pmap in dic['pmap'].items():
+            for grp_id in extra['grp_ids']:
                 if pmap and grp_id in acc:
                     acc[grp_id] |= pmap
                 else:

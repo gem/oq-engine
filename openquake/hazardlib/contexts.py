@@ -535,12 +535,11 @@ class PmapMaker(object):
                 # pnes and poes of shape (N, L, G)
                 pnes = ctx.get_probability_no_exceedance(poes)
                 for sid, pne in zip(ctx.sids, pnes):
-                    for grp_id in ctx.grp_ids:
-                        probs = pmap[grp_id].setdefault(sid, rup_indep).array
-                        if rup_indep:
-                            probs *= pne
-                        else:  # rup_mutex
-                            probs += (1. - pne) * ctx.weight
+                    probs = pmap.setdefault(sid, rup_indep).array
+                    if rup_indep:
+                        probs *= pne
+                    else:  # rup_mutex
+                        probs += (1. - pne) * ctx.weight
 
     def _ruptures(self, src, filtermag=None):
         return list(src.iter_ruptures(
@@ -581,8 +580,7 @@ class PmapMaker(object):
                     self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
-        return AccumDict((grp_id, ~p if self.rup_indep else p)
-                         for grp_id, p in self.pmap.items())
+        return ~self.pmap if self.rup_indep else self.pmap
 
     def _make_src_mutex(self):
         for src, indices in self.srcfilter.filter(self.group):
@@ -594,15 +592,14 @@ class PmapMaker(object):
             rups = self._ruptures(src)
             gidx = getattr(src, 'gidx', 0)
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
-            pmap = {grp_id: ProbabilityMap(L, G) for grp_id in src.grp_ids}
+            pmap = ProbabilityMap(L, G)
             ctxs = self._make_ctxs(rups, sites, gidx, numpy.array(src.grp_ids))
             self._update_pmap(ctxs, pmap)
-            for grp_id in src.grp_ids:
-                p = pmap[grp_id]
-                if self.rup_indep:
-                    p = ~p
-                p *= src.mutex_weight
-                self.pmap[grp_id] += p
+            p = pmap
+            if self.rup_indep:
+                p = ~p
+            p *= src.mutex_weight
+            self.pmap += p
             self.calc_times[src.source_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return self.pmap
@@ -619,7 +616,7 @@ class PmapMaker(object):
         self.rupdata = []
         imtls = self.cmaker.imtls
         L, G = len(imtls.array), len(self.gsims)
-        self.pmap = AccumDict(accum=ProbabilityMap(L, G))  # grp_id -> pmap
+        self.pmap = ProbabilityMap(L, G)
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         self.totrups = 0
