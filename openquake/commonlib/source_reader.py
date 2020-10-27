@@ -100,6 +100,7 @@ def get_csm(oq, full_lt, h5=None):
     logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
     classical = not oq.is_event_based()
     if oq.is_ucerf():
+        serial = full_lt.ses_seed
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         src_groups = []
         for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
@@ -117,6 +118,7 @@ def get_csm(oq, full_lt, h5=None):
                 sg.sources.extend(src.get_background_sources())
             else:  # event_based, use one source
                 sg.sources = [src]
+                serial = init_serials(sg, serial)
         return CompositeSourceModel(full_lt, src_groups)
 
     logging.info('Reading the source model(s) in parallel')
@@ -225,7 +227,6 @@ def _get_csm(full_lt, groups):
         elif grp:
             acc[grp.trt].extend(grp)
     key = operator.attrgetter('source_id', 'code')
-    idx = 0
     src_groups = []
     serial = full_lt.ses_seed
     for trt in acc:
@@ -234,9 +235,7 @@ def _get_csm(full_lt, groups):
             if len(srcs) > 1:
                 srcs = reduce_sources(srcs)
             for src in srcs:
-                src.id = idx
                 src._wkt = src.wkt()
-                idx += 1
                 lst.append(src)
         if full_lt.ses_seed:  # only for event based
             serial = init_serials(lst, serial)
@@ -246,9 +245,7 @@ def _get_csm(full_lt, groups):
         if full_lt.ses_seed:  # only for event based
             serial = init_serials(ag.sources, serial)
         for src in ag:
-            src.id = idx
             src._wkt = src.wkt()
-            idx += 1
     src_groups.extend(atomic)
     _check_dupl_ids(src_groups)
     return CompositeSourceModel(full_lt, src_groups)
@@ -281,6 +278,11 @@ class CompositeSourceModel:
         self.sm_rlzs = full_lt.sm_rlzs
         self.full_lt = full_lt
         self.src_groups = src_groups
+        idx = 0
+        for sg in src_groups:
+            for src in sg:
+                src.id = idx
+                idx += 1
 
     def get_grp_ids(self):
         """
