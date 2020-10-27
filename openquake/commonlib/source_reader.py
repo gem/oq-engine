@@ -227,6 +227,7 @@ def _get_csm(full_lt, groups):
     key = operator.attrgetter('source_id', 'code')
     idx = 0
     src_groups = []
+    serial = full_lt.ses_seed
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
@@ -237,6 +238,8 @@ def _get_csm(full_lt, groups):
                 src._wkt = src.wkt()
                 idx += 1
                 lst.append(src)
+        if serial:  # only for event based
+            serial = init_serials(lst, serial)
         for grp in general.groupby(lst, grp_ids).values():
             src_groups.append(sourceconverter.SourceGroup(trt, grp))
     for ag in atomic:
@@ -249,16 +252,24 @@ def _get_csm(full_lt, groups):
     return CompositeSourceModel(full_lt, src_groups)
 
 
+def init_serials(sources, serial):
+    """
+    Called only for event based calculations
+    """
+    for src in sources:
+        src.serial = serial
+        if not src.num_ruptures:
+            src.num_ruptures = src.count_ruptures()
+        serial += src.num_ruptures * len(src.grp_ids)
+    return serial
+
+
 class CompositeSourceModel:
     """
-    :param gsim_lt:
-        a :class:`openquake.commonlib.logictree.GsimLogicTree` instance
     :param full_lt:
         a :class:`FullLogicTree` instance
-    :param groups:
+    :param src_groups:
         a list of SourceGroups
-    :param ses_seed:
-        a seed used in event based
     :param event_based:
         a flag True for event based calculations, flag otherwise
     """
@@ -268,18 +279,6 @@ class CompositeSourceModel:
         self.sm_rlzs = full_lt.sm_rlzs
         self.full_lt = full_lt
         self.src_groups = src_groups
-
-    def init_serials(self, ses_seed):
-        """
-        Called only for event based calculations
-        """
-        serial = ses_seed
-        for sg in self.src_groups:
-            for src in sg:
-                src.serial = serial
-                if not src.num_ruptures:
-                    src.num_ruptures = src.count_ruptures()
-                serial += src.num_ruptures * len(src.grp_ids)
 
     def get_grp_ids(self):
         """
