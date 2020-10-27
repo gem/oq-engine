@@ -39,9 +39,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         out = self.run_calc(test_dir, job_ini, exports=exports,
                             collapse_threshold='0')
         try:
-            got = out['avg_%s-rlzs' % kind, exports]
+            got = out['%s-rlzs' % kind, exports]
         except KeyError:
-            got = out['avg_%s-stats' % kind, exports]
+            got = out['%s-stats' % kind, exports]
         expected_dir = os.path.join(test_dir, 'expected')
         expected = sorted(f for f in os.listdir(expected_dir)
                           if f.endswith(exports) and 'by_taxon' not in f)
@@ -78,10 +78,10 @@ RM       4_000
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
 
-        # check avg_damages-rlzs
-        [fname] = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
+        # check damages-rlzs
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-        df = self.calc.datastore.read_df('avg_damages-rlzs', 'asset_id')
+        df = self.calc.datastore.read_df('damages-rlzs', 'asset_id')
         self.assertEqual(list(df.columns),
                          ['rlz', 'loss_type', 'dmg_state', 'value'])
 
@@ -114,12 +114,13 @@ RM       4_000
 
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=2E-6)
+                              delta=5E-6)
 
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 2)  # one per realization
         for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=5E-6)
 
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:
@@ -154,8 +155,8 @@ RM       4_000
         self.assert_ok(case_7, 'job_h.ini,job_r.ini', exports='csv')
 
         # just run the npz export
-        [npz] = export(('avg_damages-rlzs', 'npz'), self.calc.datastore)
-        self.assertEqual(strip_calc_id(npz), 'avg_damages-rlzs.npz')
+        [npz] = export(('damages-rlzs', 'npz'), self.calc.datastore)
+        self.assertEqual(strip_calc_id(npz), 'damages-rlzs.npz')
 
     def test_case_8(self):
         # case with a shakemap
@@ -173,18 +174,15 @@ RM       4_000
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         df = read_csv(fname, index='event_id')
         nodamage = df[df['rlz_id'] == 0]['structural~no_damage'].sum()
-        self.assertEqual(nodamage, 1068763.0)
+        self.assertEqual(nodamage, 1086437.0)
 
-        [fname] = export(('avg_damages-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_damages.csv', fname)
+        [fname] = export(('damages-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/damages.csv', fname)
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_asset.csv', fname)
 
     def test_case_10(self):
-        # case with more IMTs in the imported GMFs than required
-        self.run_calc(case_10.__file__, 'job.ini')
-
-        fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
-        for i, fname in enumerate(fnames):
-            self.assertEqualFiles('expected/avg_damages-%d.csv' % i, fname)
+        # error case: there a no RiskInputs
+        with self.assertRaises(RuntimeError):
+            self.run_calc(case_10.__file__, 'job.ini')

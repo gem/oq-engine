@@ -99,35 +99,42 @@ class GmfComputer(object):
     # a matrix of size (I, N, E) is returned, where I is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
-    def __init__(self, rupture, sitecol, imts, cmaker,
+    def __init__(self, rupture, sitecol, cmaker,
                  truncation_level=None, correlation_model=None,
-                 amplifier=None):
+                 amplifier=None, sec_perils=()):
         if len(sitecol) == 0:
             raise ValueError('No sites')
-        elif len(imts) == 0:
+        elif len(cmaker.imtls) == 0:
             raise ValueError('No IMTs')
         elif len(cmaker.gsims) == 0:
             raise ValueError('No GSIMs')
-        self.imts = [from_string(imt) for imt in imts]
+        self.imts = [from_string(imt) for imt in cmaker.imtls]
         self.gsims = sorted(cmaker.gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
         self.amplifier = amplifier
+        self.sec_perils = sec_perils
         # `rupture` is an EBRupture instance in the engine
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
             self.source_id = rupture.source_id  # the underlying source
-            self.e0 = rupture.e0
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
             self.source_id = '?'
-            self.e0 = 0
         self.seed = rupture.rup_id
         self.rctx, self.sctx, self.dctx = cmaker.make_contexts(
             sitecol, rupture)
         self.sids = self.sctx.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
+        if truncation_level is None:
+            self.distribution = scipy.stats.norm()
+        elif truncation_level == 0:
+            self.distribution = None
+        else:
+            assert truncation_level > 0, truncation_level
+            self.distribution = scipy.stats.truncnorm(
+                - truncation_level, truncation_level)
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
@@ -136,9 +143,13 @@ class GmfComputer(object):
         t0 = time.time()
         sids = self.sids
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
+        mag = self.ebrupture.rupture.mag
         data = []
+        No = sum(len(sp.outputs) for sp in self.sec_perils)
         for gs, rlzs in rlzs_by_gsim.items():
-            num_events = sum(len(eids_by_rlz[rlzi]) for rlzi in rlzs)
+            num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
+            if num_events == 0:  # it may happen
+                continue
             # NB: the trick for performance is to keep the call to
             # compute.compute outside of the loop over the realizations
             # it is better to have few calls producing big arrays
@@ -148,26 +159,38 @@ class GmfComputer(object):
                 arr = array[:, i, :]
                 arr[arr < miniml] = 0
             n = 0
-            for rlzi in rlzs:
-                eids = eids_by_rlz[rlzi] + self.e0
-                e = len(eids)
+            for rlz in rlzs:
+                eids = eids_by_rlz[rlz]
                 for ei, eid in enumerate(eids):
-                    gmf = array[:, :, n + ei]  # shape (N, M)
-                    tot = gmf.sum(axis=0)  # shape (M,)
+                    gmfa = array[:, :, n + ei]  # shape (N, M)
+                    tot = gmfa.sum(axis=0)  # shape (M,)
                     if not tot.sum():
                         continue
                     if sig_eps is not None:
-                        tup = tuple([eid, rlzi] + list(sig[:, n + ei]) +
+                        tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         sig_eps.append(tup)
-                    for sid, gmv in zip(sids, gmf):
+                    sp_out = numpy.zeros((No, len(gmfa)))  # No, N
+                    o = 0
+                    for sp in self.sec_perils:
+                        o1 = o + len(sp.outputs)
+                        sp_out[o:o1] = sp.compute(
+                            mag, zip(self.imts, gmfa.T), self.sctx)
+                        o = o1
+                    for i, gmv in enumerate(gmfa):
                         if gmv.sum():
-                            data.append((sid, eid, gmv))
+                            if No:
+                                data.append((sids[i], eid, rlz, gmv) +
+                                            tuple(sp_out[:, i]))
+                            else:
+                                data.append((sids[i], eid, rlz, gmv))
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
-                n += e
-        m = (len(min_iml),)
-        d = numpy.array(data, [('sid', U32), ('eid', U32), ('gmv', (F32, m))])
+                n += len(eids)
+        dt = F32, (len(min_iml),)
+        dtlist = [('sid', U32), ('eid', U32), ('rlz', U32), ('gmv', dt)] + [
+            (out, F32) for sp in self.sec_perils for out in sp.outputs]
+        d = numpy.array(data, dtlist)
         return d, time.time() - t0
 
     def compute(self, gsim, num_events):
@@ -210,7 +233,7 @@ class GmfComputer(object):
                    epsilons(num_events))
         """
         dctx = self.dctx.roundup(gsim.minimum_distance)
-        if self.truncation_level == 0:
+        if self.distribution is None:
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
@@ -222,13 +245,6 @@ class GmfComputer(object):
             return (gmf,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
-        elif self.truncation_level is None:
-            distribution = scipy.stats.norm()
-        else:
-            assert self.truncation_level > 0, self.truncation_level
-            distribution = scipy.stats.truncnorm(
-                - self.truncation_level, self.truncation_level)
-
         num_sids = len(self.sids)
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
@@ -245,7 +261,7 @@ class GmfComputer(object):
             mean = mean.reshape(mean.shape + (1, ))
 
             total_residual = stddev_total * rvs(
-                distribution, num_sids, num_events)
+                self.distribution, num_sids, num_events)
             gmf = to_imt_unit_values(mean + total_residual, imt)
             stdi = numpy.nan
             epsilons = numpy.empty(num_events, F32)
@@ -258,7 +274,7 @@ class GmfComputer(object):
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
             intra_residual = stddev_intra * rvs(
-                distribution, num_sids, num_events)
+                self.distribution, num_sids, num_events)
 
             if self.correlation_model is not None:
                 intra_residual = self.correlation_model.apply_correlation(
@@ -267,7 +283,7 @@ class GmfComputer(object):
                 if len(sh) == 1:  # a vector
                     intra_residual = intra_residual.reshape(sh + (1,))
 
-            epsilons = rvs(distribution, num_events)
+            epsilons = rvs(self.distribution, num_events)
             inter_residual = stddev_inter * epsilons
 
             gmf = to_imt_unit_values(
@@ -322,9 +338,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
-    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim])
+    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim],
+                          dict(imtls={str(imt): [1] for imt in imts}))
     rupture.rup_id = seed
-    gc = GmfComputer(rupture, sites, [str(imt) for imt in imts],
-                     cmaker, truncation_level, correlation_model)
+    gc = GmfComputer(rupture, sites, cmaker, truncation_level,
+                     correlation_model)
     res, _sig, _eps = gc.compute(gsim, realizations)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}

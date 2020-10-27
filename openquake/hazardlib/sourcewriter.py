@@ -58,7 +58,7 @@ def build_area_source_geometry(area_source):
     lower_depth_node = Node(
         "lowerSeismoDepth", text=area_source.lower_seismogenic_depth)
     return Node(
-        "areaGeometry", {'discretization': area_source.area_discretization},
+        "areaGeometry",
         nodes=[polygon_node, upper_depth_node, lower_depth_node])
 
 
@@ -660,7 +660,8 @@ def write_source_model(dest, sources_or_groups, name=None,
         # remove duplicate content from nodes
         for grp_node in nodes:
             for src_node in grp_node:
-                src_node.nodes = []
+                if src_node["id"] in ddict:
+                    src_node.nodes = []
         # save HDF5 file
         dest5 = os.path.splitext(dest)[0] + '.hdf5'
         with hdf5.File(dest5, 'w') as h:

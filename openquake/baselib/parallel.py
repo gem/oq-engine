@@ -203,7 +203,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import config, hdf5, workerpool, __version__
+from openquake.baselib import config, hdf5, workerpool, version
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
@@ -409,11 +409,11 @@ class Result(object):
         :returns: a new Result instance
         """
         try:
-            if mon.version != __version__:
+            if mon.version != version:
                 raise RuntimeError(
                     'The master is at version %s while the worker %s is at '
                     'version %s' % (mon.version, socket.gethostname(),
-                                    __version__))
+                                    version))
             with mon:
                 val = func(*args)
         except StopIteration:
@@ -445,7 +445,7 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 
 
 dummy_mon = Monitor()
-dummy_mon.version = __version__
+dummy_mon.version = version
 dummy_mon.backurl = None
 
 
@@ -721,6 +721,7 @@ class Starmap(object):
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)
         self.monitor = Monitor(task_func.__name__)
+        self.monitor.filename = h5.filename
         self.monitor.calc_id = self.calc_id
         self.name = self.monitor.operation or task_func.__name__
         self.task_args = task_args
@@ -741,6 +742,7 @@ class Starmap(object):
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
+        self.t0 = time.time()
         if self.distribute == 'zmq':  # add a check
             err = workerpool.check_status()
             if err:
@@ -755,12 +757,8 @@ class Starmap(object):
         total = submitted + queued
         done = submitted - self.todo
         percent = int(float(done) / total * 100)
-        fname = self.task_func.__name__
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
-            nbytes = sum(self.sent[fname].values())
-            self.progress('%s %s sent, %d submitted, %d queued',
-                          self.name, humansize(nbytes), submitted, queued)
         elif percent > self.prev_percent:
             self.progress('%s %3d%% [%d submitted, %d queued]',
                           self.name, percent, submitted, queued)
@@ -774,11 +772,12 @@ class Starmap(object):
         monitor = monitor or self.monitor
         func = func or self.task_func
         if not hasattr(self, 'socket'):  # first time
+            self.t0 = time.time()
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
-            monitor.version = __version__
+            monitor.version = version
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
         if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
             self.task_no += 1
@@ -846,6 +845,11 @@ class Starmap(object):
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
+
+        nbytes = sum(self.sent[self.task_func.__name__].values())
+        if nbytes > 1E6:
+            logging.info('Sent %d tasks, %s in %d seconds', len(self.tasks),
+                         humansize(nbytes), time.time() - self.t0)
 
         isocket = iter(self.socket)
         self.todo = len(self.tasks)

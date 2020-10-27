@@ -18,6 +18,9 @@
 
 import os
 import sys
+import numpy
+import scipy
+import pandas
 import configparser
 
 # disable OpenBLAS threads before the first numpy import
@@ -26,8 +29,14 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 from openquake.baselib.general import git_suffix  # noqa: E402
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.10.0'
+__version__ = '3.11.0'
 __version__ += git_suffix(__file__)
+
+version = dict(engine=__version__,
+               python='%d.%d' % sys.version_info[:2],
+               numpy=numpy.__version__,
+               scipy=scipy.__version__,
+               pandas=pandas.__version__)
 
 
 class InvalidFile(Exception):

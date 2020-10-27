@@ -22,8 +22,13 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 
 import copy
 import numpy as np
-from openquake.hazardlib.gsim.base import GMPE, registry
+from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib import const
+from openquake.hazardlib.imt import from_string
+
+IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
+                      "set_scale_total_sigma_vector",
+                      "set_fixed_total_sigma"]
 
 
 class ModifiableGMPE(GMPE):
@@ -39,6 +44,9 @@ class ModifiableGMPE(GMPE):
         - 'set_between_epsilon' This sets the epsilon of the between event
            variability i.e. the returned mean is the original + tau * episilon
            and sigma tot is equal to sigma_within
+        - 'apply_swiss_amplification' This applies intensity amplification
+           factors to the mean intensity returned by the parent GMPE/IPE based
+           on the input 'amplfactor' site parameter
     """
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
@@ -58,6 +66,13 @@ class ModifiableGMPE(GMPE):
         self.gmpe = registry[gmpe_name](**kw)
         self.set_parameters()
         self.mean = None
+        for key in self.params:
+            if key in IMT_DEPENDENT_KEYS:
+                # If the modification is period-dependent
+                for subkey in self.params[key]:
+                    if isinstance(self.params[key][subkey], dict):
+                        self.params[key] = self._dict_to_coeffs_table(
+                            self.params[key][subkey], subkey)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -75,6 +90,9 @@ class ModifiableGMPE(GMPE):
             working_std_types.append(const.StdDev.INTRA_EVENT)
             working_std_types.append(const.StdDev.TOTAL)
 
+        if 'apply_swiss_amplification' in self.params:
+            self.REQUIRES_SITES_PARAMETERS = frozenset(['amplfactor'])
+
         # Compute the original mean and standard deviations
         omean, ostds = self.gmpe.get_mean_and_stddevs(
             sites, rup, dists, imt, working_std_types)
@@ -86,7 +104,7 @@ class ModifiableGMPE(GMPE):
 
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
-            getattr(self, methname)(**kw)
+            getattr(self, methname)(sites, rup, dists, imt, **kw)
 
         # Return the standard deviation types as originally requested
         outs = []
@@ -95,7 +113,13 @@ class ModifiableGMPE(GMPE):
 
         return self.mean, outs
 
-    def set_between_epsilon(self, epsilon_tau):
+    def apply_swiss_amplification(self, sites, rup, dists, imt):
+        """
+        Adds amplfactor to mean
+        """
+        self.mean = self.mean + sites.amplfactor
+
+    def set_between_epsilon(self, sites, rup, dists, imt, epsilon_tau):
         """
         :param epsilon_tau:
             the epsilon value used to constrain the between event variability
@@ -111,3 +135,65 @@ class ModifiableGMPE(GMPE):
         # Set total variability equal to the within-event one
         keyb = const.StdDev.INTRA_EVENT
         setattr(self, keya, getattr(self, keyb))
+
+    def set_scale_median_scalar(self, sites, rup, dists, imt, scaling_factor):
+        """
+        :param scaling_factor:
+            Simple scaling factor (in linear space) to increase/decrease median
+            ground motion, which applies to all IMTs
+        """
+        self.mean += np.log(scaling_factor)
+
+    def set_scale_median_vector(self, sites, rup, dists, imt, scaling_factor):
+        """
+        :param scaling_factor:
+            IMT-dependent median scaling factors (in linear space) as
+            a CoeffsTable
+        """
+        C = scaling_factor[imt]
+        self.mean += np.log(C["scaling_factor"])
+
+    def set_scale_total_sigma_scalar(self, sites, rup, dists, imt,
+                                     scaling_factor):
+        """
+        Scale the total standard deviations by a constant scalar factor
+        :param scaling_factor:
+            Factor to scale the standard deviations
+        """
+        total_stddev = getattr(self, const.StdDev.TOTAL)
+        total_stddev *= scaling_factor
+        setattr(self, const.StdDev.TOTAL, total_stddev)
+
+    def set_scale_total_sigma_vector(self, sites, rup, dists, imt,
+                                     scaling_factor):
+        """
+        Scale the total standard deviations by a IMT-dependent scalar factor
+        :param scaling_factor:
+            IMT-dependent total standard deviation scaling factors as a
+            CoeffsTable
+        """
+        C = scaling_factor[imt]
+        total_stddev = getattr(self, const.StdDev.TOTAL)
+        total_stddev *= C["scaling_factor"]
+        setattr(self, const.StdDev.TOTAL, total_stddev)
+
+    def set_fixed_total_sigma(self, sites, rup, dists, imt, total_sigma):
+        """
+        Sets the total standard deviations to a fixed value per IMT
+        :param total_sigma:
+            IMT-dependent total standard deviation as a CoeffsTable
+        """
+        C = total_sigma[imt]
+        shp = getattr(self, const.StdDev.TOTAL).shape
+        setattr(self, const.StdDev.TOTAL, C["total_sigma"] + np.zeros(shp))
+
+    @staticmethod
+    def _dict_to_coeffs_table(input_dict, name):
+        """
+        Transform a dictionary of parameters organised by IMT into a
+        coefficient table
+        """
+        coeff_dict = {}
+        for key in input_dict:
+            coeff_dict[from_string(key)] = {name: input_dict[key]}
+        return {name: CoeffsTable(sa_damping=5, table=coeff_dict)}

@@ -25,7 +25,7 @@ import numpy
 import h5py
 import zlib
 
-from openquake.baselib.general import random_filter, AccumDict, cached_property
+from openquake.baselib.general import AccumDict, cached_property
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
@@ -106,9 +106,9 @@ class UcerfFilter(SourceFilter):
                 ridx = set()
                 for arr in src.all_ridx:
                     ridx.update(arr)
-                src.indices = self.get_indices(src, ridx, src.mags.max())
-                if len(src.indices):
-                    yield src
+                indices = self.get_indices(src, ridx, src.mags.max())
+                if len(indices):
+                    yield src, indices
             else:  # background sources
                 yield from super().filter([src])
 
@@ -233,7 +233,8 @@ class UCERFSource(BaseSeismicSource):
         """
         new = copy.copy(self)
         new.grp_id = grp_id
-        new.source_id = branch_id
+        new.source_id = branch_id  # i.e. FM3_1/ABM/Shaw09Mod/
+        # DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
         new.idx_set = build_idx_set(branch_id, self.start_date)
         with h5py.File(self.source_file, "r") as hdf5:
             new.start = 0
@@ -389,17 +390,11 @@ class UCERFSource(BaseSeismicSource):
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, self.source_id)
 
-    def get_background_sources(self, sample_factor=None):
+    def get_background_sources(self):
         """
         Turn the background model of a given branch into a set of point sources
-
-        :param sample_factor:
-            Used to reduce the sources if OQ_SAMPLE_SOURCES is set
         """
         background_sids = self.get_background_sids()
-        if sample_factor is not None:  # hack for use in the mosaic
-            background_sids = random_filter(
-                background_sids, sample_factor, seed=42)
         with h5py.File(self.source_file, "r") as hdf5:
             grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
             # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
@@ -428,6 +423,7 @@ class UCERFSource(BaseSeismicSource):
                 ps.id = self.id
                 ps.grp_id = self.grp_id
                 ps.num_ruptures = ps.count_ruptures()
+                ps.nsites = 1  # anything <> 0 goes
                 sources.append(ps)
         return sources
 

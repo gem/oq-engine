@@ -63,11 +63,7 @@ class AkkarBommer2010(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -76,11 +72,8 @@ class AkkarBommer2010(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 2, page 199.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and stiff and soft soil).
@@ -91,6 +84,9 @@ class AkkarBommer2010(GMPE):
 
     #: Required distance measure is RRup (eq. 1, page 199).
     REQUIRES_DISTANCES = {'rjb'}
+
+    #: Reference Vs30. See page 2983 (top or right column)
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.0
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

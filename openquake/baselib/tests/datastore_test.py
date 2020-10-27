@@ -123,3 +123,16 @@ class DataStoreTestCase(unittest.TestCase):
             'hcurves', sid=[0], imt=imts, lvl=range(L))
         arr = self.dstore.sel('hcurves', imt='PGA', lvl=2)
         self.assertEqual(arr.shape, (1, 1, 1))
+
+    def test_pandas(self):
+        sids = numpy.arange(3)
+        eids = [2, 2, 0]
+        vals = [.1, .2, .3]
+        self.dstore['df/sid'] = sids
+        self.dstore['df/eid'] = eids
+        self.dstore['df/val'] = vals
+        self.dstore.getitem('df').attrs['__pdcolumns__'] = 'sid eid val'
+        df = self.dstore.read_df('df', 'sid', slc=slice(1, 3))
+        print(df)
+        df = self.dstore.read_df('df', 'eid')
+        print(df)

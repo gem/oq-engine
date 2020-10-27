@@ -25,7 +25,7 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general
-from openquake.hazardlib import nrml, sourceconverter, calc, InvalidFile
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.hazardlib.lt import apply_uncertainties
 
 TWO16 = 2 ** 16  # 65,536
@@ -48,42 +48,32 @@ def random_filtered_sources(sources, srcfilter, seed):
     return []
 
 
-def read_source_model(fname, converter, srcfilter, monitor):
+def read_source_model(fname, converter, monitor):
     """
     :param fname: path to a source model XML file
     :param converter: SourceConverter
-    :param srcfilter: None unless OQ_SAMPLE_SOURCES is set
     :param monitor: a Monitor instance
     :returns: a SourceModel instance
     """
     [sm] = nrml.read_source_models([fname], converter)
-    if srcfilter:  # if OQ_SAMPLE_SOURCES is set sample the close sources
-        for i, sg in enumerate(sm.src_groups):
-            sg.sources = random_filtered_sources(sg.sources, srcfilter, i)
     return {fname: sm}
 
 
-def check_dupl_ids(smdict):
-    """
-    Print a warning in case of duplicate source IDs referring to different
-    sources
-    """
+# NB: called after the .checksum has been stored in reduce_sources
+def _check_dupl_ids(src_groups):
     sources = general.AccumDict(accum=[])
-    for sm in smdict.values():
-        for sg in sm.src_groups:
-            for src in sg.sources:
-                sources[src.source_id].append(src)
+    for sg in src_groups:
+        for src in sg.sources:
+            sources[src.source_id].append(src)
     first = True
     for src_id, srcs in sources.items():
-        if len(srcs) > 1:  # duplicate IDs must have all the same checksum
-            checksums = set()
-            for src in srcs:
-                dic = {k: v for k, v in vars(src).items()
-                       if k not in 'grp_id samples'}
-                checksums.add(zlib.adler32(pickle.dumps(dic, protocol=4)))
-            if len(checksums) > 1 and first:
-                logging.warning('There are multiple different sources with the'
-                                ' same ID %s', srcs)
+        if len(srcs) > 1:
+            # duplicate IDs with different checksums, see cases 11, 13, 20
+            for i, src in enumerate(srcs):
+                src.source_id = '%s;%d' % (src.source_id, i)
+            if first:
+                logging.warning('There are multiple different sources with'
+                                ' the same ID %s', srcs)
                 first = False
 
 
@@ -106,7 +96,6 @@ def get_csm(oq, full_lt, h5=None):
     logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
     classical = not oq.is_event_based()
     if oq.is_ucerf():
-        sample = .001 if os.environ.get('OQ_SAMPLE_SOURCES') else None
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         src_groups = []
         for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
@@ -119,22 +108,14 @@ def get_csm(oq, full_lt, h5=None):
             src.samples = sm_rlz.samples
             if classical:
                 src.ruptures_per_block = oq.ruptures_per_block
-                if sample:
-                    sg.sources = [list(src)[0]]  # take the first source
-                else:
-                    sg.sources = list(src)
+                sg.sources = list(src)
                 # add background point sources
-                sg.sources.extend(src.get_background_sources(sample))
+                sg.sources.extend(src.get_background_sources())
             else:  # event_based, use one source
                 sg.sources = [src]
         return CompositeSourceModel(full_lt, src_groups)
 
     logging.info('Reading the source model(s) in parallel')
-    if 'OQ_SAMPLE_SOURCES' in os.environ and h5:
-        srcfilter = calc.filters.SourceFilter(
-            h5['sitecol'], h5['oqparam'].maximum_distance)
-    else:
-        srcfilter = None
 
     # NB: the source models file are often NOT in the shared directory
     # (for instance in oq-engine/demos) so the processpool must be used
@@ -143,12 +124,11 @@ def get_csm(oq, full_lt, h5=None):
     # NB: h5 is None in logictree_test.py
     allargs = []
     for fname in full_lt.source_model_lt.info.smpaths:
-        allargs.append((fname, converter, srcfilter))
+        allargs.append((fname, converter))
     smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
-    check_dupl_ids(smdict)
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
@@ -214,7 +194,8 @@ def reduce_sources(sources_with_same_id):
     """
     out = []
     for src in sources_with_same_id:
-        dic = {k: v for k, v in vars(src).items() if k not in 'grp_id samples'}
+        dic = {k: v for k, v in vars(src).items()
+               if k not in 'source_id grp_id samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
@@ -259,6 +240,7 @@ def _get_csm(full_lt, groups):
             src._wkt = src.wkt()
             idx += 1
     src_groups.extend(atomic)
+    _check_dupl_ids(src_groups)
     return CompositeSourceModel(full_lt, src_groups)
 
 
@@ -309,12 +291,19 @@ class CompositeSourceModel:
         return [src for src_group in self.src_groups
                 for src in src_group]
 
-    def get_num_probs_occur(self):
+    def get_groups(self, eri):
         """
-        :returns: the number of probs_occur from the underlying nonpar sources
+        :param eri: effective source model realization ID
+        :returns: SourceGroups associated to the given `eri`
         """
-        return max(getattr(src, 'num_probs_occur', 0)
-                   for src in self.get_sources())
+        src_groups = []
+        for sg in self.src_groups:
+            grp_id = self.full_lt.get_grp_id(sg.trt, eri)
+            src_group = copy.copy(sg)
+            src_group.sources = [src for src in sg if grp_id in src.grp_ids]
+            if len(src_group):
+                src_groups.append(src_group)
+        return src_groups
 
     def get_floating_spinning_factors(self):
         """

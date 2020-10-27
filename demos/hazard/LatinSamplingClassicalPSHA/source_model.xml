@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Source Model Containing Point Sources ABCD"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <pointSource
+                id="A"
+                name="A"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            1 1
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.5" bValue="1" maxMag="7" minMag="5"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90" probability="1" rake="0" strike="0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15" probability="1"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+                id="B"
+                name="B"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            1 -1
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.5" bValue="1" maxMag="7" minMag="5"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90" probability="1" rake="0" strike="0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15" probability="1"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+                id="C"
+                name="C"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            -1 -1
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.5" bValue="1" maxMag="7" minMag="5"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90" probability="1" rake="0" strike="0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15" probability="1"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+                id="D"
+                name="D"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            -1 1
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        10
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.5" bValue="1" maxMag="7" minMag="5"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90" probability="1" rake="0" strike="0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="15" probability="1"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

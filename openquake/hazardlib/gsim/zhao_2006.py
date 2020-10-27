@@ -47,10 +47,7 @@ class ZhaoEtAl2006Asc(GMPE):
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see paragraph 'Development of Base Model'
     #: p. 901.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components :
@@ -60,11 +57,12 @@ class ZhaoEtAl2006Asc(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 3, p. 902.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+        const.StdDev.INTRA_EVENT}
+
+    DEFINED_FOR_REFERENCE_VELOCITY = 1100.
 
     #: Required site parameters is Vs30.
     #: See table 2, p. 901.

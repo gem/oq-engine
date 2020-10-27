@@ -104,8 +104,8 @@ class CostCalculator(object):
                 unit = 'people'
             else:
                 unit = self.units[lt]
-            lst.append(encode(unit))
-        return numpy.array(lst)
+            lst.append(unit)
+        return lst
 
     def __toh5__(self):
         loss_types = sorted(self.cost_types)
@@ -325,7 +325,7 @@ class TagCollection(object):
             dic[tagname] = numpy.array(getattr(self, tagname))
             sizes.append(len(dic[tagname]))
         return dic, {'tagnames': numpy.array(self.tagnames, hdf5.vstr),
-                     'tagsizes': numpy.array(sizes)}
+                     'tagsizes': sizes}
 
     def __fromh5__(self, dic, attrs):
         self.tagnames = [decode(name) for name in attrs['tagnames']]
@@ -577,7 +577,8 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     int_fields = [(str(name), U32) for name in tagnames]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
-        [('id', '<S20'), ('ordinal', U32), ('lon', F32), ('lat', F32),
+        [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
+         ('ordinal', U32), ('lon', F32), ('lat', F32),
          ('site_id', U32), ('number', F32), ('area', F32)] + [
              (str(name), float) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)

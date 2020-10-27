@@ -217,12 +217,12 @@ class DisaggregationCalculator(base.HazardCalculator):
         :returns: a list of Z arrays of PoEs
         """
         poes = []
+        pcurves = self.pgetter.get_pcurves(sid)
         for z, rlz in enumerate(rlzs):
-            pmap = self.pgetter.get(rlz)
-            if z == 0 and sid in pmap:
-                self.curves.append(pmap[sid].array[:, 0])
-            poes.append(pmap[sid].convert(self.oqparam.imtls)
-                        if sid in pmap else None)
+            pc = pcurves[rlz]
+            if z == 0:
+                self.curves.append(pc.array[:, 0])
+            poes.append(pc.convert(self.oqparam.imtls))
         return poes
 
     def full_disaggregation(self):
@@ -249,7 +249,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.M = len(self.imts)
         ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
         self.pgetter = getters.PmapGetter(
-            self.datastore, ws, self.sitecol.sids)
+            self.datastore, ws, self.sitecol.sids, oq.imtls, oq.poes)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:

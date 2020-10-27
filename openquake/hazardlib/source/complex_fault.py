@@ -235,13 +235,14 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.rupture_mesh_spacing = spacing
 
     def __iter__(self):
+        if not hasattr(self, '_nr'):
+            self.count_ruptures()
         if self.num_ruptures <= MINWEIGHT:
             yield self  # not splittable
             return
         mag_rates = self.get_annual_occurrence_rates()
         for i, (mag, rate) in enumerate(mag_rates):
             src = copy.copy(self)
-            del src._nr
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]
             for s in split(src):

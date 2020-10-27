@@ -637,7 +637,8 @@ def bbox2poly(bbox):
 # geohash code adapted from Leonard Norrgard's implementation
 # https://github.com/vinsci/geohash/blob/master/Geohash/geohash.py
 # see also https://en.wikipedia.org/wiki/Geohash
-# length 5 = 2.4 km resolution, length 4 = 20 km, length 3 = 78 km
+# length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
+# length 4 = 20 km, length 3 = 78 km
 # it may turn useful in the future (with SiteCollection.geohash)
 def geohash(lon, lat, length):
     """

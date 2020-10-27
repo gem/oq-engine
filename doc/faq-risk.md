@@ -18,17 +18,17 @@ is non-zero. By changing it, different paths in the source model
 logic tree will be sampled. It affects both classical calculations 
 and event based calculations.
 
-2. `ses_seed` is used to generate seeds for the ruptures generated 
-by an event based calculation. Changing it will affect the generated 
-ruptures. Note that the generation of ruptures is also affected by
-`random_seed` unless full enumeration of the logic tree is used, 
+2. `ses_seed` is used to generate the seeds for the ruptures involved in
+a scenario or event based calculation. In an event based calculation
+the generation of ruptures is also affected by the
+`random_seed`, unless full enumeration of the logic tree is used, 
 due to the reasons mentioned in the previous paragraph. 
-For an event based calculation, the rupture seeds (which depend on the
-`ses_seed`) are used for sampling ground motion values / intensities 
-from a GMPE / IPE, when the parameter `truncation_level` is non-zero. 
-For historical reasons, sampling ground motion values / intensities 
-from a GMPE / IPE in a scenario calculation is controlled by the 
-`random_seed`.
+For both event based and scenario calculations the rupture seeds are used for
+sampling ground motion values / intensities  from a GMPE / IPE, when the
+parameter `truncation_level` is non-zero. 
+NB: before engine 3.11, sampling ground motion values / intensities  from a
+GMPE / IPE in a scenario calculation was incorrectly controlled by the
+`random_seed` and not the `ses_seed`.
 
 3. `master_seed` is used when generating the epsilons in a calculation 
 involving vulnerability functions with non-zero coefficients of 

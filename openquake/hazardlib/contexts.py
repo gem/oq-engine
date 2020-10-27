@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import abc
 import copy
 import time
@@ -43,8 +44,9 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 bymag = operator.attrgetter('mag')
 bydist = operator.attrgetter('dist')
 I16 = numpy.int16
-KNOWN_DISTANCES = frozenset(
-    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc'.split())
+tmp = 'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc '
+tmp += 'closest_point'
+KNOWN_DISTANCES = frozenset(tmp.split())
 
 
 def get_distances(rupture, sites, param):
@@ -74,6 +76,11 @@ def get_distances(rupture, sites, param):
         dist = rupture.surface.get_azimuth(sites)
     elif param == 'azimuth_cp':
         dist = rupture.surface.get_azimuth_of_closest_point(sites)
+    elif param == 'closest_point':
+        t = rupture.surface.get_closest_points(sites)
+        dist = numpy.array([(lo, la, de) for lo, la, de in zip(t.lons,
+                                                               t.lats,
+                                                               t.depths)])
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)
@@ -168,9 +175,7 @@ class ContextMaker(object):
 
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}
-
         self.af = param.get('af', None)
-
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
@@ -494,10 +499,11 @@ class PmapMaker(object):
         self.group = group
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
-        self.fewsites = len(srcfilter.sitecol) <= cmaker.max_sites_disagg
+        self.fewsites = self.N <= cmaker.max_sites_disagg
         self.poe_mon = cmaker.mon('get_poes', measuremem=False)
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
+        self.gss_mon = cmaker.mon('get_sources_sites', measuremem=True)
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
@@ -537,9 +543,8 @@ class PmapMaker(object):
                             probs += (1. - pne) * ctx.weight
 
     def _ruptures(self, src, filtermag=None):
-        with self.cmaker.mon('iter_ruptures', measuremem=False):
-            return list(src.iter_ruptures(shift_hypo=self.shift_hypo,
-                                          mag=filtermag))
+        return list(src.iter_ruptures(
+            shift_hypo=self.shift_hypo, mag=filtermag))
 
     def _make_ctxs(self, rups, sites, gidx, grp_ids):
         with self.ctx_mon:
@@ -557,7 +562,8 @@ class PmapMaker(object):
 
     def _make_src_indep(self):
         # srcs with the same source_id and grp_ids
-        for srcs, sites in self.srcfilter.get_sources_sites(self.group):
+        for srcs, sites in self.srcfilter.get_sources_sites(
+                self.group, self.gss_mon):
             t0 = time.time()
             src_id = srcs[0].source_id
             grp_ids = numpy.array(srcs[0].grp_ids)
@@ -579,7 +585,8 @@ class PmapMaker(object):
                          for grp_id, p in self.pmap.items())
 
     def _make_src_mutex(self):
-        for src, sites in self.srcfilter(self.group):
+        for src, indices in self.srcfilter.filter(self.group):
+            sites = self.srcfilter.sitecol.filtered(indices)
             t0 = time.time()
             self.totrups += src.num_ruptures
             self.numrups = 0
@@ -1038,7 +1045,8 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
     mags = set('%.2f' % mag for src in sources for mag in src.get_mags())
     dic = {mag: numpy.zeros(len(dist_bins), int) for mag in sorted(mags)}
     cmaker = ContextMaker(trt, gsims, params, monitor)
-    for src, sites in srcfilter(sources):
+    for src, indices in srcfilter.filter(sources):
+        sites = srcfilter.sitecol.filtered(indices)
         for rup in src.iter_ruptures(shift_hypo=cmaker.shift_hypo):
             try:
                 sctx, dctx = cmaker.make_contexts(sites, rup)

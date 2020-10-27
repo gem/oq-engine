@@ -1,4 +1,99 @@
+  [Michele Simionato]
+  * Fixed bug in source model logic tree sampling with more than 2 branchsets
+  * Fixed hazard maps all zeros for individual_curves=true and more than 1 site
+  * Fixed a bug in `oq prepare_site_model` when sites.csv is
+    the same as the vs30.csv file and there is a grid spacing
+  * Speeding up the preclassical calculator
+  * Added an entry point /extract/eids_by_gsim for the QGIS plugin
+  * Internal: automatically convert the source IDs into unique IDs
+  * Changed scenario calculations to depend on the `ses_seed`, not the
+    `random_seed`
+  * Added check on the versions of numpy, scipy and pandas between master and
+    workers
+  * Added a check for large seed dependency in the GMFs and an estimate of the
+    portfolio error due to the seed dependency
+
+  [Viktor Polak]
+  * Added fpeak site parameter
+  * Added the Hassani and Atkinson (2020) GMPE
+
+  [Marco Pagani]
+  * Added a check on DEFINED_FOR_REFERENCE_VELOCITY when using amplification
+
+python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
+
+  [Matteo Nastasi]
+  * Add info to doc about OpenQuake manual path for linux and mac installers
+
+  [Laurentiu Danciu and Athanasios Papadopoulos]
+  * Implemented intensity prediction equations for use in the Swiss Risk Model.
+    The new IPEs refer to models obtained from the ECOS (2009), Faccioli and
+    Cauzzi (2006), Bindi et al. (2011), and Baumont et al. (2018) studies.
+  * Added new float site parameter 'amplfactor'
+  * Extended the ModifiableGMPE class to allow amplification of the
+    intensity of the parent IPE based on the ‘amplfactor’ site parameter
+
+  [Michele Simionato]
+  * Avoided warnings in classical_damage due to PoE == 1
+  * Changed the sourcewriter to not save the `area_source_discretization`
+  * Restored reading from the workers in classical_risk and classical_damage
+  * Implemented `sensitivity_analysis`
+  * Fixed an npz saving error in /extract/assets affecting the QGIS plugin
+  * Improved submitting calculations to the WebAPI: now they can be run on a zmq
+    cluster, serialize_jobs is honored and the log level is configurable
+
+  [Graeme Weatherill]
+  * Adds new methods to the modifiable GMPE to apply linear scaling factors
+    to the median and standard deviation (IMT-dependent and IMT-independent)
+
+  [Michele Simionato]
+  * Made it possible to control the log level of jobs spawned by the WebAPI
+  * Reduced memory occupation in post_ebrisk
+  * Optimized loss aggregation in ebrisk calculations
+  * Extended `oq engine --reuse-input` to the exposure
+  * Parallelized by `number_of_ground_motion_fields` in scenario calculations
+    with many sites
+  * Refactored ebrisk (with a 10x speedup in "aggregate risk" in at least one
+    calculation for Canada) and reduced data transfer in event based
+
+  [Viktor Polak]
+  * Added the Parker et al. (2020) GMPE
+
+  [Marco Pagani]
+  * Added 'closest_point' metric
+
+  [Michele Simionato]
+  * Changed event based full enumeration to be consistent with sampling
+  * Changed the GMF storage to be more pandas-friendly
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Sun, 18 Oct 2020 19:55:40 +0000
+
+python3-oq-engine (3.10.0-1~xenial01) xenial; urgency=low
+
+  [Richard Styron]
+  * Added secondary perils ZhuLiquefactionGeneral and HazusLateralSpreading,
+    supplementing HazusLiquefaction and NewmarkDisplacement
+
+  [Michele Simionato]
+  * Fixed a bug with site models containing non-float parameters
+  * Raised the limit on the asset ID from 20 to 50 characters
+  * Changed the /extract/events API to extract only the relevant events
+  * Removed the GMF npz exporter
+  * Speed-up risk saving in scenario_risk and scenario_damage
+
+  [Antonio Ettorre]
+  * Bumped GDAL to version 3.1.2
+
+  [Michele Simionato]
+  * Optimized scenario_damage for the case of many sites
+  * Implemented secondary perils
+  * Fixed a 32 bit/64 bit bug in `oq prepare_site_model` when sites.csv is
+    the same as the vs30.csv file
+  * Parallelized by GSIM when there is a single rupture
+
   [Francis Bernales]
+  * Added the Stewart et al. (2016) GMPE
+  * Added the Bozorgnia & Campbell (2016) GMPE
   * Added the Gulerce et al. (2017) GMPE
 
   [Michele Simionato]
@@ -10,7 +105,7 @@
   * Displaying the hazard maps in the WebUI for debugging purposes
   * Used the hazard map to get the disaggregation IML from the disaggregation
     PoE and added a warning for zero hazard
-  * Internal: implemented multi-run functionality
+  * Internal: implemented multi-run functionality (``oq engine --multi --run``)
   * Reduced tremendously the data transfer in disaggregation calculations
   * Internal: introduced compress/decompress utilities
   * Reduced the memory and disk space occupation in classical calculations with
@@ -125,6 +220,8 @@
     have homogeneous length across ruptures
   * Removed the dependency from PyYAML, replaced the .yml files in the HMTK with
     .toml files and added an utility `utils/yaml2toml`
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 29 Sep 2020 11:53:24 +0000
 
 python3-oq-engine (3.9.0-1~xenial01) xenial; urgency=low
 

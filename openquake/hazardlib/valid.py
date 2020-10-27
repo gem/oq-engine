@@ -23,8 +23,9 @@ Validation library for the engine, the desktop tools, and anything else
 import os
 import re
 import ast
-import logging
+import json
 import toml
+import logging
 import numpy
 
 from openquake.baselib.general import distinct
@@ -32,7 +33,7 @@ from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.calc.filters import MagDepDistance, floatdict
+from openquake.hazardlib.calc.filters import MagDepDistance, floatdict  # needed
 
 PRECISION = pmf.PRECISION
 
@@ -65,6 +66,7 @@ class FromFile(object):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
+    DEFINED_FOR_REFERENCE_VELOCITY = None
     kwargs = {}
 
     def init(self):
@@ -101,7 +103,9 @@ def _fix_toml(v):
     # TomlDecoder.get_empty_inline_table.<locals>.DynamicInlineTableDict
     # using toml.loads(s, _dict=dict) would be the right way, but it does
     # not work :-(
-    if hasattr(v, 'items'):
+    if isinstance(v, numpy.ndarray):
+        return list(v)
+    elif hasattr(v, 'items'):
         return {k1: _fix_toml(v1) for k1, v1 in v.items()}
     return v
 
@@ -304,7 +308,7 @@ class SimpleId(object):
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
-ASSET_ID_LENGTH = 100
+ASSET_ID_LENGTH = 50  # length that makes Murray happy
 
 simple_id = SimpleId(MAX_ID_LENGTH)
 asset_id = SimpleId(ASSET_ID_LENGTH)
@@ -519,6 +523,8 @@ def coordinates(value):
     ...
     ValueError: Found overlapping site #2,  0 0 -1
     """
+    if isinstance(value, list):  # assume list of lists/tuples
+        return [point(' '.join(map(str, v))) for v in value]
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
     points = []
@@ -548,7 +554,7 @@ def positiveint(value):
     :param value: input string
     :returns: positive integer
     """
-    val = value.lower()
+    val = str(value).lower()
     if val == 'true':
         return 1
     elif val == 'false':
@@ -617,7 +623,7 @@ def boolean(value):
         ...
     ValueError: Not a boolean: t
     """
-    value = value.strip().lower()
+    value = str(value).strip().lower()
     try:
         return _BOOL_DICT[value]
     except KeyError:
@@ -1263,6 +1269,14 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
                     line.strip() for line in is_valid.__doc__.splitlines())
                 doc = docstring.format(**vars(self))
                 raise ValueError(doc)
+
+    def json(self):
+        """
+        :returns: the parameters as a JSON string
+        """
+        dic = {k: _fix_toml(v)
+               for k, v in self.__dict__.items() if not k.startswith('_')}
+        return json.dumps(dic)
 
     def __iter__(self):
         for item in sorted(vars(self).items()):

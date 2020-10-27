@@ -142,7 +142,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             polygon=polygon,
-            area_discretization=2,
+            area_discretization=1,
             temporal_occurrence_model=PoissonTOM(50.))
         return area
 
@@ -723,9 +723,8 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         self.assertEqual(csm.full_lt.gsim_by_trt(rlz),
                          {'Subduction Interface': '[SadighEtAl1997]',
                           'Active Shallow Crust': '[ChiouYoungs2008]'})
-        # ignoring the end of the tuple, with the uid field
         self.assertEqual(rlz.ordinal, 0)
-        self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
+        self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
         self.assertEqual(rlz.weight['default'], 1.)
 

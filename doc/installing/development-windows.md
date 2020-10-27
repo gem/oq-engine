@@ -8,7 +8,7 @@
 
 ## Extract the content of the downloaded zip
 
-Unzip the downloaded zip file, which has a name like `OpenQuake_Engine_3.9.0_2003311327.zip` to any location in your filesystem; at this step the extracted folder can be also moved to a different location or renamed after the extraction.
+Unzip the downloaded zip file, which has a name like `OpenQuake_Engine_3.10.1_2003311327.zip` to any location in your filesystem; at this step the extracted folder can be also moved to a different location or renamed after the extraction.
 
 **PLEASE NOTE: The following commands must be executed from the `oq-console.bat` console available into the root folder.**
 
@@ -103,5 +103,5 @@ silx view calc_NNN.hdf5
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
   * Contact us on IRC: irc.freenode.net, channel #openquake

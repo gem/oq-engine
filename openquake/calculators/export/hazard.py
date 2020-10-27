@@ -30,7 +30,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
-from openquake.calculators.getters import gen_rgetters
+from openquake.calculators.getters import gen_rupture_getters
 from openquake.commonlib import writers, hazard_writers, calc, util
 
 F32 = numpy.float32
@@ -59,11 +59,11 @@ def export_ruptures_xml(ekey, dstore):
     oq = dstore['oqparam']
     events = group_array(dstore['events'][()], 'rup_id')
     ruptures_by_grp = AccumDict(accum=[])
-    for rgetter in gen_rgetters(dstore):
+    for rgetter in gen_rupture_getters(dstore):
         ebrs = []
         for proxy in rgetter.get_proxies():
             events_by_ses = group_array(events[proxy['id']], 'ses_id')
-            ebr = proxy.to_ebr(rgetter.trt, rgetter.samples)
+            ebr = proxy.to_ebr(rgetter.trt)
             ebrs.append(ebr.export(events_by_ses))
         ruptures_by_grp[rgetter.grp_id].extend(ebrs)
     dest = dstore.export_path('ses.' + fmt)
@@ -382,8 +382,7 @@ def _extract(hmap, imt, j):
 
 
 @export.add(('hcurves', 'npz'), ('hmaps', 'npz'), ('uhs', 'npz'),
-            ('gmf_data', 'npz'),
-            ('losses_by_asset', 'npz'), ('avg_damages-rlzs', 'npz'))
+            ('losses_by_asset', 'npz'), ('damages-rlzs', 'npz'))
 def export_hazard_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     out = extract(dstore, ekey[0])
@@ -400,7 +399,12 @@ def export_gmf_data_csv(ekey, dstore):
     sc = dstore['sitecol'].array
     arr = sc[['lon', 'lat']]
     eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-    gmfa = dstore['gmf_data/data'][('eid', 'sid', 'gmv')]
+    gmfa = numpy.zeros(len(dstore['gmf_data/eid']), oq.gmf_data_dt())
+    df = dstore.read_df('gmf_data', 'sid')
+    gmfa['eid'] = df.eid.to_numpy()
+    gmfa['sid'] = df.index.to_numpy()
+    for m in range(len(imts)):
+        gmfa['gmv'][:, m] = df[f'gmv_{m}'].to_numpy()
     event_id = dstore['events']['id']
     gmfa['eid'] = event_id[gmfa['eid']]
     if eid is None:  # we cannot use extract here

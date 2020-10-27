@@ -80,13 +80,6 @@ The remaining new parameters introduced in this example are the following:
     only two values permitted are \Verb+asset_correlation = 0+ and 
     \Verb+asset_correlation = 1+.
 
-  \item \Verb+asset_loss_table+: this parameter
-    specifies whether the individual asset and portfolio losses should be
-    stored for each realization; the default value of this parameter is
-    \Verb+false+ and only mean and standard deviation of the portfolio losses
-    across all realizations are stored. If this flag is set to \Verb+true+, a
-    matrix containing all of the losses is saved in the datastore.
-
 \end{itemize}
 
 In this case, the ground motion fields will be computed at each of the
@@ -112,3 +105,31 @@ Calculation 2735 completed in 10 seconds. Results:
 All of the different ways of running a scenario damage calculation as
 illustrated through the examples of the previous section are also applicable
 to the scenario risk calculator, though the examples are not repeated here.
+
+
+A few additional parameters related to the event based risk calculator that
+may be useful for controlling specific aspects of the calculation are listed
+below:
+
+\begin{itemize}
+
+  \item \Verb+ignore_covs+: this parameter controls the propagation of 
+    vulnerability uncertainty to losses. The vulnerability functions using 
+    continuous distributions (such as the lognormal distribution or beta 
+    distribution) to characterize the uncertainty in the loss ratio 
+    conditional on the shaking intensity level, specify the mean loss ratios 
+    and the corresponding coefficients of variation for a set of intensity 
+    levels. They are used to build the so called epsilon matrix within the 
+    engine, which is how loss ratios are sampled from the distribution for 
+    each asset. There is clearly a performance penalty associated with the 
+    propagation of uncertainty in the vulnerability to losses. The epsilon 
+    matrix has to be computed and stored, and then the worker processes have 
+    to read it, which involves large quantities of data transfer and memory 
+    usage. Setting \Verb+ignore_covs = true+ in the job file will result in 
+    the engine using just the mean loss ratio conditioned on the shaking 
+    intensity and ignoring the uncertainty. This tradeoff of not propagating 
+    the vulnerabilty uncertainty to the loss estimates can lead to a 
+    significant boost in performance and tractability. The default value of 
+    \Verb+ignore_covs+ is \Verb+false+. 
+
+\end{itemize}

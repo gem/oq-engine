@@ -82,7 +82,12 @@ specific to each risk calculator are discussed in subsequent sections.
   and \Verb+classical_bcr+.
 
   \item \Verb+exposure_file+: this parameter is used to specify the path to
-  the \gls{exposuremodel} file.
+  the \gls{exposuremodel} file. Typically this is the path to the xml file
+  containing the exposure, or the xml file containing the metadata sections
+  for the case where the assets are listed in one or more csv files. 
+  For particularly large exposure models, it may be more convenient to provide 
+  the path to a single compressed zip file that contains the exposure xml file
+  and the exposure csv files (if any).
 
 \end{itemize}
 
@@ -107,6 +112,10 @@ calculators.
 \section{Classical Probabilistic Seismic Risk Calculator}
 \label{sec:config_classical_risk}
 \input{oqum/risk/02_config_classical_risk}
+
+\section{Stochastic Event Based Seismic Damage Calculator}
+\label{sec:config_event_based_damage}
+\input{oqum/risk/02_config_event_based_damage}
 
 \section{Stochastic Event Based Seismic Risk Calculator}
 \label{sec:config_event_based_risk}

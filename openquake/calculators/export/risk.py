@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import json
 import itertools
 import collections
 import numpy
@@ -321,12 +322,8 @@ def modal_damage_array(data, damage_dt):
     return arr
 
 
-# damages and avg_damages require different DISPLAY_NAMEs, so they are
-# kept separated even if the exporter is the same; see Anirudh's comment
-# in https://github.com/gem/oq-engine/pull/5851
-@export.add(('avg_damages-rlzs', 'csv'), ('avg_damages-stats', 'csv'),
-            ('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
-def export_avg_damages_csv(ekey, dstore):
+@export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
+def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
     dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
@@ -343,11 +340,11 @@ def export_avg_damages_csv(ekey, dstore):
         tags = ['%03d' % r for r in range(len(rlzs))]
     for i, tag in enumerate(tags):
         if oq.modal_damage_state:
-            avg_damages = modal_damage_array(data[:, i], dmg_dt)
+            damages = modal_damage_array(data[:, i], dmg_dt)
         else:
-            avg_damages = build_damage_array(data[:, i], dmg_dt)
+            damages = build_damage_array(data[:, i], dmg_dt)
         fname = dstore.build_fname(ekey[0].split('-')[0], tag, ekey[1])
-        writer.save(compose_arrays(assets, avg_damages), fname,
+        writer.save(compose_arrays(assets, damages), fname,
                     comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
@@ -511,15 +508,15 @@ def export_asset_risk_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
     fname = dstore.export_path(path)
-    md = extract(dstore, 'exposure_metadata')
-    tostr = {'taxonomy': md.taxonomy}
-    for tagname in md.tagnames:
-        tostr[tagname] = getattr(md, tagname)
-    tagnames = sorted(set(md.tagnames) - {'id'})
+    md = json.loads(extract(dstore, 'exposure_metadata').json)
+    tostr = {'taxonomy': md['taxonomy']}
+    for tagname in md['tagnames']:
+        tostr[tagname] = md[tagname]
+    tagnames = sorted(set(md['tagnames']) - {'id'})
     arr = extract(dstore, 'asset_risk').array
     rows = []
     lossnames = sorted(name for name in arr.dtype.names if 'loss' in name)
-    expnames = [name for name in arr.dtype.names if name not in md.tagnames
+    expnames = [name for name in arr.dtype.names if name not in md['tagnames']
                 and 'loss' not in name and name not in 'lon lat']
     colnames = tagnames + ['lon', 'lat'] + expnames + lossnames
     # sanity check
@@ -529,7 +526,7 @@ def export_asset_risk_csv(ekey, dstore):
         for name in colnames:
             value = rec[name]
             try:
-                row.append('"%s"' % tostr[name][value])
+                row.append(tostr[name][value])
             except KeyError:
                 row.append(value)
         rows.append(row)

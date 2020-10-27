@@ -89,6 +89,8 @@ orig_write_csv = writers.write_csv
 def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
               renamedict=None):
     fname = orig_write_csv(dest, data, sep, fmt, header, comment, renamedict)
+    if fname is None:  # writing on StringIO
+        return
     lines = open(fname).readlines()[:3]
     name = re.sub(r'[\d\.]+', '.', strip_calc_id(fname))
     collect_csv[name] = lines
@@ -113,8 +115,8 @@ class CalculatorTestCase(unittest.TestCase):
         """
         self.testdir = os.path.dirname(testfile) if os.path.isfile(testfile) \
             else testfile
-        inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
-        params = readinput.get_params(inis, **kw)
+        params = readinput.get_params(
+            os.path.join(self.testdir, job_ini), **kw)
 
         oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
             base.calculators)

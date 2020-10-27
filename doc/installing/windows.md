@@ -20,7 +20,7 @@ Requirements are:
 
 ## Install or upgrade packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.9.0-2.exe using any browser and run the installer, then follow the wizard on screen.
+Download the installer from https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.10.1-1.exe using any browser and run the installer, then follow the wizard on screen.
 
 ![installer-screenshot-1](../img/win-installer-1.png)
 ![installer-screenshot-2](../img/win-installer-2.png)
@@ -34,5 +34,5 @@ Continue on [How to run the OpenQuake Engine](../running/windows.md)
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
   * Contact us on IRC: irc.freenode.net, channel #openquake
