@@ -503,6 +503,7 @@ class PmapMaker(object):
         self.poe_mon = cmaker.mon('get_poes', measuremem=False)
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
+        self.gss_mon = cmaker.mon('get_sources_sites', measuremem=True)
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
@@ -561,7 +562,8 @@ class PmapMaker(object):
 
     def _make_src_indep(self):
         # srcs with the same source_id and grp_ids
-        for srcs, sites in self.srcfilter.get_sources_sites(self.group):
+        for srcs, sites in self.srcfilter.get_sources_sites(
+                self.group, self.gss_mon):
             t0 = time.time()
             src_id = srcs[0].source_id
             grp_ids = numpy.array(srcs[0].grp_ids)

@@ -83,7 +83,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # make sure the tot_curves-stats has the right attrs
         self.check_attr('return_periods', [30, 60, 120, 240, 480, 960])
-        self.check_attr('units', [b'EUR', b'EUR'])
+        self.check_attr('units', ['EUR', 'EUR'])
 
         # test portfolio loss
         tmp = gettemp(view('portfolio_loss', self.calc.datastore))
@@ -435,8 +435,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
 
-        curves = self.calc.datastore.read_df('agg_curves-rlzs',
-                                             ['NAME_1', 'return_periods'])
+        curves = self.calc.datastore.read_df('agg_curves-rlzs', 'NAME_1')
         self.assertEqual(len(curves), 6)  # 2 names x 3 periods
 
         # regenerate loss curves and maps

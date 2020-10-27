@@ -112,6 +112,8 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         logging.info('Building ruptures')
+        for src in self.csm.get_sources():
+            src.nsites = 1  # avoid 0 weight
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
@@ -184,10 +186,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 for m in range(M):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
                                 data['gmv'][:, m])
-                for m in range(M):
-                    for sec_out in sec_outputs:
-                        hdf5.extend(self.datastore[f'gmf_data/{sec_out}_{m}'],
-                                    data[sec_out][:, m])
+                for sec_out in sec_outputs:
+                    hdf5.extend(self.datastore[f'gmf_data/{sec_out}'],
+                                data[sec_out])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(data)
@@ -320,7 +321,7 @@ class EventBasedCalculator(base.HazardCalculator):
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in self.datastore:
             return acc
-        if oq.ground_motion_fields and oq.minimum_intensity:
+        if oq.ground_motion_fields:
             eids = self.datastore['gmf_data/eid'][:]
             rel_events = numpy.unique(eids)
             e = len(rel_events)
@@ -348,7 +349,7 @@ class EventBasedCalculator(base.HazardCalculator):
             err = views.view('gmf_error', self.datastore)
             if err > .05:
                 logging.warning('Your results are expected to have a large '
-                                'seed dependency')
+                                'dependency from ses_seed')
         if oq.hazard_curves_from_gmfs:
             rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can

@@ -16,7 +16,7 @@
 | case_13 | | 
 | case_14 | | 
 | case_15 | | 
-| case_16 | | 
+| case_16 | Sampling 10 logic tree paths out of 759_375 |
 | case_17 | | 
 | case_18 | | 
 | case_19 | | 
@@ -56,3 +56,4 @@
 | case_53 | Tests the modifiable GMPE with imt-independent linear scaling factors on median and standard deviation |
 | case_54 | Tests the modifiable GMPE with imt-dependent linear scaling factors on median and standard deviation |
 | case_55 | Tests the use of amplification functions |
+| case_56 | Another test for sampling (10 samples out of 6)|

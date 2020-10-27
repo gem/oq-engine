@@ -68,15 +68,13 @@ source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('gidx', numpy.uint16),            # 1
     ('code', (numpy.string_, 1)),      # 2
-    ('multiplicity', numpy.uint32),    # 3
-    ('calc_time', numpy.float32),      # 4
-    ('num_sites', numpy.uint32),       # 5
-    ('eff_ruptures', numpy.uint32),    # 6
-    ('checksum', numpy.uint32),        # 7
-    ('serial', numpy.uint32),          # 8
-    ('trti', numpy.uint8),             # 9
+    ('calc_time', numpy.float32),      # 3
+    ('num_sites', numpy.uint32),       # 4
+    ('eff_ruptures', numpy.uint32),    # 5
+    ('serial', numpy.uint32),          # 6
+    ('trti', numpy.uint8),             # 7
 ])
-MULTIPLICITY, SERIAL = 3, 8
+SERIAL = 6
 
 
 class DuplicatedPoint(Exception):
@@ -623,7 +621,7 @@ def get_rupture(oqparam):
     else:
         raise ValueError('Unrecognized ruptures model %s' % rup_model)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    rup.rup_id = oqparam.random_seed
+    rup.rup_id = oqparam.ses_seed
     return rup
 
 
@@ -702,10 +700,8 @@ def _get_cachedir(oq, full_lt, h5=None):
             csm.full_lt = full_lt
             return csm
     csm = get_csm(oq, full_lt, h5)
-    logging.info('Weighting the sources')
-    for sg in csm.src_groups:
-        for src in sg:
-            src.weight  # cache .num_ruptures
+    if not csm.src_groups:  # everything was filtered away
+        return csm
     logging.info('Saving %s', fname)
     with open(fname, 'wb') as f:
         pickle.dump(csm, f)
@@ -725,7 +721,7 @@ def get_composite_source_model(oqparam, h5=None):
     if oqparam.cachedir and not oqparam.is_ucerf():
         csm = _get_cachedir(oqparam, full_lt, h5)
     else:
-        csm = get_csm(oqparam, full_lt, h5)
+        csm = get_csm(oqparam, full_lt,  h5)
     grp_ids = csm.get_grp_ids()
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
     if oqparam.is_event_based():
@@ -738,14 +734,10 @@ def get_composite_source_model(oqparam, h5=None):
         if hasattr(sg, 'mags'):  # UCERF
             mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
-            if src.source_id in data:
-                multiplicity = data[src.source_id][MULTIPLICITY] + 1
-            else:
-                multiplicity = 1
-                ns += 1
+            ns += 1
             src.gidx = gidx[tuple(src.grp_ids)]
             row = [src.source_id, src.gidx, src.code,
-                   multiplicity, 0, 0, 0, src.checksum, src.serial or ns,
+                   0, 0, 0, src.serial or ns,
                    full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
@@ -966,7 +958,15 @@ tag2code = {'ar': b'A',
             'no': b'N'}
 
 
+# tested in commands_test
 def reduce_sm(paths, source_ids):
+    """
+    :param paths: list of source_model.xml files
+    :param source_ids: dictionary src_id -> array[src_id, code]
+    :returns: dictionary with keys good, total, model, path, xmlns
+
+    NB: duplicate sources are not removed from the XML
+    """
     if isinstance(source_ids, dict):  # in oq reduce_sm
         def ok(src_node):
             code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]

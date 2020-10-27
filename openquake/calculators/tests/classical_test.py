@@ -24,7 +24,7 @@ from openquake.hazardlib import lt
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.getters import PmapGetter
+from openquake.calculators.getters import get_slice_by_grp
 from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
@@ -33,7 +33,7 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50, case_51, case_52, case_53, case_54, case_55)
+    case_50, case_51, case_52, case_53, case_54, case_55, case_56)
 
 aac = numpy.testing.assert_allclose
 
@@ -124,10 +124,6 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini')
 
-        # check view_pmap for a single realization
-        got = view('pmap:grp-00', self.calc.datastore)
-        self.assertEqual(got, '<ProbabilityMap 1, 4, 1>')
-
         # check view inputs
         lines = view('inputs', self.calc.datastore).splitlines()
         self.assertEqual(len(lines), 9)
@@ -166,8 +162,10 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
             case_7.__file__)
 
-        # exercising extract/mean_std_curves
-        # extract(self.calc.datastore, 'mean_std_curves')
+        # checking the individual hazard maps are nonzero
+        iml = self.calc.datastore.sel(
+            'hmaps-rlzs', imt="PGA", site_id=0).squeeze()
+        aac(iml, [0.167078, 0.134646], atol=.0001)  # for the two realizations
 
         # exercise the warning for no output when mean_hazard_curves='false'
         self.run_calc(
@@ -202,15 +200,6 @@ class ClassicalTestCase(CalculatorTestCase):
              'quantile_curve-0.1.csv',
              'quantile_curve-0.9.csv'],
             case_11.__file__)
-
-        # checking PmapGetter.get_pcurve
-        pgetter = PmapGetter(self.calc.datastore, self.calc.weights,
-                             self.calc.sitecol.sids, self.calc.oqparam.imtls)
-        poes = pgetter.get_hcurves(pgetter.init())[0]
-        mean = self.calc.datastore.sel('hcurves-stats', stat='mean', sid=0)
-        mean2 = poes.T @ numpy.array([w['weight'] for w in self.calc.weights])
-        aac(mean2.flat, mean.flat)
-        check_disagg_by_src(self.calc.datastore)
 
     def test_case_12(self):
         # test Modified GMPE
@@ -258,7 +247,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # test sampling use the right number of gsims by looking at
         # the poes datasets which have shape (N, L, G)
         G = 1  # and not 2
-        self.calc.datastore['poes/grp-00'].array.shape[-1] == G
+        self.calc.datastore['_poes'].shape[-1] == G
 
     def test_case_15(self):
         # this is a case with both splittable and unsplittable sources
@@ -314,10 +303,8 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
-        arr = self.calc.datastore['source_info'][:]
-        mul = dict(arr[['source_id', 'multiplicity']])
-        self.assertEqual(mul['A'], 2)  # different, multiplicity > 1
-        self.assertEqual(mul['B'], 1)  # duplicates
+        ids = self.calc.datastore['source_info']['source_id']
+        numpy.testing.assert_equal(ids, ['A;0', 'A;1', 'B'])
 
     def test_case_18(self):  # GMPEtable
         self.assert_curves_ok(
@@ -374,28 +361,15 @@ hazard_uhs-std.csv
         # there are 3 sources x 12 sm_rlzs
         [sg] = self.calc.csm.src_groups  # 1 source group with 7 sources
         self.assertEqual(len(sg), 7)
-        tbl = []
-        for src in sg:
-            tbl.append((src.source_id, src.checksum) + src.grp_ids)
-        tbl.sort()
-        '''
-        self.assertEqual(tbl,
-                         [['CHAR1', 1020111046, 2, 5, 8, 11],
-                          ['CHAR1', 1117683992, 0, 3, 6, 9],
-                          ['CHAR1', 1442321585, 1, 4, 7, 10],
-                          ['COMFLT1', 2221824602, 3, 4, 5, 9, 10, 11],
-                          ['COMFLT1', 3381942518, 0, 1, 2, 6, 7, 8],
-                          ['SFLT1', 4233779789, 6, 7, 8, 9, 10, 11],
-                          ['SFLT1', 4256912415, 0, 1, 2, 3, 4, 5]])
-        '''
         dupl = sum(len(src.grp_ids) - 1 for src in sg)
         self.assertEqual(dupl, 29)  # there are 29 duplicated sources
 
         # another way to look at the duplicated sources; protects against
         # future refactorings breaking the pandas readability of source_info
         df = self.calc.datastore.read_df('source_info', 'source_id')
-        dic = dict(df['multiplicity'])
-        self.assertEqual(dic, {'CHAR1': 3, 'COMFLT1': 2, 'SFLT1': 2})
+        numpy.testing.assert_equal(
+            list(df.index), ['CHAR1;0', 'CHAR1;1', 'CHAR1;2', 'COMFLT1;0',
+                             'COMFLT1;1', 'SFLT1;0', 'SFLT1;1'])
 
         # check pandas readability of hcurves-rlzs and hcurves-stats
         df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')
@@ -446,7 +420,8 @@ hazard_uhs-std.csv
         ], case_22.__file__, delta=1E-6)
 
     def test_case_23(self):  # filtering away on TRT
-        self.assert_curves_ok(['hazard_curve.csv'], case_23.__file__)
+        self.assert_curves_ok(['hazard_curve.csv'],
+                              case_23.__file__, delta=1e-5)
         checksum = self.calc.datastore['/'].attrs['checksum32']
         self.assertEqual(checksum, 3309200309)
 
@@ -570,7 +545,7 @@ hazard_uhs-std.csv
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1).csv',
             'hazard_curve-mean-SA(0.5).csv', 'hazard_curve-mean-SA(2.0).csv',
-            'hazard_map-mean.csv'], case_39.__file__, delta=1E-5)
+            'hazard_map-mean.csv'], case_39.__file__, delta=2E-5)
 
     def test_case_40(self):
         # NGA East
@@ -610,8 +585,29 @@ hazard_uhs-std.csv
                               shift_hypo='false')
 
     def test_case_45(self):
-        # this is a test for MMI
+        # this is a test for MMI with disagg_by_src
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
+        df = self.calc.datastore.read_df('disagg_by_src', 'src_id')
+        self.assertEqual(str(df), '''\
+      site_id  rlz_id  imt  lvl         value
+b'1'        0       0  MMI    0  5.512676e-05
+b'2'        0       0  MMI    0  2.811387e-05
+b'1'        0       0  MMI    1  7.374010e-07
+b'2'        0       0  MMI    1  0.000000e+00
+b'1'        0       0  MMI    2  0.000000e+00
+b'2'        0       0  MMI    2  0.000000e+00
+b'1'        0       0  MMI    3  0.000000e+00
+b'2'        0       0  MMI    3  0.000000e+00
+b'1'        0       0  MMI    4  0.000000e+00
+b'2'        0       0  MMI    4  0.000000e+00
+b'1'        0       0  MMI    5  0.000000e+00
+b'2'        0       0  MMI    5  0.000000e+00
+b'1'        0       0  MMI    6  0.000000e+00
+b'2'        0       0  MMI    6  0.000000e+00
+b'1'        0       0  MMI    7  0.000000e+00
+b'2'        0       0  MMI    7  0.000000e+00
+b'1'        0       0  MMI    8  0.000000e+00
+b'2'        0       0  MMI    8  0.000000e+00''')
 
     def test_case_46(self):
         # SMLT with applyToBranches
@@ -760,3 +756,26 @@ hazard_uhs-std.csv
                       amplification_csv='amplification2bis.csv')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
+
+    def test_case_56(self):
+        # test with oversampling
+        # there are 6 potential paths 1A 1B 1C 2A 2B 2C
+        # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
+        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2 
+        self.run_calc(case_56.__file__, 'job.ini', concurrent_tasks='0')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurves.csv', fname)
+
+        self.calc.datastore['_poes'].shape
+        full_lt = self.calc.datastore['full_lt']
+        rlzs_by_grp = full_lt.get_rlzs_by_grp()
+        numpy.testing.assert_equal(
+            rlzs_by_grp['grp-00'], [[1, 3, 5], [2], [0, 4]])
+        numpy.testing.assert_equal(
+            rlzs_by_grp['grp-01'], [[7, 9], [6, 8]])
+        # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
+        slc0, slc1 = get_slice_by_grp(rlzs_by_grp)
+        [(trt, gsims)] = full_lt.get_gsims_by_trt().items()
+        self.assertEqual(len(gsims), 3)
+        # this is a case where slc1 is shorter than len(gsims)
+        # affects the logic in Classical.post_execute

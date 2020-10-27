@@ -438,7 +438,7 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_23.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                              delta=1E-6)
+                              delta=1E-4)
         sio = io.StringIO()
         write_csv(sio, self.calc.datastore.getitem('sitecol'))
         tmp = gettemp(sio.getvalue())
@@ -474,8 +474,8 @@ class EventBasedTestCase(CalculatorTestCase):
         # cali landslide simplified
         self.run_calc(case_26.__file__, 'job_land.ini')
         df = self.calc.datastore.read_df('gmf_data', 'sid')
-        pd_mean = df[df.prob_disp_0 > 0].prob_disp_0.mean()
-        nd_mean = df[df.newmark_disp_0 > 0].newmark_disp_0.mean()
+        pd_mean = df[df.prob_disp > 0].prob_disp.mean()
+        nd_mean = df[df.newmark_disp > 0].newmark_disp.mean()
         self.assertGreater(pd_mean, 0)
         self.assertGreater(nd_mean, 0)
 
@@ -483,8 +483,12 @@ class EventBasedTestCase(CalculatorTestCase):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
         df = self.calc.datastore.read_df('gmf_data', 'sid')
-        pd_mean = df[df.liq_prob_0 > 0].liq_prob_0.mean()
-        self.assertGreater(pd_mean, 0)
+        pd_mean = df[df.liq_prob > 0].liq_prob.mean()
+        lat_spread_mean = df.lat_spread.mean()
+        vert_settle_mean = df.vert_settlement.mean()
+        self.assertGreater(pd_mean, 0.) 
+        self.assertGreater(lat_spread_mean, 0.)
+        self.assertGreater(vert_settle_mean, 0.)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

@@ -148,6 +148,8 @@ class GmfComputer(object):
         No = sum(len(sp.outputs) for sp in self.sec_perils)
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
+            if num_events == 0:  # it may happen
+                continue
             # NB: the trick for performance is to keep the call to
             # compute.compute outside of the loop over the realizations
             # it is better to have few calls producing big arrays
@@ -168,19 +170,18 @@ class GmfComputer(object):
                         tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         sig_eps.append(tup)
-                    sp_out = numpy.zeros((No,) + gmfa.shape)  # No, N, M
-                    for m, imt in enumerate(self.imts):
-                        o = 0
-                        for sp in self.sec_perils:
-                            o1 = o + len(sp.outputs)
-                            sp_out[o:o1, :, m] = sp.compute(
-                                mag, imt, gmfa[:, m], self.sctx)
-                            o = o1
+                    sp_out = numpy.zeros((No, len(gmfa)))  # No, N
+                    o = 0
+                    for sp in self.sec_perils:
+                        o1 = o + len(sp.outputs)
+                        sp_out[o:o1] = sp.compute(
+                            mag, zip(self.imts, gmfa.T), self.sctx)
+                        o = o1
                     for i, gmv in enumerate(gmfa):
                         if gmv.sum():
                             if No:
                                 data.append((sids[i], eid, rlz, gmv) +
-                                            tuple(sp_out[:, i, :]))
+                                            tuple(sp_out[:, i]))
                             else:
                                 data.append((sids[i], eid, rlz, gmv))
                         # gmv can be zero due to the minimum_intensity, coming
@@ -188,7 +189,7 @@ class GmfComputer(object):
                 n += len(eids)
         dt = F32, (len(min_iml),)
         dtlist = [('sid', U32), ('eid', U32), ('rlz', U32), ('gmv', dt)] + [
-            (out, dt) for sp in self.sec_perils for out in sp.outputs]
+            (out, F32) for sp in self.sec_perils for out in sp.outputs]
         d = numpy.array(data, dtlist)
         return d, time.time() - t0
 

@@ -35,7 +35,6 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
-from openquake.calculators import getters
 from openquake.calculators.extract import extract, FLOAT, INT
 
 F32 = numpy.float32
@@ -156,14 +155,13 @@ def view_slow_sources(token, dstore, maxrows=20):
     """
     Returns the slowest sources
     """
-    info = dstore['source_info']['source_id', 'code', 'multiplicity',
+    info = dstore['source_info']['source_id', 'code',
                                  'calc_time', 'num_sites', 'eff_ruptures']
     info = info[info['eff_ruptures'] > 0]
     info.sort(order='calc_time')
     data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names])
     for name in info.dtype.names:
         data[name] = info[name]
-    data['num_sites'] /= data['eff_ruptures']
     return rst_table(data[::-1][:maxrows])
 
 
@@ -462,11 +460,12 @@ def stats(name, array, *extras):
     Returns statistics from an array of numbers.
 
     :param name: a descriptive string
-    :returns: (name, mean, std, min, max, len)
+    :returns: (name, mean, rel_std, min, max, len)
     """
-    std = numpy.nan if len(array) == 1 else numpy.std(array, ddof=1)
-    return (name, numpy.mean(array), std,
-            numpy.min(array), numpy.max(array), len(array)) + extras
+    avg = numpy.mean(array)
+    std = 'nan' if len(array) == 1 else '%d%%' % (numpy.std(array) / avg * 100)
+    return (name, len(array), avg, std,
+            numpy.min(array), numpy.max(array)) + extras
 
 
 @view.add('num_units')
@@ -490,7 +489,7 @@ def view_assets_by_site(token, dstore):
     """
     taxonomies = dstore['assetcol/tagcol/taxonomy'][()]
     assets_by_site = dstore['assetcol'].assets_by_site()
-    data = ['taxonomy mean stddev min max num_sites num_assets'.split()]
+    data = ['taxonomy num_assets mean stddev min max num_sites'.split()]
     num_assets = AccumDict()
     for assets in assets_by_site:
         num_assets += {k: [len(v)] for k, v in group_array(
@@ -511,7 +510,7 @@ def view_required_params_per_trt(token, dstore):
     """
     full_lt = dstore['full_lt']
     tbl = []
-    for grp_id, trt in sorted(full_lt.trt_by_grp.items()):
+    for grp_id, trt in enumerate(full_lt.trt_by_grp):
         gsims = full_lt.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
@@ -544,7 +543,7 @@ def view_task_info(token, dstore):
         data.sort(order='duration')
         return rst_table(data)
 
-    data = ['operation-duration mean stddev min max outputs'.split()]
+    data = ['operation-duration outputs mean stddev min max'.split()]
     for task, arr in group_array(task_info[()], 'taskname').items():
         val = arr['duration']
         if len(val):
@@ -689,19 +688,64 @@ def view_gmf(token, dstore):
     return str(gmf)
 
 
+def get_gmv0(dstore):
+    # returns dict gmf_error, extreme_ruptures
+    eids = dstore['gmf_data/eid'][:]
+    gmvs = dstore['gmf_data/gmv_0'][:]
+    sids = dstore['gmf_data/sid'][:]
+    df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
+    return df
+
+
 @view.add('gmf_error')
 def view_gmf_error(token, dstore):
     """
     Display a gmf relative error for seed dependency
     """
-    eids = dstore['gmf_data/eid'][:]
-    gmvs = dstore['gmf_data/gmv_0'][:]
-    sids = dstore['gmf_data/sid'][:]
-    df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
+    df = get_gmv0(dstore)
     numpy.random.seed(42)  # default_rng does not work with numpy 1.16
+    eids = numpy.array(df.index)
     numpy.random.shuffle(eids)
     res = df.groupby(eids % 10)['gmv_0'].sum()
     return res.std() / res.mean()
+
+
+class GmpeExtractor(object):
+    def __init__(self, dstore):
+        full_lt = dstore['full_lt']
+        self.trt_by_grp = full_lt.trt_by_grp
+        self.gsim_by_trt = full_lt.gsim_by_trt
+        self.rlzs = full_lt.get_realizations()
+
+    def extract(self, grp_ids, rlz_ids):
+        out = []
+        for grp_id, rlz_id in zip(grp_ids, rlz_ids):
+            trt = self.trt_by_grp[grp_id]
+            out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
+        return out
+
+
+@view.add('extreme_gmvs')
+def view_extreme_gmvs(token, dstore):
+    """
+    Display table of extreme GMVs with fields (eid, gmv_0, sid, rlz. rup)
+    """
+    if ':' in token:
+        maxgmv = float(token.split(':')[1])
+    else:
+        maxgmv = 10  # 10g is default value defining extreme GMVs
+    imt0 = list(dstore['oqparam'].imtls)[0]
+    if imt0.startswith(('PGA', 'SA(')):
+        gmpe = GmpeExtractor(dstore)
+        df = get_gmv0(dstore)
+        extreme_df = df[df.gmv_0 > maxgmv].copy()
+        ev = dstore['events'][()][extreme_df.index]
+        extreme_df['rlz'] = ev['rlz_id']
+        extreme_df['rup'] = ev['rup_id']
+        grp_ids = dstore['ruptures']['grp_id'][extreme_df.rup]
+        extreme_df['gmpe'] = gmpe.extract(grp_ids, ev['rlz_id'])
+        return extreme_df.sort_values('gmv_0').groupby('sid').head(1)
+    return 'Could not do anything for ' + imt0
 
 
 @view.add('mean_disagg')
@@ -754,21 +798,6 @@ def view_elt(token, dstore):
         else:
             tbl.append([0.] * len(header))
     return rst_table(tbl, header)
-
-
-@view.add('pmap')
-def view_pmap(token, dstore):
-    """
-    Display the mean ProbabilityMap associated to a given source group name
-    """
-    grp = token.split(':')[1]  # called as pmap:grp
-    pmap = {}
-    rlzs = dstore['full_lt'].get_realizations()
-    weights = [rlz.weight for rlz in rlzs]
-    pgetter = getters.PmapGetter(dstore, weights, dstore['sitecol'].sids,
-                                 dstore['oqparam'].imtls)
-    pmap = pgetter.get_mean(grp)
-    return str(pmap)
 
 
 @view.add('bad_ruptures')

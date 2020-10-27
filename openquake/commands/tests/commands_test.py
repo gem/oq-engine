@@ -263,8 +263,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
-        self.assertIn('source_id code multiplicity '
-                      'calc_time num_sites', str(p))
+        self.assertIn('source_id code calc_time num_sites', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
@@ -563,6 +562,10 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         sc = prepare_site_model([], [vs30_csv], [vs30_csv],
                                 True, True, False, 0, 5, output)
 
+        # test sites_csv == vs30_csv and grid spacing
+        sc = prepare_site_model([], [vs30_csv], [vs30_csv],
+                                True, True, False, 10, 5, output)
+
 
 class ReduceSourceModelTestCase(unittest.TestCase):
 
@@ -578,7 +581,7 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         calc_id = calc.datastore.calc_id
         with mock.patch('logging.info') as info:
             reduce_sm(calc_id)
-        self.assertIn('there are duplicated source IDs', info.call_args[0][0])
+        self.assertIn('Removed %d/%d sources', info.call_args[0][0])
         shutil.rmtree(temp_dir)
 
 

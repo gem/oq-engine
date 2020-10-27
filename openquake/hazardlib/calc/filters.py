@@ -28,6 +28,7 @@ from scipy.spatial import cKDTree, distance
 
 from openquake.baselib import general
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib import site
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
@@ -302,6 +303,17 @@ class SourceFilter(object):
             out.append(sf)
         return out
 
+    # not used right now
+    def reduce(self, factor=100):
+        """
+        Reduce the SourceFilter to a subset of sites
+        """
+        idxs = numpy.arange(0, len(self.sitecol), factor)
+        sc = object.__new__(site.SiteCollection)
+        sc.array = self.sitecol[idxs]
+        sc.complete = self.sitecol.complete
+        return self.__class__(sc, self.integration_distance)
+
     def get_rectangle(self, src):
         """
         :param src: a source object
@@ -320,17 +332,17 @@ class SourceFilter(object):
         if source_indices:
             return self.sitecol.filtered(source_indices[0][1])
 
-    def get_sources_sites(self, sources):
+    def get_sources_sites(self, sources, mon):
         """
         :yields:
             pairs (srcs, sites) where the sources have the same source_id,
             the same grp_ids and affect the same sites
         """
-        acc = general.AccumDict(accum=[])  # indices -> srcs
-        srcs, _split_time = split_sources(sources)
-        for src, indices in self.filter(srcs):
-            src_id = re.sub(r':\d+$', '', src.source_id)
-            acc[(src_id, src.grp_id) + tuple(indices)].append(src)
+        with mon:
+            acc = general.AccumDict(accum=[])  # indices -> srcs
+            for src, indices in self.filter(split_sources(sources)[0]):
+                src_id = re.sub(r':\d+$', '', src.source_id)
+                acc[(src_id, src.grp_id) + tuple(indices)].append(src)
         for tup, srcs in acc.items():
             yield srcs, self.sitecol.filtered(tup[2:])
 

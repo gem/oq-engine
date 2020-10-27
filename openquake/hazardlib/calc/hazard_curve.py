@@ -187,6 +187,9 @@ def calc_hazard_curves(
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     for group in groups:
+        for src in group:
+            if not src.nsites:  # not set
+                src.nsites = 1
         gsim = gsim_by_trt[group[0].tectonic_region_type]
         if group.atomic:  # do not split
             it = [classical(group, srcfilter, [gsim], param, mon)]

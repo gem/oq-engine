@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`SERA2020Craton`
+Module exports :class:`ESHM20Craton`
 """
 
 import numpy as np
@@ -31,7 +31,7 @@ from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile,
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 
 
-class SERA2020Craton(GMPE):
+class ESHM20Craton(GMPE):
     """
     Implements a scalable backbone GMPE for application to stable cratonic
     regions (primarily intended for cratonic Europe). The median ground motion

@@ -423,6 +423,7 @@ class UCERFSource(BaseSeismicSource):
                 ps.id = self.id
                 ps.grp_id = self.grp_id
                 ps.num_ruptures = ps.count_ruptures()
+                ps.nsites = 1  # anything <> 0 goes
                 sources.append(ps)
         return sources
 
