@@ -198,8 +198,8 @@ class ClassicalCalculator(base.HazardCalculator):
             return acc
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
-            acc[extra['source_id']] = {
-                grp_id: pmap for grp_id in extra['grp_ids']}
+            pmap.grp_ids = extra['grp_ids']
+            acc[extra['source_id']] = pmap
 
         trt = extra.pop('trt')
         self.maxradius = max(self.maxradius, extra.pop('maxradius'))
