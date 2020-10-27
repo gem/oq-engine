@@ -746,8 +746,9 @@ def get_composite_source_model(oqparam, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags[sg.trt].update(srcmags)
-    logging.info('There are %d sources with len(grp_ids)=%.1f',
-                 sum(len(sg) for sg in csm.src_groups), numpy.mean(lens))
+    logging.info('There are %d groups and %d sources with len(grp_ids)=%.1f',
+                 len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
+                 numpy.mean(lens))
     if h5:
         attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
         # avoid hdf5 damned bug by creating source_info in advance

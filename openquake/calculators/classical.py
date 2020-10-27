@@ -335,7 +335,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for sg in self.csm.src_groups:
                 if not sg.atomic:
                     srcs = [src for src in sg if src.nsites]
-                    sg.sources = srcs[0]
+                    sg.sources = [srcs[0]]
 
         mags = self.datastore['source_mags']  # by TRT
         if len(mags) == 0:  # everything was discarded

@@ -281,6 +281,7 @@ class CompositeSourceModel:
         self.src_groups = src_groups
         idx = 0
         for sg in src_groups:
+            assert len(sg)  # sanity check
             for src in sg:
                 src.id = idx
                 idx += 1
