@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Huge speedup in models with src_multicity > 1
+  * Huge speedup in models with src_multiplicity > 1
   * Fixed bug in source model logic tree sampling with more than 2 branchsets
   * Fixed hazard maps all zeros for individual_curves=true and more than 1 site
   * Fixed a bug in `oq prepare_site_model` when sites.csv is
