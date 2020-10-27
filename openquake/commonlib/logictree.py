@@ -28,6 +28,7 @@ import io
 import os
 import re
 import time
+import string
 import logging
 import functools
 import itertools
@@ -232,6 +233,25 @@ def read_source_groups(fname):
     return src_groups
 
 
+def keyno(key, no, chars=string.digits + string.ascii_uppercase):
+    """
+    :returns: a short version of the key based on the key number
+    """
+    try:
+        return chars[no]
+    except IndexError:
+        return '_' + key
+
+
+def shorten(path, shortener):
+    """
+    :path:  sequence of strings
+    :shortener: dictionary longstring -> shortstring
+    :returns: shortened version of the path
+    """
+    return ''.join(shortener.get(key, key) for key in path)
+
+
 class SourceModelLogicTree(object):
     """
     Source model logic tree parser.
@@ -282,6 +302,7 @@ class SourceModelLogicTree(object):
         except AttributeError:
             raise LogicTreeError(
                 root, self.filename, "missing logicTree node")
+        self.shortener = {}
         self.parse_tree(tree)
 
     @property
@@ -369,7 +390,7 @@ class SourceModelLogicTree(object):
         weight_sum = 0
         branches = branchset_node.nodes
         values = []
-        for branchnode in branches:
+        for no, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
             weight_sum += weight
             value_node = node_from_elem(branchnode.uncertaintyModel)
@@ -393,6 +414,7 @@ class SourceModelLogicTree(object):
                     branchnode, self.filename,
                     "branchID '%s' is not unique" % branch_id)
             self.branches[branch_id] = branch
+            self.shortener[branch_id] = keyno(branch_id, no)
             branchset.branches.append(branch)
         if abs(weight_sum - 1.0) > pmf.PRECISION:
             raise LogicTreeError(
@@ -638,6 +660,7 @@ class SourceModelLogicTree(object):
         bsets = []
         self.branches = {}
         self.bsetdict = {}
+        self.shortener = {}
         acc = AccumDict(accum=[])  # bsid -> rows
         for rec in array:
             # NB: it is important to keep the order of the branchsets
@@ -646,9 +669,10 @@ class SourceModelLogicTree(object):
             utype = rows[0]['utype']
             bset = BranchSet(utype, ordinal, filters=[])  # TODO: filters
             bset.id = bsid
-            for row in rows:
+            for no, row in enumerate(rows):
                 br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])
                 self.branches[br.branch_id] = br
+                self.shortener[br.branch_id] = keyno(br.branch_id, no)
                 bset.branches.append(br)
             bsets.append(bset)
             self.bsetdict[bsid] = {'uncertaintyType': utype}
@@ -786,6 +810,7 @@ class GsimLogicTree(object):
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or nrml.read(fname).logicTree
         self.bs_id_by_trt = {}
+        self.shortener = {}
         self.branches = self._build_trts_branches(trts)  # sorted by trt
         if trts != ['*']:
             # reduce self.values to the listed TRTs
@@ -852,8 +877,9 @@ class GsimLogicTree(object):
 
     def __fromh5__(self, array, dic):
         self.branches = []
+        self.shortener = {}
         self.values = collections.defaultdict(list)
-        for branch in array:
+        for no, branch in enumerate(array):
             br_id = branch['branch']
             gsim = valid.gsim(branch['uncertainty'])
             for k, v in gsim.kwargs.items():
@@ -869,6 +895,7 @@ class GsimLogicTree(object):
                 gsim.weight = weight
             bt = BranchTuple(branch['trt'], br_id, gsim, weight, True)
             self.branches.append(bt)
+            self.shortener[br_id] = keyno(br_id, no)
 
     def reduce(self, trts):
         """
@@ -975,7 +1002,7 @@ class GsimLogicTree(object):
                          trt in tectonic_region_types)
             weights = []
             branch_ids = []
-            for branch in branchset:
+            for no, branch in enumerate(branchset):
                 weight = ImtWeight(branch, self.filename)
                 weights.append(weight)
                 branch_id = branch['branchID']
@@ -996,6 +1023,7 @@ class GsimLogicTree(object):
                     branch_id, gsim, weight, effective)
                 if effective:
                     branches.append(bt)
+                    self.shortener[branch_id] = keyno(branch_id, no)
             tot = sum(weights)
             assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
             if duplicated(branch_ids):
@@ -1132,16 +1160,11 @@ class LtRealization(object):
         self.weight = weight
 
     def __repr__(self):
-        return '<%d,%s,w=%s>' % (self.ordinal, self.pid, self.weight)
+        return '<%d,w=%s>' % (self.ordinal, self.weight)
 
     @property
     def gsim_lt_path(self):
         return self.gsim_rlz.lt_path
-
-    @property
-    def pid(self):
-        """An unique identifier for effective realizations"""
-        return '_'.join(self.sm_lt_path) + '~' + self.gsim_rlz.pid
 
     def __lt__(self, other):
         return self.ordinal < other.ordinal
@@ -1421,8 +1444,13 @@ class FullLogicTree(object):
         """
         :returns: an array of realizations
         """
-        tups = [(r.ordinal, r.pid, r.weight['weight'])
-                for r in self.get_realizations()]
+        sh1 = self.source_model_lt.shortener
+        sh2 = self.gsim_lt.shortener
+        tups = []
+        for r in self.get_realizations():
+            path = '%s~%s' % (shorten(r.sm_lt_path, sh1),
+                              shorten(r.gsim_rlz.lt_path, sh2))
+            tups.append((r.ordinal, path, r.weight['weight']))
         return numpy.array(tups, rlz_dt)
 
     def get_gsims_by_trt(self):
