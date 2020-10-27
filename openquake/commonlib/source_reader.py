@@ -99,6 +99,7 @@ def get_csm(oq, full_lt, h5=None):
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
     logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
     classical = not oq.is_event_based()
+    full_lt.ses_seed = 0 if classical else oq.ses_seed
     if oq.is_ucerf():
         serial = full_lt.ses_seed
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)

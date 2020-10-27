@@ -718,7 +718,6 @@ def get_composite_source_model(oqparam, h5=None):
          an open hdf5.File where to store the source info
     """
     full_lt = get_full_lt(oqparam)
-    full_lt.ses_seed = oqparam.ses_seed if oqparam.is_event_based() else 0
     if oqparam.cachedir and not oqparam.is_ucerf():
         csm = _get_cachedir(oqparam, full_lt, h5)
     else:
