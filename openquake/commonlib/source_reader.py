@@ -243,6 +243,7 @@ def _get_csm(full_lt, groups):
         for grp in general.groupby(lst, grp_ids).values():
             src_groups.append(sourceconverter.SourceGroup(trt, grp))
     for ag in atomic:
+        serial = init_serials(ag.sources, serial)
         for src in ag:
             src.id = idx
             src._wkt = src.wkt()
