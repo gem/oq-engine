@@ -106,7 +106,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.gsim_by_trt,
                                     truncation_level=None)
         crv = curves[0][0]
-        self.assertAlmostEqual(0.3, crv[0])
+        npt.assert_almost_equal([0.30000, 0.2646, 0.0625], crv, decimal=4)
 
     def test_hazard_curve_A(self):
         # Test back-compatibility
@@ -116,8 +116,8 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.imtls,
                                     self.gsim_by_trt,
                                     truncation_level=None)
-        crv = curves[0][0]
-        npt.assert_almost_equal(numpy.array([0.30000, 0.2646, 0.0625]),
+        crv = list(curves[0][0])
+        npt.assert_almost_equal([0.30000, 0.2646, 0.0625],
                                 crv, decimal=4)
 
     def test_hazard_curve_B(self):
@@ -158,7 +158,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                      grp_probability=group.grp_probability)
         crv = classical(group, self.sites, gsim_by_trt, param)['pmap'][0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
-                                crv[0].array[:, 0], decimal=4)
+                                crv.array[:, 0], decimal=4)
 
     def test_raise_error_non_uniform_group(self):
         # Test that the uniformity of a group (in terms of tectonic region)

@@ -45,7 +45,7 @@ the engine manages all the realizations at once.
 import operator
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
-from openquake.baselib.general import DictArray, groupby, AccumDict
+from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -58,7 +58,7 @@ def _cluster(imtls, tom, gsims, pmap):
     Computes the probability map in case of a cluster group
     """
     L, G = len(imtls.array), len(gsims)
-    pmapclu = AccumDict(accum=ProbabilityMap(L, G))
+    pmapclu = ProbabilityMap(L, G)
     # Get temporal occurrence model
     # Number of occurrences for the cluster
     first = True
@@ -68,10 +68,10 @@ def _cluster(imtls, tom, gsims, pmap):
         ocr = tom.occurrence_rate
         prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
         if first:
-            pmapclu = prob_n_occ * (~pmap)**nocc
+            pmapclu = (~pmap)**nocc * prob_n_occ
             first = False
         else:
-            pmapclu += prob_n_occ * (~pmap)**nocc
+            pmapclu += (~pmap)**nocc * prob_n_occ
     pmap = ~pmapclu
     return pmap
 
@@ -113,10 +113,11 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     extra['task_no'] = getattr(monitor, 'task_no', 0)
     extra['trt'] = trt
     extra['source_id'] = src.source_id
+    extra['grp_ids'] = src.grp_ids
     extra['maxradius'] = maxradius
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
-        pmap[src.grp_id] *= group_probability
+        pmap *= group_probability
 
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
@@ -198,8 +199,7 @@ def calc_hazard_curves(
                 classical, (group.sources, srcfilter, [gsim], param),
                 weight=operator.attrgetter('weight'))
         for dic in it:
-            for grp_id, pval in dic['pmap'].items():
-                pmap |= pval
+            pmap |= dic['pmap']
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)
     return pmap.convert(imtls, len(sitecol.complete))
 
@@ -217,7 +217,6 @@ def calc_hazard_curve(site1, src, gsims_by_trt, oqparam):
     gsims = gsims_by_trt['*'] if '*' in gsims_by_trt else gsims_by_trt[trt]
     cmaker = ContextMaker(trt, gsims, vars(oqparam))
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap_by_grp, rup_data, calc_times, extra = PmapMaker(
+    pmap, rup_data, calc_times, extra = PmapMaker(
         cmaker, srcfilter, [src]).make()
-    pmap = pmap_by_grp[src.grp_ids[0]]
     return pmap[0]  # pcurve with shape (L, G)

@@ -50,14 +50,13 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 MAXMEMORY = '''Estimated upper memory limit per core:
-%d sites x %d levels x %d gsims x %d src_multiplicity * 8 bytes = %s'''
+%d sites x %d levels x %d gsims x 8 bytes = %s'''
 
 TOOBIG = '''\
 The calculation is too big and will likely fail:
 num_sites = %d
 num_levels = %d
 num_gsims = %d
-src_multiplicity = %d
 The estimated memory per core is %s > 4 GB.
 You should reduce one or more of the listed parameters.'''
 
@@ -126,7 +125,8 @@ def classical_split_filter(srcs, gsims, params, monitor):
             print(msg)
         for block in blocks[:-1]:
             yield classical1, block, gsims, params, sf.slc
-        yield classical1(blocks[-1], gsims, params, sf.slc, monitor)
+        res = classical1(blocks[-1], gsims, params, sf.slc, monitor)
+        yield res
 
 
 def preclassical(srcs, srcfilter, monitor):
@@ -192,16 +192,18 @@ class ClassicalCalculator(base.HazardCalculator):
         # for an OOM it can become None, thus giving a very confusing error
         if dic is None:
             raise MemoryError('You ran out of memory!')
-        if not dic['pmap']:
+        pmap = dic['pmap']
+        extra = dic['extra']
+        if not pmap:
             return acc
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
-            acc[dic['extra']['source_id']] = dic['pmap']
+            pmap.grp_ids = extra['grp_ids']
+            acc[extra['source_id']] = pmap
 
-        trt = dic['extra'].pop('trt')
-        self.maxradius = max(self.maxradius, dic['extra'].pop('maxradius'))
+        trt = extra.pop('trt')
+        self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
-            extra = dic['extra']
             self.totrups += extra['totrups']
             d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
             self.calc_times += d
@@ -215,7 +217,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     eff_sites += rec[1] / rec[0]
             self.by_task[extra['task_no']] = (
                 eff_rups, eff_sites, sorted(srcids))
-            for grp_id, pmap in dic['pmap'].items():
+            for grp_id in extra['grp_ids']:
                 if pmap and grp_id in acc:
                     acc[grp_id] |= pmap
                 else:
@@ -333,7 +335,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for sg in self.csm.src_groups:
                 if not sg.atomic:
                     srcs = [src for src in sg if src.nsites]
-                    sg.sources = srcs[0]
+                    sg.sources = [srcs[0]]
 
         mags = self.datastore['source_mags']  # by TRT
         if len(mags) == 0:  # everything was discarded
@@ -446,18 +448,11 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # estimate max memory per core
         max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
-        max_num_grp_ids = max(
-            len(grp_ids) for grp_ids in self.datastore['grp_ids'])
-        if max_num_grp_ids > 2:
-            logging.warning('max_num_grp_ids=%d', max_num_grp_ids)
-        num_levels = len(oq.imtls.array)
-        pmapbytes = T * num_levels * max_num_gsims * max_num_grp_ids * 8
+        L = len(oq.imtls.array)
+        pmapbytes = T * L * max_num_gsims * 8
         if pmapbytes > TWO32:
-            logging.warning(
-                TOOBIG % (T, num_levels, max_num_gsims, max_num_grp_ids,
-                          humansize(pmapbytes)))
-        logging.info(MAXMEMORY % (T, num_levels, max_num_gsims,
-                                  max_num_grp_ids, humansize(pmapbytes)))
+            logging.warning(TOOBIG, T, L, max_num_gsims, humansize(pmapbytes))
+        logging.info(MAXMEMORY, T, L, max_num_gsims, humansize(pmapbytes))
 
         C = oq.concurrent_tasks or 1
         if oq.disagg_by_src or oq.is_ucerf():
@@ -488,7 +483,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         if oq.disagg_by_src
                         else block_splitter(sg, 2 * max_weight * ntiles,
                                             operator.attrgetter('weight'),
-                                            key=operator.attrgetter('grp_id'),
                                             sort=True))
                 blocks = list(blks)
                 nb = len(blocks)
@@ -498,7 +492,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     smap.submit((block, gsims, param), f2)
 
             w = sum(src.weight for src in sg)
-            logging.info('TRT = %s', sg.trt)
             it = sorted(oq.maximum_distance.ddic[sg.trt].items())
             md = '%s->%d ... %s->%d' % (it[0] + it[-1])
             logging.info('max_dist={}, gsims={}, weight={:_d}, blocks={}'.

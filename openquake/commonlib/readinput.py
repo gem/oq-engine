@@ -724,21 +724,18 @@ def get_composite_source_model(oqparam, h5=None):
         csm = get_csm(oqparam, full_lt,  h5)
     grp_ids = csm.get_grp_ids()
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
-    if oqparam.is_event_based():
-        csm.init_serials(oqparam.ses_seed)
     data = {}  # src_id -> row
     mags = AccumDict(accum=set())  # trt -> mags
     wkts = []
-    ns = -1
+    lens = []
     for sg in csm.src_groups:
         if hasattr(sg, 'mags'):  # UCERF
             mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
-            ns += 1
+            lens.append(len(src.grp_ids))
             src.gidx = gidx[tuple(src.grp_ids)]
             row = [src.source_id, src.gidx, src.code,
-                   0, 0, 0, src.serial or ns,
-                   full_lt.trti[src.tectonic_region_type]]
+                   0, 0, 0, src.id, full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
@@ -749,7 +746,9 @@ def get_composite_source_model(oqparam, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags[sg.trt].update(srcmags)
-    logging.info('There are %d sources', ns + 1)
+    logging.info('There are %d groups and %d sources with len(grp_ids)=%.1f',
+                 len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
+                 numpy.mean(lens))
     if h5:
         attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
         # avoid hdf5 damned bug by creating source_info in advance
