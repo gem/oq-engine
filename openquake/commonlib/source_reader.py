@@ -238,12 +238,13 @@ def _get_csm(full_lt, groups):
                 src._wkt = src.wkt()
                 idx += 1
                 lst.append(src)
-        if serial:  # only for event based
+        if full_lt.ses_seed:  # only for event based
             serial = init_serials(lst, serial)
         for grp in general.groupby(lst, grp_ids).values():
             src_groups.append(sourceconverter.SourceGroup(trt, grp))
     for ag in atomic:
-        serial = init_serials(ag.sources, serial)
+        if full_lt.ses_seed:  # only for event based
+            serial = init_serials(ag.sources, serial)
         for src in ag:
             src.id = idx
             src._wkt = src.wkt()
