@@ -97,9 +97,8 @@ class CollapseTestCase(unittest.TestCase):
                              collapse_level=2))
         pmap = res['pmap']
         effrups = sum(nr for nr, ns, dt in res['calc_times'].values())
-        curves = [pmap[grp_id].array(N)[0, :, 0] for grp_id in sorted(pmap)]
-        mean = numpy.average(curves, axis=0, weights=weights)
-        return mean, srcs, effrups, weights
+        curve = pmap.array(N)[0, :, 0]
+        return curve, srcs, effrups, weights
 
     # this tests also the collapsing of the ruptures happening in contexts.py
     def test_point_source_full_enum(self):

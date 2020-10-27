@@ -32,6 +32,10 @@ TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
 
 
+def grp_ids(src):
+    return tuple(src.grp_ids)
+
+
 def random_filtered_sources(sources, srcfilter, seed):
     """
     :param sources: a list of sources
@@ -233,7 +237,8 @@ def _get_csm(full_lt, groups):
                 src._wkt = src.wkt()
                 idx += 1
                 lst.append(src)
-        src_groups.append(sourceconverter.SourceGroup(trt, lst))
+        for grp in general.groupby(lst, grp_ids).values():
+            src_groups.append(sourceconverter.SourceGroup(trt, grp))
     for ag in atomic:
         for src in ag:
             src.id = idx

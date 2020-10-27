@@ -50,14 +50,13 @@ grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 MAXMEMORY = '''Estimated upper memory limit per core:
-%d sites x %d levels x %d gsims x %d src_multiplicity * 8 bytes = %s'''
+%d sites x %d levels x %d gsims x 8 bytes = %s'''
 
 TOOBIG = '''\
 The calculation is too big and will likely fail:
 num_sites = %d
 num_levels = %d
 num_gsims = %d
-src_multiplicity = %d
 The estimated memory per core is %s > 4 GB.
 You should reduce one or more of the listed parameters.'''
 
@@ -449,18 +448,11 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # estimate max memory per core
         max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
-        max_num_grp_ids = max(
-            len(grp_ids) for grp_ids in self.datastore['grp_ids'])
-        if max_num_grp_ids > 2:
-            logging.warning('max_num_grp_ids=%d', max_num_grp_ids)
-        num_levels = len(oq.imtls.array)
-        pmapbytes = T * num_levels * max_num_gsims * max_num_grp_ids * 8
+        L = len(oq.imtls.array)
+        pmapbytes = T * L * max_num_gsims * 8
         if pmapbytes > TWO32:
-            logging.warning(
-                TOOBIG % (T, num_levels, max_num_gsims, max_num_grp_ids,
-                          humansize(pmapbytes)))
-        logging.info(MAXMEMORY % (T, num_levels, max_num_gsims,
-                                  max_num_grp_ids, humansize(pmapbytes)))
+            logging.warning(TOOBIG, T, L, max_num_gsims, humansize(pmapbytes))
+        logging.info(MAXMEMORY, T, L, max_num_gsims, humansize(pmapbytes))
 
         C = oq.concurrent_tasks or 1
         if oq.disagg_by_src or oq.is_ucerf():
@@ -491,7 +483,6 @@ class ClassicalCalculator(base.HazardCalculator):
                         if oq.disagg_by_src
                         else block_splitter(sg, 2 * max_weight * ntiles,
                                             operator.attrgetter('weight'),
-                                            key=operator.attrgetter('grp_id'),
                                             sort=True))
                 blocks = list(blks)
                 nb = len(blocks)

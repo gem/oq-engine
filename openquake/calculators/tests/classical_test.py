@@ -304,7 +304,7 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
         ids = self.calc.datastore['source_info']['source_id']
-        numpy.testing.assert_equal(ids, ['A;0', 'A;1', 'B'])
+        numpy.testing.assert_equal(ids, ['A;0', 'B', 'A;1'])
 
     def test_case_18(self):  # GMPEtable
         self.assert_curves_ok(
@@ -359,17 +359,17 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_sm1_sg2_cog2_char_simple-gsimltp_Sad1997.csv'],
             case_20.__file__, delta=1E-7)
         # there are 3 sources x 12 sm_rlzs
-        [sg] = self.calc.csm.src_groups  # 1 source group with 7 sources
-        self.assertEqual(len(sg), 7)
-        dupl = sum(len(src.grp_ids) - 1 for src in sg)
+        sgs = self.calc.csm.src_groups  # 7 source groups with 1 source each
+        self.assertEqual(len(sgs), 7)
+        dupl = sum(len(sg.sources[0].grp_ids) - 1 for sg in sgs)
         self.assertEqual(dupl, 29)  # there are 29 duplicated sources
 
         # another way to look at the duplicated sources; protects against
         # future refactorings breaking the pandas readability of source_info
         df = self.calc.datastore.read_df('source_info', 'source_id')
         numpy.testing.assert_equal(
-            list(df.index), ['CHAR1;0', 'CHAR1;1', 'CHAR1;2', 'COMFLT1;0',
-                             'COMFLT1;1', 'SFLT1;0', 'SFLT1;1'])
+            list(df.index), ['SFLT1;0', 'COMFLT1;0', 'CHAR1;0', 'CHAR1;1',
+                             'CHAR1;2', 'COMFLT1;1', 'SFLT1;1'])
 
         # check pandas readability of hcurves-rlzs and hcurves-stats
         df = self.calc.datastore.read_df('hcurves-rlzs', 'lvl')

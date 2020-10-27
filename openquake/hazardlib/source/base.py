@@ -60,8 +60,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 self.hypocenter_distribution.data)
         else:
             rescale = 1
-        g = len(self.grp_ids)
-        return self.num_ruptures * self.ngsims * nsites_factor * g / rescale
+        return self.num_ruptures * self.ngsims * nsites_factor / rescale
 
     @property
     def grp_ids(self):
