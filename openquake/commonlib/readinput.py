@@ -736,8 +736,7 @@ def get_composite_source_model(oqparam, h5=None):
             ns += 1
             src.gidx = gidx[tuple(src.grp_ids)]
             row = [src.source_id, src.gidx, src.code,
-                   0, 0, 0, src.serial or ns,
-                   full_lt.trti[src.tectonic_region_type]]
+                   0, 0, 0, ns, full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
             if hasattr(src, 'mags'):  # UCERF
