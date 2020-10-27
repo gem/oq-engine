@@ -155,7 +155,7 @@ site_param_dt = {
 
     # other parameters
     'custom_site_id': numpy.uint32,
-    'eshm20_region': numpy.uint32
+    'region': numpy.uint32
 }
 
 

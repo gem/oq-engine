@@ -91,7 +91,7 @@ class GenericGmpeAvgSATestCase(unittest.TestCase):
         sctx = SitesContext()
         sctx.vs30 = 500.0 * np.ones(4)
         sctx.vs30measured = np.ones(4, dtype="bool")
-        sctx.eshm20_region = np.zeros(4, dtype=int)
+        sctx.region = np.zeros(4, dtype=int)
         stdt = [const.StdDev.TOTAL]
         expected_mean = np.array([-1.72305707, -2.2178751,
                                   -3.20100306, -4.19948242])

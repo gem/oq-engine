@@ -606,7 +606,7 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
     """
 
     #: Required site parameters are vs30, vs30measured and the eshm20_region
-    REQUIRES_SITES_PARAMETERS = set(("eshm20_region", "vs30", "vs30measured"))
+    REQUIRES_SITES_PARAMETERS = set(("region", "vs30", "vs30measured"))
 
     def get_distance_coefficients(self, C, imt, sctx):
         """
@@ -621,20 +621,20 @@ class KothaEtAl2020ESHM20(KothaEtAl2020):
         if self.c3:
             # If c3 is input then this over-rides the regionalisation
             # assumed within this model
-            return self.c3[imt]["c3"] * np.ones(sctx.eshm20_region.shape)
+            return self.c3[imt]["c3"] * np.ones(sctx.region.shape)
 
         # Default c3 and tau values to the original GMPE c3 and tau
-        c3 = C["c3"] + np.zeros(sctx.eshm20_region.shape)
-        tau_c3 = C["tau_c3"] + np.zeros(sctx.eshm20_region.shape)
-        if not np.any(sctx.eshm20_region) or ("PGV" in str(imt)):
+        c3 = C["c3"] + np.zeros(sctx.region.shape)
+        tau_c3 = C["tau_c3"] + np.zeros(sctx.region.shape)
+        if not np.any(sctx.region) or ("PGV" in str(imt)):
             # No regionalisation - take the default C3 and multiply tau_c3
             # by the original epsilon
             return (c3 + self.c3_epsilon * tau_c3) +\
-                np.zeros(sctx.eshm20_region.shape)
+                np.zeros(sctx.region.shape)
         # Some sites belong to the calibrated regions - loop through them
         C3_R = C3_REGIONS[imt]
         for i in range(1, 6):
-            idx = sctx.eshm20_region == i
+            idx = sctx.region == i
             c3[idx] = C3_R["region_{:s}".format(str(i))]
             tau_c3[idx] = C3_R["tau_region_{:s}".format(str(i))]
         return c3 + self.c3_epsilon * tau_c3
@@ -732,7 +732,7 @@ class KothaEtAl2020ESHM20SlopeGeology(KothaEtAl2020ESHM20):
     experimental = True
 
     #: Required site parameter is not set
-    REQUIRES_SITES_PARAMETERS = set(("eshm20_region", "slope", "geology"))
+    REQUIRES_SITES_PARAMETERS = set(("region", "slope", "geology"))
 
     #: Geological Units
     GEOLOGICAL_UNITS = [b"CENOZOIC", b"HOLOCENE", b"MESOZOIC",
