@@ -682,6 +682,14 @@ kotha_2020
     :undoc-members:
     :show-inheritance:
 
+kuehn_2020
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.kuehn_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lanzano_luzi_2019
 ----------------------------------------
 
@@ -903,6 +911,14 @@ si_midorikawa_1999
 --------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.si_midorikawa_1999
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+si_2020
+--------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.si_2020
     :members:
     :undoc-members:
     :show-inheritance:
