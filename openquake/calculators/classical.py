@@ -492,7 +492,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     smap.submit((block, gsims, param), f2)
 
             w = sum(src.weight for src in sg)
-            logging.info('TRT = %s', sg.trt)
             it = sorted(oq.maximum_distance.ddic[sg.trt].items())
             md = '%s->%d ... %s->%d' % (it[0] + it[-1])
             logging.info('max_dist={}, gsims={}, weight={:_d}, blocks={}'.
