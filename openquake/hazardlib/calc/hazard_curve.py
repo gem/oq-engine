@@ -199,8 +199,7 @@ def calc_hazard_curves(
                 classical, (group.sources, srcfilter, [gsim], param),
                 weight=operator.attrgetter('weight'))
         for dic in it:
-            for grp_id, pval in dic['pmap'].items():
-                pmap |= pval
+            pmap |= dic['pmap']
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)
     return pmap.convert(imtls, len(sitecol.complete))
 
@@ -218,7 +217,6 @@ def calc_hazard_curve(site1, src, gsims_by_trt, oqparam):
     gsims = gsims_by_trt['*'] if '*' in gsims_by_trt else gsims_by_trt[trt]
     cmaker = ContextMaker(trt, gsims, vars(oqparam))
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap_by_grp, rup_data, calc_times, extra = PmapMaker(
+    pmap, rup_data, calc_times, extra = PmapMaker(
         cmaker, srcfilter, [src]).make()
-    pmap = pmap_by_grp[src.grp_ids[0]]
     return pmap[0]  # pcurve with shape (L, G)

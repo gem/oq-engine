@@ -353,7 +353,6 @@ class ContextMaker(object):
             ctx.sids = r_sites.sids
             for par in self.REQUIRES_DISTANCES | {'rrup'}:
                 setattr(ctx, par, getattr(dctx, par))
-            ctx.grp_ids = grp_ids
             ctx.gidx = gidx
             if fewsites:
                 closest = rup.surface.get_closest_points(sites.complete)
