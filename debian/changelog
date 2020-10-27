@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Shortened the logic tree paths when exporting the realizations
+
   [Graeme Weatherill]
   * Refactor of the Kotha et al. (2020) GMM and its adjustments for ESHM20
 
