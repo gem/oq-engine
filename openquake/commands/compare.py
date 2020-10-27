@@ -33,12 +33,12 @@ def getdata(what, calc_ids, sitecol, sids):
     extractor.close()
     for extractor in extractors[1:]:
         oq = extractor.oqparam
-        numpy.testing.assert_equal(
+        numpy.testing.assert_array_equal(
             extractor.get('sitecol')[['lon', 'lat']], sitecol[['lon', 'lat']])
         if what == 'hcurves':
-            numpy.testing.assert_equal(oq.imtls.array, imtls.array)
+            numpy.testing.assert_array_equal(oq.imtls.array, imtls.array)
         elif what == 'hmaps':
-            numpy.testing.assert_equal(oq.poes, poes)
+            numpy.testing.assert_array_equal(oq.poes, poes)
         arrays.append(extractor.get(what + '?kind=mean').mean[sids])
         extractor.close()
     return imtls, poes, numpy.array(arrays)  # shape (C, N, L)
