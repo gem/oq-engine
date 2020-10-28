@@ -18,7 +18,6 @@
 
 import os.path
 import logging
-import operator
 import numpy
 
 from openquake.baselib import hdf5, parallel
