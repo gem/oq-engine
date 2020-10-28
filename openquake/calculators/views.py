@@ -170,7 +170,7 @@ def view_slow_ruptures(token, dstore, maxrows=25):
     """
     Show the slowest ruptures
     """
-    fields = ['code', 'n_occ', 'mag', 'grp_id']
+    fields = ['code', 'n_occ', 'mag', 'rt_id']
     rups = dstore['ruptures'][()][fields]
     time = dstore['gmf_data/time_by_rup'][()]
     arr = util.compose_arrays(rups, time)
@@ -510,16 +510,16 @@ def view_required_params_per_trt(token, dstore):
     """
     full_lt = dstore['full_lt']
     tbl = []
-    for grp_id, trt in enumerate(full_lt.trt_by_grp):
+    for rt_id, trt in enumerate(full_lt.trt_by_grp):
         gsims = full_lt.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((grp_id, ' '.join(map(repr, map(repr, gsims))),
+        tbl.append((rt_id, ' '.join(map(repr, map(repr, gsims))),
                     distances, siteparams, ruptparams))
     return rst_table(
-        tbl, header='grp_id gsims distances siteparams ruptparams'.split(),
+        tbl, header='rt_id gsims distances siteparams ruptparams'.split(),
         fmt=scientificformat)
 
 
@@ -639,7 +639,7 @@ def view_global_poes(token, dstore):
     """
     tbl = []
     imtls = dstore['oqparam'].imtls
-    header = ['grp_id'] + [str(poe) for poe in imtls.array]
+    header = ['rt_id'] + [str(poe) for poe in imtls.array]
     for grp in sorted(dstore['poes']):
         poes = dstore['poes/' + grp]
         nsites = len(poes)
@@ -717,10 +717,10 @@ class GmpeExtractor(object):
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()
 
-    def extract(self, grp_ids, rlz_ids):
+    def extract(self, rt_ids, rlz_ids):
         out = []
-        for grp_id, rlz_id in zip(grp_ids, rlz_ids):
-            trt = self.trt_by_grp[grp_id]
+        for rt_id, rlz_id in zip(rt_ids, rlz_ids):
+            trt = self.trt_by_grp[rt_id]
             out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
         return out
 
@@ -742,8 +742,8 @@ def view_extreme_gmvs(token, dstore):
         ev = dstore['events'][()][extreme_df.index]
         extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
-        grp_ids = dstore['ruptures']['grp_id'][extreme_df.rup]
-        extreme_df['gmpe'] = gmpe.extract(grp_ids, ev['rlz_id'])
+        rt_ids = dstore['ruptures']['rt_id'][extreme_df.rup]
+        extreme_df['gmpe'] = gmpe.extract(rt_ids, ev['rlz_id'])
         return extreme_df.sort_values('gmv_0').groupby('sid').head(1)
     return 'Could not do anything for ' + imt0
 

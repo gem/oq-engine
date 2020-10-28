@@ -310,8 +310,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         allargs = []
         totweight = sum(d['rctx']['nsites'].sum() for n, d in dstore.items()
                         if n.startswith('mag_') and len(d['rctx']))
-        grp_ids = dstore['grp_ids'][:]
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
+        rt_ids = dstore['rt_ids'][:]
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(rt_ids)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
@@ -323,7 +323,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         for mag in mags:
             rctx = dstore['mag_%s/rctx' % mag][:]
             totrups += len(rctx)
-            for gidx, gids in enumerate(grp_ids):
+            for gidx, gids in enumerate(rt_ids):
                 idxs, = numpy.where(rctx['gidx'] == gidx)
                 if len(idxs) == 0:
                     continue

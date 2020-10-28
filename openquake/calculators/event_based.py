@@ -46,7 +46,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = numpy.float64(2 ** 32)
-by_grp = operator.attrgetter('grp_id')
 
 
 # ######################## GMF calculator ############################ #
@@ -100,7 +99,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def acc0(self):
         """
-        Initial accumulator, a dictionary (grp_id, gsim) -> curves
+        Initial accumulator, a dictionary (rt_id, gsim) -> curves
         """
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}

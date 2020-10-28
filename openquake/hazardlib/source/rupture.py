@@ -101,7 +101,7 @@ def from_array(aw):
     names = aw.array.dtype.names
     for rec in aw.array:
         dic = dict(zip(names, rec))
-        dic['trt'] = aw.trts[int(dic.pop('grp_id'))]
+        dic['trt'] = aw.trts[int(dic.pop('rt_id'))]
         dic['hypo'] = dic.pop('lon'), dic.pop('lat'), dic.pop('dep')
         dic.update(json.loads(dic.pop('extra')))
         rups.append(_get_rupture(dic))
@@ -670,13 +670,13 @@ class EBRupture(object):
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, source_id, grp_id, n_occ, id=None, e0=0):
+    def __init__(self, rupture, source_id, rt_id, n_occ, id=None, e0=0):
         # NB: when reading an exported ruptures.xml the rup_id will be 0
         # for the first rupture; it used to be the seed instead
         assert rupture.rup_id >= 0  # sanity check
         self.rupture = rupture
         self.source_id = source_id
-        self.grp_id = grp_id
+        self.rt_id = rt_id
         self.n_occ = n_occ
         self.id = id  # id of the rupture on the DataStore
         self.e0 = e0
@@ -788,6 +788,6 @@ class RuptureProxy(object):
         """
         # not implemented: rupture_slip_direction
         rupture = _get_rupture(self.rec, self.geom, trt)
-        ebr = EBRupture(rupture, self.rec['source_id'], self.rec['grp_id'],
+        ebr = EBRupture(rupture, self.rec['source_id'], self.rec['rt_id'],
                         self.rec['n_occ'], self.rec['id'], self.rec['e0'])
         return ebr

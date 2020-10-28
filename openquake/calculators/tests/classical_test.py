@@ -361,7 +361,7 @@ hazard_uhs-std.csv
         # there are 3 sources x 12 sm_rlzs
         sgs = self.calc.csm.src_groups  # 7 source groups with 1 source each
         self.assertEqual(len(sgs), 7)
-        dupl = sum(len(sg.sources[0].grp_ids) - 1 for sg in sgs)
+        dupl = sum(len(sg.sources[0].rt_ids) - 1 for sg in sgs)
         self.assertEqual(dupl, 29)  # there are 29 duplicated sources
 
         # another way to look at the duplicated sources; protects against

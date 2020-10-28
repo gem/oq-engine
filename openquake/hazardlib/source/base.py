@@ -63,18 +63,18 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         return self.num_ruptures * self.ngsims * nsites_factor / rescale
 
     @property
-    def grp_ids(self):
+    def rt_ids(self):
         """
         :returns: a list of source group IDs (usually of 1 element)
         """
-        grp_id = self.grp_id
-        return [grp_id] if isinstance(grp_id, int) else grp_id
+        rt_id = self.rt_id
+        return [rt_id] if isinstance(rt_id, int) else rt_id
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
         self.name = name
         self.tectonic_region_type = tectonic_region_type
-        self.grp_id = -1  # set by the engine
+        self.rt_id = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
         self.min_mag = 0  # set by the SourceConverter
@@ -103,11 +103,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         rup_id = self.serial
         numpy.random.seed(self.serial)
-        for grp_id in self.grp_ids:
+        for rt_id in self.rt_ids:
             for rup, num_occ in self._sample_ruptures(eff_num_ses):
                 rup.rup_id = rup_id
                 rup_id += 1
-                yield rup, grp_id, num_occ
+                yield rup, rt_id, num_occ
 
     def _sample_ruptures(self, eff_num_ses):
         tom = getattr(self, 'temporal_occurrence_model', None)
