@@ -379,7 +379,8 @@ class ClassicalCalculator(base.HazardCalculator):
         G0 = sum(len(vals) for vals in self.rlzs_by_gsim_list)
         poes_shape = (self.N, len(oq.imtls.array), G0)  # NLG
         size = numpy.prod(poes_shape) * 8
-        logging.info('Required %s for the ProbabilityMaps', humansize(size))
+        logging.info('Requiring %s for ProbabilityMap of shape %s',
+                     humansize(size), poes_shape)
         self.datastore.create_dset('_poes', F64, poes_shape)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
