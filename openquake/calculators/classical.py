@@ -196,10 +196,10 @@ class ClassicalCalculator(base.HazardCalculator):
         extra = dic['extra']
         if not pmap:
             return acc
-        gidx = extra['gidx']
+        grp_id = extra['grp_id']
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
-            pmap.gidx = gidx
+            pmap.grp_id = grp_id
             acc[extra['source_id']] = pmap
 
         trt = extra.pop('trt')
@@ -218,10 +218,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     eff_sites += rec[1] / rec[0]
             self.by_task[extra['task_no']] = (
                 eff_rups, eff_sites, sorted(srcids))
-            if pmap and gidx in acc:
-                acc[gidx] |= pmap
+            if pmap and grp_id in acc:
+                acc[grp_id] |= pmap
             else:
-                acc[gidx] = copy.copy(pmap)
+                acc[grp_id] = copy.copy(pmap)
             acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
@@ -234,7 +234,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Initial accumulator, a dict et_id -> ProbabilityMap(L, G)
         """
         zd = AccumDict()
-        rparams = {'gidx', 'occurrence_rate', 'clon_', 'clat_', 'rrup_'}
+        rparams = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
             cm = ContextMaker(trt, gsims)
@@ -252,7 +252,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for rparam in rparams:
                 if rparam.endswith('_'):
                     dparams.append(rparam)
-                elif rparam == 'gidx':
+                elif rparam == 'grp_id':
                     self.rdt.append((rparam, U32))
                 else:
                     self.rdt.append((rparam, F32))
@@ -550,7 +550,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for key, pmap in pmap_by_key.items():
                 if isinstance(key, str):  # disagg_by_src
                     serial = self.csm.source_info[key][readinput.SERIAL]
-                    rlzs_by_gsim = rlzs_by_gsim_list[pmap.gidx]
+                    rlzs_by_gsim = rlzs_by_gsim_list[pmap.grp_id]
                     self.datastore['disagg_by_src'][..., serial] = (
                         pgetter.get_hcurves(pmap, rlzs_by_gsim))
                 elif pmap:  # pmap can be missing if the group is filtered away

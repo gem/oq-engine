@@ -66,7 +66,7 @@ smlt_cache = {}  # fname, seed, samples, meth -> SourceModelLogicTree instance
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
-    ('gidx', numpy.uint16),            # 1
+    ('grp_id', numpy.uint16),            # 1
     ('code', (numpy.string_, 1)),      # 2
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
@@ -724,7 +724,7 @@ def get_composite_source_model(oqparam, h5=None):
         csm = get_csm(oqparam, full_lt,  h5)
     et_ids = csm.get_et_ids()
     logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
-    gidx = {tuple(arr): i for i, arr in enumerate(et_ids)}
+    grp_id = {tuple(arr): i for i, arr in enumerate(et_ids)}
     data = {}  # src_id -> row
     mags = AccumDict(accum=set())  # trt -> mags
     wkts = []
@@ -734,8 +734,8 @@ def get_composite_source_model(oqparam, h5=None):
             mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
             lens.append(len(src.et_ids))
-            src.gidx = gidx[tuple(src.et_ids)]
-            row = [src.source_id, src.gidx, src.code,
+            src.grp_id = grp_id[tuple(src.et_ids)]
+            row = [src.source_id, src.grp_id, src.code,
                    0, 0, 0, src.id, full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row

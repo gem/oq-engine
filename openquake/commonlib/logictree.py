@@ -1391,10 +1391,10 @@ class FullLogicTree(object):
 
     def get_rlzs_by_gsim_list(self, list_of_et_ids):
         """
-        :returns: a list of dictionaries rlzs_by_gsim, one for each gidx
+        :returns: a list of dictionaries rlzs_by_gsim, one for each grp_id
         """
         out = []
-        for gidx, et_ids in enumerate(list_of_et_ids):
+        for grp_id, et_ids in enumerate(list_of_et_ids):
             dic = AccumDict(accum=[])
             for et_id in et_ids:
                 for gsim, rlzs in self.get_rlzs_by_gsim(et_id).items():

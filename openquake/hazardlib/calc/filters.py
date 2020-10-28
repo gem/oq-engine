@@ -249,12 +249,12 @@ def split_sources(srcs):
         sources.extend(splits)
         has_samples = hasattr(src, 'samples')
         has_scaling_rate = hasattr(src, 'scaling_rate')
-        gidx = getattr(src, 'gidx', 0)  # 0 in hazardlib
+        grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
         if len(splits) > 1:
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
                 split.et_id = src.et_id
-                split.gidx = gidx
+                split.grp_id = grp_id
                 split.id = src.id
                 if has_samples:
                     split.samples = src.samples
@@ -264,7 +264,7 @@ def split_sources(srcs):
             [s] = splits
             s.source_id = src.source_id
             s.et_id = src.et_id
-            s.gidx = gidx
+            s.grp_id = grp_id
             s.id = src.id
             if has_samples:
                 s.samples = src.samples

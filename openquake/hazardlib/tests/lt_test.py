@@ -78,16 +78,16 @@ class CollapseTestCase(unittest.TestCase):
         # compute the mean curve with full enumeration
         srcs = []
         weights = []
-        gidx = et_id = 0
+        grp_id = et_id = 0
         for weight, branches in self.bs0.enumerate_paths():
             path = tuple(br.branch_id for br in branches)
             bset_values = self.bs0.get_bset_values(path)
             # first path: [(<b01 b02>, (4.6, 1.1)), (<b11 b12>, 7.0)]
             sg = lt.apply_uncertainties(bset_values, self.sg)
             for src in sg:
-                src.gidx = gidx
+                src.grp_id = grp_id
                 src.et_id = et_id
-            gidx += 1
+            grp_id += 1
             et_id += 1
             srcs.extend(sg)
             weights.append(weight)

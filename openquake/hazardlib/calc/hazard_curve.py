@@ -113,7 +113,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     extra['task_no'] = getattr(monitor, 'task_no', 0)
     extra['trt'] = trt
     extra['source_id'] = src.source_id
-    extra['gidx'] = src.gidx
+    extra['grp_id'] = src.grp_id
     extra['maxradius'] = maxradius
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
@@ -177,7 +177,7 @@ def calc_hazard_curves(
         for src in grp:
             if not hasattr(src, 'et_id'):
                 src.et_id = i  # fix et_id
-            src.gidx = i
+            src.grp_id = i
             src.id = idx
             idx += 1
     imtls = DictArray(imtls)
