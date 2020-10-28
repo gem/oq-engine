@@ -427,15 +427,11 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         src_groups = self.csm.src_groups
         totweight = 0
-        rlzs_by_gsim_grp = self.full_lt.get_rlzs_by_gsim_grp()
-        rlzs_by_gsim = [None] * len(src_groups)  # G dictionaries
-        for gidx, sg in enumerate(src_groups):
-            rlzs_by_gsim[gidx] = AccumDict(accum=[])
-            for grp_id in sg.sources[0].grp_ids:
-                for gsim, rlzs in rlzs_by_gsim_grp[grp_id].items():
-                    rlzs_by_gsim[gidx][gsim].extend(rlzs)
+        grp_ids = self.datastore['grp_ids'][:]
+        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
+        for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
             for src in sg:
-                src.ngsims = len(rlzs_by_gsim[gidx])
+                src.ngsims = len(rlzs_by_gsim)
                 totweight += src.weight
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
@@ -454,7 +450,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Generated %d tiles with %d sites each', ntiles, T)
 
         # estimate max memory per core
-        max_num_gsims = max(len(gsims) for gsims in rlzs_by_gsim)
+        max_num_gsims = max(len(gsims) for gsims in rlzs_by_gsim_list)
         L = len(oq.imtls.array)
         pmapbytes = T * L * max_num_gsims * 8
         if pmapbytes > TWO32:
@@ -478,13 +474,12 @@ class ClassicalCalculator(base.HazardCalculator):
             collapse_level=oq.collapse_level, hint=hint,
             max_sites_disagg=oq.max_sites_disagg,
             split_sources=oq.split_sources, af=self.af)
-        for gidx, sg in enumerate(src_groups):
-            gsims = rlzs_by_gsim[gidx]
-            param['rescale_weight'] = len(gsims)
+        for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
+            param['rescale_weight'] = len(rlzs_by_gsim)
             if sg.atomic:
                 # do not split atomic groups
                 nb = 1
-                smap.submit((sg, gsims, param), f1)
+                smap.submit((sg, rlzs_by_gsim, param), f1)
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
@@ -496,13 +491,13 @@ class ClassicalCalculator(base.HazardCalculator):
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
-                    smap.submit((block, gsims, param), f2)
+                    smap.submit((block, rlzs_by_gsim, param), f2)
 
             w = sum(src.weight for src in sg)
             it = sorted(oq.maximum_distance.ddic[sg.trt].items())
             md = '%s->%d ... %s->%d' % (it[0] + it[-1])
             logging.info('max_dist={}, gsims={}, weight={:_d}, blocks={}'.
-                         format(md, len(gsims), int(w), nb))
+                         format(md, len(rlzs_by_gsim), int(w), nb))
 
     def save_hazard(self, acc, pmap_by_kind):
         """
