@@ -425,12 +425,17 @@ class ClassicalCalculator(base.HazardCalculator):
         Submit tasks to the passed Starmap
         """
         oq = self.oqparam
-        gsims_by_trt = self.full_lt.get_gsims_by_trt()
         src_groups = self.csm.src_groups
         totweight = 0
-        for sg in src_groups:
+        rlzs_by_gsim_grp = self.full_lt.get_rlzs_by_gsim_grp()
+        rlzs_by_gsim = [None] * len(src_groups)  # G dictionaries
+        for gidx, sg in enumerate(src_groups):
+            rlzs_by_gsim[gidx] = AccumDict(accum=[])
+            for grp_id in sg.sources[0].grp_ids:
+                for gsim, rlzs in rlzs_by_gsim_grp[grp_id].items():
+                    rlzs_by_gsim[gidx][gsim].extend(rlzs)
             for src in sg:
-                src.ngsims = len(gsims_by_trt[src.tectonic_region_type])
+                src.ngsims = len(rlzs_by_gsim[gidx])
                 totweight += src.weight
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
@@ -449,7 +454,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Generated %d tiles with %d sites each', ntiles, T)
 
         # estimate max memory per core
-        max_num_gsims = max(len(gsims) for gsims in gsims_by_trt.values())
+        max_num_gsims = max(len(gsims) for gsims in rlzs_by_gsim)
         L = len(oq.imtls.array)
         pmapbytes = T * L * max_num_gsims * 8
         if pmapbytes > TWO32:
@@ -473,8 +478,8 @@ class ClassicalCalculator(base.HazardCalculator):
             collapse_level=oq.collapse_level, hint=hint,
             max_sites_disagg=oq.max_sites_disagg,
             split_sources=oq.split_sources, af=self.af)
-        for sg in src_groups:
-            gsims = gsims_by_trt[sg.trt]
+        for gidx, sg in enumerate(src_groups):
+            gsims = rlzs_by_gsim[gidx]
             param['rescale_weight'] = len(gsims)
             if sg.atomic:
                 # do not split atomic groups
@@ -554,9 +559,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     # avoid saving PoEs == 1
                     arr = base.fix_ones(pmap).array(self.N)
                     slc = slice_by_grp['grp-%02d' % key]
-                    size = slc.stop - slc.start
-                    # size is needed in test case_56
-                    self.datastore['_poes'][:, :, slc] = arr[:, :, :size]
+                    self.datastore['_poes'][:, :, slc] = arr
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
