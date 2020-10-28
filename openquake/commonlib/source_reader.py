@@ -98,7 +98,7 @@ def get_csm(oq, full_lt, h5=None):
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
     classical = not oq.is_event_based()
-    full_lt.ses_seed = 0 if classical else oq.ses_seed
+    full_lt.ses_seed = oq.ses_seed
     if oq.is_ucerf():
         serial = full_lt.ses_seed
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
@@ -118,7 +118,7 @@ def get_csm(oq, full_lt, h5=None):
                 sg.sources.extend(src.get_background_sources())
             else:  # event_based, use one source
                 sg.sources = [src]
-                serial = init_serials(sg, serial)
+            serial = init_serials(sg, serial)
         return CompositeSourceModel(full_lt, src_groups)
 
     logging.info('Reading the source model(s) in parallel')
@@ -237,13 +237,11 @@ def _get_csm(full_lt, groups):
             for src in srcs:
                 src._wkt = src.wkt()
                 lst.append(src)
-        if full_lt.ses_seed:  # only for event based
-            serial = init_serials(lst, serial)
+        serial = init_serials(lst, serial)
         for grp in general.groupby(lst, grp_ids).values():
             src_groups.append(sourceconverter.SourceGroup(trt, grp))
     for ag in atomic:
-        if full_lt.ses_seed:  # only for event based
-            serial = init_serials(ag.sources, serial)
+        serial = init_serials(ag.sources, serial)
         for src in ag:
             src._wkt = src.wkt()
     src_groups.extend(atomic)
