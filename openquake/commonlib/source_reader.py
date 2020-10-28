@@ -289,9 +289,9 @@ class CompositeSourceModel:
         """
         :returns: an array of grp_ids (to be stored as an hdf5.vuint32 array)
         """
-        keys = set(tuple(src.grp_ids) for sg in self.src_groups for src in sg)
+        keys = [sg.sources[0].grp_ids for sg in self.src_groups]
         assert len(keys) < TWO16, len(keys)
-        return [numpy.array(grp_ids, numpy.uint32) for grp_ids in sorted(keys)]
+        return [numpy.array(grp_ids, numpy.uint32) for grp_ids in keys]
 
     def get_sources(self):
         """
