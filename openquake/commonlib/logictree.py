@@ -1205,7 +1205,7 @@ class FullLogicTree(object):
     def __init__(self, source_model_lt, gsim_lt):
         self.source_model_lt = source_model_lt
         self.gsim_lt = gsim_lt
-        self.init()  # set .sm_rlzs and .trt_by_grp
+        self.init()  # set .sm_rlzs and .trt_by_et
 
     def init(self):
         if self.source_model_lt.num_samples:
@@ -1228,7 +1228,7 @@ class FullLogicTree(object):
                 for i, sm_rlz in enumerate(self.sm_rlzs)}
 
     @property
-    def trt_by_grp(self):
+    def trt_by_et(self):
         """
         :returns: a list of TRTs, one for each et_id
         """

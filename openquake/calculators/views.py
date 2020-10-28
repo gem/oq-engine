@@ -510,7 +510,7 @@ def view_required_params_per_trt(token, dstore):
     """
     full_lt = dstore['full_lt']
     tbl = []
-    for et_id, trt in enumerate(full_lt.trt_by_grp):
+    for et_id, trt in enumerate(full_lt.trt_by_et):
         gsims = full_lt.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
@@ -713,14 +713,14 @@ def view_gmf_error(token, dstore):
 class GmpeExtractor(object):
     def __init__(self, dstore):
         full_lt = dstore['full_lt']
-        self.trt_by_grp = full_lt.trt_by_grp
+        self.trt_by_et = full_lt.trt_by_et
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()
 
     def extract(self, et_ids, rlz_ids):
         out = []
         for et_id, rlz_id in zip(et_ids, rlz_ids):
-            trt = self.trt_by_grp[et_id]
+            trt = self.trt_by_et[et_id]
             out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
         return out
 

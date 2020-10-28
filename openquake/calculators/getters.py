@@ -394,7 +394,7 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
     :yields: RuptureGetters
     """
     full_lt = dstore['full_lt']
-    trt_by_grp = full_lt.trt_by_grp
+    trt_by_et = full_lt.trt_by_et
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
     rup_array.sort(order='et_id')  # avoid generating too many tasks
@@ -403,7 +403,7 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
             rup_array, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('et_id')):
         et_id = block[0]['et_id']
-        trt = trt_by_grp[et_id]
+        trt = trt_by_et[et_id]
         proxies = [RuptureProxy(rec) for rec in block]
         yield RuptureGetter(proxies, dstore.filename, et_id,
                             trt, rlzs_by_gsim[et_id])
