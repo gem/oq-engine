@@ -118,7 +118,7 @@ def get_csm(oq, full_lt, h5=None):
                 sg.sources.extend(src.get_background_sources())
             else:  # event_based, use one source
                 sg.sources = [src]
-                serial = init_serials(sg, serial)
+            serial = init_serials(sg, serial)
         return CompositeSourceModel(full_lt, src_groups)
 
     logging.info('Reading the source model(s) in parallel')
