@@ -65,7 +65,7 @@ def export_ruptures_xml(ekey, dstore):
             events_by_ses = group_array(events[proxy['id']], 'ses_id')
             ebr = proxy.to_ebr(rgetter.trt)
             ebrs.append(ebr.export(events_by_ses))
-        ruptures_by_grp[rgetter.grp_id].extend(ebrs)
+        ruptures_by_grp[rgetter.et_id].extend(ebrs)
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)

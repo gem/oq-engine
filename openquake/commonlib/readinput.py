@@ -66,7 +66,7 @@ smlt_cache = {}  # fname, seed, samples, meth -> SourceModelLogicTree instance
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
-    ('gidx', numpy.uint16),            # 1
+    ('grp_id', numpy.uint16),            # 1
     ('code', (numpy.string_, 1)),      # 2
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
@@ -722,9 +722,9 @@ def get_composite_source_model(oqparam, h5=None):
         csm = _get_cachedir(oqparam, full_lt, h5)
     else:
         csm = get_csm(oqparam, full_lt,  h5)
-    grp_ids = csm.get_grp_ids()
+    et_ids = csm.get_et_ids()
     logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
-    gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
+    grp_id = {tuple(arr): i for i, arr in enumerate(et_ids)}
     data = {}  # src_id -> row
     mags = AccumDict(accum=set())  # trt -> mags
     wkts = []
@@ -733,9 +733,9 @@ def get_composite_source_model(oqparam, h5=None):
         if hasattr(sg, 'mags'):  # UCERF
             mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
-            lens.append(len(src.grp_ids))
-            src.gidx = gidx[tuple(src.grp_ids)]
-            row = [src.source_id, src.gidx, src.code,
+            lens.append(len(src.et_ids))
+            src.grp_id = grp_id[tuple(src.et_ids)]
+            row = [src.source_id, src.grp_id, src.code,
                    0, 0, 0, src.id, full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
             data[src.source_id] = row
@@ -747,7 +747,7 @@ def get_composite_source_model(oqparam, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags[sg.trt].update(srcmags)
-    logging.info('There are %d groups and %d sources with len(grp_ids)=%.1f',
+    logging.info('There are %d groups and %d sources with len(et_ids)=%.1f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
     if h5:
@@ -755,7 +755,7 @@ def get_composite_source_model(oqparam, h5=None):
         # avoid hdf5 damned bug by creating source_info in advance
         hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        h5['grp_ids'] = grp_ids
+        h5['et_ids'] = et_ids
         mags_by_trt = {}
         for trt in mags:
             mags_by_trt[trt] = arr = numpy.array(sorted(mags[trt]))

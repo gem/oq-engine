@@ -46,7 +46,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
+grp_extreme_dt = numpy.dtype([('et_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 MAXMEMORY = '''Estimated upper memory limit per core:
@@ -196,10 +196,10 @@ class ClassicalCalculator(base.HazardCalculator):
         extra = dic['extra']
         if not pmap:
             return acc
-        gidx = extra['gidx']
+        grp_id = extra['grp_id']
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
-            pmap.gidx = gidx
+            pmap.grp_id = grp_id
             acc[extra['source_id']] = pmap
 
         trt = extra.pop('trt')
@@ -218,10 +218,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     eff_sites += rec[1] / rec[0]
             self.by_task[extra['task_no']] = (
                 eff_rups, eff_sites, sorted(srcids))
-            if pmap and gidx in acc:
-                acc[gidx] |= pmap
+            if pmap and grp_id in acc:
+                acc[grp_id] |= pmap
             else:
-                acc[gidx] = copy.copy(pmap)
+                acc[grp_id] = copy.copy(pmap)
             acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
@@ -231,10 +231,10 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def acc0(self):
         """
-        Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
+        Initial accumulator, a dict et_id -> ProbabilityMap(L, G)
         """
         zd = AccumDict()
-        rparams = {'gidx', 'occurrence_rate', 'clon_', 'clat_', 'rrup_'}
+        rparams = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
             cm = ContextMaker(trt, gsims)
@@ -252,7 +252,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for rparam in rparams:
                 if rparam.endswith('_'):
                     dparams.append(rparam)
-                elif rparam == 'gidx':
+                elif rparam == 'grp_id':
                     self.rdt.append((rparam, U32))
                 else:
                     self.rdt.append((rparam, F32))
@@ -428,8 +428,8 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         src_groups = self.csm.src_groups
         totweight = 0
-        grp_ids = self.datastore['grp_ids'][:]
-        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
+        et_ids = self.datastore['et_ids'][:]
+        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(et_ids)
         for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
             for src in sg:
                 src.ngsims = len(rlzs_by_gsim)
@@ -538,8 +538,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if nr:  # few sites, log the number of ruptures per magnitude
             logging.info('%s', nr)
         oq = self.oqparam
-        grp_ids = self.datastore['grp_ids'][:]
-        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
+        et_ids = self.datastore['et_ids'][:]
+        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(et_ids)
         slice_by_g = getters.get_slice_by_g(rlzs_by_gsim_list)
         data = []
         weights = [rlz.weight for rlz in self.realizations]
@@ -550,12 +550,12 @@ class ClassicalCalculator(base.HazardCalculator):
             for key, pmap in pmap_by_key.items():
                 if isinstance(key, str):  # disagg_by_src
                     serial = self.csm.source_info[key][readinput.SERIAL]
-                    rlzs_by_gsim = rlzs_by_gsim_list[pmap.gidx]
+                    rlzs_by_gsim = rlzs_by_gsim_list[pmap.grp_id]
                     self.datastore['disagg_by_src'][..., serial] = (
                         pgetter.get_hcurves(pmap, rlzs_by_gsim))
                 elif pmap:  # pmap can be missing if the group is filtered away
                     # key is the group ID
-                    trt = self.full_lt.trt_by_grp[grp_ids[key][0]]
+                    trt = self.full_lt.trt_by_et[et_ids[key][0]]
                     # avoid saving PoEs == 1
                     arr = base.fix_ones(pmap).array(self.N)
                     self.datastore['_poes'][:, :, slice_by_g[key]] = arr

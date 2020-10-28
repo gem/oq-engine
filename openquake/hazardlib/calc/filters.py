@@ -35,7 +35,7 @@ from openquake.hazardlib.geo.utils import (
 
 U32 = numpy.uint32
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
-grp_id = operator.attrgetter('grp_id')
+et_id = operator.attrgetter('et_id')
 
 
 @contextmanager
@@ -249,12 +249,12 @@ def split_sources(srcs):
         sources.extend(splits)
         has_samples = hasattr(src, 'samples')
         has_scaling_rate = hasattr(src, 'scaling_rate')
-        gidx = getattr(src, 'gidx', 0)  # 0 in hazardlib
+        grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
         if len(splits) > 1:
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
-                split.grp_id = src.grp_id
-                split.gidx = gidx
+                split.et_id = src.et_id
+                split.grp_id = grp_id
                 split.id = src.id
                 if has_samples:
                     split.samples = src.samples
@@ -263,8 +263,8 @@ def split_sources(srcs):
         elif splits:  # single source
             [s] = splits
             s.source_id = src.source_id
-            s.grp_id = src.grp_id
-            s.gidx = gidx
+            s.et_id = src.et_id
+            s.grp_id = grp_id
             s.id = src.id
             if has_samples:
                 s.samples = src.samples
@@ -336,13 +336,13 @@ class SourceFilter(object):
         """
         :yields:
             pairs (srcs, sites) where the sources have the same source_id,
-            the same grp_ids and affect the same sites
+            the same et_ids and affect the same sites
         """
         with mon:
             acc = general.AccumDict(accum=[])  # indices -> srcs
             for src, indices in self.filter(split_sources(sources)[0]):
                 src_id = re.sub(r':\d+$', '', src.source_id)
-                acc[(src_id, src.grp_id) + tuple(indices)].append(src)
+                acc[(src_id, src.et_id) + tuple(indices)].append(src)
         for tup, srcs in acc.items():
             yield srcs, self.sitecol.filtered(tup[2:])
 

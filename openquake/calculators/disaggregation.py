@@ -310,8 +310,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         allargs = []
         totweight = sum(d['rctx']['nsites'].sum() for n, d in dstore.items()
                         if n.startswith('mag_') and len(d['rctx']))
-        grp_ids = dstore['grp_ids'][:]
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
+        et_ids = dstore['et_ids'][:]
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(et_ids)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
@@ -323,14 +323,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         for mag in mags:
             rctx = dstore['mag_%s/rctx' % mag][:]
             totrups += len(rctx)
-            for gidx, gids in enumerate(grp_ids):
-                idxs, = numpy.where(rctx['gidx'] == gidx)
+            for grp_id, gids in enumerate(et_ids):
+                idxs, = numpy.where(rctx['grp_id'] == grp_id)
                 if len(idxs) == 0:
                     continue
                 trti = gids[0] // num_eff_rlzs
                 trt = self.trts[trti]
                 cmaker = ContextMaker(
-                    trt, rlzs_by_gsim[gidx],
+                    trt, rlzs_by_gsim[grp_id],
                     {'truncation_level': oq.truncation_level,
                      'maximum_distance': oq.maximum_distance,
                      'collapse_level': oq.collapse_level,

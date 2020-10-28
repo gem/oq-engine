@@ -568,7 +568,7 @@ def extract_sources(dstore, what):
     wkt_gz = gzip.compress(';'.join(wkt).encode('utf8'))
     src_gz = gzip.compress(';'.join(info['source_id']).encode('utf8'))
     oknames = [name for name in info.dtype.names  # avoid pickle issues
-               if name not in ('source_id', 'grp_ids')]
+               if name not in ('source_id', 'et_ids')]
     arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
     for n in oknames:
         arr[n] = info[n]
@@ -949,22 +949,22 @@ def extract_mfd(dstore, what):
     duration = oq.investigation_time * oq.ses_per_logic_tree_path
     dic = {'duration': duration}
     dd = collections.defaultdict(float)
-    rups = dstore['ruptures']['grp_id', 'mag', 'n_occ']
+    rups = dstore['ruptures']['et_id', 'mag', 'n_occ']
     mags = sorted(numpy.unique(rups['mag']))
     magidx = {mag: idx for idx, mag in enumerate(mags)}
-    num_groups = rups['grp_id'].max() + 1
+    num_groups = rups['et_id'].max() + 1
     frequencies = numpy.zeros((len(mags), num_groups), float)
-    for grp_id, mag, n_occ in rups:
+    for et_id, mag, n_occ in rups:
         if kind_mean:
-            dd[mag] += n_occ * weights[grp_id % n] / duration
+            dd[mag] += n_occ * weights[et_id % n] / duration
         if kind_by_group:
-            frequencies[magidx[mag], grp_id] += n_occ / duration
+            frequencies[magidx[mag], et_id] += n_occ / duration
     dic['magnitudes'] = numpy.array(mags)
     if kind_mean:
         dic['mean_frequency'] = numpy.array([dd[mag] for mag in mags])
     if kind_by_group:
-        for grp_id, freqs in enumerate(frequencies.T):
-            dic['grp-%02d_frequency' % grp_id] = freqs
+        for et_id, freqs in enumerate(frequencies.T):
+            dic['grp-%02d_frequency' % et_id] = freqs
     return ArrayWrapper((), dic)
 
 # NB: this is an alternative, slower approach giving exactly the same numbers;
