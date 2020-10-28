@@ -104,7 +104,8 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def make_pmap(ctxs, gsims, imtls, trunclevel, investigation_time):
+# not used
+def _make_pmap(ctxs, gsims, imtls, trunclevel, investigation_time):
     RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
     # easy case of independent ruptures, useful for debugging
     imts = [from_string(im) for im in imtls]
