@@ -951,14 +951,14 @@ def extract_mfd(dstore, what):
     dd = collections.defaultdict(float)
     rups = dstore['ruptures']['et_id', 'mag', 'n_occ']
     mags = sorted(numpy.unique(rups['mag']))
-    magrp_id = {mag: idx for idx, mag in enumerate(mags)}
+    magidx = {mag: idx for idx, mag in enumerate(mags)}
     num_groups = rups['et_id'].max() + 1
     frequencies = numpy.zeros((len(mags), num_groups), float)
     for et_id, mag, n_occ in rups:
         if kind_mean:
             dd[mag] += n_occ * weights[et_id % n] / duration
         if kind_by_group:
-            frequencies[magrp_id[mag], et_id] += n_occ / duration
+            frequencies[magidx[mag], et_id] += n_occ / duration
     dic['magnitudes'] = numpy.array(mags)
     if kind_mean:
         dic['mean_frequency'] = numpy.array([dd[mag] for mag in mags])
@@ -978,7 +978,7 @@ def extract_mfd(dstore, what):
 #     mag = dict(dstore['ruptures']['rup_id', 'mag'])
 #     mags = numpy.unique(dstore['ruptures']['mag'])
 #     mags.sort()
-#     magrp_id = {mag: idx for idx, mag in enumerate(mags)}
+#     magidx = {mag: idx for idx, mag in enumerate(mags)}
 #     occurrences = numpy.zeros((len(mags), len(weights)), numpy.uint32)
 #     events = dstore['events'][()]
 #     dic = {'duration': duration, 'magnitudes': mags,
@@ -989,7 +989,7 @@ def extract_mfd(dstore, what):
 #             continue
 #         rupids, n_occs = numpy.unique(eids // 2 ** 32, return_counts=True)
 #         for rupid, n_occ in zip(rupids, n_occs):
-#             occurrences[magrp_id[mag[rupid]], rlz] += n_occ
+#             occurrences[magidx[mag[rupid]], rlz] += n_occ
 #         dic['mean_frequencies'] += occurrences[:, rlz] * weight / duration
 #     return ArrayWrapper(occurrences, dic)
 
