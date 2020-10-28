@@ -35,7 +35,7 @@ from openquake.hazardlib.geo.utils import (
 
 U32 = numpy.uint32
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
-rt_id = operator.attrgetter('rt_id')
+et_id = operator.attrgetter('et_id')
 
 
 @contextmanager
@@ -253,7 +253,7 @@ def split_sources(srcs):
         if len(splits) > 1:
             for i, split in enumerate(splits):
                 split.source_id = '%s:%s' % (src.source_id, i)
-                split.rt_id = src.rt_id
+                split.et_id = src.et_id
                 split.gidx = gidx
                 split.id = src.id
                 if has_samples:
@@ -263,7 +263,7 @@ def split_sources(srcs):
         elif splits:  # single source
             [s] = splits
             s.source_id = src.source_id
-            s.rt_id = src.rt_id
+            s.et_id = src.et_id
             s.gidx = gidx
             s.id = src.id
             if has_samples:
@@ -336,13 +336,13 @@ class SourceFilter(object):
         """
         :yields:
             pairs (srcs, sites) where the sources have the same source_id,
-            the same rt_ids and affect the same sites
+            the same et_ids and affect the same sites
         """
         with mon:
             acc = general.AccumDict(accum=[])  # indices -> srcs
             for src, indices in self.filter(split_sources(sources)[0]):
                 src_id = re.sub(r':\d+$', '', src.source_id)
-                acc[(src_id, src.rt_id) + tuple(indices)].append(src)
+                acc[(src_id, src.et_id) + tuple(indices)].append(src)
         for tup, srcs in acc.items():
             yield srcs, self.sitecol.filtered(tup[2:])
 

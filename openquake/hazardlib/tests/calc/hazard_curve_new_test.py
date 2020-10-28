@@ -149,7 +149,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                                          data)
         src.id = 0
         src.gidx = 0
-        src.rt_id = 0
+        src.et_id = 0
         src.mutex_weight = 1
         group = SourceGroup(
             src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')

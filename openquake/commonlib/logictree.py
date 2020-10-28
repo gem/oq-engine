@@ -73,7 +73,7 @@ source_model_dt = numpy.dtype([
 ])
 
 src_group_dt = numpy.dtype(
-    [('rt_id', U32),
+    [('et_id', U32),
      ('name', hdf5.vstr),
      ('trti', U16),
      ('effrup', I32),
@@ -1230,11 +1230,11 @@ class FullLogicTree(object):
     @property
     def trt_by_grp(self):
         """
-        :returns: a list of TRTs, one for each rt_id
+        :returns: a list of TRTs, one for each et_id
         """
         e = len(self.sm_rlzs)
         trts = list(self.gsim_lt.values)
-        return [trts[rt_id // e] for rt_id in range(e*len(trts))]
+        return [trts[et_id // e] for et_id in range(e*len(trts))]
 
     @property
     def seed(self):
@@ -1257,20 +1257,20 @@ class FullLogicTree(object):
         """
         return self.source_model_lt.sampling_method
 
-    def get_trti_eri(self, rt_id):
+    def get_trti_eri(self, et_id):
         """
         :returns: (trti, eri)
         """
-        return divmod(rt_id, len(self.sm_rlzs))
+        return divmod(et_id, len(self.sm_rlzs))
 
-    def get_rt_id(self, trt, eri):
+    def get_et_id(self, trt, eri):
         """
-        :returns: rt_id
+        :returns: et_id
         """
         gid = self.trti[trt] * len(self.sm_rlzs) + int(eri)
         return gid
 
-    def rt_ids(self, eri):
+    def et_ids(self, eri):
         """
         :param eri: effective realization index
         :returns: array of T group IDs, being T the number of TRTs
@@ -1281,10 +1281,10 @@ class FullLogicTree(object):
 
     def get_samples_by_grp(self):
         """
-        :returns: a dictionary rt_id -> source_model.samples
+        :returns: a dictionary et_id -> source_model.samples
         """
-        return {rt_id: sm.samples for sm in self.sm_rlzs
-                for rt_id in self.rt_ids(sm.ordinal)}
+        return {et_id: sm.samples for sm in self.sm_rlzs
+                for et_id in self.et_ids(sm.ordinal)}
 
     def gsim_by_trt(self, rlz):
         """
@@ -1346,16 +1346,16 @@ class FullLogicTree(object):
             rlzs, smltpath).items()}
         return dic
 
-    def get_rlzs_by_gsim(self, rt_id):
+    def get_rlzs_by_gsim(self, et_id):
         """
         :returns: a dictionary gsim -> array of rlz indices
         """
         if not hasattr(self, '_rlzs_by_grp'):
             eri_by_ltp = self.get_eri_by_ltp()
             rlzs = self.get_realizations()
-            acc = AccumDict(accum=AccumDict(accum=[]))  # rt_id->gsim->rlzs
+            acc = AccumDict(accum=AccumDict(accum=[]))  # et_id->gsim->rlzs
             for sm in self.sm_rlzs:
-                for gid in self.rt_ids(sm.ordinal):
+                for gid in self.et_ids(sm.ordinal):
                     trti, eri = divmod(gid, len(self.sm_rlzs))
                     for rlz in rlzs:
                         idx = eri_by_ltp['_'.join(rlz.sm_lt_path)]
@@ -1366,38 +1366,38 @@ class FullLogicTree(object):
             for gid, dic in acc.items():
                 self._rlzs_by_grp[gid] = {
                     gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
-        return self._rlzs_by_grp[rt_id]
+        return self._rlzs_by_grp[et_id]
 
     def get_rlzs_by_gsim_grp(self):
         """
-        :returns: a dictionary rt_id -> gsim -> rlzs
+        :returns: a dictionary et_id -> gsim -> rlzs
         """
         dic = {}
         for sm in self.sm_rlzs:
-            for rt_id in self.rt_ids(sm.ordinal):
-                dic[rt_id] = self.get_rlzs_by_gsim(rt_id)
+            for et_id in self.et_ids(sm.ordinal):
+                dic[et_id] = self.get_rlzs_by_gsim(et_id)
         return dic
 
     def get_rlzs_by_grp(self):
         """
-        :returns: a dictionary rt_id -> [rlzis, ...]
+        :returns: a dictionary et_id -> [rlzis, ...]
         """
         dic = {}
         for sm in self.sm_rlzs:
-            for rt_id in self.rt_ids(sm.ordinal):
-                grp = 'grp-%02d' % rt_id
-                dic[grp] = list(self.get_rlzs_by_gsim(rt_id).values())
-        return {rt_id: dic[rt_id] for rt_id in sorted(dic)}
+            for et_id in self.et_ids(sm.ordinal):
+                grp = 'grp-%02d' % et_id
+                dic[grp] = list(self.get_rlzs_by_gsim(et_id).values())
+        return {et_id: dic[et_id] for et_id in sorted(dic)}
 
-    def get_rlzs_by_gsim_list(self, list_of_rt_ids):
+    def get_rlzs_by_gsim_list(self, list_of_et_ids):
         """
         :returns: a list of dictionaries rlzs_by_gsim, one for each gidx
         """
         out = []
-        for gidx, rt_ids in enumerate(list_of_rt_ids):
+        for gidx, et_ids in enumerate(list_of_et_ids):
             dic = AccumDict(accum=[])
-            for rt_id in rt_ids:
-                for gsim, rlzs in self.get_rlzs_by_gsim(rt_id).items():
+            for et_id in et_ids:
+                for gsim, rlzs in self.get_rlzs_by_gsim(et_id).items():
                     dic[gsim].extend(rlzs)
             out.append(dic)
         return out
@@ -1463,10 +1463,10 @@ class FullLogicTree(object):
 
     def get_sm_by_grp(self):
         """
-        :returns: a dictionary rt_id -> sm_id
+        :returns: a dictionary et_id -> sm_id
         """
-        return {rt_id: sm.ordinal for sm in self.sm_rlzs
-                for rt_id in self.rt_ids(sm.ordinal)}
+        return {et_id: sm.ordinal for sm in self.sm_rlzs
+                for et_id in self.et_ids(sm.ordinal)}
 
     def __repr__(self):
         info_by_model = {}

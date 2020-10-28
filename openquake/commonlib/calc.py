@@ -267,9 +267,9 @@ class RuptureImporter(object):
         self.rlzs_by_gsim_grp = full_lt.get_rlzs_by_gsim_grp()
         self.samples_by_grp = full_lt.get_samples_by_grp()
         self.num_rlzs_by_grp = {
-            rt_id:
-            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[rt_id].values())
-            for rt_id in self.rlzs_by_gsim_grp}
+            et_id:
+            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[et_id].values())
+            for et_id in self.rlzs_by_gsim_grp}
 
     def import_rups(self, rup_array):
         """
@@ -287,7 +287,7 @@ class RuptureImporter(object):
 
     def save_events(self, rup_array):
         """
-        :param rup_array: an array of ruptures with fields rt_id
+        :param rup_array: an array of ruptures with fields et_id
         :returns: a list of RuptureGetters
         """
         from openquake.calculators.getters import (

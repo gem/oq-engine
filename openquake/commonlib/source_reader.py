@@ -32,8 +32,8 @@ TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
 
 
-def rt_ids(src):
-    return tuple(src.rt_ids)
+def et_ids(src):
+    return tuple(src.et_ids)
 
 
 def random_filtered_sources(sources, srcfilter, seed):
@@ -103,13 +103,13 @@ def get_csm(oq, full_lt, h5=None):
         serial = full_lt.ses_seed
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         src_groups = []
-        for rt_id, sm_rlz in enumerate(full_lt.sm_rlzs):
+        for et_id, sm_rlz in enumerate(full_lt.sm_rlzs):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
             sg.mags = numpy.unique(numpy.round(src.mags, 2))
             del src.__dict__['mags']  # remove cache
-            src.checksum = src.rt_id = src.id = rt_id
+            src.checksum = src.et_id = src.id = et_id
             src.samples = sm_rlz.samples
             if classical:
                 src.ruptures_per_block = oq.ruptures_per_block
@@ -172,10 +172,10 @@ def _build_groups(full_lt, smdict):
                     (value, common, rlz.value))
             src_groups.extend(extra)
         for src_group in src_groups:
-            rt_id = full_lt.get_rt_id(src_group.trt, rlz.ordinal)
+            et_id = full_lt.get_et_id(src_group.trt, rlz.ordinal)
             sg = apply_uncertainties(bset_values, src_group)
             for src in sg:
-                src.rt_id = rt_id
+                src.et_id = et_id
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             groups.append(sg)
@@ -196,23 +196,23 @@ def _build_groups(full_lt, smdict):
 def reduce_sources(sources_with_same_id):
     """
     :param sources_with_same_id: a list of sources with the same source_id
-    :returns: a list of truly unique sources, ordered by rt_id
+    :returns: a list of truly unique sources, ordered by et_id
     """
     out = []
     for src in sources_with_same_id:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id rt_id samples'}
+               if k not in 'source_id et_id samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
         # duplicate sources: same id, same checksum
         src = srcs[0]
         if len(srcs) > 1:  # happens in classical/case_20
-            src.rt_id = tuple(s.rt_id for s in srcs)
+            src.et_id = tuple(s.et_id for s in srcs)
         else:
-            src.rt_id = src.rt_id,
+            src.et_id = src.et_id,
         out.append(src)
-    out.sort(key=operator.attrgetter('rt_id'))
+    out.sort(key=operator.attrgetter('et_id'))
     return out
 
 
@@ -238,7 +238,7 @@ def _get_csm(full_lt, groups):
                 src._wkt = src.wkt()
                 lst.append(src)
         serial = init_serials(lst, serial)
-        for grp in general.groupby(lst, rt_ids).values():
+        for grp in general.groupby(lst, et_ids).values():
             src_groups.append(sourceconverter.SourceGroup(trt, grp))
     for ag in atomic:
         serial = init_serials(ag.sources, serial)
@@ -257,7 +257,7 @@ def init_serials(sources, serial):
         src.serial = serial
         if not src.num_ruptures:
             src.num_ruptures = src.count_ruptures()
-        serial += src.num_ruptures * len(src.rt_ids)
+        serial += src.num_ruptures * len(src.et_ids)
     return serial
 
 
@@ -283,13 +283,13 @@ class CompositeSourceModel:
                 src.id = idx
                 idx += 1
 
-    def get_rt_ids(self):
+    def get_et_ids(self):
         """
-        :returns: an array of rt_ids (to be stored as an hdf5.vuint32 array)
+        :returns: an array of et_ids (to be stored as an hdf5.vuint32 array)
         """
-        keys = [sg.sources[0].rt_ids for sg in self.src_groups]
+        keys = [sg.sources[0].et_ids for sg in self.src_groups]
         assert len(keys) < TWO16, len(keys)
-        return [numpy.array(rt_ids, numpy.uint32) for rt_ids in keys]
+        return [numpy.array(et_ids, numpy.uint32) for et_ids in keys]
 
     def get_sources(self):
         """
@@ -305,9 +305,9 @@ class CompositeSourceModel:
         """
         src_groups = []
         for sg in self.src_groups:
-            rt_id = self.full_lt.get_rt_id(sg.trt, eri)
+            et_id = self.full_lt.get_et_id(sg.trt, eri)
             src_group = copy.copy(sg)
-            src_group.sources = [src for src in sg if rt_id in src.rt_ids]
+            src_group.sources = [src for src in sg if et_id in src.et_ids]
             if len(src_group):
                 src_groups.append(src_group)
         return src_groups

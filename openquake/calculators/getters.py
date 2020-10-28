@@ -167,7 +167,7 @@ class PmapGetter(object):
 
     def get_hcurves(self, pmap, rlzs_by_gsim):  # in disagg_by_src
         """
-        :param pmap_by_rt_id: a dictionary of ProbabilityMaps by group ID
+        :param pmap_by_et_id: a dictionary of ProbabilityMaps by group ID
         :returns: an array of PoEs of shape (N, R, M, L)
         """
         self.init()
@@ -397,16 +397,16 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
     trt_by_grp = full_lt.trt_by_grp
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    rup_array.sort(order='rt_id')  # avoid generating too many tasks
+    rup_array.sort(order='et_id')  # avoid generating too many tasks
     maxweight = rup_array['n_occ'].sum() / (ct or 1)
     for block in general.block_splitter(
             rup_array, maxweight, operator.itemgetter('n_occ'),
-            key=operator.itemgetter('rt_id')):
-        rt_id = block[0]['rt_id']
-        trt = trt_by_grp[rt_id]
+            key=operator.itemgetter('et_id')):
+        et_id = block[0]['et_id']
+        trt = trt_by_grp[et_id]
         proxies = [RuptureProxy(rec) for rec in block]
-        yield RuptureGetter(proxies, dstore.filename, rt_id,
-                            trt, rlzs_by_gsim[rt_id])
+        yield RuptureGetter(proxies, dstore.filename, et_id,
+                            trt, rlzs_by_gsim[et_id])
 
 
 # NB: amplification is missing
@@ -441,7 +441,7 @@ def get_eid_rlz(proxies, rlzs_by_gsim):
     eid_rlz = []
     for rup in proxies:
         ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
-                        rup['rt_id'], rup['n_occ'])
+                        rup['et_id'], rup['n_occ'])
         for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
             for eid in eids:
                 eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
@@ -455,18 +455,18 @@ class RuptureGetter(object):
         a list of RuptureProxies
     :param filename:
         path to the HDF5 file containing a 'rupgeoms' dataset
-    :param rt_id:
+    :param et_id:
         source group index
     :param trt:
         tectonic region type string
     :param rlzs_by_gsim:
         dictionary gsim -> rlzs for the group
     """
-    def __init__(self, proxies, filename, rt_id, trt, rlzs_by_gsim):
+    def __init__(self, proxies, filename, et_id, trt, rlzs_by_gsim):
         self.proxies = proxies
         self.weight = sum(proxy.weight for proxy in proxies)
         self.filename = filename
-        self.rt_id = rt_id
+        self.et_id = et_id
         self.trt = trt
         self.rlzs_by_gsim = rlzs_by_gsim
         self.num_events = sum(int(proxy['n_occ']) for proxy in proxies)
@@ -494,7 +494,7 @@ class RuptureGetter(object):
             dic['surface_class'] = surclass.__name__
             dic['hypo'] = rec['hypo']
             dic['occurrence_rate'] = rec['occurrence_rate']
-            dic['rt_id'] = rec['rt_id']
+            dic['et_id'] = rec['et_id']
             dic['n_occ'] = rec['n_occ']
             dic['serial'] = rec['serial']
             dic['mag'] = rec['mag']
@@ -525,7 +525,7 @@ class RuptureGetter(object):
             if len(sids):
                 proxies.append(RuptureProxy(proxy.rec, len(sids)))
         for block in general.block_splitter(proxies, maxw, weight):
-            yield RuptureGetter(block, self.filename, self.rt_id, self.trt,
+            yield RuptureGetter(block, self.filename, self.et_id, self.trt,
                                 self.rlzs_by_gsim)
 
     def __len__(self):
@@ -533,5 +533,5 @@ class RuptureGetter(object):
 
     def __repr__(self):
         wei = ' [w=%d]' % self.weight if hasattr(self, 'weight') else ''
-        return '<%s rt_id=%d, %d rupture(s)%s>' % (
-            self.__class__.__name__, self.rt_id, len(self), wei)
+        return '<%s et_id=%d, %d rupture(s)%s>' % (
+            self.__class__.__name__, self.et_id, len(self), wei)

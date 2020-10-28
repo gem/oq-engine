@@ -722,9 +722,9 @@ def get_composite_source_model(oqparam, h5=None):
         csm = _get_cachedir(oqparam, full_lt, h5)
     else:
         csm = get_csm(oqparam, full_lt,  h5)
-    rt_ids = csm.get_rt_ids()
+    et_ids = csm.get_et_ids()
     logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
-    gidx = {tuple(arr): i for i, arr in enumerate(rt_ids)}
+    gidx = {tuple(arr): i for i, arr in enumerate(et_ids)}
     data = {}  # src_id -> row
     mags = AccumDict(accum=set())  # trt -> mags
     wkts = []
@@ -733,8 +733,8 @@ def get_composite_source_model(oqparam, h5=None):
         if hasattr(sg, 'mags'):  # UCERF
             mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
-            lens.append(len(src.rt_ids))
-            src.gidx = gidx[tuple(src.rt_ids)]
+            lens.append(len(src.et_ids))
+            src.gidx = gidx[tuple(src.et_ids)]
             row = [src.source_id, src.gidx, src.code,
                    0, 0, 0, src.id, full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
@@ -747,7 +747,7 @@ def get_composite_source_model(oqparam, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags[sg.trt].update(srcmags)
-    logging.info('There are %d groups and %d sources with len(rt_ids)=%.1f',
+    logging.info('There are %d groups and %d sources with len(et_ids)=%.1f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
     if h5:
@@ -755,7 +755,7 @@ def get_composite_source_model(oqparam, h5=None):
         # avoid hdf5 damned bug by creating source_info in advance
         hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        h5['rt_ids'] = rt_ids
+        h5['et_ids'] = et_ids
         mags_by_trt = {}
         for trt in mags:
             mags_by_trt[trt] = arr = numpy.array(sorted(mags[trt]))

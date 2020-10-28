@@ -566,12 +566,12 @@ class RuptureConverter(object):
     def convert_ruptureCollection(self, node):
         """
         :param node: a ruptureCollection node
-        :returns: a dictionary rt_id -> EBRuptures
+        :returns: a dictionary et_id -> EBRuptures
         """
         coll = {}
         for grpnode in node:
-            rt_id = int(grpnode['id'])
-            coll[rt_id] = ebrs = []
+            et_id = int(grpnode['id'])
+            coll[et_id] = ebrs = []
             for node in grpnode:
                 rup = self.convert_node(node)
                 rup.rup_id = int(node['id'])

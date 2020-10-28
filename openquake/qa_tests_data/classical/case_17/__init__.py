@@ -19,7 +19,7 @@
 """
 This is an example with a simple source model logic tree
 sampled 5 times (one path is sampled four times).
-The associations (rt_id, gsim) -> rlzs are:
+The associations (et_id, gsim) -> rlzs are:
 {
 0,SadighEtAl1997: ['<0,b2,b1,w=0.2>']
 1,SadighEtAl1997: ['<1,b2,b1,w=0.2>']

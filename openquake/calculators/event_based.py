@@ -99,7 +99,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def acc0(self):
         """
-        Initial accumulator, a dictionary (rt_id, gsim) -> curves
+        Initial accumulator, a dictionary (et_id, gsim) -> curves
         """
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
