@@ -19,7 +19,7 @@
 | case_16 | Sampling 10 logic tree paths out of 759_375 |
 | case_17 | | 
 | case_18 | | 
-| case_19 | | 
+| case_19 | Test AvgGMPE | 
 | case_20 | | 
 | case_21 | | 
 | case_22 | | 

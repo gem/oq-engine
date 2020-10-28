@@ -67,17 +67,17 @@ def sig_eps_dt(imts):
     return numpy.dtype(lst)
 
 
-def get_slice_by_grp(rlzs_by_grp):
+def get_slice_by_g(rlzs_by_gsim_list):
     """
-    :returns: a dictionary 'grp-XX' -> slice
+    :returns: a list of slices
     """
-    dic = {}  # grp -> slice
+    slices = []
     start = 0
-    for grp in rlzs_by_grp:
-        ngsims = len(rlzs_by_grp[grp])
-        dic[grp] = slice(start, start + ngsims)
+    for rlzs_by_gsim in rlzs_by_gsim_list:
+        ngsims = len(rlzs_by_gsim)
+        slices.append(slice(start, start + ngsims))
         start += ngsims
-    return dic
+    return slices
 
 
 class PmapGetter(object):
@@ -165,20 +165,18 @@ class PmapGetter(object):
                 pcurves[rlzi] |= c
         return pcurves
 
-    def get_hcurves(self, pmap, rlzs_by_grp):  # in disagg_by_src
+    def get_hcurves(self, pmap, rlzs_by_gsim):  # in disagg_by_src
         """
         :param pmap_by_grp_id: a dictionary of ProbabilityMaps by group ID
         :returns: an array of PoEs of shape (N, R, M, L)
         """
         self.init()
         res = numpy.zeros((self.N, self.R, self.L))
-        for grp_id in pmap.grp_ids:
-            rlzs = rlzs_by_grp['grp-%02d' % grp_id]
-            for sid, pc in pmap.items():
-                for gsim_idx, rlzis in enumerate(rlzs):
-                    poes = pc.array[:, gsim_idx]
-                    for rlz in rlzis:
-                        res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
+        for sid, pc in pmap.items():
+            for gsim_idx, rlzis in enumerate(rlzs_by_gsim.values()):
+                poes = pc.array[:, gsim_idx]
+                for rlz in rlzis:
+                    res[sid, rlz] = general.agg_probs(res[sid, rlz], poes)
         return res.reshape(self.N, self.R, self.M, -1)
 
     def get_mean(self):

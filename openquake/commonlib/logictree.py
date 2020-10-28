@@ -1395,10 +1395,10 @@ class FullLogicTree(object):
         """
         out = []
         for gidx, grp_ids in enumerate(list_of_grp_ids):
-            dic = AccumDict(accum=set())
+            dic = AccumDict(accum=[])
             for grp_id in grp_ids:
                 for gsim, rlzs in self.get_rlzs_by_gsim(grp_id).items():
-                    dic[gsim].update(rlzs)
+                    dic[gsim].extend(rlzs)
             out.append(dic)
         return out
 
