@@ -196,9 +196,10 @@ class ClassicalCalculator(base.HazardCalculator):
         extra = dic['extra']
         if not pmap:
             return acc
+        gidx = extra['gidx']
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
-            pmap.grp_ids = extra['grp_ids']
+            pmap.gidx = gidx
             acc[extra['source_id']] = pmap
 
         trt = extra.pop('trt')
@@ -217,12 +218,11 @@ class ClassicalCalculator(base.HazardCalculator):
                     eff_sites += rec[1] / rec[0]
             self.by_task[extra['task_no']] = (
                 eff_rups, eff_sites, sorted(srcids))
-            for grp_id in extra['grp_ids']:
-                if pmap and grp_id in acc:
-                    acc[grp_id] |= pmap
-                else:
-                    acc[grp_id] = copy.copy(pmap)
-                acc.eff_ruptures[trt] += eff_rups
+            if pmap and gidx in acc:
+                acc[gidx] |= pmap
+            else:
+                acc[gidx] = copy.copy(pmap)
+            acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
             for mag, c in dic['rup_data'].items():
@@ -369,16 +369,17 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
                                 num_cores=oq.num_cores)
         smap.monitor.save('srcfilter', self.src_filter())
-        self.submit_tasks(smap)
+        rlzs_by_gsim_list = self.submit_tasks(smap)
+        rlzs_by_g = []
+        for rlzs_by_gsim in rlzs_by_gsim_list:
+            for rlzs in rlzs_by_gsim.values():
+                rlzs_by_g.append(rlzs)
+        self.datastore['rlzs_by_g'] = [U32(rlzs) for rlzs in rlzs_by_g]
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
-        rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
-        G0 = sum(len(vals) for vals in rlzs_by_grp.values())
-        G1 = len(self.datastore['grp_ids'])
-        # logging.info('PoEs reduction factor = %d/%d', G1, G0)
-        poes_shape = (self.N, len(oq.imtls.array), G0)  # NLG
+        poes_shape = (self.N, len(oq.imtls.array), len(rlzs_by_g))  # NLG
         size = numpy.prod(poes_shape) * 8
-        logging.info('Required %s for the ProbabilityMaps', humansize(size))
-        self.datastore['rlzs_by_g'] = sum(rlzs_by_grp.values(), [])
+        logging.info('Requiring %s for ProbabilityMap of shape %s',
+                     humansize(size), poes_shape)
         self.datastore.create_dset('_poes', F64, poes_shape)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
@@ -498,6 +499,7 @@ class ClassicalCalculator(base.HazardCalculator):
             md = '%s->%d ... %s->%d' % (it[0] + it[-1])
             logging.info('max_dist={}, gsims={}, weight={:_d}, blocks={}'.
                          format(md, len(rlzs_by_gsim), int(w), nb))
+        return rlzs_by_gsim_list
 
     def save_hazard(self, acc, pmap_by_kind):
         """
@@ -536,25 +538,27 @@ class ClassicalCalculator(base.HazardCalculator):
         if nr:  # few sites, log the number of ruptures per magnitude
             logging.info('%s', nr)
         oq = self.oqparam
-        rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
-        slice_by_grp = getters.get_slice_by_grp(rlzs_by_grp)
+        grp_ids = self.datastore['grp_ids'][:]
+        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(grp_ids)
+        slice_by_g = getters.get_slice_by_g(rlzs_by_gsim_list)
         data = []
         weights = [rlz.weight for rlz in self.realizations]
         pgetter = getters.PmapGetter(
             self.datastore, weights, self.sitecol.sids, oq.imtls)
+        logging.info('Saving _poes')
         with self.monitor('saving probability maps'):
             for key, pmap in pmap_by_key.items():
                 if isinstance(key, str):  # disagg_by_src
                     serial = self.csm.source_info[key][readinput.SERIAL]
+                    rlzs_by_gsim = rlzs_by_gsim_list[pmap.gidx]
                     self.datastore['disagg_by_src'][..., serial] = (
-                        pgetter.get_hcurves(pmap, rlzs_by_grp))
+                        pgetter.get_hcurves(pmap, rlzs_by_gsim))
                 elif pmap:  # pmap can be missing if the group is filtered away
                     # key is the group ID
-                    trt = self.full_lt.trt_by_grp[key]
+                    trt = self.full_lt.trt_by_grp[grp_ids[key][0]]
                     # avoid saving PoEs == 1
                     arr = base.fix_ones(pmap).array(self.N)
-                    slc = slice_by_grp['grp-%02d' % key]
-                    self.datastore['_poes'][:, :, slc] = arr
+                    self.datastore['_poes'][:, :, slice_by_g[key]] = arr
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)

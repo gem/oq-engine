@@ -113,7 +113,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     extra['task_no'] = getattr(monitor, 'task_no', 0)
     extra['trt'] = trt
     extra['source_id'] = src.source_id
-    extra['grp_ids'] = src.grp_ids
+    extra['gidx'] = src.gidx
     extra['maxradius'] = maxradius
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
