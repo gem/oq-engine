@@ -97,7 +97,6 @@ def get_csm(oq, full_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
-    logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
     classical = not oq.is_event_based()
     full_lt.ses_seed = 0 if classical else oq.ses_seed
     if oq.is_ucerf():

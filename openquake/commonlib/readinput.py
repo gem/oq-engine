@@ -723,6 +723,7 @@ def get_composite_source_model(oqparam, h5=None):
     else:
         csm = get_csm(oqparam, full_lt,  h5)
     grp_ids = csm.get_grp_ids()
+    logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
     gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
     data = {}  # src_id -> row
     mags = AccumDict(accum=set())  # trt -> mags

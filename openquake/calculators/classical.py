@@ -113,7 +113,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
         blocks = list(block_splitter(
             sources, maxw, operator.attrgetter('weight')))
         if not blocks:
-            yield {'pmap': {}}
+            yield {'pmap': {}, 'extra': {}}
             continue
         msg += 'producing %d subtask(s) with mean weight %d' % (
             len(blocks), numpy.mean([b.weight for b in blocks]))
@@ -372,8 +372,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         rlzs_by_grp = self.full_lt.get_rlzs_by_grp()
-        G_ = sum(len(vals) for vals in rlzs_by_grp.values())
-        poes_shape = (self.N, len(oq.imtls.array), G_)  # NLG
+        G0 = sum(len(vals) for vals in rlzs_by_grp.values())
+        G1 = len(self.datastore['grp_ids'])
+        # logging.info('PoEs reduction factor = %d/%d', G1, G0)
+        poes_shape = (self.N, len(oq.imtls.array), G0)  # NLG
         size = numpy.prod(poes_shape) * 8
         logging.info('Required %s for the ProbabilityMaps', humansize(size))
         self.datastore['rlzs_by_g'] = sum(rlzs_by_grp.values(), [])
