@@ -376,8 +376,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore['rlzs_by_g'] = [U32(rlzs) for rlzs in rlzs_by_g]
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
-        G0 = sum(len(vals) for vals in self.rlzs_by_gsim_list)
-        poes_shape = (self.N, len(oq.imtls.array), G0)  # NLG
+        poes_shape = (self.N, len(oq.imtls.array), len(rlzs_by_g))  # NLG
         size = numpy.prod(poes_shape) * 8
         logging.info('Requiring %s for ProbabilityMap of shape %s',
                      humansize(size), poes_shape)
