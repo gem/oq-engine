@@ -159,7 +159,10 @@ class EventBasedCalculator(base.HazardCalculator):
         # must be called before storing the events
         self.store_rlz_info(eff_ruptures)  # store full_lt
         with self.monitor('store source_info'):
-            self.store_source_info(calc_times)
+            self.update_source_info(calc_times)
+            recs = [tuple(row) for row in self.csm.source_info.values()]
+            hdf5.extend(self.datastore['source_info'],
+                        numpy.array(recs, readinput.source_info_dt))
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
             imp.import_rups(self.datastore.getitem('ruptures')[()])

@@ -321,14 +321,16 @@ class ClassicalCalculator(base.HazardCalculator):
             preclassical, (srcs, srcfilter),
             concurrent_tasks=oq.concurrent_tasks or 1,
             num_cores=oq.num_cores, h5=self.datastore.hdf5).reduce()
+        self.update_source_info(calc_times, nsites=True)
 
         if oq.calculation_mode == 'preclassical':
-            self.store_source_info(calc_times, nsites=True)
+            recs = [tuple(row) for row in self.csm.source_info.values()]
+            hdf5.extend(self.datastore['source_info'],
+                        numpy.array(recs, readinput.source_info_dt))
             self.datastore['full_lt'] = self.csm.full_lt
             self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
 
-        self.update_source_info(calc_times, nsites=True)
         # if OQ_SAMPLE_SOURCES is set extract one source for group
         ss = os.environ.get('OQ_SAMPLE_SOURCES')
         if ss:
@@ -389,7 +391,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.store_rlz_info(acc.eff_ruptures)
         finally:
             with self.monitor('store source_info'):
-                self.store_source_info(self.calc_times)
+                self.update_source_info(self.calc_times)
+                recs = [tuple(row) for row in self.csm.source_info.values()]
+                hdf5.extend(self.datastore['source_info'],
+                            numpy.array(recs, readinput.source_info_dt))
             if self.by_task:
                 logging.info('Storing by_task information')
                 num_tasks = max(self.by_task) + 1,

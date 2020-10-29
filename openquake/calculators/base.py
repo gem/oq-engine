@@ -912,15 +912,6 @@ class HazardCalculator(BaseCalculator):
                 srcs[row[SERIAL]].num_ruptures = int(arr[0])
                 srcs[row[SERIAL]].nsites = int(arr[1])
 
-    def store_source_info(self, calc_times, nsites=False):
-        """
-        Save (eff_ruptures, num_sites, calc_time) inside the source_info
-        """
-        self.update_source_info(calc_times, nsites)
-        recs = [tuple(row) for row in self.csm.source_info.values()]
-        hdf5.extend(self.datastore['source_info'],
-                    numpy.array(recs, readinput.source_info_dt))
-
     def post_process(self):
         """For compatibility with the engine"""
 
