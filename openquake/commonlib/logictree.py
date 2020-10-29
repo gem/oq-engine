@@ -241,7 +241,7 @@ def keyno(branch_id, no, fname='',
     :returns: a 1-char string for the branch_id based on the branch number
     """
     try:
-        valid.simple_id(branch_id)
+        valid.branch_id(branch_id)
     except ValueError as ex:
         raise ValueError('%s %s' % (ex, fname))
     try:
