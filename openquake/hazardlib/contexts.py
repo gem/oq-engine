@@ -104,20 +104,20 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def make_pmap(ctxs, gsims, imtls, trunclevel, investigation_time):
+def make_pmap(ctxs, cmaker, investigation_time):
     RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
     # easy case of independent ruptures, useful for debugging
-    imts = [from_string(im) for im in imtls]
-    loglevels = DictArray(imtls)
-    for imt, imls in imtls.items():
+    imts = [from_string(im) for im in cmaker.imtls]
+    loglevels = DictArray(cmaker.imtls)
+    for imt, imls in cmaker.imtls.items():
         if imt != 'MMI':
             loglevels[imt] = numpy.log(imls)
-    pmap = ProbabilityMap(len(loglevels.array), len(gsims))
+    pmap = ProbabilityMap(len(loglevels.array), len(cmaker.gsims))
     for ctx in ctxs:
-        mean_std = ctx.get_mean_std(imts, gsims)  # shape (2, N, M, G)
-        poes = base.get_poes(mean_std, loglevels, trunclevel, gsims,
-                             None, ctx.mag, None, ctx.rrup)  # (N, L, G)
-        pnes = ctx.get_probability_no_exceedance(poes)
+        mean_std = ctx.get_mean_std(imts, cmaker.gsims)  # shape (2, N, M, G)
+        poes = cmaker.get_poes(
+            mean_std, loglevels, None, ctx.mag, None, ctx.rrup)
+        pnes = ctx.get_probability_no_exceedance(poes)  # (N, L, G)
         for sid, pne in zip(ctx.sids, pnes):
             pmap.setdefault(sid, 1.).array *= pne
     return ~pmap
@@ -217,12 +217,12 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
 
-    def get_poes(self, mean_std, loglevels, truncation_level, af=None,
+    def get_poes(self, mean_std, loglevels, af=None,
                  mag=None, sitecode=None, rrup=None):
         """
         :returns: array of PoEs of shape (N, L, G)
         """
-        tl = truncation_level
+        tl = self.trunclevel
         if any(hasattr(gsim, 'weights_signs') for gsim in self.gsims):
             # implement average get_poes for the nshmp_2014 model
             shp = list(mean_std[0].shape)  # (N, M, G)
