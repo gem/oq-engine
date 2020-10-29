@@ -217,6 +217,54 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
 
+    def get_poes(self, mean_std, loglevels, truncation_level, af=None,
+                 mag=None, sitecode=None, rrup=None):
+        """
+        :returns: array of PoEs of shape (N, L, G)
+        """
+        tl = truncation_level
+        if any(hasattr(gsim, 'weights_signs') for gsim in self.gsims):
+            # implement average get_poes for the nshmp_2014 model
+            shp = list(mean_std[0].shape)  # (N, M, G)
+            shp[1] = len(loglevels.array)  # L
+            arr = numpy.zeros(shp)
+            for g, gsim in enumerate(self.gsims):
+                if hasattr(gsim, 'weights_signs'):
+                    outs = []
+                    weights, signs = zip(*gsim.weights_signs)
+                    for s in signs:
+                        ms = numpy.array(mean_std[:, :, :, g])  # make a copy
+                        for m in range(len(loglevels)):
+                            ms[0, :, m] += s * gsim.adjustment
+                        outs.append(
+                            base._get_poes(ms, loglevels, tl, squeeze=1))
+                    arr[:, :, g] = numpy.average(outs, weights=weights, axis=0)
+                else:
+                    ms = mean_std[:, :, :, g]
+                    arr[:, :, g] = base._get_poes(ms, loglevels, tl, squeeze=1)
+            return arr
+        elif any("mixture_model" in gsim.kwargs for gsim in self.gsims):
+            shp = list(mean_std[0].shape)  # (N, M, G)
+            shp[1] = len(loglevels.array)  # L
+            arr = numpy.zeros(shp)
+            for g, gsim in enumerate(self.gsims):
+                if "mixture_model" in gsim.kwargs:
+                    for fact, wgt in zip(
+                            gsim.kwargs["mixture_model"]["factors"],
+                            gsim.kwargs["mixture_model"]["weights"]):
+                        mean_stdi = numpy.array(mean_std[:, :, :, g])  # a copy
+                        mean_stdi[1] *= fact
+                        arr[:, :, g] += (wgt * base._get_poes(
+                            mean_stdi, loglevels, tl, squeeze=1))
+                else:
+                    ms = mean_std[:, :, :, g]
+                    arr[:, :, g] = base._get_poes(ms, loglevels, tl, squeeze=1)
+            return arr
+        else:
+            arr = base.get_poes(
+                mean_std, loglevels, tl, af, mag, sitecode, rrup)
+            return arr
+
     def get_ctx_params(self):
         """
         :returns: the interesting attributes of the context
@@ -521,8 +569,9 @@ class PmapMaker(object):
                     [sitecode] = ctx.sites['ampcode']  # single-site only
                 else:
                     sitecode = None
-                poes = base.get_poes(mean_std, ll, self.trunclevel, self.gsims,
-                                     af, ctx.mag, sitecode, ctx.rrup)
+                poes = self.cmaker.get_poes(
+                    mean_std, ll, self.trunclevel,
+                    af, ctx.mag, sitecode, ctx.rrup)
                 for g, gsim in enumerate(self.gsims):
                     for m, imt in enumerate(ll):
                         if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:

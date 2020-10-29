@@ -84,7 +84,7 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-def get_poes(mean_std, loglevels, truncation_level, gsims=(), af=None,
+def get_poes(mean_std, loglevels, truncation_level, af=None,
              mag=None, sitecode=None, rrup=None):
     """
     Calculate and return probabilities of exceedance (PoEs) of one or more
@@ -127,50 +127,9 @@ def get_poes(mean_std, loglevels, truncation_level, gsims=(), af=None,
     if truncation_level is not None and truncation_level < 0:
         raise ValueError('truncation level must be zero, positive number '
                          'or None')
-    if len(gsims):
-        assert mean_std.shape[-1] == len(gsims)
-    tl = truncation_level
-    if any(hasattr(gsim, 'weights_signs') for gsim in gsims):
-        # implement average get_poes for the nshmp_2014 model
-        shp = list(mean_std[0].shape)  # (N, M, G)
-        shp[1] = len(loglevels.array)  # L
-        arr = numpy.zeros(shp)
-        for g, gsim in enumerate(gsims):
-            if hasattr(gsim, 'weights_signs'):
-                outs = []
-                weights, signs = zip(*gsim.weights_signs)
-                for s in signs:
-                    ms = numpy.array(mean_std[:, :, :, g])  # make a copy
-                    for m in range(len(loglevels)):
-                        ms[0, :, m] += s * gsim.adjustment
-                    outs.append(_get_poes(ms, loglevels, tl, squeeze=1))
-                arr[:, :, g] = numpy.average(outs, weights=weights, axis=0)
-            else:
-                ms = mean_std[:, :, :, g]
-                arr[:, :, g] = _get_poes(ms, loglevels, tl, squeeze=1)
-        return arr
-    elif any("mixture_model" in gsim.kwargs for gsim in gsims):
-        shp = list(mean_std[0].shape)  # (N, M, G)
-        shp[1] = len(loglevels.array)  # L
-        arr = numpy.zeros(shp)
-        for g, gsim in enumerate(gsims):
-            if "mixture_model" in gsim.kwargs:
-                for fact, wgt in zip(
-                        gsim.kwargs["mixture_model"]["factors"],
-                        gsim.kwargs["mixture_model"]["weights"]):
-                    mean_stdi = numpy.array(mean_std[:, :, :, g])  # a copy
-                    mean_stdi[1] *= fact
-                    arr[:, :, g] += (wgt * _get_poes(mean_stdi, loglevels, tl,
-                                                     squeeze=1))
-            else:
-                ms = mean_std[:, :, :, g]
-                arr[:, :, g] = _get_poes(ms, loglevels, tl, squeeze=1)
-        return arr
-    elif af:
-        # kernel amplification function
-        res = _get_poes_site(mean_std, loglevels, truncation_level, af,
-                             mag, sitecode, rrup)
-        return res
+    if af:  # kernel amplification function
+        return _get_poes_site(mean_std, loglevels, truncation_level, af,
+                              mag, sitecode, rrup)
     else:
         # regular case
         return _get_poes(mean_std, loglevels, truncation_level)
