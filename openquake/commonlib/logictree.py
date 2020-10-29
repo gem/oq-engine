@@ -233,13 +233,17 @@ def read_source_groups(fname):
     return src_groups
 
 
-def keyno(branch_id, no, chars=string.digits + string.ascii_uppercase):
+def keyno(branch_id, no, fname='',
+          chars=string.digits + string.ascii_uppercase):
     """
     :param branch_id: a branch ID string
     :param no: number of the branch in the branchset (starting from 0)
     :returns: a 1-char string for the branch_id based on the branch number
     """
-    valid.simple_id(branch_id)
+    try:
+        valid.simple_id(branch_id)
+    except ValueError as ex:
+        raise ValueError('%s %s' % (ex, fname))
     try:
         return chars[no]
     except IndexError:
@@ -417,7 +421,7 @@ class SourceModelLogicTree(object):
                     branchnode, self.filename,
                     "branchID '%s' is not unique" % branch_id)
             self.branches[branch_id] = branch
-            self.shortener[branch_id] = keyno(branch_id, no)
+            self.shortener[branch_id] = keyno(branch_id, no, self.filename)
             branchset.branches.append(branch)
         if abs(weight_sum - 1.0) > pmf.PRECISION:
             raise LogicTreeError(
@@ -675,7 +679,8 @@ class SourceModelLogicTree(object):
             for no, row in enumerate(rows):
                 br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])
                 self.branches[br.branch_id] = br
-                self.shortener[br.branch_id] = keyno(br.branch_id, no)
+                self.shortener[br.branch_id] = keyno(
+                    br.branch_id, no, attrs['filename'])
                 bset.branches.append(br)
             bsets.append(bset)
             self.bsetdict[bsid] = {'uncertaintyType': utype}
@@ -1026,7 +1031,8 @@ class GsimLogicTree(object):
                     branch_id, gsim, weight, effective)
                 if effective:
                     branches.append(bt)
-                    self.shortener[branch_id] = keyno(branch_id, no)
+                    self.shortener[branch_id] = keyno(
+                        branch_id, no, self.filename)
             tot = sum(weights)
             assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
             if duplicated(branch_ids):
