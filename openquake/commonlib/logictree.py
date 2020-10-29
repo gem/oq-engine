@@ -112,7 +112,7 @@ class Realization(object):
 
     @property
     def pid(self):
-        return '_'.join(self.lt_path)  # path ID
+        return '~'.join(self.lt_path)  # path ID
 
     @property
     def name(self):
@@ -131,7 +131,7 @@ class Realization(object):
         samples = ', samples=%d' % self.samples if self.samples > 1 else ''
         return '<%s #%d %s, path=%s, weight=%s%s>' % (
             self.__class__.__name__, self.ordinal, self.value,
-            '_'.join(self.lt_path), self.weight, samples)
+            '~'.join(self.lt_path), self.weight, samples)
 
 
 @functools.lru_cache()
@@ -233,14 +233,21 @@ def read_source_groups(fname):
     return src_groups
 
 
-def keyno(key, no, chars=string.digits + string.ascii_uppercase):
+def keyno(branch_id, no, fname='',
+          chars=string.digits + string.ascii_uppercase):
     """
-    :returns: a short version of the key based on the key number
+    :param branch_id: a branch ID string
+    :param no: number of the branch in the branchset (starting from 0)
+    :returns: a 1-char string for the branch_id based on the branch number
     """
+    try:
+        valid.branch_id(branch_id)
+    except ValueError as ex:
+        raise ValueError('%s %s' % (ex, fname))
     try:
         return chars[no]
     except IndexError:
-        return '_' + key
+        return branch_id
 
 
 def shorten(path, shortener):
@@ -414,7 +421,7 @@ class SourceModelLogicTree(object):
                     branchnode, self.filename,
                     "branchID '%s' is not unique" % branch_id)
             self.branches[branch_id] = branch
-            self.shortener[branch_id] = keyno(branch_id, no)
+            self.shortener[branch_id] = keyno(branch_id, no, self.filename)
             branchset.branches.append(branch)
         if abs(weight_sum - 1.0) > pmf.PRECISION:
             raise LogicTreeError(
@@ -672,7 +679,8 @@ class SourceModelLogicTree(object):
             for no, row in enumerate(rows):
                 br = Branch(bsid, row['branch'], row['weight'], row['uvalue'])
                 self.branches[br.branch_id] = br
-                self.shortener[br.branch_id] = keyno(br.branch_id, no)
+                self.shortener[br.branch_id] = keyno(
+                    br.branch_id, no, attrs['filename'])
                 bset.branches.append(br)
             bsets.append(bset)
             self.bsetdict[bsid] = {'uncertaintyType': utype}
@@ -1023,7 +1031,8 @@ class GsimLogicTree(object):
                     branch_id, gsim, weight, effective)
                 if effective:
                     branches.append(bt)
-                    self.shortener[branch_id] = keyno(branch_id, no)
+                    self.shortener[branch_id] = keyno(
+                        branch_id, no, self.filename)
             tot = sum(weights)
             assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
             if duplicated(branch_ids):
@@ -1224,7 +1233,7 @@ class FullLogicTree(object):
         """
         :returns: a dictionary sm_lt_path -> effective realization index
         """
-        return {'_'.join(sm_rlz.lt_path): i
+        return {'~'.join(sm_rlz.lt_path): i
                 for i, sm_rlz in enumerate(self.sm_rlzs)}
 
     @property
@@ -1342,7 +1351,7 @@ class FullLogicTree(object):
         smltpath = operator.attrgetter('sm_lt_path')
         eri_by_ltp = self.get_eri_by_ltp()
         rlzs = self.get_realizations()
-        dic = {eri_by_ltp['_'.join(ltp)]: rlzs for ltp, rlzs in groupby(
+        dic = {eri_by_ltp['~'.join(ltp)]: rlzs for ltp, rlzs in groupby(
             rlzs, smltpath).items()}
         return dic
 
@@ -1358,7 +1367,7 @@ class FullLogicTree(object):
                 for gid in self.et_ids(sm.ordinal):
                     trti, eri = divmod(gid, len(self.sm_rlzs))
                     for rlz in rlzs:
-                        idx = eri_by_ltp['_'.join(rlz.sm_lt_path)]
+                        idx = eri_by_ltp['~'.join(rlz.sm_lt_path)]
                         if idx == eri:
                             acc[gid][rlz.gsim_rlz.value[trti]].append(
                                 rlz.ordinal)
@@ -1406,7 +1415,7 @@ class FullLogicTree(object):
         # save full_lt/sm_data in the datastore
         sm_data = []
         for sm in self.sm_rlzs:
-            sm_data.append((sm.value, sm.weight, '_'.join(sm.lt_path),
+            sm_data.append((sm.value, sm.weight, '~'.join(sm.lt_path),
                             sm.samples))
         return (dict(
             source_model_lt=self.source_model_lt,
@@ -1423,7 +1432,7 @@ class FullLogicTree(object):
         self.gsim_lt = dic['gsim_lt']
         self.sm_rlzs = []
         for sm_id, rec in enumerate(sm_data):
-            path = tuple(str(decode(rec['path'])).split('_'))
+            path = tuple(str(decode(rec['path'])).split('~'))
             sm = Realization(
                 rec['name'], rec['weight'], sm_id, path, rec['samples'])
             self.sm_rlzs.append(sm)
@@ -1472,7 +1481,7 @@ class FullLogicTree(object):
         info_by_model = {}
         for sm in self.sm_rlzs:
             info_by_model[sm.lt_path] = (
-                '_'.join(map(decode, sm.lt_path)),
+                '~'.join(map(decode, sm.lt_path)),
                 decode(sm.value), sm.weight, self.get_num_rlzs(sm))
         summary = ['%s, %s, weight=%s: %d realization(s)' % ibm
                    for ibm in info_by_model.values()]

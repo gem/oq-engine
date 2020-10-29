@@ -251,7 +251,7 @@ def _get_csm(full_lt, groups):
 
 def init_serials(sources, serial):
     """
-    Called only for event based calculations
+    Needed only for event based calculations
     """
     for src in sources:
         src.serial = serial

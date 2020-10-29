@@ -104,7 +104,8 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def make_pmap(ctxs, cmaker, investigation_time):
+# used only in contexts_test.py
+def _make_pmap(ctxs, cmaker, investigation_time):
     RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
     # easy case of independent ruptures, useful for debugging
     imts = [from_string(im) for im in cmaker.imtls]
