@@ -233,16 +233,17 @@ def read_source_groups(fname):
     return src_groups
 
 
-def keyno(key, no, chars=string.digits + string.ascii_uppercase):
+def keyno(branch_id, no, chars=string.digits + string.ascii_uppercase):
     """
-    :returns: a short version of the key based on the key number
+    :param branch_id: a branch ID string
+    :param no: number of the branch in the branchset (starting from 0)
+    :returns: a 1-char string for the branch_id based on the branch number
     """
-    if '~' in key:
-        raise ValueError('The branch ID %s contains a tilde' % key)
+    valid.simple_id(branch_id)
     try:
         return chars[no]
     except IndexError:
-        return '~' + key
+        return '~' + branch_id
 
 
 def shorten(path, shortener):

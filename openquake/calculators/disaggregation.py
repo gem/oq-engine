@@ -346,8 +346,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Maximum mean_std per task:\n%s', msg)
 
         s = self.shapedic
-        size = s['dist'] * s['eps'] + s['lon'] * s['lat']
-        sd = dict(N=s['N'], M=s['M'], P=s['P'], Z=s['Z'], size=size)
+        sd = dict(N=s['N'], M=s['M'], P=s['P'], Z=s['Z'], D=s['dist'],
+                  E=s['eps'], Lo=s['lon'], La=s['lat'])
         sd['tasks'] = numpy.ceil(len(allargs))
         nbytes, msg = get_array_nbytes(sd)
         if nbytes > oq.max_data_transfer:
