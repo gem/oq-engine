@@ -33,4 +33,6 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest openquake/hazardlib/tests/calc openquake/hazardlib/tests/acceptance openquake/commonlib openquake/calculators 
+        oq dbserver start
+        pytest openquake/hazardlib/tests/calc openquake/hazardlib/tests/acceptance openquake/commonlib openquake/calculators
+        oq dbserver stop
