@@ -18,7 +18,6 @@
 import io
 import os
 import re
-import time
 import copy
 import pprint
 import logging
