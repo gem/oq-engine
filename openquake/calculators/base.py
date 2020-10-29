@@ -154,12 +154,16 @@ def prefilter(srcs, srcfilter, monitor):
     calc_times = general.AccumDict(accum=numpy.zeros(3, F32))
     for src in srcs:
         t0 = time.time()
-        sites = srcfilter.get_close_sites(src)
-        if sites is None:
-            continue
-        src.weight
+        if srcfilter.sitecol is not None:  # real filter
+            sites = srcfilter.get_close_sites(src)
+            if sites is None:
+                continue
+            nsites = len(sites)
+        else:  # fake filter, do not discard anything
+            nsites = 1
+        src.num_ruptures = src.count_ruptures()
         dt = time.time() - t0
-        calc_times[src.source_id] += F32([src.num_ruptures, len(sites), dt])
+        calc_times[src.source_id] += F32([src.num_ruptures, nsites, dt])
     return calc_times
 
 
@@ -932,7 +936,9 @@ class HazardCalculator(BaseCalculator):
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        for src in self.csm.get_sources():
+        serial = self.oqparam.ses_seed
+        for src in sorted(self.csm.get_sources(),
+                          key=operator.attrgetter('id')):
             try:
                 nr, ns, dt = calc_times[src.source_id]
             except KeyError:  # discarded source
@@ -943,9 +949,11 @@ class HazardCalculator(BaseCalculator):
             if nsites:
                 row[EFF_RUPTURES] += nr
                 row[NUM_SITES] += nr
-                row[SERIAL] = src.serial
+                row[SERIAL] = serial
                 src.num_ruptures = int(nr)
                 src.nsites = int(ns)
+                src.serial = serial
+                serial += src.num_ruptures * len(src.et_ids)
 
     def post_process(self):
         """For compatibility with the engine"""

@@ -120,8 +120,7 @@ class EventBasedCalculator(base.HazardCalculator):
             srcfilter = nofilter  # otherwise it would be ultra-slow
         else:
             srcfilter = self.srcfilter
-        self.prefilter_csm()  # NB: must go go before init_serials
-        self.csm.init_serials(self.oqparam.ses_seed)  # must go after
+        self.prefilter_csm()
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         for sg in self.csm.src_groups:

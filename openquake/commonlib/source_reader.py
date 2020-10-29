@@ -270,14 +270,6 @@ class CompositeSourceModel:
         self.full_lt = full_lt
         self.src_groups = src_groups
 
-    def init_serials(self, serial):
-        """
-        Called always but used only in event based calculations
-        """
-        for src in sorted(self.get_sources(), key=operator.attrgetter('id')):
-            src.serial = serial
-            serial += src.num_ruptures * len(src.et_ids)
-
     def get_et_ids(self):
         """
         :returns: an array of et_ids (to be stored as an hdf5.vuint32 array)
