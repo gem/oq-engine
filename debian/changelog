@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Forbidded the usage of `aggregate_by` except in ebrisk calculations
   * Added a check on valid branch ID names: only letters, digits and "-_." are
     accepted
   * Huge performance improvement for very complex logic trees
