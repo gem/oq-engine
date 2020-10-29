@@ -265,7 +265,7 @@ class ContextMaker(object):
         """
         :returns: the interesting attributes of the context
         """
-        params = {'grp_id', 'occurrence_rate', 'sids_',
+        params = {'occurrence_rate', 'sids_',
                   'probs_occur', 'clon_', 'clat_', 'rrup_'}
         params.update(self.REQUIRES_RUPTURE_PARAMETERS)
         for dparam in self.REQUIRES_DISTANCES:
@@ -380,7 +380,7 @@ class ContextMaker(object):
                 dctx.rrup = numpy.sqrt(reqv**2 + rupture.hypocenter.depth**2)
         return self.make_rctx(rupture), sites, dctx
 
-    def make_ctxs(self, ruptures, sites, grp_id, et_ids, fewsites):
+    def make_ctxs(self, ruptures, sites, fewsites):
         """
         :returns:
             a list of fat RuptureContexts
@@ -397,7 +397,6 @@ class ContextMaker(object):
             ctx.sids = r_sites.sids
             for par in self.REQUIRES_DISTANCES | {'rrup'}:
                 setattr(ctx, par, getattr(dctx, par))
-            ctx.grp_id = grp_id
             if fewsites:
                 closest = rup.surface.get_closest_points(sites.complete)
                 ctx.clon = closest.lons[ctx.sids]
@@ -588,12 +587,11 @@ class PmapMaker(object):
         return list(src.iter_ruptures(
             shift_hypo=self.shift_hypo, mag=filtermag))
 
-    def _make_ctxs(self, rups, sites, grp_id, et_ids):
+    def _make_ctxs(self, rups, sites):
         with self.ctx_mon:
             if self.rup_indep and self.pointsource_distance != {}:
                 rups = self.collapse_point_ruptures(rups, sites)
-            ctxs = self.cmaker.make_ctxs(
-                rups, sites, grp_id, et_ids, self.fewsites)
+            ctxs = self.cmaker.make_ctxs(rups, sites, self.fewsites)
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
             if self.fewsites:  # keep the contexts in memory
@@ -608,18 +606,16 @@ class PmapMaker(object):
                 self.group, self.gss_mon):
             t0 = time.time()
             src_id = srcs[0].source_id
-            et_ids = numpy.array(srcs[0].et_ids)
-            grp_id = getattr(srcs[0], 'grp_id', 0)
             self.numrups = 0
             self.numsites = 0
             if self.N == 1:  # plenty of memory, collapse all sources together
                 rups = self._get_rups(srcs, sites)
-                ctxs = self._make_ctxs(rups, sites, grp_id, et_ids)
+                ctxs = self._make_ctxs(rups, sites)
                 self._update_pmap(ctxs)
             else:  # collapse one source at the time
                 for src in srcs:
                     rups = self._get_rups([src], sites)
-                    ctxs = self._make_ctxs(rups, sites, grp_id, et_ids)
+                    ctxs = self._make_ctxs(rups, sites)
                     self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
@@ -633,11 +629,9 @@ class PmapMaker(object):
             self.numrups = 0
             self.numsites = 0
             rups = self._ruptures(src)
-            grp_id = getattr(src, 'grp_id', 0)
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
             pmap = ProbabilityMap(L, G)
-            ctxs = self._make_ctxs(
-                rups, sites, grp_id, numpy.array(src.et_ids))
+            ctxs = self._make_ctxs(rups, sites)
             self._update_pmap(ctxs, pmap)
             p = pmap
             if self.rup_indep:
