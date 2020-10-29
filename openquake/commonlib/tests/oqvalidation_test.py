@@ -199,7 +199,7 @@ class OqParamTestCase(unittest.TestCase):
             reference_vs30_value='200',
             maximum_distance='400')
         oq.validate()
-        self.assertEqual(oq.export_dir, os.getcwd())
+        self.assertEqual(os.path.abspath(oq.export_dir), os.getcwd())
 
     def test_invalid_imt(self):
         with self.assertRaises(ValueError) as ctx:
