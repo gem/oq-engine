@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a check on valid branch ID names: only letters, digits and "-_." are
+    accepted
   * Huge performance improvement for very complex logic trees
   * Shortened the logic tree paths when exporting the realizations
 
