@@ -570,8 +570,7 @@ class PmapMaker(object):
                 else:
                     sitecode = None
                 poes = self.cmaker.get_poes(
-                    mean_std, ll, self.trunclevel,
-                    af, ctx.mag, sitecode, ctx.rrup)
+                    mean_std, ll, af, ctx.mag, sitecode, ctx.rrup)
                 for g, gsim in enumerate(self.gsims):
                     for m, imt in enumerate(ll):
                         if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
