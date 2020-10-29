@@ -932,16 +932,20 @@ class HazardCalculator(BaseCalculator):
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        srcs = self.csm.get_sources()
-        for src_id, arr in calc_times.items():
-            src_id = re.sub(r':\d+$', '', src_id)
+        for src in self.csm.get_sources():
+            try:
+                nr, ns, dt = calc_times[src.source_id]
+            except KeyError:  # discarded source
+                continue
+            src_id = re.sub(r':\d+$', '', src.source_id)
             row = self.csm.source_info[src_id]
-            row[CALC_TIME] += arr[2]
+            row[CALC_TIME] += dt
             if nsites:
-                row[EFF_RUPTURES] += arr[0]
-                row[NUM_SITES] += arr[1]
-                srcs[row[SERIAL]].num_ruptures = int(arr[0])
-                srcs[row[SERIAL]].nsites = int(arr[1])
+                row[EFF_RUPTURES] += nr
+                row[NUM_SITES] += nr
+                row[SERIAL] = src.serial
+                src.num_ruptures = int(nr)
+                src.nsites = int(ns)
 
     def post_process(self):
         """For compatibility with the engine"""
