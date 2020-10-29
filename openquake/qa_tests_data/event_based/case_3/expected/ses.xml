@@ -12,18 +12,13 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <singlePlaneRupture
             id="0"
-            multiplicity="13"
+            multiplicity="3"
             >
                 <stochasticEventSets>
                     <SES
-                    id="1"
-                    >
-                        0 1 2 3 4 5 6 7 9 12
-                    </SES>
-                    <SES
                     id="2"
                     >
-                        8 10 11
+                        0 1 2
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
