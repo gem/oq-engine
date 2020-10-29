@@ -108,11 +108,7 @@ def make_pmap(ctxs, cmaker, investigation_time):
     RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
     # easy case of independent ruptures, useful for debugging
     imts = [from_string(im) for im in cmaker.imtls]
-    loglevels = DictArray(cmaker.imtls)
-    for imt, imls in cmaker.imtls.items():
-        if imt != 'MMI':
-            loglevels[imt] = numpy.log(imls)
-    pmap = ProbabilityMap(len(loglevels.array), len(cmaker.gsims))
+    pmap = ProbabilityMap(len(cmaker.loglevels.array), len(cmaker.gsims))
     for ctx in ctxs:
         mean_std = ctx.get_mean_std(imts, cmaker.gsims)  # shape (2, N, M, G)
         poes = cmaker.get_poes(mean_std, None, ctx.mag, None, ctx.rrup)
