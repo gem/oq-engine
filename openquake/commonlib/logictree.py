@@ -247,7 +247,7 @@ def keyno(branch_id, no, fname='',
     try:
         return chars[no]
     except IndexError:
-        return '~' + branch_id
+        return branch_id
 
 
 def shorten(path, shortener):
