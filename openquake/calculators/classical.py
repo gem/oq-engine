@@ -129,22 +129,6 @@ def classical_split_filter(srcs, gsims, params, monitor):
         yield res
 
 
-def preclassical(srcs, srcfilter, monitor):
-    """
-    Prefilter and weight the sources
-    """
-    calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
-    for src in srcs:
-        t0 = time.time()
-        sites = srcfilter.get_close_sites(src)
-        if sites is None:
-            continue
-        src.weight
-        dt = time.time() - t0
-        calc_times[src.source_id] += F32([src.num_ruptures, len(sites), dt])
-    return calc_times
-
-
 def store_ctxs(dstore, rdt, dic):
     """
     Store contexts with the same magnitude in the datastore
@@ -315,14 +299,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
-        srcfilter = self.src_filter()
-        srcs = self.csm.get_sources()
-        calc_times = parallel.Starmap.apply(
-            preclassical, (srcs, srcfilter),
-            concurrent_tasks=oq.concurrent_tasks or 1,
-            num_cores=oq.num_cores, h5=self.datastore.hdf5).reduce()
-        self.update_source_info(calc_times, nsites=True)
-
+        self.prefilter_csm()
         if oq.calculation_mode == 'preclassical':
             recs = [tuple(row) for row in self.csm.source_info.values()]
             hdf5.extend(self.datastore['source_info'],

@@ -20,6 +20,7 @@ import re
 import sys
 import abc
 import pdb
+import time
 import logging
 import operator
 import itertools
@@ -143,6 +144,23 @@ def set_array(longarray, shortarray):
     """
     longarray[:len(shortarray)] = shortarray
     longarray[len(shortarray):] = numpy.nan
+
+
+def prefilter(srcs, srcfilter, monitor):
+    """
+    Prefilter and weight the sources
+    """
+    # nrups, nsites, time
+    calc_times = general.AccumDict(accum=numpy.zeros(3, F32))
+    for src in srcs:
+        t0 = time.time()
+        sites = srcfilter.get_close_sites(src)
+        if sites is None:
+            continue
+        src.weight
+        dt = time.time() - t0
+        calc_times[src.source_id] += F32([src.num_ruptures, len(sites), dt])
+    return calc_times
 
 
 MAXSITES = 1000
@@ -452,6 +470,19 @@ class HazardCalculator(BaseCalculator):
             logging.info(
                 'You are not using the pointsource_distance approximation:\n'
                 'https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance')
+
+    def prefilter_csm(self):
+        """
+        Prefilter the sources, count the ruptures and update source_info
+        """
+        oq = self.oqparam
+        srcfilter = self.src_filter()
+        srcs = self.csm.get_sources()
+        calc_times = parallel.Starmap.apply(
+            prefilter, (srcs, srcfilter),
+            concurrent_tasks=oq.concurrent_tasks or 1,
+            num_cores=oq.num_cores, h5=self.datastore.hdf5).reduce()
+        self.update_source_info(calc_times, nsites=True)
 
     def read_inputs(self):
         """
