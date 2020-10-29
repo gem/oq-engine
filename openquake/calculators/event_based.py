@@ -108,12 +108,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Prefilter the composite source model and store the source_info
         """
-        gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         logging.info('Building ruptures')
-        for src in self.csm.get_sources():
-            src.nsites = 1  # avoid 0 weight
-        maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
-            self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         allargs = []
@@ -125,12 +120,15 @@ class EventBasedCalculator(base.HazardCalculator):
             srcfilter = nofilter  # otherwise it would be ultra-slow
         else:
             srcfilter = self.srcfilter
+        self.prefilter_csm()
+        maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
+            self.oqparam.concurrent_tasks or 1)
         for sg in self.csm.src_groups:
+            sg.sources = [src for src in sg if src.nsites]
             if not sg.sources:
                 continue
             logging.info('Sending %s', sg)
             par = self.param.copy()
-            par['gsims'] = gsims_by_trt[sg.trt]
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, srcfilter, par))
         smap = parallel.Starmap(
