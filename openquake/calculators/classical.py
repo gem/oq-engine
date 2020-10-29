@@ -145,7 +145,7 @@ def preclassical(srcs, srcfilter, monitor):
     return calc_times
 
 
-def store_ctxs(dstore, rdt, dic):
+def store_ctxs(dstore, rdt, dic, grp_id):
     """
     Store contexts with the same magnitude in the datastore
     """
@@ -156,6 +156,7 @@ def store_ctxs(dstore, rdt, dic):
     rdata = numpy.zeros(nr, rdt)
     rdata['nsites'] = [len(s) for s in dic['sids_']]
     rdata['idx'] = numpy.arange(offset, offset + nr)
+    rdata['grp_id'] = grp_id
     rdt_names = set(dic) & set(n[0] for n in rdt)
     for name in rdt_names:
         if name == 'probs_occur':
@@ -226,7 +227,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # store rup_data if there are few sites
             for mag, c in dic['rup_data'].items():
-                store_ctxs(self.datastore, self.rdt, c)
+                store_ctxs(self.datastore, self.rdt, c, grp_id)
         return acc
 
     def acc0(self):
