@@ -213,16 +213,26 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
 
+    def new(self, gsims, **kw):
+        """
+        :returns: a copy of the ContextMaker with different gsims
+        """
+        cmaker = object.__new__(self.__class__)
+        vars(cmaker).update(vars(self))
+        vars(cmaker).update(kw)
+        cmaker.gsims = gsims
+        return cmaker
+
     def get_poes(self, mean_std, af=None, mag=None, sitecode=None, rrup=None):
         """
         :returns: array of PoEs of shape (N, L, G)
         """
         tl = self.trunclevel
+        shp = list(mean_std[0].shape)  # (N, M, G)
+        shp[1] = len(self.loglevels.array)  # L
+        arr = numpy.zeros(shp)
         if any(hasattr(gsim, 'weights_signs') for gsim in self.gsims):
             # implement average get_poes for the nshmp_2014 model
-            shp = list(mean_std[0].shape)  # (N, M, G)
-            shp[1] = len(self.loglevels.array)  # L
-            arr = numpy.zeros(shp)
             for g, gsim in enumerate(self.gsims):
                 if hasattr(gsim, 'weights_signs'):
                     outs = []
@@ -240,9 +250,6 @@ class ContextMaker(object):
                         ms, self.loglevels, tl, squeeze=1)
             return arr
         elif any("mixture_model" in gsim.kwargs for gsim in self.gsims):
-            shp = list(mean_std[0].shape)  # (N, M, G)
-            shp[1] = len(self.loglevels.array)  # L
-            arr = numpy.zeros(shp)
             for g, gsim in enumerate(self.gsims):
                 if "mixture_model" in gsim.kwargs:
                     for fact, wgt in zip(
@@ -258,8 +265,10 @@ class ContextMaker(object):
                         ms, self.loglevels, tl, squeeze=1)
             return arr
         else:
-            arr = base.get_poes(
+            arr[:, :, :] = base.get_poes(
                 mean_std, self.loglevels, tl, af, mag, sitecode, rrup)
+            if hasattr(self, 'mixture_weights'):
+                arr = (arr @ self.mixture_weights).reshape(shp)
             return arr
 
     def get_ctx_params(self):
@@ -561,14 +570,20 @@ class PmapMaker(object):
                 # this must be fast since it is inside an inner loop
                 with self.gmf_mon:
                     # shape (2, N, M, 1)
-                    mean_std = ctx.get_mean_std(self.imts, [gsim])
+                    if hasattr(gsim, 'mixture_weights'):  # contains sub-gsims
+                        mean_std = ctx.get_mean_std(self.imts, gsim.gsims)
+                        cmaker = self.cmaker.new(
+                            gsim.gsims, mixture_weights=gsim.mixture_weights)
+                    else:
+                        mean_std = ctx.get_mean_std(self.imts, [gsim])
+                        cmaker = self.cmaker
                 with self.poe_mon:
                     af = self.cmaker.af
                     if af:
                         [sitecode] = ctx.sites['ampcode']  # single-site only
                     else:
                         sitecode = None
-                    poes[:, :, g] = self.cmaker.get_poes(
+                    poes[:, :, g] = cmaker.get_poes(
                         mean_std, af, ctx.mag, sitecode, ctx.rrup)[:, :, 0]
                     for m, imt in enumerate(ll):
                         if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
