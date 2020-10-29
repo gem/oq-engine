@@ -281,7 +281,7 @@ class ContextMaker(object):
             ctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
                 ctxs.append(self.make_rctx(rup))
-            allctxs.extend(self.make_ctxs(ctxs, site1, 0, [0], True))
+            allctxs.extend(self.make_ctxs(ctxs, site1, True))
         return allctxs
 
     def filter(self, sites, rup):
