@@ -553,26 +553,28 @@ class PmapMaker(object):
         if pmap is None:  # for src_indep
             pmap = self.pmap
         rup_indep = self.rup_indep
+        ll = self.loglevels
         for ctx in ctxs:
-            # this must be fast since it is inside an inner loop
-            with self.gmf_mon:
-                # shape (2, N, M, G)
-                mean_std = ctx.get_mean_std(self.imts, self.gsims)
-            with self.poe_mon:
-                af = self.cmaker.af
-                if af:
-                    [sitecode] = ctx.sites['ampcode']  # single-site only
-                else:
-                    sitecode = None
-                poes = self.cmaker.get_poes(
-                    mean_std, af, ctx.mag, sitecode, ctx.rrup)
-                ll = self.loglevels
-                for g, gsim in enumerate(self.gsims):
+            N, L, G = len(ctx.sids), len(ll.array), len(self.gsims)
+            poes = numpy.zeros((N, L, G))
+            for g, gsim in enumerate(self.gsims):
+                # this must be fast since it is inside an inner loop
+                with self.gmf_mon:
+                    # shape (2, N, M, 1)
+                    mean_std = ctx.get_mean_std(self.imts, [gsim])
+                with self.poe_mon:
+                    af = self.cmaker.af
+                    if af:
+                        [sitecode] = ctx.sites['ampcode']  # single-site only
+                    else:
+                        sitecode = None
+                    poes[:, :, g] = self.cmaker.get_poes(
+                        mean_std, af, ctx.mag, sitecode, ctx.rrup)[:, :, 0]
                     for m, imt in enumerate(ll):
                         if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
                             # set by the engine when parsing the gsim logictree
                             # when 0 ignore the gsim: see _build_trts_branches
-                            poes[:, ll(imt), g] = 0
+                            poes[:, ll(imt)] = 0
 
             with self.pne_mon:
                 # pnes and poes of shape (N, L, G)
