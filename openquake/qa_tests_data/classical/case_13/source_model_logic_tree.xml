@@ -6,11 +6,11 @@
             <logicTreeBranchSet uncertaintyType="sourceModel"
                                 branchSetID="bs1">
                 <logicTreeBranch branchID="aFault_aPriori_D2.1">
-                    <uncertaintyModel>aFault_aPriori_D2.1.xml</uncertaintyModel>
+                    <uncertaintyModel>aFault_aPriori_D2_1.xml</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
                 <logicTreeBranch branchID="bFault_stitched_D2.1_Char">
-                    <uncertaintyModel>bFault_stitched_D2.1_Char.xml</uncertaintyModel>
+                    <uncertaintyModel>bFault_stitched_D2_1_Char.xml</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
