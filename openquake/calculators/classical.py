@@ -527,12 +527,13 @@ class ClassicalCalculator(base.HazardCalculator):
         pgetter = getters.PmapGetter(
             self.datastore, weights, self.sitecol.sids, oq.imtls)
         logging.info('Saving _poes')
+        srcidx = {src_id: i for i, src_id in enumerate(self.csm.source_info)}
         with self.monitor('saving probability maps'):
             for key, pmap in pmap_by_key.items():
                 if isinstance(key, str):  # disagg_by_src
-                    serial = self.csm.source_info[key][readinput.SERIAL]
+                    idx = srcidx[self.csm.source_info[key][0]]
                     rlzs_by_gsim = rlzs_by_gsim_list[pmap.grp_id]
-                    self.datastore['disagg_by_src'][..., serial] = (
+                    self.datastore['disagg_by_src'][..., idx] = (
                         pgetter.get_hcurves(pmap, rlzs_by_gsim))
                 elif pmap:  # pmap can be missing if the group is filtered away
                     # key is the group ID
