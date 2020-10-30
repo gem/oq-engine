@@ -215,12 +215,12 @@ class MixtureModelGMPETestCase(unittest.TestCase):
                                      0.0, 12., trace, 90., 0.)]
         imtls = {"PGA": [0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0,
                          1.25, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.0]}
-        gmpe = ChiouYoungs2014PEER(mixture_model={"factors": [0.8, 1.2],
-                                                  "weights": [0.5, 0.5]})
+        gmpe = ChiouYoungs2014PEER()
+        gmpe.mixture_model = {"factors": [0.8, 1.2], "weights": [0.5, 0.5]}
         hcm = calc_hazard_curves(sources, sitecol, imtls,
                                  {"Active Shallow Crust": gmpe})
         # Match against the benchmark is not exact - but differences in the
-        # log space should be on the order of less than 0.04 % in log space
+        # log space should be on the order of less than 0.04%
         expected = numpy.array([-4.140470001, -4.140913368, -4.259457496,
                                 -4.724733842, -5.900747959, -7.734816415,
                                 -9.019329629, -10.03864778, -10.90333404,
