@@ -108,14 +108,9 @@ def get_num_distances(gsims):
 def _make_pmap(ctxs, cmaker, investigation_time):
     RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
     # easy case of independent ruptures, useful for debugging
-    imts = [from_string(im) for im in cmaker.imtls]
     pmap = ProbabilityMap(len(cmaker.loglevels.array), len(cmaker.gsims))
     for ctx in ctxs:
-        poes = cmaker.make_zeros(ctx.sids)  # shape (N, L, G)
-        for g, gsim in enumerate(cmaker.gsims):
-            mean_std = gsim.get_mean_std(ctx, imts)  # shape (2, N, M, G)
-            poes[:, :, g] = gsim.get_poes(
-                mean_std, cmaker.loglevels, cmaker.trunclevel, ctx)
+        poes = cmaker.get_poes(ctx)
         pnes = ctx.get_probability_no_exceedance(poes)  # (N, L, G)
         for sid, pne in zip(ctx.sids, pnes):
             pmap.setdefault(sid, 1.).array *= pne
@@ -216,12 +211,25 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
 
-    def make_zeros(self, sids):
+        # instantiate monitors
+        self.gmf_mon = monitor('computing mean_std', measuremem=False)
+        self.poe_mon = monitor('get_sources_sites', measuremem=True)
+
+    def get_poes(self, ctx):
         """
-        :returns: an array of zeros of shap (N, L, G)
+        :params: a context object
+        :returns: an array of zeros of shape (N, L, G)
         """
-        shp = len(sids), len(self.loglevels.array), len(self.gsims)
-        return numpy.zeros(shp)
+        shp = len(ctx.sids), len(self.loglevels.array), len(self.gsims)
+        poes = numpy.zeros(shp)
+        for g, gsim in enumerate(self.gsims):
+            # this must be fast since it is inside an inner loop
+            with self.gmf_mon:
+                mean_std = gsim.get_mean_std(ctx, self.imts)
+            with self.poe_mon:
+                poes[:, :, g] = gsim.get_poes(
+                    mean_std, self.loglevels, self.trunclevel, self.af, ctx)
+        return poes
 
     def get_ctx_params(self):
         """
@@ -503,9 +511,7 @@ class PmapMaker(object):
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
-        self.poe_mon = cmaker.mon('get_poes', measuremem=False)
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
-        self.gmf_mon = cmaker.mon('computing mean_std', measuremem=False)
         self.gss_mon = cmaker.mon('get_sources_sites', measuremem=True)
 
     def _update_pmap(self, ctxs, pmap=None):
@@ -513,17 +519,8 @@ class PmapMaker(object):
         if pmap is None:  # for src_indep
             pmap = self.pmap
         rup_indep = self.rup_indep
-        ll = self.loglevels
         for ctx in ctxs:
-            poes = self.cmaker.make_zeros(ctx.sids)
-            for g, gsim in enumerate(self.gsims):
-                # this must be fast since it is inside an inner loop
-                with self.gmf_mon:
-                    mean_std = gsim.get_mean_std(ctx, self.imts)
-                with self.poe_mon:
-                    poes[:, :, g] = gsim.get_poes(
-                        mean_std, ll, self.trunclevel, self.af, ctx)
-
+            poes = self.cmaker.get_poes(ctx)
             with self.pne_mon:
                 # pnes and poes of shape (N, L, G)
                 pnes = ctx.get_probability_no_exceedance(poes)
