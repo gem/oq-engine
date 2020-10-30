@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import ast
 import sys
 import time
@@ -26,7 +25,6 @@ from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree, distance
 
-from openquake.baselib import general
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
 from openquake.hazardlib.geo.utils import (
@@ -245,7 +243,10 @@ def split_sources(srcs):
                     splits.append(s)
         else:
             splits = list(src)
-        split_time[src.id] = time.time() - t0
+        try:
+            split_time[src.id] = time.time() - t0
+        except AttributeError as exc:  # missing .id, should never happen
+            raise AttributeError('%s: %s' % (exc, src.source_id))
         sources.extend(splits)
         has_samples = hasattr(src, 'samples')
         has_scaling_rate = hasattr(src, 'scaling_rate')
