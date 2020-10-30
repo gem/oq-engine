@@ -512,7 +512,7 @@ class PmapMaker(object):
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
-        self.gss_mon = cmaker.mon('get_sources_sites', measuremem=True)
+        self.gss_mon = cmaker.mon('get_sources_sites', measuremem=False)
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap

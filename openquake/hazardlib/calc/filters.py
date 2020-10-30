@@ -338,13 +338,12 @@ class SourceFilter(object):
             pairs (srcs, sites) where the sources have the same source_id,
             the same et_ids and affect the same sites
         """
-        with mon:
-            acc = general.AccumDict(accum=[])  # indices -> srcs
-            for src, indices in self.filter(split_sources(sources)[0]):
-                src_id = re.sub(r':\d+$', '', src.source_id)
-                acc[(src_id, src.et_id) + tuple(indices)].append(src)
-        for tup, srcs in acc.items():
-            yield srcs, self.sitecol.filtered(tup[2:])
+        for src in sources:
+            with mon:
+                sites = self.get_close_sites(src)
+                if sites is None:
+                    continue
+            yield [src], sites
 
     # used in the rupture prefiltering: it should not discard too much
     def close_sids(self, rec, trt):
