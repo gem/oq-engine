@@ -631,6 +631,12 @@ class GMPE(GroundShakingIntensityModel):
                                  af, mag, sitecode, rrup)
         else:  # regular case
             arr = _get_poes(mean_std, loglevels, trunclevel)
+        imtweight = getattr(self, 'weight', None)  # ImtWeight or None
+        for imt in loglevels:
+            if imtweight and imtweight.dic.get(imt) == 0:
+                # set by the engine when parsing the gsim logictree
+                # when 0 ignore the contribution: see _build_trts_branches
+                arr[:, loglevels(imt)] = 0
         return arr
 
 

@@ -540,11 +540,6 @@ class PmapMaker(object):
                     poes[:, :, g] = gsim.get_poes(
                         mean_std, ll, self.trunclevel,
                         af, ctx.mag, sitecode, ctx.rrup)
-                    for m, imt in enumerate(ll):
-                        if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
-                            # set by the engine when parsing the gsim logictree
-                            # when 0 ignore the gsim: see _build_trts_branches
-                            poes[:, ll(imt)] = 0
 
             with self.pne_mon:
                 # pnes and poes of shape (N, L, G)
