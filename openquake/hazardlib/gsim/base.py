@@ -126,7 +126,6 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
     :param squeeze:
         A boolean. Should be True when ...
     """
-
     # Mean and std of ground motion for the IMTs considered in this analysis
     # N  - Number of sites
     # L - Number of intensity measure levels
@@ -193,14 +192,13 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
             # Computing the probability of exceedance of the levels of
             # ground-motion loglevels on soil
             logaf = numpy.log(numpy.exp(soillevels) / numpy.exp(iml_mid))
-            tmp = 1. - norm_cdf(logaf, numpy.log(median_af), std_af)
-            poex_af = numpy.reshape(numpy.tile(tmp, N), (-1, len(logaf)))
+            poex_af = 1. - norm_cdf(logaf, numpy.log(median_af), std_af)
             # The probability of occurrence on rock has shape:
             # 1 x 1 x number of GMMs
-            poex = poex_af.T * pocc_rock
+            poex = poex_af * pocc_rock
 
             # Updating output
-            out_s[:, m * L1: (m + 1) * L1] += poex
+            out_s[0, m * L1: (m + 1) * L1] += poex
 
     return out_s
 
@@ -547,6 +545,26 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
+    def get_mean_std(self, ctx, imts):
+        """
+        :returns: an array of shape (2, N, M) with means and stddevs
+        """
+        N = len(ctx.sids)
+        M = len(imts)
+        arr = numpy.zeros((2, N, M))
+        num_tables = CoeffsTable.num_instances
+        new = ctx.roundup(self.minimum_distance)
+        for m, imt in enumerate(imts):
+            mean, [std] = self.get_mean_and_stddevs(ctx, ctx, new, imt,
+                                                    [const.StdDev.TOTAL])
+            arr[0, :, m] = mean
+            arr[1, :, m] = std
+            if CoeffsTable.num_instances > num_tables:
+                raise RuntimeError('Instantiating CoeffsTable inside '
+                                   '%s.get_mean_and_stddevs' %
+                                   self.__class__.__name__)
+        return arr
+
     def get_poes(self, mean_std, loglevels, trunclevel,
                  af=None, mag=None, sitecode=None, rrup=None):
         """
@@ -599,12 +617,12 @@ class GMPE(GroundShakingIntensityModel):
                     ms[0, :, m] += s * self.adjustment
                 outs.append(_get_poes(ms, loglevels, trunclevel))
             arr = numpy.average(outs, weights=weights, axis=0)
-        elif "mixture_model" in self.kwargs:
+        elif hasattr(self, "mixture_model"):
             shp = list(mean_std[0].shape)  # (N, M)
             shp[1] = len(loglevels.array)  # L
             arr = numpy.zeros(shp)
-            for f, w in zip(self.kwargs["mixture_model"]["factors"],
-                            self.kwargs["mixture_model"]["weights"]):
+            for f, w in zip(self.mixture_model["factors"],
+                            self.mixture_model["weights"]):
                 mean_stdi = numpy.array(mean_std)  # a copy
                 mean_stdi[1] *= f  # multiply stddev by factor
                 arr += w * _get_poes(mean_stdi, loglevels, trunclevel)

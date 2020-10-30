@@ -113,7 +113,7 @@ def _make_pmap(ctxs, cmaker, investigation_time):
     for ctx in ctxs:
         poes = cmaker.make_zeros(ctx.sids)  # shape (N, L, G)
         for g, gsim in enumerate(cmaker.gsims):
-            mean_std = ctx.get_mean_std(imts, gsim)  # shape (2, N, M, G)
+            mean_std = gsim.get_mean_std(ctx, imts)  # shape (2, N, M, G)
             poes[:, :, g] = gsim.get_poes(
                 mean_std, cmaker.loglevels, cmaker.trunclevel,
                 None, ctx.mag, None, ctx.rrup)
@@ -432,7 +432,7 @@ class ContextMaker(object):
             means = []
             for gsim in self.gsims:
                 try:
-                    mean = ctx.get_mean_std(self.imts, gsim)[0, 0]
+                    mean = gsim.get_mean_std(ctx, self.imts)[0, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
                 means.append(mean.max())
@@ -530,7 +530,7 @@ class PmapMaker(object):
             for g, gsim in enumerate(self.gsims):
                 # this must be fast since it is inside an inner loop
                 with self.gmf_mon:
-                    mean_std = ctx.get_mean_std(self.imts, gsim)
+                    mean_std = gsim.get_mean_std(ctx, self.imts)
                 with self.poe_mon:
                     af = self.cmaker.af
                     if af:
@@ -852,26 +852,6 @@ class RuptureContext(BaseContext):
                     array.flags.writeable = False
                 setattr(ctx, dist, array)
         return ctx
-
-    def get_mean_std(self, imts, gsim):
-        """
-        :returns: an array of shape (2, N, M) with means and stddevs
-        """
-        N = len(self.sids)
-        M = len(imts)
-        arr = numpy.zeros((2, N, M))
-        num_tables = base.CoeffsTable.num_instances
-        new = self.roundup(gsim.minimum_distance)
-        for m, imt in enumerate(imts):
-            mean, [std] = gsim.get_mean_and_stddevs(self, self, new, imt,
-                                                    [const.StdDev.TOTAL])
-            arr[0, :, m] = mean
-            arr[1, :, m] = std
-            if base.CoeffsTable.num_instances > num_tables:
-                raise RuntimeError('Instantiating CoeffsTable inside '
-                                   '%s.get_mean_and_stddevs' %
-                                   gsim.__class__.__name__)
-        return arr
 
     def get_probability_no_exceedance(self, poes):
         """

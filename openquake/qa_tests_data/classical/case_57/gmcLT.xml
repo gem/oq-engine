@@ -6,8 +6,8 @@
     <logicTreeBranch branchID="b11">
       <uncertaintyModel>
         [AvgPoeGMPE]
-        b1.AkkarEtAlRjb2014.weight = .4
-        b2.ChiouYoungs2014.weight = .6
+        b1.AkkarEtAlRjb2014.weight = 0.4
+        b2.ChiouYoungs2014.weight = 0.6
       </uncertaintyModel>
       <uncertaintyWeight>1.0</uncertaintyWeight>
     </logicTreeBranch>
