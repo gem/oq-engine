@@ -115,8 +115,7 @@ def _make_pmap(ctxs, cmaker, investigation_time):
         for g, gsim in enumerate(cmaker.gsims):
             mean_std = gsim.get_mean_std(ctx, imts)  # shape (2, N, M, G)
             poes[:, :, g] = gsim.get_poes(
-                mean_std, cmaker.loglevels, cmaker.trunclevel,
-                None, ctx.mag, None, ctx.rrup)
+                mean_std, cmaker.loglevels, cmaker.trunclevel, ctx)
         pnes = ctx.get_probability_no_exceedance(poes)  # (N, L, G)
         for sid, pne in zip(ctx.sids, pnes):
             pmap.setdefault(sid, 1.).array *= pne
@@ -223,16 +222,6 @@ class ContextMaker(object):
         """
         shp = len(sids), len(self.loglevels.array), len(self.gsims)
         return numpy.zeros(shp)
-
-    def new(self, gsims, **kw):
-        """
-        :returns: a copy of the ContextMaker with different gsims
-        """
-        cmaker = object.__new__(self.__class__)
-        vars(cmaker).update(vars(self))
-        vars(cmaker).update(kw)
-        cmaker.gsims = gsims
-        return cmaker
 
     def get_ctx_params(self):
         """
@@ -532,14 +521,8 @@ class PmapMaker(object):
                 with self.gmf_mon:
                     mean_std = gsim.get_mean_std(ctx, self.imts)
                 with self.poe_mon:
-                    af = self.cmaker.af
-                    if af:
-                        [sitecode] = ctx.sites['ampcode']  # single-site only
-                    else:
-                        sitecode = None
                     poes[:, :, g] = gsim.get_poes(
-                        mean_std, ll, self.trunclevel,
-                        af, ctx.mag, sitecode, ctx.rrup)
+                        mean_std, ll, self.trunclevel, self.af, ctx)
 
             with self.pne_mon:
                 # pnes and poes of shape (N, L, G)

@@ -119,8 +119,7 @@ class AvgPoeGMPE(GMPE):
         return [gsim.get_mean_std(ctx, imts) for gsim in self.gsims]
 
     def get_poes(self, mean_std_list, loglevels, trunclevel,
-                 af=None, mag=None, sitecode=None, rrup=None):
-        poes = [gsim.get_poes(mean_std, loglevels, trunclevel,
-                              af, mag, sitecode, rrup)
+                 af=None, ctx=None):
+        poes = [gsim.get_poes(mean_std, loglevels, trunclevel, af, ctx)
                 for gsim, mean_std in zip(self.gsims, mean_std_list)]
         return numpy.average(poes, 0, self.weights)

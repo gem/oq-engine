@@ -103,8 +103,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
     return _truncnorm_sf(truncation_level, out)
 
 
-def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
-                   mag, sitecode, rrup):
+def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctx):
     """
     NOTE: this works for a single site
 
@@ -119,12 +118,8 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
     :param ampl:
         Site amplification function instance of
         :class:openquake.hazardlib.site_amplification.AmpFunction
-    :param mag:
-        The magnitude of the earthquake
-    :param rrup:
-        The rrup distances
-    :param squeeze:
-        A boolean. Should be True when ...
+    :param ctx:
+        A context object with attributes .mag, .ampcode, .rrup
     """
     # Mean and std of ground motion for the IMTs considered in this analysis
     # N  - Number of sites
@@ -187,7 +182,8 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
             # Get mean and std of the amplification function for this
             # magnitude, distance and IML
             median_af, std_af = ampfun.get_mean_std(
-                sitecode, imt, numpy.exp(iml_mid), mag, rrup)
+                ctx.sites['ampcode'][0], imt, numpy.exp(iml_mid),
+                ctx.mag, ctx.rrup)
 
             # Computing the probability of exceedance of the levels of
             # ground-motion loglevels on soil
@@ -565,8 +561,7 @@ class GMPE(GroundShakingIntensityModel):
                                    self.__class__.__name__)
         return arr
 
-    def get_poes(self, mean_std, loglevels, trunclevel,
-                 af=None, mag=None, sitecode=None, rrup=None):
+    def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctx=None):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -627,8 +622,7 @@ class GMPE(GroundShakingIntensityModel):
                 mean_stdi[1] *= f  # multiply stddev by factor
                 arr += w * _get_poes(mean_stdi, loglevels, trunclevel)
         elif af:  # kernel amplification function
-            arr = _get_poes_site(mean_std, loglevels, trunclevel,
-                                 af, mag, sitecode, rrup)
+            arr = _get_poes_site(mean_std, loglevels, trunclevel, af, ctx)
         else:  # regular case
             arr = _get_poes(mean_std, loglevels, trunclevel)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
