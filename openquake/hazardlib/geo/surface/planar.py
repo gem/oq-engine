@@ -22,6 +22,7 @@ Module :mod:`openquake.hazardlib.geo.surface.planar` contains
 """
 import logging
 import numpy
+from openquake.hazardlib.geo.geodetic import point_at
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -159,6 +160,42 @@ class PlanarSurface(BaseSurface):
         dip = numpy.degrees(numpy.arcsin(vert_dist / dist))
         self = cls(strike, dip, top_left, top_right,
                    bottom_right, bottom_left)
+        return self
+
+    @classmethod
+    def from_hypocenter(cls, hypoc, msr, mag, aratio, strike, dip, rake):
+        """
+        :param hypoc:
+            A :class:`openquake.hazardlib.geo.point.Point` instance
+        :param msr:
+        :param mag:
+        :param aratio:
+        :param strike:
+        :param aratio:
+        """
+        area = msr.get_median_area(mag, rake)
+        width = (area / aratio)**0.5
+        length = aratio * width
+
+        mr = point_at(hypoc.longitude, hypoc.latitude, strike, length/2)
+        ml = point_at(hypoc.longitude, hypoc.latitude, (strike+180) % 360,
+                      length/2)
+        depth = hypoc.depth
+
+        dipra = numpy.radians(dip)
+        dx = width * numpy.cos(dipra)
+        dy = width * numpy.sin(dipra)
+
+        tr = point_at(mr[0], mr[1], (strike-90) % 360, dx)
+        br = point_at(mr[0], mr[1], (strike+90) % 360, dx)
+        tl = point_at(ml[0], ml[1], (strike-90) % 360, dx)
+        bl = point_at(ml[0], ml[1], (strike+90) % 360, dx)
+
+        self = cls(strike, dip, Point(tl[0], tl[1], depth-dy),
+                   Point(tr[0], tr[1], depth-dy),
+                   Point(br[0], br[1], depth+dy),
+                   Point(bl[0], bl[1], depth+dy))
+
         return self
 
     @classmethod
