@@ -119,7 +119,7 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctx):
         Site amplification function instance of
         :class:openquake.hazardlib.site_amplification.AmpFunction
     :param ctx:
-        A context object with attributes .mag, .ampcode, .rrup
+        A context object with attributes .mag, .sites, .rrup
     """
     # Mean and std of ground motion for the IMTs considered in this analysis
     # N  - Number of sites
@@ -568,8 +568,8 @@ class GMPE(GroundShakingIntensityModel):
         for one or more pairs "site -- rupture".
 
         :param mean_std:
-            An array of shape (2, N, M) with mean and standard deviation for
-            the current intensity measure type
+            An array of shape (2, N, M) with mean and standard deviations
+            for the sites and intensity measure types
         :param loglevels:
             A DictArray imt -> logs of intensity measure levels
         :param trunclevel:
@@ -591,10 +591,12 @@ class GMPE(GroundShakingIntensityModel):
             value and is defined in units of sigmas. The resulting PoEs
             for that mode are values of complementary cumulative distribution
             function of that truncated Gaussian applied to IMLs.
-
+        :param af:
+            None or an instance of AmplFunction
+        :param ctx:
+            None or the context object used to compute mean_std
         :returns:
             array of PoEs of shape (N, L)
-
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
             float number, and if ``imts`` dictionary contain wrong or

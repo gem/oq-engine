@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`MixtureGMPE`, which can create a composite of
+Module exports :class:`AvgPoeGMPE`, which can create a composite of
 multiple GMPEs with different weights. The syntax to use in the
 logic tree file is as in this example::
 
@@ -34,7 +34,7 @@ logic tree file is as in this example::
 
 This syntax is exactly the same as for an `AvgGMPE`; the difference is
 in the semantic, since the `AvgGMPE` performs averages on the log(intensities)
-level while `MixtureGMPE` performs averages on the PoEs.
+while `AvgPoeGMPE` performs averages on the PoEs.
 """
 import numpy
 from openquake.hazardlib import const
