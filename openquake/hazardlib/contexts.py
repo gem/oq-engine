@@ -213,7 +213,7 @@ class ContextMaker(object):
 
         # instantiate monitors
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
-        self.poe_mon = monitor('get_sources_sites', measuremem=True)
+        self.poe_mon = monitor('get_poes', measuremem=False)
 
     def get_poes(self, ctx):
         """
