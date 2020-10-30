@@ -101,8 +101,6 @@ class UcerfFilter(SourceFilter):
     def filter(self, srcs):
         for src in srcs:
             if hasattr(src, 'start'):  # fault sources
-                src.src_filter = self  # hack: needed for .iter_ruptures
-                src.all_ridx = src.get_ridx()
                 ridx = set()
                 for arr in src.all_ridx:
                     ridx.update(arr)

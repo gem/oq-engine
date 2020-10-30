@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import ast
 import sys
 import time
@@ -26,7 +25,6 @@ from contextlib import contextmanager
 import numpy
 from scipy.spatial import cKDTree, distance
 
-from openquake.baselib import general
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
 from openquake.hazardlib.geo.utils import (
@@ -245,7 +243,10 @@ def split_sources(srcs):
                     splits.append(s)
         else:
             splits = list(src)
-        split_time[src.id] = time.time() - t0
+        try:
+            split_time[src.id] = time.time() - t0
+        except AttributeError as exc:  # missing .id, should never happen
+            raise AttributeError('%s: %s' % (exc, src.source_id))
         sources.extend(splits)
         has_samples = hasattr(src, 'samples')
         has_scaling_rate = hasattr(src, 'scaling_rate')
@@ -332,19 +333,18 @@ class SourceFilter(object):
         if source_indices:
             return self.sitecol.filtered(source_indices[0][1])
 
-    def get_sources_sites(self, sources, mon):
+    def split(self, sources, mon):
         """
-        :yields:
-            pairs (srcs, sites) where the sources have the same source_id,
-            the same et_ids and affect the same sites
+        :yields: pairs ([split], sites)
         """
-        with mon:
-            acc = general.AccumDict(accum=[])  # indices -> srcs
-            for src, indices in self.filter(split_sources(sources)[0]):
-                src_id = re.sub(r':\d+$', '', src.source_id)
-                acc[(src_id, src.et_id) + tuple(indices)].append(src)
-        for tup, srcs in acc.items():
-            yield srcs, self.sitecol.filtered(tup[2:])
+        for src in sources:
+            with mon:
+                split, dt = split_sources(src)
+            for s in split:
+                with mon:
+                    sites = self.get_close_sites(s)
+                if sites is not None:
+                    yield [s], sites
 
     # used in the rupture prefiltering: it should not discard too much
     def close_sids(self, rec, trt):

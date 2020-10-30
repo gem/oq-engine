@@ -318,11 +318,16 @@ class ClassicalCalculator(base.HazardCalculator):
 
         srcfilter = self.src_filter()
         srcs = self.csm.get_sources()
+        if oq.is_ucerf():
+            logging.info('Prefiltering UCERFSources')
+            for src in srcs:
+                if hasattr(src, 'start'):
+                    src.src_filter = srcfilter  # hack for .iter_ruptures
+                    src.all_ridx = src.get_ridx()
         calc_times = parallel.Starmap.apply(
             preclassical, (srcs, srcfilter),
             concurrent_tasks=oq.concurrent_tasks or 1,
             num_cores=oq.num_cores, h5=self.datastore.hdf5).reduce()
-
         if oq.calculation_mode == 'preclassical':
             self.store_source_info(calc_times, nsites=True)
             self.datastore['full_lt'] = self.csm.full_lt
@@ -462,9 +467,10 @@ class ClassicalCalculator(base.HazardCalculator):
         C = oq.concurrent_tasks or 1
         if oq.disagg_by_src or oq.is_ucerf():
             f1, f2 = classical1, classical1
+            max_weight = max(totweight / C, oq.min_weight) / 2
         else:
             f1, f2 = classical1, classical_split_filter
-        max_weight = max(totweight / C, oq.min_weight)
+            max_weight = max(totweight / C, oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
         param = dict(
