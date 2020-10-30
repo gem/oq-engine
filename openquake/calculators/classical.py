@@ -318,11 +318,16 @@ class ClassicalCalculator(base.HazardCalculator):
 
         srcfilter = self.src_filter()
         srcs = self.csm.get_sources()
+        if oq.is_ucerf():
+            logging.info('Prefiltering UCERFSources')
+            for src in srcs:
+                if hasattr(src, 'start'):
+                    src.src_filter = srcfilter  # hack for .iter_ruptures
+                    src.all_ridx = src.get_ridx()
         calc_times = parallel.Starmap.apply(
             preclassical, (srcs, srcfilter),
             concurrent_tasks=oq.concurrent_tasks or 1,
             num_cores=oq.num_cores, h5=self.datastore.hdf5).reduce()
-
         if oq.calculation_mode == 'preclassical':
             self.store_source_info(calc_times, nsites=True)
             self.datastore['full_lt'] = self.csm.full_lt
