@@ -335,9 +335,7 @@ class SourceFilter(object):
 
     def split(self, sources, mon):
         """
-        :yields:
-            pairs (srcs, sites) where the sources have the same source_id,
-            the same et_ids and affect the same sites
+        :yields: pairs ([split], sites)
         """
         for src in sources:
             with mon:
@@ -346,7 +344,7 @@ class SourceFilter(object):
                 with mon:
                     sites = self.get_close_sites(s)
                 if sites is not None:
-                    yield s, sites
+                    yield [s], sites
 
     # used in the rupture prefiltering: it should not discard too much
     def close_sids(self, rec, trt):

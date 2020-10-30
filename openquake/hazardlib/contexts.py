@@ -548,12 +548,16 @@ class PmapMaker(object):
 
     def _make_src_indep(self):
         # srcs with the same source_id and et_ids
-        for src, sites in self.srcfilter.split(self.group, self.gss_mon):
+        if self.fewsites:
+            srcs_sites = [(self.group, self.srcfilter.sitecol)]
+        else:
+            srcs_sites = self.srcfilter.split(self.group, self.gss_mon)
+        for srcs, sites in srcs_sites:
             t0 = time.time()
-            src_id = src.source_id
+            src_id = srcs[0].source_id
             self.numrups = 0
             self.numsites = 0
-            rups = self._get_rups([src], sites)
+            rups = self._get_rups(srcs, sites)
             ctxs = self._make_ctxs(rups, sites)
             self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
