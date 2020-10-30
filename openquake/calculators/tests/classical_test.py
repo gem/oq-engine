@@ -33,7 +33,7 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50, case_51, case_52, case_53, case_54, case_55, case_56)
+    case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57)
 
 aac = numpy.testing.assert_allclose
 
@@ -761,7 +761,7 @@ b'2'        0       0  MMI    8  0.000000e+00''')
         # test with oversampling
         # there are 6 potential paths 1A 1B 1C 2A 2B 2C
         # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
-        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2 
+        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
         self.run_calc(case_56.__file__, 'job.ini', concurrent_tasks='0')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
@@ -778,3 +778,9 @@ b'2'        0       0  MMI    8  0.000000e+00''')
         [(trt, gsims)] = full_lt.get_gsims_by_trt().items()
         self.assertEqual(len(gsims), 3)
 
+    def test_case_57(self):
+        # AvgPoeGMPE
+        self.run_calc(case_57.__file__, 'job.ini')
+        f1, f2 = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve_PGA.csv', f1)
+        self.assertEqualFiles('expected/hcurve_SA.csv', f2)
