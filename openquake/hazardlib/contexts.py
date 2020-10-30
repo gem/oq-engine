@@ -223,7 +223,7 @@ class ContextMaker(object):
         """
         shp = len(sids), len(self.loglevels.array), len(self.gsims)
         return numpy.zeros(shp)
-    
+
     def new(self, gsims, **kw):
         """
         :returns: a copy of the ContextMaker with different gsims

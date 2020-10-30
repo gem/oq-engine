@@ -590,6 +590,15 @@ class GMPE(GroundShakingIntensityModel):
         if trunclevel is not None and trunclevel < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
+        if hasattr(self, 'weights_signs'):
+            outs = []
+            weights, signs = zip(*self.weights_signs)
+            for s in signs:
+                ms = numpy.array(mean_std)  # make a copy
+                for m in range(len(loglevels)):
+                    ms[0, :, m] += s * self.adjustment
+                outs.append(_get_poes(ms, loglevels, trunclevel))
+            arr = numpy.average(outs, weights=weights, axis=0)
         elif "mixture_model" in self.kwargs:
             shp = list(mean_std[0].shape)  # (N, M)
             shp[1] = len(loglevels.array)  # L
