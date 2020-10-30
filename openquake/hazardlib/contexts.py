@@ -217,7 +217,7 @@ class ContextMaker(object):
 
     def get_poes(self, ctx):
         """
-        :params: a context object
+        :param ctx: a context object
         :returns: an array of zeros of shape (N, L, G)
         """
         shp = len(ctx.sids), len(self.loglevels.array), len(self.gsims)
