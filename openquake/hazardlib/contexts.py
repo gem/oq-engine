@@ -111,8 +111,12 @@ def _make_pmap(ctxs, cmaker, investigation_time):
     imts = [from_string(im) for im in cmaker.imtls]
     pmap = ProbabilityMap(len(cmaker.loglevels.array), len(cmaker.gsims))
     for ctx in ctxs:
-        mean_std = ctx.get_mean_std(imts, cmaker.gsims)  # shape (2, N, M, G)
-        poes = cmaker.get_poes(mean_std, None, ctx.mag, None, ctx.rrup)
+        poes = cmaker.make_zeros(ctx.sids)  # shape (N, L, G)
+        for g, gsim in enumerate(cmaker.gsims):
+            mean_std = ctx.get_mean_std(imts, gsim)  # shape (2, N, M, G)
+            poes[:, :, g] = gsim.get_poes(
+                mean_std, cmaker.loglevels, cmaker.trunclevel,
+                None, ctx.mag, None, ctx.rrup)
         pnes = ctx.get_probability_no_exceedance(poes)  # (N, L, G)
         for sid, pne in zip(ctx.sids, pnes):
             pmap.setdefault(sid, 1.).array *= pne
@@ -213,6 +217,13 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
 
+    def make_zeros(self, sids):
+        """
+        :returns: an array of zeros of shap (N, L, G)
+        """
+        shp = len(sids), len(self.loglevels.array), len(self.gsims)
+        return numpy.zeros(shp)
+    
     def new(self, gsims, **kw):
         """
         :returns: a copy of the ContextMaker with different gsims
@@ -222,54 +233,6 @@ class ContextMaker(object):
         vars(cmaker).update(kw)
         cmaker.gsims = gsims
         return cmaker
-
-    def get_poes(self, mean_std, af=None, mag=None, sitecode=None, rrup=None):
-        """
-        :returns: array of PoEs of shape (N, L, G)
-        """
-        tl = self.trunclevel
-        shp = list(mean_std[0].shape)  # (N, M, G)
-        shp[1] = len(self.loglevels.array)  # L
-        arr = numpy.zeros(shp)
-        if any(hasattr(gsim, 'weights_signs') for gsim in self.gsims):
-            # implement average get_poes for the nshmp_2014 model
-            for g, gsim in enumerate(self.gsims):
-                if hasattr(gsim, 'weights_signs'):
-                    outs = []
-                    weights, signs = zip(*gsim.weights_signs)
-                    for s in signs:
-                        ms = numpy.array(mean_std[:, :, :, g])  # make a copy
-                        for m in range(len(self.loglevels)):
-                            ms[0, :, m] += s * gsim.adjustment
-                        outs.append(
-                            base._get_poes(ms, self.loglevels, tl, squeeze=1))
-                    arr[:, :, g] = numpy.average(outs, weights=weights, axis=0)
-                else:
-                    ms = mean_std[:, :, :, g]
-                    arr[:, :, g] = base._get_poes(
-                        ms, self.loglevels, tl, squeeze=1)
-            return arr
-        elif any("mixture_model" in gsim.kwargs for gsim in self.gsims):
-            for g, gsim in enumerate(self.gsims):
-                if "mixture_model" in gsim.kwargs:
-                    for fact, wgt in zip(
-                            gsim.kwargs["mixture_model"]["factors"],
-                            gsim.kwargs["mixture_model"]["weights"]):
-                        mean_stdi = numpy.array(mean_std[:, :, :, g])  # a copy
-                        mean_stdi[1] *= fact
-                        arr[:, :, g] += (wgt * base._get_poes(
-                            mean_stdi, self.loglevels, tl, squeeze=1))
-                else:
-                    ms = mean_std[:, :, :, g]
-                    arr[:, :, g] = base._get_poes(
-                        ms, self.loglevels, tl, squeeze=1)
-            return arr
-        else:
-            arr[:, :, :] = base.get_poes(
-                mean_std, self.loglevels, tl, af, mag, sitecode, rrup)
-            if hasattr(self, 'mixture_weights'):
-                arr = (arr @ self.mixture_weights).reshape(shp)
-            return arr
 
     def get_ctx_params(self):
         """
@@ -469,8 +432,7 @@ class ContextMaker(object):
             means = []
             for gsim in self.gsims:
                 try:
-                    mean = ctx.get_mean_std(  # shape (2, N, M, G) -> M
-                        self.imts, [gsim])[0, 0, :, 0]
+                    mean = ctx.get_mean_std(self.imts, gsim)[0, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
                 means.append(mean.max())
@@ -564,27 +526,20 @@ class PmapMaker(object):
         rup_indep = self.rup_indep
         ll = self.loglevels
         for ctx in ctxs:
-            N, L, G = len(ctx.sids), len(ll.array), len(self.gsims)
-            poes = numpy.zeros((N, L, G))
+            poes = self.cmaker.make_zeros(ctx.sids)
             for g, gsim in enumerate(self.gsims):
                 # this must be fast since it is inside an inner loop
                 with self.gmf_mon:
-                    # shape (2, N, M, 1)
-                    if hasattr(gsim, 'mixture_weights'):  # contains sub-gsims
-                        mean_std = ctx.get_mean_std(self.imts, gsim.gsims)
-                        cmaker = self.cmaker.new(
-                            gsim.gsims, mixture_weights=gsim.mixture_weights)
-                    else:
-                        mean_std = ctx.get_mean_std(self.imts, [gsim])
-                        cmaker = self.cmaker
+                    mean_std = ctx.get_mean_std(self.imts, gsim)
                 with self.poe_mon:
                     af = self.cmaker.af
                     if af:
                         [sitecode] = ctx.sites['ampcode']  # single-site only
                     else:
                         sitecode = None
-                    poes[:, :, g] = cmaker.get_poes(
-                        mean_std, af, ctx.mag, sitecode, ctx.rrup)[:, :, 0]
+                    poes[:, :, g] = gsim.get_poes(
+                        mean_std, ll, self.trunclevel,
+                        af, ctx.mag, sitecode, ctx.rrup)
                     for m, imt in enumerate(ll):
                         if hasattr(gsim, 'weight') and gsim.weight[imt] == 0:
                             # set by the engine when parsing the gsim logictree
@@ -898,26 +853,24 @@ class RuptureContext(BaseContext):
                 setattr(ctx, dist, array)
         return ctx
 
-    def get_mean_std(self, imts, gsims):
+    def get_mean_std(self, imts, gsim):
         """
-        :returns: an array of shape (2, N, M, G) with means and stddevs
+        :returns: an array of shape (2, N, M) with means and stddevs
         """
         N = len(self.sids)
         M = len(imts)
-        G = len(gsims)
-        arr = numpy.zeros((2, N, M, G))
+        arr = numpy.zeros((2, N, M))
         num_tables = base.CoeffsTable.num_instances
-        for g, gsim in enumerate(gsims):
-            new = self.roundup(gsim.minimum_distance)
-            for m, imt in enumerate(imts):
-                mean, [std] = gsim.get_mean_and_stddevs(self, self, new, imt,
-                                                        [const.StdDev.TOTAL])
-                arr[0, :, m, g] = mean
-                arr[1, :, m, g] = std
-                if base.CoeffsTable.num_instances > num_tables:
-                    raise RuntimeError('Instantiating CoeffsTable inside '
-                                       '%s.get_mean_and_stddevs' %
-                                       gsim.__class__.__name__)
+        new = self.roundup(gsim.minimum_distance)
+        for m, imt in enumerate(imts):
+            mean, [std] = gsim.get_mean_and_stddevs(self, self, new, imt,
+                                                    [const.StdDev.TOTAL])
+            arr[0, :, m] = mean
+            arr[1, :, m] = std
+            if base.CoeffsTable.num_instances > num_tables:
+                raise RuntimeError('Instantiating CoeffsTable inside '
+                                   '%s.get_mean_and_stddevs' %
+                                   gsim.__class__.__name__)
         return arr
 
     def get_probability_no_exceedance(self, poes):

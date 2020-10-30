@@ -22,7 +22,7 @@ logic tree file is as in this example::
 
               <logicTreeBranch branchID="b1">
                 <uncertaintyModel>
-                  [MixtureGMPE]
+                  [AvgPoeGMPE]
                   b1.AkkarBommer2010.weight=0.20
                   b2.CauzziFaccioli2008.weight=0.20
                   b3.ChiouYoungs2008.weight=0.20
@@ -41,9 +41,9 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 
 
-class MixtureGMPE(GMPE):
+class AvgPoeGMPE(GMPE):
     """
-    The AvgGMPE returns mean and stddevs from a set of underlying
+    The AvgPoeGMPE returns mean PoEs from a set of underlying
     GMPEs with the given weights.
     """
     experimental = True
@@ -111,3 +111,8 @@ class MixtureGMPE(GMPE):
             means.append(mean)
             stds.append(std)
         return means, stds
+
+    def get_poes(self, mean_std_list):
+        poes = [gsim.get_poes(mean_std)
+                for gsim, mean_std in zip(self.gsims, mean_std_list)]
+        return poes @ self.weights
