@@ -63,9 +63,9 @@ class GetPoesSiteTestCase(unittest.TestCase):
 
         # Compute GM on rock
         # Shape: 2 x 4 (distances) x 2 (IMTs) x 1 (GMMs)
-        self.meastd = ctx.get_mean_std(imts, [gmmA])
+        self.meastd = gmmA.get_mean_std(ctx, imts)
         # Shape: 2 x 4 (distances) x 2 (IMTs) x 2 (GMMs)
-        self.meastd = ctx.get_mean_std(imts, [gmmA, gmmB])
+        self.meastd = gmmB.get_mean_std(ctx, imts)
 
     def test01(self):
 
@@ -87,8 +87,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
 
         # This function is rather slow at the moment
         res = _get_poes_site(self.meastd, imtls_soil, truncation_level,
-                             af, self.mag, sitecode, self.rrup[0],
-                             squeeze=False)
+                             af, self.mag, sitecode, self.rrup[0])
 
         if False:
             import matplotlib.pyplot as plt

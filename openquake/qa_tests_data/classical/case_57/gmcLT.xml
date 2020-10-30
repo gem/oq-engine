@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
+<logicTree logicTreeID='lt1'>
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="Active Shallow Crust">
+    <logicTreeBranch branchID="b11">
+      <uncertaintyModel>
+        [AvgPoeGMPE]
+        b1.AkkarEtAlRjb2014.weight = 0.4
+        b2.ChiouYoungs2014.weight = 0.6
+      </uncertaintyModel>
+      <uncertaintyWeight>1.0</uncertaintyWeight>
+    </logicTreeBranch>
+  </logicTreeBranchSet>
+</logicTree>
+</nrml>

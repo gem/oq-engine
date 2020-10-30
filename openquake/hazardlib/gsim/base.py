@@ -84,66 +84,14 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
-def get_poes(mean_std, loglevels, truncation_level, af=None,
-             mag=None, sitecode=None, rrup=None):
-    """
-    Calculate and return probabilities of exceedance (PoEs) of one or more
-    intensity measure levels (IMLs) of one intensity measure type (IMT)
-    for one or more pairs "site -- rupture".
-
-    :param mean_std:
-        An array of shape (2, N, M, G) with mean and standard deviation for
-        the current intensity measure type
-    :param loglevels:
-        A DictArray imt -> logs of intensity measure levels
-    :param truncation_level:
-        Can be ``None``, which means that the distribution of intensity
-        is treated as Gaussian distribution with possible values ranging
-        from minus infinity to plus infinity.
-
-        When set to zero, the mean intensity is treated as an exact
-        value (standard deviation is not even computed for that case)
-        and resulting array contains 0 in places where IMT is strictly
-        lower than the mean value of intensity and 1.0 where IMT is equal
-        or greater.
-
-        When truncation level is positive number, the intensity
-        distribution is processed as symmetric truncated Gaussian with
-        range borders being ``mean - truncation_level * stddev`` and
-        ``mean + truncation_level * stddev``. That is, the truncation
-        level expresses how far the range borders are from the mean
-        value and is defined in units of sigmas. The resulting PoEs
-        for that mode are values of complementary cumulative distribution
-        function of that truncated Gaussian applied to IMLs.
-
-    :returns:
-        array of PoEs of shape (N, L, G)
-
-    :raises ValueError:
-        If truncation level is not ``None`` and neither non-negative
-        float number, and if ``imts`` dictionary contain wrong or
-        unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
-    """
-    if truncation_level is not None and truncation_level < 0:
-        raise ValueError('truncation level must be zero, positive number '
-                         'or None')
-    if af:  # kernel amplification function
-        return _get_poes_site(mean_std, loglevels, truncation_level, af,
-                              mag, sitecode, rrup)
-    else:
-        # regular case
-        return _get_poes(mean_std, loglevels, truncation_level)
-
-
 # this is the critical function for the performance of the classical calculator
 # it is dominated by memory allocations (i.e. _truncnorm_sf is ultra-fast)
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then _get_poes will be called less times
-def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
-    mean, stddev = mean_std  # shape (N, M, G) each
-    N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
-    out = numpy.zeros((N, L) if squeeze else (N, L, G))
+def _get_poes(mean_std, loglevels, truncation_level):
+    mean, stddev = mean_std  # shape (N, M) each
+    out = numpy.zeros((len(mean), len(loglevels.array)))  # shape (N, L)
     lvl = 0
     for m, imt in enumerate(loglevels):
         for iml in loglevels[imt]:
@@ -155,8 +103,7 @@ def _get_poes(mean_std, loglevels, truncation_level, squeeze=False):
     return _truncnorm_sf(truncation_level, out)
 
 
-def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
-                   mag, sitecode, rrup, squeeze=False):
+def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctx):
     """
     NOTE: this works for a single site
 
@@ -171,26 +118,20 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
     :param ampl:
         Site amplification function instance of
         :class:openquake.hazardlib.site_amplification.AmpFunction
-    :param mag:
-        The magnitude of the earthquake
-    :param rrup:
-        The rrup distances
-    :param squeeze:
-        A boolean. Should be True when ...
+    :param ctx:
+        A context object with attributes .mag, .sites, .rrup
     """
-
     # Mean and std of ground motion for the IMTs considered in this analysis
     # N  - Number of sites
     # L - Number of intensity measure levels
-    # G  - Number of GMMs
-    mean, stddev = mean_std  # shape (N, M, G)
-    N, L, G = len(mean), len(loglevels.array), mean.shape[-1]
+    mean, stddev = mean_std  # shape (N, M)
+    N, L = len(mean), len(loglevels.array)
     assert N == 1, N
     M = len(loglevels)
     L1 = L // M
 
     # This is the array where we store the output results i.e. poes on soil
-    out_s = numpy.zeros((N, L) if squeeze else (N, L, G))
+    out_s = numpy.zeros((N, L))
 
     # `nsamp` is the number of IMLs per IMT used to compute the hazard on rock
     # while 'L' is total number of ground-motion values
@@ -241,19 +182,19 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun,
             # Get mean and std of the amplification function for this
             # magnitude, distance and IML
             median_af, std_af = ampfun.get_mean_std(
-                sitecode, imt, numpy.exp(iml_mid), mag, rrup)
+                ctx.sites['ampcode'][0], imt, numpy.exp(iml_mid),
+                ctx.mag, ctx.rrup)
 
             # Computing the probability of exceedance of the levels of
             # ground-motion loglevels on soil
             logaf = numpy.log(numpy.exp(soillevels) / numpy.exp(iml_mid))
-            tmp = 1. - norm_cdf(logaf, numpy.log(median_af), std_af)
-            poex_af = numpy.reshape(numpy.tile(tmp, N), (-1, len(logaf)))
+            poex_af = 1. - norm_cdf(logaf, numpy.log(median_af), std_af)
             # The probability of occurrence on rock has shape:
             # 1 x 1 x number of GMMs
-            poex = poex_af.T * pocc_rock
+            poex = poex_af * pocc_rock
 
             # Updating output
-            out_s[:, m * L1: (m + 1) * L1, :] += poex
+            out_s[0, m * L1: (m + 1) * L1] += poex
 
     return out_s
 
@@ -375,7 +316,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     non_verified = False
     experimental = False
     adapted = False
-    get_poes = staticmethod(get_poes)
 
     @classmethod
     def __init_subclass__(cls):
@@ -600,6 +540,100 @@ class GMPE(GroundShakingIntensityModel):
                 pass
             else:
                 setattr(self, key, val)
+
+    def get_mean_std(self, ctx, imts):
+        """
+        :returns: an array of shape (2, N, M) with means and stddevs
+        """
+        N = len(ctx.sids)
+        M = len(imts)
+        arr = numpy.zeros((2, N, M))
+        num_tables = CoeffsTable.num_instances
+        new = ctx.roundup(self.minimum_distance)
+        for m, imt in enumerate(imts):
+            mean, [std] = self.get_mean_and_stddevs(ctx, ctx, new, imt,
+                                                    [const.StdDev.TOTAL])
+            arr[0, :, m] = mean
+            arr[1, :, m] = std
+            if CoeffsTable.num_instances > num_tables:
+                raise RuntimeError('Instantiating CoeffsTable inside '
+                                   '%s.get_mean_and_stddevs' %
+                                   self.__class__.__name__)
+        return arr
+
+    def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctx=None):
+        """
+        Calculate and return probabilities of exceedance (PoEs) of one or more
+        intensity measure levels (IMLs) of one intensity measure type (IMT)
+        for one or more pairs "site -- rupture".
+
+        :param mean_std:
+            An array of shape (2, N, M) with mean and standard deviations
+            for the sites and intensity measure types
+        :param loglevels:
+            A DictArray imt -> logs of intensity measure levels
+        :param trunclevel:
+            Can be ``None``, which means that the distribution of intensity
+            is treated as Gaussian distribution with possible values ranging
+            from minus infinity to plus infinity.
+
+            When set to zero, the mean intensity is treated as an exact
+            value (standard deviation is not even computed for that case)
+            and resulting array contains 0 in places where IMT is strictly
+            lower than the mean value of intensity and 1.0 where IMT is equal
+            or greater.
+
+            When truncation level is positive number, the intensity
+            distribution is processed as symmetric truncated Gaussian with
+            range borders being ``mean - truncation_level * stddev`` and
+            ``mean + truncation_level * stddev``. That is, the truncation
+            level expresses how far the range borders are from the mean
+            value and is defined in units of sigmas. The resulting PoEs
+            for that mode are values of complementary cumulative distribution
+            function of that truncated Gaussian applied to IMLs.
+        :param af:
+            None or an instance of AmplFunction
+        :param ctx:
+            None or the context object used to compute mean_std
+        :returns:
+            array of PoEs of shape (N, L)
+        :raises ValueError:
+            If truncation level is not ``None`` and neither non-negative
+            float number, and if ``imts`` dictionary contain wrong or
+            unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
+        """
+        if trunclevel is not None and trunclevel < 0:
+            raise ValueError('truncation level must be zero, positive number '
+                             'or None')
+        if hasattr(self, 'weights_signs'):
+            outs = []
+            weights, signs = zip(*self.weights_signs)
+            for s in signs:
+                ms = numpy.array(mean_std)  # make a copy
+                for m in range(len(loglevels)):
+                    ms[0, :, m] += s * self.adjustment
+                outs.append(_get_poes(ms, loglevels, trunclevel))
+            arr = numpy.average(outs, weights=weights, axis=0)
+        elif hasattr(self, "mixture_model"):
+            shp = list(mean_std[0].shape)  # (N, M)
+            shp[1] = len(loglevels.array)  # L
+            arr = numpy.zeros(shp)
+            for f, w in zip(self.mixture_model["factors"],
+                            self.mixture_model["weights"]):
+                mean_stdi = numpy.array(mean_std)  # a copy
+                mean_stdi[1] *= f  # multiply stddev by factor
+                arr += w * _get_poes(mean_stdi, loglevels, trunclevel)
+        elif af:  # kernel amplification function
+            arr = _get_poes_site(mean_std, loglevels, trunclevel, af, ctx)
+        else:  # regular case
+            arr = _get_poes(mean_std, loglevels, trunclevel)
+        imtweight = getattr(self, 'weight', None)  # ImtWeight or None
+        for imt in loglevels:
+            if imtweight and imtweight.dic.get(imt) == 0:
+                # set by the engine when parsing the gsim logictree
+                # when 0 ignore the contribution: see _build_trts_branches
+                arr[:, loglevels(imt)] = 0
+        return arr
 
 
 class CoeffsTable(object):
