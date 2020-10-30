@@ -115,18 +115,22 @@ def classical_split_filter(srcs, gsims, params, monitor):
         if not blocks:
             yield {'pmap': {}, 'extra': {}}
             continue
-        msg += 'producing %d subtask(s) with mean weight %d' % (
-            len(blocks), numpy.mean([b.weight for b in blocks]))
-        try:
-            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                       'classical_split_filter#%d' % monitor.task_no, msg)
-        except Exception:
-            # a foreign key error in case of `oq run` is expected
-            print(msg)
-        for block in blocks[:-1]:
-            yield classical1, block, gsims, params, sf.slc
-        res = classical1(blocks[-1], gsims, params, sf.slc, monitor)
-        yield res
+        light = []
+        for block in blocks:
+            if block.weight > params['min_weight']:
+                msg += 'producing subtask with weight %d\n' % block.weight
+                try:
+                    logs.dbcmd(
+                        'log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                        'classical_split_filter#%d' % monitor.task_no, msg)
+                except Exception:
+                    # a foreign key error in case of `oq run` is expected
+                    print(msg)
+                yield classical1, block, gsims, params, sf.slc
+            else:
+                light.extend(block)
+        if light:
+            yield classical1(light, gsims, params, sf.slc, monitor)
 
 
 def preclassical(srcs, srcfilter, monitor):
@@ -478,7 +482,8 @@ class ClassicalCalculator(base.HazardCalculator):
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=getattr(oq.pointsource_distance, 'ddic', {}),
             point_rupture_bins=oq.point_rupture_bins,
-            shift_hypo=oq.shift_hypo, max_weight=max_weight,
+            shift_hypo=oq.shift_hypo,
+            min_weight=oq.min_weight, max_weight=max_weight,
             collapse_level=oq.collapse_level, hint=hint,
             max_sites_disagg=oq.max_sites_disagg,
             split_sources=oq.split_sources, af=self.af)
