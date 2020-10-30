@@ -94,7 +94,7 @@ def post_ebrisk(dstore, aggkey, monitor):
         key = ','.join(map(str, ids)) + ','
         try:
             recs = dstore['event_loss_table/' + key][()]
-        except dstore.EmptyDataset:   # no data
+        except (KeyError, dstore.EmptyDataset):   # no data
             continue
         for rec in recs:
             arr[rec['event_id']] += rec['loss']

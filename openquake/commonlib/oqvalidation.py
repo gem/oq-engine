@@ -422,6 +422,9 @@ class OqParam(valid.ParamSet):
             if self.risk_investigation_time is None:
                 raise InvalidFile('Please set the risk_investigation_time in'
                                   ' %s' % job_ini)
+        elif self.aggregate_by:
+            raise InvalidFile('aggregate_by cannot be set in %s [not ebrisk]'
+                              % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
