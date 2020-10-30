@@ -333,7 +333,7 @@ class SourceFilter(object):
         if source_indices:
             return self.sitecol.filtered(source_indices[0][1])
 
-    def get_sources_sites(self, sources, mon):
+    def split(self, sources, mon):
         """
         :yields:
             pairs (srcs, sites) where the sources have the same source_id,
@@ -341,12 +341,12 @@ class SourceFilter(object):
         """
         for src in sources:
             with mon:
-                split = split_sources(src)[0]
+                split, dt = split_sources(src)
             for s in split:
                 with mon:
                     sites = self.get_close_sites(s)
                 if sites is not None:
-                    yield [s], sites
+                    yield s, sites
 
     # used in the rupture prefiltering: it should not discard too much
     def close_sids(self, rec, trt):

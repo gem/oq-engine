@@ -33,9 +33,7 @@ from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, groupby_bin)
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import const, imt as imt_module
-from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.gsim import base
+from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -550,21 +548,14 @@ class PmapMaker(object):
 
     def _make_src_indep(self):
         # srcs with the same source_id and et_ids
-        for srcs, sites in self.srcfilter.get_sources_sites(
-                self.group, self.gss_mon):
+        for src, sites in self.srcfilter.split(self.group, self.gss_mon):
             t0 = time.time()
-            src_id = srcs[0].source_id
+            src_id = src.source_id
             self.numrups = 0
             self.numsites = 0
-            if self.N == 1:  # plenty of memory, collapse all sources together
-                rups = self._get_rups(srcs, sites)
-                ctxs = self._make_ctxs(rups, sites)
-                self._update_pmap(ctxs)
-            else:  # collapse one source at the time
-                for src in srcs:
-                    rups = self._get_rups([src], sites)
-                    ctxs = self._make_ctxs(rups, sites)
-                    self._update_pmap(ctxs)
+            rups = self._get_rups([src], sites)
+            ctxs = self._make_ctxs(rups, sites)
+            self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return ~self.pmap if self.rup_indep else self.pmap
