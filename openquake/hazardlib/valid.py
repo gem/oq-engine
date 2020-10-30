@@ -311,7 +311,7 @@ MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
 ASSET_ID_LENGTH = 50  # length that makes Murray happy
 
 simple_id = SimpleId(MAX_ID_LENGTH)
-branch_id = SimpleId(MAX_ID_LENGTH, r'^[\w_\-\.]+$')
+branch_id = SimpleId(MAX_ID_LENGTH, r'^[\w\:\#_\-\.]+$')
 asset_id = SimpleId(ASSET_ID_LENGTH)
 source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\-_]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
