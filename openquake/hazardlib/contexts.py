@@ -225,18 +225,17 @@ class ContextMaker(object):
         for g, gsim in enumerate(self.gsims):
             with self.gmf_mon:
                 mean_std = numpy.zeros(shp)
-                start = 0
+                s = 0
                 for n, ctx in zip(nsites, ctxs):
-                    mean_std[:, start:start+n] = gsim.get_mean_std(
-                        ctx, self.imts)
-                    start += n
+                    mean_std[:, s:s+n] = gsim.get_mean_std(ctx, self.imts)
+                    s += n
             with self.poe_mon:
                 poes[:, :, g] = gsim.get_poes(
                     mean_std, self.loglevels, self.trunclevel, self.af, ctxs)
-        start = 0
+        s = 0
         for ctx, n in zip(ctxs, nsites):
-            yield ctx, poes[start:start+n]
-            start += n
+            yield ctx, poes[s:s+n]
+            s += n
 
     def get_ctx_params(self):
         """

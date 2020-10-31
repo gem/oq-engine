@@ -80,7 +80,7 @@ class AmplFunction():
         df = pd.DataFrame(out, columns=dtypes).astype(dtypes)
         return AmplFunction(df, soil)  # requires reset_index
 
-    def get_mean_std(self, site, imt, iml, mag, dst):
+    def get_mean_std(self, site, imt, iml, mags, dsts):
         """
         :param site:
             A string specifying the site
@@ -90,29 +90,34 @@ class AmplFunction():
         :param iml:
             A float with the shaking level on rock for which we need the
             amplification factor
-        :param mag:
-            A float with the magnitude of the rupture
+        :param mags:
+            An array of rupture magnitudes
         :param dst:
-            A float defining the rupture-site distance
+            An array of rupture-site distances
         :returns:
             A tuple with the median amplification factor and the std of the
             logarithm
         """
-        df = copy.copy(self.df)
+        df = self.df
         df = df[(df['ampcode'] == site) & (df['imt'] == imt)]
-
-        # Filtering magnitude
-        idx = numpy.argmin((self.mags - mag) > 0)
-        df = df[df['from_mag'] == self.mags[idx]]
-
-        # Filtering distance
         tmp_dsts = numpy.array(sorted(df['from_rrup']))
-        idx = numpy.argmin((tmp_dsts - dst) > 0)
-        df = df[df['from_rrup'] == tmp_dsts[idx]]
 
-        # Interpolating
-        median = numpy.interp(iml, df['level'], df['median'])
-        std = numpy.interp(iml, df['level'], df['std'])
+        median = numpy.zeros(len(mags))
+        std = numpy.zeros(len(mags))
+
+        for i, (mag, dst) in enumerate(zip(mags, dsts)):
+
+            # Filtering magnitude
+            idx = numpy.argmin((self.mags - mag) > 0)
+            d = df[df['from_mag'] == self.mags[idx]]
+
+            # Filtering distance
+            idx = numpy.argmin((tmp_dsts - dst) > 0)
+            d = d[d['from_rrup'] == tmp_dsts[idx]]
+
+            # Interpolating
+            median[i] = numpy.interp(iml, d['level'], d['median'])
+            std[i] = numpy.interp(iml, d['level'], d['std'])
 
         return median, std
 
