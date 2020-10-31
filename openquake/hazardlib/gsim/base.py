@@ -147,7 +147,7 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
 
         # Get the values of ground-motion used to compute the probability
         # of exceedance on soil.
-        soillevels = loglevels[imt]  # shape S
+        soillevels = loglevels[imt]  # shape L1
 
         # Here we set automatically the IMLs that will be used to compute
         # the probability of occurrence of GM on rock within discrete
@@ -187,11 +187,11 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
 
             # Computing the probability of exceedance of the levels of
             # ground-motion loglevels on soil
-            logaf = numpy.log(numpy.exp(soillevels) / iml_mid)  # shape S
-            for c in range(C):
+            logaf = numpy.log(numpy.exp(soillevels) / iml_mid)  # shape L1
+            for l in range(L1):
                 poex_af = 1. - norm.cdf(
-                    logaf, numpy.log(median_af[c]), std_af[c])  # shape S
-                out_s[c, m * L1: (m + 1) * L1] += poex_af * pocc_rock[c]  # S
+                    logaf[l], numpy.log(median_af), std_af)  # shape C
+                out_s[:, m * L1 + l] += poex_af * pocc_rock  # shape C
 
     return out_s
 
