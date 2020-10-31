@@ -147,7 +147,7 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
 
         # Get the values of ground-motion used to compute the probability
         # of exceedance on soil.
-        soillevels = loglevels[imt]
+        soillevels = loglevels[imt]  # shape S
 
         # Here we set automatically the IMLs that will be used to compute
         # the probability of occurrence of GM on rock within discrete
@@ -169,33 +169,29 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
                 out_l = (iml_l - mean[:, m]) / stddev[:, m]
                 out_u = (iml_u - mean[:, m]) / stddev[:, m]
 
-            # Probability of occurrence on rock - The shape of this array
-            # is: number of sites x number of IMLs x GMMs. This corresponds
-            # to 1 x 1 x number of GMMs
+            # Probability of occurrence on rock
             pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
-                         _truncnorm_sf(truncation_level, out_u))  # shape L
+                         _truncnorm_sf(truncation_level, out_u))  # shape C
 
             # Skipping cases where the pocc on rock is negligible
             if numpy.all(pocc_rock < 1e-10):
                 continue
 
             # Ground-motion value in the middle of each interval
-            iml_mid = numpy.log((numpy.exp(iml_l) + numpy.exp(iml_u)) / 2.)
+            iml_mid = (numpy.exp(iml_l) + numpy.exp(iml_u)) / 2.
 
             # Get mean and std of the amplification function for this
             # magnitude, distance and IML
-            median_af, std_af = ampfun.get_mean_std(
-                ampcode, imt, numpy.exp(iml_mid), mags, rrups)
+            median_af, std_af = ampfun.get_mean_std(  # shape C
+                ampcode, imt, iml_mid, mags, rrups)
 
             # Computing the probability of exceedance of the levels of
             # ground-motion loglevels on soil
-            logaf = numpy.log(numpy.exp(soillevels) / numpy.exp(iml_mid))
-            import pdb; pdb.set_trace()
-            poex_af = 1. - norm.cdf(
-                logaf, loc=numpy.log(median_af), scale=std_af)
-
-            # Updating output
-            out_s[:, m * L1: (m + 1) * L1] += poex_af * pocc_rock
+            logaf = numpy.log(numpy.exp(soillevels) / iml_mid)  # shape S
+            for c in range(C):
+                poex_af = 1. - norm.cdf(
+                    logaf, numpy.log(median_af[c]), std_af[c])  # shape S
+                out_s[c, m * L1: (m + 1) * L1] += poex_af * pocc_rock[c]  # S
 
     return out_s
 
