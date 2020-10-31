@@ -81,7 +81,7 @@ def performance_view(dstore):
             mem = max(mem, rec['memory_mb'])
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    maxmem = 'max mem=%.1f MB' % dstore['task_info']['mem_gb'].max()
+    maxmem = 'max mem=%.1f GB' % dstore['task_info']['mem_gb'].max()
     if hasattr(dstore, 'calc_id'):
         operation = 'calc_%d, %s' % (dstore.calc_id, maxmem)
     else:
