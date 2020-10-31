@@ -126,7 +126,8 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
     # L - Number of intensity measure levels
     mean, stddev = mean_std  # shape (C, M)
     C, L = len(mean), len(loglevels.array)
-    assert C == len(ctxs), C
+    for ctx in ctxs:
+        assert len(ctx.sids) == 1  # 1 site
     M = len(loglevels)
     L1 = L // M
 
