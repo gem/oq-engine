@@ -115,8 +115,8 @@ def classical_split_filter(srcs, gsims, params, monitor):
         if not blocks:
             yield {'pmap': {}, 'extra': {}}
             continue
-        light = []
-        for block in blocks:
+        light = list(blocks[-1])
+        for block in blocks[:-1]:
             if block.weight > params['min_weight']:
                 msg += 'producing subtask with weight %d\n' % block.weight
                 try:
@@ -129,8 +129,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
                 yield classical, block, gsims, params, sf.slc
             else:
                 light.extend(block)
-        if light:
-            yield classical(light, gsims, params, sf.slc, monitor)
+        yield classical(light, gsims, params, sf.slc, monitor)
 
 
 def preclassical(srcs, srcfilter, monitor):
