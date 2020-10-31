@@ -34,7 +34,7 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize, get_array_nbytes)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
-from openquake.hazardlib.calc.filters import split_sources
+from openquake.hazardlib.calc.filters import split_sources, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, logs, readinput
@@ -329,7 +329,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     src.src_filter = srcfilter  # hack for .iter_ruptures
                     src.all_ridx = src.get_ridx()
         calc_times = parallel.Starmap.apply(
-            preclassical, (srcs, srcfilter),
+            preclassical,
+            (srcs, SourceFilter(self.sitecol, oq.maximum_distance)),
             concurrent_tasks=oq.concurrent_tasks or 1,
             num_cores=oq.num_cores, h5=self.datastore.hdf5).reduce()
         if oq.calculation_mode == 'preclassical':
@@ -378,7 +379,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore['effect_by_mag_dst'] = aw
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
                                 num_cores=oq.num_cores)
-        smap.monitor.save('srcfilter', self.src_filter())
+        smap.monitor.save('srcfilter', srcfilter)
         rlzs_by_gsim_list = self.submit_tasks(smap)
         rlzs_by_g = []
         for rlzs_by_gsim in rlzs_by_gsim_list:
@@ -488,10 +489,10 @@ class ClassicalCalculator(base.HazardCalculator):
             max_sites_disagg=oq.max_sites_disagg,
             split_sources=oq.split_sources, af=self.af)
         for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
-            param['rescale_weight'] = len(rlzs_by_gsim)
+            nb = 0
             if sg.atomic:
                 # do not split atomic groups
-                nb = 1
+                nb += 1
                 smap.submit((sg, rlzs_by_gsim, param), f1)
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
@@ -499,7 +500,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         else block_splitter(sg, 2 * max_weight,
                                             get_weight, sort=True))
                 blocks = list(blks)
-                nb = len(blocks)
+                nb += len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
