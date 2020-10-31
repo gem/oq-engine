@@ -543,7 +543,7 @@ def view_task_info(token, dstore):
         data.sort(order='duration')
         return rst_table(data)
 
-    data = ['operation-duration outputs mean stddev min max'.split()]
+    data = ['operation-duration counts mean stddev min max'.split()]
     for task, arr in group_array(task_info[()], 'taskname').items():
         val = arr['duration']
         if len(val):
