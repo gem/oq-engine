@@ -35,7 +35,7 @@ from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize, get_array_nbytes)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources
-from openquake.hazardlib.calc.hazard_curve import classical
+from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, logs, readinput
 from openquake.calculators import getters
@@ -46,6 +46,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
+get_weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('et_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
@@ -71,7 +72,7 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def classical1(srcs, gsims, params, slc, monitor=None):
+def classical(srcs, gsims, params, slc, monitor=None):
     """
     Read the SourceFilter, get the current slice of it (if tiling is
     enabled) and then call the classical calculator in hazardlib
@@ -80,7 +81,7 @@ def classical1(srcs, gsims, params, slc, monitor=None):
         monitor = slc
         slc = slice(None)
     srcfilter = monitor.read('srcfilter')[slc]
-    return classical(srcs, srcfilter, gsims, params, monitor)
+    return hazclassical(srcs, srcfilter, gsims, params, monitor)
 
 
 def classical_split_filter(srcs, gsims, params, monitor):
@@ -92,7 +93,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
     srcfilter = monitor.read('srcfilter')
     sf_tiles = srcfilter.split_in_tiles(params['hint'])
     nt = len(sf_tiles)
-    maxw = params['max_weight'] / 2
+    maxw = params['max_weight'] / 2 * nt
     splits = []
     if nt > 1 or params['split_sources'] is False:
         sources = srcs
@@ -110,23 +111,26 @@ def classical_split_filter(srcs, gsims, params, monitor):
         maxw /= 5
     msg = 'split %s; ' % ' '.join(splits) if splits else ''
     for sf in sf_tiles:
-        blocks = list(block_splitter(
-            sources, maxw, operator.attrgetter('weight')))
+        blocks = list(block_splitter(sources, maxw, get_weight))
         if not blocks:
             yield {'pmap': {}, 'extra': {}}
             continue
-        msg += 'producing %d subtask(s) with mean weight %d' % (
-            len(blocks), numpy.mean([b.weight for b in blocks]))
-        try:
-            logs.dbcmd('log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                       'classical_split_filter#%d' % monitor.task_no, msg)
-        except Exception:
-            # a foreign key error in case of `oq run` is expected
-            print(msg)
-        for block in blocks[:-1]:
-            yield classical1, block, gsims, params, sf.slc
-        res = classical1(blocks[-1], gsims, params, sf.slc, monitor)
-        yield res
+        light = []
+        for block in blocks:
+            if block.weight > params['min_weight']:
+                msg += 'producing subtask with weight %d\n' % block.weight
+                try:
+                    logs.dbcmd(
+                        'log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                        'classical_split_filter#%d' % monitor.task_no, msg)
+                except Exception:
+                    # a foreign key error in case of `oq run` is expected
+                    print(msg)
+                yield classical, block, gsims, params, sf.slc
+            else:
+                light.extend(block)
+        if light:
+            yield classical(light, gsims, params, sf.slc, monitor)
 
 
 def preclassical(srcs, srcfilter, monitor):
@@ -466,10 +470,10 @@ class ClassicalCalculator(base.HazardCalculator):
 
         C = oq.concurrent_tasks or 1
         if oq.disagg_by_src or oq.is_ucerf():
-            f1, f2 = classical1, classical1
+            f1, f2 = classical, classical
             max_weight = max(totweight / C, oq.min_weight) / 2
         else:
-            f1, f2 = classical1, classical_split_filter
+            f1, f2 = classical, classical_split_filter
             max_weight = max(totweight / C, oq.min_weight)
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
@@ -478,7 +482,8 @@ class ClassicalCalculator(base.HazardCalculator):
             filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
             pointsource_distance=getattr(oq.pointsource_distance, 'ddic', {}),
             point_rupture_bins=oq.point_rupture_bins,
-            shift_hypo=oq.shift_hypo, max_weight=max_weight,
+            shift_hypo=oq.shift_hypo,
+            min_weight=oq.min_weight, max_weight=max_weight,
             collapse_level=oq.collapse_level, hint=hint,
             max_sites_disagg=oq.max_sites_disagg,
             split_sources=oq.split_sources, af=self.af)
@@ -491,9 +496,8 @@ class ClassicalCalculator(base.HazardCalculator):
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, operator.attrgetter('source_id')).values()
                         if oq.disagg_by_src
-                        else block_splitter(sg, 2 * max_weight * ntiles,
-                                            operator.attrgetter('weight'),
-                                            sort=True))
+                        else block_splitter(sg, 2 * max_weight,
+                                            get_weight, sort=True))
                 blocks = list(blks)
                 nb = len(blocks)
                 for block in blocks:
