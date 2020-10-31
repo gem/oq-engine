@@ -31,7 +31,7 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, groupby_bin)
+    AccumDict, DictArray, groupby, groupby_bin, block_splitter)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.tom import PoissonTOM
@@ -213,21 +213,30 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
 
-    def get_poes(self, ctx):
+    def gen_ctx_poes(self, ctxs):
         """
-        :param ctx: a context object
-        :returns: an array of zeros of shape (N, L, G)
+        :param ctxs: a list of C context objects
+        :yields: C pairs (ctx, poes of shape (N, L, G))
         """
-        shp = len(ctx.sids), len(self.loglevels.array), len(self.gsims)
-        poes = numpy.zeros(shp)
+        nsites = [len(ctx.sids) for ctx in ctxs]
+        N = sum(nsites)
+        shp = (2, N, len(self.loglevels))
+        poes = numpy.zeros((N, len(self.loglevels.array), len(self.gsims)))
         for g, gsim in enumerate(self.gsims):
-            # this must be fast since it is inside an inner loop
             with self.gmf_mon:
-                mean_std = gsim.get_mean_std(ctx, self.imts)
+                mean_std = numpy.zeros(shp)
+                start = 0
+                for n, ctx in zip(nsites, ctxs):
+                    mean_std[:, start:start+n] = gsim.get_mean_std(
+                        ctx, self.imts)
+                    start += n
             with self.poe_mon:
                 poes[:, :, g] = gsim.get_poes(
-                    mean_std, self.loglevels, self.trunclevel, self.af, ctx)
-        return poes
+                    mean_std, self.loglevels, self.trunclevel, self.af, ctxs)
+        start = 0
+        for ctx, n in zip(ctxs, nsites):
+            yield ctx, poes[start:start+n]
+            start += n
 
     def get_ctx_params(self):
         """
@@ -511,23 +520,25 @@ class PmapMaker(object):
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gss_mon = cmaker.mon('get_sources_sites', measuremem=False)
+        self.maxsites = 1E8 / len(self.gsims) / len(self.imtls.array)
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
         if pmap is None:  # for src_indep
             pmap = self.pmap
         rup_indep = self.rup_indep
-        for ctx in ctxs:
-            poes = self.cmaker.get_poes(ctx)
-            with self.pne_mon:
-                # pnes and poes of shape (N, L, G)
-                pnes = ctx.get_probability_no_exceedance(poes)
-                for sid, pne in zip(ctx.sids, pnes):
-                    probs = pmap.setdefault(sid, rup_indep).array
-                    if rup_indep:
-                        probs *= pne
-                    else:  # rup_mutex
-                        probs += (1. - pne) * ctx.weight
+        for block in block_splitter(
+                ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
+            for ctx, poes in self.cmaker.gen_ctx_poes(block):
+                with self.pne_mon:
+                    # pnes and poes of shape (N, L, G)
+                    pnes = ctx.get_probability_no_exceedance(poes)
+                    for sid, pne in zip(ctx.sids, pnes):
+                        probs = pmap.setdefault(sid, rup_indep).array
+                        if rup_indep:
+                            probs *= pne
+                        else:  # rup_mutex
+                            probs += (1. - pne) * ctx.weight
 
     def _ruptures(self, src, filtermag=None):
         return list(src.iter_ruptures(
