@@ -270,10 +270,20 @@ class TruncatedGRMFD(BaseMFD):
     def from_moment(cls, min_mag, max_mag, bin_width, b_val, moment_rate):
         """
         :param min_mag:
+            The lowest possible magnitude for this MFD. The first bin in the
+            :meth:`result histogram <get_annual_occurrence_rates>` will be
+            aligned  to make its left border match this value.
         :param max_mag:
+            The highest possible magnitude. The same as for ``min_mag``: the
+            last bin in the histogram will correspond to the magnitude value
+            equal to ``max_mag - bin_width / 2``.
         :param bin_width:
+            A positive float value -- the width of a single histogram bin.
         :param b_val:
+            The slope of the GR relationship
         :param moment_rate:
+            The value of scalar seismic moment per year released by this MFD.
+            Unit of measure is N ・m
         """
         c_val = 1.5
         d_val = 9.1
