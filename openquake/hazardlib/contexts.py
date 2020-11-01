@@ -169,6 +169,7 @@ class ContextMaker(object):
         param = param or {}
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
+        self.split_sources = param.get('split_sources', True)
         self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
         self.trt = trt
@@ -211,7 +212,7 @@ class ContextMaker(object):
 
         # instantiate monitors
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
-        self.poe_mon = monitor('get_poes', measuremem=False)
+        self.poe_mon = monitor('get_poes', measuremem=not self.split_sources)
 
     def gen_ctx_poes(self, ctxs):
         """
@@ -560,6 +561,9 @@ class PmapMaker(object):
         # srcs with the same source_id and et_ids
         if self.fewsites:
             srcs_sites = [(self.group, self.srcfilter.sitecol)]
+        elif not self.split_sources:
+            srcs_sites = (([src], self.srcfilter.sitecol.filtered(idx))
+                          for src, idx in self.srcfilter.filter(self.group))
         else:
             srcs_sites = self.srcfilter.split(self.group, self.gss_mon)
         for srcs, sites in srcs_sites:
@@ -569,7 +573,8 @@ class PmapMaker(object):
             self.numsites = 0
             rups = self._get_rups(srcs, sites)
             ctxs = self._make_ctxs(rups, sites)
-            self._update_pmap(ctxs)
+            if ctxs:
+                self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return ~self.pmap if self.rup_indep else self.pmap
@@ -585,7 +590,8 @@ class PmapMaker(object):
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
             pmap = ProbabilityMap(L, G)
             ctxs = self._make_ctxs(rups, sites)
-            self._update_pmap(ctxs, pmap)
+            if ctxs:
+                self._update_pmap(ctxs, pmap)
             p = pmap
             if self.rup_indep:
                 p = ~p

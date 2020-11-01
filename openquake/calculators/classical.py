@@ -568,8 +568,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     # key is the group ID
                     trt = self.full_lt.trt_by_et[et_ids[key][0]]
                     # avoid saving PoEs == 1
-                    arr = base.fix_ones(pmap).array(self.N)
-                    self.datastore['_poes'][:, :, slice_by_g[key]] = arr
+                    base.fix_ones(pmap)
+                    sids = sorted(pmap)
+                    arr = numpy.array([pmap[sid].array for sid in sids])
+                    self.datastore['_poes'][sids, :, slice_by_g[key]] = arr
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
