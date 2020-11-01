@@ -28,7 +28,7 @@ jobs:
     - name: Test with pytest
       run: |
         oq dbserver start
-        pytest --doctest-modules -x -k "not gsim" --disable-warnings --color=yes
+        pytest openquake --doctest-modules -x -k "not gsim" --disable-warnings --color=yes
         oq dbserver stop
     - name: Lint with flake8
       run: |
