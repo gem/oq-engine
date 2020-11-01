@@ -212,7 +212,7 @@ class ContextMaker(object):
 
         # instantiate monitors
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
-        self.poe_mon = monitor('get_poes', measuremem=not self.split_sources)
+        self.poe_mon = monitor('get_poes', measuremem=False)
 
     def gen_ctx_poes(self, ctxs):
         """
