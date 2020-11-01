@@ -18,7 +18,7 @@ Module :mod:`openquake.hazardlib.mfd.truncated_gr` defines a Truncated
 Gutenberg-Richter MFD.
 """
 import math
-
+import numpy as np
 from openquake.baselib.python3compat import round
 from openquake.hazardlib.mfd.base import BaseMFD
 
@@ -265,3 +265,24 @@ class TruncatedGRMFD(BaseMFD):
         """
         self.b_val = b_val
         self.a_val = a_val
+
+    @classmethod
+    def from_moment(cls, min_mag, max_mag, bin_width, b_val, moment_rate):
+        """
+        :param min_mag:
+        :param max_mag:
+        :param bin_width:
+        :param b_val:
+        :param moment_rate:
+        """
+        c_val = 1.5
+        d_val = 9.1
+        tmp = 0
+        mou = 10**(c_val * max_mag + d_val)
+        beta = b_val * np.log(10.0)
+        term2 = np.exp(-beta*(max_mag - tmp))
+        rate = (moment_rate * (c_val - b_val) * (1 - term2) /
+                (b_val * mou * term2))
+        a_val = np.log10(rate)
+        self = cls(min_mag, max_mag, bin_width, a_val, b_val)
+        return self
