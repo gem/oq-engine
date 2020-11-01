@@ -85,7 +85,7 @@ def performance_view(dstore):
     if hasattr(dstore, 'calc_id'):
         operation = 'calc_%d, %s' % (dstore.calc_id, maxmem)
     else:
-        operation = maxmem
+        operation = 'operation'
     dtlist = [(operation, perf_dt['operation'])]
     dtlist.extend((n, perf_dt[n]) for n in perf_dt.names[1:-1])
     return numpy.array(out, dtlist)
