@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import copy
 import numpy
 import pandas as pd
 
@@ -105,6 +104,7 @@ class AmplFunction():
         median = numpy.zeros(len(mags))
         std = numpy.zeros(len(mags))
 
+        # TODO: figure out a way to vectorize this
         for i, (mag, dst) in enumerate(zip(mags, dsts)):
 
             # Filtering magnitude
