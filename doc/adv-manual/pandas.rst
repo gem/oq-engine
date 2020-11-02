@@ -75,7 +75,7 @@ the ``gmf_data`` table indexed by event ID, i.e. the ``eid`` field:
 .. code-block:: python
 
    >>> eid = 20  # consider event with ID 20
-   >>> gmf_data = dstore.read_df('gmf_data', index='eid')
+   >>> gmf_data = dstore.read_df('gmf_data', index='eid') # engine>3.11
    >>> gmf_data.loc[eid]
          sid     gmv_0
    eid               
