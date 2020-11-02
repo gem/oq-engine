@@ -187,6 +187,15 @@ class ModifiableGMPE(GMPE):
         shp = getattr(self, const.StdDev.TOTAL).shape
         setattr(self, const.StdDev.TOTAL, C["total_sigma"] + np.zeros(shp))
 
+    def add_delta_std_to_total_std(self, sites, rup, dists, imt, delta):
+        """
+        :param delta:
+            A delta std e.g. a phi S2S to be removed from total
+        """
+        total_stddev = getattr(self, const.StdDev.TOTAL)
+        total_stddev = (total_stddev**2 + np.sign(delta) * delta**2)**0.5
+        setattr(self, const.StdDev.TOTAL, total_stddev)
+
     @staticmethod
     def _dict_to_coeffs_table(input_dict, name):
         """

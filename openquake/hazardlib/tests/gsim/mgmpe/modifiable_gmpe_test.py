@@ -175,6 +175,22 @@ class ModifiableGMPETest(unittest.TestCase):
                                            sfact * np.ones(stddev.shape))
 
 
+    def test_add_delta(self):
+        """Check adding/removing a delta std to the total std"""
+        gmpe_name = 'AkkarEtAlRjb2014'
+        stddevs = [const.StdDev.TOTAL]
+
+        gmm = ModifiableGMPE(
+            gmpe={gmpe_name: {}},
+            add_delta_std_to_total_std={"delta": -0.20})
+        imt = PGA()
+        [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup,
+                                            self.dists, imt, stddevs)[1]
+
+        # Original total std for PGA is 0.6201
+        np.testing.assert_almost_equal(stddev[0], 0.68344277, decimal=6)
+
+
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
     """
     Tests the implementation of a correction factor for intensity
