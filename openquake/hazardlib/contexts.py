@@ -221,15 +221,12 @@ class ContextMaker(object):
         """
         nsites = [len(ctx.sids) for ctx in ctxs]
         N = sum(nsites)
-        shp = (2, N, len(self.loglevels))
         poes = numpy.zeros((N, len(self.loglevels.array), len(self.gsims)))
         for g, gsim in enumerate(self.gsims):
             with self.gmf_mon:
-                mean_std = numpy.zeros(shp)
-                s = 0
-                for n, ctx in zip(nsites, ctxs):
-                    mean_std[:, s:s+n] = gsim.get_mean_std(ctx, self.imts)
-                    s += n
+                # shape (2, N, M)
+                mean_std = numpy.concatenate([gsim.get_mean_std(ctx, self.imts)
+                                              for ctx in ctxs], axis=1)
             with self.poe_mon:
                 poes[:, :, g] = gsim.get_poes(
                     mean_std, self.loglevels, self.trunclevel, self.af, ctxs)
