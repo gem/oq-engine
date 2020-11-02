@@ -115,7 +115,9 @@ def get_csm(oq, full_lt, h5=None):
                 src.ruptures_per_block = oq.ruptures_per_block
                 sg.sources = list(src)
                 # add background point sources
-                sg.sources.extend(src.get_background_sources())
+                sg = copy.copy(grp)
+                src_groups.append(sg)
+                sg.sources = src.get_background_sources()
             else:  # event_based, use one source
                 sg.sources = [src]
             serial = init_serials(sg, serial)
