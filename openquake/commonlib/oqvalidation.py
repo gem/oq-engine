@@ -902,6 +902,15 @@ class OqParam(valid.ParamSet):
             ('classical', 'disaggregation'))
         return not invalid
 
+    def is_valid_soil_intensities(self):
+        """
+        soil_intensities can be set only if amplification_method=convolution
+        """
+        if self.amplification_method == 'convolution':
+            return len(self.soil_intensities) > 1
+        else:
+            return self.soil_intensities is None
+
     def is_valid_sites_disagg(self):
         """
         The option `sites_disagg` (when given) requires `specific_assets` to
