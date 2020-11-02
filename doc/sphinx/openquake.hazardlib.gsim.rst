@@ -394,6 +394,14 @@ cauzzi_faccioli_2008_swiss_coeffs
     :undoc-members:
     :show-inheritance:
 
+chao_2020
+-------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.chao_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 chiou_youngs_2008
 -------------------------------------------------
 
