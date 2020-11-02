@@ -3,8 +3,8 @@ Subduction backbone logic tree - 9 branch
 
 ============== ====================
 checksum32     2_313_082_878       
-date           2020-11-02T08:42:08 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:23 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 2, num_levels = 8, num_rlzs = 9
@@ -43,31 +43,19 @@ source_model_logic_tree `peer_source_model_logic_tree.xml <peer_source_model_log
 
 Composite source model
 ----------------------
-====== ============================================================================== ====
-grp_id gsim                                                                           rlzs
-====== ============================================================================== ====
-0      [BCHydroESHM20SInter]                                                          [0] 
-0      [BCHydroESHM20SInter]
-sigma_mu_epsilon = -1.732051                             [5] 
-0      [BCHydroESHM20SInter]
-sigma_mu_epsilon = 1.732051                              [4] 
-0      [BCHydroESHM20SInter]
-theta6_adjustment = -0.0015                              [1] 
-0      [BCHydroESHM20SInter]
-theta6_adjustment = -0.0015
-sigma_mu_epsilon = -1.732051 [3] 
-0      [BCHydroESHM20SInter]
-theta6_adjustment = -0.0015
-sigma_mu_epsilon = 1.732051  [2] 
-0      [BCHydroESHM20SInter]
-theta6_adjustment = 0.0015                               [6] 
-0      [BCHydroESHM20SInter]
-theta6_adjustment = 0.0015
-sigma_mu_epsilon = -1.732051  [8] 
-0      [BCHydroESHM20SInter]
-theta6_adjustment = 0.0015
-sigma_mu_epsilon = 1.732051   [7] 
-====== ============================================================================== ====
+====== ================================================================================== ====
+grp_id gsim                                                                               rlzs
+====== ================================================================================== ====
+0      '[BCHydroESHM20SInter]'                                                            [0] 
+0      '[BCHydroESHM20SInter]\nsigma_mu_epsilon = -1.732051'                              [5] 
+0      '[BCHydroESHM20SInter]\nsigma_mu_epsilon = 1.732051'                               [4] 
+0      '[BCHydroESHM20SInter]\ntheta6_adjustment = -0.0015'                               [1] 
+0      '[BCHydroESHM20SInter]\ntheta6_adjustment = -0.0015\nsigma_mu_epsilon = -1.732051' [3] 
+0      '[BCHydroESHM20SInter]\ntheta6_adjustment = -0.0015\nsigma_mu_epsilon = 1.732051'  [2] 
+0      '[BCHydroESHM20SInter]\ntheta6_adjustment = 0.0015'                                [6] 
+0      '[BCHydroESHM20SInter]\ntheta6_adjustment = 0.0015\nsigma_mu_epsilon = -1.732051'  [8] 
+0      '[BCHydroESHM20SInter]\ntheta6_adjustment = 0.0015\nsigma_mu_epsilon = 1.732051'   [7] 
+====== ================================================================================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -82,7 +70,7 @@ Slowest sources
 ============ ==== ========= ========= ============
 source_id    code calc_time num_sites eff_ruptures
 ============ ==== ========= ========= ============
-PEERS3C3_TOR X    1.569E-04 2         1           
+PEERS3C3_TOR X    1.593E-04 2         1           
 ============ ==== ========= ========= ============
 
 Computation times by source typology
@@ -90,15 +78,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-X    1.569E-04
+X    1.593E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.817E-04 nan    5.817E-04 5.817E-04
-read_source_model  1      0.08844   nan    0.08844   0.08844  
+preclassical       1      5.980E-04 nan    5.980E-04 5.980E-04
+read_source_model  1      0.08703   nan    0.08703   0.08703  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -112,10 +100,10 @@ preclassical           250 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46609, maxmem=0.4 GB time_sec  memory_mb counts
+calc_46979, maxmem=0.4 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.19586   0.0       1     
-composite source model    0.18810   0.0       1     
-total read_source_model   0.08844   0.0       1     
-total preclassical        5.817E-04 0.0       1     
+importing inputs          0.19560   0.0       1     
+composite source model    0.18781   0.0       1     
+total read_source_model   0.08703   0.0       1     
+total preclassical        5.980E-04 0.0       1     
 ========================= ========= ========= ======

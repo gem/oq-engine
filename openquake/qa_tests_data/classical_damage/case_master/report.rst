@@ -3,8 +3,8 @@ classical damage hazard
 
 ============== ====================
 checksum32     4_073_658_548       
-date           2020-11-02T08:41:10 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:13:23 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 7, num_levels = 90, num_rlzs = 8
@@ -45,16 +45,16 @@ structural_fragility    `structural_fragility_model.xml <structural_fragility_mo
 
 Composite source model
 ----------------------
-====== =================== ============
-grp_id gsim                rlzs        
-====== =================== ============
-0      [BooreAtkinson2008] [0, 1, 4, 5]
-0      [ChiouYoungs2008]   [2, 3, 6, 7]
-1      [AkkarBommer2010]   [0, 2]      
-1      [ChiouYoungs2008]   [1, 3]      
-2      [AkkarBommer2010]   [4, 6]      
-2      [ChiouYoungs2008]   [5, 7]      
-====== =================== ============
+====== ===================== ============
+grp_id gsim                  rlzs        
+====== ===================== ============
+0      '[BooreAtkinson2008]' [0, 1, 4, 5]
+0      '[ChiouYoungs2008]'   [2, 3, 6, 7]
+1      '[AkkarBommer2010]'   [0, 2]      
+1      '[ChiouYoungs2008]'   [1, 3]      
+2      '[AkkarBommer2010]'   [4, 6]      
+2      '[ChiouYoungs2008]'   [5, 7]      
+====== ===================== ============
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -87,9 +87,9 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         S    0.00281   7         482         
-2;0       S    0.00251   7         4           
-2;1       X    1.743E-04 7         1           
+2;0       S    0.00269   7         4           
+1         S    0.00261   7         482         
+2;1       X    2.189E-04 7         1           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -97,16 +97,16 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-S    0.00532  
-X    1.743E-04
+S    0.00530  
+X    2.189E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ========= =======
 operation-duration counts mean    stddev min       max    
-preclassical       3      0.00234 50%    6.757E-04 0.00332
-read_source_model  2      0.00609 70%    0.00180   0.01037
+preclassical       3      0.00236 48%    7.546E-04 0.00319
+read_source_model  2      0.00572 67%    0.00183   0.00962
 ================== ====== ======= ====== ========= =======
 
 Data transfer
@@ -120,11 +120,11 @@ preclassical      srcs=14.45 KB srcfilter=4.82 KB 721 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46551, maxmem=1.1 GB time_sec  memory_mb counts
+calc_46920, maxmem=1.1 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          1.09569   0.0       1     
-composite source model    1.06089   0.0       1     
-total read_source_model   0.01218   0.64062   2     
-total preclassical        0.00702   0.46094   3     
-reading exposure          6.764E-04 0.0       1     
+importing inputs          1.08184   0.0       1     
+composite source model    1.04738   0.0       1     
+total read_source_model   0.01145   0.72266   2     
+total preclassical        0.00707   0.51562   3     
+reading exposure          6.104E-04 0.0       1     
 ========================= ========= ========= ======

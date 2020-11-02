@@ -3,8 +3,8 @@ SAM int July 2019 A15, 300km
 
 ============== ====================
 checksum32     937_969_482         
-date           2020-11-02T08:42:27 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:41 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 15, num_rlzs = 1
@@ -42,11 +42,11 @@ source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 
 Composite source model
 ----------------------
-====== ============================== ====
-grp_id gsim                           rlzs
-====== ============================== ====
-0      [AbrahamsonEtAl2015SInterHigh] [0] 
-====== ============================== ====
+====== ================================ ====
+grp_id gsim                             rlzs
+====== ================================ ====
+0      '[AbrahamsonEtAl2015SInterHigh]' [0] 
+====== ================================ ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-int_2     C    0.01527   1         1_755       
+int_2     C    0.01481   1         1_755       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-C    0.01527  
+C    0.01481  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.01568 nan    0.01568 0.01568
-read_source_model  1      0.02895 nan    0.02895 0.02895
+preclassical       1      0.01524 nan    0.01524 0.01524
+read_source_model  1      0.02764 nan    0.02764 0.02764
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -91,10 +91,10 @@ preclassical           243 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46634, maxmem=0.9 GB time_sec memory_mb counts
+calc_47004, maxmem=0.9 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.79802  0.25000   1     
-composite source model    0.79351  0.25000   1     
-total read_source_model   0.02895  0.0       1     
-total preclassical        0.01568  0.0       1     
+importing inputs          0.79113  0.25000   1     
+composite source model    0.78608  0.25000   1     
+total read_source_model   0.02764  0.0       1     
+total preclassical        0.01524  0.0       1     
 ========================= ======== ========= ======

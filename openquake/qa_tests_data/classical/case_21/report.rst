@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ====================
 checksum32     951_606_355         
-date           2020-11-02T08:42:19 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:34 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 4, num_rlzs = 27
@@ -42,22 +42,22 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== ================ =================================
-grp_id gsim             rlzs                             
-====== ================ =================================
-0      [SadighEtAl1997] [0, 1, 2]                        
-1      [SadighEtAl1997] [0, 3, 6, 9, 12, 15, 18, 21, 24] 
-2      [SadighEtAl1997] [1, 4, 7, 10, 13, 16, 19, 22, 25]
-3      [SadighEtAl1997] [2, 5, 8, 11, 14, 17, 20, 23, 26]
-4      [SadighEtAl1997] [3, 4, 5]                        
-5      [SadighEtAl1997] [6, 7, 8]                        
-6      [SadighEtAl1997] [9, 10, 11]                      
-7      [SadighEtAl1997] [12, 13, 14]                     
-8      [SadighEtAl1997] [15, 16, 17]                     
-9      [SadighEtAl1997] [18, 19, 20]                     
-10     [SadighEtAl1997] [21, 22, 23]                     
-11     [SadighEtAl1997] [24, 25, 26]                     
-====== ================ =================================
+====== ================== =================================
+grp_id gsim               rlzs                             
+====== ================== =================================
+0      '[SadighEtAl1997]' [0, 1, 2]                        
+1      '[SadighEtAl1997]' [0, 3, 6, 9, 12, 15, 18, 21, 24] 
+2      '[SadighEtAl1997]' [1, 4, 7, 10, 13, 16, 19, 22, 25]
+3      '[SadighEtAl1997]' [2, 5, 8, 11, 14, 17, 20, 23, 26]
+4      '[SadighEtAl1997]' [3, 4, 5]                        
+5      '[SadighEtAl1997]' [6, 7, 8]                        
+6      '[SadighEtAl1997]' [9, 10, 11]                      
+7      '[SadighEtAl1997]' [12, 13, 14]                     
+8      '[SadighEtAl1997]' [15, 16, 17]                     
+9      '[SadighEtAl1997]' [18, 19, 20]                     
+10     '[SadighEtAl1997]' [21, 22, 23]                     
+11     '[SadighEtAl1997]' [24, 25, 26]                     
+====== ================== =================================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -99,17 +99,17 @@ Slowest sources
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
 SFLT2;1   S    0.00190   1         148         
-SFLT1;1   S    0.00187   1         90          
-SFLT2;0   S    0.00186   1         384         
-SFLT1;5   S    0.00186   1         25          
-SFLT1;0   S    0.00182   1         150         
-SFLT2;2   S    0.00181   1         89          
-SFLT1;6   S    0.00178   1         198         
-SFLT1;2   S    0.00177   1         60          
-SFLT1;4   S    0.00177   1         27          
-SFLT1;3   S    0.00174   1         81          
-SFLT1;8   S    0.00162   1         99          
-SFLT1;7   S    0.00151   1         132         
+SFLT1;0   S    0.00187   1         150         
+SFLT1;4   S    0.00186   1         27          
+SFLT1;2   S    0.00183   1         60          
+SFLT1;6   S    0.00182   1         198         
+SFLT1;1   S    0.00182   1         90          
+SFLT1;3   S    0.00181   1         81          
+SFLT2;0   S    0.00180   1         384         
+SFLT2;2   S    0.00177   1         89          
+SFLT1;5   S    0.00177   1         25          
+SFLT1;7   S    0.00165   1         132         
+SFLT1;8   S    0.00159   1         99          
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -117,15 +117,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-S    0.02132  
+S    0.02150  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       12     0.00224 5%     0.00193 0.00238
-read_source_model  1      0.00248 nan    0.00248 0.00248
+preclassical       12     0.00226 4%     0.00202 0.00236
+read_source_model  1      0.00256 nan    0.00256 0.00256
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -139,10 +139,10 @@ preclassical      srcs=14.77 KB srcfilter=11.12 KB 2.87 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46626, maxmem=1.5 GB time_sec memory_mb counts
+calc_46996, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.22149  0.0       1     
-composite source model    0.21377  0.0       1     
-total preclassical        0.02694  0.46484   12    
-total read_source_model   0.00248  0.0       1     
+importing inputs          0.20847  0.0       1     
+composite source model    0.20131  0.0       1     
+total preclassical        0.02717  0.50391   12    
+total read_source_model   0.00256  0.0       1     
 ========================= ======== ========= ======

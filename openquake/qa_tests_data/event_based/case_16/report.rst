@@ -3,8 +3,8 @@ Reduced Hazard Italy
 
 ============== ====================
 checksum32     237_210_023         
-date           2020-11-02T08:41:28 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:13:43 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 148, num_levels = 3, num_rlzs = 4
@@ -45,14 +45,14 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== ==================== ====
-grp_id gsim                 rlzs
-====== ==================== ====
-0      [AkkarBommer2010]    [0] 
-0      [CauzziFaccioli2008] [1] 
-0      [ChiouYoungs2008]    [2] 
-0      [ZhaoEtAl2006Asc]    [3] 
-====== ==================== ====
+====== ====================== ====
+grp_id gsim                   rlzs
+====== ====================== ====
+0      '[AkkarBommer2010]'    [0] 
+0      '[CauzziFaccioli2008]' [1] 
+0      '[ChiouYoungs2008]'    [2] 
+0      '[ZhaoEtAl2006Asc]'    [3] 
+====== ====================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -96,7 +96,7 @@ Slowest sources
 ========== ==== ========= ========= ============
 source_id  code calc_time num_sites eff_ruptures
 ========== ==== ========= ========= ============
-AS_HRAS083 A    1.493E-04 28        2_295       
+AS_HRAS083 A    1.376E-04 28        2_295       
 ========== ==== ========= ========= ============
 
 Computation times by source typology
@@ -104,15 +104,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    1.493E-04
+A    1.376E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.708E-04 nan    5.708E-04 5.708E-04
-read_source_model  1      0.00319   nan    0.00319   0.00319  
+preclassical       1      5.605E-04 nan    5.605E-04 5.605E-04
+read_source_model  1      0.00305   nan    0.00305   0.00305  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -126,11 +126,11 @@ preclassical           248 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46574, maxmem=0.3 GB time_sec  memory_mb counts
+calc_46944, maxmem=0.4 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.15516   1.10156   1     
-composite source model    0.09224   0.0       1     
-reading exposure          0.00320   0.0       1     
-total read_source_model   0.00319   0.0       1     
-total preclassical        5.708E-04 0.0       1     
+importing inputs          0.24712   0.97266   1     
+composite source model    0.18708   0.0       1     
+reading exposure          0.00317   0.0       1     
+total read_source_model   0.00305   0.0       1     
+total preclassical        5.605E-04 0.0       1     
 ========================= ========= ========= ======

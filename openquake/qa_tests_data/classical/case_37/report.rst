@@ -3,8 +3,8 @@ Classical PSHA that utilises Christchurch-specific gsims and GMtoLHC horizontal 
 
 ============== ====================
 checksum32     677_658_808         
-date           2020-11-02T08:42:11 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:26 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 2, num_levels = 4, num_rlzs = 2
@@ -43,12 +43,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== =========================== ====
-grp_id gsim                        rlzs
-====== =========================== ====
-0      [Bradley2013bChchMaps]      [0] 
-0      [McVerry2006ChchStressDrop] [1] 
-====== =========================== ====
+====== ============================= ====
+grp_id gsim                          rlzs
+====== ============================= ====
+0      '[Bradley2013bChchMaps]'      [0] 
+0      '[McVerry2006ChchStressDrop]' [1] 
+====== ============================= ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -63,7 +63,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         X    1.423E-04 2         1           
+1         X    1.447E-04 2         1           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -71,15 +71,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-X    1.423E-04
+X    1.447E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.496E-04 nan    5.496E-04 5.496E-04
-read_source_model  1      0.02574   nan    0.02574   0.02574  
+preclassical       1      5.713E-04 nan    5.713E-04 5.713E-04
+read_source_model  1      0.04058   nan    0.04058   0.04058  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -93,10 +93,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46613, maxmem=0.3 GB time_sec  memory_mb counts
+calc_46983, maxmem=0.4 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.09594   0.01562   1     
-composite source model    0.08853   0.01562   1     
-total read_source_model   0.02574   0.0       1     
-total preclassical        5.496E-04 0.0       1     
+importing inputs          0.12290   0.03125   1     
+composite source model    0.11524   0.03125   1     
+total read_source_model   0.04058   0.0       1     
+total preclassical        5.713E-04 0.0       1     
 ========================= ========= ========= ======

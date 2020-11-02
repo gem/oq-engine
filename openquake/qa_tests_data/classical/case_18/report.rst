@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ====================
 checksum32     3_835_829_256       
-date           2020-11-02T08:42:59 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:15:13 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 3, num_levels = 36, num_rlzs = 3
@@ -43,16 +43,13 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== =================================================== ====
-grp_id gsim                                                rlzs
-====== =================================================== ====
-0      [GMPETable]
-gmpe_table = "./Wcrust_high_rhypo.hdf5" [2] 
-0      [GMPETable]
-gmpe_table = "./Wcrust_low_rhypo.hdf5"  [0] 
-0      [GMPETable]
-gmpe_table = "./Wcrust_med_rhypo.hdf5"  [1] 
-====== =================================================== ====
+====== ====================================================== ====
+grp_id gsim                                                   rlzs
+====== ====================================================== ====
+0      '[GMPETable]\ngmpe_table = "./Wcrust_high_rhypo.hdf5"' [2] 
+0      '[GMPETable]\ngmpe_table = "./Wcrust_low_rhypo.hdf5"'  [0] 
+0      '[GMPETable]\ngmpe_table = "./Wcrust_med_rhypo.hdf5"'  [1] 
+====== ====================================================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -67,7 +64,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-VICM      A    1.235E-04 3         2_430       
+VICM      A    1.252E-04 3         2_430       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -75,15 +72,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    1.235E-04
+A    1.252E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.302E-04 nan    5.302E-04 5.302E-04
-read_source_model  1      0.00368   nan    0.00368   0.00368  
+preclassical       1      5.496E-04 nan    5.496E-04 5.496E-04
+read_source_model  1      0.00370   nan    0.00370   0.00370  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -97,10 +94,10 @@ preclassical           242 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46660, maxmem=0.4 GB time_sec  memory_mb counts
+calc_47030, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.08573   0.0       1     
-composite source model    0.08054   0.0       1     
-total read_source_model   0.00368   0.0       1     
-total preclassical        5.302E-04 0.0       1     
+importing inputs          0.08566   0.0       1     
+composite source model    0.08053   0.0       1     
+total read_source_model   0.00370   0.0       1     
+total preclassical        5.496E-04 0.0       1     
 ========================= ========= ========= ======

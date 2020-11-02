@@ -3,8 +3,8 @@ Classical PSHA — using GMPE specrtal averaging
 
 ============== ====================
 checksum32     3_467_810_856       
-date           2020-11-02T08:42:08 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:22 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 20, num_rlzs = 1
@@ -42,14 +42,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== ============================================================================================================ ====
-grp_id gsim                                                                                                         rlzs
-====== ============================================================================================================ ====
-0      [GenericGmpeAvgSA]
-gmpe_name = "BooreAtkinson2008"
-avg_periods = [0.5, 1.0, 2.0]
-corr_func = "baker_jayaram" [0] 
-====== ============================================================================================================ ====
+====== ================================================================================================================= ====
+grp_id gsim                                                                                                              rlzs
+====== ================================================================================================================= ====
+0      '[GenericGmpeAvgSA]\ngmpe_name = "BooreAtkinson2008"\navg_periods = [0.5, 1.0, 2.0]\ncorr_func = "baker_jayaram"' [0] 
+====== ================================================================================================================= ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -64,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-956       A    1.202E-04 1         2_093       
+956       A    1.194E-04 1         2_093       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -72,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    1.202E-04
+A    1.194E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.338E-04 nan    5.338E-04 5.338E-04
-read_source_model  1      0.00366   nan    0.00366   0.00366  
+preclassical       1      5.462E-04 nan    5.462E-04 5.462E-04
+read_source_model  1      0.00466   nan    0.00466   0.00466  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -94,10 +91,10 @@ preclassical           241 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46608, maxmem=0.5 GB time_sec  memory_mb counts
+calc_46978, maxmem=0.5 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.27151   0.0       1     
-composite source model    0.26644   0.0       1     
-total read_source_model   0.00366   0.0       1     
-total preclassical        5.338E-04 0.0       1     
+importing inputs          0.26711   0.0       1     
+composite source model    0.26218   0.0       1     
+total read_source_model   0.00466   0.0       1     
+total preclassical        5.462E-04 0.0       1     
 ========================= ========= ========= ======

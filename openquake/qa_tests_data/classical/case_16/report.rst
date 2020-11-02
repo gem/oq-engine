@@ -3,8 +3,8 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 
 ============== ====================
 checksum32     53_665_629          
-date           2020-11-02T08:42:24 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:39 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 3, num_rlzs = 10
@@ -42,30 +42,30 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== =================== ============
-grp_id gsim                rlzs        
-====== =================== ============
-0      [BooreAtkinson2008] [0]         
-1      [BooreAtkinson2008] [0, 2]      
-2      [BooreAtkinson2008] [0, 3, 6, 9]
-3      [BooreAtkinson2008] [0, 5]      
-4      [BooreAtkinson2008] [1]         
-5      [BooreAtkinson2008] [1, 3, 7, 9]
-6      [BooreAtkinson2008] [1, 7]      
-7      [BooreAtkinson2008] [2]         
-8      [BooreAtkinson2008] [2, 8]      
-9      [BooreAtkinson2008] [3]         
-10     [BooreAtkinson2008] [3, 4]      
-11     [BooreAtkinson2008] [3, 7]      
-12     [BooreAtkinson2008] [4]         
-13     [BooreAtkinson2008] [4, 6]      
-14     [BooreAtkinson2008] [5]         
-15     [BooreAtkinson2008] [5, 6, 7]   
-16     [BooreAtkinson2008] [5, 7, 9]   
-17     [BooreAtkinson2008] [6]         
-18     [BooreAtkinson2008] [8]         
-19     [BooreAtkinson2008] [9]         
-====== =================== ============
+====== ===================== ============
+grp_id gsim                  rlzs        
+====== ===================== ============
+0      '[BooreAtkinson2008]' [0]         
+1      '[BooreAtkinson2008]' [0, 2]      
+2      '[BooreAtkinson2008]' [0, 3, 6, 9]
+3      '[BooreAtkinson2008]' [0, 5]      
+4      '[BooreAtkinson2008]' [1]         
+5      '[BooreAtkinson2008]' [1, 3, 7, 9]
+6      '[BooreAtkinson2008]' [1, 7]      
+7      '[BooreAtkinson2008]' [2]         
+8      '[BooreAtkinson2008]' [2, 8]      
+9      '[BooreAtkinson2008]' [3]         
+10     '[BooreAtkinson2008]' [3, 4]      
+11     '[BooreAtkinson2008]' [3, 7]      
+12     '[BooreAtkinson2008]' [4]         
+13     '[BooreAtkinson2008]' [4, 6]      
+14     '[BooreAtkinson2008]' [5]         
+15     '[BooreAtkinson2008]' [5, 6, 7]   
+16     '[BooreAtkinson2008]' [5, 7, 9]   
+17     '[BooreAtkinson2008]' [6]         
+18     '[BooreAtkinson2008]' [8]         
+19     '[BooreAtkinson2008]' [9]         
+====== ===================== ============
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -89,25 +89,25 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1;0       A    1.397E-04 1         68          
-3;4       A    1.366E-04 1         90          
-3;1       A    1.307E-04 1         90          
-3;2       A    1.299E-04 1         102         
-1;5       A    1.299E-04 1         60          
-2;1       A    1.280E-04 1         90          
-2;4       A    1.264E-04 1         78          
-5;5       A    1.256E-04 1         52          
-1;3       A    1.256E-04 1         60          
-2;0       A    1.254E-04 1         90          
-4;5       A    1.137E-04 1         60          
-2;5       A    9.346E-05 1         102         
-4;2       A    7.820E-05 1         52          
-4;3       A    7.677E-05 1         52          
-1;2       A    7.463E-05 1         60          
-3;3       A    7.415E-05 1         78          
-5;2       A    7.367E-05 1         60          
-5;1       A    7.296E-05 1         60          
-1;4       A    7.153E-05 1         68          
+5;5       A    1.814E-04 1         52          
+3;1       A    1.416E-04 1         90          
+1;0       A    1.378E-04 1         68          
+3;2       A    1.366E-04 1         102         
+3;4       A    1.292E-04 1         90          
+2;4       A    1.276E-04 1         78          
+2;0       A    1.264E-04 1         90          
+2;1       A    1.259E-04 1         90          
+1;5       A    1.256E-04 1         60          
+4;5       A    1.247E-04 1         60          
+1;3       A    1.194E-04 1         60          
+1;6       A    8.011E-05 1         60          
+4;2       A    7.606E-05 1         52          
+5;1       A    7.534E-05 1         60          
+5;2       A    7.463E-05 1         60          
+3;7       A    7.367E-05 1         78          
+4;3       A    7.248E-05 1         52          
+1;2       A    7.176E-05 1         60          
+3;0       A    7.153E-05 1         102         
 5;0       A    7.105E-05 1         52          
 ========= ==== ========= ========= ============
 
@@ -116,15 +116,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    0.00295  
+A    0.00300  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       11     7.924E-04 5%     7.212E-04 8.862E-04
-read_source_model  1      0.00667   nan    0.00667   0.00667  
+preclassical       11     7.949E-04 4%     7.560E-04 8.516E-04
+read_source_model  1      0.00666   nan    0.00666   0.00666  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -138,10 +138,10 @@ preclassical      srcs=41.46 KB srcfilter=13.83 KB 3.52 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46632, maxmem=1.5 GB time_sec memory_mb counts
+calc_47002, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.27234  0.0       1     
-composite source model    0.26653  0.0       1     
-total preclassical        0.00872  0.28125   11    
-total read_source_model   0.00667  0.0       1     
+importing inputs          0.30275  0.0       1     
+composite source model    0.29703  0.0       1     
+total preclassical        0.00874  0.37891   11    
+total read_source_model   0.00666  0.0       1     
 ========================= ======== ========= ======

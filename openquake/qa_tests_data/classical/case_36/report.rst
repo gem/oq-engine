@@ -3,8 +3,8 @@ applyToSources with multiple sources
 
 ============== ====================
 checksum32     3_933_251_036       
-date           2020-11-02T08:42:36 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:50 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 1, num_rlzs = 9
@@ -42,46 +42,46 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== ==================== =========
-grp_id gsim                 rlzs     
-====== ==================== =========
-0      [SadighEtAl1997]     [0, 4, 5]
-1      [SadighEtAl1997]     [1, 2]   
-2      [SadighEtAl1997]     [3, 7]   
-3      [SadighEtAl1997]     [6]      
-4      [SadighEtAl1997]     [8]      
-5      [SadighEtAl1997]     [0, 1]   
-6      [SadighEtAl1997]     [2]      
-7      [SadighEtAl1997]     [3]      
-8      [SadighEtAl1997]     [4, 5]   
-9      [SadighEtAl1997]     [6, 7]   
-10     [SadighEtAl1997]     [8]      
-11     [SadighEtAl1997]     [0, 1]   
-11     [AkkarBommer2010]    [2]      
-12     [SadighEtAl1997]     [0, 1]   
-12     [AkkarBommer2010]    [2, 3]   
-13     [SadighEtAl1997]     [0]      
-13     [AkkarBommer2010]    [2]      
-14     [SadighEtAl1997]     [0]      
-14     [AkkarBommer2010]    [2, 3]   
-15     [SadighEtAl1997]     [0, 6]   
-16     [SadighEtAl1997]     [1]      
-17     [SadighEtAl1997]     [1, 5, 8]
-17     [AkkarBommer2010]    [2]      
-18     [SadighEtAl1997]     [1]      
-18     [AkkarBommer2010]    [3]      
-19     [AkkarBommer2010]    [3]      
-20     [SadighEtAl1997]     [4]      
-21     [SadighEtAl1997]     [4, 5]   
-22     [SadighEtAl1997]     [5]      
-23     [SadighEtAl1997]     [6]      
-23     [CauzziFaccioli2008] [7]      
-24     [SadighEtAl1997]     [6, 8]   
-24     [CauzziFaccioli2008] [7]      
-25     [SadighEtAl1997]     [6, 8]   
-26     [CauzziFaccioli2008] [7]      
-27     [SadighEtAl1997]     [8]      
-====== ==================== =========
+====== ====================== =========
+grp_id gsim                   rlzs     
+====== ====================== =========
+0      '[SadighEtAl1997]'     [0, 4, 5]
+1      '[SadighEtAl1997]'     [1, 2]   
+2      '[SadighEtAl1997]'     [3, 7]   
+3      '[SadighEtAl1997]'     [6]      
+4      '[SadighEtAl1997]'     [8]      
+5      '[SadighEtAl1997]'     [0, 1]   
+6      '[SadighEtAl1997]'     [2]      
+7      '[SadighEtAl1997]'     [3]      
+8      '[SadighEtAl1997]'     [4, 5]   
+9      '[SadighEtAl1997]'     [6, 7]   
+10     '[SadighEtAl1997]'     [8]      
+11     '[SadighEtAl1997]'     [0, 1]   
+11     '[AkkarBommer2010]'    [2]      
+12     '[SadighEtAl1997]'     [0, 1]   
+12     '[AkkarBommer2010]'    [2, 3]   
+13     '[SadighEtAl1997]'     [0]      
+13     '[AkkarBommer2010]'    [2]      
+14     '[SadighEtAl1997]'     [0]      
+14     '[AkkarBommer2010]'    [2, 3]   
+15     '[SadighEtAl1997]'     [0, 6]   
+16     '[SadighEtAl1997]'     [1]      
+17     '[SadighEtAl1997]'     [1, 5, 8]
+17     '[AkkarBommer2010]'    [2]      
+18     '[SadighEtAl1997]'     [1]      
+18     '[AkkarBommer2010]'    [3]      
+19     '[AkkarBommer2010]'    [3]      
+20     '[SadighEtAl1997]'     [4]      
+21     '[SadighEtAl1997]'     [4, 5]   
+22     '[SadighEtAl1997]'     [5]      
+23     '[SadighEtAl1997]'     [6]      
+23     '[CauzziFaccioli2008]' [7]      
+24     '[SadighEtAl1997]'     [6, 8]   
+24     '[CauzziFaccioli2008]' [7]      
+25     '[SadighEtAl1997]'     [6, 8]   
+26     '[CauzziFaccioli2008]' [7]      
+27     '[SadighEtAl1997]'     [8]      
+====== ====================== =========
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -122,12 +122,12 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1;4       C    0.00373   1         633         
-1;0       C    0.00369   1         633         
-1;1       C    0.00363   1         633         
-1;5       C    0.00335   1         633         
-1;3       C    0.00326   1         656         
-1;2       C    0.00324   1         633         
+1;4       C    0.00376   1         633         
+1;0       C    0.00363   1         633         
+1;1       C    0.00359   1         633         
+1;5       C    0.00339   1         633         
+1;2       C    0.00321   1         633         
+1;3       C    0.00320   1         656         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -136,7 +136,7 @@ Computation times by source typology
 code calc_time
 ==== =========
 A    0.0      
-C    0.02090  
+C    0.02076  
 S    0.0      
 ==== =========
 
@@ -144,8 +144,8 @@ Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ========= =======
 operation-duration counts mean    stddev min       max    
-preclassical       16     0.00504 74%    6.540E-04 0.01190
-read_source_model  1      0.03510 nan    0.03510   0.03510
+preclassical       16     0.00531 72%    6.614E-04 0.01181
+read_source_model  1      0.01951 nan    0.01951   0.01951
 ================== ====== ======= ====== ========= =======
 
 Data transfer
@@ -159,10 +159,10 @@ preclassical      srcs=96.25 KB srcfilter=25.16 KB 3.33 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46640, maxmem=1.5 GB time_sec memory_mb counts
+calc_47010, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.82948  0.0       1     
-composite source model    1.82321  0.0       1     
-total preclassical        0.08067  0.44141   16    
-total read_source_model   0.03510  0.0       1     
+importing inputs          1.67439  0.0       1     
+composite source model    1.66825  0.0       1     
+total preclassical        0.08501  0.48438   16    
+total read_source_model   0.01951  0.0       1     
 ========================= ======== ========= ======

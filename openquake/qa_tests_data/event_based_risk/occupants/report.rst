@@ -3,8 +3,8 @@ event based risk
 
 ============== ====================
 checksum32     3_959_245_916       
-date           2020-11-02T08:41:54 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:08 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 7, num_levels = 1, num_rlzs = 1
@@ -44,11 +44,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== =================== ====
-grp_id gsim                rlzs
-====== =================== ====
-0      [BooreAtkinson2008] [0] 
-====== =================== ====
+====== ===================== ====
+grp_id gsim                  rlzs
+====== ===================== ====
+0      '[BooreAtkinson2008]' [0] 
+====== ===================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -75,7 +75,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         S    0.00244   7         482         
+1         S    0.00246   7         482         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -83,15 +83,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-S    0.00244  
+S    0.00246  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.00286 nan    0.00286 0.00286
-read_source_model  1      0.00152 nan    0.00152 0.00152
+preclassical       1      0.01906 nan    0.01906 0.01906
+read_source_model  1      0.00165 nan    0.00165 0.00165
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -105,11 +105,11 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46592, maxmem=0.4 GB time_sec  memory_mb counts
+calc_46962, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.12779   0.0       1     
-composite source model    0.10711   0.0       1     
-total preclassical        0.00286   0.0       1     
-total read_source_model   0.00152   0.0       1     
-reading exposure          7.136E-04 0.0       1     
+importing inputs          0.10103   0.0       1     
+composite source model    0.08009   0.0       1     
+total preclassical        0.01906   0.0       1     
+total read_source_model   0.00165   0.0       1     
+reading exposure          7.088E-04 0.0       1     
 ========================= ========= ========= ======

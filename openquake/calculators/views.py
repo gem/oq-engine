@@ -198,12 +198,15 @@ def view_contents(token, dstore):
 @view.add('full_lt')
 def view_full_lt(token, dstore):
     full_lt = dstore['full_lt']
-    rlzs_by_gsim = full_lt.get_rlzs_by_gsim_list(dstore['et_ids'])
+    try:
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['et_ids'])
+    except KeyError:  # for scenario et_ids is missing
+        rlzs_by_gsim_list = [full_lt.get_rlzs_by_gsim(0)]
     header = ['grp_id', 'gsim', 'rlzs']
     rows = []
-    for grp_id, rbg in enumerate(rlzs_by_gsim):
+    for grp_id, rbg in enumerate(rlzs_by_gsim_list):
         for gsim, rlzs in rbg.items():
-            rows.append([grp_id, str(gsim), str(list(rlzs))])
+            rows.append([grp_id, repr(str(gsim)), str(list(rlzs))])
     return rst_table(rows, header)
 
 

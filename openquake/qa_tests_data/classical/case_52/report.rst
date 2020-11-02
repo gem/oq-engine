@@ -3,8 +3,8 @@ late_weights sampling
 
 ============== ====================
 checksum32     382_189_057         
-date           2020-11-02T08:42:24 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:38 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 20, num_rlzs = 10
@@ -42,12 +42,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== ================= =====================
-grp_id gsim              rlzs                 
-====== ================= =====================
-0      [AkkarBommer2010] [3, 4, 7]            
-0      [SadighEtAl1997]  [0, 1, 2, 5, 6, 8, 9]
-====== ================= =====================
+====== =================== =====================
+grp_id gsim                rlzs                 
+====== =================== =====================
+0      '[AkkarBommer2010]' [3, 4, 7]            
+0      '[SadighEtAl1997]'  [0, 1, 2, 5, 6, 8, 9]
+====== =================== =====================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -62,7 +62,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         P    1.652E-04 1         3           
+1         P    1.523E-04 1         3           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -70,15 +70,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    1.652E-04
+P    1.523E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.772E-04 nan    5.772E-04 5.772E-04
-read_source_model  1      0.00172   nan    0.00172   0.00172  
+preclassical       1      5.844E-04 nan    5.844E-04 5.844E-04
+read_source_model  1      0.00177   nan    0.00177   0.00177  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -92,10 +92,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46630, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47000, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.08178   0.0       1     
-composite source model    0.05976   0.0       1     
-total read_source_model   0.00172   0.0       1     
-total preclassical        5.772E-04 0.0       1     
+importing inputs          0.06659   0.0       1     
+composite source model    0.06074   0.0       1     
+total read_source_model   0.00177   0.0       1     
+total preclassical        5.844E-04 0.0       1     
 ========================= ========= ========= ======

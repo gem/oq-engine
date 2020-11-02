@@ -3,8 +3,8 @@ Hazard Japan (HERP model 2014) reduced
 
 ============== ====================
 checksum32     2_710_180_929       
-date           2020-11-02T08:41:37 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:13:51 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 5, num_levels = 1, num_rlzs = 1
@@ -43,12 +43,12 @@ source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 
 Composite source model
 ----------------------
-====== ==================== ====
-grp_id gsim                 rlzs
-====== ==================== ====
-0      [ZhaoEtAl2006SInter] [0] 
-1      [ZhaoEtAl2006SInter] [0] 
-====== ==================== ====
+====== ====================== ====
+grp_id gsim                   rlzs
+====== ====================== ====
+0      '[ZhaoEtAl2006SInter]' [0] 
+1      '[ZhaoEtAl2006SInter]' [0] 
+====== ====================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -63,8 +63,8 @@ Slowest sources
 ================== ==== ========= ========= ============
 source_id          code calc_time num_sites eff_ruptures
 ================== ==== ========= ========= ============
-case_02            N    2.599E-04 1         1           
-gs_PSE_CPCF_2_1228 P    2.060E-04 1         26          
+case_02            N    2.747E-04 1         1           
+gs_PSE_CPCF_2_1228 P    1.850E-04 1         26          
 ================== ==== ========= ========= ============
 
 Computation times by source typology
@@ -72,16 +72,16 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-N    2.599E-04
-P    2.060E-04
+N    2.747E-04
+P    1.850E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       2      7.179E-04 4%     6.840E-04 7.517E-04
-read_source_model  1      0.00369   nan    0.00369   0.00369  
+preclassical       2      7.210E-04 3%     6.940E-04 7.479E-04
+read_source_model  1      0.00502   nan    0.00502   0.00502  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -95,10 +95,10 @@ preclassical      srcs=6.8 KB srcfilter=3.35 KB 501 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46579, maxmem=1.0 GB time_sec memory_mb counts
+calc_46949, maxmem=1.0 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.08790  0.0       1     
-composite source model    0.07964  0.0       1     
-total read_source_model   0.00369  0.0       1     
-total preclassical        0.00144  0.44531   2     
+importing inputs          0.06865  0.0       1     
+composite source model    0.05989  0.0       1     
+total read_source_model   0.00502  0.0       1     
+total preclassical        0.00144  0.46094   2     
 ========================= ======== ========= ======

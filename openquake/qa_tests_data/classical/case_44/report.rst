@@ -3,8 +3,8 @@ Test the use of the `shift_hypo` option
 
 ============== ====================
 checksum32     2_830_909_546       
-date           2020-11-02T08:42:30 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:44 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 20, num_rlzs = 1
@@ -42,11 +42,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== ============== ====
-grp_id gsim           rlzs
-====== ============== ====
-0      [Atkinson2015] [0] 
-====== ============== ====
+====== ================ ====
+grp_id gsim             rlzs
+====== ================ ====
+0      '[Atkinson2015]' [0] 
+====== ================ ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         A    1.180E-04 1         200         
+1         A    1.187E-04 1         200         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    1.180E-04
+A    1.187E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.307E-04 nan    5.307E-04 5.307E-04
-read_source_model  1      0.00343   nan    0.00343   0.00343  
+preclassical       1      5.419E-04 nan    5.419E-04 5.419E-04
+read_source_model  1      0.00264   nan    0.00264   0.00264  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -91,10 +91,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46636, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47006, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.07432   0.0       1     
-composite source model    0.06923   0.0       1     
-total read_source_model   0.00343   0.0       1     
-total preclassical        5.307E-04 0.0       1     
+importing inputs          0.06781   0.0       1     
+composite source model    0.06305   0.0       1     
+total read_source_model   0.00264   0.0       1     
+total preclassical        5.419E-04 0.0       1     
 ========================= ========= ========= ======

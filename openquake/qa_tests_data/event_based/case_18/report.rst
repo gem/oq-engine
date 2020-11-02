@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 18
 
 ============== ====================
 checksum32     3_211_005_400       
-date           2020-11-02T08:41:45 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:13:59 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 4, num_rlzs = 3
@@ -42,12 +42,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== ==================== ======
-grp_id gsim                 rlzs  
-====== ==================== ======
-0      [AkkarBommer2010]    [0]   
-0      [CauzziFaccioli2008] [1, 2]
-====== ==================== ======
+====== ====================== ======
+grp_id gsim                   rlzs  
+====== ====================== ======
+0      '[AkkarBommer2010]'    [0]   
+0      '[CauzziFaccioli2008]' [1, 2]
+====== ====================== ======
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -62,7 +62,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         P    0.00419   1         3_000       
+1         P    0.00425   1         3_000       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -70,15 +70,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    0.00419  
+P    0.00425  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.00474 nan    0.00474 0.00474
-read_source_model  1      0.00239 nan    0.00239 0.00239
+preclassical       1      0.00469 nan    0.00469 0.00469
+read_source_model  1      0.00256 nan    0.00256 0.00256
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -92,10 +92,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46588, maxmem=0.3 GB time_sec memory_mb counts
+calc_46958, maxmem=0.3 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.08743  0.0       1     
-composite source model    0.08227  0.0       1     
-total preclassical        0.00474  0.0       1     
-total read_source_model   0.00239  0.0       1     
+importing inputs          0.06970  0.0       1     
+composite source model    0.06457  0.0       1     
+total preclassical        0.00469  0.0       1     
+total read_source_model   0.00256  0.0       1     
 ========================= ======== ========= ======

@@ -3,8 +3,8 @@ Classical PSHA - Loss fractions QA test
 
 ============== ====================
 checksum32     1_419_521_135       
-date           2020-11-02T08:40:45 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:12:58 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 12, num_levels = 19, num_rlzs = 1
@@ -44,11 +44,11 @@ structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 
 Composite source model
 ----------------------
-====== ================= ====
-grp_id gsim              rlzs
-====== ================= ====
-0      [ChiouYoungs2008] [0] 
-====== ================= ====
+====== =================== ====
+grp_id gsim                rlzs
+====== =================== ====
+0      '[ChiouYoungs2008]' [0] 
+====== =================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -79,8 +79,8 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-225       A    1.657E-04 2         520         
-232       A    1.507E-04 8         1_612       
+232       A    1.709E-04 8         1_612       
+225       A    1.602E-04 2         520         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -88,15 +88,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    3.164E-04
+A    3.312E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       15     5.753E-04 9%     4.845E-04 6.936E-04
-read_source_model  1      0.01769   nan    0.01769   0.01769  
+preclassical       15     5.693E-04 9%     4.861E-04 6.769E-04
+read_source_model  1      0.03276   nan    0.03276   0.03276  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -110,11 +110,11 @@ preclassical      srcs=30.78 KB srcfilter=26.95 KB 2.97 KB
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46491, maxmem=1.5 GB time_sec  memory_mb counts
+calc_46860, maxmem=1.5 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          2.20829   0.10156   1     
-composite source model    2.18170   0.10156   1     
-total read_source_model   0.01769   0.0       1     
-total preclassical        0.00863   0.36719   15    
-reading exposure          5.794E-04 0.0       1     
+importing inputs          2.40246   0.16797   1     
+composite source model    2.37612   0.16797   1     
+total read_source_model   0.03276   0.0       1     
+total preclassical        0.00854   0.50391   15    
+reading exposure          7.689E-04 0.0       1     
 ========================= ========= ========= ======

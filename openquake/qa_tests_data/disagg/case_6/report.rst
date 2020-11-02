@@ -3,8 +3,8 @@ GEM model for PAC, 0.10 in 50 years, Suva, testing IDL
 
 ============== ====================
 checksum32     1_106_876_662       
-date           2020-11-02T08:40:53 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:13:07 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 20, num_rlzs = 3
@@ -42,13 +42,13 @@ source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 
 Composite source model
 ----------------------
-====== =================== ====
-grp_id gsim                rlzs
-====== =================== ====
-0      [BooreAtkinson2008] [0] 
-0      [ChiouYoungs2008]   [1] 
-0      [ZhaoEtAl2006Asc]   [2] 
-====== =================== ====
+====== ===================== ====
+grp_id gsim                  rlzs
+====== ===================== ====
+0      '[BooreAtkinson2008]' [0] 
+0      '[ChiouYoungs2008]'   [1] 
+0      '[ZhaoEtAl2006Asc]'   [2] 
+====== ===================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -63,11 +63,11 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-19        S    0.02207   1         86          
-32        S    0.02168   1         80          
-36        S    0.01944   1         67          
-39        S    0.01910   1         61          
-28        S    0.01452   1         55          
+32        S    0.02370   1         80          
+19        S    0.02281   1         86          
+39        S    0.01971   1         61          
+36        S    0.01958   1         67          
+28        S    0.01480   1         55          
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -75,15 +75,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-S    0.09681  
+S    0.10059  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       5      0.01989 13%    0.01504 0.02259
-read_source_model  1      0.02271 nan    0.02271 0.02271
+preclassical       5      0.02065 15%    0.01530 0.02430
+read_source_model  1      0.03803 nan    0.03803 0.03803
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -97,10 +97,10 @@ preclassical      srcs=33.03 KB srcfilter=4.96 KB 1.17 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46526, maxmem=1.2 GB time_sec memory_mb counts
+calc_46895, maxmem=1.2 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.28726  0.00781   1     
-composite source model    0.28190  0.00781   1     
-total preclassical        0.09946  0.28906   5     
-total read_source_model   0.02271  0.0       1     
+importing inputs          0.49682  0.0       1     
+composite source model    0.49157  0.0       1     
+total preclassical        0.10324  0.36328   5     
+total read_source_model   0.03803  0.0       1     
 ========================= ======== ========= ======

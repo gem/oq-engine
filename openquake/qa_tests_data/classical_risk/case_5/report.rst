@@ -3,8 +3,8 @@ Hazard Calculation for end-to-end hazard+risk
 
 ============== ====================
 checksum32     3_242_621_847       
-date           2020-11-02T08:40:36 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:12:49 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 50, num_rlzs = 4
@@ -42,15 +42,15 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== ========================= ============
-grp_id gsim                      rlzs        
-====== ========================= ============
-0      [AkkarBommer2010]         [0, 1, 2, 3]
-1      [AtkinsonBoore2003SInter] [1]         
-1      [LinLee2008SInter]        [3]         
-1      [YoungsEtAl1997SInter]    [2]         
-1      [ZhaoEtAl2006SInter]      [0]         
-====== ========================= ============
+====== =========================== ============
+grp_id gsim                        rlzs        
+====== =========================== ============
+0      '[AkkarBommer2010]'         [0, 1, 2, 3]
+1      '[AtkinsonBoore2003SInter]' [1]         
+1      '[LinLee2008SInter]'        [3]         
+1      '[YoungsEtAl1997SInter]'    [2]         
+1      '[ZhaoEtAl2006SInter]'      [0]         
+====== =========================== ============
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -66,8 +66,8 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-A         P    2.127E-04 1         23          
-B         P    2.103E-04 1         23          
+A         P    2.031E-04 1         23          
+B         P    1.905E-04 1         23          
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -75,15 +75,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    4.230E-04
+P    3.936E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       2      6.979E-04 1%     6.862E-04 7.095E-04
-read_source_model  1      0.00251   nan    0.00251   0.00251  
+preclassical       2      7.498E-04 1%     7.408E-04 7.589E-04
+read_source_model  1      0.00277   nan    0.00277   0.00277  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -97,10 +97,10 @@ preclassical      srcfilter=4.04 KB srcs=2.34 KB 478 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46488, maxmem=1.0 GB time_sec memory_mb counts
+calc_46857, maxmem=1.0 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.06892  0.85547   1     
-composite source model    0.06332  0.83984   1     
-total read_source_model   0.00251  0.02734   1     
-total preclassical        0.00140  0.37109   2     
+importing inputs          0.07460  0.68750   1     
+composite source model    0.06880  0.67578   1     
+total read_source_model   0.00277  0.03125   1     
+total preclassical        0.00150  0.31250   2     
 ========================= ======== ========= ======

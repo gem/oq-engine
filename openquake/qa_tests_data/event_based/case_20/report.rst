@@ -3,8 +3,8 @@ British Columbia With Vs30
 
 ============== ====================
 checksum32     2_694_571_962       
-date           2020-11-02T08:41:34 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:13:49 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 2, num_levels = 3, num_rlzs = 15
@@ -44,22 +44,16 @@ source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 
 Composite source model
 ----------------------
-====== =============================================== ==========
-grp_id gsim                                            rlzs      
-====== =============================================== ==========
-0      [NRCan15SiteTerm]
-gmpe_name = 'OceanicCan15Low' [0, 6, 9] 
-0      [NRCan15SiteTerm]
-gmpe_name = 'OceanicCan15Mid' [1, 7, 10]
-0      [NRCan15SiteTerm]
-gmpe_name = 'OceanicCan15Upp' [2, 8, 11]
-1      [NRCan15SiteTerm]
-gmpe_name = 'OceanicCan15Low' [3, 12]   
-1      [NRCan15SiteTerm]
-gmpe_name = 'OceanicCan15Mid' [4, 13]   
-1      [NRCan15SiteTerm]
-gmpe_name = 'OceanicCan15Upp' [5, 14]   
-====== =============================================== ==========
+====== ================================================== ==========
+grp_id gsim                                               rlzs      
+====== ================================================== ==========
+0      "[NRCan15SiteTerm]\ngmpe_name = 'OceanicCan15Low'" [0, 6, 9] 
+0      "[NRCan15SiteTerm]\ngmpe_name = 'OceanicCan15Mid'" [1, 7, 10]
+0      "[NRCan15SiteTerm]\ngmpe_name = 'OceanicCan15Upp'" [2, 8, 11]
+1      "[NRCan15SiteTerm]\ngmpe_name = 'OceanicCan15Low'" [3, 12]   
+1      "[NRCan15SiteTerm]\ngmpe_name = 'OceanicCan15Mid'" [4, 13]   
+1      "[NRCan15SiteTerm]\ngmpe_name = 'OceanicCan15Upp'" [5, 14]   
+====== ================================================== ==========
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -92,8 +86,8 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-OFS;1     A    1.454E-04 2         15_618      
-OFS;0     A    1.347E-04 2         8_778       
+OFS;0     A    1.442E-04 2         8_778       
+OFS;1     A    1.392E-04 2         15_618      
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -101,15 +95,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    2.801E-04
+A    2.835E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       2      6.495E-04 2%     6.311E-04 6.678E-04
-read_source_model  5      0.00256   3%     0.00241   0.00271  
+preclassical       2      6.351E-04 1%     6.232E-04 6.471E-04
+read_source_model  5      0.00252   1%     0.00248   0.00259  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -123,11 +117,11 @@ preclassical      srcs=5.14 KB srcfilter=2.68 KB 486 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46578, maxmem=1.2 GB time_sec memory_mb counts
+calc_46948, maxmem=1.2 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.29310  0.0       1     
-composite source model    1.26773  0.0       1     
-total read_source_model   0.01279  0.53125   5     
-reading exposure          0.00234  0.0       1     
-total preclassical        0.00130  0.35938   2     
+importing inputs          1.29873  0.0       1     
+composite source model    1.27373  0.0       1     
+total read_source_model   0.01258  0.48047   5     
+reading exposure          0.00210  0.0       1     
+total preclassical        0.00127  0.24609   2     
 ========================= ======== ========= ======

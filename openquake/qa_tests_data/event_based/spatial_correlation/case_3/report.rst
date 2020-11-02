@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with No Spatial Correlation, case 3
 
 ============== ====================
 checksum32     1_103_090_900       
-date           2020-11-02T08:41:28 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:13:42 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 2, num_levels = 1, num_rlzs = 1
@@ -42,11 +42,11 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== =================== ====
-grp_id gsim                rlzs
-====== =================== ====
-0      [BooreAtkinson2008] [0] 
-====== =================== ====
+====== ===================== ====
+grp_id gsim                  rlzs
+====== ===================== ====
+0      '[BooreAtkinson2008]' [0] 
+====== ===================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         P    1.526E-04 2         1           
+1         P    1.457E-04 2         1           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    1.526E-04
+P    1.457E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.674E-04 nan    5.674E-04 5.674E-04
-read_source_model  1      0.00136   nan    0.00136   0.00136  
+preclassical       1      5.705E-04 nan    5.705E-04 5.705E-04
+read_source_model  1      0.00173   nan    0.00173   0.00173  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -91,10 +91,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46572, maxmem=0.3 GB time_sec  memory_mb counts
+calc_46942, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.07705   0.0       1     
-composite source model    0.07221   0.0       1     
-total read_source_model   0.00136   0.0       1     
-total preclassical        5.674E-04 0.0       1     
+importing inputs          0.05346   0.0       1     
+composite source model    0.04881   0.0       1     
+total read_source_model   0.00173   0.0       1     
+total preclassical        5.705E-04 0.0       1     
 ========================= ========= ========= ======

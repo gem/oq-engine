@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ====================
 checksum32     96_663_792          
-date           2020-11-02T08:41:03 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:13:16 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 200, num_rlzs = 6
@@ -42,16 +42,16 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== =================== ====
-grp_id gsim                rlzs
-====== =================== ====
-0      [BindiEtAl2011]     [0] 
-0      [BindiEtAl2014Rhyp] [1] 
-0      [CauzziEtAl2014]    [2] 
-1      [BindiEtAl2011]     [3] 
-1      [BindiEtAl2014Rhyp] [4] 
-1      [CauzziEtAl2014]    [5] 
-====== =================== ====
+====== ===================== ====
+grp_id gsim                  rlzs
+====== ===================== ====
+0      '[BindiEtAl2011]'     [0] 
+0      '[BindiEtAl2014Rhyp]' [1] 
+0      '[CauzziEtAl2014]'    [2] 
+1      '[BindiEtAl2011]'     [3] 
+1      '[BindiEtAl2014Rhyp]' [4] 
+1      '[CauzziEtAl2014]'    [5] 
+====== ===================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -67,11 +67,11 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-f1        C    0.00158   1         477         
-p1        P    1.853E-04 1         156         
-p3        P    1.814E-04 1         156         
-p2        P    1.745E-04 1         156         
-p4        P    1.714E-04 1         156         
+f1        C    0.00157   1         477         
+p3        P    1.884E-04 1         156         
+p1        P    1.795E-04 1         156         
+p2        P    1.791E-04 1         156         
+p4        P    1.726E-04 1         156         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -79,16 +79,16 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-C    0.00158  
-P    7.126E-04
+C    0.00157  
+P    7.195E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =======
 operation-duration counts mean      stddev min       max    
-preclassical       5      9.479E-04 59%    6.320E-04 0.00207
-read_source_model  2      0.00298   3%     0.00287   0.00309
+preclassical       5      9.600E-04 57%    6.557E-04 0.00207
+read_source_model  2      0.00294   3%     0.00284   0.00304
 ================== ====== ========= ====== ========= =======
 
 Data transfer
@@ -102,10 +102,10 @@ preclassical      srcfilter=9.8 KB srcs=7.9 KB 1.17 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46532, maxmem=1.2 GB time_sec memory_mb counts
+calc_46901, maxmem=1.2 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.06159  0.0       1     
-composite source model    1.05680  0.0       1     
-total read_source_model   0.00596  0.62500   2     
-total preclassical        0.00474  0.37500   5     
+importing inputs          1.05131  0.0       1     
+composite source model    1.04639  0.0       1     
+total read_source_model   0.00587  0.48438   2     
+total preclassical        0.00480  0.41797   5     
 ========================= ======== ========= ======

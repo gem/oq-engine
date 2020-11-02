@@ -3,8 +3,8 @@ Event Based Risk Lisbon
 
 ============== ====================
 checksum32     2_099_960_623       
-date           2020-11-02T08:42:03 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:18 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 1, num_rlzs = 8
@@ -44,18 +44,18 @@ structural_vulnerability `vulnerability_model2013.xml <vulnerability_model2013.x
 
 Composite source model
 ----------------------
-====== =================== ======
-grp_id gsim                rlzs  
-====== =================== ======
-0      [AkkarBommer2010]   [2, 3]
-0      [AtkinsonBoore2006] [0, 1]
-1      [AkkarBommer2010]   [6, 7]
-1      [AtkinsonBoore2006] [4, 5]
-2      [AkkarBommer2010]   [1, 3]
-2      [AtkinsonBoore2006] [0, 2]
-3      [AkkarBommer2010]   [5, 7]
-3      [AtkinsonBoore2006] [4, 6]
-====== =================== ======
+====== ===================== ======
+grp_id gsim                  rlzs  
+====== ===================== ======
+0      '[AkkarBommer2010]'   [2, 3]
+0      '[AtkinsonBoore2006]' [0, 1]
+1      '[AkkarBommer2010]'   [6, 7]
+1      '[AtkinsonBoore2006]' [4, 5]
+2      '[AkkarBommer2010]'   [1, 3]
+2      '[AtkinsonBoore2006]' [0, 2]
+3      '[AkkarBommer2010]'   [5, 7]
+3      '[AtkinsonBoore2006]' [4, 6]
+====== ===================== ======
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -85,26 +85,26 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-2;0       A    1.402E-04 1         4_901       
-4;1       A    1.383E-04 1         310         
-10;0      A    1.349E-04 1         1_116       
-1;1       A    1.316E-04 1         989         
-6;0       A    1.299E-04 1         1_054       
-8;0       A    1.290E-04 1         342         
-10;1      A    1.245E-04 1         1_116       
-0;0       A    1.233E-04 1         6_075       
-6;1       A    1.202E-04 1         1_054       
-4;0       A    1.190E-04 1         310         
-8;1       A    1.156E-04 1         342         
-2;1       A    7.391E-05 1         4_901       
-9;0       A    7.343E-05 1         612         
-7;0       A    7.200E-05 1         429         
-5;0       A    7.200E-05 1         551         
-1;0       A    7.176E-05 1         989         
-3;1       A    7.129E-05 1         812         
-3;0       A    7.105E-05 1         812         
-9;1       A    6.986E-05 1         612         
-5;1       A    6.986E-05 1         551         
+0;0       A    1.423E-04 1         6_075       
+10;1      A    1.302E-04 1         1_116       
+4;0       A    1.299E-04 1         310         
+10;0      A    1.276E-04 1         1_116       
+2;0       A    1.273E-04 1         4_901       
+1;1       A    1.268E-04 1         989         
+6;1       A    1.256E-04 1         1_054       
+4;1       A    1.254E-04 1         310         
+6;0       A    1.252E-04 1         1_054       
+8;0       A    1.245E-04 1         342         
+8;1       A    1.099E-04 1         342         
+3;1       A    7.439E-05 1         812         
+5;1       A    7.391E-05 1         551         
+1;0       A    7.391E-05 1         989         
+9;1       A    7.367E-05 1         612         
+7;1       A    7.367E-05 1         429         
+0;1       A    7.367E-05 1         6_075       
+5;0       A    7.343E-05 1         551         
+2;1       A    7.176E-05 1         4_901       
+7;0       A    7.153E-05 1         429         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -112,15 +112,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    0.00219  
+A    0.00220  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       11     7.064E-04 4%     6.423E-04 7.617E-04
-read_source_model  2      0.01139   0%     0.01139   0.01140  
+preclassical       11     6.923E-04 4%     6.306E-04 7.370E-04
+read_source_model  2      0.01162   0%     0.01157   0.01166  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -134,11 +134,11 @@ preclassical      srcs=32.54 KB srcfilter=30.6 KB 3.06 KB
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46604, maxmem=1.5 GB time_sec  memory_mb counts
+calc_46974, maxmem=1.5 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          1.58137   0.0       1     
-composite source model    1.56209   0.0       1     
-total read_source_model   0.02279   0.50000   2     
-total preclassical        0.00777   0.37109   11    
-reading exposure          6.573E-04 0.0       1     
+importing inputs          1.56336   0.0       1     
+composite source model    1.54480   0.0       1     
+total read_source_model   0.02324   0.51172   2     
+total preclassical        0.00761   0.37109   11    
+reading exposure          6.163E-04 0.0       1     
 ========================= ========= ========= ======

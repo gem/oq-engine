@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 20
 
 ============== ====================
 checksum32     2_043_154_504       
-date           2020-11-02T08:42:40 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:54 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 4, num_rlzs = 12
@@ -42,17 +42,17 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== ================ ====================
-grp_id gsim             rlzs                
-====== ================ ====================
-0      [SadighEtAl1997] [0, 1, 2, 3, 4, 5]  
-1      [SadighEtAl1997] [0, 1, 2, 6, 7, 8]  
-2      [SadighEtAl1997] [0, 3, 6, 9]        
-3      [SadighEtAl1997] [1, 4, 7, 10]       
-4      [SadighEtAl1997] [2, 5, 8, 11]       
-5      [SadighEtAl1997] [3, 4, 5, 9, 10, 11]
-6      [SadighEtAl1997] [6, 7, 8, 9, 10, 11]
-====== ================ ====================
+====== ================== ====================
+grp_id gsim               rlzs                
+====== ================== ====================
+0      '[SadighEtAl1997]' [0, 1, 2, 3, 4, 5]  
+1      '[SadighEtAl1997]' [0, 1, 2, 6, 7, 8]  
+2      '[SadighEtAl1997]' [0, 3, 6, 9]        
+3      '[SadighEtAl1997]' [1, 4, 7, 10]       
+4      '[SadighEtAl1997]' [2, 5, 8, 11]       
+5      '[SadighEtAl1997]' [3, 4, 5, 9, 10, 11]
+6      '[SadighEtAl1997]' [6, 7, 8, 9, 10, 11]
+====== ================== ====================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -78,13 +78,13 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-SFLT1;0   S    0.00282   1         56          
-SFLT1;1   S    0.00258   1         58          
-COMFLT1;0 C    0.00220   1         29          
-COMFLT1;1 C    0.00211   1         62          
-CHAR1;2   X    2.348E-04 1         1           
-CHAR1;0   X    1.786E-04 1         1           
-CHAR1;1   X    1.664E-04 1         1           
+SFLT1;0   S    0.00283   1         56          
+SFLT1;1   S    0.00259   1         58          
+COMFLT1;0 C    0.00219   1         29          
+COMFLT1;1 C    0.00218   1         62          
+CHAR1;1   X    3.335E-04 1         1           
+CHAR1;2   X    2.701E-04 1         1           
+CHAR1;0   X    1.729E-04 1         1           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -92,17 +92,17 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-C    0.00431  
-S    0.00540  
-X    5.798E-04
+C    0.00437  
+S    0.00542  
+X    7.765E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ========= =======
 operation-duration counts mean    stddev min       max    
-preclassical       7      0.00196 57%    6.533E-04 0.00330
-read_source_model  1      0.01579 nan    0.01579   0.01579
+preclassical       7      0.00207 50%    6.526E-04 0.00334
+read_source_model  1      0.01465 nan    0.01465   0.01465
 ================== ====== ======= ====== ========= =======
 
 Data transfer
@@ -116,10 +116,10 @@ preclassical      srcs=25.95 KB srcfilter=6.31 KB 1.68 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46643, maxmem=1.3 GB time_sec memory_mb counts
+calc_47013, maxmem=1.3 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.31962  0.0       1     
-composite source model    0.31136  0.0       1     
-total read_source_model   0.01579  0.0       1     
-total preclassical        0.01371  0.50781   7     
+importing inputs          0.29935  0.0       1     
+composite source model    0.29380  0.0       1     
+total read_source_model   0.01465  0.0       1     
+total preclassical        0.01450  0.51172   7     
 ========================= ======== ========= ======

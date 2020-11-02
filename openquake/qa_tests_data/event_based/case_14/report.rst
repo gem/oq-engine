@@ -3,8 +3,8 @@ Hazard South Africa
 
 ============== ====================
 checksum32     745_203_157         
-date           2020-11-02T08:41:31 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:13:45 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 10, num_levels = 1, num_rlzs = 3
@@ -43,18 +43,18 @@ source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 
 Composite source model
 ----------------------
-====== =================== ======
-grp_id gsim                rlzs  
-====== =================== ======
-0      [AkkarEtAlRjb2014]  [0]   
-1      [AkkarEtAlRjb2014]  [0]   
-1      [BooreAtkinson2008] [1]   
-2      [AkkarEtAlRjb2014]  [0]   
-2      [BooreAtkinson2008] [2]   
-3      [BooreAtkinson2008] [1]   
-4      [BooreAtkinson2008] [1, 2]
-5      [BooreAtkinson2008] [2]   
-====== =================== ======
+====== ===================== ======
+grp_id gsim                  rlzs  
+====== ===================== ======
+0      '[AkkarEtAlRjb2014]'  [0]   
+1      '[AkkarEtAlRjb2014]'  [0]   
+1      '[BooreAtkinson2008]' [1]   
+2      '[AkkarEtAlRjb2014]'  [0]   
+2      '[BooreAtkinson2008]' [2]   
+3      '[BooreAtkinson2008]' [1]   
+4      '[BooreAtkinson2008]' [1, 2]
+5      '[BooreAtkinson2008]' [2]   
+====== ===================== ======
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -71,18 +71,18 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-19;0      A    1.702E-04 1         12_690      
-20;0      A    1.616E-04 2         12_654      
-22;2      A    1.585E-04 2         8           
-18;2      A    1.547E-04 2         320         
-22;1      A    1.528E-04 2         12          
-22;0      A    1.523E-04 2         12          
-18;0      A    1.521E-04 2         320         
-18;1      A    1.500E-04 2         480         
-19;1      A    1.493E-04 1         10_152      
-21;0      A    1.454E-04 3         56          
-21;1      A    1.447E-04 3         56          
-20;1      A    1.197E-04 2         23_199      
+18;0      A    1.693E-04 2         320         
+22;1      A    1.659E-04 2         12          
+22;0      A    1.595E-04 2         12          
+21;1      A    1.521E-04 3         56          
+20;0      A    1.507E-04 2         12_654      
+18;2      A    1.500E-04 2         320         
+21;0      A    1.497E-04 3         56          
+22;2      A    1.493E-04 2         8           
+18;1      A    1.454E-04 2         480         
+19;0      A    1.452E-04 1         12_690      
+19;1      A    1.450E-04 1         10_152      
+20;1      A    1.340E-04 2         23_199      
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -90,15 +90,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    0.00181  
+A    0.00182  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       12     6.448E-04 8%     5.367E-04 7.932E-04
-read_source_model  5      0.00251   3%     0.00237   0.00259  
+preclassical       12     6.253E-04 4%     5.779E-04 6.845E-04
+read_source_model  5      0.00253   2%     0.00248   0.00263  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -112,10 +112,10 @@ preclassical      srcs=28.96 KB srcfilter=17.74 KB 2.84 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46577, maxmem=1.5 GB time_sec memory_mb counts
+calc_46947, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          2.05517  0.0       1     
-composite source model    2.04600  0.0       1     
-total read_source_model   0.01256  0.48047   5     
-total preclassical        0.00774  0.35938   12    
+importing inputs          2.05945  0.0       1     
+composite source model    2.04994  0.0       1     
+total read_source_model   0.01267  0.57422   5     
+total preclassical        0.00750  0.50391   12    
 ========================= ======== ========= ======

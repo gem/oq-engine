@@ -3,8 +3,8 @@ Example EB Hazard. Infer region from exposure model
 
 ============== ====================
 checksum32     2_604_032_785       
-date           2020-11-02T08:41:45 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:13:59 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 93, num_levels = 0, num_rlzs = 2
@@ -44,12 +44,12 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-====== ================= ====
-grp_id gsim              rlzs
-====== ================= ====
-0      [AkkarBommer2010] [1] 
-0      [ChiouYoungs2008] [0] 
-====== ================= ====
+====== =================== ====
+grp_id gsim                rlzs
+====== =================== ====
+0      '[AkkarBommer2010]' [1] 
+0      '[ChiouYoungs2008]' [0] 
+====== =================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -81,26 +81,26 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-239       A    1.814E-04 33        480         
-279       A    1.791E-04 18        70          
-232       A    1.781E-04 81        620         
-234       A    1.760E-04 70        790         
-229       A    1.752E-04 53        1_050       
-230       A    1.738E-04 57        2_436       
-228       A    1.674E-04 32        519         
-236       A    1.581E-04 24        3_240       
-226       A    1.538E-04 18        1_088       
-224       A    1.523E-04 1         960         
-243       A    1.521E-04 5         1_130       
-386       A    1.345E-04 21        273         
-374       A    1.342E-04 20        1_060       
-231       A    1.163E-04 79        1_674       
-233       A    1.140E-04 69        294         
-238       A    1.123E-04 44        748         
-240       A    1.116E-04 40        480         
-235       A    1.094E-04 67        3_084       
-376       A    1.070E-04 27        888         
-272       A    1.020E-04 6         1_245       
+279       A    4.225E-04 18        70          
+272       A    2.630E-04 6         1_245       
+280       A    2.463E-04 20        165         
+230       A    2.022E-04 57        2_436       
+232       A    1.767E-04 81        620         
+228       A    1.719E-04 32        519         
+234       A    1.717E-04 70        790         
+226       A    1.669E-04 18        1_088       
+239       A    1.643E-04 33        480         
+236       A    1.624E-04 24        3_240       
+243       A    1.559E-04 5         1_130       
+224       A    1.540E-04 1         960         
+374       A    1.476E-04 20        1_060       
+386       A    1.292E-04 21        273         
+231       A    1.290E-04 79        1_674       
+229       A    1.192E-04 53        1_050       
+233       A    1.154E-04 69        294         
+376       A    1.118E-04 27        888         
+238       A    1.118E-04 44        748         
+235       A    1.097E-04 67        3_084       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -108,16 +108,16 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    0.00318  
+A    0.00374  
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ====== ========= ====== ========= =========
-operation-duration counts mean      stddev min       max      
-preclassical       12     7.583E-04 9%     5.615E-04 8.693E-04
-read_source_model  1      0.02575   nan    0.02575   0.02575  
-================== ====== ========= ====== ========= =========
+================== ====== ========= ====== ========= =======
+operation-duration counts mean      stddev min       max    
+preclassical       12     8.195E-04 20%    5.379E-04 0.00128
+read_source_model  1      0.03341   nan    0.03341   0.03341
+================== ====== ========= ====== ========= =======
 
 Data transfer
 -------------
@@ -130,11 +130,11 @@ preclassical      srcfilter=71.17 KB srcs=34.39 KB 3.3 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46589, maxmem=1.5 GB time_sec memory_mb counts
+calc_46959, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          3.46164  0.0       1     
-composite source model    2.21224  0.0       1     
-total read_source_model   0.02575  0.0       1     
-reading exposure          0.01512  0.0       1     
-total preclassical        0.00910  0.29688   12    
+importing inputs          3.47593  0.0       1     
+composite source model    2.22111  0.0       1     
+total read_source_model   0.03341  0.0       1     
+reading exposure          0.01518  0.0       1     
+total preclassical        0.00983  0.36328   12    
 ========================= ======== ========= ======

@@ -3,8 +3,8 @@ SHARE OpenQuake Computational Settings
 
 ============== ====================
 checksum32     3_663_895_060       
-date           2020-11-02T08:43:00 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:15:14 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 1, num_levels = 90, num_rlzs = 16
@@ -42,18 +42,18 @@ source_model_logic_tree `simple_source_model_logic_tree.xml <simple_source_model
 
 Composite source model
 ----------------------
-====== ========================= ================
-grp_id gsim                      rlzs            
-====== ========================= ================
-0      [AtkinsonBoore2003SInter] [0, 4, 8, 12]   
-0      [LinLee2008SInter]        [1, 5, 9, 13]   
-0      [YoungsEtAl1997SInter]    [2, 6, 10, 14]  
-0      [ZhaoEtAl2006SInter]      [3, 7, 11, 15]  
-1      [AtkinsonBoore2003SSlab]  [0, 1, 2, 3]    
-1      [LinLee2008SSlab]         [4, 5, 6, 7]    
-1      [YoungsEtAl1997SSlab]     [8, 9, 10, 11]  
-1      [ZhaoEtAl2006SSlab]       [12, 13, 14, 15]
-====== ========================= ================
+====== =========================== ================
+grp_id gsim                        rlzs            
+====== =========================== ================
+0      '[AtkinsonBoore2003SInter]' [0, 4, 8, 12]   
+0      '[LinLee2008SInter]'        [1, 5, 9, 13]   
+0      '[YoungsEtAl1997SInter]'    [2, 6, 10, 14]  
+0      '[ZhaoEtAl2006SInter]'      [3, 7, 11, 15]  
+1      '[AtkinsonBoore2003SSlab]'  [0, 1, 2, 3]    
+1      '[LinLee2008SSlab]'         [4, 5, 6, 7]    
+1      '[YoungsEtAl1997SSlab]'     [8, 9, 10, 11]  
+1      '[ZhaoEtAl2006SSlab]'       [12, 13, 14, 15]
+====== =========================== ================
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -69,9 +69,9 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-i17       C    0.00589   1         2_190       
-s13       A    7.963E-05 1         3_150       
-s46       A    6.986E-05 1         1_974       
+i17       C    0.00597   1         2_190       
+s13       A    7.749E-05 1         3_150       
+s46       A    6.700E-05 1         1_974       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -79,16 +79,16 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    1.495E-04
-C    0.00589  
+A    1.445E-04
+C    0.00597  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.00651 nan    0.00651 0.00651
-read_source_model  1      0.01462 nan    0.01462 0.01462
+preclassical       1      0.00662 nan    0.00662 0.00662
+read_source_model  1      0.02582 nan    0.02582 0.02582
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -102,10 +102,10 @@ preclassical           328 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46662, maxmem=0.5 GB time_sec memory_mb counts
+calc_47032, maxmem=0.6 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.32669  0.12891   1     
-composite source model    0.32150  0.12891   1     
-total read_source_model   0.01462  0.0       1     
-total preclassical        0.00651  0.0       1     
+importing inputs          0.36479  0.15625   1     
+composite source model    0.35924  0.15625   1     
+total read_source_model   0.02582  0.0       1     
+total preclassical        0.00662  0.0       1     
 ========================= ======== ========= ======

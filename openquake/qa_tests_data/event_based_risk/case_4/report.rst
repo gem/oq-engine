@@ -3,8 +3,8 @@ Event Based Risk for Turkey reduced
 
 ============== ====================
 checksum32     3_674_230_362       
-date           2020-11-02T08:41:51 
-engine_version 3.11.0-gitd13380ddb1
+date           2020-11-02T09:14:06 
+engine_version 3.11.0-git24d6ba92cd
 ============== ====================
 
 num_sites = 13, num_levels = 60, num_rlzs = 12
@@ -45,22 +45,22 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Composite source model
 ----------------------
-====== ==================== ====
-grp_id gsim                 rlzs
-====== ==================== ====
-0      [AkkarBommer2010]    [0] 
-0      [CauzziFaccioli2008] [1] 
-0      [ChiouYoungs2008]    [2] 
-0      [ZhaoEtAl2006Asc]    [3] 
-1      [AkkarBommer2010]    [4] 
-1      [CauzziFaccioli2008] [5] 
-1      [ChiouYoungs2008]    [6] 
-1      [ZhaoEtAl2006Asc]    [7] 
-2      [AkkarBommer2010]    [8] 
-2      [CauzziFaccioli2008] [9] 
-2      [ChiouYoungs2008]    [10]
-2      [ZhaoEtAl2006Asc]    [11]
-====== ==================== ====
+====== ====================== ====
+grp_id gsim                   rlzs
+====== ====================== ====
+0      '[AkkarBommer2010]'    [0] 
+0      '[CauzziFaccioli2008]' [1] 
+0      '[ChiouYoungs2008]'    [2] 
+0      '[ZhaoEtAl2006Asc]'    [3] 
+1      '[AkkarBommer2010]'    [4] 
+1      '[CauzziFaccioli2008]' [5] 
+1      '[ChiouYoungs2008]'    [6] 
+1      '[ZhaoEtAl2006Asc]'    [7] 
+2      '[AkkarBommer2010]'    [8] 
+2      '[CauzziFaccioli2008]' [9] 
+2      '[ChiouYoungs2008]'    [10]
+2      '[ZhaoEtAl2006Asc]'    [11]
+====== ====================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
@@ -98,13 +98,13 @@ Slowest sources
 ============ ==== ========= ========= ============
 source_id    code calc_time num_sites eff_ruptures
 ============ ==== ========= ========= ============
-AS_TRAS360   A    2.966E-04 3         624         
-AS_TRAS334   A    1.769E-04 6         760         
-AS_TRAS410   A    1.538E-04 2         240         
-FSBG_TRBG989 A    1.457E-04 1         108         
-AS_TRAS458   A    1.450E-04 2         399         
-AS_TRAS346   A    1.440E-04 5         527         
-AS_TRAS395   A    1.411E-04 3         432         
+AS_TRAS360   A    1.795E-04 3         624         
+AS_TRAS334   A    1.750E-04 6         760         
+AS_TRAS395   A    1.588E-04 3         432         
+FSBG_TRBG989 A    1.576E-04 1         108         
+AS_TRAS410   A    1.473E-04 2         240         
+AS_TRAS346   A    1.433E-04 5         527         
+AS_TRAS458   A    1.431E-04 2         399         
 ============ ==== ========= ========= ============
 
 Computation times by source typology
@@ -112,17 +112,17 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    0.00120  
+A    0.00110  
 P    0.0      
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ====== ========= ====== ========= =======
-operation-duration counts mean      stddev min       max    
-preclassical       8      7.114E-04 33%    5.872E-04 0.00134
-read_source_model  3      0.00443   78%    0.00149   0.00930
-================== ====== ========= ====== ========= =======
+================== ====== ========= ====== ========= =========
+operation-duration counts mean      stddev min       max      
+preclassical       8      6.310E-04 4%     5.872E-04 6.771E-04
+read_source_model  3      0.00444   78%    0.00148   0.00933  
+================== ====== ========= ====== ========= =========
 
 Data transfer
 -------------
@@ -135,11 +135,11 @@ preclassical      srcs=18.57 KB srcfilter=16.91 KB 1.89 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46591, maxmem=1.4 GB time_sec memory_mb counts
+calc_46961, maxmem=1.4 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.24094  0.0       1     
-composite source model    1.18338  0.0       1     
-total read_source_model   0.01328  0.48438   3     
-total preclassical        0.00569  0.40625   8     
-reading exposure          0.00228  0.0       1     
+importing inputs          1.23971  0.00391   1     
+composite source model    1.18235  0.00391   1     
+total read_source_model   0.01332  0.43359   3     
+total preclassical        0.00505  0.50391   8     
+reading exposure          0.00205  0.0       1     
 ========================= ======== ========= ======
