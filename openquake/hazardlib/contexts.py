@@ -31,7 +31,7 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, groupby_bin)
+    AccumDict, DictArray, groupby, groupby_bin, block_splitter)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.tom import PoissonTOM
@@ -107,8 +107,7 @@ def _make_pmap(ctxs, cmaker, investigation_time):
     RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
     # easy case of independent ruptures, useful for debugging
     pmap = ProbabilityMap(len(cmaker.loglevels.array), len(cmaker.gsims))
-    for ctx in ctxs:
-        poes = cmaker.get_poes(ctx)
+    for ctx, poes in cmaker.gen_ctx_poes(ctxs):
         pnes = ctx.get_probability_no_exceedance(poes)  # (N, L, G)
         for sid, pne in zip(ctx.sids, pnes):
             pmap.setdefault(sid, 1.).array *= pne
@@ -169,6 +168,7 @@ class ContextMaker(object):
         param = param or {}
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
+        self.split_sources = param.get('split_sources', True)
         self.collapse_level = param.get('collapse_level', False)
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
         self.trt = trt
@@ -213,21 +213,26 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
 
-    def get_poes(self, ctx):
+    def gen_ctx_poes(self, ctxs):
         """
-        :param ctx: a context object
-        :returns: an array of zeros of shape (N, L, G)
+        :param ctxs: a list of C context objects
+        :yields: C pairs (ctx, poes of shape (N, L, G))
         """
-        shp = len(ctx.sids), len(self.loglevels.array), len(self.gsims)
-        poes = numpy.zeros(shp)
+        nsites = [len(ctx.sids) for ctx in ctxs]
+        N = sum(nsites)
+        poes = numpy.zeros((N, len(self.loglevels.array), len(self.gsims)))
         for g, gsim in enumerate(self.gsims):
-            # this must be fast since it is inside an inner loop
             with self.gmf_mon:
-                mean_std = gsim.get_mean_std(ctx, self.imts)
+                # shape (2, N, M)
+                mean_std = numpy.concatenate([gsim.get_mean_std(ctx, self.imts)
+                                              for ctx in ctxs], axis=1)
             with self.poe_mon:
                 poes[:, :, g] = gsim.get_poes(
-                    mean_std, self.loglevels, self.trunclevel, self.af, ctx)
-        return poes
+                    mean_std, self.loglevels, self.trunclevel, self.af, ctxs)
+        s = 0
+        for ctx, n in zip(ctxs, nsites):
+            yield ctx, poes[s:s+n]
+            s += n
 
     def get_ctx_params(self):
         """
@@ -511,23 +516,27 @@ class PmapMaker(object):
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gss_mon = cmaker.mon('get_sources_sites', measuremem=False)
+        self.maxsites = 1E8 / len(self.gsims) / len(self.imtls.array)
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
         if pmap is None:  # for src_indep
             pmap = self.pmap
         rup_indep = self.rup_indep
-        for ctx in ctxs:
-            poes = self.cmaker.get_poes(ctx)
-            with self.pne_mon:
-                # pnes and poes of shape (N, L, G)
-                pnes = ctx.get_probability_no_exceedance(poes)
-                for sid, pne in zip(ctx.sids, pnes):
-                    probs = pmap.setdefault(sid, rup_indep).array
-                    if rup_indep:
-                        probs *= pne
-                    else:  # rup_mutex
-                        probs += (1. - pne) * ctx.weight
+        # splitting in blocks makes sure that the maximum poes array
+        # generated has size N x L x G x 8 = 8E8 bytes = 0.745 GB
+        for block in block_splitter(
+                ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
+            for ctx, poes in self.cmaker.gen_ctx_poes(block):
+                with self.pne_mon:
+                    # pnes and poes of shape (N, L, G)
+                    pnes = ctx.get_probability_no_exceedance(poes)
+                    for sid, pne in zip(ctx.sids, pnes):
+                        probs = pmap.setdefault(sid, rup_indep).array
+                        if rup_indep:
+                            probs *= pne
+                        else:  # rup_mutex
+                            probs += (1. - pne) * ctx.weight
 
     def _ruptures(self, src, filtermag=None):
         return list(src.iter_ruptures(
@@ -550,8 +559,11 @@ class PmapMaker(object):
         # srcs with the same source_id and et_ids
         if self.fewsites:
             srcs_sites = [(self.group, self.srcfilter.sitecol)]
-        else:
+        elif self.split_sources:
             srcs_sites = self.srcfilter.split(self.group, self.gss_mon)
+        else:
+            srcs_sites = (([src], self.srcfilter.sitecol.filtered(idx))
+                          for src, idx in self.srcfilter.filter(self.group))
         for srcs, sites in srcs_sites:
             t0 = time.time()
             src_id = srcs[0].source_id
@@ -559,7 +571,8 @@ class PmapMaker(object):
             self.numsites = 0
             rups = self._get_rups(srcs, sites)
             ctxs = self._make_ctxs(rups, sites)
-            self._update_pmap(ctxs)
+            if ctxs:
+                self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return ~self.pmap if self.rup_indep else self.pmap
@@ -575,7 +588,8 @@ class PmapMaker(object):
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
             pmap = ProbabilityMap(L, G)
             ctxs = self._make_ctxs(rups, sites)
-            self._update_pmap(ctxs, pmap)
+            if ctxs:
+                self._update_pmap(ctxs, pmap)
             p = pmap
             if self.rup_indep:
                 p = ~p

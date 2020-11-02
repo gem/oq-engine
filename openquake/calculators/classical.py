@@ -20,6 +20,7 @@ import os
 import re
 import time
 import copy
+import psutil
 import pprint
 import logging
 import operator
@@ -306,6 +307,29 @@ class ClassicalCalculator(base.HazardCalculator):
             raise RuntimeError(msg)
         return sources
 
+    def init(self):
+        super().init()
+        if self.oqparam.hazard_calculation_id:
+            full_lt = self.datastore.parent['full_lt']
+        else:
+            full_lt = self.csm.full_lt
+        et_ids = self.datastore['et_ids'][:]
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(et_ids)
+        rlzs_by_g = []
+        for rlzs_by_gsim in rlzs_by_gsim_list:
+            for rlzs in rlzs_by_gsim.values():
+                rlzs_by_g.append(rlzs)
+        self.datastore['rlzs_by_g'] = [U32(rlzs) for rlzs in rlzs_by_g]
+        poes_shape = (self.N, len(self.oqparam.imtls.array), len(rlzs_by_g))
+        size = numpy.prod(poes_shape) * 8
+        logging.info('Requiring %s for ProbabilityMap of shape %s',
+                     humansize(size), poes_shape)
+        avail = psutil.virtual_memory().available
+        if avail < 2 * size:
+            raise MemoryError(
+                'You have only %s of free RAM' % humansize(avail))
+        self.datastore.create_dset('_poes', F64, poes_shape)
+
     def execute(self):
         """
         Run in parallel `core_task(sources, sitecol, monitor)`, by
@@ -379,18 +403,8 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
                                 num_cores=oq.num_cores)
         smap.monitor.save('srcfilter', srcfilter)
-        rlzs_by_gsim_list = self.submit_tasks(smap)
-        rlzs_by_g = []
-        for rlzs_by_gsim in rlzs_by_gsim_list:
-            for rlzs in rlzs_by_gsim.values():
-                rlzs_by_g.append(rlzs)
-        self.datastore['rlzs_by_g'] = [U32(rlzs) for rlzs in rlzs_by_g]
+        self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
-        poes_shape = (self.N, len(oq.imtls.array), len(rlzs_by_g))  # NLG
-        size = numpy.prod(poes_shape) * 8
-        logging.info('Requiring %s for ProbabilityMap of shape %s',
-                     humansize(size), poes_shape)
-        self.datastore.create_dset('_poes', F64, poes_shape)
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
@@ -568,8 +582,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     # key is the group ID
                     trt = self.full_lt.trt_by_et[et_ids[key][0]]
                     # avoid saving PoEs == 1
-                    arr = base.fix_ones(pmap).array(self.N)
-                    self.datastore['_poes'][:, :, slice_by_g[key]] = arr
+                    base.fix_ones(pmap)
+                    sids = sorted(pmap)
+                    arr = numpy.array([pmap[sid].array for sid in sids])
+                    self.datastore['_poes'][sids, :, slice_by_g[key]] = arr
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
