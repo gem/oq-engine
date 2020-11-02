@@ -1,34 +1,34 @@
 Classical Hazard QA Test, Case 25, topographic surface1 (Mt Etna)
 =================================================================
 
-============== ===================
-checksum32     240_735_792        
-date           2020-03-13T11:22:02
-engine_version 3.9.0-gitfb3ef3a732
-============== ===================
+============== ====================
+checksum32     1_566_593_950       
+date           2020-11-02T09:36:51 
+engine_version 3.11.0-git82b78631ac
+============== ====================
 
 num_sites = 6, num_levels = 3, num_rlzs = 1
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'preclassical'    
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 200.0}
-investigation_time              50.0              
-ses_per_logic_tree_path         1                 
-truncation_level                3.0               
-rupture_mesh_spacing            1.0               
-complex_fault_mesh_spacing      1.0               
-width_of_mfd_bin                0.1               
-area_source_discretization      1.0               
-pointsource_distance            {'default': {}}   
-ground_motion_correlation_model None              
-minimum_intensity               {}                
-random_seed                     23                
-master_seed                     0                 
-ses_seed                        42                
-=============================== ==================
+=============================== ==========================================
+calculation_mode                'preclassical'                            
+number_of_logic_tree_samples    0                                         
+maximum_distance                {'default': [(1.0, 200.0), (10.0, 200.0)]}
+investigation_time              50.0                                      
+ses_per_logic_tree_path         1                                         
+truncation_level                3.0                                       
+rupture_mesh_spacing            1.0                                       
+complex_fault_mesh_spacing      1.0                                       
+width_of_mfd_bin                0.1                                       
+area_source_discretization      1.0                                       
+pointsource_distance            None                                      
+ground_motion_correlation_model None                                      
+minimum_intensity               {}                                        
+random_seed                     23                                        
+master_seed                     0                                         
+ses_seed                        42                                        
+=============================== ==========================================
 
 Input files
 -----------
@@ -43,69 +43,59 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ======= ================
-smlt_path weight  num_realizations
-========= ======= ================
-b1        1.00000 1               
-========= ======= ================
+====== ======================= ====
+grp_id gsim                    rlzs
+====== ======================= ====
+0      '[TusaLanger2016Rhypo]' [0] 
+====== ======================= ====
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ======================= ========= ========== ==========
-grp_id gsims                   distances siteparams ruptparams
-====== ======================= ========= ========== ==========
-0      '[TusaLanger2016Rhypo]' rhypo     vs30       mag       
-====== ======================= ========= ========== ==========
-
-Number of ruptures per source group
------------------------------------
-====== ========= ============ ============
-grp_id num_sites num_ruptures eff_ruptures
-====== ========= ============ ============
-0      0.27273   440          440         
-====== ========= ============ ============
+===== ======================= ========= ========== ==========
+et_id gsims                   distances siteparams ruptparams
+===== ======================= ========= ========== ==========
+0     '[TusaLanger2016Rhypo]' rhypo     vs30       mag       
+===== ======================= ========= ========== ==========
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
-========= ====== ==== ============ ========= ========= ============
-1         0      A    440          0.00367   0.27273   440         
-========= ====== ==== ============ ========= ========= ============
+========= ==== ========= ========= ============
+source_id code calc_time num_sites eff_ruptures
+========= ==== ========= ========= ============
+1         A    1.342E-04 6         440         
+========= ==== ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== =========
 code calc_time
 ==== =========
-A    0.00367  
+A    1.342E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-preclassical       0.01153 NaN    0.01153 0.01153 1      
-read_source_model  0.00829 NaN    0.00829 0.00829 1      
-================== ======= ====== ======= ======= =======
+================== ====== ========= ====== ========= =========
+operation-duration counts mean      stddev min       max      
+preclassical       1      5.488E-04 nan    5.488E-04 5.488E-04
+read_source_model  1      0.00263   nan    0.00263   0.00263  
+================== ====== ========= ====== ========= =========
 
 Data transfer
 -------------
-================= ========================================= ========
-task              sent                                      received
-read_source_model                                           2.3 KB  
-preclassical      srcs=2.17 KB params=638 B srcfilter=223 B 358 B   
-================= ========================================= ========
+================= ==== ========
+task              sent received
+read_source_model      1.72 KB 
+preclassical           239 B   
+================= ==== ========
 
 Slowest operations
 ------------------
-=========================== ========= ========= ======
-calc_66973                  time_sec  memory_mb counts
-=========================== ========= ========= ======
-composite source model      0.01708   0.0       1     
-total preclassical          0.01153   1.83594   1     
-total read_source_model     0.00829   0.0       1     
-splitting/filtering sources 0.00722   0.0       1     
-store source_info           0.00199   0.0       1     
-aggregate curves            4.098E-04 0.0       1     
-=========================== ========= ========= ======
+========================= ========= ========= ======
+calc_47325, maxmem=0.3 GB time_sec  memory_mb counts
+========================= ========= ========= ======
+importing inputs          0.07404   0.0       1     
+composite source model    0.06914   0.0       1     
+total read_source_model   0.00263   0.0       1     
+total preclassical        5.488E-04 0.0       1     
+========================= ========= ========= ======
