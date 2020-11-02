@@ -3,8 +3,8 @@ Classical PSHA with non-trivial logic tree (1 source model + 5 (a, b) pairs per 
 
 ============== ====================
 checksum32     53_665_629          
-date           2020-11-02T09:14:39 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:05 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 3, num_rlzs = 10
@@ -89,26 +89,26 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-5;5       A    1.814E-04 1         52          
-3;1       A    1.416E-04 1         90          
-1;0       A    1.378E-04 1         68          
-3;2       A    1.366E-04 1         102         
-3;4       A    1.292E-04 1         90          
-2;4       A    1.276E-04 1         78          
-2;0       A    1.264E-04 1         90          
-2;1       A    1.259E-04 1         90          
-1;5       A    1.256E-04 1         60          
-4;5       A    1.247E-04 1         60          
-1;3       A    1.194E-04 1         60          
-1;6       A    8.011E-05 1         60          
-4;2       A    7.606E-05 1         52          
-5;1       A    7.534E-05 1         60          
-5;2       A    7.463E-05 1         60          
-3;7       A    7.367E-05 1         78          
-4;3       A    7.248E-05 1         52          
-1;2       A    7.176E-05 1         60          
-3;0       A    7.153E-05 1         102         
-5;0       A    7.105E-05 1         52          
+2;1       A    1.442E-04 1         90          
+1;0       A    1.433E-04 1         68          
+1;3       A    1.416E-04 1         60          
+1;5       A    1.366E-04 1         60          
+3;1       A    1.333E-04 1         90          
+3;2       A    1.302E-04 1         102         
+5;5       A    1.299E-04 1         52          
+3;4       A    1.297E-04 1         90          
+2;0       A    1.252E-04 1         90          
+2;4       A    1.245E-04 1         78          
+4;5       A    1.075E-04 1         60          
+1;2       A    8.059E-05 1         60          
+5;1       A    7.939E-05 1         60          
+3;6       A    7.868E-05 1         78          
+3;5       A    7.486E-05 1         78          
+3;0       A    7.367E-05 1         102         
+5;2       A    7.343E-05 1         60          
+2;5       A    7.343E-05 1         102         
+4;2       A    7.272E-05 1         52          
+4;3       A    7.224E-05 1         52          
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -116,15 +116,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    0.00300  
+A    0.00299  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       11     7.949E-04 4%     7.560E-04 8.516E-04
-read_source_model  1      0.00666   nan    0.00666   0.00666  
+preclassical       11     7.978E-04 6%     7.048E-04 8.898E-04
+read_source_model  1      0.00691   nan    0.00691   0.00691  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -138,10 +138,10 @@ preclassical      srcs=41.46 KB srcfilter=13.83 KB 3.52 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_47002, maxmem=1.5 GB time_sec memory_mb counts
+calc_47346, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.30275  0.0       1     
-composite source model    0.29703  0.0       1     
-total preclassical        0.00874  0.37891   11    
-total read_source_model   0.00666  0.0       1     
+importing inputs          0.27006  0.0       1     
+composite source model    0.24766  0.0       1     
+total preclassical        0.00878  0.37109   11    
+total read_source_model   0.00691  0.0       1     
 ========================= ======== ========= ======

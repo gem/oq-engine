@@ -3,8 +3,8 @@ Hazard South Africa
 
 ============== ====================
 checksum32     745_203_157         
-date           2020-11-02T09:13:45 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:11 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 10, num_levels = 1, num_rlzs = 3
@@ -71,18 +71,18 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-18;0      A    1.693E-04 2         320         
-22;1      A    1.659E-04 2         12          
-22;0      A    1.595E-04 2         12          
-21;1      A    1.521E-04 3         56          
-20;0      A    1.507E-04 2         12_654      
-18;2      A    1.500E-04 2         320         
-21;0      A    1.497E-04 3         56          
-22;2      A    1.493E-04 2         8           
-18;1      A    1.454E-04 2         480         
-19;0      A    1.452E-04 1         12_690      
-19;1      A    1.450E-04 1         10_152      
-20;1      A    1.340E-04 2         23_199      
+18;0      A    1.643E-04 2         320         
+18;2      A    1.576E-04 2         320         
+22;0      A    1.526E-04 2         12          
+20;0      A    1.512E-04 2         12_654      
+21;1      A    1.500E-04 3         56          
+18;1      A    1.493E-04 2         480         
+21;0      A    1.469E-04 3         56          
+19;0      A    1.457E-04 1         12_690      
+19;1      A    1.431E-04 1         10_152      
+22;1      A    1.426E-04 2         12          
+20;1      A    1.354E-04 2         23_199      
+22;2      A    1.221E-04 2         8           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -90,15 +90,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    0.00182  
+A    0.00176  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       12     6.253E-04 4%     5.779E-04 6.845E-04
-read_source_model  5      0.00253   2%     0.00248   0.00263  
+preclassical       12     6.245E-04 5%     5.436E-04 6.690E-04
+read_source_model  5      0.00249   3%     0.00237   0.00261  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -112,10 +112,10 @@ preclassical      srcs=28.96 KB srcfilter=17.74 KB 2.84 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46947, maxmem=1.5 GB time_sec memory_mb counts
+calc_47291, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          2.05945  0.0       1     
-composite source model    2.04994  0.0       1     
-total read_source_model   0.01267  0.57422   5     
-total preclassical        0.00750  0.50391   12    
+importing inputs          2.07733  0.0       1     
+composite source model    2.06808  0.0       1     
+total read_source_model   0.01246  0.46094   5     
+total preclassical        0.00749  0.43750   12    
 ========================= ======== ========= ======

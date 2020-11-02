@@ -3,8 +3,8 @@ Event Based QA Test, Case 3
 
 ============== ====================
 checksum32     3_971_019_167       
-date           2020-11-02T09:13:56 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:22 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 3, num_rlzs = 2
@@ -62,7 +62,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         P    1.419E-04 1         1           
+1         P    1.411E-04 1         1           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -70,15 +70,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    1.419E-04
+P    1.411E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.760E-04 nan    5.760E-04 5.760E-04
-read_source_model  1      0.00142   nan    0.00142   0.00142  
+preclassical       1      5.643E-04 nan    5.643E-04 5.643E-04
+read_source_model  1      0.00139   nan    0.00139   0.00139  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -92,10 +92,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46954, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47298, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.06416   0.0       1     
-composite source model    0.05934   0.0       1     
-total read_source_model   0.00142   0.0       1     
-total preclassical        5.760E-04 0.0       1     
+importing inputs          0.06552   0.0       1     
+composite source model    0.06040   0.0       1     
+total read_source_model   0.00139   0.0       1     
+total preclassical        5.643E-04 0.0       1     
 ========================= ========= ========= ======

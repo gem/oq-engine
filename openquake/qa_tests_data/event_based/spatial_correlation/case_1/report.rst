@@ -3,8 +3,8 @@ Probabilistic Event-Based QA Test with Spatial Correlation, case 1
 
 ============== ====================
 checksum32     1_691_625_401       
-date           2020-11-02T09:13:42 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:08 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 2, num_levels = 1, num_rlzs = 1
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         P    1.833E-04 2         1           
+1         P    1.438E-04 2         1           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    1.833E-04
+P    1.438E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      6.447E-04 nan    6.447E-04 6.447E-04
-read_source_model  1      0.00174   nan    0.00174   0.00174  
+preclassical       1      5.536E-04 nan    5.536E-04 5.536E-04
+read_source_model  1      0.00136   nan    0.00136   0.00136  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -91,10 +91,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46941, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47285, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.07633   0.0       1     
-composite source model    0.07173   0.0       1     
-total read_source_model   0.00174   0.0       1     
-total preclassical        6.447E-04 0.0       1     
+importing inputs          0.09158   0.0       1     
+composite source model    0.08690   0.0       1     
+total read_source_model   0.00136   0.0       1     
+total preclassical        5.536E-04 0.0       1     
 ========================= ========= ========= ======

@@ -3,8 +3,8 @@ applyToSources with multiple sources
 
 ============== ====================
 checksum32     3_933_251_036       
-date           2020-11-02T09:14:50 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:16 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 1, num_rlzs = 9
@@ -122,12 +122,12 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1;4       C    0.00376   1         633         
-1;0       C    0.00363   1         633         
-1;1       C    0.00359   1         633         
-1;5       C    0.00339   1         633         
-1;2       C    0.00321   1         633         
-1;3       C    0.00320   1         656         
+1;1       C    0.00392   1         633         
+1;4       C    0.00362   1         633         
+1;0       C    0.00360   1         633         
+1;2       C    0.00356   1         633         
+1;3       C    0.00355   1         656         
+1;5       C    0.00323   1         633         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -136,7 +136,7 @@ Computation times by source typology
 code calc_time
 ==== =========
 A    0.0      
-C    0.02076  
+C    0.02148  
 S    0.0      
 ==== =========
 
@@ -144,8 +144,8 @@ Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ========= =======
 operation-duration counts mean    stddev min       max    
-preclassical       16     0.00531 72%    6.614E-04 0.01181
-read_source_model  1      0.01951 nan    0.01951   0.01951
+preclassical       16     0.00513 73%    6.669E-04 0.01157
+read_source_model  1      0.02007 nan    0.02007   0.02007
 ================== ====== ======= ====== ========= =======
 
 Data transfer
@@ -159,10 +159,10 @@ preclassical      srcs=96.25 KB srcfilter=25.16 KB 3.33 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_47010, maxmem=1.5 GB time_sec memory_mb counts
+calc_47354, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.67439  0.0       1     
-composite source model    1.66825  0.0       1     
-total preclassical        0.08501  0.48438   16    
-total read_source_model   0.01951  0.0       1     
+importing inputs          1.70292  0.0       1     
+composite source model    1.69666  0.0       1     
+total preclassical        0.08200  0.39844   16    
+total read_source_model   0.02007  0.0       1     
 ========================= ======== ========= ======

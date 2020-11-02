@@ -3,8 +3,8 @@ event based hazard
 
 ============== ====================
 checksum32     521_560_149         
-date           2020-11-02T09:14:14 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:40 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 1, num_rlzs = 1
@@ -74,7 +74,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         S    0.00228   1         482         
+1         S    0.00243   1         482         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -82,15 +82,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-S    0.00228  
+S    0.00243  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.00271 nan    0.00271 0.00271
-read_source_model  1      0.00205 nan    0.00205 0.00205
+preclassical       1      0.00287 nan    0.00287 0.00287
+read_source_model  1      0.00208 nan    0.00208 0.00208
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -104,11 +104,11 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46969, maxmem=0.4 GB time_sec  memory_mb counts
+calc_47313, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.12154   0.0       1     
-composite source model    0.10810   0.0       1     
-total preclassical        0.00271   0.0       1     
-total read_source_model   0.00205   0.0       1     
-reading exposure          6.297E-04 0.0       1     
+importing inputs          0.07471   0.0       1     
+composite source model    0.06084   0.0       1     
+total preclassical        0.00287   0.0       1     
+total read_source_model   0.00208   0.0       1     
+reading exposure          6.714E-04 0.0       1     
 ========================= ========= ========= ======

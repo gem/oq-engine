@@ -1,11 +1,11 @@
 Event Based Risk from GMF
 =========================
 
-============== ===================
-checksum32     1_821_360_684      
-date           2020-03-13T11:20:14
-engine_version 3.9.0-gitfb3ef3a732
-============== ===================
+============== ====================
+checksum32     4_053_279_609       
+date           2020-11-02T09:35:30 
+engine_version 3.11.0-git82b78631ac
+============== ====================
 
 num_sites = 3, num_levels = 2, num_rlzs = 1
 
@@ -22,7 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      5.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
-pointsource_distance            {'default': {}}   
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -45,11 +45,11 @@ structural_vulnerability `vulnerability_2IM.xml <vulnerability_2IM.xml>`_
 
 Composite source model
 ----------------------
-========= ======= ================
-smlt_path weight  num_realizations
-========= ======= ================
-b_1       1.00000 1               
-========= ======= ================
+====== ============ ====
+grp_id gsim         rlzs
+====== ============ ====
+0      '[FromFile]' [0] 
+====== ============ ====
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -62,12 +62,12 @@ Exposure model
 #taxonomies 2
 =========== =
 
-======== ======= ====== === === ========= ==========
-taxonomy mean    stddev min max num_sites num_assets
-RM       1.00000 0.0    1   1   2         2         
-RC       1.00000 NaN    1   1   1         1         
-*ALL*    1.00000 0.0    1   1   3         3         
-======== ======= ====== === === ========= ==========
+======== ========== ======= ====== === === =========
+taxonomy num_assets mean    stddev min max num_sites
+RM       2          1.00000 0%     1   1   2        
+RC       1          1.00000 nan    1   1   1        
+*ALL*    3          1.00000 0%     1   1   3        
+======== ========== ======= ====== === === =========
 
 Information about the tasks
 ---------------------------
@@ -82,7 +82,8 @@ task sent received
 Slowest operations
 ------------------
 ================ ========= ========= ======
-calc_66861       time_sec  memory_mb counts
+calc_47209       time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 8.333E-04 0.0       1     
+importing inputs 0.01916   0.25000   1     
+reading exposure 8.466E-04 0.0       1     
 ================ ========= ========= ======

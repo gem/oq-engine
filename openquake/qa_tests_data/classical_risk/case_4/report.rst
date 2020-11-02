@@ -3,8 +3,8 @@ Classical Hazard-Risk QA test 4
 
 ============== ====================
 checksum32     204_296_531         
-date           2020-11-02T09:12:50 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:35:15 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 6, num_levels = 19, num_rlzs = 2
@@ -78,8 +78,8 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-376       A    1.364E-04 1         2_220       
-231       A    6.747E-05 6         4_185       
+376       A    2.041E-04 1         2_220       
+231       A    6.866E-05 6         4_185       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -87,15 +87,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    2.038E-04
+A    2.728E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       13     6.810E-04 4%     6.208E-04 7.398E-04
-read_source_model  1      0.12356   nan    0.12356   0.12356  
+preclassical       13     7.240E-04 9%     6.585E-04 9.317E-04
+read_source_model  1      0.16847   nan    0.16847   0.16847  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -109,11 +109,11 @@ preclassical      srcs=51.03 KB srcfilter=19.83 KB 2.59 KB
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46858, maxmem=1.5 GB time_sec  memory_mb counts
+calc_47203, maxmem=1.5 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          4.87288   0.44531   1     
-composite source model    4.84618   0.42578   1     
-total read_source_model   0.12356   0.34766   1     
-total preclassical        0.00885   0.41016   13    
-reading exposure          5.276E-04 0.0       1     
+importing inputs          5.09642   0.36719   1     
+composite source model    5.06968   0.36328   1     
+total read_source_model   0.16847   0.30078   1     
+total preclassical        0.00941   0.37109   13    
+reading exposure          5.205E-04 0.0       1     
 ========================= ========= ========= ======

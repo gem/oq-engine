@@ -3,8 +3,8 @@ QA test for disaggregation case_1, taken from the disagg demo
 
 ============== ====================
 checksum32     1_876_684_295       
-date           2020-11-02T09:13:14 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:35:41 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 2, num_levels = 38, num_rlzs = 1
@@ -61,10 +61,10 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-3         S    0.00273   1         617         
-4         C    0.00220   1         164         
-1         P    2.241E-04 1         30          
-2         A    1.633E-04 1         2_880       
+3         S    0.00265   1         617         
+4         C    0.00212   1         164         
+1         P    2.539E-04 1         30          
+2         A    1.485E-04 1         2_880       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -72,18 +72,18 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    1.633E-04
-C    0.00220  
-P    2.241E-04
-S    0.00273  
+A    1.485E-04
+C    0.00212  
+P    2.539E-04
+S    0.00265  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ========= =======
 operation-duration counts mean    stddev min       max    
-preclassical       4      0.00185 62%    7.067E-04 0.00323
-read_source_model  1      0.00571 nan    0.00571   0.00571
+preclassical       4      0.00180 61%    6.390E-04 0.00314
+read_source_model  1      0.00567 nan    0.00567   0.00567
 ================== ====== ======= ====== ========= =======
 
 Data transfer
@@ -97,10 +97,10 @@ preclassical      srcs=5.67 KB srcfilter=5.04 KB 956 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46899, maxmem=1.1 GB time_sec memory_mb counts
+calc_47244, maxmem=1.1 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.20685  0.0       1     
-composite source model    0.19838  0.0       1     
-total preclassical        0.00740  0.40625   4     
-total read_source_model   0.00571  0.0       1     
+importing inputs          0.19033  0.0       1     
+composite source model    0.18534  0.0       1     
+total preclassical        0.00722  0.51172   4     
+total read_source_model   0.00567  0.0       1     
 ========================= ======== ========= ======

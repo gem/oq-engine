@@ -3,8 +3,8 @@ Event Based QA Test, Case 13
 
 ============== ====================
 checksum32     3_130_125_660       
-date           2020-11-02T09:13:56 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:22 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 3, num_rlzs = 1
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         P    1.345E-04 1         1           
+1         P    1.411E-04 1         1           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    1.345E-04
+P    1.411E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.665E-04 nan    5.665E-04 5.665E-04
-read_source_model  1      0.00195   nan    0.00195   0.00195  
+preclassical       1      5.596E-04 nan    5.596E-04 5.596E-04
+read_source_model  1      0.00201   nan    0.00201   0.00201  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -91,10 +91,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46953, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47297, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.05510   0.0       1     
-composite source model    0.04993   0.0       1     
-total read_source_model   0.00195   0.0       1     
-total preclassical        5.665E-04 0.0       1     
+importing inputs          0.05458   0.0       1     
+composite source model    0.04983   0.0       1     
+total read_source_model   0.00201   0.0       1     
+total preclassical        5.596E-04 0.0       1     
 ========================= ========= ========= ======

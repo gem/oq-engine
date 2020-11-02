@@ -3,8 +3,8 @@ SAM int July 2019 A15, 300km
 
 ============== ====================
 checksum32     937_969_482         
-date           2020-11-02T09:14:41 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:07 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 15, num_rlzs = 1
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-int_2     C    0.01481   1         1_755       
+int_2     C    0.01593   1         1_755       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-C    0.01481  
+C    0.01593  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.01524 nan    0.01524 0.01524
-read_source_model  1      0.02764 nan    0.02764 0.02764
+preclassical       1      0.01637 nan    0.01637 0.01637
+read_source_model  1      0.02853 nan    0.02853 0.02853
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -91,10 +91,10 @@ preclassical           243 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_47004, maxmem=0.9 GB time_sec memory_mb counts
+calc_47348, maxmem=0.9 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.79113  0.25000   1     
-composite source model    0.78608  0.25000   1     
-total read_source_model   0.02764  0.0       1     
-total preclassical        0.01524  0.0       1     
+importing inputs          0.79638  0.0       1     
+composite source model    0.79179  0.0       1     
+total read_source_model   0.02853  0.0       1     
+total preclassical        0.01637  0.0       1     
 ========================= ======== ========= ======

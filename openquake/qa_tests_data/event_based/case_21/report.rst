@@ -3,8 +3,8 @@ Event Based PSHA
 
 ============== ====================
 checksum32     3_670_782_079       
-date           2020-11-02T09:13:42 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:08 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 3, num_rlzs = 1000
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1_1       N    4.568E-04 1         2           
+1_1       N    4.754E-04 1         2           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-N    4.568E-04
+N    4.754E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      8.693E-04 nan    8.693E-04 8.693E-04
-read_source_model  1      0.01125   nan    0.01125   0.01125  
+preclassical       1      8.953E-04 nan    8.953E-04 8.953E-04
+read_source_model  1      0.01076   nan    0.01076   0.01076  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -91,10 +91,10 @@ preclassical           241 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46940, maxmem=0.4 GB time_sec  memory_mb counts
+calc_47284, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.15813   0.91016   1     
-composite source model    0.07673   0.0       1     
-total read_source_model   0.01125   0.0       1     
-total preclassical        8.693E-04 0.0       1     
+importing inputs          0.09920   0.31250   1     
+composite source model    0.07780   0.0       1     
+total read_source_model   0.01076   0.0       1     
+total preclassical        8.953E-04 0.0       1     
 ========================= ========= ========= ======

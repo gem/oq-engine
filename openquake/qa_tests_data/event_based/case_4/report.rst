@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 4
 
 ============== ====================
 checksum32     1_106_683_383       
-date           2020-11-02T09:13:38 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:04 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 3, num_rlzs = 1
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         S    0.00177   1         5           
+1         S    0.00180   1         5           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-S    0.00177  
+S    0.00180  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.00222 nan    0.00222 0.00222
-read_source_model  1      0.00196 nan    0.00196 0.00196
+preclassical       1      0.00223 nan    0.00223 0.00223
+read_source_model  1      0.00213 nan    0.00213 0.00213
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -91,10 +91,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46937, maxmem=0.3 GB time_sec memory_mb counts
+calc_47281, maxmem=0.4 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.06161  0.0       1     
-composite source model    0.05661  0.0       1     
-total preclassical        0.00222  0.0       1     
-total read_source_model   0.00196  0.0       1     
+importing inputs          0.06344  0.08203   1     
+composite source model    0.05865  0.08203   1     
+total preclassical        0.00223  0.0       1     
+total read_source_model   0.00213  0.0       1     
 ========================= ======== ========= ======

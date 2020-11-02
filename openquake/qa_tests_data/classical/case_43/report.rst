@@ -3,8 +3,8 @@ Spinning with maximum_distance=60 km
 
 ============== ====================
 checksum32     2_241_407_815       
-date           2020-11-02T09:14:28 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:54 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 82, num_levels = 20, num_rlzs = 1
@@ -77,8 +77,8 @@ Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.586E-04 nan    5.586E-04 5.586E-04
-read_source_model  1      0.00481   nan    0.00481   0.00481  
+preclassical       1      5.598E-04 nan    5.598E-04 5.598E-04
+read_source_model  1      0.00423   nan    0.00423   0.00423  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -92,10 +92,10 @@ preclassical           241 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46987, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47331, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.07766   0.0       1     
-composite source model    0.07222   0.0       1     
-total read_source_model   0.00481   0.0       1     
-total preclassical        5.586E-04 0.0       1     
+importing inputs          0.07977   0.0       1     
+composite source model    0.07417   0.0       1     
+total read_source_model   0.00423   0.0       1     
+total preclassical        5.598E-04 0.0       1     
 ========================= ========= ========= ======

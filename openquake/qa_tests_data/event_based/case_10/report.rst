@@ -3,8 +3,8 @@ Event Based Bogota
 
 ============== ====================
 checksum32     13_057_122          
-date           2020-11-02T09:13:38 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:05 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 5, num_levels = 4, num_rlzs = 100
@@ -86,26 +86,26 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-CC_02_152 P    2.141E-04 5         108         
-CC_03_77  P    1.984E-04 5         108         
-CC_64_412 P    1.879E-04 3         84          
-CC_02_38  P    1.819E-04 5         108         
-CC_64_406 P    1.795E-04 3         84          
-CC_02_63  P    1.764E-04 5         108         
-CC_03_70  P    1.740E-04 5         108         
-CC_03_31  P    1.738E-04 5         108         
-CC_57_1   P    1.731E-04 5         15          
-CC_03_13  P    1.709E-04 5         108         
-CC_57_16  P    1.655E-04 5         15          
-CC_57_58  P    1.547E-04 5         15          
-CC_57_3   P    1.490E-04 5         15          
-CC_67_172 P    1.488E-04 5         63          
-CC_57_8   P    1.440E-04 5         15          
-CC_57_22  P    1.397E-04 5         15          
-CC_57_411 P    1.373E-04 5         15          
-CC_02_153 P    1.369E-04 5         108         
-CC_02_147 P    1.335E-04 5         108         
-CC_02_64  P    1.261E-04 5         108         
+CC_57_3   P    3.865E-04 5         15          
+CC_57_416 P    2.096E-04 5         15          
+CC_02_152 P    1.934E-04 5         108         
+CC_03_70  P    1.836E-04 5         108         
+CC_02_38  P    1.740E-04 5         108         
+CC_03_13  P    1.729E-04 5         108         
+CC_64_412 P    1.709E-04 3         84          
+CC_03_31  P    1.683E-04 5         108         
+CC_03_77  P    1.681E-04 5         108         
+CC_02_63  P    1.659E-04 5         108         
+CC_57_16  P    1.602E-04 5         15          
+CC_57_1   P    1.578E-04 5         15          
+CC_64_406 P    1.571E-04 3         84          
+CC_67_172 P    1.566E-04 5         63          
+CC_57_418 P    1.473E-04 5         15          
+CC_02_147 P    1.414E-04 5         108         
+CC_57_411 P    1.402E-04 5         15          
+CC_57_22  P    1.402E-04 5         15          
+CC_02_377 P    1.366E-04 5         108         
+CC_67_167 P    1.299E-04 2         63          
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -114,15 +114,15 @@ Computation times by source typology
 code calc_time
 ==== =========
 C    0.0      
-P    0.01327  
+P    0.01356  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ========= =======
 operation-duration counts mean    stddev min       max    
-preclassical       18     0.00154 59%    9.174E-04 0.00526
-read_source_model  2      0.02610 71%    0.00737   0.04482
+preclassical       18     0.00164 62%    9.260E-04 0.00545
+read_source_model  2      0.02439 71%    0.00696   0.04181
 ================== ====== ======= ====== ========= =======
 
 Data transfer
@@ -136,11 +136,11 @@ preclassical      srcs=87.4 KB srcfilter=32.17 KB 9.25 KB
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46938, maxmem=1.5 GB time_sec  memory_mb counts
+calc_47282, maxmem=1.5 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          1.77868   0.75000   1     
-composite source model    1.72360   0.75000   1     
-total read_source_model   0.05219   1.70312   2     
-total preclassical        0.02765   0.42969   18    
-reading exposure          5.596E-04 0.0       1     
+importing inputs          1.71533   0.57422   1     
+composite source model    1.66406   0.57422   1     
+total read_source_model   0.04877   1.78906   2     
+total preclassical        0.02953   0.43359   18    
+reading exposure          5.367E-04 0.0       1     
 ========================= ========= ========= ======

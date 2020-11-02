@@ -3,8 +3,8 @@ Classical PSHA — Area Source
 
 ============== ====================
 checksum32     3_361_561_195       
-date           2020-11-02T09:14:22 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:48 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 19, num_rlzs = 1
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         A    1.092E-04 1         11_132      
+1         A    1.199E-04 1         11_132      
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,14 +69,14 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    1.092E-04
+A    1.199E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.171E-04 nan    5.171E-04 5.171E-04
+preclassical       1      5.367E-04 nan    5.367E-04 5.367E-04
 read_source_model  1      0.00277   nan    0.00277   0.00277  
 ================== ====== ========= ====== ========= =========
 
@@ -91,10 +91,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46977, maxmem=0.4 GB time_sec  memory_mb counts
+calc_47321, maxmem=0.4 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.19003   0.0       1     
-composite source model    0.18531   0.0       1     
+importing inputs          0.18195   0.0       1     
+composite source model    0.17720   0.0       1     
 total read_source_model   0.00277   0.0       1     
-total preclassical        5.171E-04 0.0       1     
+total preclassical        5.367E-04 0.0       1     
 ========================= ========= ========= ======

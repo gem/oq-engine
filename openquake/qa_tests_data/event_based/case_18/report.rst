@@ -3,8 +3,8 @@ Event-Based Hazard QA Test, Case 18
 
 ============== ====================
 checksum32     3_211_005_400       
-date           2020-11-02T09:13:59 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:25 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 4, num_rlzs = 3
@@ -62,7 +62,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         P    0.00425   1         3_000       
+1         P    0.00410   1         3_000       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -70,15 +70,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    0.00425  
+P    0.00410  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.00469 nan    0.00469 0.00469
-read_source_model  1      0.00256 nan    0.00256 0.00256
+preclassical       1      0.00453 nan    0.00453 0.00453
+read_source_model  1      0.00263 nan    0.00263 0.00263
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -92,10 +92,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46958, maxmem=0.3 GB time_sec memory_mb counts
+calc_47302, maxmem=0.3 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.06970  0.0       1     
-composite source model    0.06457  0.0       1     
-total preclassical        0.00469  0.0       1     
-total read_source_model   0.00256  0.0       1     
+importing inputs          0.07007  0.0       1     
+composite source model    0.06488  0.0       1     
+total preclassical        0.00453  0.0       1     
+total read_source_model   0.00263  0.0       1     
 ========================= ======== ========= ======

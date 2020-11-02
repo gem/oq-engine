@@ -3,8 +3,8 @@ Classical PSHA-Based Hazard
 
 ============== ====================
 checksum32     3_399_798_743       
-date           2020-11-02T09:13:22 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:35:49 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 7, num_levels = 30, num_rlzs = 1
@@ -75,7 +75,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         S    0.00248   7         482         
+1         S    0.00247   7         482         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -83,14 +83,14 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-S    0.00248  
+S    0.00247  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.00297 nan    0.00297 0.00297
+preclassical       1      0.00290 nan    0.00290 0.00290
 read_source_model  1      0.00148 nan    0.00148 0.00148
 ================== ====== ======= ====== ======= =======
 
@@ -105,11 +105,11 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46914, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47259, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.11135   0.0       1     
-composite source model    0.08492   0.0       1     
-total preclassical        0.00297   0.0       1     
+importing inputs          0.09966   0.00391   1     
+composite source model    0.08014   0.00391   1     
+total preclassical        0.00290   0.0       1     
 total read_source_model   0.00148   0.0       1     
-reading exposure          5.312E-04 0.0       1     
+reading exposure          5.014E-04 0.0       1     
 ========================= ========= ========= ======

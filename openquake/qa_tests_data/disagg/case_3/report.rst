@@ -3,8 +3,8 @@ test for POE_TOO_BIG
 
 ============== ====================
 checksum32     96_663_792          
-date           2020-11-02T09:13:16 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:35:44 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 200, num_rlzs = 6
@@ -67,11 +67,11 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-f1        C    0.00157   1         477         
-p3        P    1.884E-04 1         156         
-p1        P    1.795E-04 1         156         
-p2        P    1.791E-04 1         156         
-p4        P    1.726E-04 1         156         
+f1        C    0.00150   1         477         
+p1        P    1.969E-04 1         156         
+p4        P    1.853E-04 1         156         
+p3        P    1.762E-04 1         156         
+p2        P    1.748E-04 1         156         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -79,16 +79,16 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-C    0.00157  
-P    7.195E-04
+C    0.00150  
+P    7.331E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =======
 operation-duration counts mean      stddev min       max    
-preclassical       5      9.600E-04 57%    6.557E-04 0.00207
-read_source_model  2      0.00294   3%     0.00284   0.00304
+preclassical       5      9.257E-04 58%    6.304E-04 0.00200
+read_source_model  2      0.00293   3%     0.00283   0.00302
 ================== ====== ========= ====== ========= =======
 
 Data transfer
@@ -102,10 +102,10 @@ preclassical      srcfilter=9.8 KB srcs=7.9 KB 1.17 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46901, maxmem=1.2 GB time_sec memory_mb counts
+calc_47246, maxmem=1.2 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.05131  0.0       1     
-composite source model    1.04639  0.0       1     
-total read_source_model   0.00587  0.48438   2     
-total preclassical        0.00480  0.41797   5     
+importing inputs          1.05770  0.00781   1     
+composite source model    1.05288  0.00781   1     
+total read_source_model   0.00585  0.42969   2     
+total preclassical        0.00463  0.41797   5     
 ========================= ======== ========= ======

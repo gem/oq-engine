@@ -3,8 +3,8 @@ Demo Classical PSHA for Vancouver Schools
 
 ============== ====================
 checksum32     3_835_829_256       
-date           2020-11-02T09:15:13 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:39 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 3, num_levels = 36, num_rlzs = 3
@@ -64,7 +64,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-VICM      A    1.252E-04 3         2_430       
+VICM      A    1.209E-04 3         2_430       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -72,15 +72,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    1.252E-04
+A    1.209E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.496E-04 nan    5.496E-04 5.496E-04
-read_source_model  1      0.00370   nan    0.00370   0.00370  
+preclassical       1      5.412E-04 nan    5.412E-04 5.412E-04
+read_source_model  1      0.00350   nan    0.00350   0.00350  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -94,10 +94,10 @@ preclassical           242 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_47030, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47374, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.08566   0.0       1     
-composite source model    0.08053   0.0       1     
-total read_source_model   0.00370   0.0       1     
-total preclassical        5.496E-04 0.0       1     
+importing inputs          0.08409   0.0       1     
+composite source model    0.07901   0.0       1     
+total read_source_model   0.00350   0.0       1     
+total preclassical        5.412E-04 0.0       1     
 ========================= ========= ========= ======

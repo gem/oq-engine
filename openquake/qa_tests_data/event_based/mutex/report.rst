@@ -3,8 +3,8 @@ Event Based QA Test, Case 1
 
 ============== ====================
 checksum32     4_098_937_088       
-date           2020-11-02T09:13:56 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:22 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 46, num_rlzs = 1
@@ -61,16 +61,16 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-case_05   N    2.620E-04 1         1           
-case_07   N    2.460E-04 1         1           
-case_03   N    2.418E-04 1         1           
-case_02   N    2.413E-04 1         1           
-case_06   N    2.377E-04 1         1           
-case_04   N    2.365E-04 1         1           
-case_08   N    2.346E-04 1         1           
-case_01   N    2.317E-04 1         1           
-case_10   N    2.291E-04 1         1           
-case_09   N    2.229E-04 1         1           
+case_04   N    2.460E-04 1         1           
+case_06   N    2.398E-04 1         1           
+case_02   N    2.365E-04 1         1           
+case_01   N    2.365E-04 1         1           
+case_07   N    2.341E-04 1         1           
+case_03   N    2.327E-04 1         1           
+case_08   N    2.315E-04 1         1           
+case_05   N    2.303E-04 1         1           
+case_09   N    2.253E-04 1         1           
+case_10   N    2.234E-04 1         1           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -78,15 +78,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-N    0.00238  
+N    0.00234  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       10     7.171E-04 3%     6.869E-04 7.665E-04
-read_source_model  1      0.43919   nan    0.43919   0.43919  
+preclassical       10     7.145E-04 3%     6.726E-04 7.486E-04
+read_source_model  1      0.28333   nan    0.28333   0.28333  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -100,10 +100,10 @@ preclassical      srcs=771.41 KB srcfilter=10.03 KB 2.39 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46955, maxmem=1.5 GB time_sec memory_mb counts
+calc_47299, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.82505  0.91016   1     
-composite source model    0.82050  0.91016   1     
-total read_source_model   0.43919  0.0       1     
-total preclassical        0.00717  0.20312   10    
+importing inputs          0.69829  1.01172   1     
+composite source model    0.69368  1.01172   1     
+total read_source_model   0.28333  0.37109   1     
+total preclassical        0.00714  0.40625   10    
 ========================= ======== ========= ======

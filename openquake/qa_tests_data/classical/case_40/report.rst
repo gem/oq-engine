@@ -3,8 +3,8 @@ Classical PSHA — Area Source
 
 ============== ====================
 checksum32     1_023_658_862       
-date           2020-11-02T09:14:33 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:59 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 16, num_levels = 45, num_rlzs = 1
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         A    1.235E-04 16        8           
+1         A    1.240E-04 16        8           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    1.235E-04
+A    1.240E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.472E-04 nan    5.472E-04 5.472E-04
-read_source_model  1      0.00343   nan    0.00343   0.00343  
+preclassical       1      5.479E-04 nan    5.479E-04 5.479E-04
+read_source_model  1      0.00338   nan    0.00338   0.00338  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -91,10 +91,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46994, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47338, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.07026   1.09375   1     
-composite source model    0.05806   1.00391   1     
-total read_source_model   0.00343   0.0       1     
-total preclassical        5.472E-04 0.0       1     
+importing inputs          0.07298   1.06250   1     
+composite source model    0.06044   1.00391   1     
+total read_source_model   0.00338   0.0       1     
+total preclassical        5.479E-04 0.0       1     
 ========================= ========= ========= ======

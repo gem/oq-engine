@@ -3,8 +3,8 @@ Reduced USGS 1998 Hawaii model
 
 ============== ====================
 checksum32     3_138_901_998       
-date           2020-11-02T09:14:31 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:57 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 80, num_rlzs = 8
@@ -69,9 +69,9 @@ Slowest sources
 ========== ==== ========= ========= ============
 source_id  code calc_time num_sites eff_ruptures
 ========== ==== ========= ========= ============
-HLEKAOSFL  C    0.00231   1         104         
-HLE        A    4.830E-04 1         6_945       
-Deep_10014 P    2.151E-04 1         45          
+HLEKAOSFL  C    0.00230   1         104         
+HLE        A    3.424E-04 1         6_945       
+Deep_10014 P    2.983E-04 1         45          
 ========== ==== ========= ========= ============
 
 Computation times by source typology
@@ -79,17 +79,17 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    4.830E-04
-C    0.00231  
-P    2.151E-04
+A    3.424E-04
+C    0.00230  
+P    2.983E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.00390 nan    0.00390 0.00390
-read_source_model  3      0.00245 27%    0.00154 0.00312
+preclassical       1      0.00368 nan    0.00368 0.00368
+read_source_model  3      0.00238 26%    0.00153 0.00298
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -103,10 +103,10 @@ preclassical                                  341 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46992, maxmem=1.1 GB time_sec memory_mb counts
+calc_47336, maxmem=1.1 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.26508  0.0       1     
-composite source model    1.25990  0.0       1     
-total read_source_model   0.00735  0.44531   3     
-total preclassical        0.00390  0.0       1     
+importing inputs          1.26366  0.0       1     
+composite source model    1.25846  0.0       1     
+total read_source_model   0.00714  0.68750   3     
+total preclassical        0.00368  0.0       1     
 ========================= ======== ========= ======

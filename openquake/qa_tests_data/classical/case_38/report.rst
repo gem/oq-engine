@@ -3,8 +3,8 @@ Subduction backbone logic tree - 9 branch
 
 ============== ====================
 checksum32     2_313_082_878       
-date           2020-11-02T09:14:23 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:49 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 2, num_levels = 8, num_rlzs = 9
@@ -70,7 +70,7 @@ Slowest sources
 ============ ==== ========= ========= ============
 source_id    code calc_time num_sites eff_ruptures
 ============ ==== ========= ========= ============
-PEERS3C3_TOR X    1.593E-04 2         1           
+PEERS3C3_TOR X    1.302E-04 2         1           
 ============ ==== ========= ========= ============
 
 Computation times by source typology
@@ -78,15 +78,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-X    1.593E-04
+X    1.302E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.980E-04 nan    5.980E-04 5.980E-04
-read_source_model  1      0.08703   nan    0.08703   0.08703  
+preclassical       1      5.422E-04 nan    5.422E-04 5.422E-04
+read_source_model  1      0.10434   nan    0.10434   0.10434  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -100,10 +100,10 @@ preclassical           250 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46979, maxmem=0.4 GB time_sec  memory_mb counts
+calc_47323, maxmem=0.4 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.19560   0.0       1     
-composite source model    0.18781   0.0       1     
-total read_source_model   0.08703   0.0       1     
-total preclassical        5.980E-04 0.0       1     
+importing inputs          0.20420   0.0       1     
+composite source model    0.19648   0.0       1     
+total read_source_model   0.10434   0.0       1     
+total preclassical        5.422E-04 0.0       1     
 ========================= ========= ========= ======

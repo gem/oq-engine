@@ -3,8 +3,8 @@ Disaggregation with sampling
 
 ============== ====================
 checksum32     1_253_230_809       
-date           2020-11-02T09:13:10 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:35:38 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 2, num_levels = 38, num_rlzs = 2
@@ -61,9 +61,9 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-4         C    0.00216   1         164         
-1         P    2.475E-04 1         15          
-2         A    1.516E-04 1         1_440       
+4         C    0.00214   1         164         
+1         P    2.317E-04 1         15          
+2         A    1.583E-04 1         1_440       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -71,9 +71,9 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    1.516E-04
-C    0.00216  
-P    2.475E-04
+A    1.583E-04
+C    0.00214  
+P    2.317E-04
 S    0.0      
 ==== =========
 
@@ -81,8 +81,8 @@ Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ========= =======
 operation-duration counts mean    stddev min       max    
-preclassical       4      0.00180 62%    6.588E-04 0.00314
-read_source_model  1      0.00569 nan    0.00569   0.00569
+preclassical       4      0.00180 61%    6.430E-04 0.00313
+read_source_model  1      0.00543 nan    0.00543   0.00543
 ================== ====== ======= ====== ========= =======
 
 Data transfer
@@ -96,10 +96,10 @@ preclassical      srcs=5.67 KB srcfilter=5.04 KB 914 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46897, maxmem=1.1 GB time_sec memory_mb counts
+calc_47242, maxmem=1.1 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.24671  0.00391   1     
-composite source model    0.22532  0.00391   1     
-total preclassical        0.00720  0.36719   4     
-total read_source_model   0.00569  0.0       1     
+importing inputs          0.21848  0.06250   1     
+composite source model    0.18889  0.06250   1     
+total preclassical        0.00719  0.37109   4     
+total read_source_model   0.00543  0.0       1     
 ========================= ======== ========= ======

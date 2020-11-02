@@ -3,8 +3,8 @@ Classical PSHA that utilises Christchurch-specific gsims and GMtoLHC horizontal 
 
 ============== ====================
 checksum32     677_658_808         
-date           2020-11-02T09:14:26 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:52 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 2, num_levels = 4, num_rlzs = 2
@@ -63,7 +63,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         X    1.447E-04 2         1           
+1         X    1.462E-04 2         1           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -71,15 +71,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-X    1.447E-04
+X    1.462E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.713E-04 nan    5.713E-04 5.713E-04
-read_source_model  1      0.04058   nan    0.04058   0.04058  
+preclassical       1      5.655E-04 nan    5.655E-04 5.655E-04
+read_source_model  1      0.02578   nan    0.02578   0.02578  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -93,10 +93,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46983, maxmem=0.4 GB time_sec  memory_mb counts
+calc_47327, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.12290   0.03125   1     
-composite source model    0.11524   0.03125   1     
-total read_source_model   0.04058   0.0       1     
-total preclassical        5.713E-04 0.0       1     
+importing inputs          0.08258   0.0       1     
+composite source model    0.07509   0.0       1     
+total read_source_model   0.02578   0.0       1     
+total preclassical        5.655E-04 0.0       1     
 ========================= ========= ========= ======

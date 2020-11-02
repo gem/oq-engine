@@ -3,8 +3,8 @@ Finite-size effects
 
 ============== ====================
 checksum32     224_598_442         
-date           2020-11-02T09:14:34 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:00 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 2, num_levels = 20, num_rlzs = 1
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         P    1.936E-04 2         10          
+1         P    2.000E-04 2         10          
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    1.936E-04
+P    2.000E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      6.354E-04 nan    6.354E-04 6.354E-04
-read_source_model  1      0.00135   nan    0.00135   0.00135  
+preclassical       1      6.387E-04 nan    6.387E-04 6.387E-04
+read_source_model  1      0.00133   nan    0.00133   0.00133  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -91,10 +91,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46995, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47339, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.06207   0.0       1     
-composite source model    0.05745   0.0       1     
-total read_source_model   0.00135   0.0       1     
-total preclassical        6.354E-04 0.0       1     
+importing inputs          0.08380   0.0       1     
+composite source model    0.06274   0.0       1     
+total read_source_model   0.00133   0.0       1     
+total preclassical        6.387E-04 0.0       1     
 ========================= ========= ========= ======

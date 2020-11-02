@@ -3,8 +3,8 @@ Event Based Hazard QA Test, Case 17
 
 ============== ====================
 checksum32     517_223_860         
-date           2020-11-02T09:13:43 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:09 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 3, num_rlzs = 5
@@ -63,8 +63,8 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-2         P    1.824E-04 1         7           
-1         P    1.824E-04 1         39          
+2         P    1.812E-04 1         7           
+1         P    1.659E-04 1         39          
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -72,15 +72,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    3.648E-04
+P    3.471E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       2      7.058E-04 0%     7.000E-04 7.117E-04
-read_source_model  2      0.00143   1%     0.00140   0.00145  
+preclassical       2      6.702E-04 3%     6.475E-04 6.928E-04
+read_source_model  2      0.00141   0%     0.00139   0.00142  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -94,10 +94,10 @@ preclassical      srcfilter=2.56 KB srcs=2.56 KB 478 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46946, maxmem=1.0 GB time_sec memory_mb counts
+calc_47290, maxmem=1.0 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.05099  0.0       1     
-composite source model    1.04622  0.0       1     
-total read_source_model   0.00285  0.20312   2     
-total preclassical        0.00141  0.51172   2     
+importing inputs          1.04303  0.0       1     
+composite source model    1.03815  0.0       1     
+total read_source_model   0.00282  0.43359   2     
+total preclassical        0.00134  0.14062   2     
 ========================= ======== ========= ======

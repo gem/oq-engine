@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 21
 
 ============== ====================
 checksum32     951_606_355         
-date           2020-11-02T09:14:34 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:00 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 4, num_rlzs = 27
@@ -98,18 +98,18 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-SFLT2;1   S    0.00190   1         148         
-SFLT1;0   S    0.00187   1         150         
-SFLT1;4   S    0.00186   1         27          
-SFLT1;2   S    0.00183   1         60          
-SFLT1;6   S    0.00182   1         198         
-SFLT1;1   S    0.00182   1         90          
+SFLT1;7   S    0.00202   1         132         
+SFLT1;5   S    0.00195   1         25          
+SFLT1;2   S    0.00189   1         60          
+SFLT1;1   S    0.00185   1         90          
+SFLT2;1   S    0.00183   1         148         
+SFLT1;4   S    0.00181   1         27          
 SFLT1;3   S    0.00181   1         81          
+SFLT1;0   S    0.00180   1         150         
 SFLT2;0   S    0.00180   1         384         
-SFLT2;2   S    0.00177   1         89          
-SFLT1;5   S    0.00177   1         25          
-SFLT1;7   S    0.00165   1         132         
-SFLT1;8   S    0.00159   1         99          
+SFLT2;2   S    0.00179   1         89          
+SFLT1;6   S    0.00173   1         198         
+SFLT1;8   S    0.00164   1         99          
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -117,15 +117,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-S    0.02150  
+S    0.02192  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       12     0.00226 4%     0.00202 0.00236
-read_source_model  1      0.00256 nan    0.00256 0.00256
+preclassical       12     0.00231 4%     0.00209 0.00255
+read_source_model  1      0.00257 nan    0.00257 0.00257
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -139,10 +139,10 @@ preclassical      srcs=14.77 KB srcfilter=11.12 KB 2.87 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46996, maxmem=1.5 GB time_sec memory_mb counts
+calc_47340, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.20847  0.0       1     
-composite source model    0.20131  0.0       1     
-total preclassical        0.02717  0.50391   12    
-total read_source_model   0.00256  0.0       1     
+importing inputs          0.22109  0.0       1     
+composite source model    0.21294  0.0       1     
+total preclassical        0.02768  0.50781   12    
+total read_source_model   0.00257  0.0       1     
 ========================= ======== ========= ======

@@ -3,8 +3,8 @@ North Africa PSHA
 
 ============== ====================
 checksum32     1_331_502_781       
-date           2020-11-02T09:15:06 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:32 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 2, num_levels = 133, num_rlzs = 2
@@ -63,7 +63,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-21        M    3.965E-04 1         460         
+21        M    3.638E-04 1         460         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -71,15 +71,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-M    3.965E-04
+M    3.638E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      8.457E-04 nan    8.457E-04 8.457E-04
-read_source_model  1      0.00171   nan    0.00171   0.00171  
+preclassical       1      7.832E-04 nan    7.832E-04 7.832E-04
+read_source_model  1      0.00224   nan    0.00224   0.00224  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -93,10 +93,10 @@ preclassical           240 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_47023, maxmem=0.4 GB time_sec  memory_mb counts
+calc_47367, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.07968   0.0       1     
-composite source model    0.07452   0.0       1     
-total read_source_model   0.00171   0.0       1     
-total preclassical        8.457E-04 0.0       1     
+importing inputs          0.06166   0.0       1     
+composite source model    0.05647   0.0       1     
+total read_source_model   0.00224   0.0       1     
+total preclassical        7.832E-04 0.0       1     
 ========================= ========= ========= ======

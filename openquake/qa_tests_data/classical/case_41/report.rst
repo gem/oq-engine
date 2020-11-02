@@ -3,8 +3,8 @@ PEER 2015 Validation Project, Set 3, Test 3.1a as Characteristic Source w/SERA S
 
 ============== ====================
 checksum32     3_400_984_971       
-date           2020-11-02T09:14:45 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:11 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 2, num_levels = 12, num_rlzs = 6
@@ -67,7 +67,7 @@ Slowest sources
 ======================= ==== ========= ========= ============
 source_id               code calc_time num_sites eff_ruptures
 ======================= ==== ========= ========= ============
-PEERWestDipBendingFault X    1.504E-04 2         1           
+PEERWestDipBendingFault X    1.411E-04 2         1           
 ======================= ==== ========= ========= ============
 
 Computation times by source typology
@@ -75,15 +75,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-X    1.504E-04
+X    1.411E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.732E-04 nan    5.732E-04 5.732E-04
-read_source_model  1      0.01073   nan    0.01073   0.01073  
+preclassical       1      5.481E-04 nan    5.481E-04 5.481E-04
+read_source_model  1      0.01016   nan    0.01016   0.01016  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -97,10 +97,10 @@ preclassical           261 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_47007, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47351, maxmem=0.4 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.07418   0.0       1     
-composite source model    0.06559   0.0       1     
-total read_source_model   0.01073   0.0       1     
-total preclassical        5.732E-04 0.0       1     
+importing inputs          0.10529   0.0       1     
+composite source model    0.09668   0.0       1     
+total read_source_model   0.01016   0.0       1     
+total preclassical        5.481E-04 0.0       1     
 ========================= ========= ========= ======

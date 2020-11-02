@@ -3,8 +3,8 @@ Classical BCR test
 
 ============== ====================
 checksum32     4_073_231_028       
-date           2020-11-02T09:13:02 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:35:26 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 11, num_levels = 30, num_rlzs = 3
@@ -82,9 +82,9 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-229       A    1.714E-04 7         264         
-232       A    1.340E-04 11        150         
-231       A    1.335E-04 11        414         
+229       A    1.752E-04 7         264         
+231       A    1.726E-04 11        414         
+232       A    1.323E-04 11        150         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -92,15 +92,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    4.389E-04
+A    4.802E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       3      6.251E-04 4%     6.027E-04 6.607E-04
-read_source_model  1      0.00544   nan    0.00544   0.00544  
+preclassical       3      6.601E-04 1%     6.554E-04 6.695E-04
+read_source_model  1      0.00462   nan    0.00462   0.00462  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -114,11 +114,11 @@ preclassical      srcs=6.11 KB srcfilter=4.54 KB 723 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46861, maxmem=1.1 GB time_sec  memory_mb counts
+calc_47206, maxmem=1.1 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.15997   0.07031   1     
-composite source model    0.12332   0.07031   1     
-total read_source_model   0.00544   0.0       1     
-total preclassical        0.00188   0.45703   3     
-reading exposure          6.154E-04 0.0       1     
+importing inputs          0.28921   0.12109   1     
+composite source model    0.23668   0.12109   1     
+total read_source_model   0.00462   0.0       1     
+total preclassical        0.00198   0.44922   3     
+reading exposure          7.265E-04 0.0       1     
 ========================= ========= ========= ======

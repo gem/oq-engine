@@ -3,8 +3,8 @@ Classical PSHA QA test with sites_csv
 
 ============== ====================
 checksum32     3_287_965_351       
-date           2020-11-02T09:14:54 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:20 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 10, num_levels = 13, num_rlzs = 1
@@ -63,7 +63,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-3         S    0.00241   10        447         
+3         S    0.00239   10        447         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -71,15 +71,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-S    0.00241  
+S    0.00239  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.00286 nan    0.00286 0.00286
-read_source_model  1      0.00301 nan    0.00301 0.00301
+preclassical       1      0.00281 nan    0.00281 0.00281
+read_source_model  1      0.00202 nan    0.00202 0.00202
 ================== ====== ======= ====== ======= =======
 
 Data transfer
@@ -93,10 +93,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_47012, maxmem=0.3 GB time_sec memory_mb counts
+calc_47356, maxmem=0.3 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.06685  0.0       1     
-composite source model    0.06137  0.0       1     
-total read_source_model   0.00301  0.0       1     
-total preclassical        0.00286  0.0       1     
+importing inputs          0.08951  0.0       1     
+composite source model    0.08399  0.0       1     
+total preclassical        0.00281  0.0       1     
+total read_source_model   0.00202  0.0       1     
 ========================= ======== ========= ======

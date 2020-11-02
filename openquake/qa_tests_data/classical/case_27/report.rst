@@ -3,8 +3,8 @@ Mutex sources for Nankai, Japan, case_27
 
 ============== ====================
 checksum32     541_131_823         
-date           2020-11-02T09:14:35 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:01 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 6, num_rlzs = 1
@@ -62,22 +62,22 @@ Slowest sources
 ================= ==== ========= ========= ============
 source_id         code calc_time num_sites eff_ruptures
 ================= ==== ========= ========= ============
-case_14           N    4.215E-04 1         2           
-case_12           N    3.347E-04 1         2           
-case_05           N    3.178E-04 1         1           
-case_07           N    3.145E-04 1         1           
-case_04           N    3.109E-04 1         1           
-case_01           N    3.040E-04 1         1           
-case_08           N    3.028E-04 1         1           
-case_02           N    3.028E-04 1         1           
-case_13           N    3.009E-04 1         2           
-case_06           N    3.004E-04 1         1           
-case_15           N    2.999E-04 1         2           
-case_09           N    2.978E-04 1         1           
-case_03           N    2.885E-04 1         1           
-case_11           N    2.623E-04 1         1           
-case_10           N    2.527E-04 1         1           
-gs_PSE_CPCF_2_100 P    1.581E-04 1         26          
+case_14           N    5.109E-04 1         2           
+case_12           N    4.065E-04 1         2           
+case_15           N    3.893E-04 1         2           
+case_01           N    3.428E-04 1         1           
+case_03           N    3.221E-04 1         1           
+case_02           N    3.014E-04 1         1           
+case_05           N    2.959E-04 1         1           
+case_13           N    2.940E-04 1         2           
+case_08           N    2.921E-04 1         1           
+case_04           N    2.916E-04 1         1           
+case_07           N    2.909E-04 1         1           
+case_06           N    2.856E-04 1         1           
+case_09           N    2.851E-04 1         1           
+case_10           N    2.427E-04 1         1           
+case_11           N    2.418E-04 1         1           
+gs_PSE_CPCF_2_100 P    1.633E-04 1         26          
 ================= ==== ========= ========= ============
 
 Computation times by source typology
@@ -85,17 +85,17 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-N    0.00461  
-P    1.581E-04
+N    0.00479  
+P    1.633E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ====== ========= ====== ========= =========
-operation-duration counts mean      stddev min       max      
-preclassical       16     7.704E-04 10%    6.204E-04 9.985E-04
-read_source_model  1      0.05492   nan    0.05492   0.05492  
-================== ====== ========= ====== ========= =========
+================== ====== ========= ====== ========= =======
+operation-duration counts mean      stddev min       max    
+preclassical       16     8.047E-04 15%    6.623E-04 0.00118
+read_source_model  1      0.05618   nan    0.05618   0.05618
+================== ====== ========= ====== ========= =======
 
 Data transfer
 -------------
@@ -108,10 +108,10 @@ preclassical      srcs=583.31 KB srcfilter=27.42 KB 3.84 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46998, maxmem=1.5 GB time_sec memory_mb counts
+calc_47342, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.61016  0.01562   1     
-composite source model    0.60525  0.01562   1     
-total read_source_model   0.05492  0.01562   1     
-total preclassical        0.01233  0.35938   16    
+importing inputs          0.81415  0.01562   1     
+composite source model    0.80962  0.01562   1     
+total read_source_model   0.05618  0.01562   1     
+total preclassical        0.01287  0.36719   16    
 ========================= ======== ========= ======

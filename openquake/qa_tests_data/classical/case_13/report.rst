@@ -3,8 +3,8 @@ Classical PSHA QA test
 
 ============== ====================
 checksum32     104_621_010         
-date           2020-11-02T09:15:03 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:29 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 21, num_levels = 26, num_rlzs = 4
@@ -66,23 +66,23 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-3_0       X    2.258E-04 20        11          
-2_0;1     X    2.253E-04 15        11          
-3_1       X    2.174E-04 20        11          
-89_1      X    2.155E-04 15        11          
-1_0;0     X    2.136E-04 9         11          
-0_0;0     X    2.043E-04 11        11          
-0_0;1     X    2.038E-04 9         11          
-0_1;0     X    1.998E-04 11        11          
-89_0      X    1.938E-04 15        11          
-2_0;0     X    1.895E-04 8         11          
-0_1;1     X    1.884E-04 9         11          
-1_1;0     X    1.864E-04 9         11          
-2_1;0     X    1.862E-04 8         11          
-2_1;1     X    1.686E-04 15        11          
-1_1;1     X    1.662E-04 13        11          
-1_0;1     X    1.647E-04 13        11          
-122_1     X    1.528E-04 13        11          
+3_1       X    2.325E-04 20        11          
+2_0;1     X    2.236E-04 15        11          
+0_0;1     X    2.129E-04 9         11          
+0_1;0     X    2.105E-04 11        11          
+89_1      X    2.010E-04 15        11          
+0_0;0     X    1.912E-04 11        11          
+1_0;0     X    1.903E-04 9         11          
+1_1;0     X    1.891E-04 9         11          
+89_0      X    1.867E-04 15        11          
+2_0;0     X    1.862E-04 8         11          
+122_1     X    1.857E-04 13        11          
+2_1;0     X    1.838E-04 8         11          
+0_1;1     X    1.829E-04 9         11          
+2_1;1     X    1.788E-04 15        11          
+3_0       X    1.714E-04 20        11          
+1_1;1     X    1.707E-04 13        11          
+1_0;1     X    1.469E-04 13        11          
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -90,15 +90,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-X    0.00330  
+X    0.00324  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       17     6.832E-04 11%    5.605E-04 8.628E-04
-read_source_model  2      0.04668   12%    0.04094   0.05243  
+preclassical       17     6.720E-04 9%     5.693E-04 8.171E-04
+read_source_model  2      0.04884   13%    0.04209   0.05558  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -112,10 +112,10 @@ preclassical      srcfilter=73.73 KB srcs=63.6 KB 4.03 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_47021, maxmem=1.5 GB time_sec memory_mb counts
+calc_47365, maxmem=1.5 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.10522  0.0       1     
-composite source model    1.10040  0.0       1     
-total read_source_model   0.09337  0.49609   2     
-total preclassical        0.01161  0.42578   17    
+importing inputs          1.09770  0.0       1     
+composite source model    1.09271  0.0       1     
+total read_source_model   0.09767  0.99219   2     
+total preclassical        0.01142  0.47656   17    
 ========================= ======== ========= ======

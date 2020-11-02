@@ -3,8 +3,8 @@ Event Based Risk for Turkey reduced
 
 ============== ====================
 checksum32     3_674_230_362       
-date           2020-11-02T09:14:06 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:32 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 13, num_levels = 60, num_rlzs = 12
@@ -98,13 +98,13 @@ Slowest sources
 ============ ==== ========= ========= ============
 source_id    code calc_time num_sites eff_ruptures
 ============ ==== ========= ========= ============
-AS_TRAS360   A    1.795E-04 3         624         
-AS_TRAS334   A    1.750E-04 6         760         
-AS_TRAS395   A    1.588E-04 3         432         
-FSBG_TRBG989 A    1.576E-04 1         108         
-AS_TRAS410   A    1.473E-04 2         240         
-AS_TRAS346   A    1.433E-04 5         527         
-AS_TRAS458   A    1.431E-04 2         399         
+AS_TRAS334   A    1.864E-04 6         760         
+AS_TRAS346   A    1.624E-04 5         527         
+AS_TRAS395   A    1.533E-04 3         432         
+AS_TRAS458   A    1.483E-04 2         399         
+AS_TRAS360   A    1.459E-04 3         624         
+AS_TRAS410   A    1.440E-04 2         240         
+FSBG_TRBG989 A    1.428E-04 1         108         
 ============ ==== ========= ========= ============
 
 Computation times by source typology
@@ -112,7 +112,7 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    0.00110  
+A    0.00108  
 P    0.0      
 ==== =========
 
@@ -120,8 +120,8 @@ Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       8      6.310E-04 4%     5.872E-04 6.771E-04
-read_source_model  3      0.00444   78%    0.00148   0.00933  
+preclassical       8      6.373E-04 4%     6.015E-04 6.709E-04
+read_source_model  3      0.00441   78%    0.00146   0.00929  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -135,11 +135,11 @@ preclassical      srcs=18.57 KB srcfilter=16.91 KB 1.89 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46961, maxmem=1.4 GB time_sec memory_mb counts
+calc_47305, maxmem=1.4 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.23971  0.00391   1     
-composite source model    1.18235  0.00391   1     
-total read_source_model   0.01332  0.43359   3     
-total preclassical        0.00505  0.50391   8     
-reading exposure          0.00205  0.0       1     
+importing inputs          1.23338  0.0       1     
+composite source model    1.17521  0.0       1     
+total read_source_model   0.01323  0.72656   3     
+total preclassical        0.00510  0.42578   8     
+reading exposure          0.00230  0.0       1     
 ========================= ======== ========= ======

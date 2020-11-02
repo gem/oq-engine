@@ -3,8 +3,8 @@ Event Based QA Test, Case 12
 
 ============== ====================
 checksum32     3_453_513_060       
-date           2020-11-02T09:13:58 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:24 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 3, num_rlzs = 1
@@ -63,8 +63,8 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         P    1.702E-04 1         1           
-2         P    1.457E-04 1         1           
+1         P    1.600E-04 1         1           
+2         P    1.547E-04 1         1           
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -72,15 +72,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    3.159E-04
+P    3.147E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       2      6.375E-04 2%     6.223E-04 6.528E-04
-read_source_model  1      0.00213   nan    0.00213   0.00213  
+preclassical       2      6.651E-04 3%     6.397E-04 6.905E-04
+read_source_model  1      0.00228   nan    0.00228   0.00228  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -94,10 +94,10 @@ preclassical      srcs=2.3 KB srcfilter=1.8 KB 478 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46956, maxmem=1.0 GB time_sec memory_mb counts
+calc_47300, maxmem=1.0 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.05505  0.0       1     
-composite source model    0.05031  0.0       1     
-total read_source_model   0.00213  0.0       1     
-total preclassical        0.00128  0.37109   2     
+importing inputs          0.07949  0.0       1     
+composite source model    0.07440  0.0       1     
+total read_source_model   0.00228  0.0       1     
+total preclassical        0.00133  0.14062   2     
 ========================= ======== ========= ======

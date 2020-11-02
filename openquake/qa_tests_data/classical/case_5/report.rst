@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 5
 
 ============== ====================
 checksum32     2_938_551_036       
-date           2020-11-02T09:14:27 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:53 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 3, num_rlzs = 1
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         C    0.02563   1         49          
+1         C    0.00137   1         49          
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,14 +69,14 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-C    0.02563  
+C    0.00137  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ======= =======
 operation-duration counts mean    stddev min     max    
-preclassical       1      0.02612 nan    0.02612 0.02612
+preclassical       1      0.00181 nan    0.00181 0.00181
 read_source_model  1      0.00329 nan    0.00329 0.00329
 ================== ====== ======= ====== ======= =======
 
@@ -91,10 +91,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46986, maxmem=0.7 GB time_sec memory_mb counts
+calc_47330, maxmem=0.6 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          0.39810  0.0       1     
-composite source model    0.39326  0.0       1     
-total preclassical        0.02612  0.0       1     
+importing inputs          0.36665  0.0       1     
+composite source model    0.36189  0.0       1     
 total read_source_model   0.00329  0.0       1     
+total preclassical        0.00181  0.0       1     
 ========================= ======== ========= ======

@@ -3,8 +3,8 @@ Test case for the SplitSigma modified GMPE
 
 ============== ====================
 checksum32     3_984_327_704       
-date           2020-11-02T09:13:27 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:35:55 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 36, num_levels = 40, num_rlzs = 1
@@ -61,7 +61,7 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-1         A    1.309E-04 36        416         
+1         A    1.242E-04 36        416         
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -69,15 +69,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    1.309E-04
+A    1.242E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       1      5.801E-04 nan    5.801E-04 5.801E-04
-read_source_model  1      0.00407   nan    0.00407   0.00407  
+preclassical       1      5.357E-04 nan    5.357E-04 5.357E-04
+read_source_model  1      0.00393   nan    0.00393   0.00393  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -91,10 +91,10 @@ preclassical           239 B
 Slowest operations
 ------------------
 ========================= ========= ========= ======
-calc_46931, maxmem=0.3 GB time_sec  memory_mb counts
+calc_47276, maxmem=0.3 GB time_sec  memory_mb counts
 ========================= ========= ========= ======
-importing inputs          0.10090   0.0       1     
-composite source model    0.08151   0.0       1     
-total read_source_model   0.00407   0.0       1     
-total preclassical        5.801E-04 0.0       1     
+importing inputs          0.09269   0.0       1     
+composite source model    0.07488   0.0       1     
+total read_source_model   0.00393   0.0       1     
+total preclassical        5.357E-04 0.0       1     
 ========================= ========= ========= ======

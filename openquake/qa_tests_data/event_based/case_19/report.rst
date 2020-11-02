@@ -3,8 +3,8 @@ Vancouver - 5 branches - 5 Years
 
 ============== ====================
 checksum32     3_162_001_059       
-date           2020-11-02T09:14:04 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:36:30 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 2, num_levels = 1, num_rlzs = 1
@@ -66,9 +66,9 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-CIS-15    C    0.00259   2         8           
-GTP       A    1.385E-04 2         1_971       
-JDFN      A    1.316E-04 2         3_276       
+CIS-15    C    0.00261   2         8           
+JDFN      A    1.605E-04 2         3_276       
+GTP       A    1.447E-04 2         1_971       
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -76,16 +76,16 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-A    2.701E-04
-C    0.00259  
+A    3.052E-04
+C    0.00261  
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ======= ====== ========= =======
 operation-duration counts mean    stddev min       max    
-preclassical       5      0.00112 88%    5.913E-04 0.00310
-read_source_model  1      0.01016 nan    0.01016   0.01016
+preclassical       5      0.00112 88%    5.879E-04 0.00311
+read_source_model  1      0.01018 nan    0.01018   0.01018
 ================== ====== ======= ====== ========= =======
 
 Data transfer
@@ -99,10 +99,10 @@ preclassical      srcfilter=14.77 KB srcs=13.92 KB 1.09 KB
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_46960, maxmem=1.2 GB time_sec memory_mb counts
+calc_47304, maxmem=1.2 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.50752  0.0       1     
-composite source model    1.49989  0.0       1     
-total read_source_model   0.01016  0.0       1     
-total preclassical        0.00560  0.41797   5     
+importing inputs          1.42249  0.0       1     
+composite source model    1.41470  0.0       1     
+total read_source_model   0.01018  0.0       1     
+total preclassical        0.00559  0.46484   5     
 ========================= ======== ========= ======

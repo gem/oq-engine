@@ -3,8 +3,8 @@ Classical Hazard QA Test, Case 17
 
 ============== ====================
 checksum32     3_298_114_952       
-date           2020-11-02T09:14:42 
-engine_version 3.11.0-git24d6ba92cd
+date           2020-11-02T09:37:08 
+engine_version 3.11.0-git82b78631ac
 ============== ====================
 
 num_sites = 1, num_levels = 3, num_rlzs = 5
@@ -64,9 +64,9 @@ Slowest sources
 ========= ==== ========= ========= ============
 source_id code calc_time num_sites eff_ruptures
 ========= ==== ========= ========= ============
-A;0       P    1.655E-04 1         39          
-B         P    1.647E-04 1         13          
-A;1       P    1.581E-04 1         7           
+A;0       P    1.886E-04 1         39          
+A;1       P    1.569E-04 1         7           
+B         P    1.559E-04 1         13          
 ========= ==== ========= ========= ============
 
 Computation times by source typology
@@ -74,15 +74,15 @@ Computation times by source typology
 ==== =========
 code calc_time
 ==== =========
-P    4.883E-04
+P    5.014E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
 ================== ====== ========= ====== ========= =========
 operation-duration counts mean      stddev min       max      
-preclassical       3      6.390E-04 2%     6.280E-04 6.604E-04
-read_source_model  2      0.00180   2%     0.00175   0.00184  
+preclassical       3      6.665E-04 2%     6.464E-04 6.905E-04
+read_source_model  2      0.00173   2%     0.00169   0.00177  
 ================== ====== ========= ====== ========= =========
 
 Data transfer
@@ -96,10 +96,10 @@ preclassical      srcfilter=4.68 KB srcs=3.88 KB 721 B
 Slowest operations
 ------------------
 ========================= ======== ========= ======
-calc_47005, maxmem=1.1 GB time_sec memory_mb counts
+calc_47349, maxmem=1.1 GB time_sec memory_mb counts
 ========================= ======== ========= ======
-importing inputs          1.02508  0.00391   1     
-composite source model    1.01989  0.00391   1     
-total read_source_model   0.00360  0.26562   2     
-total preclassical        0.00192  0.14062   3     
+importing inputs          1.02504  0.0       1     
+composite source model    1.01991  0.0       1     
+total read_source_model   0.00346  0.60156   2     
+total preclassical        0.00200  0.14062   3     
 ========================= ======== ========= ======
