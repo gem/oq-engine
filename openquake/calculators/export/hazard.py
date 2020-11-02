@@ -453,10 +453,10 @@ def _expand_gmv(array, imts):
         elif name in ('sid', 'eid'):
             dtlist.append((name, dt))
     new = numpy.zeros(len(array), dtlist)
+    imti = {imt: i for i, imt in enumerate(imts)}
     for name, _dt in dtlist:
         if name.startswith('gmv_'):
-            for i, imt in enumerate(imts):
-                new[name] = array['gmv'][:, i]
+            new[name] = array['gmv'][:, imti[name[4:]]]
         else:
             new[name] = array[name]
     return new
