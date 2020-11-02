@@ -107,8 +107,7 @@ def _make_pmap(ctxs, cmaker, investigation_time):
     RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
     # easy case of independent ruptures, useful for debugging
     pmap = ProbabilityMap(len(cmaker.loglevels.array), len(cmaker.gsims))
-    for ctx in ctxs:
-        poes = cmaker.get_poes(ctx)
+    for ctx, poes in cmaker.gen_ctx_poes(ctxs):
         pnes = ctx.get_probability_no_exceedance(poes)  # (N, L, G)
         for sid, pne in zip(ctx.sids, pnes):
             pmap.setdefault(sid, 1.).array *= pne
@@ -524,6 +523,8 @@ class PmapMaker(object):
         if pmap is None:  # for src_indep
             pmap = self.pmap
         rup_indep = self.rup_indep
+        # splitting in blocks makes sure that the maximum poes array
+        # generated has size N x L x G x 8 = 8E8 bytes = 0.745 GB
         for block in block_splitter(
                 ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
             for ctx, poes in self.cmaker.gen_ctx_poes(block):
@@ -558,11 +559,11 @@ class PmapMaker(object):
         # srcs with the same source_id and et_ids
         if self.fewsites:
             srcs_sites = [(self.group, self.srcfilter.sitecol)]
-        elif not self.split_sources:
+        elif self.split_sources:
+            srcs_sites = self.srcfilter.split(self.group, self.gss_mon)
+        else:
             srcs_sites = (([src], self.srcfilter.sitecol.filtered(idx))
                           for src, idx in self.srcfilter.filter(self.group))
-        else:
-            srcs_sites = self.srcfilter.split(self.group, self.gss_mon)
         for srcs, sites in srcs_sites:
             t0 = time.time()
             src_id = srcs[0].source_id
