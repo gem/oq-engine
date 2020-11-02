@@ -559,7 +559,7 @@ class GMPE(GroundShakingIntensityModel):
                                    self.__class__.__name__)
         return arr
 
-    def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctx=None):
+    def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctxs=()):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -591,8 +591,8 @@ class GMPE(GroundShakingIntensityModel):
             function of that truncated Gaussian applied to IMLs.
         :param af:
             None or an instance of AmplFunction
-        :param ctx:
-            None or the context object used to compute mean_std
+        :param ctxs:
+            Context object used to compute mean_std
         :returns:
             array of PoEs of shape (N, L)
         :raises ValueError:
@@ -622,7 +622,7 @@ class GMPE(GroundShakingIntensityModel):
                 mean_stdi[1] *= f  # multiply stddev by factor
                 arr += w * _get_poes(mean_stdi, loglevels, trunclevel)
         elif af:  # kernel amplification function
-            arr = _get_poes_site(mean_std, loglevels, trunclevel, af, ctx)
+            arr = _get_poes_site(mean_std, loglevels, trunclevel, af, ctxs)
         else:  # regular case
             arr = _get_poes(mean_std, loglevels, trunclevel)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
