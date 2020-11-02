@@ -1,34 +1,34 @@
 Reduced Hazard Italy
 ====================
 
-============== ===================
-checksum32     2_542_535_525      
-date           2020-03-13T11:21:24
-engine_version 3.9.0-gitfb3ef3a732
-============== ===================
+============== ====================
+checksum32     237_210_023         
+date           2020-11-02T08:41:28 
+engine_version 3.11.0-gitd13380ddb1
+============== ====================
 
-num_sites = 148, num_levels = 30, num_rlzs = 4
+num_sites = 148, num_levels = 3, num_rlzs = 4
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'preclassical'    
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 300.0}
-investigation_time              200.0             
-ses_per_logic_tree_path         1                 
-truncation_level                3.0               
-rupture_mesh_spacing            5.0               
-complex_fault_mesh_spacing      10.0              
-width_of_mfd_bin                0.2               
-area_source_discretization      20.0              
-pointsource_distance            {'default': {}}   
-ground_motion_correlation_model None              
-minimum_intensity               {}                
-random_seed                     113               
-master_seed                     0                 
-ses_seed                        42                
-=============================== ==================
+=============================== ======================================
+calculation_mode                'preclassical'                        
+number_of_logic_tree_samples    0                                     
+maximum_distance                {'default': [(1.0, 300), (10.0, 300)]}
+investigation_time              200.0                                 
+ses_per_logic_tree_path         1                                     
+truncation_level                3.0                                   
+rupture_mesh_spacing            5.0                                   
+complex_fault_mesh_spacing      10.0                                  
+width_of_mfd_bin                0.2                                   
+area_source_discretization      20.0                                  
+pointsource_distance            None                                  
+ground_motion_correlation_model None                                  
+minimum_intensity               {}                                    
+random_seed                     113                                   
+master_seed                     0                                     
+ses_seed                        42                                    
+=============================== ======================================
 
 Input files
 -----------
@@ -45,27 +45,22 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-========= ======= ================
-smlt_path weight  num_realizations
-========= ======= ================
-b11       1.00000 4               
-========= ======= ================
+====== ==================== ====
+grp_id gsim                 rlzs
+====== ==================== ====
+0      [AkkarBommer2010]    [0] 
+0      [CauzziFaccioli2008] [1] 
+0      [ChiouYoungs2008]    [2] 
+0      [ZhaoEtAl2006Asc]    [3] 
+====== ==================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================================================================================== ================= ======================= ============================
-grp_id gsims                                                                              distances         siteparams              ruptparams                  
-====== ================================================================================== ================= ======================= ============================
-0      '[AkkarBommer2010]' '[CauzziFaccioli2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
-====== ================================================================================== ================= ======================= ============================
-
-Number of ruptures per source group
------------------------------------
-====== ========= ============ ============
-grp_id num_sites num_ruptures eff_ruptures
-====== ========= ============ ============
-0      0.06138   2_295        945         
-====== ========= ============ ============
+===== ================================================================================== ================= ======================= ============================
+et_id gsims                                                                              distances         siteparams              ruptparams                  
+===== ================================================================================== ================= ======================= ============================
+0     '[AkkarBommer2010]' '[CauzziFaccioli2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
+===== ================================================================================== ================= ======================= ============================
 
 Exposure model
 --------------
@@ -74,70 +69,68 @@ Exposure model
 #taxonomies 17 
 =========== ===
 
-================= ======= ======= === === ========= ==========
-taxonomy          mean    stddev  min max num_sites num_assets
-CR/CDN/HBET:1-2   1.00000 0.0     1   1   8         8         
-CR/CDM/HBET:1-2   1.00000 0.0     1   1   13        13        
-CR/CDM/HBET:3-5   1.00000 0.0     1   1   14        14        
-CR/CDN/H:4        1.00000 0.0     1   1   2         2         
-MUR/LWAL/HBET:5-8 1.00000 0.0     1   1   6         6         
-CR/CDM/HBET:6-8   1.00000 0.0     1   1   3         3         
-MUR/LWAL/H:3      1.00000 0.0     1   1   18        18        
-CR/CDM/SOS        1.00000 0.0     1   1   10        10        
-MUR/LWAL/HBET:1-2 1.00000 0.0     1   1   17        17        
-CR/CDN/SOS        1.00000 0.0     1   1   10        10        
-W/CDN/HBET:1-3    1.00000 0.0     1   1   14        14        
-CR/CDH/HBET:1-2   1.00000 0.0     1   1   11        11        
-CR/CDH/HBET:6-8   1.00000 0.0     1   1   3         3         
-MUR/LWAL/H:4      1.00000 0.0     1   1   8         8         
-CR/CDH/HBET:3-5   1.00000 0.0     1   1   9         9         
-S/CDM/HBET:4-8    1.00000 0.0     1   1   2         2         
-CR/CDN/H:3        1.00000 0.0     1   1   3         3         
-*ALL*             1.02027 0.14140 1   2   148       151       
-================= ======= ======= === === ========= ==========
+================= ========== ======= ====== === === =========
+taxonomy          num_assets mean    stddev min max num_sites
+CR/CDN/HBET:1-2   8          1.00000 0%     1   1   8        
+CR/CDM/HBET:1-2   13         1.00000 0%     1   1   13       
+CR/CDM/HBET:3-5   14         1.00000 0%     1   1   14       
+CR/CDN/H:4        2          1.00000 0%     1   1   2        
+MUR/LWAL/HBET:5-8 6          1.00000 0%     1   1   6        
+CR/CDM/HBET:6-8   3          1.00000 0%     1   1   3        
+MUR/LWAL/H:3      18         1.00000 0%     1   1   18       
+CR/CDM/SOS        10         1.00000 0%     1   1   10       
+MUR/LWAL/HBET:1-2 17         1.00000 0%     1   1   17       
+CR/CDN/SOS        10         1.00000 0%     1   1   10       
+W/CDN/HBET:1-3    14         1.00000 0%     1   1   14       
+CR/CDH/HBET:1-2   11         1.00000 0%     1   1   11       
+CR/CDH/HBET:6-8   3          1.00000 0%     1   1   3        
+MUR/LWAL/H:4      8          1.00000 0%     1   1   8        
+CR/CDH/HBET:3-5   9          1.00000 0%     1   1   9        
+S/CDM/HBET:4-8    2          1.00000 0%     1   1   2        
+CR/CDN/H:3        3          1.00000 0%     1   1   3        
+*ALL*             148        1.02027 13%    1   2   151      
+================= ========== ======= ====== === === =========
 
 Slowest sources
 ---------------
-========== ====== ==== ============ ========= ========= ============
-source_id  grp_id code num_ruptures calc_time num_sites eff_ruptures
-========== ====== ==== ============ ========= ========= ============
-AS_HRAS083 0      A    2_295        0.00414   0.06138   945         
-========== ====== ==== ============ ========= ========= ============
+========== ==== ========= ========= ============
+source_id  code calc_time num_sites eff_ruptures
+========== ==== ========= ========= ============
+AS_HRAS083 A    1.493E-04 28        2_295       
+========== ==== ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== =========
 code calc_time
 ==== =========
-A    0.00414  
+A    1.493E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-preclassical       0.03104 NaN    0.03104 0.03104 1      
-read_source_model  0.02410 NaN    0.02410 0.02410 1      
-================== ======= ====== ======= ======= =======
+================== ====== ========= ====== ========= =========
+operation-duration counts mean      stddev min       max      
+preclassical       1      5.708E-04 nan    5.708E-04 5.708E-04
+read_source_model  1      0.00319   nan    0.00319   0.00319  
+================== ====== ========= ====== ========= =========
 
 Data transfer
 -------------
-================= ===================================== ========
-task              sent                                  received
-read_source_model                                       2.77 KB 
-preclassical      srcs=2.74 KB params=995 B gsims=487 B 370 B   
-================= ===================================== ========
+================= ==== ========
+task              sent received
+read_source_model      2.07 KB 
+preclassical           248 B   
+================= ==== ========
 
 Slowest operations
 ------------------
-=========================== ========= ========= ======
-calc_66938                  time_sec  memory_mb counts
-=========================== ========= ========= ======
-composite source model      0.03576   0.0       1     
-total preclassical          0.03104   1.01172   1     
-total read_source_model     0.02410   0.0       1     
-splitting/filtering sources 0.02305   0.50781   1     
-reading exposure            0.00399   0.0       1     
-store source_info           0.00216   0.0       1     
-aggregate curves            4.091E-04 0.0       1     
-=========================== ========= ========= ======
+========================= ========= ========= ======
+calc_46574, maxmem=0.3 GB time_sec  memory_mb counts
+========================= ========= ========= ======
+importing inputs          0.15516   1.10156   1     
+composite source model    0.09224   0.0       1     
+reading exposure          0.00320   0.0       1     
+total read_source_model   0.00319   0.0       1     
+total preclassical        5.708E-04 0.0       1     
+========================= ========= ========= ======

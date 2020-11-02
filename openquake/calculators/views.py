@@ -198,15 +198,12 @@ def view_contents(token, dstore):
 @view.add('full_lt')
 def view_full_lt(token, dstore):
     full_lt = dstore['full_lt']
-    if full_lt.num_samples == 0:
-        num_rlzs = full_lt.gsim_lt.get_num_paths()
-    header = ['smlt_path', 'weight', 'num_realizations']
+    rlzs_by_gsim = full_lt.get_rlzs_by_gsim_list(dstore['et_ids'])
+    header = ['grp_id', 'gsim', 'rlzs']
     rows = []
-    for sm in full_lt.sm_rlzs:
-        if full_lt.num_samples:
-            num_rlzs = sm.samples
-        row = ('_'.join(sm.lt_path), sm.weight, num_rlzs)
-        rows.append(row)
+    for grp_id, rbg in enumerate(rlzs_by_gsim):
+        for gsim, rlzs in rbg.items():
+            rows.append([grp_id, str(gsim), str(list(rlzs))])
     return rst_table(rows, header)
 
 

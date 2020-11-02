@@ -1,34 +1,34 @@
 Event Based Risk QA Test 2
 ==========================
 
-============== ===================
-checksum32     1_772_081_114      
-date           2020-03-13T11:21:59
-engine_version 3.9.0-gitfb3ef3a732
-============== ===================
+============== ====================
+checksum32     2_301_435_532       
+date           2020-11-02T08:42:06 
+engine_version 3.11.0-gitd13380ddb1
+============== ====================
 
 num_sites = 3, num_levels = 3, num_rlzs = 1
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'preclassical'    
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 100.0}
-investigation_time              50.0              
-ses_per_logic_tree_path         20                
-truncation_level                3.0               
-rupture_mesh_spacing            5.0               
-complex_fault_mesh_spacing      5.0               
-width_of_mfd_bin                0.3               
-area_source_discretization      10.0              
-pointsource_distance            {'default': {}}   
-ground_motion_correlation_model None              
-minimum_intensity               {}                
-random_seed                     23                
-master_seed                     42                
-ses_seed                        42                
-=============================== ==================
+=============================== ==========================================
+calculation_mode                'preclassical'                            
+number_of_logic_tree_samples    0                                         
+maximum_distance                {'default': [(1.0, 100.0), (10.0, 100.0)]}
+investigation_time              50.0                                      
+ses_per_logic_tree_path         20                                        
+truncation_level                3.0                                       
+rupture_mesh_spacing            5.0                                       
+complex_fault_mesh_spacing      5.0                                       
+width_of_mfd_bin                0.3                                       
+area_source_discretization      10.0                                      
+pointsource_distance            None                                      
+ground_motion_correlation_model None                                      
+minimum_intensity               {}                                        
+random_seed                     23                                        
+master_seed                     42                                        
+ses_seed                        42                                        
+=============================== ==========================================
 
 Input files
 -----------
@@ -44,27 +44,19 @@ structural_vulnerability `vulnerability_model_stco.xml <vulnerability_model_stco
 
 Composite source model
 ----------------------
-========= ======= ================
-smlt_path weight  num_realizations
-========= ======= ================
-b1        1.00000 1               
-========= ======= ================
+====== ================= ====
+grp_id gsim              rlzs
+====== ================= ====
+0      [ChiouYoungs2008] [0] 
+====== ================= ====
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =================== =========== ======================= =================
-grp_id gsims               distances   siteparams              ruptparams       
-====== =================== =========== ======================= =================
-0      '[ChiouYoungs2008]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
-====== =================== =========== ======================= =================
-
-Number of ruptures per source group
------------------------------------
-====== ========= ============ ============
-grp_id num_sites num_ruptures eff_ruptures
-====== ========= ============ ============
-0      0.16667   18           18          
-====== ========= ============ ============
+===== =================== =========== ======================= =================
+et_id gsims               distances   siteparams              ruptparams       
+===== =================== =========== ======================= =================
+0     '[ChiouYoungs2008]' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+===== =================== =========== ======================= =================
 
 Exposure model
 --------------
@@ -73,58 +65,56 @@ Exposure model
 #taxonomies 3
 =========== =
 
-======== ======= ======= === === ========= ==========
-taxonomy mean    stddev  min max num_sites num_assets
-RM       1.00000 0.0     1   1   2         2         
-RC+      1.00000 NaN     1   1   1         1         
-W/1      1.00000 NaN     1   1   1         1         
-*ALL*    1.33333 0.57735 1   2   3         4         
-======== ======= ======= === === ========= ==========
+======== ========== ======= ====== === === =========
+taxonomy num_assets mean    stddev min max num_sites
+RM       2          1.00000 0%     1   1   2        
+RC+      1          1.00000 nan    1   1   1        
+W/1      1          1.00000 nan    1   1   1        
+*ALL*    3          1.33333 35%    1   2   4        
+======== ========== ======= ====== === === =========
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
-========= ====== ==== ============ ========= ========= ============
-1         0      P    6            0.00306   0.16667   6.00000     
-3         0      P    6            0.00302   0.16667   6.00000     
-2         0      P    6            0.00299   0.16667   6.00000     
-========= ====== ==== ============ ========= ========= ============
+========= ==== ========= ========= ============
+source_id code calc_time num_sites eff_ruptures
+========= ==== ========= ========= ============
+2         P    2.284E-04 1         6           
+1         P    2.089E-04 1         6           
+3         P    1.938E-04 1         6           
+========= ==== ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== =========
 code calc_time
 ==== =========
-P    0.00906  
+P    6.311E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-preclassical       0.00429 9.742E-05 0.00420 0.00439 3      
-read_source_model  0.00178 NaN       0.00178 0.00178 1      
-================== ======= ========= ======= ======= =======
+================== ====== ========= ====== ========= =========
+operation-duration counts mean      stddev min       max      
+preclassical       3      6.870E-04 2%     6.588E-04 7.069E-04
+read_source_model  1      0.00211   nan    0.00211   0.00211  
+================== ====== ========= ====== ========= =========
 
 Data transfer
 -------------
-================= =========================================== ========
-task              sent                                        received
-read_source_model                                             2.16 KB 
-preclassical      srcs=3.41 KB params=2.27 KB srcfilter=669 B 1.08 KB 
-================= =========================================== ========
+================= ============================= ========
+task              sent                          received
+read_source_model                               2.14 KB 
+preclassical      srcs=3.5 KB srcfilter=3.25 KB 717 B   
+================= ============================= ========
 
 Slowest operations
 ------------------
-=========================== ========= ========= ======
-calc_66968                  time_sec  memory_mb counts
-=========================== ========= ========= ======
-total preclassical          0.01287   0.51172   3     
-composite source model      0.01057   0.0       1     
-store source_info           0.00213   0.0       1     
-total read_source_model     0.00178   0.0       1     
-reading exposure            0.00157   0.0       1     
-splitting/filtering sources 0.00118   0.0       3     
-aggregate curves            6.790E-04 0.0       3     
-=========================== ========= ========= ======
+========================= ======== ========= ======
+calc_46605, maxmem=1.1 GB time_sec memory_mb counts
+========================= ======== ========= ======
+importing inputs          0.11841  0.0       1     
+composite source model    0.09428  0.0       1     
+total read_source_model   0.00211  0.0       1     
+total preclassical        0.00206  0.44922   3     
+reading exposure          0.00162  0.0       1     
+========================= ======== ========= ======

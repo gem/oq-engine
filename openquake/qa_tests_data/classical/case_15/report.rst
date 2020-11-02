@@ -1,34 +1,34 @@
 Classical PSHA with GMPE logic tree with multiple tectonic region types
 =======================================================================
 
-============== ===================
-checksum32     3_553_734_699      
-date           2020-01-16T05:31:49
-engine_version 3.8.0-git83c45f7244
-============== ===================
+============== ====================
+checksum32     3_167_921_005       
+date           2020-11-02T08:42:41 
+engine_version 3.11.0-gitd13380ddb1
+============== ====================
 
-num_sites = 3, num_levels = 17, num_rlzs = 8
+num_sites = 3, num_levels = 10, num_rlzs = 12
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'preclassical'    
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 200.0}
-investigation_time              50.0              
-ses_per_logic_tree_path         1                 
-truncation_level                3.0               
-rupture_mesh_spacing            1.0               
-complex_fault_mesh_spacing      1.0               
-width_of_mfd_bin                0.1               
-area_source_discretization      10.0              
-pointsource_distance            None              
-ground_motion_correlation_model None              
-minimum_intensity               {}                
-random_seed                     23                
-master_seed                     0                 
-ses_seed                        42                
-=============================== ==================
+=============================== ==========================================
+calculation_mode                'preclassical'                            
+number_of_logic_tree_samples    0                                         
+maximum_distance                {'default': [(1.0, 200.0), (10.0, 200.0)]}
+investigation_time              50.0                                      
+ses_per_logic_tree_path         1                                         
+truncation_level                3.0                                       
+rupture_mesh_spacing            1.0                                       
+complex_fault_mesh_spacing      1.0                                       
+width_of_mfd_bin                0.1                                       
+area_source_discretization      10.0                                      
+pointsource_distance            None                                      
+ground_motion_correlation_model None                                      
+minimum_intensity               {}                                        
+random_seed                     23                                        
+master_seed                     0                                         
+ses_seed                        42                                        
+=============================== ==========================================
 
 Input files
 -----------
@@ -42,88 +42,75 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-============== ======= =============== ================
-smlt_path      weight  gsim_logic_tree num_realizations
-============== ======= =============== ================
-SM1            0.50000 complex(2,2)    4               
-SM2_a3b1       0.25000 simple(2,0)     2               
-SM2_a3pt2b0pt8 0.25000 simple(2,0)     2               
-============== ======= =============== ================
+====== ======================= ========
+grp_id gsim                    rlzs    
+====== ======================= ========
+0      [BooreAtkinson2008]     [0, 1]  
+0      [CampbellBozorgnia2008] [2, 3]  
+1      [BooreAtkinson2008]     [4, 5]  
+1      [CampbellBozorgnia2008] [6, 7]  
+2      [BooreAtkinson2008]     [8, 9]  
+2      [CampbellBozorgnia2008] [10, 11]
+3      [Campbell2003]          [0, 2]  
+3      [ToroEtAl2002]          [1, 3]  
+====== ======================= ========
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =============================================== ========= ========== =================
-grp_id gsims                                           distances siteparams ruptparams       
-====== =============================================== ========= ========== =================
-0      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
-1      '[Campbell2003]' '[ToroEtAl2002]'               rjb rrup             mag              
-2      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
-3      '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
-====== =============================================== ========= ========== =================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=16, rlzs=8)>
-
-Number of ruptures per source group
------------------------------------
-====== ========= ============ ============
-grp_id num_sites num_ruptures eff_ruptures
-====== ========= ============ ============
-0      3.00000   15           15          
-1      3.00000   15           15          
-2      3.00000   240          240         
-3      3.00000   240          240         
-====== ========= ============ ============
+===== =============================================== ========= ========== =================
+et_id gsims                                           distances siteparams ruptparams       
+===== =============================================== ========= ========== =================
+0     '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
+1     '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
+2     '[BooreAtkinson2008]' '[CampbellBozorgnia2008]' rjb rrup  vs30 z2pt5 dip mag rake ztor
+3     '[Campbell2003]' '[ToroEtAl2002]'               rjb rrup             mag              
+4     '[Campbell2003]' '[ToroEtAl2002]'               rjb rrup             mag              
+5     '[Campbell2003]' '[ToroEtAl2002]'               rjb rrup             mag              
+===== =============================================== ========= ========== =================
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
-========= ====== ==== ============ ========= ========= ============
-1         2      A    240          0.05614   3.00000   240         
-1         3      A    240          0.05025   3.00000   240         
-1         0      P    15           0.00436   3.00000   15          
-2         1      P    15           0.00425   3.00000   15          
-========= ====== ==== ============ ========= ========= ============
+========= ==== ========= ========= ============
+source_id code calc_time num_sites eff_ruptures
+========= ==== ========= ========= ============
+1         P    2.201E-04 3         15          
+2         P    2.050E-04 3         15          
+3;1       A    1.352E-04 3         240         
+3;0       A    1.273E-04 3         240         
+========= ==== ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== =========
 code calc_time
 ==== =========
-A    0.10639  
-P    0.00862  
+A    2.625E-04
+P    4.251E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-SourceReader       0.00994 0.00728 0.00155 0.01446 3      
-preclassical       0.00851 0.00201 0.00519 0.01150 32     
-================== ======= ======= ======= ======= =======
+================== ====== ========= ====== ========= =========
+operation-duration counts mean      stddev min       max      
+preclassical       4      6.629E-04 5%     6.034E-04 7.026E-04
+read_source_model  2      0.00200   11%    0.00176   0.00224  
+================== ====== ========= ====== ========= =========
 
 Data transfer
 -------------
-============ =========================================== ========
-task         sent                                        received
-SourceReader apply_unc=4.4 KB ltmodel=590 B fname=318 B  8.8 KB  
-preclassical srcs=63.28 KB params=26.44 KB gsims=9.02 KB 11.44 KB
-============ =========================================== ========
+================= ============================= ========
+task              sent                          received
+read_source_model converter=664 B fname=198 B   3.68 KB 
+preclassical      srcfilter=6.9 KB srcs=6.37 KB 960 B   
+================= ============================= ========
 
 Slowest operations
 ------------------
-=========================== ======== ========= ======
-calc_43329                  time_sec memory_mb counts
-=========================== ======== ========= ======
-total preclassical          0.27219  0.0       32    
-splitting/filtering sources 0.13029  0.0       32    
-composite source model      0.03244  0.0       1     
-total SourceReader          0.02983  0.0       3     
-aggregate curves            0.00578  0.0       32    
-store source_info           0.00254  0.0       1     
-=========================== ======== ========= ======
+========================= ======== ========= ======
+calc_46644, maxmem=1.2 GB time_sec memory_mb counts
+========================= ======== ========= ======
+importing inputs          1.02283  0.0       1     
+composite source model    1.01780  0.0       1     
+total read_source_model   0.00400  0.52734   2     
+total preclassical        0.00265  0.20312   4     
+========================= ======== ========= ======

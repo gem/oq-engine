@@ -1,34 +1,34 @@
 Hazard South Africa
 ===================
 
-============== ===================
-checksum32     2_508_160_232      
-date           2020-03-31T07:29:22
-engine_version 3.9.0-git805a678d6e
-============== ===================
+============== ====================
+checksum32     745_203_157         
+date           2020-11-02T08:41:31 
+engine_version 3.11.0-gitd13380ddb1
+============== ====================
 
 num_sites = 10, num_levels = 1, num_rlzs = 3
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'preclassical'    
-number_of_logic_tree_samples    3                 
-maximum_distance                {'default': 100.0}
-investigation_time              100.0             
-ses_per_logic_tree_path         1                 
-truncation_level                3.0               
-rupture_mesh_spacing            5.0               
-complex_fault_mesh_spacing      10.0              
-width_of_mfd_bin                0.1               
-area_source_discretization      20.0              
-pointsource_distance            {'default': {}}   
-ground_motion_correlation_model None              
-minimum_intensity               {}                
-random_seed                     113               
-master_seed                     0                 
-ses_seed                        23                
-=============================== ==================
+=============================== ================================
+calculation_mode                'preclassical'                  
+number_of_logic_tree_samples    3                               
+maximum_distance                {'default': [(6, 50), (8, 200)]}
+investigation_time              100.0                           
+ses_per_logic_tree_path         2                               
+truncation_level                3.0                             
+rupture_mesh_spacing            5.0                             
+complex_fault_mesh_spacing      10.0                            
+width_of_mfd_bin                0.1                             
+area_source_discretization      20.0                            
+pointsource_distance            None                            
+ground_motion_correlation_model None                            
+minimum_intensity               {}                              
+random_seed                     113                             
+master_seed                     0                               
+ses_seed                        23                              
+=============================== ================================
 
 Input files
 -----------
@@ -43,66 +43,79 @@ source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 
 Composite source model
 ----------------------
-=============================================================== ======= ================
-smlt_path                                                       weight  num_realizations
-=============================================================== ======= ================
-b01_b1811_b1821_b1911_b1921_b2011_b2021_b2111_b2121_b2211_b2221 0.66667 2               
-b01_b1812_b1822_b1913_b1923_b2012_b2022_b2112_b2123_b2214_b2223 0.33333 1               
-=============================================================== ======= ================
+====== =================== ======
+grp_id gsim                rlzs  
+====== =================== ======
+0      [AkkarEtAlRjb2014]  [0]   
+1      [AkkarEtAlRjb2014]  [0]   
+1      [BooreAtkinson2008] [1]   
+2      [AkkarEtAlRjb2014]  [0]   
+2      [BooreAtkinson2008] [2]   
+3      [BooreAtkinson2008] [1]   
+4      [BooreAtkinson2008] [1, 2]
+5      [BooreAtkinson2008] [2]   
+====== =================== ======
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ========================================== ========= ========== ==========
-grp_id gsims                                      distances siteparams ruptparams
-====== ========================================== ========= ========== ==========
-0      '[AkkarEtAlRjb2014]' '[BooreAtkinson2008]' rjb       vs30       mag rake  
-1      '[AkkarEtAlRjb2014]' '[BooreAtkinson2008]' rjb       vs30       mag rake  
-====== ========================================== ========= ========== ==========
+===== ========================================== ========= ========== ==========
+et_id gsims                                      distances siteparams ruptparams
+===== ========================================== ========= ========== ==========
+0     '[AkkarEtAlRjb2014]' '[BooreAtkinson2008]' rjb       vs30       mag rake  
+1     '[AkkarEtAlRjb2014]' '[BooreAtkinson2008]' rjb       vs30       mag rake  
+2     '[AkkarEtAlRjb2014]' '[BooreAtkinson2008]' rjb       vs30       mag rake  
+===== ========================================== ========= ========== ==========
 
 Slowest sources
 ---------------
-========= ==== =========== ========= ========= ============
-source_id code num_sources calc_time num_sites eff_ruptures
-========= ==== =========== ========= ========= ============
-18        A    2           0.00957   0.20000   470         
-22        A    2           0.00365   0.06667   60          
-21        A    2           0.00239   0.11111   198         
-20        A    2           8.078E-04 0.03763   186         
-========= ==== =========== ========= ========= ============
+========= ==== ========= ========= ============
+source_id code calc_time num_sites eff_ruptures
+========= ==== ========= ========= ============
+19;0      A    1.702E-04 1         12_690      
+20;0      A    1.616E-04 2         12_654      
+22;2      A    1.585E-04 2         8           
+18;2      A    1.547E-04 2         320         
+22;1      A    1.528E-04 2         12          
+22;0      A    1.523E-04 2         12          
+18;0      A    1.521E-04 2         320         
+18;1      A    1.500E-04 2         480         
+19;1      A    1.493E-04 1         10_152      
+21;0      A    1.454E-04 3         56          
+21;1      A    1.447E-04 3         56          
+20;1      A    1.197E-04 2         23_199      
+========= ==== ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== =========
 code calc_time
 ==== =========
-A    0.01642  
+A    0.00181  
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-preclassical       0.07949 0.09271   0.00354 0.23176 10     
-read_source_model  0.00247 1.507E-04 0.00230 0.00271 5      
-================== ======= ========= ======= ======= =======
+================== ====== ========= ====== ========= =========
+operation-duration counts mean      stddev min       max      
+preclassical       12     6.448E-04 8%     5.367E-04 7.932E-04
+read_source_model  5      0.00251   3%     0.00237   0.00259  
+================== ====== ========= ====== ========= =========
 
 Data transfer
 -------------
-================= ============================================ ========
-task              sent                                         received
-read_source_model converter=1.62 KB fname=495 B srcfilter=20 B 9.54 KB 
-preclassical      srcs=23.56 KB params=6.22 KB gsims=3.84 KB   8.83 KB 
-================= ============================================ ========
+================= ================================ ========
+task              sent                             received
+read_source_model converter=1.62 KB fname=495 B    9.53 KB 
+preclassical      srcs=28.96 KB srcfilter=17.74 KB 2.84 KB 
+================= ================================ ========
 
 Slowest operations
 ------------------
-=========================== ======== ========= ======
-calc_41331                  time_sec memory_mb counts
-=========================== ======== ========= ======
-composite source model      0.82970  1.48438   1     
-total preclassical          0.79490  2.12500   10    
-splitting/filtering sources 0.54452  1.01172   10    
-total read_source_model     0.01234  0.64844   5     
-aggregate curves            0.00269  0.00781   8     
-store source_info           0.00121  0.0       1     
-=========================== ======== ========= ======
+========================= ======== ========= ======
+calc_46577, maxmem=1.5 GB time_sec memory_mb counts
+========================= ======== ========= ======
+importing inputs          2.05517  0.0       1     
+composite source model    2.04600  0.0       1     
+total read_source_model   0.01256  0.48047   5     
+total preclassical        0.00774  0.35938   12    
+========================= ======== ========= ======

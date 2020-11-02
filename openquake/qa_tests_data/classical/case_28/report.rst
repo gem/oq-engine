@@ -1,34 +1,34 @@
 North Africa PSHA
 =================
 
-============== ===================
-checksum32     2_135_452_217      
-date           2020-03-13T11:23:06
-engine_version 3.9.0-gitfb3ef3a732
-============== ===================
+============== ====================
+checksum32     1_331_502_781       
+date           2020-11-02T08:42:52 
+engine_version 3.11.0-gitd13380ddb1
+============== ====================
 
 num_sites = 2, num_levels = 133, num_rlzs = 2
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'preclassical'    
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 200.0}
-investigation_time              50.0              
-ses_per_logic_tree_path         1                 
-truncation_level                3.0               
-rupture_mesh_spacing            2.0               
-complex_fault_mesh_spacing      2.0               
-width_of_mfd_bin                0.1               
-area_source_discretization      10.0              
-pointsource_distance            {'default': {}}   
-ground_motion_correlation_model None              
-minimum_intensity               {}                
-random_seed                     19                
-master_seed                     0                 
-ses_seed                        42                
-=============================== ==================
+=============================== ==========================================
+calculation_mode                'preclassical'                            
+number_of_logic_tree_samples    0                                         
+maximum_distance                {'default': [(1.0, 200.0), (10.0, 200.0)]}
+investigation_time              50.0                                      
+ses_per_logic_tree_path         1                                         
+truncation_level                3.0                                       
+rupture_mesh_spacing            2.0                                       
+complex_fault_mesh_spacing      2.0                                       
+width_of_mfd_bin                0.1                                       
+area_source_discretization      10.0                                      
+pointsource_distance            None                                      
+ground_motion_correlation_model None                                      
+minimum_intensity               {}                                        
+random_seed                     19                                        
+master_seed                     0                                         
+ses_seed                        42                                        
+=============================== ==========================================
 
 Input files
 -----------
@@ -43,71 +43,71 @@ source_model_logic_tree `source_model_logic_tree.xml <source_model_logic_tree.xm
 
 Composite source model
 ----------------------
-============================= ======= ================
-smlt_path                     weight  num_realizations
-============================= ======= ================
-smoothed_model_m_m0.2_b_e0.0  0.50000 1               
-smoothed_model_m_m0.2_b_m0.05 0.50000 1               
-============================= ======= ================
+====== ===================================================================================================================================================================================================================================================================== ======
+grp_id gsim                                                                                                                                                                                                                                                                  rlzs  
+====== ===================================================================================================================================================================================================================================================================== ======
+0      [AvgGMPE.GROUP_B_GMPE_0.ChiouYoungs2014]
+weight = 0.25
+
+[AvgGMPE.GROUP_B_GMPE_1.AkkarEtAlRjb2014]
+adjustment_factor = 1.0
+weight = 0.25
+
+[AvgGMPE.GROUP_B_GMPE_2.AtkinsonBoore2006Modified2011]
+weight = 0.25
+
+[AvgGMPE.GROUP_B_GMPE_3.PezeshkEtAl2011]
+weight = 0.25 [0, 1]
+====== ===================================================================================================================================================================================================================================================================== ======
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== =========== ========= ========== ==========
-grp_id gsims       distances siteparams ruptparams
-====== =========== ========= ========== ==========
-0      '[AvgGMPE]'                                
-1      '[AvgGMPE]'                                
-====== =========== ========= ========== ==========
-
-Number of ruptures per source group
------------------------------------
-====== ========= ============ ============
-grp_id num_sites num_ruptures eff_ruptures
-====== ========= ============ ============
-0      0.00435   460          460         
-====== ========= ============ ============
+===== ================================================================================================================================================================================================================================================================================== =========== ======================= =================
+et_id gsims                                                                                                                                                                                                                                                                              distances   siteparams              ruptparams       
+===== ================================================================================================================================================================================================================================================================================== =========== ======================= =================
+0     '[AvgGMPE.GROUP_B_GMPE_0.ChiouYoungs2014]\nweight = 0.25\n\n[AvgGMPE.GROUP_B_GMPE_1.AkkarEtAlRjb2014]\nadjustment_factor = 1.0\nweight = 0.25\n\n[AvgGMPE.GROUP_B_GMPE_2.AtkinsonBoore2006Modified2011]\nweight = 0.25\n\n[AvgGMPE.GROUP_B_GMPE_3.PezeshkEtAl2011]\nweight = 0.25' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+1     '[AvgGMPE.GROUP_B_GMPE_0.ChiouYoungs2014]\nweight = 0.25\n\n[AvgGMPE.GROUP_B_GMPE_1.AkkarEtAlRjb2014]\nadjustment_factor = 1.0\nweight = 0.25\n\n[AvgGMPE.GROUP_B_GMPE_2.AtkinsonBoore2006Modified2011]\nweight = 0.25\n\n[AvgGMPE.GROUP_B_GMPE_3.PezeshkEtAl2011]\nweight = 0.25' rjb rrup rx vs30 vs30measured z1pt0 dip mag rake ztor
+===== ================================================================================================================================================================================================================================================================================== =========== ======================= =================
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
-========= ====== ==== ============ ========= ========= ============
-21        0      M    460          0.00304   0.00435   460         
-========= ====== ==== ============ ========= ========= ============
+========= ==== ========= ========= ============
+source_id code calc_time num_sites eff_ruptures
+========= ==== ========= ========= ============
+21        M    3.757E-04 1         460         
+========= ==== ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== =========
 code calc_time
 ==== =========
-M    0.00304  
+M    3.757E-04
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-preclassical       0.00485 NaN    0.00485 0.00485 1      
-read_source_model  0.00119 NaN    0.00119 0.00119 1      
-================== ======= ====== ======= ======= =======
+================== ====== ========= ====== ========= =========
+operation-duration counts mean      stddev min       max      
+preclassical       1      7.894E-04 nan    7.894E-04 7.894E-04
+read_source_model  1      0.00227   nan    0.00227   0.00227  
+================== ====== ========= ====== ========= =========
 
 Data transfer
 -------------
-================= ======================================= ========
-task              sent                                    received
-read_source_model                                         1.84 KB 
-preclassical      params=2.06 KB srcs=1.76 KB gsims=632 B 370 B   
-================= ======================================= ========
+================= ==== ========
+task              sent received
+read_source_model      1.82 KB 
+preclassical           240 B   
+================= ==== ========
 
 Slowest operations
 ------------------
-=========================== ========= ========= ======
-calc_67007                  time_sec  memory_mb counts
-=========================== ========= ========= ======
-composite source model      0.01299   0.0       1     
-total preclassical          0.00485   0.0       1     
-store source_info           0.00205   0.0       1     
-total read_source_model     0.00119   0.0       1     
-splitting/filtering sources 0.00100   0.0       1     
-aggregate curves            2.110E-04 0.0       1     
-=========================== ========= ========= ======
+========================= ========= ========= ======
+calc_46653, maxmem=0.3 GB time_sec  memory_mb counts
+========================= ========= ========= ======
+importing inputs          0.06179   0.0       1     
+composite source model    0.05661   0.0       1     
+total read_source_model   0.00227   0.0       1     
+total preclassical        7.894E-04 0.0       1     
+========================= ========= ========= ======
