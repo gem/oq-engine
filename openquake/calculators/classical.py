@@ -366,10 +366,12 @@ class ClassicalCalculator(base.HazardCalculator):
         # if OQ_SAMPLE_SOURCES is set extract one source for group
         ss = os.environ.get('OQ_SAMPLE_SOURCES')
         if ss:
+            logging.info('Reducing the number of sources')
             for sg in self.csm.src_groups:
                 if not sg.atomic:
-                    srcs = [src for src in sg if src.nsites]
-                    sg.sources = [srcs[0]]
+                    src = max(
+                        sg, key=operator.attrgetter('nsites', 'source_id'))
+                    sg.sources = [src]
 
         mags = self.datastore['source_mags']  # by TRT
         if len(mags) == 0:  # everything was discarded
