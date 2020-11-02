@@ -20,6 +20,7 @@ import os
 import re
 import time
 import copy
+import psutil
 import pprint
 import logging
 import operator
@@ -323,6 +324,10 @@ class ClassicalCalculator(base.HazardCalculator):
         size = numpy.prod(poes_shape) * 8
         logging.info('Requiring %s for ProbabilityMap of shape %s',
                      humansize(size), poes_shape)
+        avail = psutil.virtual_memory().available
+        if avail < 2 * size:
+            raise MemoryError(
+                'You have only %s of free RAM' % humansize(avail))
         self.datastore.create_dset('_poes', F64, poes_shape)
 
     def execute(self):
