@@ -27,8 +27,8 @@ import warnings
 import functools
 import numpy
 from scipy.special import ndtr
+from scipy.stats import norm
 
-from openquake.hazardlib.stats import norm_cdf
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
@@ -144,7 +144,7 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctx):
 
         # Get the values of ground-motion used to compute the probability of
         # exceedance on soil.
-        soillevels = loglevels[imt]
+        soillevels = loglevels[imt]  # shape S
 
         # Here we set automatically the IMLs that will be used to compute
         # the probability of occurrence of GM on rock within discrete
@@ -160,41 +160,35 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctx):
             # Set the arguments of the truncated normal distribution
             # function
             if truncation_level == 0:
-                out_l = iml_l <= mean[:, m]
-                out_u = iml_u <= mean[:, m]
+                out_l = iml_l <= mean[0, m]
+                out_u = iml_u <= mean[0, m]
             else:
-                out_l = (iml_l - mean[:, m]) / stddev[:, m]
-                out_u = (iml_u - mean[:, m]) / stddev[:, m]
+                out_l = (iml_l - mean[0, m]) / stddev[0, m]
+                out_u = (iml_u - mean[0, m]) / stddev[0, m]
 
-            # Probability of occurrence on rock - The shape of this array
-            # is: number of sites x number of IMLs x GMMs. This corresponds
-            # to 1 x 1 x number of GMMs
+            # Probability of occurrence on rock
             pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
-                         _truncnorm_sf(truncation_level, out_u))
+                         _truncnorm_sf(truncation_level, out_u))  # shape 1
 
             # Skipping cases where the pocc on rock is negligible
             if numpy.all(pocc_rock < 1e-10):
                 continue
 
             # Ground-motion value in the middle of each interval
-            iml_mid = numpy.log((numpy.exp(iml_l) + numpy.exp(iml_u)) / 2.)
+            iml_mid = (numpy.exp(iml_l) + numpy.exp(iml_u)) / 2.
 
             # Get mean and std of the amplification function for this
             # magnitude, distance and IML
             median_af, std_af = ampfun.get_mean_std(
-                ctx.sites['ampcode'][0], imt, numpy.exp(iml_mid),
-                ctx.mag, ctx.rrup)
+                ctx.sites['ampcode'][0], imt, iml_mid, ctx.mag, ctx.rrup)
 
             # Computing the probability of exceedance of the levels of
             # ground-motion loglevels on soil
-            logaf = numpy.log(numpy.exp(soillevels) / numpy.exp(iml_mid))
-            poex_af = 1. - norm_cdf(logaf, numpy.log(median_af), std_af)
-            # The probability of occurrence on rock has shape:
-            # 1 x 1 x number of GMMs
-            poex = poex_af * pocc_rock
+            logaf = numpy.log(numpy.exp(soillevels) / iml_mid)  # shape S
+            poex_af = 1. - norm.cdf(logaf, numpy.log(median_af), std_af)  # S
 
             # Updating output
-            out_s[0, m * L1: (m + 1) * L1] += poex
+            out_s[0, m * L1: (m + 1) * L1] += poex_af * pocc_rock  # S
 
     return out_s
 

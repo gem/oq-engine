@@ -1,3 +1,6 @@
+  [Viktor Polak]
+  * Added the Chao et al. (2020) GMPE
+
   [Michele Simionato]
   * Reduced the memory occupation in classical calculations
   * Implemented AvgPoeGMPE
