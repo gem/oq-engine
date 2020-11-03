@@ -306,7 +306,6 @@ class UCERFSource(BaseSeismicSource):
         :param iloc:
             Location of the rupture plane in the hdf5 file
         """
-        trt = self.tectonic_region_type
         if hasattr(self, 'all_ridx'):  # already computed in classical
             ridx = self.all_ridx[iloc - self.start]
         else:  # event based
@@ -314,11 +313,12 @@ class UCERFSource(BaseSeismicSource):
         mag = self.mags[iloc - self.start]
         if mag < self.min_mag:
             return
-        surface_set = []
         if self.src_filter.sitecol:
             indices = get_indices(self.src_filter, self, ridx, mag, h5)
             if len(indices) == 0:
                 return
+
+        surface_set = []
         for trace, plane in self.gen_trace_planes(ridx, h5):
             # build simple fault surface
             for jloc in range(0, plane.shape[2]):
@@ -339,7 +339,7 @@ class UCERFSource(BaseSeismicSource):
                                      bottom_right, bottom_left)
 
         rupture = ParametricProbabilisticRupture(
-            mag, self.rake[iloc - self.start], trt,
+            mag, self.rake[iloc - self.start, self.tectonic_region_type,
             surface_set[len(surface_set) // 2].get_middle_point(),
             MultiSurface(surface_set), self.rate[iloc - self.start], self.tom)
 
