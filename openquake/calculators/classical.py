@@ -350,8 +350,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for src in srcs:
                 if hasattr(src, 'start'):
                     with hdf5.File(src.source_file, "r") as h5:
-                        src.src_filter = srcfilter  # hack for .iter_ruptures
-                        src.all_sections = src.get_sections(h5)
+                        src.all_sections = src.get_all_sections(h5)
         calc_times = parallel.Starmap.apply(
             preclassical,
             (srcs, SourceFilter(self.sitecol, oq.maximum_distance)),
