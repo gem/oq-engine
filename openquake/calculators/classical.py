@@ -345,12 +345,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
         srcfilter = self.src_filter()
         srcs = self.csm.get_sources()
-        if oq.is_ucerf():
-            logging.info('Prefiltering UCERFSources')
-            for src in srcs:
-                if hasattr(src, 'start'):
-                    with hdf5.File(src.source_file, "r") as h5:
-                        src.all_sections = src.get_all_sections(h5)
         calc_times = parallel.Starmap.apply(
             preclassical,
             (srcs, SourceFilter(self.sitecol, oq.maximum_distance)),

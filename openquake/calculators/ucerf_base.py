@@ -292,10 +292,7 @@ class UCERFSource(BaseSeismicSource):
         :param ridx:
             Location of the rupture plane in the hdf5 file
         """
-        if hasattr(self, 'all_sections'):  # already computed in classical
-            sections = self.all_sections[ridx - self.start]
-        else:  # event based
-            sections = self.get_sections(h5, ridx)
+        sections = self.get_sections(h5, ridx)
         mag = self.mags[ridx - self.start]
         if mag < self.min_mag:
             return
