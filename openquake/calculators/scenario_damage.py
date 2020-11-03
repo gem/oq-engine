@@ -152,7 +152,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.param['master_seed'] = self.oqparam.master_seed
         self.param['num_events'] = numpy.bincount(  # events by rlz
             self.datastore['events']['rlz_id'])
-        A = len(self.assetcol)
         self.datastore.create_dset('dd_data/data', aed_dt, compression='gzip')
         self.riskinputs = self.build_riskinputs('gmf')
 
