@@ -187,7 +187,7 @@ class ModifiableGMPETest(unittest.TestCase):
         [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup,
                                             self.dists, imt, stddevs)[1]
 
-        # Original total std for PGA is 0.6201
+        # Original total std for PGA is 0.7121
         np.testing.assert_almost_equal(stddev[0], 0.68344277, decimal=6)
 
 
@@ -203,7 +203,7 @@ class ModifiableGMPETest(unittest.TestCase):
         [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup,
                                             self.dists, imt, stddevs)[1]
 
-        # Original total std for PGA is 0.6201
+        # Original tau for PGA is 0.6201
         np.testing.assert_almost_equal(stddev[0], 0.5701491121, decimal=6)
 
 
