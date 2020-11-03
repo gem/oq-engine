@@ -487,7 +487,7 @@ class ClassicalCalculator(base.HazardCalculator):
         C = oq.concurrent_tasks or 1
         if oq.disagg_by_src or oq.is_ucerf():
             f1, f2 = classical, classical
-            max_weight = max(totweight / C, oq.min_weight) / 2
+            max_weight = max(totweight / C, oq.min_weight) / 5
         else:
             f1, f2 = classical, classical_split_filter
             max_weight = max(totweight / C, oq.min_weight)
