@@ -516,6 +516,7 @@ class PmapMaker(object):
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.gss_mon = cmaker.mon('get_sources_sites', measuremem=False)
+        self.ir_mon = cmaker.mon('iter_ruptures', measuremem=False)
         self.maxsites = 1E8 / len(self.gsims) / len(self.imtls.array)
 
     def _update_pmap(self, ctxs, pmap=None):
@@ -539,8 +540,12 @@ class PmapMaker(object):
                             probs += (1. - pne) * ctx.weight
 
     def _ruptures(self, src, filtermag=None):
-        return list(src.iter_ruptures(
-            shift_hypo=self.shift_hypo, mag=filtermag))
+        it = src.iter_ruptures(
+            shift_hypo=self.shift_hypo, mag=filtermag)
+        if hasattr(src, 'loc'):  # do not store millions of performance_data
+            return list(it)
+        with self.ir_mon:
+            return list(it)
 
     def _make_ctxs(self, rups, sites):
         with self.ctx_mon:
