@@ -149,30 +149,30 @@ def preclassical(srcs, srcfilter, monitor):
     return calc_times
 
 
-def store_ctxs(dstore, rdt, dic, grp_id):
+def store_ctxs(dstore, rdt, rupdata, grp_id):
     """
     Store contexts with the same magnitude in the datastore
     """
-    magstr = '%.2f' % dic['mag'][0]
+    magstr = '%.2f' % rupdata['mag'][0]
     rctx = dstore['mag_%s/rctx' % magstr]
     offset = len(rctx)
-    nr = len(dic['mag'])
+    nr = len(rupdata['mag'])
     rdata = numpy.zeros(nr, rdt)
-    rdata['nsites'] = [len(s) for s in dic['sids_']]
+    rdata['nsites'] = [len(s) for s in rupdata['sids_']]
     rdata['idx'] = numpy.arange(offset, offset + nr)
     rdata['grp_id'] = grp_id
-    rdt_names = set(dic) & set(n[0] for n in rdt)
+    rdt_names = set(rupdata) & set(n[0] for n in rdt)
     for name in rdt_names:
         if name == 'probs_occur':
-            rdata[name] = list(dic[name])
+            rdata[name] = list(rupdata[name])
         else:
-            rdata[name] = dic[name]
+            rdata[name] = rupdata[name]
     hdf5.extend(rctx, rdata)
     for name in dstore['mag_%s' % magstr]:
         if name.endswith('_'):
             n = 'mag_%s/%s' % (magstr, name)
-            if name in dic:
-                dstore.hdf5.save_vlen(n, dic[name])
+            if name in rupdata:
+                dstore.hdf5.save_vlen(n, rupdata[name])
             else:
                 zs = [numpy.zeros(0, numpy.float32)] * nr
                 dstore.hdf5.save_vlen(n, zs)
