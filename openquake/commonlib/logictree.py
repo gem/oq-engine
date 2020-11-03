@@ -1288,13 +1288,6 @@ class FullLogicTree(object):
         ns = len(self.sm_rlzs)
         return eri + numpy.arange(nt) * ns
 
-    def get_samples_by_grp(self):
-        """
-        :returns: a dictionary et_id -> source_model.samples
-        """
-        return {et_id: sm.samples for sm in self.sm_rlzs
-                for et_id in self.et_ids(sm.ordinal)}
-
     def gsim_by_trt(self, rlz):
         """
         :returns: a dictionary trt->gsim for the given realization
