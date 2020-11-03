@@ -26,7 +26,6 @@ import h5py
 import zlib
 
 from openquake.baselib.general import AccumDict, cached_property
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -92,23 +91,6 @@ class ImperfectPlanarSurface(PlanarSurface):
     order of < 0.15 % for Rrup (< 2 % for Rjb, < 3.0E-5 % for Rx)
     """
     IMPERFECT_RECTANGLE_TOLERANCE = numpy.inf
-
-
-def get_indices(srcfilter, src, ridx, mag, h5):
-    """
-    :param srcfilter: a SourceFilter instance
-    :param src: an UCERF source
-    :param ridx: a set of rupture indices
-    :param mag: magnitude to use to compute the integration distance
-    :param h5: input HDF5 file
-    :returns: array with the IDs of the sites close to the ruptures
-    """
-    centroids = src.get_centroids(ridx, h5)
-    mindistance = min_geodetic_distance(
-        (centroids[:, 0], centroids[:, 1]), srcfilter.sitecol.xyz)
-    idist = srcfilter.integration_distance(DEFAULT_TRT, mag)
-    indices, = (mindistance <= idist).nonzero()
-    return indices
 
 
 class UCERFSource(BaseSeismicSource):
@@ -237,27 +219,25 @@ class UCERFSource(BaseSeismicSource):
         """
         return PoissonTOM(self.inv_time)
 
-    def get_ridx(self, hdf5, iloc=None):
-        """List of rupture indices for the given iloc"""
-        if iloc is None:
-            iloc = slice(self.start, self.stop)
-        return hdf5[self.idx_set["geol"] + "/RuptureIndex"][iloc]
+    def get_sections(self, hdf5, ridx):
+        """List of section indices for the given ridx"""
+        return hdf5[self.idx_set["geol"] + "/RuptureIndex"][ridx]
 
-    def get_centroids(self, ridx, hdf5):
+    def get_centroids(self, sections, hdf5):
         """
         :returns: array of centroids for the given rupture index
         """
         centroids = []
-        for idx in ridx:
+        for idx in sections:
             trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
             centroids.append(hdf5[trace + "/Centroids"][()])
         return numpy.concatenate(centroids)
 
-    def gen_trace_planes(self, ridx, hdf5):
+    def gen_trace_planes(self, sections, hdf5):
         """
         :yields: trace and rupture planes for the given rupture index
         """
-        for idx in ridx:
+        for idx in sections:
             trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
             plane = hdf5[trace + "/RupturePlanes"][:].astype("float64")
             yield trace, plane
@@ -301,26 +281,18 @@ class UCERFSource(BaseSeismicSource):
             # get list of indices from array of booleans
             return numpy.where(ok)[0].tolist()
 
-    def get_ucerf_rupture(self, iloc, h5):
+    def get_ucerf_rupture(self, ridx, h5):
         """
-        :param iloc:
+        :param ridx:
             Location of the rupture plane in the hdf5 file
         """
-        if hasattr(self, 'all_ridx'):  # already computed in classical
-            ridx = self.all_ridx[iloc - self.start]
-        else:  # event based
-            ridx = self.get_ridx(h5, iloc)
-        mag = self.mags[iloc - self.start]
+        sections = self.get_sections(h5, ridx)
+        mag = self.mags[ridx - self.start]
         if mag < self.min_mag:
             return
 
-        if self.src_filter.sitecol:
-            indices = get_indices(self.src_filter, self, ridx, mag, h5)
-            if len(indices) == 0:
-                return
-
         surface_set = []
-        for trace, plane in self.gen_trace_planes(ridx, h5):
+        for trace, plane in self.gen_trace_planes(sections, h5):
             # build simple fault surface
             for jloc in range(0, plane.shape[2]):
                 top_left = Point(
@@ -340,9 +312,9 @@ class UCERFSource(BaseSeismicSource):
                                      bottom_right, bottom_left)
 
         rupture = ParametricProbabilisticRupture(
-            mag, self.rake[iloc - self.start], self.tectonic_region_type,
+            mag, self.rake[ridx - self.start], self.tectonic_region_type,
             surface_set[len(surface_set) // 2].get_middle_point(),
-            MultiSurface(surface_set), self.rate[iloc - self.start], self.tom)
+            MultiSurface(surface_set), self.rate[ridx - self.start], self.tom)
 
         return rupture
 
@@ -429,8 +401,8 @@ class UCERFSource(BaseSeismicSource):
             # get ruptures from the indices
             ruptures = []
             rupture_occ = []
-            for iloc, n_occ in zip(indices, occurrences[indices]):
-                ucerf_rup = self.get_ucerf_rupture(iloc, hdf5)
+            for ridx, n_occ in zip(indices, occurrences[indices]):
+                ucerf_rup = self.get_ucerf_rupture(ridx, hdf5)
                 if ucerf_rup:
                     ruptures.append(ucerf_rup)
                     rupture_occ.append(n_occ)
