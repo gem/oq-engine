@@ -313,6 +313,7 @@ class UCERFSource(BaseSeismicSource):
         mag = self.mags[iloc - self.start]
         if mag < self.min_mag:
             return
+
         if self.src_filter.sitecol:
             indices = get_indices(self.src_filter, self, ridx, mag, h5)
             if len(indices) == 0:
@@ -339,7 +340,7 @@ class UCERFSource(BaseSeismicSource):
                                      bottom_right, bottom_left)
 
         rupture = ParametricProbabilisticRupture(
-            mag, self.rake[iloc - self.start, self.tectonic_region_type,
+            mag, self.rake[iloc - self.start], self.tectonic_region_type,
             surface_set[len(surface_set) // 2].get_middle_point(),
             MultiSurface(surface_set), self.rate[iloc - self.start], self.tom)
 
