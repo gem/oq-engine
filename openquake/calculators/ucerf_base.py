@@ -26,7 +26,6 @@ import h5py
 import zlib
 
 from openquake.baselib.general import AccumDict, cached_property
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -223,11 +222,6 @@ class UCERFSource(BaseSeismicSource):
     def get_sections(self, hdf5, ridx):
         """List of section indices for the given ridx"""
         return hdf5[self.idx_set["geol"] + "/RuptureIndex"][ridx]
-
-    def get_all_sections(self, hdf5):
-        """List of list of section indices"""
-        key = self.idx_set["geol"] + "/RuptureIndex"
-        return hdf5[key][self.start:self.stop]
 
     def get_centroids(self, sections, hdf5):
         """
