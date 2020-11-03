@@ -94,15 +94,16 @@ class ImperfectPlanarSurface(PlanarSurface):
     IMPERFECT_RECTANGLE_TOLERANCE = numpy.inf
 
 
-def get_indices(srcfilter, src, ridx, mag):
+def get_indices(srcfilter, src, ridx, mag, h5):
     """
     :param srcfilter: a SourceFilter instance
     :param src: an UCERF source
     :param ridx: a set of rupture indices
     :param mag: magnitude to use to compute the integration distance
+    :param h5: input HDF5 file
     :returns: array with the IDs of the sites close to the ruptures
     """
-    centroids = src.get_centroids(ridx)
+    centroids = src.get_centroids(ridx, h5)
     mindistance = min_geodetic_distance(
         (centroids[:, 0], centroids[:, 1]), srcfilter.sitecol.xyz)
     idist = srcfilter.integration_distance(DEFAULT_TRT, mag)
@@ -242,15 +243,14 @@ class UCERFSource(BaseSeismicSource):
             iloc = slice(self.start, self.stop)
         return hdf5[self.idx_set["geol"] + "/RuptureIndex"][iloc]
 
-    def get_centroids(self, ridx):
+    def get_centroids(self, ridx, hdf5):
         """
         :returns: array of centroids for the given rupture index
         """
         centroids = []
-        with h5py.File(self.source_file, "r") as hdf5:
-            for idx in ridx:
-                trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
-                centroids.append(hdf5[trace + "/Centroids"][()])
+        for idx in ridx:
+            trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
+            centroids.append(hdf5[trace + "/Centroids"][()])
         return numpy.concatenate(centroids)
 
     def gen_trace_planes(self, ridx, hdf5):
@@ -315,7 +315,7 @@ class UCERFSource(BaseSeismicSource):
         if mag < self.min_mag:
             return
         surface_set = []
-        indices = get_indices(self.src_filter, self, ridx, mag)
+        indices = get_indices(self.src_filter, self, ridx, mag, h5)
         if len(indices) == 0:
             return
         for trace, plane in self.gen_trace_planes(ridx, h5):
