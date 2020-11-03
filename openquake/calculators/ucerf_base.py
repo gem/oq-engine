@@ -94,35 +94,20 @@ class ImperfectPlanarSurface(PlanarSurface):
     IMPERFECT_RECTANGLE_TOLERANCE = numpy.inf
 
 
-class UcerfFilter(SourceFilter):
+def get_indices(srcfilter, src, ridx, mag):
     """
-    Filter for UCERF sources, both background and faults.
+    :param srcfilter: a SourceFilter instance
+    :param src: an UCERF source
+    :param ridx: a set of rupture indices
+    :param mag: magnitude to use to compute the integration distance
+    :returns: array with the IDs of the sites close to the ruptures
     """
-    def filter(self, srcs):
-        for src in srcs:
-            if hasattr(src, 'start'):  # fault sources
-                ridx = set()
-                for arr in src.all_ridx:
-                    ridx.update(arr)
-                indices = self.get_indices(src, ridx, src.mags.max())
-                if len(indices):
-                    yield src, indices
-            else:  # background sources
-                yield from super().filter([src])
-
-    def get_indices(self, src, ridx, mag):
-        """
-        :param src: an UCERF source
-        :param ridx: a set of rupture indices
-        :param mag: magnitude to use to compute the integration distance
-        :returns: array with the IDs of the sites close to the ruptures
-        """
-        centroids = src.get_centroids(ridx)
-        mindistance = min_geodetic_distance(
-            (centroids[:, 0], centroids[:, 1]), self.sitecol.xyz)
-        idist = self.integration_distance(DEFAULT_TRT, mag)
-        indices, = (mindistance <= idist).nonzero()
-        return indices
+    centroids = src.get_centroids(ridx)
+    mindistance = min_geodetic_distance(
+        (centroids[:, 0], centroids[:, 1]), srcfilter.sitecol.xyz)
+    idist = srcfilter.integration_distance(DEFAULT_TRT, mag)
+    indices, = (mindistance <= idist).nonzero()
+    return indices
 
 
 class UCERFSource(BaseSeismicSource):
@@ -322,7 +307,7 @@ class UCERFSource(BaseSeismicSource):
             Location of the rupture plane in the hdf5 file
         """
         trt = self.tectonic_region_type
-        if hasattr(self, 'all_ridx'):  # already computed by the UcerfFilter
+        if hasattr(self, 'all_ridx'):  # already computed in classical
             ridx = self.all_ridx[iloc - self.start]
         else:
             ridx = self.get_ridx(h5, iloc)
@@ -330,7 +315,7 @@ class UCERFSource(BaseSeismicSource):
         if mag < self.min_mag:
             return
         surface_set = []
-        indices = self.src_filter.get_indices(self, ridx, mag)
+        indices = get_indices(self.src_filter, self, ridx, mag)
         if len(indices) == 0:
             return
         for trace, plane in self.gen_trace_planes(ridx, h5):
