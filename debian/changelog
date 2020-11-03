@@ -39,6 +39,8 @@
   * Added a method to create a TruncatedGRMFD from a value of scalar seismic
     moment
   * Added a method to the modifiable GMPE to add (or subtract) a delta std
+  * Added a method to the modifiable GMPE to set the total std as the sum of 
+	tau plus a delta
 
 python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
 
