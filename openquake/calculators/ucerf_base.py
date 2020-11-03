@@ -309,15 +309,16 @@ class UCERFSource(BaseSeismicSource):
         trt = self.tectonic_region_type
         if hasattr(self, 'all_ridx'):  # already computed in classical
             ridx = self.all_ridx[iloc - self.start]
-        else:
+        else:  # event based
             ridx = self.get_ridx(h5, iloc)
         mag = self.mags[iloc - self.start]
         if mag < self.min_mag:
             return
         surface_set = []
-        indices = get_indices(self.src_filter, self, ridx, mag, h5)
-        if len(indices) == 0:
-            return
+        if self.src_filter.sitecol:
+            indices = get_indices(self.src_filter, self, ridx, mag, h5)
+            if len(indices) == 0:
+                return
         for trace, plane in self.gen_trace_planes(ridx, h5):
             # build simple fault surface
             for jloc in range(0, plane.shape[2]):
