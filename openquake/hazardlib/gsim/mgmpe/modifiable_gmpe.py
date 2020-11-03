@@ -82,7 +82,8 @@ class ModifiableGMPE(GMPE):
         """
         working_std_types = copy.copy(stddev_types)
 
-        if 'set_between_epsilon' in self.params:
+        if ('set_between_epsilon' in self.params or
+                'set_total_std_as_tau_plus_delta' in self.params):
             if (const.StdDev.INTER_EVENT not in
                     self.gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
                 raise ValueError('The GMPE does not have between event std')
@@ -194,6 +195,15 @@ class ModifiableGMPE(GMPE):
         """
         total_stddev = getattr(self, const.StdDev.TOTAL)
         total_stddev = (total_stddev**2 + np.sign(delta) * delta**2)**0.5
+        setattr(self, const.StdDev.TOTAL, total_stddev)
+
+    def set_total_std_as_tau_plus_delta(self, sites, rup, dists, imt, delta):
+        """
+        :param delta:
+            A delta std e.g. a phi SS to be combined with between std, tau.
+        """
+        tau = getattr(self, const.StdDev.INTER_EVENT)
+        total_stddev = (tau**2 + np.sign(delta) * delta**2)**0.5
         setattr(self, const.StdDev.TOTAL, total_stddev)
 
     @staticmethod
