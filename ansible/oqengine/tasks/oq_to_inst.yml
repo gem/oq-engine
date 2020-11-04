@@ -18,7 +18,7 @@
     shell: "kill -9 {{ item }}"
     with_items: "{{ dbserver_pid.stdout_lines }}"
 
-  - name: Install latest wheel setuptools and pip 
+  - name: Install latest wheel setuptools and pip in virtualenv
     pip:
       name: "{{ item }} "
       virtualenv: /opt/openquake
@@ -28,7 +28,7 @@
 #
 
 #python3.8
-  - name: Install the requirementes files for python 3.8
+  - name: Install the requirementes files for python 3.8 in virtualenv
     pip:
       virtualenv: /opt/openquake
       requirements: "{{ req_py38 }}"
