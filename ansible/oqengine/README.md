@@ -1,7 +1,7 @@
 Role Name
 =========
 
-A brief description of the role goes here.
+An Ansible Role that installs oqengine on CentOS 7,8 or Ubuntu 1804
 
 Requirements
 ------------
