@@ -5,8 +5,8 @@ driver:
   name: docker
 platforms:
   - name: instance
-    image: ${MOLECULE_DISTRO:-'centos:7'}
-    command: /sbin/init
+    image: ${MOLECULE_DISTRO:-'centos:8'}
+    command: /sbin/init 
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     privileged: true
