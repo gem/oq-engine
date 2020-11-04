@@ -64,6 +64,10 @@ class NonParametricSourceTestCase(unittest.TestCase):
 
         return source, kwargs
 
+    def raises_exception(self):
+        source, kwargs = make_non_parametric_source()
+        self.assertRaises(NotImplementedError, source.get_fault_surface_area)
+
     def test_creation(self):
         self.make_non_parametric_source()
 
