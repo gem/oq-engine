@@ -37,12 +37,12 @@ Including an example of how to use your role (for instance, with variables passe
 
 Use also pre_tasks to assure to update the cache for Debian derivate
 
-  pre_tasks:
-    - name: Update apt cache.
-      apt:
-        update_cache: true
-        cache_valid_time: 600
-      when: ansible_os_family == 'Debian'
+      pre_tasks:
+        - name: Update apt cache.
+          apt:
+            update_cache: true
+            cache_valid_time: 600
+          when: ansible_os_family == 'Debian'
 
 
 License
