@@ -333,7 +333,6 @@ class ModifyComplexFaultGeometryTestCase(unittest.TestCase):
     def test_calculate_area(self):
         source = self._make_source(self.edges)
         computed = source.get_fault_surface_area()
-        print(computed)
         expected = 3988.697687355716
         self.assertAlmostEqual(computed, expected)
 
