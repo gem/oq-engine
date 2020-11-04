@@ -1,0 +1,7 @@
+---
+# tasks file for oqengine
+- name: Check for dependencies per installation
+  import_tasks: oq_to_check.yml
+#
+- name: "Perform installation of oqengine {{ engine_release }} "
+  import_tasks: oq_to_inst.yml
