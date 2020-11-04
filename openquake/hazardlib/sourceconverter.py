@@ -654,10 +654,19 @@ class SourceConverter(RuptureConverter):
                     min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
                     occurrence_rates=~mfd_node.occurRates)
             elif mfd_node.tag.endswith('truncGutenbergRichterMFD'):
-                return mfd.TruncatedGRMFD(
-                    a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
-                    min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
-                    bin_width=self.width_of_mfd_bin)
+                slip_rate = mfd_node.get('slipRate')
+                rigidity = mfd_node.get('rigidity')
+                if slip_rate:
+                    assert rigidity
+                    gr_mfd = mfd.TruncatedGRMFD.from_moment(
+                        mfd_node['minMag'], mfd_node['maxMag'],
+                        self.width_of_mfd_bin, mfd_node['bValue'], moment)
+                else:
+                    gr_mfd = mfd.TruncatedGRMFD(
+                        a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
+                        min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
+                        bin_width=self.width_of_mfd_bin)
+                return gr_mfd
             elif mfd_node.tag.endswith('arbitraryMFD'):
                 return mfd.ArbitraryMFD(
                     magnitudes=~mfd_node.magnitudes,
