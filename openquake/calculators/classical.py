@@ -329,6 +329,8 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
         self.datastore.create_dset('_poes', F64, poes_shape)
+        if not self.oqparam.hazard_calculation_id:
+            self.datastore.swmr_on()
 
     def execute(self):
         """
