@@ -41,6 +41,8 @@ class PhungEtAl2020Asc(GMPE):
 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
+    DEFINED_FOR_REFERENCE_VELOCITY = 1130
+
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
@@ -87,7 +89,8 @@ class PhungEtAl2020Asc(GMPE):
             * (C['c9_a'] + (1 - C['c9_a']) * np.tanh(dists.rx / C['c9_b'])) \
             * (1 - np.sqrt(dists.rjb ** 2 + ztor ** 2) / (dists.rrup + 1))
         # directivity [11]
-        lnmed += C['c8'] * max(1 - max(dists.rrup - 40, 0) / 30, 0) \
+        lnmed += C['c8'] \
+            * np.maximum(1 - np.maximum(dists.rrup - 40, 0) / 30, 0) \
             * min(max(rup.mag - 5.5, 0) / 0.8, 1) \
             * math.exp(self.CONSTANTS['c8_a'] * (rup.mag - C['c8_b']) ** 2) \
             * self.d_dpp
@@ -99,9 +102,11 @@ class PhungEtAl2020Asc(GMPE):
 
         sa1130 = np.exp(lnmed)
         # site response [14, 15]
-        lnmed += C['phi1' + self.region] * min(np.log(sites.vs30 / 1130), 0)
-        lnmed += C['phi2'] * (np.exp(C['phi3'] * (min(sites.vs30, 1130) - 360))
-                              - math.exp(C['phi3'] * (1130 - 360))) \
+        lnmed += C['phi1' + self.region] \
+            * np.minimum(np.log(sites.vs30 / 1130), 0)
+        lnmed += C['phi2'] \
+            * (np.exp(C['phi3'] * (np.minimum(sites.vs30, 1130) - 360))
+               - math.exp(C['phi3'] * (1130 - 360))) \
             * np.log((sa1130 + C['phi4']) / C['phi4'])
         # basin term [16]
         lnmed += self._basin_term(C, sites.vs30, sites.z1pt0)
@@ -148,7 +153,7 @@ class PhungEtAl2020Asc(GMPE):
                 phi6 = 800
 
         d_z1 = z1pt0 - ez_1
-        return np.where(np.isnan(z1pt0), 0,
+        return np.where(z1pt0 < 0, 0,
                         C['phi5' + self.region] * (1 - np.exp(-d_z1 / phi6)))
 
     def _distance_attenuation(self, C, mag, rrup, ztor):
@@ -158,11 +163,12 @@ class PhungEtAl2020Asc(GMPE):
         del_c5 = C['dp'] * max(ztor / 50 - 20 / 50, 0) \
             * (ztor > 20) * (mag < 7.0)
         cns = (C['c5'] + del_c5) * math.cosh(C['c6'] * max(mag - C['c_hm'], 0))
+        print(cns)
         s = self.CONSTANTS
 
         f8 = s['c4'] * np.log(rrup + cns)
         f9 = (s['c4_a'] - s['c4']) * np.log(np.sqrt(rrup ** 2
-                                                    + C['c_rb'] ** 2))
+                                                    + s['c_rb'] ** 2))
         f10 = (C['c_g1' + self.region] + self.aftershocks * C['dc_g1as']
                + C['c_g2'] / (math.cosh(max(mag - C['c_g3'], 0)))) * rrup
 
@@ -185,7 +191,7 @@ class PhungEtAl2020Asc(GMPE):
                 f234 += C['c1_b'] \
                     + C['c1_d'] / math.cosh(2 * max(mag - 4.5, 0))
 
-        ztor = np.where(np.isnan(ztor), e_ztor, ztor)
+        ztor = np.where(ztor < 0, e_ztor, ztor)
         delta_ztor = ztor - e_ztor
         # [4]
         f234 += (C['c7'] + C['c7_b'] / math.cosh(2 * max(mag - 4.5, 0))) \
@@ -356,7 +362,7 @@ class PhungEtAl2020SInter(GMPE):
         Basin depth term.
         """
         result = np.zeros_like(z1pt0)
-        idx = np.invert(np.isnan(z1pt0))
+        idx = np.where(z1pt0 >= 0)
 
         if self.region == 'tw':
             ez_1 = np.exp(-3.96 / 2 * np.log((vs30 ** 2 + 352.7 ** 2)
