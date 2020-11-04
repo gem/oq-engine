@@ -41,7 +41,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
             nr = src.count_ruptures()
             src.serial = start + seed
             start += nr
-        param = dict(ses_per_logic_tree_path=10, filter_distance='rjb',
+        param = dict(ses_per_logic_tree_path=10,
                      gsims=[SiMidorikawa1999SInter()])
         sf = calc.filters.SourceFilter(None, {})
         dic = sum(sample_ruptures(group, sf, param), {})

@@ -273,8 +273,7 @@ class GmfGetter(object):
         md = (calc.filters.MagDepDistance(oqparam.maximum_distance)
               if isinstance(oqparam.maximum_distance, dict)
               else oqparam.maximum_distance)
-        param = {'filter_distance': oqparam.filter_distance,
-                 'imtls': oqparam.imtls, 'maximum_distance': md}
+        param = {'imtls': oqparam.imtls, 'maximum_distance': md}
         self.cmaker = ContextMaker(
             rupgetter.trt, rupgetter.rlzs_by_gsim, param)
         self.correl_model = oqparam.correl_model

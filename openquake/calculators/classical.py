@@ -490,8 +490,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(totweight), int(max_weight)))
         param = dict(
-            truncation_level=oq.truncation_level, imtls=oq.imtls,
-            filter_distance=oq.filter_distance, reqv=oq.get_reqv(),
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls, reqv=oq.get_reqv(),
             pointsource_distance=getattr(oq.pointsource_distance, 'ddic', {}),
             point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo,

@@ -218,7 +218,7 @@ class EventBasedCalculator(base.HazardCalculator):
             oqparam=oq,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
-            imtls=oq.imtls, filter_distance=oq.filter_distance,
+            imtls=oq.imtls,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path, **kw)
 
     def _read_scenario_ruptures(self):
