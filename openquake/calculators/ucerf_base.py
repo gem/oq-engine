@@ -219,35 +219,37 @@ class UCERFSource(BaseSeismicSource):
         """
         return PoissonTOM(self.inv_time)
 
-    def get_sections(self, hdf5, ridx):
-        """List of section indices for the given ridx"""
-        return hdf5[self.ukey["geol"] + "/RuptureIndex"][ridx]
+    def get_sections(self):
+        """
+        :returns: array of list of section indices
+        """
+        with h5py.File(self.source_file, 'r') as hdf5:
+            dset = hdf5[self.ukey["geol"] + "/RuptureIndex"]
+            return dset[self.start:self.stop]
 
-    def get_centroids(self, sections, hdf5):
+    def get_planes(self):
         """
-        :returns: array of centroids for the given rupture index
+        :returns: dictionary of planes, one per section
         """
-        centroids = []
-        for trace, planes in self.gen_planes(self, sections, hdf5):
-            centroids.append(planes.mean(axis=2))
-        return numpy.concatenate(centroids)
-
-    def gen_planes(self, sections, hdf5):
-        """
-        :yields: trace and rupture planes for the given rupture index
-        """
-        for sec in sections:
-            key = "{:s}/{:d}/RupturePlanes".format(self.ukey["sec"], sec)
-            yield hdf5[key][:]
+        dic = {}
+        with h5py.File(self.source_file, 'r') as hdf5:
+            sections = sorted(map(int, hdf5[self.ukey["sec"]]))
+            for sec in sections:
+                key = "{:s}/{:d}/RupturePlanes".format(self.ukey["sec"], sec)
+                dic[sec] = hdf5[key][:]
+        return dic
 
     def get_bounding_box(self, maxdist):
         """
         :returns: min_lon, min_lat, max_lon, max_lat
         """
-        with h5py.File(self.source_file, 'r') as hdf5:
-            locations = hdf5["Grid/Locations"][()]
-        lons, lats = locations[:, 0], locations[:, 1]
-        bbox = lons.min(), lats.min(), lons.max(), lats.max()
+        lons, lats = [], []
+        sections = set(sec for sections in self.sections for sec in sections)
+        for sec in sections:
+            plane = self.planes[sec]
+            lons.extend(plane[:, 0].flat)
+            lats.extend(plane[:, 1].flat)
+        bbox = min(lons), min(lats), max(lons), max(lats)
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = angular_distance(maxdist, bbox[1], bbox[3])
         return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
@@ -279,36 +281,36 @@ class UCERFSource(BaseSeismicSource):
             # get list of indices from array of booleans
             return numpy.where(ok)[0].tolist()
 
-    def get_ucerf_rupture(self, ridx, h5):
+    def get_ucerf_rupture(self, ridx):
         """
-        :param ridx:
-            Location of the rupture plane in the hdf5 file
+        :param ridx: rupture index
         """
-        sections = self.get_sections(h5, ridx)
-        mag = self.mags[ridx - self.start]
+        sections = self.sections[ridx]
+        mag = self.mags[ridx]
         if mag < self.min_mag:
             return
 
         surface_set = []
-        for plane in self.gen_planes(sections, h5):
+        for sec in sections:
+            plane = self.planes[sec]
             # build simple fault surface
-            for jloc in range(0, plane.shape[2]):
+            for j in range(0, plane.shape[2]):
                 top_left = Point(
-                    plane[0, 0, jloc], plane[0, 1, jloc], plane[0, 2, jloc])
+                    plane[0, 0, j], plane[0, 1, j], plane[0, 2, j])
                 top_right = Point(
-                    plane[1, 0, jloc], plane[1, 1, jloc], plane[1, 2, jloc])
+                    plane[1, 0, j], plane[1, 1, j], plane[1, 2, j])
                 bottom_right = Point(
-                    plane[2, 0, jloc], plane[2, 1, jloc], plane[2, 2, jloc])
+                    plane[2, 0, j], plane[2, 1, j], plane[2, 2, j])
                 bottom_left = Point(
-                    plane[3, 0, jloc], plane[3, 1, jloc], plane[3, 2, jloc])
+                    plane[3, 0, j], plane[3, 1, j], plane[3, 2, j])
                 surface_set.append(
                     ImperfectPlanarSurface.from_corner_points(
                         top_left, top_right, bottom_right, bottom_left))
 
         rupture = ParametricProbabilisticRupture(
-            mag, self.rake[ridx - self.start], self.tectonic_region_type,
+            mag, self.rake[ridx], self.tectonic_region_type,
             surface_set[len(surface_set) // 2].get_middle_point(),
-            MultiSurface(surface_set), self.rate[ridx - self.start], self.tom)
+            MultiSurface(surface_set), self.rate[ridx], self.tom)
 
         return rupture
 
@@ -316,12 +318,11 @@ class UCERFSource(BaseSeismicSource):
         """
         Yield ruptures for the current set of indices
         """
-        with h5py.File(self.source_file, "r") as hdf5:
-            for ridx in range(self.start, self.stop):
-                if self.rate[ridx - self.start]:  # may have have zero rate
-                    rup = self.get_ucerf_rupture(ridx, hdf5)
-                    if rup:
-                        yield rup
+        for ridx in range(self.start, self.stop):
+            if self.rate[ridx - self.start]:  # may have have zero rate
+                rup = self.get_ucerf_rupture(ridx - self.start)
+                if rup:
+                    yield rup
 
     # called upfront, before classical_split_filter
     def __iter__(self):
@@ -396,7 +397,7 @@ class UCERFSource(BaseSeismicSource):
             ruptures = []
             rupture_occ = []
             for ridx, n_occ in zip(indices, occurrences[indices]):
-                ucerf_rup = self.get_ucerf_rupture(ridx, hdf5)
+                ucerf_rup = self.get_ucerf_rupture(ridx)
                 if ucerf_rup:
                     ruptures.append(ucerf_rup)
                     rupture_occ.append(n_occ)
