@@ -469,7 +469,8 @@ def ucerf_classical(srcs, gsims, params, slc, monitor=None):
             for par in self.REQUIRES_SITES_PARAMETERS:
                 setattr(ctx, par, sites[par])
             for par in self.REQUIRES_DISTANCES:
-                dists = numpy.array([ddic[sec][par] for sec in rup.sections])
+                dists = numpy.array([ddic[sec][par][ctx.sids]
+                                     for sec in rup.sections])
                 setattr(ctx, par, dists.min(axis=0))
             ctxs.append(ctx)
         return ctxs
