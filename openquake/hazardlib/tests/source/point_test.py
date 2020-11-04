@@ -62,6 +62,10 @@ class PointSourceCreationTestCase(unittest.TestCase):
             self.make_point_source(**kwargs)
         self.assertEqual(str(ae.exception), msg)
 
+    def raises_exception(self):
+        source = make_point_source()
+        self.assertRaises(NotImplementedError, source.get_fault_surface_area)
+
     def test_non_positive_rupture_mesh_spacing(self):
         msg = 'rupture mesh spacing must be positive'
         self.assert_failed_creation(ValueError, msg, rupture_mesh_spacing=-0.1)

@@ -63,6 +63,9 @@ class AreaSource(ParametricSeismicSource):
         self.area_discretization = area_discretization
         self.max_radius = 0
 
+    def get_fault_surface_area(self):
+        raise NotImplementedError('I cannot calculate this for area sources')
+
     def iter_ruptures(self, **kwargs):
         """
         See :meth:

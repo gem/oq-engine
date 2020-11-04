@@ -135,6 +135,9 @@ class PointSource(ParametricSeismicSource):
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
 
+    def get_fault_surface_area(self):
+        raise NotImplementedError('I cannot calculate this for point sources')
+
     def _get_max_rupture_projection_radius(self, mag=None):
         """
         Find a maximum radius of a circle on Earth surface enveloping a rupture

@@ -48,7 +48,25 @@ def make_area_source(polygon, discretization, **kwargs):
     return source
 
 
+class AreaSourceGetFaultSurfacetestCase(unittest.TestCase):
+
+    def make_area_source(self, polygon, discretization, **kwargs):
+        source = make_area_source(polygon, discretization, **kwargs)
+        for key in kwargs:
+            self.assertIs(getattr(source, key), kwargs[key])
+        assert_pickleable(source)
+        return source
+
+    def test_get_area(self):
+        source = self.make_area_source(Polygon([Point(-2, -2), Point(0, -2),
+                                                Point(0, 0), Point(-2, 0)]),
+                                       discretization=66.7,
+                                       rupture_mesh_spacing=5)
+        self.assertRaises(NotImplementedError, source.get_fault_surface_area)
+
+
 class AreaSourceIterRupturesTestCase(unittest.TestCase):
+
     def make_area_source(self, polygon, discretization, **kwargs):
         source = make_area_source(polygon, discretization, **kwargs)
         for key in kwargs:
