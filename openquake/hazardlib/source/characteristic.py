@@ -73,6 +73,15 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1
 
+    def get_fault_surface_area(self):
+        """
+        Computes the area covered by the surface of the fault.
+
+        :returns:
+            A float defining the area of the surface of the fault [km^2]
+        """
+        return self.surface.get_area()
+
     def iter_ruptures(self, **kwargs):
         """
         See :meth:

@@ -86,8 +86,10 @@ class GetPoesSiteTestCase(unittest.TestCase):
         tmp = _get_poes(self.meastd, imtls_soil, truncation_level)
 
         # This function is rather slow at the moment
+        ctx = unittest.mock.Mock(mag=self.mag, rrup=self.rrup, sids=[0],
+                                 sites=dict(ampcode=[sitecode]))
         res = _get_poes_site(self.meastd, imtls_soil, truncation_level,
-                             af, self.mag, sitecode, self.rrup[0])
+                             af, [ctx])
 
         if False:
             import matplotlib.pyplot as plt

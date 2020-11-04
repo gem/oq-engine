@@ -41,7 +41,6 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, util
-from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -403,15 +402,13 @@ class HazardCalculator(BaseCalculator):
     """
     def src_filter(self):
         """
-        :returns: a SourceFilter/UcerfFilter
+        :returns: a SourceFilter
         """
         oq = self.oqparam
         if getattr(self, 'sitecol', None):
             sitecol = self.sitecol.complete
         else:  # can happen to the ruptures-only calculator
             sitecol = None
-        if oq.is_ucerf():
-            return UcerfFilter(sitecol, oq.maximum_distance)
         return SourceFilter(sitecol, oq.maximum_distance)
 
     @property

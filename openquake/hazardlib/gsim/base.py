@@ -27,8 +27,8 @@ import warnings
 import functools
 import numpy
 from scipy.special import ndtr
+from scipy.stats import norm
 
-from openquake.hazardlib.stats import norm_cdf
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
@@ -103,7 +103,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
     return _truncnorm_sf(truncation_level, out)
 
 
-def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctx):
+def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
     """
     NOTE: this works for a single site
 
@@ -118,20 +118,21 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctx):
     :param ampl:
         Site amplification function instance of
         :class:openquake.hazardlib.site_amplification.AmpFunction
-    :param ctx:
-        A context object with attributes .mag, .sites, .rrup
+    :param ctxs:
+        Context objects with attributes .mag, .sites, .rrup
     """
     # Mean and std of ground motion for the IMTs considered in this analysis
-    # N  - Number of sites
+    # C - Number of contexts
     # L - Number of intensity measure levels
-    mean, stddev = mean_std  # shape (N, M)
-    N, L = len(mean), len(loglevels.array)
-    assert N == 1, N
+    mean, stddev = mean_std  # shape (C, M)
+    C, L = len(mean), len(loglevels.array)
+    for ctx in ctxs:
+        assert len(ctx.sids) == 1  # 1 site
     M = len(loglevels)
     L1 = L // M
 
     # This is the array where we store the output results i.e. poes on soil
-    out_s = numpy.zeros((N, L))
+    out_s = numpy.zeros((C, L))
 
     # `nsamp` is the number of IMLs per IMT used to compute the hazard on rock
     # while 'L' is total number of ground-motion values
@@ -140,11 +141,14 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctx):
     # Compute the probability of exceedance for each in intensity
     # measure type IMT
     sigma = ampfun.get_max_sigma()
+    mags = [ctx.mag for ctx in ctxs]
+    rrups = [ctx.rrup for ctx in ctxs]
+    ampcode = ctxs[0].sites['ampcode'][0]
     for m, imt in enumerate(loglevels):
 
-        # Get the values of ground-motion used to compute the probability of
-        # exceedance on soil.
-        soillevels = loglevels[imt]
+        # Get the values of ground-motion used to compute the probability
+        # of exceedance on soil.
+        soillevels = loglevels[imt]  # shape L1
 
         # Here we set automatically the IMLs that will be used to compute
         # the probability of occurrence of GM on rock within discrete
@@ -166,35 +170,29 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctx):
                 out_l = (iml_l - mean[:, m]) / stddev[:, m]
                 out_u = (iml_u - mean[:, m]) / stddev[:, m]
 
-            # Probability of occurrence on rock - The shape of this array
-            # is: number of sites x number of IMLs x GMMs. This corresponds
-            # to 1 x 1 x number of GMMs
+            # Probability of occurrence on rock
             pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
-                         _truncnorm_sf(truncation_level, out_u))
+                         _truncnorm_sf(truncation_level, out_u))  # shape C
 
             # Skipping cases where the pocc on rock is negligible
             if numpy.all(pocc_rock < 1e-10):
                 continue
 
             # Ground-motion value in the middle of each interval
-            iml_mid = numpy.log((numpy.exp(iml_l) + numpy.exp(iml_u)) / 2.)
+            iml_mid = (numpy.exp(iml_l) + numpy.exp(iml_u)) / 2.
 
             # Get mean and std of the amplification function for this
             # magnitude, distance and IML
-            median_af, std_af = ampfun.get_mean_std(
-                ctx.sites['ampcode'][0], imt, numpy.exp(iml_mid),
-                ctx.mag, ctx.rrup)
+            median_af, std_af = ampfun.get_mean_std(  # shape C
+                ampcode, imt, iml_mid, mags, rrups)
 
             # Computing the probability of exceedance of the levels of
             # ground-motion loglevels on soil
-            logaf = numpy.log(numpy.exp(soillevels) / numpy.exp(iml_mid))
-            poex_af = 1. - norm_cdf(logaf, numpy.log(median_af), std_af)
-            # The probability of occurrence on rock has shape:
-            # 1 x 1 x number of GMMs
-            poex = poex_af * pocc_rock
-
-            # Updating output
-            out_s[0, m * L1: (m + 1) * L1] += poex
+            logaf = numpy.log(numpy.exp(soillevels) / iml_mid)  # shape L1
+            for l in range(L1):
+                poex_af = 1. - norm.cdf(
+                    logaf[l], numpy.log(median_af), std_af)  # shape C
+                out_s[:, m * L1 + l] += poex_af * pocc_rock  # shape C
 
     return out_s
 
@@ -561,7 +559,7 @@ class GMPE(GroundShakingIntensityModel):
                                    self.__class__.__name__)
         return arr
 
-    def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctx=None):
+    def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctxs=()):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -593,8 +591,8 @@ class GMPE(GroundShakingIntensityModel):
             function of that truncated Gaussian applied to IMLs.
         :param af:
             None or an instance of AmplFunction
-        :param ctx:
-            None or the context object used to compute mean_std
+        :param ctxs:
+            Context object used to compute mean_std
         :returns:
             array of PoEs of shape (N, L)
         :raises ValueError:
@@ -624,7 +622,7 @@ class GMPE(GroundShakingIntensityModel):
                 mean_stdi[1] *= f  # multiply stddev by factor
                 arr += w * _get_poes(mean_stdi, loglevels, trunclevel)
         elif af:  # kernel amplification function
-            arr = _get_poes_site(mean_std, loglevels, trunclevel, af, ctx)
+            arr = _get_poes_site(mean_std, loglevels, trunclevel, af, ctxs)
         else:  # regular case
             arr = _get_poes(mean_std, loglevels, trunclevel)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None

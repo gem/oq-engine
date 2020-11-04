@@ -128,7 +128,6 @@ class OqParam(valid.ParamSet):
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
-    filter_distance = valid.Param(valid.Choice('rrup'), None)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
     ground_motion_correlation_params = valid.Param(valid.dictionary, {})
@@ -223,7 +222,7 @@ class OqParam(valid.ParamSet):
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 5E9)  # used in ebrisk
-    min_weight = valid.Param(valid.positiveint, 3_000)  # used in classical
+    min_weight = valid.Param(valid.positiveint, 1_000)  # used in classical
     max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -901,6 +900,15 @@ class OqParam(valid.ParamSet):
             self.hazard_curves_from_gmfs or self.calculation_mode in
             ('classical', 'disaggregation'))
         return not invalid
+
+    def is_valid_soil_intensities(self):
+        """
+        soil_intensities can be set only if amplification_method=convolution
+        """
+        if self.amplification_method == 'convolution':
+            return len(self.soil_intensities) > 1
+        else:
+            return self.soil_intensities is None
 
     def is_valid_sites_disagg(self):
         """

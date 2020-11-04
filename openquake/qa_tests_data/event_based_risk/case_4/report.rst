@@ -1,34 +1,34 @@
 Event Based Risk for Turkey reduced
 ===================================
 
-============== ===================
-checksum32     4_007_884_407      
-date           2020-03-13T11:21:44
-engine_version 3.9.0-gitfb3ef3a732
-============== ===================
+============== ====================
+checksum32     3_674_230_362       
+date           2020-11-02T09:36:32 
+engine_version 3.11.0-git82b78631ac
+============== ====================
 
 num_sites = 13, num_levels = 60, num_rlzs = 12
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'preclassical'    
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 200.0}
-investigation_time              10.0              
-ses_per_logic_tree_path         1                 
-truncation_level                3.0               
-rupture_mesh_spacing            4.0               
-complex_fault_mesh_spacing      4.0               
-width_of_mfd_bin                0.1               
-area_source_discretization      20.0              
-pointsource_distance            {'default': 0}    
-ground_motion_correlation_model None              
-minimum_intensity               {}                
-random_seed                     323               
-master_seed                     42                
-ses_seed                        323               
-=============================== ==================
+=============================== ==========================================
+calculation_mode                'preclassical'                            
+number_of_logic_tree_samples    0                                         
+maximum_distance                {'default': [(1.0, 200.0), (10.0, 200.0)]}
+investigation_time              10.0                                      
+ses_per_logic_tree_path         1                                         
+truncation_level                3.0                                       
+rupture_mesh_spacing            4.0                                       
+complex_fault_mesh_spacing      4.0                                       
+width_of_mfd_bin                0.1                                       
+area_source_discretization      20.0                                      
+pointsource_distance            {'default': [(1.0, 0), (10.0, 0)]}        
+ground_motion_correlation_model None                                      
+minimum_intensity               {}                                        
+random_seed                     323                                       
+master_seed                     42                                        
+ses_seed                        323                                       
+=============================== ==========================================
 
 Input files
 -----------
@@ -45,33 +45,32 @@ structural_vulnerability `structural_vulnerability_model.xml <structural_vulnera
 
 Composite source model
 ----------------------
-======================== ======= ================
-smlt_path                weight  num_realizations
-======================== ======= ================
-AreaSource               0.50000 4               
-FaultSourceAndBackground 0.20000 4               
-SeiFaCrust               0.30000 4               
-======================== ======= ================
+====== ====================== ====
+grp_id gsim                   rlzs
+====== ====================== ====
+0      '[AkkarBommer2010]'    [0] 
+0      '[CauzziFaccioli2008]' [1] 
+0      '[ChiouYoungs2008]'    [2] 
+0      '[ZhaoEtAl2006Asc]'    [3] 
+1      '[AkkarBommer2010]'    [4] 
+1      '[CauzziFaccioli2008]' [5] 
+1      '[ChiouYoungs2008]'    [6] 
+1      '[ZhaoEtAl2006Asc]'    [7] 
+2      '[AkkarBommer2010]'    [8] 
+2      '[CauzziFaccioli2008]' [9] 
+2      '[ChiouYoungs2008]'    [10]
+2      '[ZhaoEtAl2006Asc]'    [11]
+====== ====================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================================================================================== ================= ======================= ============================
-grp_id gsims                                                                              distances         siteparams              ruptparams                  
-====== ================================================================================== ================= ======================= ============================
-0      '[AkkarBommer2010]' '[CauzziFaccioli2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
-1      '[AkkarBommer2010]' '[CauzziFaccioli2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
-2      '[AkkarBommer2010]' '[CauzziFaccioli2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
-====== ================================================================================== ================= ======================= ============================
-
-Number of ruptures per source group
------------------------------------
-====== ========= ============ ============
-grp_id num_sites num_ruptures eff_ruptures
-====== ========= ============ ============
-0      0.21697   2_982        2_982       
-1      0.11111   108          54          
-2      NaN       9            0.0         
-====== ========= ============ ============
+===== ================================================================================== ================= ======================= ============================
+et_id gsims                                                                              distances         siteparams              ruptparams                  
+===== ================================================================================== ================= ======================= ============================
+0     '[AkkarBommer2010]' '[CauzziFaccioli2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
+1     '[AkkarBommer2010]' '[CauzziFaccioli2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
+2     '[AkkarBommer2010]' '[CauzziFaccioli2008]' '[ChiouYoungs2008]' '[ZhaoEtAl2006Asc]' rhypo rjb rrup rx vs30 vs30measured z1pt0 dip hypo_depth mag rake ztor
+===== ================================================================================== ================= ======================= ============================
 
 Exposure model
 --------------
@@ -80,69 +79,67 @@ Exposure model
 #taxonomies 9 
 =========== ==
 
-======== ======= ======= === === ========= ==========
-taxonomy mean    stddev  min max num_sites num_assets
-RC_LR    1.00000 0.0     1   1   3         3         
-RC_MR    1.00000 NaN     1   1   1         1         
-RC_HR    1.00000 NaN     1   1   1         1         
-URM_1S   1.00000 0.0     1   1   2         2         
-URM_2S   1.00000 0.0     1   1   2         2         
-SAM_1S   1.00000 NaN     1   1   1         1         
-SAM_2S   1.00000 0.0     1   1   2         2         
-SAM_3S   1.00000 NaN     1   1   1         1         
-SAM_4S   1.00000 NaN     1   1   1         1         
-*ALL*    0.16867 0.40783 0   2   83        14        
-======== ======= ======= === === ========= ==========
+======== ========== ======= ====== === === =========
+taxonomy num_assets mean    stddev min max num_sites
+RC_LR    3          1.00000 0%     1   1   3        
+RC_MR    1          1.00000 nan    1   1   1        
+RC_HR    1          1.00000 nan    1   1   1        
+URM_1S   2          1.00000 0%     1   1   2        
+URM_2S   2          1.00000 0%     1   1   2        
+SAM_1S   1          1.00000 nan    1   1   1        
+SAM_2S   2          1.00000 0%     1   1   2        
+SAM_3S   1          1.00000 nan    1   1   1        
+SAM_4S   1          1.00000 nan    1   1   1        
+*ALL*    83         0.16867 240%   0   2   14       
+======== ========== ======= ====== === === =========
 
 Slowest sources
 ---------------
-============ ====== ==== ============ ========= ========= ============
-source_id    grp_id code num_ruptures calc_time num_sites eff_ruptures
-============ ====== ==== ============ ========= ========= ============
-AS_TRAS360   0      A    624          0.00531   0.14904   624         
-AS_TRAS334   0      A    760          0.00530   0.31316   760         
-AS_TRAS346   0      A    527          0.00473   0.23340   527         
-AS_TRAS395   0      A    432          0.00430   0.18750   432         
-AS_TRAS458   0      A    399          0.00373   0.10526   399         
-AS_TRAS410   0      A    240          0.00290   0.29167   240         
-FSBG_TRBG989 1      A    108          0.00221   0.11111   54          
-============ ====== ==== ============ ========= ========= ============
+============ ==== ========= ========= ============
+source_id    code calc_time num_sites eff_ruptures
+============ ==== ========= ========= ============
+AS_TRAS334   A    1.864E-04 6         760         
+AS_TRAS346   A    1.624E-04 5         527         
+AS_TRAS395   A    1.533E-04 3         432         
+AS_TRAS458   A    1.483E-04 2         399         
+AS_TRAS360   A    1.459E-04 3         624         
+AS_TRAS410   A    1.440E-04 2         240         
+FSBG_TRBG989 A    1.428E-04 1         108         
+============ ==== ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== =========
 code calc_time
 ==== =========
-A    0.02848  
+A    0.00108  
 P    0.0      
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ======= ======= ======= =======
-operation-duration mean    stddev  min     max     outputs
-preclassical       0.01256 0.00655 0.00250 0.02215 8      
-read_source_model  0.03236 0.04160 0.00304 0.07997 3      
-================== ======= ======= ======= ======= =======
+================== ====== ========= ====== ========= =========
+operation-duration counts mean      stddev min       max      
+preclassical       8      6.373E-04 4%     6.015E-04 6.709E-04
+read_source_model  3      0.00441   78%    0.00146   0.00929  
+================== ====== ========= ====== ========= =========
 
 Data transfer
 -------------
-================= ========================================== ========
-task              sent                                       received
-read_source_model converter=996 B fname=332 B srcfilter=12 B 12.17 KB
-preclassical      srcs=18.24 KB params=9.13 KB gsims=3.8 KB  2.84 KB 
-================= ========================================== ========
+================= ================================ ========
+task              sent                             received
+read_source_model converter=996 B fname=332 B      8.83 KB 
+preclassical      srcs=18.57 KB srcfilter=16.91 KB 1.89 KB 
+================= ================================ ========
 
 Slowest operations
 ------------------
-=========================== ======== ========= ======
-calc_66955                  time_sec memory_mb counts
-=========================== ======== ========= ======
-composite source model      0.14046  0.12500   1     
-total preclassical          0.10046  1.85547   8     
-total read_source_model     0.09707  0.0       3     
-splitting/filtering sources 0.06404  0.0       8     
-reading exposure            0.00236  0.0       1     
-aggregate curves            0.00218  0.0       7     
-store source_info           0.00217  0.0       1     
-=========================== ======== ========= ======
+========================= ======== ========= ======
+calc_47305, maxmem=1.4 GB time_sec memory_mb counts
+========================= ======== ========= ======
+importing inputs          1.23338  0.0       1     
+composite source model    1.17521  0.0       1     
+total read_source_model   0.01323  0.72656   3     
+total preclassical        0.00510  0.42578   8     
+reading exposure          0.00230  0.0       1     
+========================= ======== ========= ======
