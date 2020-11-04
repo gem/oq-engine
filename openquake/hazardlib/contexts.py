@@ -277,18 +277,6 @@ class ContextMaker(object):
             raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
         return sites, DistancesContext([('rrup', distances)])
 
-    def get_dctx(self, sites, rup):
-        """
-        :param sites: :class:`openquake.hazardlib.site.SiteCollection`
-        :param rup: :class:`openquake.hazardlib.source.rupture.BaseRupture`
-        :returns: :class:`DistancesContext`
-        """
-        distances = get_distances(rup, sites, 'rrup')
-        mdist = self.maximum_distance(self.trt, rup.mag)
-        if (distances > mdist).all():
-            raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
-        return DistancesContext([('rrup', distances)])
-
     def make_rctx(self, rupture):
         """
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
