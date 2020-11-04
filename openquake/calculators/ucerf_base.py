@@ -228,18 +228,17 @@ class UCERFSource(BaseSeismicSource):
         :returns: array of centroids for the given rupture index
         """
         centroids = []
-        for trace, planes in self.gen_trace_planes(self, sections, hdf5):
+        for trace, planes in self.gen_planes(self, sections, hdf5):
             centroids.append(planes.mean(axis=2))
         return numpy.concatenate(centroids)
 
-    def gen_trace_planes(self, sections, hdf5):
+    def gen_planes(self, sections, hdf5):
         """
         :yields: trace and rupture planes for the given rupture index
         """
-        for idx in sections:
-            trace = "{:s}/{:s}".format(self.ukey["sec"], str(idx))
-            planes = hdf5[trace + "/RupturePlanes"][:]
-            yield trace, planes
+        for sec in sections:
+            key = "{:s}/{:d}/RupturePlanes".format(self.ukey["sec"], sec)
+            yield hdf5[key][:]
 
     def get_bounding_box(self, maxdist):
         """
@@ -291,7 +290,7 @@ class UCERFSource(BaseSeismicSource):
             return
 
         surface_set = []
-        for trace, plane in self.gen_trace_planes(sections, h5):
+        for plane in self.gen_planes(sections, h5):
             # build simple fault surface
             for jloc in range(0, plane.shape[2]):
                 top_left = Point(
@@ -302,13 +301,9 @@ class UCERFSource(BaseSeismicSource):
                     plane[2, 0, jloc], plane[2, 1, jloc], plane[2, 2, jloc])
                 bottom_left = Point(
                     plane[3, 0, jloc], plane[3, 1, jloc], plane[3, 2, jloc])
-                try:
-                    surface_set.append(
-                        ImperfectPlanarSurface.from_corner_points(
-                            top_left, top_right, bottom_right, bottom_left))
-                except ValueError as err:
-                    raise ValueError(err, trace, top_left, top_right,
-                                     bottom_right, bottom_left)
+                surface_set.append(
+                    ImperfectPlanarSurface.from_corner_points(
+                        top_left, top_right, bottom_right, bottom_left))
 
         rupture = ParametricProbabilisticRupture(
             mag, self.rake[ridx - self.start], self.tectonic_region_type,
