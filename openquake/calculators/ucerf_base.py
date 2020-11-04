@@ -243,10 +243,13 @@ class UCERFSource(BaseSeismicSource):
         """
         :returns: min_lon, min_lat, max_lon, max_lat
         """
-        with h5py.File(self.source_file, 'r') as hdf5:
-            locations = hdf5["Grid/Locations"][()]
-        lons, lats = locations[:, 0], locations[:, 1]
-        bbox = lons.min(), lats.min(), lons.max(), lats.max()
+        lons, lats = [], []
+        sections = set(sec for sections in self.sections for sec in sections)
+        for sec in sections:
+            plane = self.planes[sec]
+            lons.extend(plane[:, 0].flat)
+            lats.extend(plane[:, 1].flat)
+        bbox = min(lons), min(lats), max(lons), max(lats)
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = angular_distance(maxdist, bbox[1], bbox[3])
         return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
