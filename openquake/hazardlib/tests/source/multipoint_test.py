@@ -28,6 +28,24 @@ from openquake.hazardlib.pmf import PMF
 
 
 class MultiPointTestCase(unittest.TestCase):
+
+    def test_area(self):
+
+        npd = PMF([(0.5, NodalPlane(1, 20, 3)),
+                   (0.5, NodalPlane(2, 2, 4))])
+        hd = PMF([(1, 14)])
+        mesh = Mesh(numpy.array([0, 1]), numpy.array([0.5, 1]))
+        mmfd = MultiMFD('incrementalMFD',
+                        size=2,
+                        min_mag=[4.5],
+                        bin_width=[2.0],
+                        occurRates=[[.3, .1], [.4, .2, .1]])
+        mps = MultiPointSource('mp1', 'multi point source',
+                               'Active Shallow Crust',
+                               mmfd, PeerMSR(), 1.0,
+                               10, 20, npd, hd, mesh)
+        self.assertRaises(NotImplementedError, mps.get_fault_surface_area)
+
     def test(self):
         npd = PMF([(0.5, NodalPlane(1, 20, 3)),
                    (0.5, NodalPlane(2, 2, 4))])
