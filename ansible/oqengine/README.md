@@ -23,9 +23,27 @@ Example Playbook
 
 Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
 
+
     - hosts: servers
       roles:
          - { role: username.rolename, x: 42 }
+         
+    - hosts: all
+      become: yes
+      order: sorted
+
+      roles:
+         - oqengine
+
+Use also pre_tasks to assure to update the cache for Debian derivate
+
+  pre_tasks:
+    - name: Update apt cache.
+      apt:
+        update_cache: true
+        cache_valid_time: 600
+      when: ansible_os_family == 'Debian'
+
 
 License
 -------
