@@ -20,6 +20,7 @@ import copy
 import math
 import logging
 import pickle
+from unittest.mock import patch
 from datetime import datetime
 import numpy
 import h5py
@@ -34,10 +35,13 @@ from openquake.hazardlib.geo.utils import KM_TO_DEGREES, angular_distance
 from openquake.hazardlib.source.point import PointSource
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.contexts import (
+    ContextMaker, RuptureContext, get_distances)
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib import valid
+from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.sourceconverter import SourceConverter
 
 DEFAULT_TRT = "Active Shallow Crust"
@@ -285,33 +289,13 @@ class UCERFSource(BaseSeismicSource):
         """
         :param ridx: rupture index
         """
-        sections = self.sections[ridx]
         mag = self.mags[ridx]
         if mag < self.min_mag:
             return
-
-        surface_set = []
-        for sec in sections:
-            plane = self.planes[sec]
-            # build simple fault surface
-            for j in range(0, plane.shape[2]):
-                top_left = Point(
-                    plane[0, 0, j], plane[0, 1, j], plane[0, 2, j])
-                top_right = Point(
-                    plane[1, 0, j], plane[1, 1, j], plane[1, 2, j])
-                bottom_right = Point(
-                    plane[2, 0, j], plane[2, 1, j], plane[2, 2, j])
-                bottom_left = Point(
-                    plane[3, 0, j], plane[3, 1, j], plane[3, 2, j])
-                surface_set.append(
-                    ImperfectPlanarSurface.from_corner_points(
-                        top_left, top_right, bottom_right, bottom_left))
-
         rupture = ParametricProbabilisticRupture(
             mag, self.rake[ridx], self.tectonic_region_type,
-            surface_set[len(surface_set) // 2].get_middle_point(),
-            MultiSurface(surface_set), self.rate[ridx], self.tom)
-
+            None, None, self.rate[ridx], self.tom)
+        rupture.sections = self.sections[ridx]
         return rupture
 
     def iter_ruptures(self, **kwargs):
@@ -419,6 +403,79 @@ class UCERFSource(BaseSeismicSource):
         for rup, occ in zip(rups, occs):
             n_occ[rup] += occ
         yield from n_occ.items()
+
+
+def compute_distances(srcs, sites, dist_types):
+    """
+    Compute distances planes -> sites for all the relevant sections
+    :returns: a dictionary section_id -> dist_type -> distances
+    """
+    dic = {}  # sec -> dist_type -> distances
+    for src in srcs:
+        for sections in src.sections:
+            for sec in sections:
+                if sec in dic:  # already computed
+                    continue
+                plane = src.planes[sec]
+                surfaces = []
+                for j in range(0, plane.shape[2]):
+                    top_left = Point(
+                        plane[0, 0, j], plane[0, 1, j], plane[0, 2, j])
+                    top_right = Point(
+                        plane[1, 0, j], plane[1, 1, j], plane[1, 2, j])
+                    bottom_right = Point(
+                        plane[2, 0, j], plane[2, 1, j], plane[2, 2, j])
+                    bottom_left = Point(
+                        plane[3, 0, j], plane[3, 1, j], plane[3, 2, j])
+                    surfaces.append(
+                        ImperfectPlanarSurface.from_corner_points(
+                            top_left, top_right, bottom_right, bottom_left))
+                rup = RuptureContext()
+                rup.surface = MultiSurface(surfaces)
+                dic[sec] = {dist_type: get_distances(rup, sites, dist_type)
+                            for dist_type in dist_types}
+                dic[sec]['surfaces'] = rup.surface.surfaces
+    return dic
+
+
+def ucerf_classical(srcs, gsims, params, slc, monitor=None):
+    """
+    Compute the distances planes -> sites only once and then call classical
+    as usual
+    """
+    if monitor is None:  # fix mispassed parameters (for disagg_by_src)
+        monitor = slc
+        slc = slice(None)
+    srcfilter = monitor.read('srcfilter')[slc]
+    if not hasattr(srcs[0], 'start'):  # all point sources
+        return hazclassical(srcs, srcfilter, gsims, params, monitor)
+
+    dist_types = set()
+    for gsim in gsims:
+        dist_types.update(gsim.REQUIRES_DISTANCES)
+
+    with monitor('compute distances'):
+        ddic = compute_distances(srcs, srcfilter.sitecol.complete, dist_types)
+
+    def make_ctxs(self, rups, sites, fewsites):
+        ctxs = []
+        for rup in rups:
+            surfaces = []
+            for sec in rup.sections:
+                surfaces.extend(ddic[sec]['surfaces'])
+            rup.surface = MultiSurface(surfaces)
+            ctx = self.make_rctx(rup)
+            ctx.sids = sites.sids
+            for par in self.REQUIRES_SITES_PARAMETERS:
+                setattr(ctx, par, sites[par])
+            for par in self.REQUIRES_DISTANCES:
+                dists = numpy.array([ddic[sec][par] for sec in rup.sections])
+                setattr(ctx, par, dists.min(axis=0))
+            ctxs.append(ctx)
+        return ctxs
+
+    with patch.object(ContextMaker, 'make_ctxs', make_ctxs):
+        return hazclassical(srcs, srcfilter, gsims, params, monitor)
 
 
 def sample_background_model(
@@ -542,6 +599,7 @@ def get_rupture_dimensions(mag, nodal_plane, msr, rupture_aspect_ratio,
     return rup_length, rup_width
 
 
+# called by generate_background_ruptures
 def get_rupture_surface(mag, nodal_plane, hypocenter, msr,
                         rupture_aspect_ratio, upper_seismogenic_depth,
                         lower_seismogenic_depth, mesh_spacing=1.0):

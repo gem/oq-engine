@@ -40,7 +40,7 @@ from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, logs, readinput
 from openquake.calculators import getters
-from openquake.calculators import base
+from openquake.calculators import base, ucerf_base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -481,7 +481,10 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info(MAXMEMORY, T, L, max_num_gsims, humansize(pmapbytes))
 
         C = oq.concurrent_tasks or 1
-        if oq.disagg_by_src or oq.is_ucerf():
+        if oq.is_ucerf():
+            f1, f2 = ucerf_base.ucerf_classical, ucerf_base.ucerf_classical
+            max_weight = max(totweight / C, oq.min_weight) / 5
+        elif oq.disagg_by_src or oq.is_ucerf():
             f1, f2 = classical, classical
             max_weight = max(totweight / C, oq.min_weight) / 5
         else:
