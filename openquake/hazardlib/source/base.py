@@ -97,15 +97,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
 
-    @abc.abstractmethod
-    def get_fault_surface_area(self, **kwargs):
-        """
-        Calculates the area of the surface of the fault.
-
-        :returns:
-            A float with the area (in km^2) of the fault surface
-        """
-
     def sample_ruptures(self, eff_num_ses):
         """
         :param eff_num_ses: number of stochastic event sets * number of samples

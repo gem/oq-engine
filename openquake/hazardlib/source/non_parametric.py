@@ -61,9 +61,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
             for (rup, pmf), weight in zip(data, weights):
                 rup.weight = weight
 
-    def get_fault_surface_area(self):
-        raise NotImplementedError('I cannot calculate this for point sources')
-
     def iter_ruptures(self, **kwargs):
         """
         Get a generator object that yields probabilistic ruptures the source

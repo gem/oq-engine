@@ -96,9 +96,6 @@ class MultiPointSource(ParametricSeismicSource):
             for rupture in ps.iter_ruptures(**kwargs):
                 yield rupture
 
-    def get_fault_surface_area(self):
-        raise NotImplementedError('I cannot calculate this for point sources')
-
     def count_ruptures(self):
         """
         See
