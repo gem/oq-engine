@@ -223,22 +223,17 @@ class UCERFSource(BaseSeismicSource):
         """List of section indices for the given ridx"""
         return hdf5[self.ukey["geol"] + "/RuptureIndex"][ridx]
 
-    def get_centroids(self, sections, hdf5):
+    def get_planes(self):
         """
-        :returns: array of centroids for the given rupture index
+        :returns: dictionary of planes, one per section
         """
-        centroids = []
-        for trace, planes in self.gen_planes(self, sections, hdf5):
-            centroids.append(planes.mean(axis=2))
-        return numpy.concatenate(centroids)
-
-    def gen_planes(self, sections, hdf5):
-        """
-        :yields: trace and rupture planes for the given rupture index
-        """
-        for sec in sections:
-            key = "{:s}/{:d}/RupturePlanes".format(self.ukey["sec"], sec)
-            yield hdf5[key][:]
+        dic = {}
+        with h5py.File(self.source_file, 'r') as hdf5:
+            sections = sorted(map(int, hdf5[self.ukey["sec"]]))
+            for sec in sections:
+                key = "{:s}/{:d}/RupturePlanes".format(self.ukey["sec"], sec)
+                dic[sec] = hdf5[key][:]
+        return dic
 
     def get_bounding_box(self, maxdist):
         """
@@ -290,17 +285,18 @@ class UCERFSource(BaseSeismicSource):
             return
 
         surface_set = []
-        for plane in self.gen_planes(sections, h5):
+        for sec in sections:
+            plane = self.planes[sec]
             # build simple fault surface
-            for jloc in range(0, plane.shape[2]):
+            for j in range(0, plane.shape[2]):
                 top_left = Point(
-                    plane[0, 0, jloc], plane[0, 1, jloc], plane[0, 2, jloc])
+                    plane[0, 0, j], plane[0, 1, j], plane[0, 2, j])
                 top_right = Point(
-                    plane[1, 0, jloc], plane[1, 1, jloc], plane[1, 2, jloc])
+                    plane[1, 0, j], plane[1, 1, j], plane[1, 2, j])
                 bottom_right = Point(
-                    plane[2, 0, jloc], plane[2, 1, jloc], plane[2, 2, jloc])
+                    plane[2, 0, j], plane[2, 1, j], plane[2, 2, j])
                 bottom_left = Point(
-                    plane[3, 0, jloc], plane[3, 1, jloc], plane[3, 2, jloc])
+                    plane[3, 0, j], plane[3, 1, j], plane[3, 2, j])
                 surface_set.append(
                     ImperfectPlanarSurface.from_corner_points(
                         top_left, top_right, bottom_right, bottom_left))
