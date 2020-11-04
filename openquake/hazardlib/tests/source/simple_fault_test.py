@@ -150,6 +150,19 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
 
         self.assertEqual(len(list(fault.iter_ruptures())), 1)
 
+    def test_calculate_fault_surface_area(self):
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=6.0, max_mag=7.0,
+                             bin_width=1.0)
+
+        # The upper and lower seismogenic depths are 0 and 4.24 respectively
+        fault_trace = Line([Point(0.123, 0.456), Point(1.123, 0.456)])
+        source = self._make_source(mfd=mfd, aspect_ratio=1.0,
+                                   fault_trace=fault_trace, dip=45)
+        computed = source.get_fault_surface_area()
+        # Checked with an approx calculaton by hand
+        expected = 665.669139352068
+        self.assertAlmostEqual(computed, expected)
+
 
 class SimpleFaultParametersChecksTestCase(_BaseFaultSourceTestCase):
 
@@ -581,7 +594,7 @@ class ModifySimpleFaultTestCase(_BaseFaultSourceTestCase):
         self.assertAlmostEqual(new_fault.lower_seismogenic_depth, 10.0)
 
     def test_modify_set_geometry_other_params(self):
-        new_fault = deepcopy(self.fault) 
+        new_fault = deepcopy(self.fault)
         new_fault.modify_set_geometry(self.basic_trace, 1., 12., 60., 1.)
         self.assertAlmostEqual(new_fault.dip, 60.)
         self.assertAlmostEqual(new_fault.upper_seismogenic_depth, 1.0)
@@ -589,11 +602,11 @@ class ModifySimpleFaultTestCase(_BaseFaultSourceTestCase):
 
     def test_modify_adjust_dip(self):
         # Increase dip
-        new_fault = deepcopy(self.fault) 
+        new_fault = deepcopy(self.fault)
         new_fault.modify_adjust_dip(15.0)
         self.assertAlmostEqual(new_fault.dip, 60.0)
         # Decrease dip
-        new_fault = deepcopy(self.fault) 
+        new_fault = deepcopy(self.fault)
         new_fault.modify_adjust_dip(-15.0)
         self.assertAlmostEqual(new_fault.dip, 30.0)
 
