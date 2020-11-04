@@ -166,20 +166,20 @@ class UCERFSource(BaseSeismicSource):
     def mags(self):
         # read from FM0_0/MEANFS/MEANMSR/Magnitude
         with h5py.File(self.source_file, "r") as hdf5:
-            arr = hdf5[self.idx_set["mag"]][self.start: self.stop]
+            arr = hdf5[self.ukey["mag"]][self.start: self.stop]
         return arr
 
     @cached_property
     def rate(self):
         # read from FM0_0/MEANFS/MEANMSR/Rates/MeanRates
         with h5py.File(self.source_file, "r") as hdf5:
-            return hdf5[self.idx_set["rate"]][self.start: self.stop]
+            return hdf5[self.ukey["rate"]][self.start: self.stop]
 
     @cached_property
     def rake(self):
         # read from FM0_0/MEANFS/Rake
         with h5py.File(self.source_file, "r") as hdf5:
-            return hdf5[self.idx_set["rake"]][self.start:self.stop]
+            return hdf5[self.ukey["rake"]][self.start:self.stop]
 
     def wkt(self):
         return ''
@@ -201,10 +201,10 @@ class UCERFSource(BaseSeismicSource):
         new.et_id = et_id
         new.source_id = branch_id  # i.e. FM3_1/ABM/Shaw09Mod/
         # DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
-        new.idx_set = build_idx_set(branch_id, self.start_date)
+        new.ukey = build_ukey(branch_id, self.start_date)
         with h5py.File(self.source_file, "r") as hdf5:
             new.start = 0
-            new.stop = len(hdf5[new.idx_set["mag"]])
+            new.stop = len(hdf5[new.ukey["mag"]])
         return new
 
     def get_min_max_mag(self):
@@ -221,16 +221,15 @@ class UCERFSource(BaseSeismicSource):
 
     def get_sections(self, hdf5, ridx):
         """List of section indices for the given ridx"""
-        return hdf5[self.idx_set["geol"] + "/RuptureIndex"][ridx]
+        return hdf5[self.ukey["geol"] + "/RuptureIndex"][ridx]
 
     def get_centroids(self, sections, hdf5):
         """
         :returns: array of centroids for the given rupture index
         """
         centroids = []
-        for idx in sections:
-            trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
-            centroids.append(hdf5[trace + "/Centroids"][()])
+        for trace, planes in self.gen_trace_planes(self, sections, hdf5):
+            centroids.append(planes.mean(axis=2))
         return numpy.concatenate(centroids)
 
     def gen_trace_planes(self, sections, hdf5):
@@ -238,9 +237,9 @@ class UCERFSource(BaseSeismicSource):
         :yields: trace and rupture planes for the given rupture index
         """
         for idx in sections:
-            trace = "{:s}/{:s}".format(self.idx_set["sec"], str(idx))
-            plane = hdf5[trace + "/RupturePlanes"][:].astype("float64")
-            yield trace, plane
+            trace = "{:s}/{:s}".format(self.ukey["sec"], str(idx))
+            planes = hdf5[trace + "/RupturePlanes"][:]
+            yield trace, planes
 
     def get_bounding_box(self, maxdist):
         """
@@ -260,7 +259,7 @@ class UCERFSource(BaseSeismicSource):
         step - this is done here rather than in the sampling of the ruptures
         themselves
         """
-        branch_key = self.idx_set["grid_key"]
+        branch_key = self.ukey["grid_key"]
         with h5py.File(self.source_file, 'r') as hdf5:
             bg_locations = hdf5["Grid/Locations"][()]
             if hasattr(self, 'src_filter'):
@@ -352,7 +351,7 @@ class UCERFSource(BaseSeismicSource):
         """
         background_sids = self.get_background_sids()
         with h5py.File(self.source_file, "r") as hdf5:
-            grid_loc = "/".join(["Grid", self.idx_set["grid_key"]])
+            grid_loc = "/".join(["Grid", self.ukey["grid_key"]])
             # for instance Grid/FM0_0_MEANFS_MEANMSR_MeanRates
             mags = hdf5[grid_loc + "/Magnitude"][()]
             mmax = hdf5[grid_loc + "/MMax"][background_sids]
@@ -360,8 +359,8 @@ class UCERFSource(BaseSeismicSource):
             locations = hdf5["Grid/Locations"][background_sids, :]
             sources = []
             for i, bg_idx in enumerate(background_sids):
-                src_id = "_".join([self.idx_set["grid_key"], str(bg_idx)])
-                src_name = "|".join([self.idx_set["total_key"], str(bg_idx)])
+                src_id = "_".join([self.ukey["grid_key"], str(bg_idx)])
+                src_name = "|".join([self.ukey["total_key"], str(bg_idx)])
                 mag_idx = (self.min_mag <= mags) & (mags < mmax[i])
                 src_mags = mags[mag_idx]
                 src_mfd = EvenlyDiscretizedMFD(
@@ -409,7 +408,7 @@ class UCERFSource(BaseSeismicSource):
 
             # sample background sources
             background_ruptures, background_n_occ = sample_background_model(
-                hdf5, self.idx_set["grid_key"], self.tom, eff_num_ses,
+                hdf5, self.ukey["grid_key"], self.tom, eff_num_ses,
                 self.serial, background_sids, self.min_mag, self.npd,
                 self.hdd, self.usd, self.lsd, self.msr, self.aspect,
                 self.tectonic_region_type)
@@ -488,26 +487,26 @@ def sample_background_model(
 # #################################################################### #
 
 
-def build_idx_set(branch_id, start_date):
+def build_ukey(branch_id, start_date):
     """
     Builds a dictionary of keys based on the branch code
     """
     code_set = branch_id.split("/")
     code_set.insert(3, "Rates")
-    idx_set = {
+    ukey = {
         "sec": "/".join([code_set[0], code_set[1], "Sections"]),
         "mag": "/".join([code_set[0], code_set[1], code_set[2], "Magnitude"])}
-    idx_set["rate"] = "/".join(code_set)
-    idx_set["rake"] = "/".join([code_set[0], code_set[1], "Rake"])
-    idx_set["msr"] = "-".join(code_set[:3])
-    idx_set["geol"] = code_set[0]
+    ukey["rate"] = "/".join(code_set)
+    ukey["rake"] = "/".join([code_set[0], code_set[1], "Rake"])
+    ukey["msr"] = "-".join(code_set[:3])
+    ukey["geol"] = code_set[0]
     if start_date:  # time-dependent source
-        idx_set["grid_key"] = "_".join(
+        ukey["grid_key"] = "_".join(
             branch_id.replace("/", "_").split("_")[:-1])
     else:  # time-independent source
-        idx_set["grid_key"] = branch_id.replace("/", "_")
-    idx_set["total_key"] = branch_id.replace("/", "|")
-    return idx_set
+        ukey["grid_key"] = branch_id.replace("/", "_")
+    ukey["total_key"] = branch_id.replace("/", "|")
+    return ukey
 
 
 def get_rupture_dimensions(mag, nodal_plane, msr, rupture_aspect_ratio,
