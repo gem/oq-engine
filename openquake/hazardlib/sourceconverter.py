@@ -658,9 +658,12 @@ class SourceConverter(RuptureConverter):
                 rigidity = mfd_node.get('rigidity')
                 if slip_rate:
                     assert rigidity
+                    # instantiate a NaN MFD to be fixed later on
                     gr_mfd = mfd.TruncatedGRMFD.from_moment(
                         mfd_node['minMag'], mfd_node['maxMag'],
-                        self.width_of_mfd_bin, mfd_node['bValue'], moment)
+                        self.width_of_mfd_bin, mfd_node['bValue'], numpy.nan)
+                    gr_mfd.slip_rate = slip_rate
+                    gr_mfd.rigidity = rigidity
                 else:
                     gr_mfd = mfd.TruncatedGRMFD(
                         a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
@@ -940,6 +943,12 @@ class SourceConverter(RuptureConverter):
             src = self.convert_node(src_node)
             if src is None:  # filtered out by source_id
                 continue
+            if hasattr(src.mfd, 'slip_rate'):  # TruncatedGRMFD with slip rate
+                m = src.mfd
+                mm = 1E-3  # conversion meters -> millimiters
+                moment_rate = src.get_area() * m.slip_rate * mm * m.rigidity
+                m.__init__(m.min_mag, m.max_mag, m.bin_width, m.b_val,
+                           moment_rate)
             # transmit the group attributes to the underlying source
             for attr, value in grp_attrs.items():
                 if attr == 'tectonicRegion':

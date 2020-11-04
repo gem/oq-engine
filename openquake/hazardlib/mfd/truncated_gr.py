@@ -295,4 +295,5 @@ class TruncatedGRMFD(BaseMFD):
                 (b_val * mou * term2))
         a_val = np.log10(rate)
         self = cls(min_mag, max_mag, bin_width, a_val, b_val)
+        self.moment_rate = rate
         return self
