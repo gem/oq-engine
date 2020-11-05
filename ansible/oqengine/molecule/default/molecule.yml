@@ -13,7 +13,7 @@ platforms:
     privileged: true
 provisioner:
   name: ansible
-  lint:|
+  lint:
     set -e
     yamllint .
     ansible-lint
