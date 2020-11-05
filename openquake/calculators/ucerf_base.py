@@ -475,6 +475,7 @@ def ucerf_classical(srcs, gsims, params, slc, monitor=None):
         dic = compute_distances(srcs, srcfilter.sitecol.complete, dist_types)
 
     def make_ctxs(self, rups, sites, fewsites):
+        sitecol = sites.complete
         ctxs = []
         for rup in rups:
             surfaces = []
@@ -487,13 +488,13 @@ def ucerf_classical(srcs, gsims, params, slc, monitor=None):
             rrup = numpy.array(dists['rrup']).min(axis=0)
             ok = rrup <= self.maximum_distance(self.trt, rup.mag)
             if ok.any():
-                ctx.sids = sids = sites.sids
-                ctx.rrup = rrup[sids]
+                ctx.sids = sitecol.sids[ok]
+                ctx.rrup = rrup[ok]
                 for par in self.REQUIRES_DISTANCES - {'rrup'}:
-                    dst = numpy.array(dists[par]).min(axis=0)
-                    setattr(ctx, par, dst[sids])
+                    dst = numpy.array(dists[par][ok]).min(axis=0)
+                    setattr(ctx, par, dst)
                 for par in self.REQUIRES_SITES_PARAMETERS:
-                    setattr(ctx, par, sites[par][sids])
+                    setattr(ctx, par, sitecol[par][ok])
                 ctxs.append(ctx)
         return ctxs
 
