@@ -294,7 +294,10 @@ class UCERFSource(BaseSeismicSource):
             return
         surfaces = []
         for sec in self.sections[ridx]:
-            surfaces.extend(_get_planar_surfaces(self.planes[sec]))
+            if hasattr(self, 'msurface'):  # classical
+                surfaces.extend(self.msurface[sec].surfaces)
+            else:  # event_based
+                surfaces.extend(_get_planar_surfaces(self.planes[sec]))
         surface = MultiSurface(surfaces)
         hypocenter = surfaces[len(surfaces) // 2].get_middle_point()
         rupture = ParametricProbabilisticRupture(
@@ -413,21 +416,23 @@ class UCERFSource(BaseSeismicSource):
 def compute_distances(srcs, sites, dist_types):
     """
     Compute distances planes -> sites for all the relevant sections
-    :returns: a dictionary section_id -> dist_type -> distances
+    :returns: a dictionary section_id -> multisurface with distances
     """
-    dic = {}  # sec -> dist_type -> distances
+    dic = {}  # sec -> multisurface
     for src in srcs:
+        src.msurface = dic
         for sections in src.sections:
             for sec in sections:
                 if sec in dic:  # already computed
                     continue
                 surfaces = _get_planar_surfaces(src.planes[sec])
                 rup = RuptureContext()
-                rup.surface = MultiSurface(surfaces)
+                rup.surface = msurface = MultiSurface(surfaces)
                 rup.hypocenter = surfaces[len(surfaces)//2].get_middle_point()
-                dic[sec] = {dist_type: get_distances(rup, sites, dist_type)
-                            for dist_type in dist_types}
-                dic[sec]['surfaces'] = rup.surface.surfaces
+                for dist_type in dist_types:
+                    setattr(msurface, dist_type,
+                            get_distances(rup, sites, dist_type))
+                dic[sec] = msurface
     return dic
 
 
@@ -465,21 +470,21 @@ def ucerf_classical(srcs, gsims, params, slc, monitor=None):
         dist_types.update(gsim.REQUIRES_DISTANCES)
 
     with monitor('compute distances', measuremem=True):
-        # compute double dict section_id -> dist_type -> distances
-        ddic = compute_distances(srcs, srcfilter.sitecol.complete, dist_types)
+        # compute dict section_id -> multisurfac
+        dic = compute_distances(srcs, srcfilter.sitecol.complete, dist_types)
 
     def make_ctxs(self, rups, sites, fewsites):
         ctxs = []
         for rup in rups:
             surfaces = []
             for sec in rup.sections:
-                surfaces.extend(ddic[sec]['surfaces'])
+                surfaces.extend(dic[sec].surfaces)
             ctx = self.make_rctx(rup)
             ctx.sids = sites.sids
             for par in self.REQUIRES_SITES_PARAMETERS:
                 setattr(ctx, par, sites[par])
             for par in self.REQUIRES_DISTANCES:
-                dists = numpy.array([ddic[sec][par][ctx.sids]
+                dists = numpy.array([getattr(dic[sec], par)[ctx.sids]
                                      for sec in rup.sections])
                 setattr(ctx, par, dists.min(axis=0))
             ctxs.append(ctx)
