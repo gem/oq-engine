@@ -539,24 +539,28 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
-    def get_mean_std(self, ctx, imts):
+    def get_mean_std(self, ctxs, imts):
         """
         :returns: an array of shape (2, N, M) with means and stddevs
         """
-        N = len(ctx.sids)
+        N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(imts)
         arr = numpy.zeros((2, N, M))
         num_tables = CoeffsTable.num_instances
-        new = ctx.roundup(self.minimum_distance)
-        for m, imt in enumerate(imts):
-            mean, [std] = self.get_mean_and_stddevs(ctx, ctx, new, imt,
-                                                    [const.StdDev.TOTAL])
-            arr[0, :, m] = mean
-            arr[1, :, m] = std
-            if CoeffsTable.num_instances > num_tables:
-                raise RuntimeError('Instantiating CoeffsTable inside '
-                                   '%s.get_mean_and_stddevs' %
-                                   self.__class__.__name__)
+        start = 0
+        for ctx in ctxs:
+            stop = start + len(ctx.sids)
+            new = ctx.roundup(self.minimum_distance)
+            for m, imt in enumerate(imts):
+                mean, [std] = self.get_mean_and_stddevs(ctx, ctx, new, imt,
+                                                        [const.StdDev.TOTAL])
+                arr[0, start:stop, m] = mean
+                arr[1, start:stop, m] = std
+                if CoeffsTable.num_instances > num_tables:
+                    raise RuntimeError('Instantiating CoeffsTable inside '
+                                       '%s.get_mean_and_stddevs' %
+                                       self.__class__.__name__)
+            start = stop
         return arr
 
     def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctxs=()):
