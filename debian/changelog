@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Implemented `truncGutenbergRichterMFD` from slip rate and rigidity
   * Simplified/optimized the UCERF filtering
 
   [Viktor Polak]
