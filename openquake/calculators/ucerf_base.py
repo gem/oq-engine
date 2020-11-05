@@ -292,9 +292,26 @@ class UCERFSource(BaseSeismicSource):
         mag = self.mags[ridx]
         if mag < self.min_mag:
             return
+        surfaces = []
+        for sec in self.sections[ridx]:
+            plane = self.planes[sec]
+            for j in range(0, plane.shape[2]):
+                top_left = Point(
+                    plane[0, 0, j], plane[0, 1, j], plane[0, 2, j])
+                top_right = Point(
+                    plane[1, 0, j], plane[1, 1, j], plane[1, 2, j])
+                bottom_right = Point(
+                    plane[2, 0, j], plane[2, 1, j], plane[2, 2, j])
+                bottom_left = Point(
+                    plane[3, 0, j], plane[3, 1, j], plane[3, 2, j])
+                surfaces.append(
+                    ImperfectPlanarSurface.from_corner_points(
+                        top_left, top_right, bottom_right, bottom_left))
+        surface = MultiSurface(surfaces)
+        hypocenter = surfaces[len(surfaces) // 2].get_middle_point()
         rupture = ParametricProbabilisticRupture(
             mag, self.rake[ridx], self.tectonic_region_type,
-            None, None, self.rate[ridx], self.tom)
+            hypocenter, surface, self.rate[ridx], self.tom)
         rupture.sections = self.sections[ridx]
         return rupture
 
@@ -465,7 +482,6 @@ def ucerf_classical(srcs, gsims, params, slc, monitor=None):
             surfaces = []
             for sec in rup.sections:
                 surfaces.extend(ddic[sec]['surfaces'])
-            rup.surface = MultiSurface(surfaces)
             ctx = self.make_rctx(rup)
             ctx.sids = sites.sids
             for par in self.REQUIRES_SITES_PARAMETERS:
