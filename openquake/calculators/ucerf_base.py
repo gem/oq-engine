@@ -478,17 +478,23 @@ def ucerf_classical(srcs, gsims, params, slc, monitor=None):
         ctxs = []
         for rup in rups:
             surfaces = []
+            dists = AccumDict(accum=[])  # dist_type -> distances
             for sec in rup.sections:
                 surfaces.extend(dic[sec].surfaces)
+                for par in self.REQUIRES_DISTANCES:
+                    dists[par].append(getattr(dic[sec], par))
             ctx = self.make_rctx(rup)
-            ctx.sids = sites.sids
-            for par in self.REQUIRES_SITES_PARAMETERS:
-                setattr(ctx, par, sites[par])
-            for par in self.REQUIRES_DISTANCES:
-                dists = numpy.array([getattr(dic[sec], par)[ctx.sids]
-                                     for sec in rup.sections])
-                setattr(ctx, par, dists.min(axis=0))
-            ctxs.append(ctx)
+            rrup = numpy.array(dists['rrup']).min(axis=0)
+            ok = rrup <= self.maximum_distance(self.trt, rup.mag)
+            ctx.sids = sites.sids[ok]
+            ctx.rrup = rrup[ok]
+            if ok.any():
+                for par in self.REQUIRES_DISTANCES - {'rrup'}:
+                    dst = numpy.array(dists[par]).min(axis=0)
+                    setattr(ctx, par, dst[ok])
+                for par in self.REQUIRES_SITES_PARAMETERS:
+                    setattr(ctx, par, sites[par])
+                ctxs.append(ctx)
         return ctxs
 
     with patch.object(ContextMaker, 'make_ctxs', make_ctxs):
