@@ -13,7 +13,9 @@ platforms:
     privileged: true
 provisioner:
   name: ansible
-  lint:
-    name: ansible-lint
+  lint:|
+    set -e
+    yamllint .
+    ansible-lint
 verifier:
-  name: testinfra
+  name: ansible
