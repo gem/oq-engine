@@ -3,7 +3,10 @@
 
 - name: Verify
   hosts: all
+  become: yes
+  become_user: openquake
   gather_facts: false
+
   tasks:
   - name: Copy job.zip to instance
     copy:
@@ -12,10 +15,9 @@
       owner: openquake
       group: openquake
       mode: '0644'
+
   - name: Run a Demo calc for EventBasedRisk
     command: /usr/bin/oq engine --run job.zip
-    become: yes
-    become_user: openquake
     args:
       chdir: /home/openquake
     register: calc
