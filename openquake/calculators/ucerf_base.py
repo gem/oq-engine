@@ -486,14 +486,14 @@ def ucerf_classical(srcs, gsims, params, slc, monitor=None):
             ctx = self.make_rctx(rup)
             rrup = numpy.array(dists['rrup']).min(axis=0)
             ok = rrup <= self.maximum_distance(self.trt, rup.mag)
-            ctx.sids = sites.sids
-            ctx.rrup = rrup
             if ok.any():
+                ctx.sids = sids = sites.sids
+                ctx.rrup = rrup[sids]
                 for par in self.REQUIRES_DISTANCES - {'rrup'}:
                     dst = numpy.array(dists[par]).min(axis=0)
-                    setattr(ctx, par, dst)
+                    setattr(ctx, par, dst[sids])
                 for par in self.REQUIRES_SITES_PARAMETERS:
-                    setattr(ctx, par, sites[par])
+                    setattr(ctx, par, sites[par][sids])
                 ctxs.append(ctx)
         return ctxs
 
