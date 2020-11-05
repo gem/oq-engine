@@ -5,7 +5,8 @@ driver:
   name: docker
 platforms:
   - name: instance
-    image: ${MOLECULE_DISTRO:-'centos:7'}
+    #image: ${MOLECULE_DISTRO:-'centos:7'}
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-centos7}-ansible:latest"
     command: /sbin/init 
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
