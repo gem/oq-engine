@@ -163,6 +163,18 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.edges = edges
         self.rake = rake
 
+    def get_fault_surface_area(self):
+        """
+        Computes the area covered by the surface of the fault.
+
+        :returns:
+            A float defining the area of the surface of the fault [km^2]
+        """
+        # The mesh spacing is hardcoded to guarantee stability in the values
+        # computed
+        sfc = ComplexFaultSurface.from_fault_data(self.edges, 2.0)
+        return sfc.get_area()
+
     def iter_ruptures(self, **kwargs):
         """
         See :meth:

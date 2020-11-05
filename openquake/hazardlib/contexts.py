@@ -187,7 +187,6 @@ class ContextMaker(object):
             self.pointsource_distance = param['pointsource_distance'][trt]
         else:
             self.pointsource_distance = {}
-        self.filter_distance = 'rrup'
         if 'imtls' in param:
             self.imtls = param['imtls']
         elif 'hazard_imtls' in param:
@@ -269,26 +268,14 @@ class ContextMaker(object):
         :returns:
             (filtered sites, distance context)
         """
-        distances = get_distances(rup, sites, self.filter_distance)
+        distances = get_distances(rup, sites, 'rrup')
         mdist = self.maximum_distance(self.trt, rup.mag)
         mask = distances <= mdist
         if mask.any():
             sites, distances = sites.filter(mask), distances[mask]
         else:
             raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
-        return sites, DistancesContext([(self.filter_distance, distances)])
-
-    def get_dctx(self, sites, rup):
-        """
-        :param sites: :class:`openquake.hazardlib.site.SiteCollection`
-        :param rup: :class:`openquake.hazardlib.source.rupture.BaseRupture`
-        :returns: :class:`DistancesContext`
-        """
-        distances = get_distances(rup, sites, self.filter_distance)
-        mdist = self.maximum_distance(self.trt, rup.mag)
-        if (distances > mdist).all():
-            raise FarAwayRupture('%d: %d km' % (rup.rup_id, distances.min()))
-        return DistancesContext([(self.filter_distance, distances)])
+        return sites, DistancesContext([('rrup', distances)])
 
     def make_rctx(self, rupture):
         """
@@ -341,7 +328,7 @@ class ContextMaker(object):
             distance parameters) is unknown.
         """
         sites, dctx = self.filter(sites, rupture)
-        for param in self.REQUIRES_DISTANCES - set([self.filter_distance]):
+        for param in self.REQUIRES_DISTANCES - {'rrup'}:
             distances = get_distances(rupture, sites, param)
             setattr(dctx, param, distances)
         reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)

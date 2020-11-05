@@ -28,6 +28,7 @@ from openquake.hazardlib.pmf import PMF
 
 
 class MultiPointTestCase(unittest.TestCase):
+
     def test(self):
         npd = PMF([(0.5, NodalPlane(1, 20, 3)),
                    (0.5, NodalPlane(2, 2, 4))])

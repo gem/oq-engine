@@ -129,7 +129,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 # not used in the engine, only in tests and possibly notebooks
 def calc_hazard_curves(
         groups, srcfilter, imtls, gsim_by_trt, truncation_level=None,
-        apply=sequential_apply, filter_distance='rjb', reqv=None, **kwargs):
+        apply=sequential_apply, reqv=None, **kwargs):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
     groups and a dictionary of ground shaking intensity models (one per
@@ -156,8 +156,6 @@ def calc_hazard_curves(
         distribution.
     :param apply:
         apply function to use (default sequential_apply)
-    :param filter_distance:
-        The distance used to filter the ruptures (default rjb)
     :param reqv:
         If not None, an instance of RjbEquivalent
     :returns:
@@ -182,8 +180,7 @@ def calc_hazard_curves(
             idx += 1
     imtls = DictArray(imtls)
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
-    param = dict(imtls=imtls, truncation_level=truncation_level,
-                 filter_distance=filter_distance, reqv=reqv,
+    param = dict(imtls=imtls, truncation_level=truncation_level, reqv=reqv,
                  cluster=grp.cluster, shift_hypo=shift_hypo)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
