@@ -81,8 +81,9 @@
           state: latest
 
       - name: Enable PowerTools on CentOS 8
-          command: dnf config-manager --set-enabled PowerTools
-        warn: false
+        command: dnf config-manager --set-enabled PowerTools
+        args:
+          warn: false
 
       - name: Install python 3.8 on CentOS 8
         dnf:
