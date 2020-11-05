@@ -432,6 +432,7 @@ def compute_distances(srcs, sites, dist_types):
                             top_left, top_right, bottom_right, bottom_left))
                 rup = RuptureContext()
                 rup.surface = MultiSurface(surfaces)
+                rup.hypocenter = surfaces[len(surfaces)//2].get_middle_point()
                 dic[sec] = {dist_type: get_distances(rup, sites, dist_type)
                             for dist_type in dist_types}
                 dic[sec]['surfaces'] = rup.surface.surfaces
@@ -454,7 +455,8 @@ def ucerf_classical(srcs, gsims, params, slc, monitor=None):
     for gsim in gsims:
         dist_types.update(gsim.REQUIRES_DISTANCES)
 
-    with monitor('compute distances'):
+    with monitor('compute distances', measuremem=True):
+        # compute double dict section_id -> dist_type -> distances
         ddic = compute_distances(srcs, srcfilter.sitecol.complete, dist_types)
 
     def make_ctxs(self, rups, sites, fewsites):
