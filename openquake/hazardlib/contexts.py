@@ -223,8 +223,7 @@ class ContextMaker(object):
         for g, gsim in enumerate(self.gsims):
             with self.gmf_mon:
                 # shape (2, N, M)
-                mean_std = numpy.concatenate([gsim.get_mean_std(ctx, self.imts)
-                                              for ctx in ctxs], axis=1)
+                mean_std = gsim.get_mean_std(ctxs, self.imts)
             with self.poe_mon:
                 poes[:, :, g] = gsim.get_poes(
                     mean_std, self.loglevels, self.trunclevel, self.af, ctxs)
@@ -419,7 +418,7 @@ class ContextMaker(object):
             means = []
             for gsim in self.gsims:
                 try:
-                    mean = gsim.get_mean_std(ctx, self.imts)[0, 0]
+                    mean = gsim.get_mean_std([ctx], self.imts)[0, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
                 means.append(mean.max())
