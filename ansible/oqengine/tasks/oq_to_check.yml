@@ -3,23 +3,19 @@
     ping:
 
   - name: check OS
-    debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_python_version}}
+    debug: msg={{ansible_distribution}}-{{ansible_distribution_release}}-{{ansible_python_version}}
 
   - name: Gather the package facts
     package_facts:
       manager: auto
 
-          #- name: Print the package facts
-          #debug:
-          #var: ansible_facts.packages
-
-  - name: Check whether package python 3.8 is installed from repository for Ubuntu
+  - name: Check whether package python 3.8 is installed from repository for Ubuntu and is not focal
     debug:
       msg: "{{ ansible_facts.packages['python3.8'][0].version  }} versions of python3.8 are installed!"
-    when: "'python3.8' in ansible_facts.packages and ansible_distribution == 'Ubuntu'"
+    when: "'python3.8' in ansible_facts.packages and ansible_distribution == 'Ubuntu' and ansible_distribution_release != focal "
 
   - meta: end_host
-    when: "'python3.8' in ansible_facts.packages and ansible_distribution == 'Ubuntu'"
+    when: "'python3.8' in ansible_facts.packages and ansible_distribution == 'Ubuntu' and ansible_distribution_release != focal "
 
   - name: Check whether package python 3.8 is installed from repository for CentOS
     debug:
@@ -46,9 +42,9 @@
 
   - name: Python 3.8 already on the system
     meta: end_play
-    when: python3_version.stdout.find("3.8") != -1
+    when: ' python3_version.stdout.find("3.8") != -1 and ansible_distribution_release != focal '
 
-# Ubuntu Bionic
+# Ubuntu 
   - name: Install python 3.8 from universe on Ubuntu
     block:
       - name: Enable universe repository on Ubuntu
@@ -66,7 +62,8 @@
           update_cache: yes
         loop: ['python3.8','python3.8-venv', 'python3-venv']
     when: ansible_distribution == 'Ubuntu'
- 
+
+#Centos 
   - name: Python 3.8 from PowerTools on Centos 8
     block:
       - name: Enable EPEL Repository on CentOS 8
