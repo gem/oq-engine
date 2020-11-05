@@ -416,9 +416,9 @@ class UCERFSource(BaseSeismicSource):
 def compute_distances(srcs, sites, dist_types):
     """
     Compute distances planes -> sites for all the relevant sections
-    :returns: a dictionary section_id -> multisurface with distances
+    :returns: a dictionary section index-> multisurface (with distances)
     """
-    dic = {}  # sec -> multisurface
+    dic = {}  # section index -> multisurface
     for src in srcs:
         src.msurface = dic
         for sections in src.sections:
