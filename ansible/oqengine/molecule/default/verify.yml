@@ -10,7 +10,7 @@
   tasks:
   - name: Copy job.zip to instance
     copy:
-      src: files/job.zip
+      src: job.zip
       dest: /home/openquake/
       owner: openquake
       group: openquake
