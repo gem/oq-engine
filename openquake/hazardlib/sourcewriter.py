@@ -184,6 +184,11 @@ def build_truncated_gr_mfd(mfd):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
+    if hasattr(mfd, 'slip_rate'):
+        return Node("truncGutenbergRichterMFD",
+                    {"aValue": mfd.a_val, "slipRate": mfd.slip_rate,
+                     "rigidity": mfd.rigidity,
+                     "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
     return Node("truncGutenbergRichterMFD",
                 {"aValue": mfd.a_val, "bValue": mfd.b_val,
                  "minMag": mfd.min_mag, "maxMag": mfd.max_mag})

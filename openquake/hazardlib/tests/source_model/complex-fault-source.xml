@@ -51,7 +51,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 <ruptAspectRatio>
                     2.0000000E+00
                 </ruptAspectRatio>
-                <truncGutenbergRichterMFD aValue="-3.5000000E+00" bValue="1.0000000E+00" maxMag="6.5000000E+00" minMag="5.0000000E+00"/>
+                <truncGutenbergRichterMFD slipRate="5.4000000E+00" rigidity="32" bValue="1.0000000E+00" maxMag="6.5000000E+00" minMag="5.0000000E+00"/>
                 <rake>
                     3.0000000E+01
                 </rake>
