@@ -311,7 +311,7 @@ class UCERFSource(BaseSeismicSource):
             mag, self.rake[ridx], self.tectonic_region_type,
             surface_set[len(surface_set) // 2].get_middle_point(),
             MultiSurface(surface_set), self.rate[ridx], self.tom)
-
+        rupture.rup_id = self.start + ridx
         return rupture
 
     def iter_ruptures(self, **kwargs):
