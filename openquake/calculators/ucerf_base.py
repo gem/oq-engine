@@ -303,6 +303,7 @@ class UCERFSource(BaseSeismicSource):
         rupture = ParametricProbabilisticRupture(
             mag, self.rake[ridx], self.tectonic_region_type,
             hypocenter, surface, self.rate[ridx], self.tom)
+        rupture.rup_id = self.start + ridx
         rupture.sections = self.sections[ridx]
         return rupture
 
