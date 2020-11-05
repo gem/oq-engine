@@ -294,19 +294,7 @@ class UCERFSource(BaseSeismicSource):
             return
         surfaces = []
         for sec in self.sections[ridx]:
-            plane = self.planes[sec]
-            for j in range(0, plane.shape[2]):
-                top_left = Point(
-                    plane[0, 0, j], plane[0, 1, j], plane[0, 2, j])
-                top_right = Point(
-                    plane[1, 0, j], plane[1, 1, j], plane[1, 2, j])
-                bottom_right = Point(
-                    plane[2, 0, j], plane[2, 1, j], plane[2, 2, j])
-                bottom_left = Point(
-                    plane[3, 0, j], plane[3, 1, j], plane[3, 2, j])
-                surfaces.append(
-                    ImperfectPlanarSurface.from_corner_points(
-                        top_left, top_right, bottom_right, bottom_left))
+            surfaces.extend(_get_planar_surfaces(self.planes[sec]))
         surface = MultiSurface(surfaces)
         hypocenter = surfaces[len(surfaces) // 2].get_middle_point()
         rupture = ParametricProbabilisticRupture(
@@ -433,20 +421,7 @@ def compute_distances(srcs, sites, dist_types):
             for sec in sections:
                 if sec in dic:  # already computed
                     continue
-                plane = src.planes[sec]
-                surfaces = []
-                for j in range(0, plane.shape[2]):
-                    top_left = Point(
-                        plane[0, 0, j], plane[0, 1, j], plane[0, 2, j])
-                    top_right = Point(
-                        plane[1, 0, j], plane[1, 1, j], plane[1, 2, j])
-                    bottom_right = Point(
-                        plane[2, 0, j], plane[2, 1, j], plane[2, 2, j])
-                    bottom_left = Point(
-                        plane[3, 0, j], plane[3, 1, j], plane[3, 2, j])
-                    surfaces.append(
-                        ImperfectPlanarSurface.from_corner_points(
-                            top_left, top_right, bottom_right, bottom_left))
+                surfaces = _get_planar_surfaces(src.planes[sec])
                 rup = RuptureContext()
                 rup.surface = MultiSurface(surfaces)
                 rup.hypocenter = surfaces[len(surfaces)//2].get_middle_point()
@@ -454,6 +429,23 @@ def compute_distances(srcs, sites, dist_types):
                             for dist_type in dist_types}
                 dic[sec]['surfaces'] = rup.surface.surfaces
     return dic
+
+
+def _get_planar_surfaces(plane):
+    surfaces = []
+    for j in range(0, plane.shape[2]):
+        top_left = Point(
+            plane[0, 0, j], plane[0, 1, j], plane[0, 2, j])
+        top_right = Point(
+            plane[1, 0, j], plane[1, 1, j], plane[1, 2, j])
+        bottom_right = Point(
+            plane[2, 0, j], plane[2, 1, j], plane[2, 2, j])
+        bottom_left = Point(
+            plane[3, 0, j], plane[3, 1, j], plane[3, 2, j])
+        surfaces.append(
+            ImperfectPlanarSurface.from_corner_points(
+                top_left, top_right, bottom_right, bottom_left))
+    return surfaces
 
 
 def ucerf_classical(srcs, gsims, params, slc, monitor=None):
