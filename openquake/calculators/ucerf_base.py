@@ -491,8 +491,8 @@ def ucerf_classical(srcs, gsims, params, slc, monitor=None):
                 ctx.sids = sitecol.sids[ok]
                 ctx.rrup = rrup[ok]
                 for par in self.REQUIRES_DISTANCES - {'rrup'}:
-                    dst = numpy.array(dists[par][ok]).min(axis=0)
-                    setattr(ctx, par, dst)
+                    dst = numpy.array(dists[par]).min(axis=0)
+                    setattr(ctx, par, dst[ok])
                 for par in self.REQUIRES_SITES_PARAMETERS:
                     setattr(ctx, par, sitecol[par][ok])
                 ctxs.append(ctx)
