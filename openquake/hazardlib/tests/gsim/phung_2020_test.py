@@ -44,3 +44,35 @@ class PhungEtAl2020AscTestCase(BaseGSIMTestCase):
     def test_mean_jp_stddevs(self):
             self.check('PHUNG20/PhungEtAl2020Asc_MEAN4.csv',
                    max_discrep_percentage=0.1, region='jp')
+
+
+class PhungEtAl2020SInterTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = PhungEtAl2020SInter
+
+    def test_mean(self):
+        self.check('PHUNG20/PhungEtAl2020SInter_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_stddev(self):
+            self.check('PHUNG20/PhungEtAl2020SInter_STDDEV.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_mean2(self):
+        self.check('PHUNG20/PhungEtAl2020SInter_MEAN2.csv',
+                   max_discrep_percentage=0.1, region='tw')
+
+    def test_stddev2(self):
+            self.check('PHUNG20/PhungEtAl2020SInter_STDDEV2.csv',
+                   max_discrep_percentage=0.1, region='tw')
+
+
+class PhungEtAl2020SSlabTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = PhungEtAl2020SSlab
+
+    def test_mean(self):
+        self.check('PHUNG20/PhungEtAl2020SSlab_MEAN.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_mean2(self):
+        self.check('PHUNG20/PhungEtAl2020SSlab_MEAN2.csv',
+                   max_discrep_percentage=0.1, region='tw')
