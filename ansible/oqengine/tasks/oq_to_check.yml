@@ -75,6 +75,11 @@
           state: latest
           update_cache: yes
 
+      - name: Enable dnf-plugins-core on CentOS 8
+        dnf:
+          enable_plugin: core
+          state: latest
+
       - name: Enable PowerTools on CentOS 8
         command: dnf config-manager --set-enabled PowerTools
 
