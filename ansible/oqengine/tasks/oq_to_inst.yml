@@ -18,18 +18,13 @@
     shell: "kill -9 {{ item }}"
     with_items: "{{ dbserver_pid.stdout_lines }}"
 
-  - name: Create Virtualenv for openquake
-    pip:
-      virtualenv: /opt/openquake
-      virtualenv_command: /usr/bin/python3.8 -m venv
-
   - name: Install latest wheel setuptools and pip in virtualenv
     pip:
       name: "{{ item }} "
       virtualenv: /opt/openquake
       virtualenv_command: /usr/bin/python3.8 -m venv
       state: latest
-    loop: [ 'setuptools', 'pip', 'wheel']
+    loop: [ 'pip']
 #
 
 #python3.8
