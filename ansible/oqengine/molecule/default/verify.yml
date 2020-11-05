@@ -5,6 +5,18 @@
   hosts: all
   gather_facts: false
   tasks:
-  - name: Example assertion
-    assert:
-      that: true
+  - name: Copy job.zip to instance
+    copy:
+      src: files/foo.conf
+      dest: /home/openquake/
+      owner: openquake
+      group: openquake
+      mode: '0644'
+  - name: Run a Demo calc for EventBasedRisk
+    command: /usr/bin/oq engine --run job.zip
+    become: yes
+    become_user: openquake
+    args:
+      chdir: /home/openquake
+    register: calc
+      
