@@ -1,10 +1,4 @@
 ---
-  - name: ping hosts
-    ping:
-
-  - name: check OS
-      debug: msg={{ansible_distribution}}-{{ansible_distribution_release}}-{{ansible_distribution_version}}-{{ansible_python_version}}
-
   - name: Gather the package facts
     package_facts:
       manager: auto
