@@ -382,13 +382,17 @@ def portfolio_damage_error(dstore):
     """
     df = dstore.read_df('dd_data', 'eid')
     del df['aid']
-    header = list(df.columns)
+    header = ['damage'] + list(df.columns)
     sums = []
     for i in range(10):
         sums.append(df[df.index % 10 == i].sum())
-    means = numpy.sum(sums, axis=0)
-    errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
-    return [header, means, errors]
+    if 'damages-stats' in dstore:
+        arr = dstore.sel('damages-stats', stat='mean')
+    else:
+        arr = dstore.sel('damages-rlzs', rlz=0)  # shape (A, 1, L, D)
+    means = arr.sum(axis=(0, 1))[:, 1:].flatten()  # L * D1
+    errors = means * numpy.std(sums, axis=0) / numpy.mean(sums, axis=0)
+    return [header, ['mean'] + list(means), ['error'] + list(errors)]
 
 
 @view.add('portfolio_damage_error')

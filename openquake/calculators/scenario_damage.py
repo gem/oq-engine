@@ -184,12 +184,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         R = self.R
         D = len(dstates)
         A = len(self.assetcol)
-        if not len(self.datastore['dd_data/aid']):
-            logging.warning('There is no damage at all!')
-        else:
-            dmg = views.portfolio_damage_error(self.datastore)
-            logging.info('Portfolio damage\n%s' % views.rst_table(dmg))
-
         # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
         if oq.investigation_time:  # event_based_damage
@@ -207,7 +201,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
-        self.sanity_check(dmg[1])
+        self.sanity_check()
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
@@ -240,10 +234,15 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                     arr[i] = (eid, rlz[eid], loss)
                 self.datastore[name] = arr
 
-    def sanity_check(self, tot_damages):
+    def sanity_check(self):
         """
         Sanity check on the total number of assets
         """
+        if not len(self.datastore['dd_data/aid']):
+            logging.warning('There is no damage at all!')
+        else:
+            dmg = views.portfolio_damage_error(self.datastore)
+            logging.info('Portfolio damage\n%s' % views.rst_table(dmg))
         if self.R == 1:
             avgdamages = self.datastore.sel('damages-rlzs')
         else:
@@ -258,11 +257,3 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 numdic[lt] = num
             logging.info('Due to numeric errors the total number of assets'
                          ' is imprecise: %s', numdic)
-
-        tot = avgdamages.sum(axis=(0, 1))  # shape (L, D)
-        D1 = len(self.crmodel.damage_states[1:])
-        for i, ds in enumerate(self.crmodel.damage_states[1:]):
-            for l, lt in enumerate(self.crmodel.loss_types):
-                logging.error('dd_data and damages-stats: '
-                              '%d != %d for %s', tot_damages[l * D1 + i],
-                              tot[l, i + 1], ds)
