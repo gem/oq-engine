@@ -234,10 +234,11 @@ class ZeroGetter(GmfDataGetter):
     """
     An object with an .init() and .get_hazard() method
     """
-    def __init__(self, sid, rlzs):
+    def __init__(self, sid, rlzs, num_rlzs):
         self.sids = [sid]
         self.df = pandas.DataFrame({
             'rlzs': rlzs, 'eid': numpy.arange(len(rlzs))})
+        self.num_rlzs = num_rlzs
 
 
 time_dt = numpy.dtype(
