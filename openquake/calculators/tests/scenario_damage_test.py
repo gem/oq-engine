@@ -187,6 +187,14 @@ RM       4_000
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_asset.csv', fname)
 
+        # check dd_data
+        df = self.calc.datastore.read_df('dd_data', 'eid')
+        dmg = df.loc[0]  # damage caused by the first event
+        self.assertEqual(dmg.slight_0.sum(), 123)
+        self.assertEqual(dmg.moderate_0.sum(), 11)
+        self.assertEqual(dmg.extensive_0.sum(), 0)
+        self.assertEqual(dmg.complete_0.sum(), 0)
+
     def test_case_10(self):
         # error case: there a no RiskInputs
         with self.assertRaises(RuntimeError):
