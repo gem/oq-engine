@@ -188,6 +188,8 @@ RM       4_000
         self.assertEqualFiles('expected/losses_asset.csv', fname)
 
         # check dd_data
+        self.calc.datastore.close()
+        self.calc.datastore.open('r')
         df = self.calc.datastore.read_df('dd_data', 'eid')
         dmg = df.loc[0]  # damage caused by the first event
         self.assertEqual(dmg.slight_0.sum(), 123)
