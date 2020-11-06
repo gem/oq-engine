@@ -27,12 +27,17 @@
   - meta: end_play
     when: "'python3-oq-engine' in ansible_facts.packages"
 
+  - name: check if python3 interpreter exists
+    stat: 
+      path: /usr/bin/python3 
+    register: python3_ver
 
-  - name: Check python version on host
+  - name: Check python version on host if exist interpreter
     script: files/py_ver.py
     ignore_errors: true
     changed_when: false
     register: python3_version
+    when: python3_ver.stat.exists == true
 
   - name: Python 3.8 already on the system
     meta: end_play
