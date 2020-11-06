@@ -20,8 +20,12 @@
     command: /usr/bin/oq engine --run job.zip
     args:
       chdir: /home/openquake
-    register: calc
   
+  - name: Display outputs of calculcation
+    command: /usr/bin/oq --list-outputs
+    args:
+      chdir: /home/openquake
+    register: calc
   - debug: msg="{{ calc.stdout }}"
 
     # - name: Run database migrations
