@@ -375,6 +375,31 @@ def view_portfolio_loss(token, dstore):
     return(rst_table(rows, ['loss'] + oq.loss_names))
 
 
+def portfolio_damage_error(dstore):
+    """
+    The damages and errors for the full portfolio, extracted from
+    the asset damage table.
+    """
+    df = dstore.read_df('dd_data', 'eid')
+    del df['aid']
+    header = list(df.columns)
+    sums = []
+    for i in range(10):
+        sums.append(df[df.index % 10 == i].sum())
+    means = numpy.sum(sums, axis=0)
+    errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
+    return [header, means, errors]
+
+
+@view.add('portfolio_damage_error')
+def view_portfolio_damage_error(token, dstore):
+    """
+    The damages and errors for the full portfolio, extracted from
+    the asset damage table.
+    """
+    return rst_table(portfolio_damage_error(dstore))
+
+
 @view.add('portfolio_damage')
 def view_portfolio_damage(token, dstore):
     """
