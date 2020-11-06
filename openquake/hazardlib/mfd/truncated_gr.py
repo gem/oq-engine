@@ -296,3 +296,16 @@ class TruncatedGRMFD(BaseMFD):
         a_val = np.log10(rate)
         self = cls(min_mag, max_mag, bin_width, a_val, b_val)
         return self
+
+    @classmethod
+    def from_slip_rate(cls, min_mag, max_mag, bin_width, b_val,
+                       slip_rate, rigidity, area):
+        """
+        Calls .from_moment with moment = slip_rate * rigidity * area
+        """
+        mm = 1E-3  # conversion meters -> millimiters
+        moment_rate = slip_rate * mm * rigidity * area
+        self = cls.from_moment(min_mag, max_mag, bin_width, b_val, moment_rate)
+        self.slip_rate = slip_rate
+        self.rigidity = rigidity
+        return self
