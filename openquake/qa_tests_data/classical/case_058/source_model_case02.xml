@@ -19,8 +19,7 @@ xmlns:gml="http://www.opengis.net/gml" >
                 </simpleFaultGeometry>
                 <magScaleRel> WC1994 </magScaleRel>
                 <ruptAspectRatio> 2.0 </ruptAspectRatio>
-                <!--truncGutenbergRichterMFD slipRate="4.0" rigidity="32" bValue="0.9" maxMag="7.0" minMag="6.75"/ -->
-                <truncGutenbergRichterMFD aValue="4.2" bValue="0.9" maxMag="7.0" minMag="6.75"/>
+                <truncGutenbergRichterMFD slipRate="4.0" rigidity="32" bValue="0.9" maxMag="7.0" minMag="6.75"/>
                 <rake> 90.0 </rake>
             </simpleFaultSource>
 

@@ -775,19 +775,18 @@ hazard_uhs-std.csv
         f01, f02 = export(('hcurves/rlz-000', 'csv'), self.calc.datastore)
         f03, f04 = export(('hcurves/rlz-003', 'csv'), self.calc.datastore)
 
-        # Second calculation
-        self.run_calc(case_058.__file__, 'job.ini',
-                      source_model_logic_tree_file='sscLTcase01.xml')
+        # Second calculation. Same LT structure for case 1 but with only one
+        # branch for each branch set
+        self.run_calc(case_058.__file__, 'job_case01.ini')
         f11, f12 = export(('hcurves/', 'csv'), self.calc.datastore)
 
         # Third calculation. In this case we use a source model containing one
         # source with the geometry of branch b22 and slip rate of branch b32
-        self.run_calc(case_058.__file__, 'job.ini',
-                      source_model_logic_tree_file='sscLTcase02.xml')
+        self.run_calc(case_058.__file__, 'job_case02.ini')
         f21, f22 = export(('hcurves/', 'csv'), self.calc.datastore)
 
         # First test
         self.assertEqualFiles(f01, f11)
 
         # Second test
-        #self.assertEqualFiles(f03, f21)
+        # self.assertEqualFiles(f03, f21)

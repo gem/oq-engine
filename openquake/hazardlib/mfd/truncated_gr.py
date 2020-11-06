@@ -302,9 +302,30 @@ class TruncatedGRMFD(BaseMFD):
                        slip_rate, rigidity, area):
         """
         Calls .from_moment with moment = slip_rate * rigidity * area
+
+        :param min_mag:
+            The lowest possible magnitude for this MFD. The first bin in the
+            :meth:`result histogram <get_annual_occurrence_rates>` will be
+            aligned  to make its left border match this value.
+        :param max_mag:
+            The highest possible magnitude. The same as for ``min_mag``: the
+            last bin in the histogram will correspond to the magnitude value
+            equal to ``max_mag - bin_width / 2``.
+        :param bin_width:
+            A positive float value -- the width of a single histogram bin.
+        :param b_val:
+            The slope of the GR relationship
+        :param slip_rate:
+            A float defining the slip rate [mm/yr]
+        :param rigidity:
+            A float defining the rigidity [GPa]
+        :param area:
+            A float defining the area of the fault surface [km^2]
         """
         mm = 1E-3  # conversion meters -> millimiters
         moment_rate = slip_rate * mm * rigidity * area
+        area *= 1e6
+        rigidity *= 1e9
         self = cls.from_moment(min_mag, max_mag, bin_width, b_val, moment_rate)
         self.slip_rate = slip_rate
         self.rigidity = rigidity
