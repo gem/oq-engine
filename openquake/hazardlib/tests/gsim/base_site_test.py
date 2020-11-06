@@ -62,10 +62,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
         self.rrup = ctx.rrup
 
         # Compute GM on rock
-        # Shape: 2 x 4 (distances) x 2 (IMTs) x 1 (GMMs)
-        self.meastd = gmmA.get_mean_std(ctx, imts)
-        # Shape: 2 x 4 (distances) x 2 (IMTs) x 2 (GMMs)
-        self.meastd = gmmB.get_mean_std(ctx, imts)
+        self.meastd = gmmA.get_mean_std([ctx], imts)  # shape (2, N=1, M=2)
 
     def test01(self):
 
