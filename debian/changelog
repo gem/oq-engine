@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed bug when computing the damage distributions per asset and event
   * Simplified/optimized the UCERF filtering
 
   [Viktor Polak]
@@ -42,7 +43,7 @@
   * Added a method to create a TruncatedGRMFD from a value of scalar seismic
     moment
   * Added a method to the modifiable GMPE to add (or subtract) a delta std
-  * Added a method to the modifiable GMPE to set the total std as the sum of 
+  * Added a method to the modifiable GMPE to set the total std as the sum of
 	tau plus a delta
   * Added a get_fault_surface_area method to sources
 
