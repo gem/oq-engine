@@ -386,17 +386,17 @@ def portfolio_damage_error(dstore, total_sum=None):
     sums = []
     for i in range(10):
         sums.append(df[df.index % 10 == i].sum())
+    tot_from_dd = numpy.sum(sums)
 
-    if total_sum is not None:  # shape (L, D)
-        tot_sum = numpy.concatenate([tot[1:] for tot in total_sum])  # L*D1
-        tot_from_dd = numpy.sum(sums)
-        numpy.allclose(tot_from_dd, tot_sum, rtol=1E-5)  # sanity check
+    if total_sum is None:
+        if 'damages-stats' in dstore:
+            arr = dstore.sel('damages-stats', stat='mean')
+        else:
+            arr = dstore.sel('damages-rlzs', rlz=0)  # shape (A, 1, L, D)
+        total_sum = arr.sum(axis=(0, 1))  # shape (L, D)
 
-    if 'damages-stats' in dstore:
-        arr = dstore.sel('damages-stats', stat='mean')
-    else:
-        arr = dstore.sel('damages-rlzs', rlz=0)  # shape (A, 1, L, D)
-    means = arr.sum(axis=(0, 1))[:, 1:].flatten()  # L * D1
+    means = numpy.concatenate([tot[1:] for tot in total_sum])  # L * D1
+    numpy.allclose(tot_from_dd, means, rtol=1E-5)  # sanity check
     errors = means * numpy.std(sums, axis=0) / numpy.mean(sums, axis=0)
     return [header, ['mean'] + list(means), ['error'] + list(errors)]
 
