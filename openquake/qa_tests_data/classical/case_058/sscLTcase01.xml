@@ -18,7 +18,7 @@
                  <simpleFaultGeometry spacing="1.0">
                     <gml:LineString>
                         <gml:posList>
-                            1.0 -0.2 1.4 0.0 1.0 1.7 
+                            1.0 -0.2 1.4 0.0 1.7 0.0
                         </gml:posList>
                     </gml:LineString>
                     <dip> 30 </dip>
