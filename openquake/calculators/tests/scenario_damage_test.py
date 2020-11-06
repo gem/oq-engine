@@ -158,6 +158,11 @@ RM       4_000
         [npz] = export(('damages-rlzs', 'npz'), self.calc.datastore)
         self.assertEqual(strip_calc_id(npz), 'damages-rlzs.npz')
 
+        # check dd_data is readable by pandas
+        df = self.calc.datastore.read_df('dd_data', 'aid')
+        self.assertEqual(len(df), 100)
+        self.assertEqual(len(df[df.ds1_0 > 0]), 22)  # only 22/100 are nonzero
+
     def test_case_8(self):
         # case with a shakemap
         self.run_calc(case_8.__file__, 'prejob.ini')

@@ -118,9 +118,10 @@ def scenario_damage(riskinputs, param, monitor):
                         for eid, value in zip(out.eids, values):
                             by_event[eid][l] += value
 
-        res['aed'] = aed = numpy.zeros(len(ddic), param['aed_dt'])
+        res['aed'] = aed = numpy.zeros(len(ddic), param['asset_damage_dt'])
         for i, ((aid, eid), dd) in enumerate(sorted(ddic.items())):
-            aed[i] = (aid, eid, dd)
+            damages = [dd[l, d] for l in range(L) for d in range(D-1)]
+            aed[i] = (aid, eid) + tuple(damages)
     return res
 
 
@@ -147,12 +148,17 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             logging.error("The asset %s has number=%s > 2^32-1!",
                           aref, ass['number'])
         self.param['approx_ddd'] = self.oqparam.approx_ddd or num_floats
-        self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt(
+        self.param['asset_damage_dt'] = self.crmodel.asset_damage_dt(
             self.oqparam.approx_ddd or num_floats)
         self.param['master_seed'] = self.oqparam.master_seed
         self.param['num_events'] = numpy.bincount(  # events by rlz
             self.datastore['events']['rlz_id'])
-        self.datastore.create_dset('dd_data/data', aed_dt, compression='gzip')
+        fields = []
+        for f, dt in self.param['asset_damage_dt']:
+            self.datastore.create_dset('dd_data/' + f, dt, compression='gzip')
+            fields.append(f)
+        attrs = self.datastore.getitem('dd_data').attrs
+        attrs['__pdcolumns__'] = ' '.join(fields)
         self.riskinputs = self.build_riskinputs('gmf')
 
     def combine(self, acc, res):
@@ -160,7 +166,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             aed = res.pop('aed', ())
             if len(aed) == 0:
                 return acc + res
-            hdf5.extend(self.datastore['dd_data/data'], aed)
+            for name in aed.dtype.names:
+                hdf5.extend(self.datastore['dd_data/' + name], aed[name])
             return acc + res
 
     def post_execute(self, result):
@@ -177,7 +184,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         R = self.R
         D = len(dstates)
         A = len(self.assetcol)
-        if not len(self.datastore['dd_data/data']):
+        if not len(self.datastore['dd_data/aid']):
             logging.warning('There is no damage at all!')
 
         # avg_ratio = ratio used when computing the averages

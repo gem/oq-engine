@@ -646,14 +646,17 @@ class CompositeRiskModel(collections.abc.Mapping):
         D = len(self.damage_states)
         return numpy.dtype([('eid', U32), ('dmg', (F32, (L, D)))])
 
-    def aid_eid_dd_dt(self, approx_ddd):
+    def asset_damage_dt(self, approx_ddd):
         """
-        :returns: a dtype (aid, eid, dd)
+        :returns: a list [('aid', U32), ('eid', U32), ('moderate_0', U32), ...]
         """
         L = len(self.lti)
-        D1 = len(self.damage_states) - 1
-        dt = (F32, (L, D1)) if approx_ddd else (U32, (L, D1))
-        return numpy.dtype([('aid', U32), ('eid', U32), ('dd', dt)])
+        dt = F32 if approx_ddd else U32
+        dtlist = [('aid', U32), ('eid', U32)]
+        for l in range(L):
+            for dmg in self.damage_states[1:]:
+                dtlist.append((f'{dmg}_{l}', dt))
+        return dtlist
 
     def vectorize_cons_model(self, tagcol):
         """
