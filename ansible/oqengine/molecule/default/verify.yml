@@ -22,17 +22,8 @@
       chdir: /home/openquake
   
   - name: Display outputs of calculcation
-    command: /usr/bin/oq --list-outputs
+    command: /usr/bin/oq engine --list-outputs
     args:
       chdir: /home/openquake
     register: calc
   - debug: msg="{{ calc.stdout }}"
-
-    # - name: Run database migrations
-    #  command: env/bin/python migrate.py -q chdir=$project_dir/releases/$release_date
-    #  register: result
-    #  changed_when: result.stdout_lines
-
-    #- debug: msg="{{item}}"
-    #  with_items: result.stdout_lines
-    #  when: result.stdout_lines
