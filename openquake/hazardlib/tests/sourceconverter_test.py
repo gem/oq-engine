@@ -264,7 +264,7 @@ class SourceConverterTestCase(unittest.TestCase):
         testfile = os.path.join(testdir, 'source_with_slip_rate.xml')
         src = nrml.to_python(testfile).src_groups[0][0]
         print(src.mfd.a_val)
-        self.assertAlmostEqual(src.mfd.a_val, -2.02815426565)
+        self.assertAlmostEqual(src.mfd.a_val, 3.97184573434)
 
 
 class SourceGroupHDF5TestCase(unittest.TestCase):
