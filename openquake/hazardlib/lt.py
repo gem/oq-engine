@@ -83,6 +83,13 @@ def incMFD(utype, node, filename):
     return min_mag,  bin_width, ~node.incrementalMFD.occurRates
 
 
+@parse_uncertainty.add('TruncatedGRFromSlipAbsolute')
+def trucMFDFromSlip_absolute(utype, node, filename):
+    slip_rate, rigidity = (node.faultActivityData["slipRate"],
+                           node.faultActivityData["rigidity"])
+    return slip_rate, rigidity
+
+
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
 def simpleGeom(utype, node, filename):
     if hasattr(node, 'simpleFaultGeometry'):
@@ -262,6 +269,13 @@ def _incMFD_absolute(utype, source, value):
     min_mag, bin_width, occur_rates = value
     source.mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                       occurrence_rates=occur_rates))
+
+
+@apply_uncertainty.add('TruncatedGRFromSlipAbsolute')
+def _trucMFDFromSlip_absolute(utype, source, value):
+    slip_rate, rigidity = value
+    source.modify('adjust_mfd_from_slip', dict(slip_rate=slip_rate,
+                                               rigidity=rigidity))
 
 
 # ######################### apply_uncertainties ########################### #
