@@ -32,16 +32,17 @@
       path: /usr/bin/python3 
     register: python3_ver
 
-  - name: Check python version on host if exist interpreter
-    script: files/py_ver.py
-    ignore_errors: true
-    changed_when: false
-    register: python3_version
-    when: python3_ver.stat.exists == true
+    block:
+      - name: Check python version on host if exist interpreter
+        script: files/py_ver.py
+        ignore_errors: true
+        changed_when: false
+        register: python3_version
 
-  - name: Python 3.8 already on the system
-    meta: end_play
-    when: ' python3_version.stdout.find("3.8") != -1 and ansible_distribution_release != "focal" '
+      - name: Python 3.8 already on the system
+        meta: end_play
+        when: ' python3_version.stdout.find("3.8") != -1 and ansible_distribution_release != "focal" '
+    when: python3_ver.stat.exists == true
 
 # Ubuntu 
   - name: Install python 3.8 from universe on Ubuntu
