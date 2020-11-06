@@ -103,7 +103,7 @@ def scenario_damage(riskinputs, param, monitor):
                     # ddds has shape E', D with E' == len(out.eids)
                     for e, ddd in enumerate(ddds):
                         eid = out.eids[e]
-                        ddic[aid, eid][l] += ddd[1:]
+                        ddic[aid, eid][l] = ddd[1:]
                         d_event[eid][l] += ddd[1:]
                     tot = ddds.sum(axis=0)  # shape D
                     nodamage = asset['number'] * (ne - len(ddds))
