@@ -851,6 +851,14 @@ pezeshk_2011
     :undoc-members:
     :show-inheritance:
 
+phung_2020
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.phung_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 raghukanth_iyengar_2007
 -------------------------------------------------------
 
