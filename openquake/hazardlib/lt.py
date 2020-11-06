@@ -83,7 +83,7 @@ def incMFD(utype, node, filename):
     return min_mag,  bin_width, ~node.incrementalMFD.occurRates
 
 
-@parse_uncertainty.add('TruncatedGRFromSlipAbsolute')
+@parse_uncertainty.add('truncatedGRFromSlipAbsolute')
 def trucMFDFromSlip_absolute(utype, node, filename):
     slip_rate, rigidity = (node.faultActivityData["slipRate"],
                            node.faultActivityData["rigidity"])
@@ -271,7 +271,7 @@ def _incMFD_absolute(utype, source, value):
                                       occurrence_rates=occur_rates))
 
 
-@apply_uncertainty.add('TruncatedGRFromSlipAbsolute')
+@apply_uncertainty.add('truncatedGRFromSlipAbsolute')
 def _trucMFDFromSlip_absolute(utype, source, value):
     slip_rate, rigidity = value
     source.modify('adjust_mfd_from_slip', dict(slip_rate=slip_rate,
@@ -499,6 +499,8 @@ class BranchSet(object):
         characteristicFaultGeometryAbsolute
             Replaces the complex fault geometry surface of a given source with
             the values provided
+        truncatedGRFromSlipAbsolute
+            Updates a TruncatedGR using a slip rate and a rigidity
 
     :param filters:
         Dictionary, a set of filters to specify which sources should
