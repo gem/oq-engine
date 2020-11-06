@@ -31,6 +31,7 @@ from openquake.hazardlib import valid, nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
+U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -648,14 +649,13 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def asset_damage_dt(self, approx_ddd):
         """
-        :returns: a list [('aid', U32), ('eid', U32), ('moderate_0', U32), ...]
+        :returns: a list [('aid', U32), ('eid', U32), ('lid', U8),
+                          ('moderate_0', U32), ...]
         """
-        L = len(self.lti)
         dt = F32 if approx_ddd else U32
-        dtlist = [('aid', U32), ('eid', U32)]
-        for l in range(L):
-            for dmg in self.damage_states[1:]:
-                dtlist.append((f'{dmg}_{l}', dt))
+        dtlist = [('aid', U32), ('eid', U32), ('lid', U8)]
+        for dmg in self.damage_states[1:]:
+            dtlist.append((dmg, dt))
         return dtlist
 
     def vectorize_cons_model(self, tagcol):

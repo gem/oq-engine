@@ -160,8 +160,8 @@ RM       4_000
 
         # check dd_data is readable by pandas
         df = self.calc.datastore.read_df('dd_data', 'aid')
-        self.assertEqual(len(df), 100)
-        self.assertEqual(len(df[df.ds1_0 > 0]), 22)  # only 22/100 are nonzero
+        self.assertEqual(len(df), 300)
+        self.assertEqual(len(df[df.ds1 > 0]), 76)  # only 76/300 are nonzero
 
     def test_case_8(self):
         # case with a shakemap
@@ -192,10 +192,10 @@ RM       4_000
         self.calc.datastore.open('r')
         df = self.calc.datastore.read_df('dd_data', 'eid')
         dmg = df.loc[0]  # damage caused by the first event
-        self.assertEqual(dmg.slight_0.sum(), 123)
-        self.assertEqual(dmg.moderate_0.sum(), 11)
-        self.assertEqual(dmg.extensive_0.sum(), 0)
-        self.assertEqual(dmg.complete_0.sum(), 0)
+        self.assertEqual(dmg.slight.sum(), 123)
+        self.assertEqual(dmg.moderate.sum(), 11)
+        self.assertEqual(dmg.extensive.sum(), 0)
+        self.assertEqual(dmg.complete.sum(), 0)
 
     def test_case_10(self):
         # error case: there a no RiskInputs

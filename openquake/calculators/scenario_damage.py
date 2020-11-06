@@ -87,7 +87,7 @@ def scenario_damage(riskinputs, param, monitor):
     num_events = param['num_events']  # per realization
     for ri in riskinputs:
         # here instead F32 floats are ok
-        ddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->dd
+        acc = []  # (aid, eid, lid, ds...)
         ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
@@ -103,7 +103,8 @@ def scenario_damage(riskinputs, param, monitor):
                     # ddds has shape E', D with E' == len(out.eids)
                     for e, ddd in enumerate(ddds):
                         eid = out.eids[e]
-                        ddic[aid, eid][l] = ddd[1:]  # (aid, eid, l) is unique
+                        # (aid, eid, l) is unique
+                        acc.append((aid, eid, l) + tuple(ddd[1:]))
                         d_event[eid][l] += ddd[1:]
                     tot = ddds.sum(axis=0)  # shape D
                     nodamage = asset['number'] * (ne - len(ddds))
@@ -117,11 +118,7 @@ def scenario_damage(riskinputs, param, monitor):
                         by_event = res[name + '_by_event']
                         for eid, value in zip(out.eids, values):
                             by_event[eid][l] += value
-
-        res['aed'] = aed = numpy.zeros(len(ddic), param['asset_damage_dt'])
-        for i, ((aid, eid), dd) in enumerate(sorted(ddic.items())):
-            damages = [dd[l, d] for l in range(L) for d in range(D-1)]
-            aed[i] = (aid, eid) + tuple(damages)
+        res['aed'] = numpy.array(acc, param['asset_damage_dt'])
     return res
 
 
@@ -243,8 +240,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         if not len(self.datastore['dd_data/aid']):
             logging.warning('There is no damage at all!')
         else:
-            dmg = views.portfolio_damage_error(self.datastore, total_sum)
-            logging.info('Portfolio damage\n%s' % views.rst_table(dmg))
+            df = views.portfolio_damage_error(self.datastore, total_sum)
+            logging.info('Portfolio damage\n%s' % df)
         if self.R == 1:
             avgdamages = self.datastore.sel('damages-rlzs')
         else:
