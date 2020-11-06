@@ -203,6 +203,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
+        self.datastore.swmr_on()
         self.sanity_check(total_sum)
 
         # damage by event: make sure the sum of the buildings is consistent
