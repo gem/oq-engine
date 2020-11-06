@@ -103,7 +103,7 @@ def scenario_damage(riskinputs, param, monitor):
                     # ddds has shape E', D with E' == len(out.eids)
                     for e, ddd in enumerate(ddds):
                         eid = out.eids[e]
-                        ddic[aid, eid][l] += ddd[1:]
+                        ddic[aid, eid][l] = ddd[1:]  # (aid, eid, l) is unique
                         d_event[eid][l] += ddd[1:]
                     tot = ddds.sum(axis=0)  # shape D
                     nodamage = asset['number'] * (ne - len(ddds))
@@ -203,7 +203,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
-        self.datastore.swmr_on()
         self.sanity_check(total_sum)
 
         # damage by event: make sure the sum of the buildings is consistent
