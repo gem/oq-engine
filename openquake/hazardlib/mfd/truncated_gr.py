@@ -322,10 +322,8 @@ class TruncatedGRMFD(BaseMFD):
         :param area:
             A float defining the area of the fault surface [km^2]
         """
-        mm = 1E-3  # conversion meters -> millimiters
-        moment_rate = slip_rate * mm * rigidity * area
-        area *= 1e6
-        rigidity *= 1e9
+        mm = 1E-3  # conversion millimiters -> meters
+        moment_rate = (slip_rate * mm) * (rigidity * 1e9) * (area * 1e6)
         self = cls.from_moment(min_mag, max_mag, bin_width, b_val, moment_rate)
         self.slip_rate = slip_rate
         self.rigidity = rigidity
