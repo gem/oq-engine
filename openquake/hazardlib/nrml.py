@@ -259,6 +259,8 @@ validators = {
     'uncertaintyWeight': float,
     'alongStrike': valid.probability,
     'downDip': valid.probability,
+    'slipRate': valid.positivefloat,
+    'rigidity': valid.positivefloat,
     'totalMomentRate': valid.positivefloat,
     'characteristicRate': valid.positivefloat,
     'char_rate': valid.positivefloats,

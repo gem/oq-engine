@@ -717,6 +717,7 @@ def get_composite_source_model(oqparam, h5=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
+    logging.info('Reading the CompositeSourceModel')
     full_lt = get_full_lt(oqparam)
     if oqparam.cachedir and not oqparam.is_ucerf():
         csm = _get_cachedir(oqparam, full_lt, h5)

@@ -198,15 +198,15 @@ def view_contents(token, dstore):
 @view.add('full_lt')
 def view_full_lt(token, dstore):
     full_lt = dstore['full_lt']
-    if full_lt.num_samples == 0:
-        num_rlzs = full_lt.gsim_lt.get_num_paths()
-    header = ['smlt_path', 'weight', 'num_realizations']
+    try:
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['et_ids'])
+    except KeyError:  # for scenario et_ids is missing
+        rlzs_by_gsim_list = [full_lt.get_rlzs_by_gsim(0)]
+    header = ['grp_id', 'gsim', 'rlzs']
     rows = []
-    for sm in full_lt.sm_rlzs:
-        if full_lt.num_samples:
-            num_rlzs = sm.samples
-        row = ('_'.join(sm.lt_path), sm.weight, num_rlzs)
-        rows.append(row)
+    for grp_id, rbg in enumerate(rlzs_by_gsim_list):
+        for gsim, rlzs in rbg.items():
+            rows.append([grp_id, repr(str(gsim)), str(list(rlzs))])
     return rst_table(rows, header)
 
 
@@ -373,6 +373,54 @@ def view_portfolio_loss(token, dstore):
     errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
     rows = [['mean'] + list(means), ['error'] + list(errors)]
     return(rst_table(rows, ['loss'] + oq.loss_names))
+
+
+def portfolio_damage_error(dstore, total_sum=None):
+    """
+    The damages and errors for the full portfolio, extracted from
+    the asset damage table.
+    """
+    df = dstore.read_df('dd_data', 'eid')
+    dset = dstore.getitem('damages-rlzs')
+    A, R, L, D = dset.shape
+    dmg_states = dset.attrs['dmg_state']
+    loss_types = dset.attrs['loss_type']
+    sums = numpy.zeros((10, L, D-1))
+    for i in range(10):
+        section = df[df.index % 10 == i]
+        for l, grp in section.groupby('lid'):
+            ser = grp.sum()  # aid, lid, ds...
+            sums[i, l] = numpy.array(ser)[2:]
+    tot_from_dd = numpy.sum(sums, axis=0)  # (L, D1)
+
+    if total_sum is None:
+        if 'damages-stats' in dstore:
+            arr = dstore.sel('damages-stats', stat='mean')
+        else:
+            arr = dstore.sel('damages-rlzs', rlz=0)  # shape (A, 1, L, D)
+        total_sum = arr.sum(axis=(0, 1))  # shape (L, D)
+
+    tot_from_da = total_sum[:, 1:]
+    numpy.allclose(tot_from_dd, tot_from_da, rtol=1E-5)  # sanity check
+    errors = tot_from_da * numpy.std(sums, axis=0) / numpy.mean(sums, axis=0)
+    dic = dict(dmg_state=[], loss_type=[], mean=[], error=[])
+    for l, lt in enumerate(loss_types):
+        for d, dmg in enumerate(dmg_states[1:]):
+            dic['dmg_state'].append(dmg)
+            dic['loss_type'].append(lt)
+            dic['mean'].append(tot_from_da[l, d])
+            dic['error'].append(errors[l, d])
+    return pandas.DataFrame(dic)
+
+
+@view.add('portfolio_damage_error')
+def view_portfolio_damage_error(token, dstore):
+    """
+    The damages and errors for the full portfolio, extracted from
+    the asset damage table.
+    """
+    df = portfolio_damage_error(dstore)
+    return rst_table(numpy.array(df), list(df.columns))
 
 
 @view.add('portfolio_damage')
@@ -543,7 +591,7 @@ def view_task_info(token, dstore):
         data.sort(order='duration')
         return rst_table(data)
 
-    data = ['operation-duration outputs mean stddev min max'.split()]
+    data = ['operation-duration counts mean stddev min max'.split()]
     for task, arr in group_array(task_info[()], 'taskname').items():
         val = arr['duration']
         if len(val):

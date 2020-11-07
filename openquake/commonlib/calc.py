@@ -262,14 +262,6 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
-        full_lt = dstore['full_lt']
-        self.trt_by_et = full_lt.trt_by_et
-        self.rlzs_by_gsim_grp = full_lt.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = full_lt.get_samples_by_grp()
-        self.num_rlzs_by_grp = {
-            et_id:
-            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[et_id].values())
-            for et_id in self.rlzs_by_gsim_grp}
 
     def import_rups(self, rup_array):
         """

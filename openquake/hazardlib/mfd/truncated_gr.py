@@ -18,7 +18,7 @@ Module :mod:`openquake.hazardlib.mfd.truncated_gr` defines a Truncated
 Gutenberg-Richter MFD.
 """
 import math
-
+import numpy as np
 from openquake.baselib.python3compat import round
 from openquake.hazardlib.mfd.base import BaseMFD
 
@@ -265,3 +265,47 @@ class TruncatedGRMFD(BaseMFD):
         """
         self.b_val = b_val
         self.a_val = a_val
+
+    @classmethod
+    def from_moment(cls, min_mag, max_mag, bin_width, b_val, moment_rate):
+        """
+        :param min_mag:
+            The lowest possible magnitude for this MFD. The first bin in the
+            :meth:`result histogram <get_annual_occurrence_rates>` will be
+            aligned  to make its left border match this value.
+        :param max_mag:
+            The highest possible magnitude. The same as for ``min_mag``: the
+            last bin in the histogram will correspond to the magnitude value
+            equal to ``max_mag - bin_width / 2``.
+        :param bin_width:
+            A positive float value -- the width of a single histogram bin.
+        :param b_val:
+            The slope of the GR relationship
+        :param moment_rate:
+            The value of scalar seismic moment per year released by this MFD.
+            Unit of measure is N ・m
+        """
+        c_val = 1.5
+        d_val = 9.1
+        tmp = 0
+        mou = 10**(c_val * max_mag + d_val)
+        beta = b_val * np.log(10.0)
+        term2 = np.exp(-beta*(max_mag - tmp))
+        rate = (moment_rate * (c_val - b_val) * (1 - term2) /
+                (b_val * mou * term2))
+        a_val = np.log10(rate)
+        self = cls(min_mag, max_mag, bin_width, a_val, b_val)
+        return self
+
+    @classmethod
+    def from_slip_rate(cls, min_mag, max_mag, bin_width, b_val,
+                       slip_rate, rigidity, area):
+        """
+        Calls .from_moment with moment = slip_rate * rigidity * area
+        """
+        mm = 1E-3  # conversion meters -> millimiters
+        moment_rate = slip_rate * mm * rigidity * area
+        self = cls.from_moment(min_mag, max_mag, bin_width, b_val, moment_rate)
+        self.slip_rate = slip_rate
+        self.rigidity = rigidity
+        return self

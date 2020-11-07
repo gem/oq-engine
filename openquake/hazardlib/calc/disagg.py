@@ -140,7 +140,7 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
 
     truncnorm, epsilons, eps_bands = eps3
     cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
-    G = ctxs[0].mean_std.shape[-1]
+    G = len(ctxs[0].mean_std)
     mean_std = numpy.zeros((2, U, M, G), numpy.float32)
     for u, ctx in enumerate(ctxs):
         if not hasattr(ctx, 'idx'):  # assume single site
@@ -150,7 +150,8 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
         dists[u] = ctx.rrup[idx]  # distance to the site
         lons[u] = ctx.clon[idx]  # closest point of the rupture lon
         lats[u] = ctx.clat[idx]  # closest point of the rupture lat
-        mean_std[:, u] = ctx.mean_std[:, idx]  # (2, N, M, G) => (2, M, G)
+        for g in range(G):
+            mean_std[:, u, :, g] = ctx.mean_std[g][:, idx]  # (2, M)
     poes = numpy.zeros((U, E, M, P, Z))
     pnes = numpy.ones((U, E, M, P, Z))
     for (m, p, z), iml in numpy.ndenumerate(iml3):
@@ -177,7 +178,7 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
 
 def set_mean_std(ctxs, imts, gsims):
     for u, ctx in enumerate(ctxs):
-        ctx.mean_std = ctx.get_mean_std(imts, gsims)  # (2, N, M, G)
+        ctx.mean_std = [gsim.get_mean_std([ctx], imts) for gsim in gsims]
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):

@@ -23,6 +23,7 @@ import math
 
 import numpy.testing
 
+from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import countby, gettemp
 from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml, InvalidFile
@@ -478,6 +479,9 @@ class EventBasedTestCase(CalculatorTestCase):
         nd_mean = df[df.newmark_disp > 0].newmark_disp.mean()
         self.assertGreater(pd_mean, 0)
         self.assertGreater(nd_mean, 0)
+        [fname, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
+        arr = read_csv(fname)[:2]
+        self.assertEqual(arr.dtype.names, ('site_id', 'event_id', 'gmv_PGA'))
 
     def test_case_26_liq(self):
         # cali liquefaction simplified
@@ -486,7 +490,7 @@ class EventBasedTestCase(CalculatorTestCase):
         pd_mean = df[df.liq_prob > 0].liq_prob.mean()
         lat_spread_mean = df.lat_spread.mean()
         vert_settle_mean = df.vert_settlement.mean()
-        self.assertGreater(pd_mean, 0.) 
+        self.assertGreater(pd_mean, 0.)
         self.assertGreater(lat_spread_mean, 0.)
         self.assertGreater(vert_settle_mean, 0.)
 

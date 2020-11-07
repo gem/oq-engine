@@ -77,6 +77,7 @@ class ComplexFaultSourceIterRupturesTestCase(
         assert_pickleable(cfs)
         return cfs
 
+
     def test_1(self):
         # Complex fault source equivalent to Simple fault source defined
         # by only the top and bottom edges. That is the complex fault surface
@@ -328,6 +329,12 @@ class ModifyComplexFaultGeometryTestCase(unittest.TestCase):
             edges, self.rake
         )
         return cfs
+
+    def test_calculate_area(self):
+        source = self._make_source(self.edges)
+        computed = source.get_fault_surface_area()
+        expected = 3988.697687355716
+        self.assertAlmostEqual(computed, expected)
 
     def test_modify_geometry(self):
         fault = self._make_source(self.edges)

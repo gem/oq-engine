@@ -33,7 +33,7 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50, case_51, case_52, case_53, case_54, case_55, case_56)
+    case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57)
 
 aac = numpy.testing.assert_allclose
 
@@ -278,7 +278,7 @@ hazard_uhs-std.csv
         # check deserialization of source_model_lt
         smlt = self.calc.datastore['full_lt/source_model_lt']
         exp = str(list(smlt))
-        self.assertEqual('''[<Realization #0 source_model_1.xml, path=SM1, weight=0.5>, <Realization #1 source_model_2.xml, path=SM2_a3pt2b0pt8, weight=0.25>, <Realization #2 source_model_2.xml, path=SM2_a3b1, weight=0.25>]''', exp)
+        self.assertEqual('''[<Realization #0 source_model_1.xml, path=SM1, weight=0.5>, <Realization #1 source_model_2.xml, path=SM2~a3pt2b0pt8, weight=0.25>, <Realization #2 source_model_2.xml, path=SM2~a3b1, weight=0.25>]''', exp)
 
     def test_case_16(self):   # sampling
         self.assert_curves_ok(
@@ -587,27 +587,7 @@ hazard_uhs-std.csv
     def test_case_45(self):
         # this is a test for MMI with disagg_by_src
         self.assert_curves_ok(["hazard_curve-mean-MMI.csv"], case_45.__file__)
-        df = self.calc.datastore.read_df('disagg_by_src', 'src_id')
-        self.assertEqual(str(df), '''\
-      site_id  rlz_id  imt  lvl         value
-b'1'        0       0  MMI    0  5.512676e-05
-b'2'        0       0  MMI    0  2.811387e-05
-b'1'        0       0  MMI    1  7.374010e-07
-b'2'        0       0  MMI    1  0.000000e+00
-b'1'        0       0  MMI    2  0.000000e+00
-b'2'        0       0  MMI    2  0.000000e+00
-b'1'        0       0  MMI    3  0.000000e+00
-b'2'        0       0  MMI    3  0.000000e+00
-b'1'        0       0  MMI    4  0.000000e+00
-b'2'        0       0  MMI    4  0.000000e+00
-b'1'        0       0  MMI    5  0.000000e+00
-b'2'        0       0  MMI    5  0.000000e+00
-b'1'        0       0  MMI    6  0.000000e+00
-b'2'        0       0  MMI    6  0.000000e+00
-b'1'        0       0  MMI    7  0.000000e+00
-b'2'        0       0  MMI    7  0.000000e+00
-b'1'        0       0  MMI    8  0.000000e+00
-b'2'        0       0  MMI    8  0.000000e+00''')
+        self.calc.datastore.read_df('disagg_by_src', 'src_id')
 
     def test_case_46(self):
         # SMLT with applyToBranches
@@ -761,7 +741,7 @@ b'2'        0       0  MMI    8  0.000000e+00''')
         # test with oversampling
         # there are 6 potential paths 1A 1B 1C 2A 2B 2C
         # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
-        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2 
+        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
         self.run_calc(case_56.__file__, 'job.ini', concurrent_tasks='0')
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
@@ -778,3 +758,9 @@ b'2'        0       0  MMI    8  0.000000e+00''')
         [(trt, gsims)] = full_lt.get_gsims_by_trt().items()
         self.assertEqual(len(gsims), 3)
 
+    def test_case_57(self):
+        # AvgPoeGMPE
+        self.run_calc(case_57.__file__, 'job.ini')
+        f1, f2 = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve_PGA.csv', f1)
+        self.assertEqualFiles('expected/hcurve_SA.csv', f2)

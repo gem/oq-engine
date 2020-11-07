@@ -1,4 +1,26 @@
   [Michele Simionato]
+  * Added an estimate of the portfolio damage error due to the seed dependency
+  * Stored the damage distributions in a pandas-friendly way and extended
+    `DataStore.read_df` to accept multi-indices
+
+ [Viktor Polak]
+  * Added the Phung et al. (2020) GMPE
+
+  [Michele Simionato]
+  * Implemented `truncGutenbergRichterMFD` from slip rate and rigidity
+  * Fixed bug when computing the damage distributions per asset and event
+  * Simplified/optimized the UCERF filtering
+
+  [Viktor Polak]
+  * Added the Chao et al. (2020) GMPE
+
+  [Michele Simionato]
+  * Introduced an early memory check in classical calculations
+  * Reduced the memory occupation in classical calculations
+  * Implemented AvgPoeGMPE
+  * Forbidded the usage of `aggregate_by` except in ebrisk calculations
+  * Added a check on valid branch ID names: only letters, digits and
+    the characters "#:-_." are accepted
   * Huge performance improvement for very complex logic trees
   * Shortened the logic tree paths when exporting the realizations
 
@@ -27,6 +49,12 @@
 
   [Marco Pagani]
   * Added a check on DEFINED_FOR_REFERENCE_VELOCITY when using amplification
+  * Added a method to create a TruncatedGRMFD from a value of scalar seismic
+    moment
+  * Added a method to the modifiable GMPE to add (or subtract) a delta std
+  * Added a method to the modifiable GMPE to set the total std as the sum of
+	tau plus a delta
+  * Added a get_fault_surface_area method to sources
 
 python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
 

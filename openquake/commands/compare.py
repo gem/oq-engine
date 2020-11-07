@@ -89,6 +89,7 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
                     len(sitecol), numsamples, replace=False)
     sids.sort()
     imtls, poes, arrays = getdata(what, calc_ids, sitecol, sids)
+    imti = {imt: i for i, imt in enumerate(imtls)}
     try:
         levels = imtls[imt]
     except KeyError:
@@ -97,7 +98,7 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
     imt2idx = {imt: i for i, imt in enumerate(imtls)}
     head = ['site_id'] if files else ['site_id', 'calc_id']
     if what == 'hcurves':
-        array_imt = arrays[:, :, imtls(imt)]
+        array_imt = arrays[:, :, imti[imt], :]  # shape (C, N, L1)
         header = head + ['%.5f' % lvl for lvl in levels]
     else:  # hmaps
         array_imt = arrays[:, :, imt2idx[imt]]
