@@ -159,7 +159,7 @@ RM       4_000
         self.assertEqual(strip_calc_id(npz), 'damages-rlzs.npz')
 
         # check dd_data is readable by pandas
-        df = self.calc.datastore.read_df('dd_data', 'aid')
+        df = self.calc.datastore.read_df('dd_data', ['aid', 'eid', 'lid'])
         self.assertEqual(len(df), 300)
         self.assertEqual(len(df[df.ds1 > 0]), 76)  # only 76/300 are nonzero
 

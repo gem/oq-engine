@@ -475,7 +475,7 @@ class DataStore(collections.abc.MutableMapping):
     def read_df(self, key, index=None, sel=(), slc=slice(None)):
         """
         :param key: name of the structured dataset
-        :param index: if given, name of the "primary key" field
+        :param index: pandas index (or multi-index), possibly None
         :param sel: dictionary used to select subsets of the dataset
         :param slc: slice object to extract a slice of the dataset
         :returns: pandas DataFrame associated to the dataset
@@ -487,10 +487,9 @@ class DataStore(collections.abc.MutableMapping):
             return dset2df(dset, index, sel)
         elif '__pdcolumns__' in dset.attrs:
             columns = dset.attrs['__pdcolumns__'].split()
-            dic = {col: dset[col][slc] for col in columns if col != index}
-            if index is not None:
-                index = dset[index][slc]
-            return pandas.DataFrame(dic, index=index)
+            dic = {col: dset[col][slc] for col in columns}
+            df = pandas.DataFrame(dic).set_index(index)
+            return df
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]
