@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the source seed algorithm in event based calculations
   * Added an estimate of the portfolio damage error due to the seed dependency
   * Stored the damage distributions in a pandas-friendly way and extended
     `DataStore.read_df` to accept multi-indices
