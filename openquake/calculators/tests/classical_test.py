@@ -789,4 +789,4 @@ hazard_uhs-std.csv
         self.assertEqualFiles(f01, f11)
 
         # Second test
-        # self.assertEqualFiles(f03, f21)
+        self.assertEqualFiles(f03, f21)
