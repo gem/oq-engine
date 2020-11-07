@@ -400,15 +400,15 @@ def portfolio_damage_error(dstore, total_sum=None):
             arr = dstore.sel('damages-rlzs', rlz=0)  # shape (A, 1, L, D)
         total_sum = arr.sum(axis=(0, 1))  # shape (L, D)
 
-    tot_from_da = total_sum[:, 1:]
-    numpy.allclose(tot_from_dd, tot_from_da, rtol=1E-5)  # sanity check
-    errors = tot_from_da * numpy.std(sums, axis=0) / numpy.mean(sums, axis=0)
+    avg = total_sum[:, 1:] / R
+    numpy.allclose(tot_from_dd, avg, rtol=1E-5)  # sanity check
+    errors = avg * numpy.std(sums, axis=0) / numpy.mean(sums, axis=0)
     dic = dict(dmg_state=[], loss_type=[], mean=[], error=[])
     for l, lt in enumerate(loss_types):
         for d, dmg in enumerate(dmg_states[1:]):
             dic['dmg_state'].append(dmg)
             dic['loss_type'].append(lt)
-            dic['mean'].append(tot_from_da[l, d])
+            dic['mean'].append(avg[l, d])
             dic['error'].append(errors[l, d])
     return pandas.DataFrame(dic)
 
