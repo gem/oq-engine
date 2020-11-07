@@ -41,7 +41,7 @@
 | case_38 | |
 | case_39 | |
 | case_40 | |
-| case_41 | |
+| case_41 | |s
 | case_42 | |
 | case_43 | |
 | case_44 | |
@@ -56,5 +56,6 @@
 | case_53 | Tests the modifiable GMPE with imt-independent linear scaling factors on median and standard deviation |
 | case_54 | Tests the modifiable GMPE with imt-dependent linear scaling factors on median and standard deviation |
 | case_55 | Tests the use of amplification functions |
-| case_56 | Another test for oversampling (10 samples out of 6)|
-| case_57 | Test for sampling AvgPoeGMPE|
+| case_56 | Another test for oversampling (10 samples out of 6) s|
+| case_57 | Test for sampling AvgPoeGMPE |
+| case_58 | Test for the truncatedGRFromSlipAbsolute epistemic uncertainty |
