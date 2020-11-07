@@ -242,7 +242,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             logging.warning('There is no damage at all!')
         else:
             df = views.portfolio_damage_error(self.datastore, total_sum)
-            logging.info('Portfolio damage\n%s' % df)
+            rst = views.rst_table(numpy.array(df), list(df.columns))
+            logging.info('Portfolio damage\n%s' % rst)
         if self.R == 1:
             avgdamages = self.datastore.sel('damages-rlzs')
         else:
