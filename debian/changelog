@@ -1,4 +1,8 @@
-  [Viktor Polak]
+  [Michele Simionato]
+  * Stored the damage distributions in a pandas-friendly way and extended
+    `DataStore.read_df` to accept multi-indices
+
+ [Viktor Polak]
   * Added the Phung et al. (2020) GMPE
 
   [Michele Simionato]

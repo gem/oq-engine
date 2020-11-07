@@ -1023,7 +1023,7 @@ class RiskCalculator(HazardCalculator):
             try:
                 df = by_sid[sid]
             except KeyError:
-                getter = getters.ZeroGetter(sid, self.R)
+                getter = getters.ZeroGetter(sid, rlzs, self.R)
             else:
                 df['rlzs'] = rlzs[df.eid.to_numpy()]
                 getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)
