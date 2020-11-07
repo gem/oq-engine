@@ -34,18 +34,11 @@ class StochasticEventSetTestCase(unittest.TestCase):
         aae([src.mutex_weight for src in group],
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])
-        seed = 42
-        start = 0
-        for i, src in enumerate(group):
-            src.id = i
-            nr = src.count_ruptures()
-            src.serial = start + seed
-            start += nr
-        param = dict(ses_per_logic_tree_path=10,
+        param = dict(ses_per_logic_tree_path=10, ses_seed=42,
                      gsims=[SiMidorikawa1999SInter()])
         sf = calc.filters.SourceFilter(None, {})
         dic = sum(sample_ruptures(group, sf, param), {})
-        self.assertEqual(len(dic['rup_array']), 6)
+        self.assertEqual(len(dic['rup_array']), 7)
         self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
 
         # test no filtering 1
@@ -54,4 +47,4 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
         # test no filtering 2
         ruptures = sum(sample_ruptures(group, sf, param), {})['rup_array']
-        self.assertEqual(len(ruptures), 6)
+        self.assertEqual(len(ruptures), 7)
