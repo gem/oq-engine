@@ -53,7 +53,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
         # check the distribution of the events
-        self.assertEventsByRlz([17, 19])
+        self.assertEventsByRlz([16, 19])
 
     def test_classical(self):
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini',

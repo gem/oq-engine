@@ -1,9 +1,12 @@
-#,,,,"generated_by='OpenQuake engine 3.9.0-gitc9a4f7bc4f', start_date='2020-03-05T07:08:30', checksum=2115243534, investigation_time=50.0, risk_investigation_time=50.0"
+#,,,,"generated_by='OpenQuake engine 3.11.0-git49bc44ebb8', start_date='2020-10-29T08:36:14', checksum=672619912, investigation_time=50.0, risk_investigation_time=50.0"
 event_id,structural,rlz_id,rup_id,year
-0,2.35503E+02,0,0,39
-1,6.61698E+02,0,0,29
-2,2.74907E+02,0,0,15
-3,5.97396E+02,0,0,43
-4,3.51715E+02,0,1,8
-5,9.83762E+01,0,2,21
-6,1.12018E+03,0,3,39
+0,2.70453E+02,0,0,39
+1,1.76481E+03,0,0,29
+2,5.82996E+02,0,0,15
+3,9.24924E+02,0,1,43
+4,6.19045E+02,0,1,8
+5,5.56826E+02,0,2,21
+6,1.65351E+02,0,3,39
+7,1.21148E+02,0,4,19
+8,1.24162E+02,0,4,23
+9,1.49623E+02,0,5,11

@@ -271,7 +271,10 @@ class RuptureImporter(object):
         # order the ruptures by serial
         rup_array.sort(order='serial')
         nr = len(rup_array)
-        assert len(numpy.unique(rup_array['serial'])) == nr  # sanity
+        serials, counts = numpy.unique(rup_array['serial'], return_counts=True)
+        if len(serials) != nr:
+            logging.info('The following rupture seeds are duplicated: %s',
+                         serials[counts > 1])
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
         self.datastore['ruptures'] = rup_array
