@@ -25,7 +25,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, get_array_nbytes, humansize, pprod, agg_probs, block_splitter)
+    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, block_splitter)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -252,8 +252,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.imts = list(oq.imtls)
         self.M = len(self.imts)
         ws = [rlz.weight for rlz in self.full_lt.get_realizations()]
+        dstore = (self.datastore.parent if self.datastore.parent
+                  else self.datastore)
         self.pgetter = getters.PmapGetter(
-            self.datastore, ws, self.sitecol.sids, oq.imtls, oq.poes)
+            dstore, ws, self.sitecol.sids, oq.imtls, oq.poes)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
@@ -346,14 +348,14 @@ class DisaggregationCalculator(base.HazardCalculator):
                                     self.hmap4, trti, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
         logging.info('Found {:_d} ruptures'.format(totrups))
-        nbytes, msg = get_array_nbytes(dict(M=self.M, G=G, U=U, F=2))
+        nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
         s = self.shapedic
         sd = dict(N=s['N'], M=s['M'], P=s['P'], Z=s['Z'], D=s['dist'],
                   E=s['eps'], Lo=s['lon'], La=s['lat'])
         sd['tasks'] = numpy.ceil(len(allargs))
-        nbytes, msg = get_array_nbytes(sd)
+        nbytes, msg = get_nbytes_msg(sd)
         if nbytes > oq.max_data_transfer:
             raise ValueError(
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
@@ -363,7 +365,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         sd.pop('tasks')
         sd['mags_trt'] = sum(len(mags) for mags in
                              self.datastore['source_mags'].values())
-        nbytes, msg = get_array_nbytes(sd)
+        nbytes, msg = get_nbytes_msg(sd)
         logging.info('Estimated memory on the master:\n%s', msg)
 
         dt = numpy.dtype([('trti', U8), ('mag', '|S4'), ('nrups', U32)])

@@ -100,7 +100,6 @@ def get_csm(oq, full_lt, h5=None):
     classical = not oq.is_event_based()
     full_lt.ses_seed = oq.ses_seed
     if oq.is_ucerf():
-        serial = full_lt.ses_seed
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         src_groups = []
         for et_id, sm_rlz in enumerate(full_lt.sm_rlzs):
@@ -127,7 +126,6 @@ def get_csm(oq, full_lt, h5=None):
                 sg.sources = [src]
                 src.planes = planes
                 src.sections = src.get_sections()
-            serial = init_serials(sg, serial)
         return CompositeSourceModel(full_lt, src_groups)
 
     logging.info('Reading the source model(s) in parallel')
@@ -237,7 +235,6 @@ def _get_csm(full_lt, groups):
             acc[grp.trt].extend(grp)
     key = operator.attrgetter('source_id', 'code')
     src_groups = []
-    serial = full_lt.ses_seed
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
@@ -246,28 +243,14 @@ def _get_csm(full_lt, groups):
             for src in srcs:
                 src._wkt = src.wkt()
                 lst.append(src)
-        serial = init_serials(lst, serial)
         for grp in general.groupby(lst, et_ids).values():
             src_groups.append(sourceconverter.SourceGroup(trt, grp))
     for ag in atomic:
-        serial = init_serials(ag.sources, serial)
         for src in ag:
             src._wkt = src.wkt()
     src_groups.extend(atomic)
     _check_dupl_ids(src_groups)
     return CompositeSourceModel(full_lt, src_groups)
-
-
-def init_serials(sources, serial):
-    """
-    Needed only for event based calculations
-    """
-    for src in sources:
-        src.serial = serial
-        if not src.num_ruptures:
-            src.num_ruptures = src.count_ruptures()
-        serial += src.num_ruptures * len(src.et_ids)
-    return serial
 
 
 class CompositeSourceModel:

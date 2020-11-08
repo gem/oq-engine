@@ -375,7 +375,7 @@ def view_portfolio_loss(token, dstore):
     return(rst_table(rows, ['loss'] + oq.loss_names))
 
 
-def portfolio_damage_error(dstore, total_sum=None):
+def portfolio_damage_error(dstore, avg=None):
     """
     The damages and errors for the full portfolio, extracted from
     the asset damage table.
@@ -385,30 +385,28 @@ def portfolio_damage_error(dstore, total_sum=None):
     A, R, L, D = dset.shape
     dmg_states = dset.attrs['dmg_state']
     loss_types = dset.attrs['loss_type']
+
     sums = numpy.zeros((10, L, D-1))
     for i in range(10):
         section = df[df.index % 10 == i]
         for l, grp in section.groupby('lid'):
             ser = grp.sum()  # aid, lid, ds...
-            sums[i, l] = numpy.array(ser)[2:]
-    tot_from_dd = numpy.sum(sums, axis=0)  # (L, D1)
+            sums[i, l, :] = numpy.array(ser)[2:]
 
-    if total_sum is None:
+    if avg is None:
         if 'damages-stats' in dstore:
             arr = dstore.sel('damages-stats', stat='mean')
         else:
             arr = dstore.sel('damages-rlzs', rlz=0)  # shape (A, 1, L, D)
-        total_sum = arr.sum(axis=(0, 1))  # shape (L, D)
+        avg = arr.sum(axis=(0, 1))[:, 1:]  # shape (L, D)
 
-    tot_from_da = total_sum[:, 1:]
-    numpy.allclose(tot_from_dd, tot_from_da, rtol=1E-5)  # sanity check
-    errors = tot_from_da * numpy.std(sums, axis=0) / numpy.mean(sums, axis=0)
+    errors = avg * numpy.std(sums, axis=0) / numpy.mean(sums, axis=0)
     dic = dict(dmg_state=[], loss_type=[], mean=[], error=[])
     for l, lt in enumerate(loss_types):
         for d, dmg in enumerate(dmg_states[1:]):
             dic['dmg_state'].append(dmg)
             dic['loss_type'].append(lt)
-            dic['mean'].append(tot_from_da[l, d])
+            dic['mean'].append(avg[l, d])
             dic['error'].append(errors[l, d])
     return pandas.DataFrame(dic)
 
