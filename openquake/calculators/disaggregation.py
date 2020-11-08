@@ -94,14 +94,17 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, rctx, cmaker, hmap4, trti, bin_edges, oq, monitor):
+def compute_disagg(dstore, mag, idxs, cmaker, hmap4, trti, bin_edges,
+                   oq, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param dstore:
         a DataStore instance
-    :param rctx:
-        an array of rupture parameters
+    :param mag:
+        a magnitude, as a string
+    :param idxs:
+        an array of rupture indices
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param hmap4:
@@ -122,9 +125,10 @@ def compute_disagg(dstore, rctx, cmaker, hmap4, trti, bin_edges, oq, monitor):
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs, close_ctxs = read_ctxs(
-            dstore, rctx, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
+            dstore, 'mag_' + mag, idxs,
+            req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
 
-    magi = numpy.searchsorted(bin_edges[0], rctx[0]['mag']) - 1
+    magi = numpy.searchsorted(bin_edges[0], float(mag)) - 1
     if magi == -1:  # when the magnitude is on the edge
         magi = 0
     dis_mon = monitor('disaggregate', measuremem=False)
@@ -335,10 +339,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                      'maximum_distance': oq.maximum_distance,
                      'collapse_level': oq.collapse_level,
                      'imtls': oq.imtls})
-                for blk in block_splitter(rctx[idxs], maxweight, nsites):
+                for blk in block_splitter(idxs, maxweight):
                     nr = len(blk)
                     U = max(U, blk.weight)
-                    allargs.append((dstore, numpy.array(blk), cmaker,
+                    allargs.append((dstore, mag, numpy.array(blk), cmaker,
                                     self.hmap4, trti, self.bin_edges, oq))
                     task_inputs.append((trti, mag, nr))
         logging.info('Found {:_d} ruptures'.format(totrups))

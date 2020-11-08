@@ -114,7 +114,7 @@ def _make_pmap(ctxs, cmaker, investigation_time):
     return ~pmap
 
 
-def read_ctxs(dstore, rctx_or_magstr, grp_id=0, req_site_params=None):
+def read_ctxs(dstore, magstr, idxs=None, req_site_params=None):
     """
     Use it as `read_ctxs(dstore, 'mag_5.50')`.
     :returns: a pair (contexts, [contexts close to site for each site])
@@ -122,13 +122,7 @@ def read_ctxs(dstore, rctx_or_magstr, grp_id=0, req_site_params=None):
     sitecol = dstore['sitecol']
     site_params = {par: sitecol[par]
                    for par in req_site_params or sitecol.array.dtype.names}
-    if isinstance(rctx_or_magstr, str):
-        rctx = dstore[rctx_or_magstr]['rctx'][:]
-        rctx = rctx[rctx['grp_id'] == grp_id]
-    else:
-        # in disaggregation
-        rctx = rctx_or_magstr
-    magstr = 'mag_%.2f' % rctx[0]['mag']
+    rctx = dstore[magstr]['rctx'][slice(None) if idxs is None else idxs]
     if h5py.version.version_tuple >= (2, 10, 0):
         # this version is spectacularly better in cluster1; for
         # Colombia with 1.2M ruptures I measured a speedup of 8.5x
