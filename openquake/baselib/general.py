@@ -1437,7 +1437,7 @@ def get_array_nbytes(sizedict, size=8):
     (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
     """
     nbytes = numpy.prod(list(sizedict.values())) * size
-    prod = ' * '.join('(%s=%d)' % item for item in sizedict.items())
+    prod = ' * '.join('(%s=%d)' % (k, int(v)) for k, v in sizedict.items())
     return nbytes, '%s * %d bytes = %s' % (prod, size, humansize(nbytes))
 
 
