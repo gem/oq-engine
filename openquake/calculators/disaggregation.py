@@ -314,8 +314,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         allargs = []
-        totweight = sum(d['rctx']['nsites'].sum() for n, d in dstore.items()
-                        if n.startswith('mag_') and len(d['rctx']))
+        totweight = sum(len(d['rctx']) for n, d in dstore.items()
+                        if n.startswith('mag_'))
         et_ids = dstore['et_ids'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(et_ids)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
