@@ -155,11 +155,9 @@ def store_ctxs(dstore, rdt, rupdata, grp_id):
     """
     magstr = '%.2f' % rupdata['mag'][0]
     rctx = dstore['mag_%s/rctx' % magstr]
-    offset = len(rctx)
     nr = len(rupdata['mag'])
     rdata = numpy.zeros(nr, rdt)
     rdata['nsites'] = [len(s) for s in rupdata['sids_']]
-    rdata['idx'] = numpy.arange(offset, offset + nr)
     rdata['grp_id'] = grp_id
     rdt_names = set(rupdata) & set(n[0] for n in rdt)
     for name in rdt_names:
@@ -261,7 +259,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.rdt.append((rparam, U32))
                 else:
                     self.rdt.append((rparam, F32))
-            self.rdt.append(('idx', U32))
             self.rdt.append(('probs_occur', hdf5.vfloat64))
             for mag in mags:
                 name = 'mag_%s/' % mag
