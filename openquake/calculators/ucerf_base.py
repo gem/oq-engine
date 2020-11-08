@@ -371,8 +371,8 @@ class UCERFSource(BaseSeismicSource):
                 sources.append(ps)
         return sources
 
-    def get_one_rupture(self):
-        raise ValueError('Unsupported option')
+    def get_one_rupture(self, ses_seed):
+        raise NotImplementedError
 
     def generate_event_set(self, background_sids, eff_num_ses):
         """

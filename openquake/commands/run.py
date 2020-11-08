@@ -122,8 +122,7 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, loglevel, hc, exports,
                         'retrieve the %s' % (len(calc_ids), hc_id))
             calc = base.calculators(oqparam, calc_id)
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
-                     exports=exports, hazard_calculation_id=hc_id,
-                     rlz_ids=rlz_ids)
+                     exports=exports, rlz_ids=rlz_ids)
         else:  # run hazard + risk
             calc = run2(
                 job_inis[0], job_inis[1], calc_id, concurrent_tasks, pdb,

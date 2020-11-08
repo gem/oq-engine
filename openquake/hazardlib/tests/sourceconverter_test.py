@@ -260,6 +260,11 @@ class SourceConverterTestCase(unittest.TestCase):
         self.assertEqual(
             'There were repeated values %s in %s:%s', w.call_args[0][0])
 
+    def test_mfd_with_slip_rate(self):
+        testfile = os.path.join(testdir, 'source_with_slip_rate.xml')
+        src = nrml.to_python(testfile).src_groups[0][0]
+        self.assertAlmostEqual(src.mfd.a_val, -11.028154265)
+
 
 class SourceGroupHDF5TestCase(unittest.TestCase):
     def test_serialization(self):

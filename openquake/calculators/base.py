@@ -842,7 +842,8 @@ class HazardCalculator(BaseCalculator):
                           collapse_level=oq.collapse_level,
                           avg_losses=oq.avg_losses,
                           amplifier=self.amplifier,
-                          sec_perils=sec_perils)
+                          sec_perils=sec_perils,
+                          ses_seed=oq.ses_seed)
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):
@@ -1023,7 +1024,7 @@ class RiskCalculator(HazardCalculator):
             try:
                 df = by_sid[sid]
             except KeyError:
-                getter = getters.ZeroGetter(sid, self.R)
+                getter = getters.ZeroGetter(sid, rlzs, self.R)
             else:
                 df['rlzs'] = rlzs[df.eid.to_numpy()]
                 getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)

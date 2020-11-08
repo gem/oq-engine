@@ -25,7 +25,7 @@ from openquake.sep.liquefaction.liquefaction import (
     hazus_liquefaction_probability, zhu_liquefaction_probability_general)
 from openquake.sep.liquefaction.lateral_spreading import (
     hazus_lateral_spreading_displacement)
-from openquake.sep.liquefaction.vertical_settlement import(
+from openquake.sep.liquefaction.vertical_settlement import (
     hazus_vertical_settlement)
 
 

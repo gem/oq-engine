@@ -33,7 +33,7 @@ except ImportError:
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize, get_array_nbytes)
+    AccumDict, DictArray, block_splitter, groupby, humansize, get_nbytes_msg)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -293,7 +293,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.M = len(oq.imtls)
         self.L1 = len(oq.imtls.array) // self.M
         sources = encode([src_id for src_id in self.csm.source_info])
-        size, msg = get_array_nbytes(
+        size, msg = get_nbytes_msg(
             dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
         ps = 'pointSource' in self.full_lt.source_model_lt.source_types
         if size > TWO32 and not ps:

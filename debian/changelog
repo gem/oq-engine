@@ -1,4 +1,15 @@
   [Michele Simionato]
+  * Changed the source seed algorithm in event based calculations
+  * Added an estimate of the portfolio damage error due to the seed dependency
+  * Stored the damage distributions in a pandas-friendly way and extended
+    `DataStore.read_df` to accept multi-indices
+
+ [Viktor Polak]
+  * Added the Phung et al. (2020) GMPE
+
+  [Michele Simionato]
+  * Implemented `truncGutenbergRichterMFD` from slip rate and rigidity
+  * Fixed bug when computing the damage distributions per asset and event
   * Simplified/optimized the UCERF filtering
 
   [Viktor Polak]
@@ -42,7 +53,7 @@
   * Added a method to create a TruncatedGRMFD from a value of scalar seismic
     moment
   * Added a method to the modifiable GMPE to add (or subtract) a delta std
-  * Added a method to the modifiable GMPE to set the total std as the sum of 
+  * Added a method to the modifiable GMPE to set the total std as the sum of
 	tau plus a delta
   * Added a get_fault_surface_area method to sources
 

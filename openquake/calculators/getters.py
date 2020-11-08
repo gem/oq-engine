@@ -19,6 +19,7 @@
 import operator
 import unittest.mock as mock
 import numpy
+import pandas
 from openquake.baselib import hdf5, datastore, general, performance
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
@@ -229,23 +230,15 @@ class GmfDataGetter(object):
         return dict(list(self.df.groupby('rlzs')))
 
 
-class ZeroGetter(object):
+class ZeroGetter(GmfDataGetter):
     """
     An object with an .init() and .get_hazard() method
     """
-    def __init__(self, sid, num_rlzs):
+    def __init__(self, sid, rlzs, num_rlzs):
         self.sids = [sid]
+        self.df = pandas.DataFrame({
+            'rlzs': rlzs, 'eid': numpy.arange(len(rlzs))})
         self.num_rlzs = num_rlzs
-
-    def init(self):
-        pass
-
-    def get_hazard(self, gsim=None):
-        """
-        :param gsim: ignored
-        :returns: an dict rlzi -> 0
-        """
-        return {rlzi: 0 for rlzi in range(self.num_rlzs)}
 
 
 time_dt = numpy.dtype(
