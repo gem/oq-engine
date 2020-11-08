@@ -1437,7 +1437,8 @@ def get_nbytes_msg(sizedict, size=8):
     (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
     """
     nbytes = numpy.prod(list(sizedict.values())) * size
-    prod = ' * '.join('({}={:_d})'.format(*item) for item in sizedict.items())
+    prod = ' * '.join('({}={:_d})'.format(k, int(v))
+                      for k, v in sizedict.items())
     return nbytes, '%s * %d bytes = %s' % (prod, size, humansize(nbytes))
 
 
