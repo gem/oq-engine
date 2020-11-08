@@ -20,6 +20,7 @@ import os
 import numpy
 
 from openquake.baselib.hdf5 import read_csv
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
@@ -121,6 +122,9 @@ RM       4_000
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=5E-6)
+
+        fname = gettemp(view('portfolio_damage_error', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_damage.rst', fname)
 
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:

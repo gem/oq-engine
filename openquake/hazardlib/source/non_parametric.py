@@ -204,7 +204,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         return self.polygon.wkt
 
-    def get_one_rupture(self, rupture_mutex=False):
+    def get_one_rupture(self, ses_seed, rupture_mutex=False):
         """
         Yields one random rupture from a source
         """
@@ -212,10 +212,11 @@ class NonParametricSeismicSource(BaseSeismicSource):
         if rupture_mutex:
             weights = numpy.array([rup.weight for rup in self.iter_ruptures()])
         else:
-            weights = numpy.ones((num_ruptures))*1./num_ruptures
+            weights = numpy.ones((num_ruptures)) / num_ruptures
         idx = numpy.random.choice(range(num_ruptures), p=weights)
+        serial = self.serial(ses_seed)
         for i, rup in enumerate(self.iter_ruptures()):
             if i == idx:
-                rup.rup_id = self.serial + i
+                rup.rup_id = serial + i
                 rup.idx = idx
                 return rup

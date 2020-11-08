@@ -19,7 +19,7 @@
 import logging
 import numpy
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, get_nbytes_msg
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.calculators import base, views
 
@@ -182,6 +182,14 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         R = self.R
         D = len(dstates)
         A = len(self.assetcol)
+        E = len(self.datastore['events'])
+
+        # reduction factor
+        _, msg1 = get_nbytes_msg(dict(A=A, E=E, L=L))
+        _, msg2 = get_nbytes_msg(dict(nrows=len(self.datastore['dd_data/eid']),
+                                      ncols=D+2))
+        logging.info('Using %s\ninstead of %s', msg2, msg1)
+
         # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
         if oq.investigation_time:  # event_based_damage
@@ -191,17 +199,15 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # damage by asset
         d_asset = numpy.zeros((A, R, L, D), F32)
-        total_sum = numpy.zeros((L, D), F32)
         for (l, r, a, tot) in result['d_asset']:
             d_asset[a, r, l] = tot * avg_ratio[r]
-            total_sum[l] += tot
         self.datastore['damages-rlzs'] = d_asset
         set_rlzs_stats(self.datastore,
                        'damages',
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
-        self.sanity_check(total_sum)
+        self.sanity_check()
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
@@ -234,21 +240,22 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                     arr[i] = (eid, rlz[eid], loss)
                 self.datastore[name] = arr
 
-    def sanity_check(self, total_sum):
+    def sanity_check(self):
         """
         Sanity check on the total number of assets
         """
+        if self.R == 1:
+            arr = self.datastore.sel('damages-rlzs')  # shape (A, 1, L, D)
+        else:
+            arr = self.datastore.sel('damages-stats', stat='mean')
+        avg = arr.sum(axis=(0, 1))  # shape (L, D)
         if not len(self.datastore['dd_data/aid']):
             logging.warning('There is no damage at all!')
         else:
-            df = views.portfolio_damage_error(self.datastore, total_sum)
-            logging.info('Portfolio damage\n%s' % df)
-        if self.R == 1:
-            avgdamages = self.datastore.sel('damages-rlzs')
-        else:
-            avgdamages = self.datastore.sel('damages-stats', stat='mean')
-        # avgdamages of shape (A, 1, L, D)
-        num_assets = avgdamages.sum(axis=(0, 1, 3))  # by loss_type
+            df = views.portfolio_damage_error(self.datastore, avg[:, 1:])
+            rst = views.rst_table(numpy.array(df), list(df.columns))
+            logging.info('Portfolio damage\n%s' % rst)
+        num_assets = avg.sum(axis=1)  # by loss_type
         expected = self.assetcol['number'].sum()
         nums = set(num_assets) | {expected}
         if len(nums) > 1:

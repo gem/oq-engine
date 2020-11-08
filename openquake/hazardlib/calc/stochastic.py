@@ -155,7 +155,8 @@ def sample_cluster(sources, srcfilter, num_ses, param):
         dictionaries with keys rup_array, calc_times, eff_ruptures
     """
     eb_ruptures = []
-    numpy.random.seed(sources[0].serial)
+    ses_seed = param['ses_seed']
+    numpy.random.seed(sources[0].serial(ses_seed))
     [et_id] = set(src.et_id for src in sources)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
@@ -185,7 +186,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
             for src, _ in srcfilter.filter(sources):
                 # Track calculation time
                 t0 = time.time()
-                rup = src.get_one_rupture()
+                rup = src.get_one_rupture(ses_seed)
                 # The problem here is that we do not know a-priori the
                 # number of occurrences of a given rupture.
                 if src.id not in rup_counter:
@@ -260,7 +261,8 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                                      calc_times={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
-            for rup, et_id, n_occ in src.sample_ruptures(samples * num_ses):
+            for rup, et_id, n_occ in src.sample_ruptures(
+                    samples * num_ses, param['ses_seed']):
                 ebr = EBRupture(rup, src.source_id, et_id, n_occ)
                 eb_ruptures.append(ebr)
             dt = time.time() - t0
