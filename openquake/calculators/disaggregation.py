@@ -47,7 +47,6 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-nsites = operator.itemgetter('nsites')
 
 
 def _matrix(matrices, num_trts, num_mag_bins):
@@ -94,14 +93,17 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, rctx, cmaker, hmap4, trti, bin_edges, oq, monitor):
+def compute_disagg(dstore, mag, idxs, cmaker, hmap4, trti, bin_edges,
+                   oq, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param dstore:
         a DataStore instance
-    :param rctx:
-        an array of rupture parameters
+    :param mag:
+        a magnitude, as a string
+    :param idxs:
+        an array of rupture indices
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param hmap4:
@@ -122,9 +124,10 @@ def compute_disagg(dstore, rctx, cmaker, hmap4, trti, bin_edges, oq, monitor):
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs, close_ctxs = read_ctxs(
-            dstore, rctx, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
+            dstore, 'mag_' + mag, idxs,
+            req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
 
-    magi = numpy.searchsorted(bin_edges[0], rctx[0]['mag']) - 1
+    magi = numpy.searchsorted(bin_edges[0], float(mag)) - 1
     if magi == -1:  # when the magnitude is on the edge
         magi = 0
     dis_mon = monitor('disaggregate', measuremem=False)
@@ -329,6 +332,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 idxs, = numpy.where(rctx['grp_id'] == grp_id)
                 if len(idxs) == 0:
                     continue
+                nsites = rctx['nsites'][idxs]
                 trti = gids[0] // num_eff_rlzs
                 trt = self.trts[trti]
                 cmaker = ContextMaker(
@@ -337,12 +341,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                      'maximum_distance': oq.maximum_distance,
                      'collapse_level': oq.collapse_level,
                      'imtls': oq.imtls})
-                for blk in block_splitter(rctx[idxs], maxweight, nsites):
-                    nr = len(blk)
-                    U = max(U, blk.weight)
-                    allargs.append((dstore, numpy.array(blk), cmaker,
+                for block in block_splitter(zip(idxs, nsites), maxweight,
+                                            operator.itemgetter(1)):
+                    U = max(U, block.weight)
+                    blk = numpy.array([idx for idx, nsites in block])
+                    allargs.append((dstore, mag, blk, cmaker,
                                     self.hmap4, trti, self.bin_edges, oq))
-                    task_inputs.append((trti, mag, nr))
+                    task_inputs.append((trti, mag, len(blk)))
         logging.info('Found {:_d} ruptures'.format(totrups))
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
