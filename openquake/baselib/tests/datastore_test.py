@@ -136,3 +136,12 @@ class DataStoreTestCase(unittest.TestCase):
         print(df)
         df = self.dstore.read_df('df', 'eid')
         print(df)
+
+    def test_pandas_vlen(self):
+        self.dstore['test/val'] = [.2, .3]
+        self.dstore.hdf5.save_vlen(
+            'test/val_', [numpy.array([1]), numpy.array([2, 3])])
+        self.dstore.getitem('test').attrs['__pdcolumns__'] = 'val val_'
+        df = self.dstore.read_df('test')
+        numpy.testing.assert_equal(df['val_'].loc[0], [1])
+        numpy.testing.assert_equal(df['val_'].loc[1], [2, 3])

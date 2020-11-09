@@ -228,14 +228,14 @@ class ClassicalCalculator(base.HazardCalculator):
         Initial accumulator, a dict et_id -> ProbabilityMap(L, G)
         """
         zd = AccumDict()
-        rparams = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
-                   'nsites', 'probs_occur_', 'sids_'}
+        params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
+                  'nsites', 'probs_occur_', 'sids_'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
             cm = ContextMaker(trt, gsims)
-            rparams.update(cm.REQUIRES_RUPTURE_PARAMETERS)
+            params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             for dparam in cm.REQUIRES_DISTANCES:
-                rparams.add(dparam + '_')
+                params.add(dparam + '_')
         zd.eff_ruptures = AccumDict(accum=0)  # trt -> eff_ruptures
         mags = set()
         for trt, dset in self.datastore['source_mags'].items():
@@ -244,7 +244,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.few_sites:
             for mag in mags:
                 name = 'mag_%s/' % mag
-                for param in rparams:
+                for param in params:
                     if param == 'sids_':
                         dt = hdf5.vuint16
                     elif param.endswith('_'):
@@ -255,6 +255,8 @@ class ClassicalCalculator(base.HazardCalculator):
                         dt = F64
                     self.datastore.create_dset(name + param, dt, (None,),
                                                compression='gzip')
+                dset = self.datastore.getitem(name)
+                dset.attrs['__pdcolumns__'] = ' '.join(params)
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         self.maxradius = 0

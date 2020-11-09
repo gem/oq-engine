@@ -488,7 +488,10 @@ class DataStore(collections.abc.MutableMapping):
         elif '__pdcolumns__' in dset.attrs:
             columns = dset.attrs['__pdcolumns__'].split()
             dic = {col: dset[col][slc] for col in columns}
-            df = pandas.DataFrame(dic).set_index(index)
+            if index is None:
+                df = pandas.DataFrame(dic)
+            else:
+                df = pandas.DataFrame(dic).set_index(index)
             return df
         dtlist = []
         for name in dset.dtype.names:
