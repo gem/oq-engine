@@ -38,7 +38,7 @@ RUN useradd -m -u 1000 -s /bin/bash openquake
 USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
-RUN pip install --no-index --find-links=/opt/openquake/whl/ openquake.engine
+RUN pip install --no-index --find-links=/opt/openquake/whl/ openquake.engine[osgeo]
 ENV PATH="/home/openquake/.local/bin:$PATH"
 #
 ADD scripts/oq-start.sh ${HOME}
