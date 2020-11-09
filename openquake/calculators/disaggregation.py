@@ -47,7 +47,6 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-nsites = operator.itemgetter('nsites')
 
 
 def _matrix(matrices, num_trts, num_mag_bins):
@@ -314,8 +313,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         allargs = []
-        totweight = sum(len(d['rctx']) for n, d in dstore.items()
-                        if n.startswith('mag_'))
+        totweight = sum(d['rctx']['nsites'].sum() for n, d in dstore.items()
+                        if n.startswith('mag_') and len(d['rctx']))
         et_ids = dstore['et_ids'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(et_ids)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
@@ -333,6 +332,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 idxs, = numpy.where(rctx['grp_id'] == grp_id)
                 if len(idxs) == 0:
                     continue
+                nsites = rctx['nsites'][idxs]
                 trti = gids[0] // num_eff_rlzs
                 trt = self.trts[trti]
                 cmaker = ContextMaker(
@@ -341,12 +341,13 @@ class DisaggregationCalculator(base.HazardCalculator):
                      'maximum_distance': oq.maximum_distance,
                      'collapse_level': oq.collapse_level,
                      'imtls': oq.imtls})
-                for blk in block_splitter(idxs, maxweight):
-                    nr = len(blk)
-                    U = max(U, blk.weight)
-                    allargs.append((dstore, mag, numpy.array(blk), cmaker,
+                for block in block_splitter(zip(idxs, nsites), maxweight,
+                                            operator.itemgetter(1)):
+                    U = max(U, block.weight)
+                    blk = numpy.array([idx for idx, nsites in block])
+                    allargs.append((dstore, mag, blk, cmaker,
                                     self.hmap4, trti, self.bin_edges, oq))
-                    task_inputs.append((trti, mag, nr))
+                    task_inputs.append((trti, mag, len(blk)))
         logging.info('Found {:_d} ruptures'.format(totrups))
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
