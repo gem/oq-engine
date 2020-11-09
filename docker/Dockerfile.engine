@@ -16,28 +16,23 @@
 FROM python:3.8-slim AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
-
-ARG oq_branch=multistagedocker
-
+RUN useradd -m -u 1000 -s /bin/bash openquake
 RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev
-WORKDIR /opt/openquake
+USER openquake
+ENV HOME /home/openquake
+WORKDIR /home/openquake
+ARG oq_branch=master
 #clone repository and install engine
-RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine \
-        && pip download -r requirements-py38-linux64.txt -d /opt/openquake/whl \
-    && pip wheel .[cluster,osgeo]  --wheel-dir=/opt/openquake/whl --find-links=/opt/openquake/whl/ 
-
+RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
+    && pip install .[cluster,osgeo] --user -r requirements-py38-linux64.txt --wheel-dir=/opt/openquake/whl --find-links=/opt/openquake/whl/ 
+#
 FROM python:3.8-slim AS build-image
-COPY --from=compile-image /opt/openquake/whl /opt/openquake/whl
-#
 ENV LANG en_US.UTF-8
-#
-# if you want to use user specific else run with
-# CURRENT_UID=$(id -u):$(id -g) docker
 RUN useradd -m -u 1000 -s /bin/bash openquake
 USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
-RUN pip install --no-index --find-links=/opt/openquake/whl/ openquake.engine[osgeo,cluster]
+COPY --from=compile-image /home/openquake/.local /home/openquake/.local
 ENV PATH="/home/openquake/.local/bin:$PATH"
 #
 ADD scripts/oq-start.sh ${HOME}
