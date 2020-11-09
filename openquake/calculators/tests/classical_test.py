@@ -33,7 +33,8 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57)
+    case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
+    case_058)
 
 aac = numpy.testing.assert_allclose
 
@@ -764,3 +765,28 @@ hazard_uhs-std.csv
         f1, f2 = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve_PGA.csv', f1)
         self.assertEqualFiles('expected/hcurve_SA.csv', f2)
+
+    def test_case_058(self):
+        # Logic tree with SimpleFault uncertainty on geometry and MFD (from
+        # slip)
+
+        # First calculation
+        self.run_calc(case_058.__file__, 'job.ini')
+        f01, f02 = export(('hcurves/rlz-000', 'csv'), self.calc.datastore)
+        f03, f04 = export(('hcurves/rlz-003', 'csv'), self.calc.datastore)
+
+        # Second calculation. Same LT structure for case 1 but with only one
+        # branch for each branch set
+        self.run_calc(case_058.__file__, 'job_case01.ini')
+        f11, f12 = export(('hcurves/', 'csv'), self.calc.datastore)
+
+        # Third calculation. In this case we use a source model containing one
+        # source with the geometry of branch b22 and slip rate of branch b32
+        self.run_calc(case_058.__file__, 'job_case02.ini')
+        f21, f22 = export(('hcurves/', 'csv'), self.calc.datastore)
+
+        # First test
+        self.assertEqualFiles(f01, f11)
+
+        # Second test
+        self.assertEqualFiles(f03, f21)

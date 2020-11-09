@@ -56,6 +56,8 @@
   * Added a method to the modifiable GMPE to set the total std as the sum of
 	tau plus a delta
   * Added a get_fault_surface_area method to sources
+  * Added a new type of undertainty for the seismic source characterisation 
+    logic tree called `TruncatedGRFromSlipAbsolute`
 
 python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
 
