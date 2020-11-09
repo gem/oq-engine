@@ -915,7 +915,7 @@ def pmf(value):
     probs = probabilities(value)
     if sum(probs) != 1:
         # avoid https://github.com/gem/oq-engine/issues/5901
-        raise ValueError('The probabilities %s do not sum up to 1! but to %' % value,sum(probs))
+        raise ValueError('The probabilities %s do not sum up to 1! but to %s' % value,sum(probs))
     return [(p, i) for i, p in enumerate(probs)]
 
 
