@@ -458,12 +458,16 @@ class RuptureConverter(object):
            :class:`openquake.hazardlib.geo.complexFaultSurface` instance
         3. there is a single griddedSurface node; returns a
            :class:`openquake.hazardlib.geo.GriddedSurface` instance
-        4. there is a list of PlanarSurface nodes; returns a
+        4. there is a list of simpleFaultGeometry, complexFaultGeometry,
+         PlanarSurface nodes and/or griddedSurface; returns a
+           :class:`openquake.hazardlib.geo.MultiSurface` instance
+        5. there is a list of PlanarSurface nodes; returns a
            :class:`openquake.hazardlib.geo.MultiSurface` instance
 
         :param surface_nodes: surface nodes as just described
         """
         surface_node = surface_nodes[0]
+        nodes_name_list = [i.tag for i in surface_nodes]
         if surface_node.tag.endswith('simpleFaultGeometry'):
             surface = geo.SimpleFaultSurface.from_fault_data(
                 self.geo_line(surface_node),
@@ -480,9 +484,31 @@ class RuptureConverter(object):
                 coords = split_coords_3d(~surface_node.posList)
             points = [geo.Point(*p) for p in coords]
             surface = geo.GriddedSurface.from_points_list(points)
+        elif len(set(nodes_name_list)) > 1 : # a mix collection of surfaces
+            surfaces = []
+            for surface_node in surface_nodes:
+                if surface_node.tag.endswith('simpleFaultGeometry'):
+                    surfaces += geo.SimpleFaultSurface.from_fault_data(
+                        self.geo_line(surface_node),
+                        ~surface_node.upperSeismoDepth,
+                        ~surface_node.lowerSeismoDepth,
+                        ~surface_node.dip,
+                        self.rupture_mesh_spacing)
+                elif surface_node.tag.endswith('complexFaultGeometry'):
+                    surfaces += geo.ComplexFaultSurface.from_fault_data(
+                        self.geo_lines(surface_node),
+                        self.complex_fault_mesh_spacing)
+                elif surface_node.tag.endswith('griddedSurface'):
+                    with context(self.fname, surface_node):
+                        coords = split_coords_3d(~surface_node.posList)
+                    points = [geo.Point(*p) for p in coords]
+                    surfaces += geo.GriddedSurface.from_points_list(points)
+                else:  # a collection of planar surfaces
+                    surfaces += list(map(self.geo_planar, surface_nodes))
+                surface = geo.MultiSurface(surfaces)
         else:  # a collection of planar surfaces
             planar_surfaces = list(map(self.geo_planar, surface_nodes))
-            surface = geo.MultiSurface(planar_surfaces)
+            surface = geo.MultiSurface(surfaces)
         return surface
 
     def convert_simpleFaultRupture(self, node):
