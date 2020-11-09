@@ -486,25 +486,25 @@ class RuptureConverter(object):
             surface = geo.GriddedSurface.from_points_list(points)
         elif len(set(nodes_name_list)) > 1 : # a mix collection of surfaces
             surfaces = []
-            for surface_node in surface_nodes:
-                if surface_node.tag.endswith('simpleFaultGeometry'):
+            for node in surface_nodes:
+                if node.tag.endswith('simpleFaultGeometry'):
                     surfaces += geo.SimpleFaultSurface.from_fault_data(
                         self.geo_line(surface_node),
                         ~surface_node.upperSeismoDepth,
                         ~surface_node.lowerSeismoDepth,
                         ~surface_node.dip,
                         self.rupture_mesh_spacing)
-                elif surface_node.tag.endswith('complexFaultGeometry'):
+                elif node.tag.endswith('complexFaultGeometry'):
                     surfaces += geo.ComplexFaultSurface.from_fault_data(
                         self.geo_lines(surface_node),
                         self.complex_fault_mesh_spacing)
-                elif surface_node.tag.endswith('griddedSurface'):
+                elif node.tag.endswith('griddedSurface'):
                     with context(self.fname, surface_node):
                         coords = split_coords_3d(~surface_node.posList)
                     points = [geo.Point(*p) for p in coords]
                     surfaces += geo.GriddedSurface.from_points_list(points)
                 else:  # a collection of planar surfaces
-                    surfaces += list(map(self.geo_planar, surface_nodes))
+                    surfaces += list(map(self.geo_planar, [node]))
                 surface = geo.MultiSurface(surfaces)
                 print(len(surfaces))
         else:  # a collection of planar surfaces
