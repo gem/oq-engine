@@ -436,7 +436,7 @@ hazard_uhs-std.csv
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['mag_5.25/rctx']), 34)
+        self.assertEqual(len(self.calc.datastore['mag_5.25/mag']), 34)
         self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
@@ -449,7 +449,7 @@ hazard_uhs-std.csv
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
         # make sure probs_occur are stored as expected
-        probs_occur = self.calc.datastore['mag_8.20/rctx']['probs_occur']
+        probs_occur = self.calc.datastore['mag_8.20/probs_occur_']
         tot_probs_occur = sum(len(po) for po in probs_occur)
         self.assertEqual(tot_probs_occur, 4)  # 2 nonparam rups x 2
 
@@ -487,7 +487,7 @@ hazard_uhs-std.csv
                                    'hazard_curve-SA(1.0).csv'],
                                   case_30.__file__)
             # check rupdata
-            nruptures = len(self.calc.datastore['mag_5.05/rctx'])
+            nruptures = len(self.calc.datastore['mag_5.05/mag'])
             self.assertEqual(nruptures, 28)
 
     def test_case_30_sampling(self):
