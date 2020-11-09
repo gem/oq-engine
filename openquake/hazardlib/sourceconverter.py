@@ -466,7 +466,6 @@ class RuptureConverter(object):
 
         :param surface_nodes: surface nodes as just described
         """
-        print("surface_nodes",surface_nodes)
         surface_node = surface_nodes[0]
         nodes_name_list = [i.tag for i in surface_nodes]
         if surface_node.tag.endswith('simpleFaultGeometry'):
@@ -568,6 +567,9 @@ class RuptureConverter(object):
         mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = list(node.getnodes('planarSurface'))
+            surfaces += list(node.getnodes('complexFaultGeometry'))
+            surfaces += list(node.getnodes('simpleFaultGeometry'))
+            surfaces += list(node.getnodes('griddedSurface'))
         rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
