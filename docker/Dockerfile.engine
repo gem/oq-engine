@@ -24,8 +24,8 @@ RUN pip install -U pip
 WORKDIR /opt/openquake
 #clone repository and install engine
 RUN git clone https://github.com/gem/oq-engine.git --depth=1  && cd oq-engine \
-    && pip install -r requirements-py38-linux64.txt \
-    && pip wheel . --wheel-dir=/opt/openquake/whl
+    && pip download -r requirements-py38-linux64.txt -d /opt/openquake/whl \
+    && pip wheel . --wheel-dir=/opt/openquake/whl --no-deps
 
 FROM python:3.8-slim AS build-image
 COPY --from=compile-image /opt/openquake/whl /opt/openquake/whl
