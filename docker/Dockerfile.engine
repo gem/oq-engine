@@ -23,7 +23,7 @@ WORKDIR /home/openquake
 ARG oq_branch=master
 #clone repository and install engine
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
-    pip install .[cluster,osgeo] --user -r requirements-py38-linux64.txt 
+    pip install .[cluster,osgeo] --user -r requirements-py38-linux64.txt --no-warn-script-location
 #
 FROM python:3.8-slim AS build-image
 ENV LANG en_US.UTF-8
