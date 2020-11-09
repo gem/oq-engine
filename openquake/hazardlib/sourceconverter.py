@@ -506,6 +506,7 @@ class RuptureConverter(object):
                 else:  # a collection of planar surfaces
                     surfaces += list(map(self.geo_planar, surface_nodes))
                 surface = geo.MultiSurface(surfaces)
+                print(len(surfaces))
         else:  # a collection of planar surfaces
             planar_surfaces = list(map(self.geo_planar, surface_nodes))
             surface = geo.MultiSurface(surfaces)
