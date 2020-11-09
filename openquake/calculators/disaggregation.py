@@ -341,6 +341,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'maximum_distance': oq.maximum_distance,
                  'collapse_level': oq.collapse_level,
                  'imtls': oq.imtls})
+            logging.info('%d ruptures in grp_id=%d split in %d mag bins',
+                         nr, grp_id, len(numpy.unique(arr['magi'])))
             for block in block_splitter(arr, maxweight,
                                         operator.itemgetter('nsites'),
                                         operator.itemgetter('magi'),
@@ -351,7 +353,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 allargs.append((dstore, magi, blk, cmaker,
                                 self.hmap4, grp_id, trti, self.bin_edges, oq))
                 task_inputs.append((trti, magi, len(blk)))
-        logging.info('Found {:_d} ruptures'.format(totrups))
+        logging.info('Total {:_d} ruptures'.format(totrups))
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
@@ -367,10 +369,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Estimated data transfer:\n%s', msg)
 
         sd.pop('tasks')
-        sd['mags_trt'] = sum(len(mags) for mags in
-                             self.datastore['source_mags'].values())
-        nbytes, msg = get_nbytes_msg(sd)
-        logging.info('Estimated memory on the master:\n%s', msg)
+        #sd['mags_trt'] = sum(len(mags) for mags in
+        #                     self.datastore['source_mags'].values())
+        #nbytes, msg = get_nbytes_msg(sd)
+        #logging.info('Estimated memory on the master:\n%s', msg)
 
         dt = numpy.dtype([('trti', U8), ('mag', '|S4'), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
