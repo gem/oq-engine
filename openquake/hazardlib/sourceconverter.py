@@ -466,6 +466,7 @@ class RuptureConverter(object):
 
         :param surface_nodes: surface nodes as just described
         """
+        print("surface_nodes",surface_nodes)
         surface_node = surface_nodes[0]
         nodes_name_list = [i.tag for i in surface_nodes]
         if surface_node.tag.endswith('simpleFaultGeometry'):
