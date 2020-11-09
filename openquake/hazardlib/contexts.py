@@ -119,28 +119,23 @@ def read_ctxs(dstore, magstr, idxs=slice(None), req_site_params=None):
     Use it as `read_ctxs(dstore, 'mag_5.50')`.
     :returns: a pair (contexts, [contexts close to site for each site])
     """
-    sitecol = dstore['sitecol']
+    sitecol = dstore['sitecol'].complete
     site_params = {par: sitecol[par]
                    for par in req_site_params or sitecol.array.dtype.names}
     if h5py.version.version_tuple >= (2, 10, 0):
         # this version is spectacularly better in cluster1; for
         # Colombia with 1.2M ruptures I measured a speedup of 8.5x
-        grp = {n: d[idxs] for n, d in dstore[magstr].items()
-               if n.endswith('_')}
-        rctx = dstore[magstr]['rctx'][idxs]
+        params = {n: d[idxs] for n, d in dstore[magstr].items()}
     else:
         # for old h5py read the whole array and then filter on the indices
-        grp = {n: d[:][idxs] for n, d in dstore[magstr].items()
-               if n.endswith('_')}
-        rctx = dstore[magstr]['rctx'][:][idxs]
-
+        params = {n: d[:][idxs] for n, d in dstore[magstr].items()}
     ctxs = []
-    for u, rec in enumerate(rctx):
+    for u in range(len(params['mag'])):
         ctx = RuptureContext()
-        for par in rctx.dtype.names:
-            setattr(ctx, par, rec[par])
-        for par, arr in grp.items():
-            setattr(ctx, par[:-1], arr[u])
+        for par, arr in params.items():
+            if par.endswith('_'):
+                par = par[:-1]
+            setattr(ctx, par, arr[u])
         for par, arr in site_params.items():
             setattr(ctx, par, arr[ctx.sids])
         ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
@@ -233,7 +228,7 @@ class ContextMaker(object):
         :returns: the interesting attributes of the context
         """
         params = {'occurrence_rate', 'sids_',
-                  'probs_occur', 'clon_', 'clat_', 'rrup_'}
+                  'probs_occur_', 'clon_', 'clat_', 'rrup_'}
         params.update(self.REQUIRES_RUPTURE_PARAMETERS)
         for dparam in self.REQUIRES_DISTANCES:
             params.add(dparam + '_')
