@@ -17,11 +17,13 @@ FROM python:3.8-slim AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
 
+ARG oq_branch=multistagedocker
+
 RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev
 WORKDIR /opt/openquake
 #clone repository and install engine
-RUN git clone https://github.com/gem/oq-engine.git --depth=1  && cd oq-engine \
-    && pip download -r requirements-py38-linux64.txt -d /opt/openquake/whl \
+RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine \
+        && pip download -r requirements-py38-linux64.txt -d /opt/openquake/whl \
     && pip wheel .[cluster,osgeo]  --wheel-dir=/opt/openquake/whl --find-links=/opt/openquake/whl/ 
 
 FROM python:3.8-slim AS build-image
