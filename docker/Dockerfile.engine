@@ -12,7 +12,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 FROM python:3.8-slim AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
@@ -24,7 +23,7 @@ WORKDIR /home/openquake
 ARG oq_branch=master
 #clone repository and install engine
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
-    && pip install .[cluster,osgeo] --user -r requirements-py38-linux64.txt --wheel-dir=/opt/openquake/whl --find-links=/opt/openquake/whl/ 
+    pip install .[cluster,osgeo] --user -r requirements-py38-linux64.txt 
 #
 FROM python:3.8-slim AS build-image
 ENV LANG en_US.UTF-8
@@ -42,4 +41,4 @@ RUN mkdir oqdata
 EXPOSE 8800:8800
 STOPSIGNAL SIGINT
 ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["./oq-start.sh"]     
+CMD ["./oq-start.sh"]  
