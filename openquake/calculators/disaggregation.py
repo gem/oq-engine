@@ -332,7 +332,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 idxs, = numpy.where(grp_ids == grp_id)
                 if len(idxs) == 0:
                     continue
-                nsites = dstore['mag_%s/nsites' % mag][list(idxs)]
+                nsites = dstore['mag_%s/nsites' % mag][:][idxs]
                 trti = gids[0] // num_eff_rlzs
                 trt = self.trts[trti]
                 cmaker = ContextMaker(
@@ -344,7 +344,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for block in block_splitter(zip(idxs, nsites), maxweight,
                                             operator.itemgetter(1)):
                     U = max(U, block.weight)
-                    blk = [idx for idx, nsites in block]
+                    blk = numpy.array([idx for idx, nsites in block])
                     allargs.append((dstore, mag, blk, cmaker,
                                     self.hmap4, trti, self.bin_edges, oq))
                     task_inputs.append((trti, mag, len(blk)))

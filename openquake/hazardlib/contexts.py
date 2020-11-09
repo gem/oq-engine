@@ -122,7 +122,13 @@ def read_ctxs(dstore, magstr, idxs=slice(None), req_site_params=None):
     sitecol = dstore['sitecol'].complete
     site_params = {par: sitecol[par]
                    for par in req_site_params or sitecol.array.dtype.names}
-    params = {n: d[idxs] for n, d in dstore[magstr].items()}
+    if h5py.version.version_tuple >= (2, 10, 0):
+        # this version is spectacularly better in cluster1; for
+        # Colombia with 1.2M ruptures I measured a speedup of 8.5x
+        params = {n: d[idxs] for n, d in dstore[magstr].items()}
+    else:
+        # for old h5py read the whole array and then filter on the indices
+        params = {n: d[:][idxs] for n, d in dstore[magstr].items()}
     ctxs = []
     for u in range(len(params['mag'])):
         ctx = RuptureContext()
