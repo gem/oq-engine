@@ -93,15 +93,15 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, mag, idxs, cmaker, hmap4, trti, bin_edges,
+def compute_disagg(dstore, magi, idxs, cmaker, hmap4, grp_id, trti, bin_edges,
                    oq, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param dstore:
         a DataStore instance
-    :param mag:
-        a magnitude, as a string
+    :param magi:
+        a magnitude index
     :param idxs:
         an array of rupture indices
     :param cmaker:
@@ -124,12 +124,9 @@ def compute_disagg(dstore, mag, idxs, cmaker, hmap4, trti, bin_edges,
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs, close_ctxs = read_ctxs(
-            dstore, 'mag_' + mag, idxs,
+            dstore, grp_id, idxs,
             req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
 
-    magi = numpy.searchsorted(bin_edges[0], float(mag)) - 1
-    if magi == -1:  # when the magnitude is on the edge
-        magi = 0
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     N, M, P, Z = hmap4.shape
@@ -314,7 +311,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         mags = sorted(mags)
         allargs = []
         totweight = sum(d['nsites'][:].sum() for n, d in dstore.items()
-                        if n.startswith('mag_'))
+                        if n.startswith('grp-'))
         et_ids = dstore['et_ids'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(et_ids)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
@@ -325,29 +322,35 @@ class DisaggregationCalculator(base.HazardCalculator):
         task_inputs = []
         U = 0
         totrups = 0
-        for mag in mags:
-            grp_ids = dstore['mag_%s/grp_id' % mag][:]
-            totrups += len(grp_ids)
-            for grp_id, gids in enumerate(et_ids):
-                idxs, = numpy.where(grp_ids == grp_id)
-                if len(idxs) == 0:
-                    continue
-                nsites = dstore['mag_%s/nsites' % mag][idxs]
-                trti = gids[0] // num_eff_rlzs
-                trt = self.trts[trti]
-                cmaker = ContextMaker(
-                    trt, rlzs_by_gsim[grp_id],
-                    {'truncation_level': oq.truncation_level,
-                     'maximum_distance': oq.maximum_distance,
-                     'collapse_level': oq.collapse_level,
-                     'imtls': oq.imtls})
-                for block in block_splitter(zip(idxs, nsites), maxweight,
-                                            operator.itemgetter(1)):
-                    U = max(U, block.weight)
-                    blk = numpy.array([idx for idx, nsites in block])
-                    allargs.append((dstore, mag, blk, cmaker,
-                                    self.hmap4, trti, self.bin_edges, oq))
-                    task_inputs.append((trti, mag, len(blk)))
+        dtlist = [('magi', U8), ('nsites', U16), ('idx', U32)]
+        for grp_id, gids in enumerate(et_ids):
+            mags = dstore['grp-%02d/mag' % grp_id][:]
+            nr = len(mags)
+            arr = numpy.zeros(nr, dtlist)
+            magi = numpy.searchsorted(self.bin_edges[0], mags) - 1
+            magi[magi == -1] = 0  # when the magnitude is on the edge
+            arr['magi'] = magi
+            arr['nsites'] = dstore['grp-%02d/nsites' % grp_id][:]
+            arr['idx'] = numpy.arange(nr)
+            totrups += nr
+            trti = gids[0] // num_eff_rlzs
+            trt = self.trts[trti]
+            cmaker = ContextMaker(
+                trt, rlzs_by_gsim[grp_id],
+                {'truncation_level': oq.truncation_level,
+                 'maximum_distance': oq.maximum_distance,
+                 'collapse_level': oq.collapse_level,
+                 'imtls': oq.imtls})
+            for block in block_splitter(arr, maxweight,
+                                        operator.itemgetter('nsites'),
+                                        operator.itemgetter('magi'),
+                                        sort=True):
+                magi = block[0]['magi']
+                U = max(U, block.weight)
+                blk = numpy.array([rec['idx'] for rec in block])
+                allargs.append((dstore, magi, blk, cmaker,
+                                self.hmap4, grp_id, trti, self.bin_edges, oq))
+                task_inputs.append((trti, magi, len(blk)))
         logging.info('Found {:_d} ruptures'.format(totrups))
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)

@@ -153,12 +153,12 @@ def store_ctxs(dstore, rupdata, grp_id):
     """
     Store contexts with the same magnitude in the datastore
     """
-    magstr = 'mag_%.2f' % rupdata['mag'][0]
+    grp = 'grp-%02d' % grp_id
     nr = len(rupdata['mag'])
     rupdata['nsites'] = numpy.array([len(s) for s in rupdata['sids_']])
     rupdata['grp_id'] = numpy.array([grp_id] * nr)
-    for par in dstore[magstr]:
-        n = '%s/%s' % (magstr, par)
+    for par in dstore[grp]:
+        n = '%s/%s' % (grp, par)
         if par not in rupdata:  # when not requiring the parameter
             hdf5.extend(dstore[n], numpy.array([numpy.nan] * nr))
         elif par.endswith('_'):
@@ -219,8 +219,7 @@ class ClassicalCalculator(base.HazardCalculator):
             acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
-            for mag, c in dic['rup_data'].items():
-                store_ctxs(self.datastore, c, grp_id)
+            store_ctxs(self.datastore, dic['rup_data'], grp_id)
         return acc
 
     def acc0(self):
@@ -241,9 +240,10 @@ class ClassicalCalculator(base.HazardCalculator):
         for trt, dset in self.datastore['source_mags'].items():
             mags.update(dset[:])
         mags = sorted(mags)
+        G = len(self.datastore['et_ids'])
         if self.few_sites:
-            for mag in mags:
-                name = 'mag_%s/' % mag
+            for grp_id in range(G):
+                name = 'grp-%02d/' % grp_id
                 for param in params:
                     if param == 'sids_':
                         dt = hdf5.vuint16

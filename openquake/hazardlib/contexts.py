@@ -26,7 +26,6 @@ import itertools
 import functools
 import collections
 import numpy
-import h5py
 from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, parallel
@@ -114,15 +113,15 @@ def _make_pmap(ctxs, cmaker, investigation_time):
     return ~pmap
 
 
-def read_ctxs(dstore, magstr, idxs=slice(None), req_site_params=None):
+def read_ctxs(dstore, grp_id, idxs=slice(None), req_site_params=None):
     """
-    Use it as `read_ctxs(dstore, 'mag_5.50')`.
+    Use it as `read_ctxs(dstore, grp_id=0)`.
     :returns: a pair (contexts, [contexts close to site for each site])
     """
     sitecol = dstore['sitecol'].complete
     site_params = {par: sitecol[par]
                    for par in req_site_params or sitecol.array.dtype.names}
-    params = {n: d[idxs] for n, d in dstore[magstr].items()}
+    params = {n: d[idxs] for n, d in dstore['grp-%02d' % grp_id].items()}
     ctxs = []
     for u in range(len(params['mag'])):
         ctx = RuptureContext()
@@ -595,9 +594,7 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
-        rupdata = groupby(self.rupdata, lambda ctx: '%.2f' % ctx.mag)
-        for mag, ctxs in rupdata.items():
-            rupdata[mag] = self.dictarray(ctxs)
+        rupdata = self.dictarray(self.rupdata)
         return (pmap, rupdata, self.calc_times, dict(totrups=self.totrups))
 
     def collapse_point_ruptures(self, rups, sites):
