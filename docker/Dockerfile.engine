@@ -19,8 +19,8 @@ LABEL maintainer="GEM Foundation <devops@openquake.org>" \
 
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends build-essential gcc git
-#upgrade pip and setuptools first
-RUN pip install -U pip setuptools
+#upgrade pip first
+RUN pip install -U pip
 WORKDIR /opt/openquake
 #clone repository and install engine
 RUN git clone https://github.com/gem/oq-engine.git --depth=1  && cd oq-engine \
