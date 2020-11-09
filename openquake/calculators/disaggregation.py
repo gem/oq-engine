@@ -347,7 +347,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                                         sort=True):
                 magi = block[0]['magi']
                 U = max(U, block.weight)
-                blk = numpy.array([rec['idx'] for rec in block])
+                blk = numpy.array(sorted(rec['idx'] for rec in block))
                 allargs.append((dstore, magi, blk, cmaker,
                                 self.hmap4, grp_id, trti, self.bin_edges, oq))
                 task_inputs.append((trti, magi, len(blk)))
