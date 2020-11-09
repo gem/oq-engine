@@ -313,8 +313,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         allargs = []
-        totweight = sum(d['rctx']['nsites'].sum() for n, d in dstore.items()
-                        if n.startswith('mag_') and len(d['rctx']))
+        totweight = sum(d['nsites'][:].sum() for n, d in dstore.items()
+                        if n.startswith('mag_'))
         et_ids = dstore['et_ids'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(et_ids)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
@@ -326,13 +326,13 @@ class DisaggregationCalculator(base.HazardCalculator):
         U = 0
         totrups = 0
         for mag in mags:
-            rctx = dstore['mag_%s/rctx' % mag][:]
-            totrups += len(rctx)
+            grp_ids = dstore['mag_%s/grp_id' % mag][:]
+            totrups += len(grp_ids)
             for grp_id, gids in enumerate(et_ids):
-                idxs, = numpy.where(rctx['grp_id'] == grp_id)
+                idxs, = numpy.where(grp_ids == grp_id)
                 if len(idxs) == 0:
                     continue
-                nsites = rctx['nsites'][idxs]
+                nsites = dstore['mag_%s/nsites' % mag][idxs]
                 trti = gids[0] // num_eff_rlzs
                 trt = self.trts[trti]
                 cmaker = ContextMaker(
