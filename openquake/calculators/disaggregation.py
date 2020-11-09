@@ -332,7 +332,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 idxs, = numpy.where(grp_ids == grp_id)
                 if len(idxs) == 0:
                     continue
-                nsites = dstore['mag_%s/nsites' % mag][:][idxs]
+                nsites = dstore['mag_%s/nsites' % mag][idxs]
                 trti = gids[0] // num_eff_rlzs
                 trt = self.trts[trti]
                 cmaker = ContextMaker(
