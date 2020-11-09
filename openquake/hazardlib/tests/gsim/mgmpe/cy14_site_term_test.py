@@ -34,7 +34,7 @@ class CY14SiteTermTestCase(unittest.TestCase):
         # want to make sure that the modified gmm provided GM amplified 
         # by the site term exactly as the original model.
         sites = Dummy.get_site_collection(4, vs30=400., vs30measured=True,
-                                          z1pt0=0.)
+                                          z1pt0=50.)
         rup = Dummy.get_rupture(mag=6.0)
         rup.dip = 90.
         rup.ztor = 0.
