@@ -15,7 +15,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 FROM openquake/engine
-LABEL maintainer="Antomio Ettorre <antonio@openquake.org>" \
+LABEL maintainer="GEM Foundation <devops@openquake.org>" \
       vendor="GEM Foundation"
 
 ADD ./zmq/openquake.cfg /etc/openquake/openquake.cfg
