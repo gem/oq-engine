@@ -81,7 +81,7 @@ extras_require = {
                 "setproctitle"],
     'osgeo':  [
         'pyproj >=1.9',
-        'GDAL >= 2.4',
+        'GDAL == 3.1.2',
     ],
     'dev':  [
         'pytest >=4.5',
