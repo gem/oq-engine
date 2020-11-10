@@ -341,10 +341,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'investigation_time': oq.investigation_time,
                  'imtls': oq.imtls})
             U = max(U, block.weight)
-            idxs = numpy.sort([rec['idx'] for rec in block])
-            smap.submit((dstore, idxs, cmaker, self.hmap4, trti, magi[idxs],
+            slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
+            smap.submit((dstore, slc, cmaker, self.hmap4, trti, magi[slc],
                          self.bin_edges))
-            task_inputs.append((trti, len(idxs)))
+            task_inputs.append((trti, slc.stop-slc.start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)

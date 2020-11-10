@@ -114,13 +114,6 @@ def _make_pmap(ctxs, cmaker):
     return ~pmap
 
 
-def _get(dset, idxs):
-    if hasattr(idxs,  'start'):  # is a slice
-        return dset[idxs]
-    # fast access to the dataset by filtering a larger slice
-    return dset[idxs[0]:idxs[-1] + 1][idxs-idxs[0]]
-
-
 def read_ctxs(dstore, slc=slice(None), req_site_params=None):
     """
      :returns: a list of contexts
@@ -128,7 +121,7 @@ def read_ctxs(dstore, slc=slice(None), req_site_params=None):
     sitecol = dstore['sitecol'].complete
     site_params = {par: sitecol[par]
                    for par in req_site_params or sitecol.array.dtype.names}
-    params = {n: _get(dstore['rup/' + n], slc) for n in dstore['rup']}
+    params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
     ctxs = []
     for u in range(len(params['mag'])):
         ctx = RuptureContext()
