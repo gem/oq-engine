@@ -324,6 +324,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
         U = 0
+        self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         for block in block_splitter(rdata, maxweight,
                                     operator.itemgetter('nsites'),
