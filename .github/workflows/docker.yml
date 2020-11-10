@@ -18,33 +18,38 @@ jobs:
       # This Checkout is necessary when using a context in docker/build-push-action
       - name: Checkout
         uses: actions/checkout@v2
-      # qemu should only be needed for multi-platform images
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Build and load
+      - name: Build and load engine with tag devs
         id: docker_build
         uses: docker/build-push-action@v2
         with:
           context: docker 
           file: docker/Dockerfile.engine
           load: true
-          platforms: linux/amd64
-          tags: engine:nightly
+          tags: openquake/engine
 
-      #use case?
-      #- name: Image digest
-      #run: echo ${{ steps.docker_build.outputs.digest }}
+      - name: Builds and load engine master 
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: docker/zmq
+          file: docker/zmq/Dockerfile.master
+          load: true
+          tags: openquake/engine-master-zmq
 
-      #- name: Inspect
-      #run: |
-      #docker image inspect engine:nightly
+      - name: Builds and load engine worker 
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: docker/zmq
+          file: docker/zmq/Dockerfile.worker
+          load: true
+          tags: openquake/engine-worker-zmq
 
-
-      - name: Run calc on docker engine
-        run: |
-          docker run -v $(pwd):/srv engine:nightly "/srv/bin/run-demos.sh /srv/demos/risk/"
+            #- name: Run calc on docker engine
+            #run: 
+            #docker run -v $(pwd):/srv openquake/engine "/srv/bin/run-demos.sh /srv/demos/risk/"
