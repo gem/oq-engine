@@ -326,6 +326,12 @@ class DisaggregationCalculator(base.HazardCalculator):
         U = 0
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
+        # ABSURDLY IMPORTANT!! we rely on the fact that the classical part
+        # of the calculation stores the ruptures in chunks of constant
+        # grp_id, therefore it is possible to build (start, stop) slices;
+        # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
+        # that would break the ordering of the indices causing an incredibly
+        # worse performance, but visible only in extra-large calculations!
         for block in block_splitter(rdata, maxweight,
                                     operator.itemgetter('nsites'),
                                     operator.itemgetter('grp_id')):
