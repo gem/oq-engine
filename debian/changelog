@@ -1,4 +1,14 @@
   [Michele Simionato]
+  * Internal: required h5py == 2.10.0
+  * Internal: made the classical ruptures pandas-friendly
+  * Internal: made the damage distributions pandas-friendly
+
+  [Marco Pagani]
+  * Added a new type of undertainty for the seismic source characterisation
+    logic tree called `TruncatedGRFromSlipAbsolute`
+  * Added a get_fault_surface_area method to sources
+
+  [Michele Simionato]
   * Changed the source seed algorithm in event based calculations
   * Added an estimate of the portfolio damage error due to the seed dependency
   * Stored the damage distributions in a pandas-friendly way and extended
@@ -55,7 +65,6 @@
   * Added a method to the modifiable GMPE to add (or subtract) a delta std
   * Added a method to the modifiable GMPE to set the total std as the sum of
 	tau plus a delta
-  * Added a get_fault_surface_area method to sources
 
 python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
 

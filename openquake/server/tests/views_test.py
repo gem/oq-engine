@@ -160,7 +160,7 @@ class EngineServerTestCase(unittest.TestCase):
         # check eids_by_gsim
         resp = self.c.get(extract_url + 'eids_by_gsim')
         dic = dict(loadnpz(resp.streaming_content))
-        self.assertEqual(len(dic['[AtkinsonBoore2003SInter]']), 6)
+        self.assertEqual(len(dic['[AtkinsonBoore2003SInter]']), 8)
 
         # check extract/composite_risk_model.attrs
         url = extract_url + 'composite_risk_model.attrs'
@@ -219,14 +219,14 @@ class EngineServerTestCase(unittest.TestCase):
         extract_url = '/v1/calc/%s/extract/rupture_info' % job_id
         got = loadnpz(self.c.get(extract_url))
         boundaries = gzip.decompress(got['boundaries']).split(b'\n')
-        self.assertEqual(len(boundaries), 33)
-        self.assertEqual(boundaries[0], b'POLYGON((-77.10575 18.83643, -77.11150 18.75286, -77.18793 18.75618, -77.18146 18.84064, -77.10575 18.83643))')
-        self.assertEqual(boundaries[32], b'POLYGON((-77.36446 18.50400, -77.37234 18.41776, -77.38020 18.33151, -77.38806 18.24526, -77.39591 18.15902, -77.40376 18.07277, -77.41159 17.98652, -77.41942 17.90027, -77.42724 17.81402, -77.43505 17.72777, -77.52006 17.72029, -77.60506 17.71277, -77.69004 17.70522, -77.77502 17.69763, -77.76438 17.78745, -77.75372 17.87728, -77.74306 17.96710, -77.73238 18.05692, -77.72169 18.14674, -77.71099 18.23656, -77.70028 18.32638, -77.68955 18.41620, -77.67883 18.50602, -77.60023 18.50556, -77.52164 18.50508, -77.44305 18.50455, -77.36446 18.50400))')
+        self.assertEqual(len(boundaries), 30)
+        self.assertEqual(boundaries[0], b'POLYGON((-77.25716 18.84483, -77.26435 18.75948, -77.34079 18.76274, -77.33288 18.84898, -77.25716 18.84483))')
+        self.assertEqual(boundaries[-1], b'POLYGON((-77.10000 18.92000, -77.10575 18.83643, -77.11150 18.75286, -77.11723 18.66929, -77.12297 18.58572, -77.12869 18.50215, -77.13442 18.41858, -77.14014 18.33500, -77.14584 18.25143, -77.15155 18.16786, -77.15725 18.08429, -77.16295 18.00072, -77.16864 17.91714, -77.17432 17.83357, -77.18000 17.75000, -77.26502 17.74263, -77.35004 17.73522, -77.43505 17.72777, -77.52006 17.72029, -77.60506 17.71277, -77.69004 17.70522, -77.77502 17.69763, -77.86000 17.69000, -77.84865 17.78072, -77.83729 17.87144, -77.82591 17.96215, -77.81452 18.05287, -77.80312 18.14359, -77.79172 18.23430, -77.78030 18.32502, -77.76886 18.41573, -77.75742 18.50644, -77.74596 18.59716, -77.73448 18.68787, -77.72300 18.77858, -77.71151 18.86929, -77.70000 18.96000, -77.62498 18.95510, -77.54997 18.95018, -77.47497 18.94523, -77.39996 18.94024, -77.32497 18.93523, -77.24997 18.93018, -77.17499 18.92511, -77.10000 18.92000))')
 
         # check num_events
         extract_url = '/v1/calc/%s/extract/num_events' % job_id
         got = loadnpz(self.c.get(extract_url))
-        self.assertEqual(got['num_events'], 34)
+        self.assertEqual(got['num_events'], 31)
 
         # check gmf_data
         extract_url = '/v1/calc/%s/extract/gmf_data?event_id=28' % job_id
