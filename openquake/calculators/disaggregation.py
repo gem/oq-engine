@@ -93,7 +93,7 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, magi, idxs, cmaker, hmap4, grp_id, trti, bin_edges,
+def compute_disagg(dstore, magi, idxs, cmaker, hmap4, trti, bin_edges,
                    oq, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -124,8 +124,7 @@ def compute_disagg(dstore, magi, idxs, cmaker, hmap4, grp_id, trti, bin_edges,
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs, close_ctxs = read_ctxs(
-            dstore, grp_id, idxs,
-            req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
+            dstore, idxs, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
 
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
@@ -301,17 +300,22 @@ class DisaggregationCalculator(base.HazardCalculator):
         """
         Submit disaggregation tasks and return the results
         """
-        logging.info('Reading ruptures')
         oq = self.oqparam
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        mags = set()
-        for trt, dset in self.datastore['source_mags'].items():
-            mags.update(dset[:])
-        mags = sorted(mags)
+        magi = numpy.searchsorted(self.bin_edges[0], dstore['rup/mag'][:]) - 1
+        magi[magi == -1] = 0  # when the magnitude is on the edge
+        totrups = len(magi)
+        logging.info('Read {:_d} ruptures'.format(totrups))
+        rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
+        rdata = numpy.zeros(totrups, rdt)
+        rdata['magi'] = magi
+        rdata['idx'] = numpy.arange(totrups)
+        rdata['grp_id'] = dstore['rup/grp_id'][:]
+        rdata['nsites'] = dstore['rup/nsites'][:]
+        rdata.sort(order=['grp_id', 'magi'])
         allargs = []
-        totweight = sum(d['nsites'][:].sum() for n, d in dstore.items()
-                        if n.startswith('grp-'))
+        totweight = rdata['nsites'].sum()
         et_ids = dstore['et_ids'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(et_ids)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
@@ -321,19 +325,12 @@ class DisaggregationCalculator(base.HazardCalculator):
         num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
         U = 0
-        totrups = 0
-        dtlist = [('magi', U8), ('nsites', U16), ('idx', U32)]
-        for grp_id, gids in enumerate(et_ids):
-            mags = dstore['grp-%02d/mag' % grp_id][:]
-            nr = len(mags)
-            arr = numpy.zeros(nr, dtlist)
-            magi = numpy.searchsorted(self.bin_edges[0], mags) - 1
-            magi[magi == -1] = 0  # when the magnitude is on the edge
-            arr['magi'] = magi
-            arr['nsites'] = dstore['grp-%02d/nsites' % grp_id][:]
-            arr['idx'] = numpy.arange(nr)
-            totrups += nr
-            trti = gids[0] // num_eff_rlzs
+        for block in block_splitter(rdata, maxweight,
+                                    operator.itemgetter('nsites'),
+                                    operator.itemgetter('grp_id', 'magi')):
+            grp_id = block[0]['grp_id']
+            magi = block[0]['magi']
+            trti = et_ids[grp_id][0] // num_eff_rlzs
             trt = self.trts[trti]
             cmaker = ContextMaker(
                 trt, rlzs_by_gsim[grp_id],
@@ -341,19 +338,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'maximum_distance': oq.maximum_distance,
                  'collapse_level': oq.collapse_level,
                  'imtls': oq.imtls})
-            logging.info('%d ruptures in grp_id=%d split in %d mag bins',
-                         nr, grp_id, len(numpy.unique(arr['magi'])))
-            for block in block_splitter(arr, maxweight,
-                                        operator.itemgetter('nsites'),
-                                        operator.itemgetter('magi'),
-                                        sort=True):
-                magi = block[0]['magi']
-                U = max(U, block.weight)
-                blk = numpy.array(sorted(rec['idx'] for rec in block))
-                allargs.append((dstore, magi, blk, cmaker,
-                                self.hmap4, grp_id, trti, self.bin_edges, oq))
-                task_inputs.append((trti, magi, len(blk)))
-        logging.info('Total {:_d} ruptures'.format(totrups))
+            U = max(U, block.weight)
+            blk = numpy.array(sorted(rec['idx'] for rec in block))
+            allargs.append((dstore, magi, blk, cmaker,
+                            self.hmap4, trti, self.bin_edges, oq))
+            task_inputs.append((trti, magi, len(blk)))
+
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
 
@@ -369,11 +359,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Estimated data transfer:\n%s', msg)
 
         sd.pop('tasks')
-        #sd['mags_trt'] = sum(len(mags) for mags in
-        #                     self.datastore['source_mags'].values())
-        #nbytes, msg = get_nbytes_msg(sd)
-        #logging.info('Estimated memory on the master:\n%s', msg)
-
         dt = numpy.dtype([('trti', U8), ('mag', '|S4'), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         self.datastore.swmr_on()

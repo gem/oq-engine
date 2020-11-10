@@ -153,13 +153,12 @@ def store_ctxs(dstore, rupdata, grp_id):
     """
     Store contexts with the same magnitude in the datastore
     """
-    grp = 'grp-%02d' % grp_id
     nr = len(rupdata['mag'])
     rupdata['nsites'] = numpy.array([len(s) for s in rupdata['sids_']])
     rupdata['grp_id'] = numpy.repeat(grp_id, nr)
     nans = numpy.repeat(numpy.nan, nr)
-    for par in dstore[grp]:
-        n = '%s/%s' % (grp, par)
+    for par in dstore['rup']:
+        n = 'rup/' + par
         if par.endswith('_'):
             if par in rupdata:
                 dstore.hdf5.save_vlen(n, rupdata[par])
@@ -243,23 +242,20 @@ class ClassicalCalculator(base.HazardCalculator):
         for trt, dset in self.datastore['source_mags'].items():
             mags.update(dset[:])
         mags = sorted(mags)
-        G = len(self.datastore['et_ids'])
         if self.few_sites:
-            for grp_id in range(G):
-                name = 'grp-%02d/' % grp_id
-                for param in params:
-                    if param == 'sids_':
-                        dt = hdf5.vuint16
-                    elif param.endswith('_'):
-                        dt = hdf5.vfloat64
-                    elif param in {'nsites', 'grp_id'}:
-                        dt = U32
-                    else:
-                        dt = F64
-                    self.datastore.create_dset(name + param, dt, (None,),
-                                               compression='gzip')
-                dset = self.datastore.getitem(name)
-                dset.attrs['__pdcolumns__'] = ' '.join(params)
+            for param in params:
+                if param == 'sids_':
+                    dt = hdf5.vuint16
+                elif param.endswith('_'):
+                    dt = hdf5.vfloat64
+                elif param in {'nsites', 'grp_id'}:
+                    dt = U32
+                else:
+                    dt = F64
+                self.datastore.create_dset('rup/' + param, dt, (None,),
+                                           compression='gzip')
+            dset = self.datastore.getitem('rup')
+            dset.attrs['__pdcolumns__'] = ' '.join(params)
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         self.maxradius = 0

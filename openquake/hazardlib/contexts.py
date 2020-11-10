@@ -113,15 +113,15 @@ def _make_pmap(ctxs, cmaker, investigation_time):
     return ~pmap
 
 
-def read_ctxs(dstore, grp_id, idxs=slice(None), req_site_params=None):
+def read_ctxs(dstore, idxs=slice(None), req_site_params=None):
     """
-    Use it as `read_ctxs(dstore, grp_id=0)`.
+    Use it as `read_ctxs(dstore)`.
     :returns: a pair (contexts, [contexts close to site for each site])
     """
     sitecol = dstore['sitecol'].complete
     site_params = {par: sitecol[par]
                    for par in req_site_params or sitecol.array.dtype.names}
-    params = {n: d[idxs] for n, d in dstore['grp-%02d' % grp_id].items()}
+    params = {n: d[idxs] for n, d in dstore['rup'].items()}
     ctxs = []
     for u in range(len(params['mag'])):
         ctx = RuptureContext()
