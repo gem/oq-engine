@@ -18,24 +18,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build image engine with tag daily
+        id: docker_engine
         run: docker build -t openquake/engine:daily -f docker/Dockerfile.engine docker
       - name: List Image
         run: |
           docker image ls
-      - name: Builds and load engine master with tags daily
+      - name: Build image engine master with tag daily
         id: docker_master
-        uses: docker/build-push-action@v2
-        with:
-          context: docker/zmq
-          file: docker/zmq/Dockerfile.master
-          tags: openquake/engine-master-zmq:daily
-      - name: Builds and load engine worker with tags daily
+        run: docker build -t openquake/engine-master-zmq:daily -f docker/zmq/Dockerfile.master docker/zmq
+      - name: Builds image engine worker with tags daily
         id: docker_worker
-        uses: docker/build-push-action@v2
-        with:
-          context: docker/zmq
-          file: docker/zmq/Dockerfile.worker
-          tags: openquake/engine-worker-zmq:daily
+        run: docker build -t openquake/engine-worker-zmq:daily -f docker/zmq/Dockerfile.worker docker/zmq
+      - name: List Image
+        run: |
+          docker image ls
       - name: Run docker compose to build up cluster
         run: |
           cd docker
