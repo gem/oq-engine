@@ -153,13 +153,12 @@ def store_ctxs(dstore, rupdata, grp_id):
     """
     Store contexts with the same magnitude in the datastore
     """
-    magstr = 'mag_%.2f' % rupdata['mag'][0]
     nr = len(rupdata['mag'])
     rupdata['nsites'] = numpy.array([len(s) for s in rupdata['sids_']])
     rupdata['grp_id'] = numpy.repeat(grp_id, nr)
     nans = numpy.repeat(numpy.nan, nr)
-    for par in dstore[magstr]:
-        n = '%s/%s' % (magstr, par)
+    for par in dstore['rup']:
+        n = 'rup/' + par
         if par.endswith('_'):
             if par in rupdata:
                 dstore.hdf5.save_vlen(n, rupdata[par])
@@ -221,8 +220,9 @@ class ClassicalCalculator(base.HazardCalculator):
             acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
-            for mag, c in dic['rup_data'].items():
-                store_ctxs(self.datastore, c, grp_id)
+            if self.few_sites:
+                store_ctxs(self.datastore, dic['rup_data'], grp_id)
+
         return acc
 
     def acc0(self):
@@ -244,23 +244,21 @@ class ClassicalCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         if self.few_sites:
-            for mag in mags:
-                name = 'mag_%s/' % mag
-                for param in params:
-                    if param == 'sids_':
-                        dt = hdf5.vuint16
-                    elif param == 'probs_occur_':
-                        dt = hdf5.vfloat64
-                    elif param.endswith('_'):
-                        dt = hdf5.vfloat32
-                    elif param in {'nsites', 'grp_id'}:
-                        dt = U32
-                    else:
-                        dt = F32
-                    self.datastore.create_dset(name + param, dt, (None,),
-                                               compression='gzip')
-                dset = self.datastore.getitem(name)
-                dset.attrs['__pdcolumns__'] = ' '.join(params)
+            for param in params:
+                if param == 'sids_':
+                    dt = hdf5.vuint16
+                elif param == 'probs_occur_':
+                    dt = hdf5.vfloat64
+                elif param.endswith('_'):
+                    dt = hdf5.vfloat32
+                elif param in {'nsites', 'grp_id'}:
+                    dt = U16
+                else:
+                    dt = F32
+                self.datastore.create_dset('rup/' + param, dt, (None,),
+                                           compression='gzip')
+            dset = self.datastore.getitem('rup')
+            dset.attrs['__pdcolumns__'] = ' '.join(params)
         self.by_task = {}  # task_no => src_ids
         self.totrups = 0  # total number of ruptures before collapsing
         self.maxradius = 0
