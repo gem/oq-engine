@@ -48,7 +48,7 @@ Use also pre_tasks to assure to update the cache for Debian derivate
 License
 -------
 
-BSD
+AGPL3
 
 Author Information
 ------------------
