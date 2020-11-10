@@ -30,7 +30,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: docker 
-          file: ./Dockerfile.engine
+          file: docker/Dockerfile.engine
           load: true
           platforms: linux/amd64
           tags: engine:nightly
