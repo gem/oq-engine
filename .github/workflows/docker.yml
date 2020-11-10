@@ -58,11 +58,10 @@ jobs:
         run: 
         docker-compose -f docker/docker-compose.yml -p oqcluster up -d 
 
-      - name: List of docker container up
-        run: 
-        docker-compose -p oqcluster ps 
+        #- name: List of docker container up
+        #run: 
+        #docker-compose -p oqcluster ps 
 
-      - name: Run calculation to test cluster
-        run:
-        docker exec engine-master oq-engine/bin/run-demos.sh oq-engine/demos 
-
+        #- name: Run calculation to test cluster
+        #run:
+        #docker exec engine-master oq-engine/bin/run-demos.sh oq-engine/demos 
