@@ -16,7 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
+      # This Checkout is necessary when using a context in docker/build-push-action
+      - name: Checkout
+        uses: actions/checkout@v2
       # qemu should only be needed for multi-platform images
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
