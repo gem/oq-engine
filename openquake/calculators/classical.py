@@ -162,7 +162,7 @@ def store_ctxs(dstore, rupdata, grp_id):
         if par.endswith('_'):
             if par in rupdata:
                 dstore.hdf5.save_vlen(n, rupdata[par])
-            else:
+            else:  # add nr empty rows
                 dstore[n].resize((len(dstore[n]) + nr,))
         else:
             hdf5.extend(dstore[n], rupdata.get(par, nans))
