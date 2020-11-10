@@ -56,7 +56,8 @@ jobs:
             #
       - name: Run docker compose to build up cluster
         run: 
-        docker-compose -f docker/docker-compose.yml -p oqcluster up -d && sleep 30 && docker ps -a
-      - name: :
-
-
+        docker-compose -f docker/docker-compose.yml -p oqcluster up -d && sleep 30 && docker-compose -p oqcluster ps
+      - name: Run calculation to test cluster
+        run:
+        docker exec engine-master oq-engine/bin/run-demos.sh oq-engine/demos && curl http://localhost:8800/v1/calc/list
+      
