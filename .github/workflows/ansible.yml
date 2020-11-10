@@ -5,6 +5,7 @@ name: ansible
   push:
     branches:
       - master
+      - ansible
 
 jobs:
 
