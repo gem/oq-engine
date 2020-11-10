@@ -22,11 +22,11 @@ Disaggregation calculator core functionality
 import logging
 import operator
 import numpy
-import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
-    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs, block_splitter)
+    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs,
+    block_splitter, groupby)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
@@ -94,15 +94,12 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, magi, slc, cmaker, hmap4, trti, bin_edges,
-                   monitor):
+def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
     :param dstore:
         a DataStore instance
-    :param magi:
-        a magnitude index
     :param slc:
         a slice of ruptures
     :param cmaker:
@@ -112,7 +109,7 @@ def compute_disagg(dstore, magi, slc, cmaker, hmap4, trti, bin_edges,
     :param trti:
         tectonic region type index
     :param magi:
-        magnitude bin index
+        magnitude bin indices
     :param bin_egdes:
         a quartet (dist_edges, lon_edges, lat_edges, eps_edges)
     :param monitor:
@@ -124,8 +121,10 @@ def compute_disagg(dstore, magi, slc, cmaker, hmap4, trti, bin_edges,
         cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        ctxs, close_ctxs = read_ctxs(
+        allctxs, close_ctxs = read_ctxs(
             dstore, slc, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
+        for magidx, ctx in zip(magi, allctxs):
+            ctx.magi = magidx
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     N, M, P, Z = hmap4.shape
@@ -135,31 +134,33 @@ def compute_disagg(dstore, magi, slc, cmaker, hmap4, trti, bin_edges,
             if r in rlzs:
                 g_by_z[s][z] = g
     eps3 = disagg._eps3(cmaker.trunclevel, cmaker.num_epsilon_bins)
-    res = {'trti': trti, 'magi': magi}
     imts = [from_string(im) for im in cmaker.imtls]
-    with ms_mon:
-        # compute mean and std for a single IMT to save memory
-        # the size is N * U * G * 16 bytes
-        disagg.set_mean_std(ctxs, imts, cmaker.gsims)
+    for magi, ctxs in groupby(allctxs, operator.attrgetter('magi')).items():
+        res = {'trti': trti, 'magi': magi}
+        with ms_mon:
+            # compute mean and std for a single IMT to save memory
+            # the size is N * U * G * 16 bytes
+            disagg.set_mean_std(ctxs, imts, cmaker.gsims)
 
-    # disaggregate by site, IMT
-    for s, iml3 in enumerate(hmap4):
-        if not g_by_z[s] or not close_ctxs[s]:
-            # g_by_z[s] is empty in test case_7
-            continue
-        # dist_bins, lon_bins, lat_bins, eps_bins
-        bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
-                bin_edges[4])
-        iml2 = dict(zip(imts, iml3))
-        with dis_mon:
-            # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
-            matrix = disagg.disaggregate(
-                close_ctxs[s], g_by_z[s], iml2, eps3, s, bins)  # 7D-matrix
-            for m in range(M):
-                mat6 = matrix[..., m, :, :]
-                if mat6.any():
-                    res[s, m] = output(mat6)
-    return res
+        # disaggregate by site, IMT
+        for s, iml3 in enumerate(hmap4):
+            close = [ctx for ctx in close_ctxs[s] if ctx.magi == magi]
+            if not g_by_z[s] or not close:
+                # g_by_z[s] is empty in test case_7
+                continue
+            # dist_bins, lon_bins, lat_bins, eps_bins
+            bins = (bin_edges[1], bin_edges[2][s], bin_edges[3][s],
+                    bin_edges[4])
+            iml2 = dict(zip(imts, iml3))
+            with dis_mon:
+                # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
+                matrix = disagg.disaggregate(
+                    close, g_by_z[s], iml2, eps3, s, bins)  # 7D-matrix
+                for m in range(M):
+                    mat6 = matrix[..., m, :, :]
+                    if mat6.any():
+                        res[s, m] = output(mat6)
+        yield res
     # NB: compressing the results is not worth it since the aggregation of
     # the matrices is fast and the data are not queuing up
 
@@ -313,7 +314,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
         rdata['nsites'] = dstore['rup/nsites'][:]
-        rdata.sort(order=['grp_id', 'magi'])
         totweight = rdata['nsites'].sum()
         et_ids = dstore['et_ids'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(et_ids)
@@ -327,9 +327,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
         for block in block_splitter(rdata, maxweight,
                                     operator.itemgetter('nsites'),
-                                    operator.itemgetter('grp_id', 'magi')):
+                                    operator.itemgetter('grp_id')):
             grp_id = block[0]['grp_id']
-            magi = block[0]['magi']
             trti = et_ids[grp_id][0] // num_eff_rlzs
             trt = self.trts[trti]
             cmaker = ContextMaker(
@@ -342,11 +341,9 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'imtls': oq.imtls})
             U = max(U, block.weight)
             idxs = numpy.sort([rec['idx'] for rec in block])
-            logging.info('Sending {:_d} ruptures with grp_id={:d}, magi={:d}'.
-                         format(len(idxs), grp_id, magi))
-            smap.submit((dstore, magi, idxs,
-                         cmaker, self.hmap4, trti, self.bin_edges))
-            task_inputs.append((trti, magi, len(idxs)))
+            smap.submit((dstore, idxs, cmaker, self.hmap4, trti, magi[idxs],
+                         self.bin_edges))
+            task_inputs.append((trti, len(idxs)))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
@@ -363,7 +360,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Estimated data transfer:\n%s', msg)
 
         sd.pop('tasks')
-        dt = numpy.dtype([('trti', U8), ('mag', '|S4'), ('nrups', U32)])
+        dt = numpy.dtype([('trti', U8), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
         return results  # imti, sid -> trti, magi -> 6D array
