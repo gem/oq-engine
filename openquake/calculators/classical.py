@@ -156,15 +156,17 @@ def store_ctxs(dstore, rupdata, grp_id):
     grp = 'grp-%02d' % grp_id
     nr = len(rupdata['mag'])
     rupdata['nsites'] = numpy.array([len(s) for s in rupdata['sids_']])
-    rupdata['grp_id'] = numpy.array([grp_id] * nr)
+    rupdata['grp_id'] = numpy.repeat(grp_id, nr)
+    nans = numpy.repeat(numpy.nan, nr)
     for par in dstore[grp]:
         n = '%s/%s' % (grp, par)
-        if par not in rupdata:  # when not requiring the parameter
-            hdf5.extend(dstore[n], numpy.array([numpy.nan] * nr))
-        elif par.endswith('_'):
-            dstore.hdf5.save_vlen(n, rupdata[par])
+        if par.endswith('_'):
+            if par in rupdata:
+                dstore.hdf5.save_vlen(n, rupdata[par])
+            else:
+                dstore[n].resize((len(dstore[n]) + nr,))
         else:
-            hdf5.extend(dstore[n], rupdata[par])
+            hdf5.extend(dstore[n], rupdata.get(par, nans))
 
 
 @base.calculators.add('classical', 'preclassical', 'ucerf_classical')
@@ -220,6 +222,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # store rup_data if there are few sites
             store_ctxs(self.datastore, dic['rup_data'], grp_id)
+
         return acc
 
     def acc0(self):
