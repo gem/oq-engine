@@ -49,4 +49,3 @@ jobs:
         with:
           volume: .:/srv
           args: /srv/bin/run-demos.sh /srv/demos/
-          args: 
