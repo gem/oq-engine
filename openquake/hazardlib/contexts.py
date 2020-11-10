@@ -102,8 +102,9 @@ def get_num_distances(gsims):
 
 
 # used only in contexts_test.py
-def _make_pmap(ctxs, cmaker, investigation_time):
-    RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
+def _make_pmap(ctxs, cmaker):
+    RuptureContext.temporal_occurrence_model = PoissonTOM(
+        cmaker.investigation_time)
     # easy case of independent ruptures, useful for debugging
     pmap = ProbabilityMap(len(cmaker.loglevels.array), len(cmaker.gsims))
     for ctx, poes in cmaker.gen_ctx_poes(ctxs):
@@ -159,7 +160,9 @@ class ContextMaker(object):
         self.gsims = gsims
         self.maximum_distance = (
             param.get('maximum_distance') or MagDepDistance({}))
+        self.investigation_time = param.get('investigation_time')
         self.trunclevel = param.get('truncation_level')
+        self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.effect = param.get('effect')
         for req in self.REQUIRES:
             reqset = set()

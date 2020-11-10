@@ -94,7 +94,7 @@ def output(mat6):
 
 
 def compute_disagg(dstore, magi, idxs, cmaker, hmap4, trti, bin_edges,
-                   oq, monitor):
+                   monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -120,7 +120,7 @@ def compute_disagg(dstore, magi, idxs, cmaker, hmap4, trti, bin_edges,
         a dictionary sid, imti -> 6D-array
     """
     RuptureContext.temporal_occurrence_model = PoissonTOM(
-        oq.investigation_time)
+        cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         ctxs, close_ctxs = read_ctxs(
@@ -134,9 +134,9 @@ def compute_disagg(dstore, magi, idxs, cmaker, hmap4, trti, bin_edges,
         for (s, z), r in numpy.ndenumerate(hmap4.rlzs):
             if r in rlzs:
                 g_by_z[s][z] = g
-    eps3 = disagg._eps3(cmaker.trunclevel, oq.num_epsilon_bins)
+    eps3 = disagg._eps3(cmaker.trunclevel, cmaker.num_epsilon_bins)
     res = {'trti': trti, 'magi': magi}
-    imts = [from_string(im) for im in oq.imtls]
+    imts = [from_string(im) for im in cmaker.imtls]
     with ms_mon:
         # compute mean and std for a single IMT to save memory
         # the size is N * U * G * 16 bytes
@@ -337,12 +337,14 @@ class DisaggregationCalculator(base.HazardCalculator):
                 {'truncation_level': oq.truncation_level,
                  'maximum_distance': oq.maximum_distance,
                  'collapse_level': oq.collapse_level,
+                 'num_epsilon_bins': oq.num_epsilon_bins,
+                 'investigation_time': oq.investigation_time,
                  'imtls': oq.imtls})
             U = max(U, block.weight)
-            blk = numpy.array(sorted(rec['idx'] for rec in block))
-            allargs.append((dstore, magi, blk, cmaker,
-                            self.hmap4, trti, self.bin_edges, oq))
-            task_inputs.append((trti, magi, len(blk)))
+            idxs = numpy.array(sorted(rec['idx'] for rec in block))
+            allargs.append((dstore, magi, idxs, cmaker,
+                            self.hmap4, trti, self.bin_edges))
+            task_inputs.append((trti, magi, len(idxs)))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)
