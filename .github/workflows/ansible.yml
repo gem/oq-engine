@@ -4,14 +4,15 @@ name: ansible
   pull_request:
   push:
     branches:
-      - master
       - ansible
+  schedule:
+    - cron: "0 4 * * *"
 
 jobs:
 
   molecule:
     name: Molecule
-    runs-on: ubuntu-latest
+    runs-on: centos-latest
     strategy:
       matrix:
         distro:
