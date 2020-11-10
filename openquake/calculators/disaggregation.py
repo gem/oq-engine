@@ -22,6 +22,7 @@ Disaggregation calculator core functionality
 import logging
 import operator
 import numpy
+import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import (
@@ -325,6 +326,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         task_inputs = []
         U = 0
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
+        rup_df = dstore.read_df('rup')
         for block in block_splitter(rdata, maxweight,
                                     operator.itemgetter('nsites'),
                                     operator.itemgetter('grp_id', 'magi')):
@@ -342,8 +344,11 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'imtls': oq.imtls})
             U = max(U, block.weight)
             idxs = numpy.sort([rec['idx'] for rec in block])
-            rup_df = dstore.read_df('rup', slc=idxs)
-            smap.submit((dstore, magi, rup_df, cmaker,
+            df = pandas.DataFrame(
+                {col: rup_df[col][idxs] for col in rup_df.columns})
+            logging.info('Sending {:_d} ruptures with grp_id={:d}, magi={:d}'.
+                         format(len(idxs), grp_id, magi))
+            smap.submit((dstore, magi, df, cmaker,
                          self.hmap4, trti, self.bin_edges))
             task_inputs.append((trti, magi, len(idxs)))
 
