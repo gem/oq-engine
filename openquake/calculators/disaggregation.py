@@ -307,7 +307,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         magi = numpy.searchsorted(self.bin_edges[0], dstore['rup/mag'][:]) - 1
         magi[magi == -1] = 0  # when the magnitude is on the edge
         totrups = len(magi)
-        logging.info('Read {:_d} ruptures'.format(totrups))
+        logging.info('Reading {:_d} ruptures'.format(totrups))
         rdt = [('grp_id', U16), ('magi', U8), ('nsites', U16), ('idx', U32)]
         rdata = numpy.zeros(totrups, rdt)
         rdata['magi'] = magi
