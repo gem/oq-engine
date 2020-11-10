@@ -1,7 +1,6 @@
 ---
 name: docker
 'on':
-  pull_request:
   push:
     branches:
       - multistagedocker
@@ -15,9 +14,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # This Checkout is necessary when using a context in docker/build-push-action
+  # This Checkout is necessary when using a context in docker/build-push-action
       - name: Checkout
         uses: actions/checkout@v2
+
+      - name: Get the version
+	      id: vars
+	      run: echo ::set-output name=tag::$(echo ${GITHUB_REF:10})
 
       - name: Set up Docker Buildx
         id: buildx
@@ -31,6 +34,10 @@ jobs:
           file: docker/Dockerfile.engine
           load: true
           tags: openquake/engine:daily
+
+      - name: List Image
+        run: |
+          docker image ls
 
       - name: Builds and load engine master with tags daily
         id: docker_master
