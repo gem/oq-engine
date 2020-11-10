@@ -156,15 +156,17 @@ def store_ctxs(dstore, rupdata, grp_id):
     magstr = 'mag_%.2f' % rupdata['mag'][0]
     nr = len(rupdata['mag'])
     rupdata['nsites'] = numpy.array([len(s) for s in rupdata['sids_']])
-    rupdata['grp_id'] = numpy.array([grp_id] * nr)
+    rupdata['grp_id'] = numpy.repeat(grp_id, nr)
+    nans = numpy.repeat(numpy.nan, nr)
     for par in dstore[magstr]:
         n = '%s/%s' % (magstr, par)
-        if par not in rupdata:  # when not requiring the parameter
-            hdf5.extend(dstore[n], numpy.array([numpy.nan] * nr))
-        elif par.endswith('_'):
-            dstore.hdf5.save_vlen(n, rupdata[par])
+        if par.endswith('_'):
+            if par in rupdata:
+                dstore.hdf5.save_vlen(n, rupdata[par])
+            else:  # add nr empty rows
+                dstore[n].resize((len(dstore[n]) + nr,))
         else:
-            hdf5.extend(dstore[n], rupdata[par])
+            hdf5.extend(dstore[n], rupdata.get(par, nans))
 
 
 @base.calculators.add('classical', 'preclassical', 'ucerf_classical')
