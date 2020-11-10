@@ -36,8 +36,9 @@ jobs:
           platforms: linux/amd64
           tags: engine:nightly
 
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+      #use case?
+      #- name: Image digest
+        #run: echo ${{ steps.docker_build.outputs.digest }}
 
       - name: Inspect
         run: |
