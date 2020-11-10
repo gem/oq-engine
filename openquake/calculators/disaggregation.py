@@ -314,6 +314,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         rdata['grp_id'] = dstore['rup/grp_id'][:]
         rdata['nsites'] = dstore['rup/nsites'][:]
         rdata.sort(order=['grp_id', 'magi'])
+        blocks = len(numpy.unique(rdata[['grp_id', 'magi']]))
+        logging.info('There are %d combinations (grp_id, magi)', blocks)
         allargs = []
         totweight = rdata['nsites'].sum()
         et_ids = dstore['et_ids'][:]

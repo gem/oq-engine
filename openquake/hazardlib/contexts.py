@@ -122,6 +122,7 @@ def read_ctxs(dstore, idxs=slice(None), req_site_params=None):
     sitecol = dstore['sitecol'].complete
     site_params = {par: sitecol[par]
                    for par in req_site_params or sitecol.array.dtype.names}
+    # this is the slow part, reading from a huge dataset
     params = {n: d[idxs] for n, d in dstore['rup'].items()}
     ctxs = []
     for u in range(len(params['mag'])):
