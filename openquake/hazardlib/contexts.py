@@ -114,17 +114,21 @@ def _make_pmap(ctxs, cmaker):
     return ~pmap
 
 
-def read_ctxs(dstore, rup_df=None, req_site_params=None):
+def _get(dset, idxs):
+    if hasattr(idxs,  'start'):  # is a slice
+        return dset[idxs]
+    # fast access to the dataset by filtering a larger slice
+    return dset[idxs[0]:idxs[-1] + 1][idxs-idxs[0]]
+
+
+def read_ctxs(dstore, slc=slice(None), req_site_params=None):
     """
      :returns: a list of contexts
     """
     sitecol = dstore['sitecol'].complete
     site_params = {par: sitecol[par]
                    for par in req_site_params or sitecol.array.dtype.names}
-    if rup_df is None:  # in tests
-        params = {n: d[:] for n, d in dstore['rup'].items()}
-    else:  # in disaggregation
-        params = {n: rup_df[n].to_numpy() for n in rup_df.columns}
+    params = {n: _get(dstore['rup/' + n], slc) for n in dstore['rup']}
     ctxs = []
     for u in range(len(params['mag'])):
         ctx = RuptureContext()
@@ -136,7 +140,11 @@ def read_ctxs(dstore, rup_df=None, req_site_params=None):
             setattr(ctx, par, arr[ctx.sids])
         ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
         ctxs.append(ctx)
-    return ctxs
+    close_ctxs = [[] for sid in sitecol.sids]
+    for ctx in ctxs:
+        for sid in ctx.idx:
+            close_ctxs[sid].append(ctx)
+    return ctxs, close_ctxs
 
 
 class ContextMaker(object):

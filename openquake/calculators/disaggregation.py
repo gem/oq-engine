@@ -94,7 +94,7 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, magi, rup_df, cmaker, hmap4, trti, bin_edges,
+def compute_disagg(dstore, magi, slc, cmaker, hmap4, trti, bin_edges,
                    monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
@@ -103,8 +103,8 @@ def compute_disagg(dstore, magi, rup_df, cmaker, hmap4, trti, bin_edges,
         a DataStore instance
     :param magi:
         a magnitude index
-    :param rup_df:
-        a DataFrame of ruptures
+    :param slc:
+        a slice of ruptures
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param hmap4:
@@ -124,9 +124,8 @@ def compute_disagg(dstore, magi, rup_df, cmaker, hmap4, trti, bin_edges,
         cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        ctxs = read_ctxs(
-            dstore, rup_df, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
-
+        ctxs, close_ctxs = read_ctxs(
+            dstore, slc, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
     dis_mon = monitor('disaggregate', measuremem=False)
     ms_mon = monitor('disagg mean_std', measuremem=True)
     N, M, P, Z = hmap4.shape
@@ -145,8 +144,7 @@ def compute_disagg(dstore, magi, rup_df, cmaker, hmap4, trti, bin_edges,
 
     # disaggregate by site, IMT
     for s, iml3 in enumerate(hmap4):
-        close = [ctx for ctx in ctxs if s in ctx.idx]
-        if not g_by_z[s] or not close:
+        if not g_by_z[s] or not close_ctxs[s]:
             # g_by_z[s] is empty in test case_7
             continue
         # dist_bins, lon_bins, lat_bins, eps_bins
@@ -156,7 +154,7 @@ def compute_disagg(dstore, magi, rup_df, cmaker, hmap4, trti, bin_edges,
         with dis_mon:
             # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
             matrix = disagg.disaggregate(
-                close, g_by_z[s], iml2, eps3, s, bins)  # 7D-matrix
+                close_ctxs[s], g_by_z[s], iml2, eps3, s, bins)  # 7D-matrix
             for m in range(M):
                 mat6 = matrix[..., m, :, :]
                 if mat6.any():
@@ -327,7 +325,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         task_inputs = []
         U = 0
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
-        rup_df = dstore.read_df('rup')
         for block in block_splitter(rdata, maxweight,
                                     operator.itemgetter('nsites'),
                                     operator.itemgetter('grp_id', 'magi')):
@@ -345,12 +342,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                  'imtls': oq.imtls})
             U = max(U, block.weight)
             idxs = numpy.sort([rec['idx'] for rec in block])
-            df = pandas.DataFrame(
-                {col: rup_df[col][idxs] for col in rup_df.columns})
             logging.info('Sending {:_d} ruptures with grp_id={:d}, magi={:d}'.
                          format(len(idxs), grp_id, magi))
-            smap.submit((dstore, magi, df, cmaker,
-                         self.hmap4, trti, self.bin_edges))
+            smap.submit((dstore, magi, idxs,
+                         cmaker, self.hmap4, trti, self.bin_edges))
             task_inputs.append((trti, magi, len(idxs)))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
