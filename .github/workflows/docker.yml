@@ -4,7 +4,6 @@ name: docker
   pull_request:
   push:
     branches:
-      - master
       - multistagedocker
   schedule:
     - cron: "0 2 * * *"
