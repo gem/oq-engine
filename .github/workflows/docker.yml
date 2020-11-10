@@ -51,5 +51,7 @@ jobs:
           tags: openquake/engine-worker-zmq:nightly
 
       - name: Run docker compose to build up cluster
-        run: 
-        docker-compose -f docker/docker-compose.yml -p oqcluster up -d
+        run: |
+          docker-compose -f docker/docker-compose.yml -p oqcluster up -d
+          docker-compose -p oqcluster ps
+
