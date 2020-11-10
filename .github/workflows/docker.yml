@@ -29,6 +29,7 @@ jobs:
           context: docker 
           file: docker/Dockerfile.engine
           tags: openquake/engine:daily
+          load: true
 
       - name: List Image
         run: |
