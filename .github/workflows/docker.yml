@@ -43,3 +43,10 @@ jobs:
       - name: Inspect
         run: |
           docker image inspect engine:nightly
+
+      - name: Run calc on docker engine
+        uses: docker://engine:nightly
+        with:
+          volume: .:/srv
+          args: /srv/bin/run-demos.sh /srv/demos/
+          args: 
