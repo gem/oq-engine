@@ -124,7 +124,7 @@ def compute_disagg(dstore, magi, rup_df, cmaker, hmap4, trti, bin_edges,
         cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        ctxs, close_ctxs = read_ctxs(
+        ctxs = read_ctxs(
             dstore, rup_df, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
 
     dis_mon = monitor('disaggregate', measuremem=False)
@@ -145,7 +145,8 @@ def compute_disagg(dstore, magi, rup_df, cmaker, hmap4, trti, bin_edges,
 
     # disaggregate by site, IMT
     for s, iml3 in enumerate(hmap4):
-        if not g_by_z[s] or not close_ctxs[s]:
+        close = [ctx for ctx in ctxs if s in ctx.idx]
+        if not g_by_z[s] or not close:
             # g_by_z[s] is empty in test case_7
             continue
         # dist_bins, lon_bins, lat_bins, eps_bins
@@ -155,7 +156,7 @@ def compute_disagg(dstore, magi, rup_df, cmaker, hmap4, trti, bin_edges,
         with dis_mon:
             # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
             matrix = disagg.disaggregate(
-                close_ctxs[s], g_by_z[s], iml2, eps3, s, bins)  # 7D-matrix
+                close, g_by_z[s], iml2, eps3, s, bins)  # 7D-matrix
             for m in range(M):
                 mat6 = matrix[..., m, :, :]
                 if mat6.any():

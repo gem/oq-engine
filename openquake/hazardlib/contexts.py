@@ -116,7 +116,7 @@ def _make_pmap(ctxs, cmaker):
 
 def read_ctxs(dstore, rup_df=None, req_site_params=None):
     """
-     :returns: a pair (contexts, [contexts close to site for each site])
+     :returns: a list of contexts
     """
     sitecol = dstore['sitecol'].complete
     site_params = {par: sitecol[par]
@@ -136,13 +136,7 @@ def read_ctxs(dstore, rup_df=None, req_site_params=None):
             setattr(ctx, par, arr[ctx.sids])
         ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
         ctxs.append(ctx)
-    # sorting for debugging convenience
-    ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
-    close_ctxs = [[] for sid in sitecol.sids]
-    for ctx in ctxs:
-        for sid in ctx.idx:
-            close_ctxs[sid].append(ctx)
-    return ctxs, close_ctxs
+    return ctxs
 
 
 class ContextMaker(object):
