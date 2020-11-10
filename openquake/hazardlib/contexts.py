@@ -114,16 +114,17 @@ def _make_pmap(ctxs, cmaker):
     return ~pmap
 
 
-def read_ctxs(dstore, idxs=slice(None), req_site_params=None):
+def read_ctxs(dstore, rup_df=None, req_site_params=None):
     """
-    Use it as `read_ctxs(dstore)`.
-    :returns: a pair (contexts, [contexts close to site for each site])
+     :returns: a pair (contexts, [contexts close to site for each site])
     """
     sitecol = dstore['sitecol'].complete
     site_params = {par: sitecol[par]
                    for par in req_site_params or sitecol.array.dtype.names}
-    # this is the slow part, reading from a huge dataset
-    params = {n: d[idxs] for n, d in dstore['rup'].items()}
+    if rup_df is None:  # in tests
+        params = {n: d[:] for n, d in dstore['rup'].items()}
+    else:  # in disaggregation
+        params = {n: rup_df[n].to_numpy() for n in rup_df.columns}
     ctxs = []
     for u in range(len(params['mag'])):
         ctx = RuptureContext()
