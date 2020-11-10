@@ -30,7 +30,7 @@ jobs:
           context: docker 
           file: docker/Dockerfile.engine
           load: true
-          tags: openquake/engine
+          tags: openquake/engine:devs
 
       - name: Builds and load engine master 
         id: docker_master
@@ -39,7 +39,7 @@ jobs:
           context: docker/zmq
           file: docker/zmq/Dockerfile.master
           load: true
-          tags: openquake/engine-master-zmq
+          tags: openquake/engine-master-zmq:devs
 
       - name: Builds and load engine worker 
         id: docker_worker
@@ -48,7 +48,7 @@ jobs:
           context: docker/zmq
           file: docker/zmq/Dockerfile.worker
           load: true
-          tags: openquake/engine-worker-zmq
+          tags: openquake/engine-worker-zmq:devs
 
             #- name: Run calc on docker engine
             #run: 
