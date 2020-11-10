@@ -6,3 +6,33 @@ name: docker
     branches:
       - master
       - multistagedocker
+  schedule:
+    - cron: "0 2 * * *"
+
+
+jobs:
+
+  docker:
+    name: docker
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distro:
+          - centos8
+          - centos7
+          - ubuntu1804
+          - ubuntu2004
+    env:
+      working-directory: ./docker
+
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      - name: Install docker and docker-compose.
+        run: pip3 install docker docker-compose
