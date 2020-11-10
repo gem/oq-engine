@@ -246,12 +246,14 @@ class ClassicalCalculator(base.HazardCalculator):
             for param in params:
                 if param == 'sids_':
                     dt = hdf5.vuint16
-                elif param.endswith('_'):
+                elif param == 'probs_occur_':
                     dt = hdf5.vfloat64
+                elif param.endswith('_'):
+                    dt = hdf5.vfloat32
                 elif param in {'nsites', 'grp_id'}:
-                    dt = U32
+                    dt = U16
                 else:
-                    dt = F64
+                    dt = F32
                 self.datastore.create_dset('rup/' + param, dt, (None,),
                                            compression='gzip')
             dset = self.datastore.getitem('rup')
