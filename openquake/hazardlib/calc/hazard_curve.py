@@ -45,7 +45,7 @@ the engine manages all the realizations at once.
 import operator
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
-from openquake.baselib.general import DictArray, groupby, AccumDict
+from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
@@ -58,7 +58,7 @@ def _cluster(imtls, tom, gsims, pmap):
     Computes the probability map in case of a cluster group
     """
     L, G = len(imtls.array), len(gsims)
-    pmapclu = AccumDict(accum=ProbabilityMap(L, G))
+    pmapclu = ProbabilityMap(L, G)
     # Get temporal occurrence model
     # Number of occurrences for the cluster
     first = True
@@ -68,10 +68,10 @@ def _cluster(imtls, tom, gsims, pmap):
         ocr = tom.occurrence_rate
         prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
         if first:
-            pmapclu = prob_n_occ * (~pmap)**nocc
+            pmapclu = (~pmap)**nocc * prob_n_occ
             first = False
         else:
-            pmapclu += prob_n_occ * (~pmap)**nocc
+            pmapclu += (~pmap)**nocc * prob_n_occ
     pmap = ~pmapclu
     return pmap
 
@@ -113,10 +113,11 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     extra['task_no'] = getattr(monitor, 'task_no', 0)
     extra['trt'] = trt
     extra['source_id'] = src.source_id
+    extra['grp_id'] = src.grp_id
     extra['maxradius'] = maxradius
     group_probability = getattr(group, 'grp_probability', None)
     if src_mutex and group_probability:
-        pmap[src.grp_id] *= group_probability
+        pmap *= group_probability
 
     if cluster:
         tom = getattr(group, 'temporal_occurrence_model')
@@ -128,7 +129,7 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
 # not used in the engine, only in tests and possibly notebooks
 def calc_hazard_curves(
         groups, srcfilter, imtls, gsim_by_trt, truncation_level=None,
-        apply=sequential_apply, filter_distance='rjb', reqv=None, **kwargs):
+        apply=sequential_apply, reqv=None, **kwargs):
     """
     Compute hazard curves on a list of sites, given a set of seismic source
     groups and a dictionary of ground shaking intensity models (one per
@@ -155,8 +156,6 @@ def calc_hazard_curves(
         distribution.
     :param apply:
         apply function to use (default sequential_apply)
-    :param filter_distance:
-        The distance used to filter the ruptures (default rjb)
     :param reqv:
         If not None, an instance of RjbEquivalent
     :returns:
@@ -170,23 +169,26 @@ def calc_hazard_curves(
         odic = groupby(groups, operator.attrgetter('tectonic_region_type'))
         groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
                   for trt in odic]
-    # ensure the sources have the right grp_id
+    # ensure the sources have the right et_id
     idx = 0
     for i, grp in enumerate(groups):
         for src in grp:
-            if not hasattr(src, 'grp_id'):
-                src.grp_id = i  # fix grp_id
+            if not hasattr(src, 'et_id'):
+                src.et_id = i  # fix et_id
+            src.grp_id = i
             src.id = idx
             idx += 1
     imtls = DictArray(imtls)
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
-    param = dict(imtls=imtls, truncation_level=truncation_level,
-                 filter_distance=filter_distance, reqv=reqv,
+    param = dict(imtls=imtls, truncation_level=truncation_level, reqv=reqv,
                  cluster=grp.cluster, shift_hypo=shift_hypo)
     pmap = ProbabilityMap(len(imtls.array), 1)
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     for group in groups:
+        for src in group:
+            if not src.nsites:  # not set
+                src.nsites = 1
         gsim = gsim_by_trt[group[0].tectonic_region_type]
         if group.atomic:  # do not split
             it = [classical(group, srcfilter, [gsim], param, mon)]
@@ -195,8 +197,7 @@ def calc_hazard_curves(
                 classical, (group.sources, srcfilter, [gsim], param),
                 weight=operator.attrgetter('weight'))
         for dic in it:
-            for grp_id, pval in dic['pmap'].items():
-                pmap |= pval
+            pmap |= dic['pmap']
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)
     return pmap.convert(imtls, len(sitecol.complete))
 
@@ -214,7 +215,6 @@ def calc_hazard_curve(site1, src, gsims_by_trt, oqparam):
     gsims = gsims_by_trt['*'] if '*' in gsims_by_trt else gsims_by_trt[trt]
     cmaker = ContextMaker(trt, gsims, vars(oqparam))
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap_by_grp, rup_data, calc_times, extra = PmapMaker(
+    pmap, rup_data, calc_times, extra = PmapMaker(
         cmaker, srcfilter, [src]).make()
-    pmap = pmap_by_grp[src.grp_ids[0]]
     return pmap[0]  # pcurve with shape (L, G)

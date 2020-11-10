@@ -1,0 +1,133 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel name="a Fault a-Priori D2.1 model for California">
+    <characteristicFaultSource id="0_0" name="Elsinore;W combined w/merge2.f" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.789">
+        <occurRates>8.57121030795e-06 1.76089791121e-05 3.08275554898e-05 4.59893086476e-05 5.84638695421e-05 6.33331538012e-05 5.84638695421e-05 4.59893086476e-05 3.08275554898e-05 1.76089791121e-05 8.57121030795e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.59 33.8289 -117.636 33.8511 -117.717 33.8733 -117.792 33.9074 -117.852 33.9297 -117.992 33.9712 -118.048 33.995</gml:posList>
+          </gml:LineString>
+          <dip>75.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.4888873943</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="0_1" name="Elsinore;W combined w/merge2.f" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.602">
+        <occurRates>8.57121030795e-06 1.76089791121e-05 3.08275554898e-05 4.59893086476e-05 5.84638695421e-05 6.33331538012e-05 5.84638695421e-05 4.59893086476e-05 3.08275554898e-05 1.76089791121e-05 8.57121030795e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.59 33.8289 -117.636 33.8511 -117.717 33.8733 -117.792 33.9074 -117.852 33.9297 -117.992 33.9712 -118.048 33.995</gml:posList>
+          </gml:LineString>
+          <dip>75.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.4888873943</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="1_0" name="Elsinore;GI" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.649">
+        <occurRates>3.06018758985e-05 6.28695101539e-05 0.000110063922533 0.000164196077955 0.000208734124586 0.000226118977747 0.000208734124586 0.000164196077955 0.000110063922533 6.28695101539e-05 3.06018758985e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.59 33.8289 -117.548 33.8129 -117.46332 33.74509 -117.44568 33.73183 -117.42415 33.71851 -117.40265 33.70453 -117.3727 33.68522 -117.27443 33.62646</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="1_1" name="Elsinore;GI" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.429">
+        <occurRates>3.06018758985e-05 6.28695101539e-05 0.000110063922533 0.000164196077955 0.000208734124586 0.000226118977747 0.000208734124586 0.000164196077955 0.000110063922533 6.28695101539e-05 3.06018758985e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.59 33.8289 -117.548 33.8129 -117.46332 33.74509 -117.44568 33.73183 -117.42415 33.71851 -117.40265 33.70453 -117.3727 33.68522 -117.27443 33.62646</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>13.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="2_0" name="Elsinore;T" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.826">
+        <occurRates>7.32188242782e-06 1.50423184242e-05 2.63341732059e-05 3.92859699805e-05 4.99422559572e-05 5.4101800009e-05 4.99422559572e-05 3.92859699805e-05 2.63341732059e-05 1.50423184242e-05 7.32188242782e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.389 33.6677 -117.31566 33.63098 -117.28099 33.6116 -117.20448 33.55897 -117.17214 33.52894 -117.14172 33.49754 -117.05333 33.42297 -117.03091 33.3914 -117.01517 33.3703 -117.00819 33.34092</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="2_1" name="Elsinore;T" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.652">
+        <occurRates>7.32188242782e-06 1.50423184242e-05 2.63341732059e-05 3.92859699805e-05 4.99422559572e-05 5.4101800009e-05 4.99422559572e-05 3.92859699805e-05 2.63341732059e-05 1.50423184242e-05 7.32188242782e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-117.389 33.6677 -117.31566 33.63098 -117.28099 33.6116 -117.20448 33.55897 -117.17214 33.52894 -117.14172 33.49754 -117.05333 33.42297 -117.03091 33.3914 -117.01517 33.3703 -117.00819 33.34092</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>14.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="89_0" name="Calaveras;CN+CC+CS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.785">
+        <occurRates>1.08796930676e-05 2.23516027597e-05 3.9130336289e-05 5.83756021029e-05 7.42099345728e-05 8.03906624158e-05 7.42099345728e-05 5.83756021029e-05 3.9130336289e-05 2.23516027597e-05 1.08796930676e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.0094 37.8173 -121.9379 37.7149 -121.9327 37.6939 -121.862 37.5675 -121.8511 37.5385 -121.8349 37.5101 -121.8235 37.4888 -121.8071 37.445 -121.7618 37.3996 -121.7149 37.343 -121.6483 37.2481 -121.5801 37.1523 -121.5424 37.0958 -121.4678 36.9898 -121.3956 36.8257</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.2</upperSeismoDepth>
+          <lowerSeismoDepth>7.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="89_1" name="Calaveras;CN+CC+CS" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.597">
+        <occurRates>1.08796930676e-05 2.23516027597e-05 3.9130336289e-05 5.83756021029e-05 7.42099345728e-05 8.03906624158e-05 7.42099345728e-05 5.83756021029e-05 3.9130336289e-05 2.23516027597e-05 1.08796930676e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.0094 37.8173 -121.9379 37.7149 -121.9327 37.6939 -121.862 37.5675 -121.8511 37.5385 -121.8349 37.5101 -121.8235 37.4888 -121.8071 37.445 -121.7618 37.3996 -121.7149 37.343 -121.6483 37.2481 -121.5801 37.1523 -121.5424 37.0958 -121.4678 36.9898 -121.3956 36.8257</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>2.2</upperSeismoDepth>
+          <lowerSeismoDepth>7.2</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+  </sourceModel>
+</nrml>

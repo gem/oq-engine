@@ -1,0 +1,149 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel name="b Fault stitched D2.1 Char model for California">
+    <characteristicFaultSource id="0_0" name="Mount Diablo Thrust combined w/merge2.f" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.46">
+        <occurRates>1.44010545193e-05 2.95860046727e-05 5.17954047741e-05 7.72696640663e-05 9.82289947899e-05 0.000106410199727 9.82289947899e-05 7.72696640663e-05 5.17954047741e-05 2.95860046727e-05 1.44010545193e-05</occurRates>
+      </incrementalMFD>
+      <rake>90.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.89893637 37.6603863591 -122.11498748 37.8073862294</gml:posList>
+          </gml:LineString>
+          <dip>38.0</dip>
+          <upperSeismoDepth>8.0</upperSeismoDepth>
+          <lowerSeismoDepth>16.0035991792</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="0_1" name="Mount Diablo Thrust combined w/merge2.f" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.26">
+        <occurRates>2.87329228452e-05 5.90298709319e-05 0.000103341971737 0.00015416810574 0.000195986073428 0.000212309178789 0.000195986073428 0.00015416810574 0.000103341971737 5.90298709319e-05 2.87329228452e-05</occurRates>
+      </incrementalMFD>
+      <rake>90.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.89893637 37.6603863591 -122.11498748 37.8073862294</gml:posList>
+          </gml:LineString>
+          <dip>38.0</dip>
+          <upperSeismoDepth>8.0</upperSeismoDepth>
+          <lowerSeismoDepth>16.0035991792</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="1_0" name="Monte Vista-Shannon" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.26">
+        <occurRates>3.94578154478e-06 8.10634464755e-06 1.41915546524e-05 2.11713117284e-05 2.69140120459e-05 2.91556011885e-05 2.69140120459e-05 2.11713117284e-05 1.41915546524e-05 8.10634464755e-06 3.94578154478e-06</occurRates>
+      </incrementalMFD>
+      <rake>90.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.25001 37.4375 -122.065 37.305 -122.00001 37.265 -121.9275 37.2275 -121.8375 37.21</gml:posList>
+          </gml:LineString>
+          <dip>45.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>3.53553390593</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="1_1" name="Monte Vista-Shannon" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.06">
+        <occurRates>7.87287249106e-06 1.61742907088e-05 2.83158859557e-05 4.22423380043e-05 5.37005362955e-05 5.81730964962e-05 5.37005362955e-05 4.22423380043e-05 2.83158859557e-05 1.61742907088e-05 7.87287249106e-06</occurRates>
+      </incrementalMFD>
+      <rake>90.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-122.25001 37.4375 -122.065 37.305 -122.00001 37.265 -121.9275 37.2275 -121.8375 37.21</gml:posList>
+          </gml:LineString>
+          <dip>45.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>3.53553390593</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="2_0" name="Ortigalita" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.86">
+        <occurRates>4.29171251165e-06 8.81703671447e-06 1.54357437101e-05 2.30274236932e-05 2.92735928041e-05 3.17117045091e-05 2.92735928041e-05 2.30274236932e-05 1.54357437101e-05 8.81703671447e-06 4.29171251165e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.28059 37.27054 -121.22482 37.19204 -121.15121 37.11761 -121.12592 37.03807 -121.01141 36.90705 -120.90358 36.79396 -120.8954 36.73216</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>11.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="2_1" name="Ortigalita" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="6.66">
+        <occurRates>8.56308221719e-06 1.75922804925e-05 3.07983216757e-05 4.59456969217e-05 5.84084281726e-05 6.32730948826e-05 5.84084281726e-05 4.59456969217e-05 3.07983216757e-05 1.75922804925e-05 8.56308221719e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.28059 37.27054 -121.22482 37.19204 -121.15121 37.11761 -121.12592 37.03807 -121.01141 36.90705 -120.90358 36.79396 -120.8954 36.73216</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>11.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="3_0" name="Rinconada" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.26">
+        <occurRates>2.66583696737e-06 5.47678399993e-06 9.58805513873e-06 1.43036974583e-05 1.81835632403e-05 1.96980189025e-05 1.81835632403e-05 1.43036974583e-05 9.58805513873e-06 5.47678399993e-06 2.66583696737e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.7565 36.67524 -121.46286 36.45199 -120.70242 35.61091 -120.662 35.4455 -120.615 35.4022 -120.583 35.353 -120.517 35.3112</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>10.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="3_1" name="Rinconada" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.16">
+        <occurRates>3.76548439011e-06 7.73593618521e-06 1.35430907435e-05 2.02039172535e-05 2.56842126417e-05 2.78233753982e-05 2.56842126417e-05 2.02039172535e-05 1.35430907435e-05 7.73593618521e-06 3.76548439011e-06</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.7565 36.67524 -121.46286 36.45199 -120.70242 35.61091 -120.662 35.4455 -120.615 35.4022 -120.583 35.353 -120.517 35.3112</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>10.0</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    <characteristicFaultSource id="122_1" name="San Gregorio Connected" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD binWidth="0.048" minMag="7.16">
+        <occurRates>2.05937351411e-05 4.23084534051e-05 7.40682459063e-05 0.000110496838554 0.000140469012125 0.000152168264244 0.000140469012125 0.000110496838554 7.40682459063e-05 4.23084534051e-05 2.05937351411e-05</occurRates>
+      </incrementalMFD>
+      <rake>0.0</rake>
+      <surface>
+        <simpleFaultGeometry>
+          <gml:LineString>
+            <gml:posList>-121.8593 36.3131 -121.9 36.359 -121.9351 36.4194 -121.9538 36.4669 -121.9803 36.5172 -122.0212 36.5561 -122.0945 36.6696 -122.1295 36.7496 -122.1555 36.8528 -122.3936 37.2906 -122.6166 37.7682</gml:posList>
+          </gml:LineString>
+          <dip>90.0</dip>
+          <upperSeismoDepth>0.6</upperSeismoDepth>
+          <lowerSeismoDepth>11.6</lowerSeismoDepth>
+        </simpleFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+  </sourceModel>
+</nrml>

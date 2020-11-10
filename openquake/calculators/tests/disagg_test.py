@@ -21,9 +21,7 @@ import unittest
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.probability_map import combine
 from openquake.hazardlib.contexts import read_ctxs
-from openquake.calculators import getters
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -64,22 +62,6 @@ class DisaggregationTestCase(CalculatorTestCase):
              'rlz-0-SA(0.025)-sid-0-poe-1_Mag_Dist.csv'],
             case_1.__file__,
             fmt='csv')
-
-        # disaggregation by source group
-        rlzs = self.calc.datastore['full_lt'].get_realizations()
-        ws = [rlz.weight for rlz in rlzs]
-        pgetter = getters.PmapGetter(self.calc.datastore, ws)
-        pgetter.init()
-        pmaps = []
-        for grp in sorted(pgetter.dstore['poes']):
-            pmaps.append(pgetter.get_mean(grp))
-        # make sure that the combination of the contributions is okay
-        pmap = pgetter.get_mean()  # total mean map
-        cmap = combine(pmaps)  # combination of the mean maps per source group
-        for sid in pmap:
-            numpy.testing.assert_almost_equal(pmap[sid].array, cmap[sid].array)
-
-        check_disagg_by_src(self.calc.datastore)
 
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
@@ -173,8 +155,9 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_7(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
         self.run_calc(case_7.__file__, 'job.ini')
-        ctxs0 = read_ctxs(self.calc.datastore, 'mag_7.70', gidx=0)[0]
-        ctxs1 = read_ctxs(self.calc.datastore, 'mag_7.70', gidx=1)[0]
+        ctxs, _close = read_ctxs(self.calc.datastore, 'mag_7.70')
+        ctxs0 = [ctx for ctx in ctxs if ctx.grp_id == 0]
+        ctxs1 = [ctx for ctx in ctxs if ctx.grp_id == 1]
         self.assertEqual(len(ctxs0), 7)  # rlz-0, the closest to the mean
         self.assertEqual(len(ctxs1), 2)  # rlz-1, the one to discard
         # checking that the wrong realization is indeed discarded
@@ -185,7 +168,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
         self.assertEqual(haz[1], 0.18757115242025785)
-        
+
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')

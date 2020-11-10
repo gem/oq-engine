@@ -144,7 +144,7 @@ def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
             haz_sitecol = site.SiteCollection.from_points(
                 lons, lats, req_site_params=req_site_params)
             if grid_spacing:
-                grid = mesh.get_convex_hull().dilate(
+                grid = haz_sitecol.mesh.get_convex_hull().dilate(
                     grid_spacing).discretize(grid_spacing)
                 haz_sitecol = site.SiteCollection.from_points(
                     grid.lons, grid.lats, req_site_params=req_site_params)

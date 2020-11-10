@@ -123,7 +123,6 @@ site_param_dt = {
     'z1pt4': numpy.float64,
     'backarc': numpy.bool,
     'xvf': numpy.float64,
-    'backarc_distance': numpy.float64,
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
@@ -131,6 +130,7 @@ site_param_dt = {
     'ec8_p18': (numpy.string_, 2),
     'h800': numpy.float64,
     'geology': (numpy.string_, 20),
+    'amplfactor': numpy.float64,
 
     # parameters for secondary perils
     'friction_mid': numpy.float64,
@@ -151,9 +151,11 @@ site_param_dt = {
     'dwb': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
+    'fpeak': numpy.float64,
 
     # other parameters
     'custom_site_id': numpy.uint32,
+    'region': numpy.uint32
 }
 
 

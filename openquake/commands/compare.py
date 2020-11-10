@@ -33,12 +33,12 @@ def getdata(what, calc_ids, sitecol, sids):
     extractor.close()
     for extractor in extractors[1:]:
         oq = extractor.oqparam
-        numpy.testing.assert_equal(
-            extractor.get('sitecol').array, sitecol.array)
+        numpy.testing.assert_array_equal(
+            extractor.get('sitecol')[['lon', 'lat']], sitecol[['lon', 'lat']])
         if what == 'hcurves':
-            numpy.testing.assert_equal(oq.imtls.array, imtls.array)
+            numpy.testing.assert_array_equal(oq.imtls.array, imtls.array)
         elif what == 'hmaps':
-            numpy.testing.assert_equal(oq.poes, poes)
+            numpy.testing.assert_array_equal(oq.poes, poes)
         arrays.append(extractor.get(what + '?kind=mean').mean[sids])
         extractor.close()
     return imtls, poes, numpy.array(arrays)  # shape (C, N, L)
@@ -89,6 +89,7 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
                     len(sitecol), numsamples, replace=False)
     sids.sort()
     imtls, poes, arrays = getdata(what, calc_ids, sitecol, sids)
+    imti = {imt: i for i, imt in enumerate(imtls)}
     try:
         levels = imtls[imt]
     except KeyError:
@@ -97,7 +98,7 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
     imt2idx = {imt: i for i, imt in enumerate(imtls)}
     head = ['site_id'] if files else ['site_id', 'calc_id']
     if what == 'hcurves':
-        array_imt = arrays[:, :, imtls(imt)]
+        array_imt = arrays[:, :, imti[imt], :]  # shape (C, N, L1)
         header = head + ['%.5f' % lvl for lvl in levels]
     else:  # hmaps
         array_imt = arrays[:, :, imt2idx[imt]]
@@ -124,6 +125,10 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             print('Generated %s' % f.name)
     else:
         print(views.rst_table(rows['all'], header))
+        if len(calc_ids) == 2 and what == 'hmaps':
+            ms = numpy.mean((array_imt[0] - array_imt[1])**2, axis=0)  # P
+            rows = [(str(poe), m) for poe, m in zip(poes, ms)]
+            print(views.rst_table(rows, ['poe', 'rms-diff']))
 
 
 compare.arg('what', '"hmaps", "hcurves" or "cumtime of"',

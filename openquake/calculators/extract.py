@@ -28,6 +28,8 @@ import requests
 from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
+import pandas
+
 from openquake.baselib import config, hdf5, general
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
@@ -63,8 +65,12 @@ def dumps(dic):
     for k, v in dic.items():
         if isinstance(v, numpy.ndarray):
             new[k] = v.tolist()
+        elif isinstance(v, list) and v and isinstance(v[0], INT):
+            new[k] = [int(x) for x in v]
+        elif isinstance(v, list) and v and isinstance(v[0], FLOAT):
+            new[k] = [float(x) for x in v]
         elif isinstance(v, FLOAT):
-            new[k] = int(v)
+            new[k] = float(v)
         elif isinstance(v, INT):
             new[k] = int(v)
         else:
@@ -305,7 +311,7 @@ def extract_assets(dstore, what):
             tagidx, = numpy.where(dic[tag] == val)
             cond |= arr[tag] == tagidx
         arr = arr[cond]
-    return ArrayWrapper(arr, dic)
+    return ArrayWrapper(arr, dict(json=dumps(dic)))
 
 
 @extract.add('asset_risk')
@@ -537,7 +543,7 @@ def extract_sources(dstore, what):
     codes = qdict.get('code', None)
     if codes is not None:
         codes = [code.encode('utf8') for code in codes]
-    fields = 'source_id code multiplicity num_sites eff_ruptures'
+    fields = 'source_id code num_sites eff_ruptures'
     info = dstore['source_info'][()][fields.split()]
     wkt = dstore['source_wkt'][()]
     arrays = []
@@ -562,7 +568,7 @@ def extract_sources(dstore, what):
     wkt_gz = gzip.compress(';'.join(wkt).encode('utf8'))
     src_gz = gzip.compress(';'.join(info['source_id']).encode('utf8'))
     oknames = [name for name in info.dtype.names  # avoid pickle issues
-               if name not in ('source_id', 'grp_ids')]
+               if name not in ('source_id', 'et_ids')]
     arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
     for n in oknames:
         arr[n] = info[n]
@@ -731,12 +737,12 @@ def extract_agg_curves(dstore, what):
     attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
     attrs['return_period'] = list(rps)
     attrs['kind'] = kinds
-    attrs['units'] = units  # used by the QGIS plugin
+    attrs['units'] = list(units)  # used by the QGIS plugin
     for tagname, tagvalue in zip(tagnames, tagvalues):
         attrs[tagname] = [tagvalue]
     if tagnames:
         arr = arr.reshape(arr.shape + (1,) * len(tagnames))
-    return ArrayWrapper(arr, attrs)
+    return ArrayWrapper(arr, dict(json=dumps(attrs)))
 
 
 @extract.add('agg_losses')
@@ -778,9 +784,9 @@ def extract_agg_damages(dstore, what):
         for the given tags
     """
     loss_type, tags = get_loss_type_tags(what)
-    if 'avg_damages-rlzs' in dstore:  # scenario_damage
+    if 'damages-rlzs' in dstore:  # scenario_damage
         lti = dstore['oqparam'].lti[loss_type]
-        losses = dstore['avg_damages-rlzs'][:, :, lti]
+        losses = dstore['damages-rlzs'][:, :, lti]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags)
@@ -848,33 +854,31 @@ def extract_losses_by_event(dstore, what):
         yield 'rlz-%03d' % rlzi, dic[rlzi]
 
 
-def _gmf(data, num_sites, imts):
+def _gmf(df, num_sites, imts):
     # convert data into the composite array expected by QGIS
-    gmf_dt = numpy.dtype([(imt, F32) for imt in imts])
-    gmfa = numpy.zeros(num_sites, gmf_dt)
-    for rec in data:
-        arr = gmfa[rec['sid']]
-        for imt, gmv in zip(imts, rec['gmv']):
-            arr[imt] = gmv
+    gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts])
+    for m, imt in enumerate(imts):
+        gmfa[imt][U32(df.sid)] = df[f'gmv_{m}']
     return gmfa
 
 
-# used by the QGIS plugin
+# used by the QGIS plugin for a single eid
 @extract.add('gmf_data')
 def extract_gmf_npz(dstore, what):
     oq = dstore['oqparam']
     qdict = parse(what)
     [eid] = qdict.get('event_id', [0])  # there must be a single event
+    rlzi = dstore['events'][eid]['rlz_id']
     mesh = get_mesh(dstore['sitecol'])
     n = len(mesh)
-    data = dstore['gmf_data/data']
-    rlzi = dstore['events'][eid]['rlz_id']
-    idx = data['eid'] == eid
-    if idx.any():
-        gmfa = _gmf(data[idx], n, oq.imtls)
-        yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
-    else:  # zero GMF
+    try:
+        df = dstore.read_df('gmf_data', 'eid').loc[eid]
+    except KeyError:
+        # zero GMF
         yield 'rlz-%03d' % rlzi, []
+    else:
+        gmfa = _gmf(df, n, oq.imtls)
+        yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
 
 
 @extract.add('num_events')
@@ -917,16 +921,16 @@ def build_damage_array(data, damage_dt):
     return dmg
 
 
-@extract.add('avg_damages-rlzs')
-def extract_avg_damages_npz(dstore, what):
+@extract.add('damages-rlzs')
+def extract_damages_npz(dstore, what):
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    data = dstore['avg_damages-rlzs']
+    data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
-        avg_damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
+        damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
         yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
-            assets, avg_damages)
+            assets, damages)
 
 
 @extract.add('event_based_mfd')
@@ -945,22 +949,22 @@ def extract_mfd(dstore, what):
     duration = oq.investigation_time * oq.ses_per_logic_tree_path
     dic = {'duration': duration}
     dd = collections.defaultdict(float)
-    rups = dstore['ruptures']['grp_id', 'mag', 'n_occ']
+    rups = dstore['ruptures']['et_id', 'mag', 'n_occ']
     mags = sorted(numpy.unique(rups['mag']))
     magidx = {mag: idx for idx, mag in enumerate(mags)}
-    num_groups = rups['grp_id'].max() + 1
+    num_groups = rups['et_id'].max() + 1
     frequencies = numpy.zeros((len(mags), num_groups), float)
-    for grp_id, mag, n_occ in rups:
+    for et_id, mag, n_occ in rups:
         if kind_mean:
-            dd[mag] += n_occ * weights[grp_id % n] / duration
+            dd[mag] += n_occ * weights[et_id % n] / duration
         if kind_by_group:
-            frequencies[magidx[mag], grp_id] += n_occ / duration
+            frequencies[magidx[mag], et_id] += n_occ / duration
     dic['magnitudes'] = numpy.array(mags)
     if kind_mean:
         dic['mean_frequency'] = numpy.array([dd[mag] for mag in mags])
     if kind_by_group:
-        for grp_id, freqs in enumerate(frequencies.T):
-            dic['grp-%02d_frequency' % grp_id] = freqs
+        for et_id, freqs in enumerate(frequencies.T):
+            dic['grp-%02d_frequency' % et_id] = freqs
     return ArrayWrapper((), dic)
 
 # NB: this is an alternative, slower approach giving exactly the same numbers;
@@ -1024,14 +1028,14 @@ def _get(dstore, name):
 
 
 @extract.add('events')
-def extract_events(dstore, dummy):
+def extract_relevant_events(dstore, dummy=None):
     """
     Extract the relevant events
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/events
     """
     events = dstore['events'][:]
-    if 'relevant_events' not in dstore:  # engine < 3.10
+    if 'relevant_events' not in dstore:
         return events
     rel_events = dstore['relevant_events'][:]
     return events[rel_events]
@@ -1046,7 +1050,7 @@ def extract_event_info(dstore, eidx):
     """
     event = dstore['events'][int(eidx)]
     ridx = event['rup_id']
-    [getter] = getters.gen_rgetters(dstore, slice(ridx, ridx + 1))
+    [getter] = getters.gen_rupture_getters(dstore, slc=slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
     rlzi = event['rlz_id']
     full_lt = dstore['full_lt']
@@ -1056,6 +1060,21 @@ def extract_event_info(dstore, eidx):
         yield key, val
     yield 'rlzi', rlzi
     yield 'gsim', repr(gsim)
+
+
+@extract.add('extreme_event')
+def extract_extreme_event(dstore, eidx):
+    """
+    Extract information about the given event index.
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/extreme_event
+    """
+    arr = dstore['gmf_data/gmv_0'][()]
+    idx = arr.argmax()
+    eid = dstore['gmf_data/eid'][idx]
+    dic = dict(extract_event_info(dstore, eid))
+    dic['gmv'] = arr[idx]
+    return dic
 
 
 @extract.add('ruptures_within')
@@ -1170,7 +1189,7 @@ def extract_disagg_by_src(dstore, what):
     arr['src_id'] = src_id
     arr['poe'] = poe
     arr.sort(order='poe')
-    return ArrayWrapper(arr[::-1], dict(json=json.dumps(f)))
+    return ArrayWrapper(arr[::-1], dict(json=dumps(f)))
 
 
 @extract.add('disagg_layer')
@@ -1224,9 +1243,8 @@ class RuptureData(object):
     Container for information about the ruptures of a given
     tectonic region type.
     """
-    def __init__(self, trt, samples, gsims):
+    def __init__(self, trt, gsims):
         self.trt = trt
-        self.samples = samples
         self.cmaker = ContextMaker(trt, gsims)
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
@@ -1244,7 +1262,7 @@ class RuptureData(object):
         """
         data = []
         for proxy in proxies:
-            ebr = proxy.to_ebr(self.trt, self.samples)
+            ebr = proxy.to_ebr(self.trt)
             rup = ebr.rupture
             ctx = self.cmaker.make_rctx(rup)
             ruptparams = tuple(getattr(ctx, param) for param in self.params)
@@ -1280,10 +1298,9 @@ def extract_rupture_info(dstore, what):
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
     boundaries = []
-    for rgetter in getters.gen_rgetters(dstore):
+    for rgetter in getters.gen_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
-        rup_data = RuptureData(
-            rgetter.trt, rgetter.samples, rgetter.rlzs_by_gsim)
+        rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r in rup_data.to_array(proxies):
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
             coordset = sorted(set(coords))
@@ -1316,7 +1333,7 @@ def extract_ruptures(dstore, what):
     bio = io.StringIO()
     first = True
     trts = list(dstore.getitem('full_lt').attrs['trts'])
-    for rgetter in getters.gen_rgetters(dstore):
+    for rgetter in getters.gen_rupture_getters(dstore):
         rups = [rupture._get_rupture(proxy.rec, proxy.geom, rgetter.trt)
                 for proxy in rgetter.get_proxies(min_mag)]
         arr = rupture.to_csv_array(rups)
@@ -1329,6 +1346,22 @@ def extract_ruptures(dstore, what):
             comment = None
         writers.write_csv(bio, arr, header=header, comment=comment)
     return bio.getvalue()
+
+
+@extract.add('eids_by_gsim')
+def extract_eids_by_gsim(dstore, what):
+    """
+    Returns a dictionary gsim -> event_ids for the first TRT
+    Example:
+    http://127.0.0.1:8800/v1/calc/30/extract/eids_by_gsim
+    """
+    rlzs = dstore['full_lt'].get_realizations()
+    gsims = [str(rlz.gsim_rlz.value[0]) for rlz in rlzs]
+    evs = extract_relevant_events(dstore)
+    df = pandas.DataFrame({'id': evs['id'], 'rlz_id': evs['rlz_id']})
+    for r, evs in df.groupby('rlz_id'):
+        yield gsims[r], numpy.array(evs['id'])
+
 
 # #####################  extraction from the WebAPI ###################### #
 

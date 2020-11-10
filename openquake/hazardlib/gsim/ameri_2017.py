@@ -73,8 +73,8 @@ class AmeriEtAl2017Rjb(GMPE):
     #: Required distance measure is Rjb (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
-    def __init__(self, adjustment_factor=1.0):
-        super().__init__()
+    def __init__(self, adjustment_factor=1.0, **kwargs):
+        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(adjustment_factor)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):

@@ -1,7 +1,7 @@
 
 | Test ID | Description |
 |---------|-------------|
-| case_1  | | 
+| case_1  | Checks .npz export, raises error when all source are discarded and checks wrong .ini | 
 | case_2  | | 
 | case_3  | | 
 | case_4  | | 
@@ -16,10 +16,10 @@
 | case_13 | | 
 | case_14 | | 
 | case_15 | | 
-| case_16 | | 
+| case_16 | Sampling 10 logic tree paths out of 759_375 |
 | case_17 | | 
 | case_18 | | 
-| case_19 | | 
+| case_19 | Test AvgGMPE | 
 | case_20 | | 
 | case_21 | | 
 | case_22 | | 
@@ -52,3 +52,10 @@
 | case_49 | Test the use of the convolution method to amplify the motion |
 | case_50 | Test the use of the kernel method to amplify the motion |
 | case_51 | Test the use of a modifiable GMPE |
+| case_52 | |
+| case_53 | Tests the modifiable GMPE with imt-independent linear scaling factors on median and standard deviation |
+| case_54 | Tests the modifiable GMPE with imt-dependent linear scaling factors on median and standard deviation |
+| case_55 | Tests the use of amplification functions |
+| case_56 | Another test for oversampling (10 samples out of 6) |
+| case_57 | Test for sampling AvgPoeGMPE |
+| case_58 | Test for the truncatedGRFromSlipAbsolute epistemic uncertainty |

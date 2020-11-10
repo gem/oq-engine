@@ -142,7 +142,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             polygon=polygon,
-            area_discretization=2,
+            area_discretization=1,
             temporal_occurrence_model=PoissonTOM(50.))
         return area
 
@@ -723,9 +723,8 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         self.assertEqual(csm.full_lt.gsim_by_trt(rlz),
                          {'Subduction Interface': '[SadighEtAl1997]',
                           'Active Shallow Crust': '[ChiouYoungs2008]'})
-        # ignoring the end of the tuple, with the uid field
         self.assertEqual(rlz.ordinal, 0)
-        self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
+        self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
         self.assertEqual(rlz.weight['default'], 1.)
 
@@ -734,13 +733,15 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
         oqparam.number_of_logic_tree_samples = 0
         csm = readinput.get_composite_source_model(oqparam)
         self.assertEqual(len(csm.sm_rlzs), 9)  # example with 1 x 3 x 3 paths
-        # there are 2 distinct tectonic region types, so 2 src_groups
-        self.assertEqual(sum(1 for tm in csm.src_groups), 2)
+        # there are 2 distinct tectonic region types and 18 src_groups
+        self.assertEqual(sum(1 for tm in csm.src_groups), 18)
 
         rlzs = csm.full_lt.get_realizations()
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         # counting the sources in each TRT model (after splitting)
-        self.assertEqual([9, 18], list(map(len, csm.src_groups)))
+        self.assertEqual(
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+            list(map(len, csm.src_groups)))
 
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17

@@ -18,6 +18,7 @@
 
 import os
 import time
+import pickle
 import getpass
 import operator
 import itertools
@@ -80,8 +81,12 @@ def performance_view(dstore):
             mem = max(mem, rec['memory_mb'])
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    operation = ('calc_%d' % dstore.calc_id if hasattr(dstore, 'calc_id')
-                 else 'operation')
+    mems = dstore['task_info']['mem_gb']
+    maxmem = ', maxmem=%.1f GB' % mems.max() if len(mems) else ''
+    if hasattr(dstore, 'calc_id'):
+        operation = 'calc_%d%s' % (dstore.calc_id, maxmem)
+    else:
+        operation = 'operation'
     dtlist = [(operation, perf_dt['operation'])]
     dtlist.extend((n, perf_dt[n]) for n in perf_dt.names[1:-1])
     return numpy.array(out, dtlist)
@@ -263,6 +268,31 @@ class Monitor(object):
                          counts=0, mem=0, duration=0)
         vars(new).update(kw)
         return new
+
+    def save(self, key, obj):
+        """
+        :param key: key in the _tmp.hdf5 file
+        :param obj: big object to store in pickle format
+        """
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        f = hdf5.File(tmp, 'a') if os.path.exists(tmp) else hdf5.File(tmp, 'w')
+        with f:
+            if isinstance(obj, numpy.ndarray):
+                f[key] = obj
+            else:
+                f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def read(self, key):
+        """
+        :param key: key in the _tmp.hdf5 file
+        :return: unpickled object
+        """
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        with hdf5.File(tmp, 'r') as f:
+            data = f[key][()]
+            if data.shape:
+                return data
+            return pickle.loads(data)
 
     def __repr__(self):
         calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '

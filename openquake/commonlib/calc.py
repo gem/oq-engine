@@ -15,6 +15,30 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""
+Here is an example of how to convert GMFs into mean hazard curves. Works
+in the case of sampling, when the weights are all equal. It keeps
+everything in memory and it is extremely fast.
+NB: parallelization would kill the performance::
+
+ def gmvs_to_mean_hcurves(dstore):
+    # Convert GMFs into mean hazard curves. Works by keeping everything in
+    # memory and it is extremely fast.
+    # NB: parallelization would kill the performance.
+    oq = dstore['oqparam']
+    N = len(dstore['sitecol'])
+    M = len(oq.imtls)
+    L1 = len(oq.imtls.array) // M
+    gmf_df = dstore.read_df('gmf_data', 'sid')
+    mean = numpy.zeros((N, 1, M, L1))
+    for sid, df in gmf_df.groupby(gmf_df.index):
+        gmvs = [df[col].to_numpy() for col in df.columns
+                if col.startswith('gmv_')]
+        mean[sid, 0] = calc.gmvs_to_poes(
+            gmvs, oq.imtls, oq.ses_per_logic_tree_path)
+    return mean
+"""
+import itertools
 import warnings
 import logging
 import numpy
@@ -238,14 +262,6 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
-        full_lt = dstore['full_lt']
-        self.trt_by_grp = full_lt.trt_by_grp
-        self.rlzs_by_gsim_grp = full_lt.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = full_lt.get_samples_by_grp()
-        self.num_rlzs_by_grp = {
-            grp_id:
-            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
-            for grp_id in self.rlzs_by_gsim_grp}
 
     def import_rups(self, rup_array):
         """
@@ -255,7 +271,10 @@ class RuptureImporter(object):
         # order the ruptures by serial
         rup_array.sort(order='serial')
         nr = len(rup_array)
-        assert len(numpy.unique(rup_array['serial'])) == nr  # sanity
+        serials, counts = numpy.unique(rup_array['serial'], return_counts=True)
+        if len(serials) != nr:
+            logging.info('The following rupture seeds are duplicated: %s',
+                         serials[counts > 1])
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
         self.datastore['ruptures'] = rup_array
@@ -263,29 +282,30 @@ class RuptureImporter(object):
 
     def save_events(self, rup_array):
         """
-        :param rup_array: an array of ruptures with fields grp_id
+        :param rup_array: an array of ruptures with fields et_id
         :returns: a list of RuptureGetters
         """
-        from openquake.calculators.getters import RuptureGetter, gen_rgetters
+        from openquake.calculators.getters import (
+            get_eid_rlz, gen_rupture_getters)
         # this is very fast compared to saving the ruptures
-        eids = rupture.get_eids(
-            rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
-        self.check_overflow(len(eids))  # check the number of events
-        events = numpy.zeros(len(eids), rupture.events_dt)
+        E = rup_array['n_occ'].sum()
+        self.check_overflow(E)  # check the number of events
+        events = numpy.zeros(E, rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = gen_rgetters(self.datastore)
+        rgetters = gen_rupture_getters(
+            self.datastore, self.oqparam.concurrent_tasks)
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        logging.info('Building assocs event_id -> rlz_id for {:_d} events'
-                     ' and {:_d} ruptures'.format(len(events), len(rup_array)))
+        logging.info('Associating event_id -> rlz_id for {:_d} events '
+                     'and {:_d} ruptures'.format(len(events), len(rup_array)))
+        iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
         if len(events) < 1E5:
-            it = map(RuptureGetter.get_eid_rlz, rgetters)
+            it = itertools.starmap(get_eid_rlz, iterargs)
         else:
-            it = parallel.Starmap(RuptureGetter.get_eid_rlz,
-                                  ((rgetter,) for rgetter in rgetters),
-                                  progress=logging.debug,
-                                  h5=self.datastore.hdf5)
+            it = parallel.Starmap(
+                get_eid_rlz, iterargs, progress=logging.debug,
+                h5=self.datastore.hdf5)
         i = 0
         for eid_rlz in it:
             for er in eid_rlz:

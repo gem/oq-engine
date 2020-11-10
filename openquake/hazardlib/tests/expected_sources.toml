@@ -73,7 +73,6 @@ magScaleRel = "PeerMSR"
 ruptAspectRatio = 1.5
 
 [areaSource.areaGeometry]
-_discretization = 2.0
 upperSeismoDepth = 0.0
 lowerSeismoDepth = 10.0
 

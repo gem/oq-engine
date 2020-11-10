@@ -371,7 +371,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
 _tmp_paths = []
 
 
-def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
+def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     """Create temporary file with the given content.
 
     Please note: the temporary file can be deleted by the caller or not.
@@ -386,7 +386,8 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         if not os.path.exists(dir):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
-    _tmp_paths.append(path)
+    if remove:
+        _tmp_paths.append(path)
     with os.fdopen(fh, "wb") as fh:
         if content:
             if hasattr(content, 'encode'):
@@ -744,6 +745,16 @@ class AccumDict(dict):
         """
         return self.__class__({key: func(value, *extras)
                                for key, value in self.items()})
+
+
+def copyobj(obj, **kwargs):
+    """
+    :returns: a shallow copy of obj with some changed attributes
+    """
+    new = copy.copy(obj)
+    for k, v in kwargs.items():
+        setattr(new, k, v)
+    return new
 
 
 # return a dict imt -> slice and the total number of levels
@@ -1162,13 +1173,15 @@ def random_histogram(counts, nbins, seed):
     """
     Distribute a total number of counts on a set of bins homogenously.
 
-    >>> random_histogram(1, 2, 42)
+    >>> random_histogram(1, 2, seed=42)
     array([1, 0])
-    >>> random_histogram(100, 5, 42)
+    >>> random_histogram(100, 5, seed=42)
     array([28, 18, 17, 19, 18])
-    >>> random_histogram(10000, 5, 42)
+    >>> random_histogram(10000, 5, seed=42)
     array([2043, 2015, 2050, 1930, 1962])
     """
+    if nbins == 1:
+        return numpy.array([counts])
     numpy.random.seed(seed)
     return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
 
@@ -1415,16 +1428,17 @@ def categorize(values, nchars=2):
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 
 
-def get_array_nbytes(sizedict, size=8):
+def get_nbytes_msg(sizedict, size=8):
     """
     :param sizedict: mapping name -> num_dimensions
     :returns: (size of the array in bytes, descriptive message)
 
-    >>> get_array_nbytes(dict(nsites=2, nbins=5))
+    >>> get_nbytes_msg(dict(nsites=2, nbins=5))
     (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
     """
     nbytes = numpy.prod(list(sizedict.values())) * size
-    prod = ' * '.join('(%s=%d)' % item for item in sizedict.items())
+    prod = ' * '.join('({}={:_d})'.format(k, int(v))
+                      for k, v in sizedict.items())
     return nbytes, '%s * %d bytes = %s' % (prod, size, humansize(nbytes))
 
 

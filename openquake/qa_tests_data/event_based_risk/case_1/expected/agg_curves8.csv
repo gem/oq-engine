@@ -1,9 +1,11 @@
 ============= ===== ====== ======== =======
 return_period kind  policy taxonomy value  
-240           rlz-0 A      RC       0.04702
-240           rlz-1 A      RC       0.04349
-480           rlz-0 A      RC       0.46177
-480           rlz-1 A      RC       0.25790
-960           rlz-0 A      RC       0.55673
-960           rlz-1 A      RC       0.54340
+120           rlz-0 A      RC       0.04113
+120           rlz-1 A      RC       0.03552
+240           rlz-0 A      RC       0.06749
+240           rlz-1 A      RC       0.05649
+480           rlz-0 A      RC       0.11128
+480           rlz-1 A      RC       0.06305
+960           rlz-0 A      RC       0.53367
+960           rlz-1 A      RC       0.21803
 ============= ===== ====== ======== =======
