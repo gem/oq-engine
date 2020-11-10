@@ -220,7 +220,8 @@ class ClassicalCalculator(base.HazardCalculator):
             acc.eff_ruptures[trt] += eff_rups
 
             # store rup_data if there are few sites
-            store_ctxs(self.datastore, dic['rup_data'], grp_id)
+            if self.few_sites:
+                store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
         return acc
 
