@@ -19,6 +19,8 @@ jobs:
           - centos7
           # - ubuntu1804
           #  - ubuntu2004
+    env:
+      working-directory: ./ansible/oqengine
 
     steps:
       - name: Check out the codebase.
@@ -34,6 +36,7 @@ jobs:
 
       - name: Run Molecule tests.
         run: molecule test
+        working-directory: ${{env.working-directory}}
         env:
           PY_COLORS: '1'
           ANSIBLE_FORCE_COLOR: '1'
