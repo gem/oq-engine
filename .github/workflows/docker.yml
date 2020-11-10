@@ -50,6 +50,6 @@ jobs:
           load: true
           tags: openquake/engine-worker-zmq:nightly
 
-      - name: Run calc on docker engine
+      - name: Run docker compose to build up cluster
         run: 
-        docker run -v $(pwd):/srv openquake/engine "/srv/bin/run-demos.sh /srv/demos/risk/"
+        docker-compose -f docker/docker-compose.yml -p oqcluster up -d
