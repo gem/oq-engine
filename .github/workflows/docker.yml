@@ -28,7 +28,6 @@ jobs:
         with:
           context: docker 
           file: docker/Dockerfile.engine
-          load: true
           tags: openquake/engine:daily
 
       - name: List Image
@@ -41,7 +40,6 @@ jobs:
         with:
           context: docker/zmq
           file: docker/zmq/Dockerfile.master
-          load: true
           tags: openquake/engine-master-zmq:daily
 
       - name: Builds and load engine worker with tags daily
@@ -50,12 +48,12 @@ jobs:
         with:
           context: docker/zmq
           file: docker/zmq/Dockerfile.worker
-          load: true
           tags: openquake/engine-worker-zmq:daily
 
       - name: Run docker compose to build up cluster
         run: |
           cd docker
           docker-compose -p oqcluster up -d
+          sleep 30
           docker-compose -p oqcluster ps
 
