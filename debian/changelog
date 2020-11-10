@@ -1,5 +1,4 @@
   [Michele Simionato]
-  * Reduced the data storage required for disaggregation
   * Internal: required h5py == 2.10.0
   * Internal: made the classical ruptures pandas-friendly
   * Internal: made the damage distributions pandas-friendly
