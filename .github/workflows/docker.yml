@@ -11,28 +11,27 @@ name: docker
 
 
 jobs:
-
   docker:
-    name: docker
+    name: run a calc on docker engine 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        distro:
-          - centos8
-          - centos7
-          - ubuntu1804
-          - ubuntu2004
     env:
       working-directory: ./docker
 
     steps:
-      - name: Check out the codebase.
-        uses: actions/checkout@v2
 
-      - name: Set up Python 3.
-        uses: actions/setup-python@v2
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
         with:
-          python-version: '3.8'
+          context: ./
+          file: ./Dockerfile.engine
+          push: false
+          tags: ushamandya/simplewhale:latest
 
-      - name: Install docker and docker-compose.
-        run: pip3 install docker docker-compose
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
+
