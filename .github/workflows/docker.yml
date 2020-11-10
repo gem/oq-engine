@@ -43,8 +43,10 @@ jobs:
         run: |
           docker image inspect engine:nightly
 
+      - name: list content of folder
+        run: |
+          ls -lrt
+
       - name: Run calc on docker engine
-        uses: docker://engine:nightly
-        with:
-          volume: .:/srv
-          args: /srv/bin/run-demos.sh /srv/demos/
+        run: |
+          docker run -v .:/srv engine:nightly "/srv/bin/run-demos.sh /srv/demos/risk/"
