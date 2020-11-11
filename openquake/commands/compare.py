@@ -19,6 +19,7 @@ import sys
 import collections
 import numpy
 from openquake.baselib import sap
+from openquake.commonlib import util
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
@@ -61,6 +62,19 @@ def get_diff_idxs(array, rtol, atol, threshold):
     return numpy.fromiter(diff_idxs, int)
 
 
+def compare_rups(calc_1, calc_2):
+    """
+    Compare the ruptures of two calculations as pandas DataFrames
+    """
+    with util.read(calc_1) as ds1, util.read(calc_2) as ds2:
+        df1 = ds1.read_df('rup').sort_values(['src_id', 'mag'])
+        df2 = ds2.read_df('rup').sort_values(['src_id', 'mag'])
+    cols = [col for col in df1.columns if not col.endswith('_')]
+    df1 = df1[cols].reset_index(drop=True)
+    df2 = df2[cols].reset_index(drop=True)
+    return df1.compare(df2)
+
+
 @sap.script
 def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             threshold=1E-2):
@@ -74,6 +88,9 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             time = Extractor(calc_id).get('performance_data')['time_sec'].sum()
             data.append((calc_id, time))
         print(views.rst_table(data, ['calc_id', 'time']))
+        return
+    if what == 'rups':
+        print(compare_rups(int(imt), calc_ids[0]))
         return
     sitecol = Extractor(calc_ids[0]).get('sitecol')
     sids = sitecol['sids']
@@ -132,7 +149,7 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
 
 
 compare.arg('what', '"hmaps", "hcurves" or "cumtime of"',
-            choices={'hmaps', 'hcurves', 'cumtime'})
+            choices={'rups', 'hmaps', 'hcurves', 'cumtime'})
 compare.arg('imt', 'intensity measure type to compare')
 compare.arg('calc_ids', 'calculation IDs', type=int, nargs='+')
 compare.flg('files', 'write the results in multiple files')
