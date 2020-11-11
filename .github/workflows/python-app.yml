@@ -29,8 +29,7 @@ jobs:
       run: |
         oq dbserver start
         pytest openquake/server
-        pytest openquake --doctest-modules -x -k "not gsim" --disable-warnings --color=yes --durations=10 && pytest doc/adv-manual/developing.rst
-        oq dbserver stop
+        pytest openquake --doctest-modules -x -k "not gsim" --disable-warnings --color=yes --durations=10 && pytest doc/adv-manual/developing.rst && oq dbserver stop
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
