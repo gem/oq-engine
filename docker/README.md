@@ -17,7 +17,6 @@ $ docker build -t openquake/engine -f Dockerfile.engine .
 
 ```bash
 --build-arg oq_branch=master      ## oq-engine branch
---build-arg tools_branch=mater    ## oq standalone tools branch
 ```
 
 
@@ -41,6 +40,12 @@ $ docker build -t openquake/engine-worker-zmq -f zmq/Dockerfile.worker .
 
 ```bash
 $ docker-compose -f docker-compose.yml <build,up,down...> 
+```
+
+If you want more to scale the worker service start with follow:
+```bash
+$ docker-compose -f docker-compose.yml <build,up,down...> --scale worker=NUM
+
 ```
 
 ### Debug
