@@ -21,9 +21,9 @@ from openquake.baselib.general import gettemp
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
-from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3, case_4
+from openquake.qa_tests_data.gmf_ebrisk import case_01, case_02, case_03, case_04
 from openquake.qa_tests_data.event_based_risk import (
-    case_master, case_2 as ebr_2)
+    case_master, case_02 as ebr_2)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -37,23 +37,23 @@ def check_full_lt(calc1, calc2):
 
 
 class GmfEbRiskTestCase(CalculatorTestCase):
-    def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job_risk.ini')
+    def test_case_01(self):
+        self.run_calc(case_01.__file__, 'job_risk.ini')
         num_events = len(self.calc.datastore['losses_by_event'])
         self.assertEqual(num_events, 10)
 
-    def test_case_2(self):
+    def test_case_02(self):
         # case with 3 sites but gmvs only on 2 sites
-        self.run_calc(case_2.__file__, 'job.ini')
+        self.run_calc(case_02.__file__, 'job.ini')
         alt = self.calc.datastore['losses_by_event']
         self.assertEqual(len(alt), 3)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
         totloss = alt['loss'].sum()
         aae(totloss, 1.82, decimal=4)
 
-    def test_case_3(self):
+    def test_case_03(self):
         # case with 13 sites, 10 eids, and several 0 values
-        self.run_calc(case_3.__file__, 'job.ini')
+        self.run_calc(case_03.__file__, 'job.ini')
         alt = self.calc.datastore['losses_by_event']
         self.assertEqual(len(alt), 10)
         self.assertEqual(set(alt['rlzi']), set([0]))  # single rlzi
@@ -73,12 +73,12 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         totloss = alt['loss'].sum()
         aae(totloss, 15283.561, decimal=2)
 
-    def test_case_4(self):
+    def test_case_04(self):
         # a simple test with 1 asset and two source models
         # this is also a test with preimported exposure
-        self.run_calc(case_4.__file__, 'job_haz.ini')
+        self.run_calc(case_04.__file__, 'job_haz.ini')
         calc0 = self.calc.datastore  # event_based
-        self.run_calc(case_4.__file__, 'job_risk.ini',
+        self.run_calc(case_04.__file__, 'job_risk.ini',
                       hazard_calculation_id=str(calc0.calc_id))
         calc1 = self.calc.datastore  # event_based_risk
         [fname] = export(('losses_by_event', 'csv'), calc1)

@@ -17,9 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.qa_tests_data.classical_damage import (
-    case_1, case_2, case_1a, case_1b, case_1c, case_2a, case_2b, case_3a,
-    case_4a, case_4b, case_4c, case_5a, case_6a, case_6b, case_7a, case_7b,
-    case_7c, case_8a, case_master)
+    case_01, case_02, case_01a, case_01b, case_01c, case_02a, case_02b,
+    case_03a, case_04a, case_04b, case_04c, case_05a, case_06a, case_06b,
+    case_07a, case_07b, case_07c, case_08a, case_master)
 from openquake.calculators.export import export
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, NOT_DARWIN)
@@ -32,17 +32,17 @@ aae = numpy.testing.assert_almost_equal
 class ClassicalDamageCase1TestCase(CalculatorTestCase):
 
     def test_continuous(self):
-        self.run_calc(case_1.__file__, 'job_continuous.ini')
+        self.run_calc(case_01.__file__, 'job_continuous.ini')
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_continuous.csv', fname)
 
     def test_discrete(self):
-        self.run_calc(case_1.__file__, 'job_discrete.ini')
+        self.run_calc(case_01.__file__, 'job_discrete.ini')
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_discrete.csv', fname)
 
     def test_interpolation(self):
-        self.run_calc(case_1.__file__, 'job_interpolation.ini')
+        self.run_calc(case_01.__file__, 'job_interpolation.ini')
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_interpolation.csv', fname)
 
@@ -51,27 +51,27 @@ class ClassicalDamageCase1TestCase(CalculatorTestCase):
 class ClassicalDamageCase2TestCase(CalculatorTestCase):
 
     def test_continuous(self):
-        self.run_calc(case_2.__file__, 'job_continuous.ini')
+        self.run_calc(case_02.__file__, 'job_continuous.ini')
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_continuous.csv', fname)
 
     def test_discrete(self):
         # a test producing NaNs
-        self.run_calc(case_2.__file__, 'job_discrete.ini')
+        self.run_calc(case_02.__file__, 'job_discrete.ini')
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_discrete.csv', fname)
 
     def test_interpolation(self):
-        self.run_calc(case_2.__file__, 'job_interpolation.ini')
+        self.run_calc(case_02.__file__, 'job_interpolation.ini')
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damage_interpolation.csv', fname)
 
 
 class ClassicalDamageCase8TestCase(CalculatorTestCase):
 
-    def test_case_8a(self):
+    def test_case_08a(self):
         self.run_calc(
-            case_8a.__file__, 'job_haz.ini,job_risk.ini')
+            case_08a.__file__, 'job_haz.ini,job_risk.ini')
         f1, f2 = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/damages-rlzs-AkkarBommer2010().csv', f2)
@@ -96,52 +96,52 @@ class ClassicalDamageTestCase(CalculatorTestCase):
                 self.assertEqualFiles(
                     'expected/%s' % strip_calc_id(fname), fname)
 
-    def test_case_1a(self):
-        self.check(case_1a)
+    def test_case_01a(self):
+        self.check(case_01a)
 
-    def test_case_1b(self):
-        self.check(case_1b)
+    def test_case_01b(self):
+        self.check(case_01b)
 
-    def test_case_1c(self):
-        self.check(case_1c)
+    def test_case_01c(self):
+        self.check(case_01c)
 
-    def test_case_2a(self):
-        self.check(case_2a)
+    def test_case_02a(self):
+        self.check(case_02a)
 
-    def test_case_2b(self):
-        self.check(case_2b)
+    def test_case_02b(self):
+        self.check(case_02b)
 
-    def test_case_3a(self):
-        self.check(case_3a)
+    def test_case_03a(self):
+        self.check(case_03a)
 
-    def test_case_4a(self):
-        self.check(case_4a)
+    def test_case_04a(self):
+        self.check(case_04a)
 
-    def test_case_4b(self):
-        self.check(case_4b)
+    def test_case_04b(self):
+        self.check(case_04b)
 
-    def test_case_4c(self):
-        self.check(case_4c)
+    def test_case_04c(self):
+        self.check(case_04c)
 
-    def test_case_5a(self):
-        self.check(case_5a)
+    def test_case_05a(self):
+        self.check(case_05a)
 
-    def test_case_6a(self):
+    def test_case_06a(self):
         # this is a tricky test where the region_constraint discards an asset
         # so the risk sites are different from the hazard sites
-        self.check(case_6a)
+        self.check(case_06a)
 
-    def test_case_6b(self):
-        self.check(case_6b)
+    def test_case_06b(self):
+        self.check(case_06b)
 
-    def test_case_7a(self):
-        self.check(case_7a)
+    def test_case_07a(self):
+        self.check(case_07a)
 
-    def test_case_7b(self):
-        self.check(case_7b)
+    def test_case_07b(self):
+        self.check(case_07b)
 
-    def test_case_7c(self):
-        self.check(case_7c)
+    def test_case_07c(self):
+        self.check(case_07c)
 
     def test_case_master(self):
         if NOT_DARWIN:  # skip on macOS

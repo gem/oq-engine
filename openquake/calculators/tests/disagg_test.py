@@ -28,7 +28,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_master)
+    case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -46,7 +46,7 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected_output/%s' % fname, actual)
         return out
 
-    def test_case_1(self):
+    def test_case_01(self):
         self.assert_curves_ok(
             ['rlz-0-PGA-sid-0-poe-0_Lon_Lat.csv',
              'rlz-0-PGA-sid-0-poe-0_Mag.csv',
@@ -60,10 +60,10 @@ class DisaggregationTestCase(CalculatorTestCase):
              'rlz-0-SA(0.025)-sid-0-poe-1_Lon_Lat.csv',
              'rlz-0-SA(0.025)-sid-0-poe-1_Mag.csv',
              'rlz-0-SA(0.025)-sid-0-poe-1_Mag_Dist.csv'],
-            case_1.__file__,
+            case_01.__file__,
             fmt='csv')
 
-    def test_case_2(self):
+    def test_case_02(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
         # site #0 is partially discarded
         if sys.platform == 'darwin':
@@ -75,7 +75,7 @@ class DisaggregationTestCase(CalculatorTestCase):
              'rlz-1-SA(0.1)-sid-1.xml',
              'rlz-2-SA(0.1)-sid-1.xml',
              'rlz-3-SA(0.1)-sid-1.xml'],
-            case_2.__file__)
+            case_02.__file__)
 
         # check that the CSV exporter does not break
         fnames = export(('disagg', 'csv'), self.calc.datastore)
@@ -95,17 +95,17 @@ class DisaggregationTestCase(CalculatorTestCase):
         aw = extract(self.calc.datastore, 'sitecol?field=custom_site_id')
         self.assertEqual(list(aw), [100, 200])
 
-    def test_case_3(self):
+    def test_case_03(self):
         # a case with poes_disagg too large
         with self.assertRaises(SystemExit) as ctx:
-            self.run_calc(case_3.__file__, 'job.ini')
+            self.run_calc(case_03.__file__, 'job.ini')
         self.assertEqual(str(ctx.exception),
                          'Cannot do any disaggregation: zero hazard')
 
-    def test_case_4(self):
+    def test_case_04(self):
         # this is case with number of lon/lat bins different for site 0/site 1
         # this exercise sampling
-        self.run_calc(case_4.__file__, 'job.ini')
+        self.run_calc(case_04.__file__, 'job.ini')
 
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 32)  # 1 sid x 8 keys x 2 poe x 2 imt
@@ -114,18 +114,18 @@ class DisaggregationTestCase(CalculatorTestCase):
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
-    def test_case_5(self):
+    def test_case_05(self):
         # test gridded nonparametric sources
-        self.run_calc(case_5.__file__, 'job.ini')
+        self.run_calc(case_05.__file__, 'job.ini')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         # there is a collapsed nonparametric source with len(probs_occur)==3
 
-    def test_case_6(self):
+    def test_case_06(self):
         # test with international date line
-        self.run_calc(case_6.__file__, 'job.ini')
+        self.run_calc(case_06.__file__, 'job.ini')
 
         # test CSV export
         fnames = export(('disagg', 'csv'), self.calc.datastore)
@@ -152,9 +152,9 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         check_disagg_by_src(self.calc.datastore)
 
-    def test_case_7(self):
+    def test_case_07(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
-        self.run_calc(case_7.__file__, 'job.ini')
+        self.run_calc(case_07.__file__, 'job.ini')
         ctxs, _ = read_ctxs(self.calc.datastore)
         ctxs0 = [ctx for ctx in ctxs if ctx.grp_id == 0]
         ctxs1 = [ctx for ctx in ctxs if ctx.grp_id == 1]

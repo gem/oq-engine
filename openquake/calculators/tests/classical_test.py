@@ -27,14 +27,14 @@ from openquake.calculators.extract import extract
 from openquake.calculators.getters import get_slice_by_g
 from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
 from openquake.qa_tests_data.classical import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
+    case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08, case_09,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_22, case_23, case_24, case_25,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
-    case_058)
+    case_58)
 
 aac = numpy.testing.assert_allclose
 
@@ -76,10 +76,10 @@ class ClassicalTestCase(CalculatorTestCase):
                                   delta=delta)
         return got
 
-    def test_case_1(self):
+    def test_case_01(self):
         self.assert_curves_ok(
             ['hazard_curve-PGA.csv', 'hazard_curve-SA(0.1).csv'],
-            case_1.__file__)
+            case_01.__file__)
 
         if parallel.oq_distribute() != 'no':
             info = view('job_info', self.calc.datastore)
@@ -104,25 +104,25 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
-            self.run_calc(case_1.__file__, 'job.ini', minimum_magnitude='4.5')
+            self.run_calc(case_01.__file__, 'job.ini', minimum_magnitude='4.5')
         self.assertEqual(str(ctx.exception), 'All sources were discarded!?')
 
     def test_wrong_smlt(self):
         with self.assertRaises(lt.LogicTreeError):
-            self.run_calc(case_1.__file__, 'job_wrong.ini')
+            self.run_calc(case_01.__file__, 'job_wrong.ini')
 
     def test_sa_period_too_big(self):
         imtls = '{"SA(4.1)": [0.1, 0.4, 0.6]}'
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(
-                case_1.__file__, 'job.ini',
+                case_01.__file__, 'job.ini',
                 intensity_measure_types_and_levels=imtls)
         self.assertEqual(
             'SA(4.1) is out of the period range defined for [SadighEtAl1997]',
             str(ctx.exception))
 
-    def test_case_2(self):
-        self.run_calc(case_2.__file__, 'job.ini')
+    def test_case_02(self):
+        self.run_calc(case_02.__file__, 'job.ini')
 
         # check view inputs
         lines = view('inputs', self.calc.datastore).splitlines()
@@ -134,33 +134,33 @@ class ClassicalTestCase(CalculatorTestCase):
         # check disagg_by_src for a single realization
         check_disagg_by_src(self.calc.datastore)
 
-    def test_case_3(self):
+    def test_case_03(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
-            case_3.__file__)
+            case_03.__file__)
 
-    def test_case_4(self):
+    def test_case_04(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
-            case_4.__file__)
+            case_04.__file__)
 
-    def test_case_5(self):
+    def test_case_05(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
-            case_5.__file__)
+            case_05.__file__)
 
-    def test_case_6(self):
+    def test_case_06(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
-            case_6.__file__)
+            case_06.__file__)
 
-    def test_case_7(self):
+    def test_case_07(self):
         # this is a case with duplicated sources
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',
              'hazard_curve-smltp_b1-gsimltp_b1.csv',
              'hazard_curve-smltp_b2-gsimltp_b1.csv'],
-            case_7.__file__)
+            case_07.__file__)
 
         # checking the individual hazard maps are nonzero
         iml = self.calc.datastore.sel(
@@ -169,21 +169,21 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # exercise the warning for no output when mean_hazard_curves='false'
         self.run_calc(
-            case_7.__file__, 'job.ini', mean_hazard_curves='false',
+            case_07.__file__, 'job.ini', mean_hazard_curves='false',
             calculation_mode='preclassical',  poes='0.1')
 
-    def test_case_8(self):
+    def test_case_08(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b4-gsimltp_b1.csv'],
-            case_8.__file__)
+            case_08.__file__)
 
-    def test_case_9(self):
+    def test_case_09(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv'],
-            case_9.__file__)
+            case_09.__file__)
 
     def test_case_10(self):
         self.assert_curves_ok(
@@ -765,23 +765,23 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve_PGA.csv', f1)
         self.assertEqualFiles('expected/hcurve_SA.csv', f2)
 
-    def test_case_058(self):
+    def test_case_58(self):
         # Logic tree with SimpleFault uncertainty on geometry and MFD (from
         # slip)
 
         # First calculation
-        self.run_calc(case_058.__file__, 'job.ini')
+        self.run_calc(case_58.__file__, 'job.ini')
         f01, f02 = export(('hcurves/rlz-000', 'csv'), self.calc.datastore)
         f03, f04 = export(('hcurves/rlz-003', 'csv'), self.calc.datastore)
 
         # Second calculation. Same LT structure for case 1 but with only one
         # branch for each branch set
-        self.run_calc(case_058.__file__, 'job_case01.ini')
+        self.run_calc(case_58.__file__, 'job_case01.ini')
         f11, f12 = export(('hcurves/', 'csv'), self.calc.datastore)
 
         # Third calculation. In this case we use a source model containing one
         # source with the geometry of branch b22 and slip rate of branch b32
-        self.run_calc(case_058.__file__, 'job_case02.ini')
+        self.run_calc(case_58.__file__, 'job_case02.ini')
         f21, f22 = export(('hcurves/', 'csv'), self.calc.datastore)
 
         # First test

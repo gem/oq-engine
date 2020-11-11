@@ -24,8 +24,8 @@ from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
-    case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8, case_9, case_10)
+    case_01, case_01c, case_02, case_03, case_04, case_04b, case_05, case_05a,
+    case_06, case_07, case_08, case_09, case_10)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -50,9 +50,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         for fname, actual in zip(expected, got):
             self.assertEqualFiles('expected/%s' % fname, actual)
 
-    def test_case_1(self):
+    def test_case_01(self):
         # test with a single event and a missing tag
-        self.assert_ok(case_1, 'job_risk.ini')
+        self.assert_ok(case_01, 'job_risk.ini')
         got = view('num_units', self.calc.datastore)
         self.assertEqual('''\
 ======== =========
@@ -72,11 +72,11 @@ RM       4_000
                       'taxonomy=RM&CRESTA=01.1')
         self.assertEqual(dmg.shape, ())
 
-    def test_case_1c(self):
+    def test_case_01c(self):
         # this is a case with more hazard sites than exposure sites
         # it is also a case with asset numbers > 65535 and < 1
         # and also a case with modal_damage_state
-        test_dir = os.path.dirname(case_1c.__file__)
+        test_dir = os.path.dirname(case_01c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
 
         # check damages-rlzs
@@ -98,17 +98,17 @@ RM       4_000
         gmf_data = dict(extract(self.calc.datastore, 'gmf_data'))
         self.assertEqual(gmf_data['rlz-000'].shape, (2,))  # 2 assets
 
-    def test_case_2(self):
-        self.assert_ok(case_2, 'job_risk.ini')
+    def test_case_02(self):
+        self.assert_ok(case_02, 'job_risk.ini')
 
-    def test_case_3(self):
-        self.assert_ok(case_3, 'job_risk.ini')
+    def test_case_03(self):
+        self.assert_ok(case_03, 'job_risk.ini')
 
-    def test_case_4(self):
-        self.assert_ok(case_4, 'job_haz.ini,job_risk.ini')
+    def test_case_04(self):
+        self.assert_ok(case_04, 'job_haz.ini,job_risk.ini')
 
-    def test_case_4b(self):
-        self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
+    def test_case_04b(self):
+        self.run_calc(case_04b.__file__, 'job_haz.ini,job_risk.ini')
 
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
@@ -128,35 +128,35 @@ RM       4_000
 
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:
-            self.run_calc(os.path.dirname(case_4b.__file__), 'job_err.ini')
+            self.run_calc(os.path.dirname(case_04b.__file__), 'job_err.ini')
         self.assertIn('must contain a single branchset, found 2!',
                       str(ctx.exception))
 
-    def test_case_5(self):
+    def test_case_05(self):
         # this is a test for the rupture filtering
         # NB: the exposure file is imported twice on purpose, to make
         # sure that nothing changes; the case is very tricky since the
         # hazard site collection is filtered by the maximum_distance,
         # there is no region_constraint in hazard and there is in risk
-        self.assert_ok(case_5, 'job_haz.ini,job_risk.ini')
+        self.assert_ok(case_05, 'job_haz.ini,job_risk.ini')
 
-    def test_case_5a(self):
+    def test_case_05a(self):
         # this is a case with two gsims and one asset
-        self.assert_ok(case_5a, 'job_haz.ini,job_risk.ini')
+        self.assert_ok(case_05a, 'job_haz.ini,job_risk.ini')
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
         tmpname = write_csv(None, dmg)  # shape (T, R, D) == (1, 2, 5)
         self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
 
-    def test_case_6(self):
+    def test_case_06(self):
         # this is a case with 5 assets on the same point
-        self.assert_ok(case_6, 'job_h.ini,job_r.ini')
+        self.assert_ok(case_06, 'job_h.ini,job_r.ini')
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
         tmpname = write_csv(None, dmg)  # shape (T, R, D) == (5, 1, 5)
         self.assertEqualFiles('expected/dmg_by_taxon.csv', tmpname)
 
-    def test_case_7(self):
+    def test_case_07(self):
         # this is a case with three loss types
-        self.assert_ok(case_7, 'job_h.ini,job_r.ini', exports='csv')
+        self.assert_ok(case_07, 'job_h.ini,job_r.ini', exports='csv')
 
         # just run the npz export
         [npz] = export(('damages-rlzs', 'npz'), self.calc.datastore)
@@ -167,17 +167,17 @@ RM       4_000
         self.assertEqual(len(df), 221)
         self.assertEqual(len(df[df.ds1 > 0]), 76)  # only 76/300 are nonzero
 
-    def test_case_8(self):
+    def test_case_08(self):
         # case with a shakemap
-        self.run_calc(case_8.__file__, 'prejob.ini')
-        self.run_calc(case_8.__file__, 'job.ini',
+        self.run_calc(case_08.__file__, 'prejob.ini')
+        self.run_calc(case_08.__file__, 'job.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/dmg_by_event.csv', fname)
 
-    def test_case_9(self):
+    def test_case_09(self):
         # case with noDamageLimit==0 that had NaNs in the past
-        self.run_calc(case_9.__file__, 'job.ini')
+        self.run_calc(case_09.__file__, 'job.ini')
 
         # export/import dmg_by_event and check the total nodamage
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)

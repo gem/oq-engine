@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.qa_tests_data.classical_risk import (
-    case_2, case_3, case_4, case_5, case_master)
+    case_02, case_03, case_04, case_05, case_master)
 from openquake.calculators.tests import (
     CalculatorTestCase, strip_calc_id, NOT_DARWIN)
 from openquake.calculators.export import export
@@ -25,16 +25,16 @@ from openquake.calculators.export import export
 
 class ClassicalRiskTestCase(CalculatorTestCase):
 
-    def test_case_2(self):
-        self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
+    def test_case_02(self):
+        self.run_calc(case_02.__file__, 'job_risk.ini', exports='csv')
         [fname] = export(('loss_curves/rlz-0', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves.csv', fname)
 
         [fname] = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps.csv', fname)
 
-    def test_case_3(self):
-        self.run_calc(case_3.__file__, 'job.ini', exports='csv')
+    def test_case_03(self):
+        self.run_calc(case_03.__file__, 'job.ini', exports='csv')
         [fname] = export(('loss_curves/rlz-0/sid-0', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-000.csv', fname)
@@ -42,8 +42,8 @@ class ClassicalRiskTestCase(CalculatorTestCase):
                          self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-ref-a8-000.csv', fname)
 
-    def test_case_4(self):
-        self.run_calc(case_4.__file__, 'job_haz.ini,job_risk.ini',
+    def test_case_04(self):
+        self.run_calc(case_04.__file__, 'job_haz.ini,job_risk.ini',
                       exports='csv')
 
         fnames = export(('loss_maps-rlzs', 'csv'), self.calc.datastore)
@@ -64,9 +64,9 @@ class ClassicalRiskTestCase(CalculatorTestCase):
                               fname)
 
     # test with 1 hazard site and 2 risk sites using assoc_assets_sites
-    def test_case_5(self):
+    def test_case_05(self):
         # test with different curve resolution for different taxonomies
-        self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini')
+        self.run_calc(case_05.__file__, 'job_h.ini,job_r.ini')
 
         # check the cutoff in classical.fix_ones
         poes = self.calc.datastore['_poes'][()]

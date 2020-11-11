@@ -39,12 +39,12 @@ from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import case_18 as gmpe_tables
 from openquake.qa_tests_data.event_based import (
-    blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
-    case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
-    case_17,  case_18, case_19, case_20, case_21, case_22, case_23, case_24,
+    blocksize, case_01, case_02, case_03, case_04, case_05, case_06, case_07,
+    case_08, case_09, case_10, case_12, case_13, case_14, case_15, case_16,
+    case_17,  case_018, case_19, case_20, case_21, case_22, case_23, case_24,
     case_25, case_26, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
-    case_1 as sc1, case_2 as sc2, case_3 as sc3)
+    case_01 as sc1, case_02 as sc2, case_03 as sc3)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -128,8 +128,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/gmf-data.csv', fname)
         self.assertEqualFiles('expected/sig-eps.csv', sig_eps)
 
-    def test_case_1(self):
-        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
+    def test_case_01(self):
+        out = self.run_calc(case_01.__file__, 'job.ini', exports='csv,xml')
 
         # make sure ses_id >= 65536 is valid
         high_ses = (self.calc.datastore['events']['ses_id'] >= 65536).sum()
@@ -157,7 +157,7 @@ class EventBasedTestCase(CalculatorTestCase):
         aae(poes, hcurve)
 
         # test gsim_by_imt
-        out = self.run_calc(case_1.__file__, 'job.ini',
+        out = self.run_calc(case_01.__file__, 'job.ini',
                             ses_per_logic_tree_path='30',
                             gsim_logic_tree_file='gsim_by_imt_logic_tree.xml',
                             exports='csv')
@@ -180,21 +180,21 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gsim_by_imt.csv', fname)
 
-    def test_case_1_ruptures(self):
-        self.run_calc(case_1.__file__, 'job_ruptures.ini')
+    def test_case_01_ruptures(self):
+        self.run_calc(case_01.__file__, 'job_ruptures.ini')
         self.assertEqual(len(self.calc.datastore['ruptures']), 2)
         [fname] = export(('events', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/events.csv', fname)
 
     def test_minimum_intensity(self):
-        out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
+        out = self.run_calc(case_02.__file__, 'job.ini', exports='csv',
                             minimum_intensity='0.2')
 
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/minimum-intensity-gmf-data.csv', fname)
 
-    def test_case_2(self):
-        out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
+    def test_case_02(self):
+        out = self.run_calc(case_02.__file__, 'job.ini', exports='csv')
 
         [gmfs, sig_eps, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', gmfs)
@@ -205,16 +205,16 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-    def test_case_2bis(self):  # oversampling
-        out = self.run_calc(case_2.__file__, 'job_2.ini', exports='csv,xml')
+    def test_case_02bis(self):  # oversampling
+        out = self.run_calc(case_02.__file__, 'job_2.ini', exports='csv,xml')
         [fname, _, _] = out['gmf_data', 'csv']  # 2 realizations, 1 TRT
         self.assertEqualFiles('expected/gmf-data-bis.csv', fname)
         for fname in out['hcurves', 'csv']:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-6)
 
-    def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
-        self.run_calc(case_3.__file__, 'job.ini')
+    def test_case_03(self):  # 1 site, 1 rupture, 2 GSIMs
+        self.run_calc(case_03.__file__, 'job.ini')
         [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', f)
 
@@ -225,18 +225,18 @@ class EventBasedTestCase(CalculatorTestCase):
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', f)
 
-    def test_case_4(self):
-        out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
+    def test_case_04(self):
+        out = self.run_calc(case_04.__file__, 'job.ini', exports='csv')
         [fname] = out['hcurves', 'csv']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
         # exercise preclassical
-        self.run_calc(case_4.__file__, 'job.ini',
+        self.run_calc(case_04.__file__, 'job.ini',
                       calculation_mode='preclassical')
 
-    def test_case_5(self):
-        out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
+    def test_case_05(self):
+        out = self.run_calc(case_05.__file__, 'job.ini', exports='csv')
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
@@ -254,13 +254,13 @@ class EventBasedTestCase(CalculatorTestCase):
         aae(aw.mean_frequency, [0.02, 0.013333, 0.01, 0.053333, 0.006667,
                                 0.006667, 0.006667], decimal=6)
 
-    def test_case_6(self):
+    def test_case_06(self):
         # 2 models x 3 GMPEs, different weights
         expected = [
             'hazard_curve-mean.csv',
             'quantile_curve-0.1.csv',
         ]
-        out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
+        out = self.run_calc(case_06.__file__, 'job.ini', exports='csv')
         fnames = out['hcurves', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
@@ -268,12 +268,12 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
-    def test_case_7(self):
+    def test_case_07(self):
         # 2 models x 3 GMPEs, 1000 samples * 10 SES
         expected = [
             'hazard_curve-mean.csv',
         ]
-        out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
+        out = self.run_calc(case_07.__file__, 'job.ini', exports='csv')
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
         self.assertEqual({b'0~0': 308,  # w = .6 * .5 = .30
@@ -293,8 +293,8 @@ class EventBasedTestCase(CalculatorTestCase):
             mean_cl, mean_eb, min_value=0.1)
         self.assertLess(reldiff, 0.05)
 
-    def test_case_8(self):
-        out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
+    def test_case_08(self):
+        out = self.run_calc(case_08.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/rup_data.csv', fname, delta=1E-5)
 
@@ -302,9 +302,9 @@ class EventBasedTestCase(CalculatorTestCase):
         gg = get_gmfgetter(self.calc.datastore, rup_id=0)
         self.assertEqual(len(gg.get_hazard()), 1)  # 1 rlz
 
-    def test_case_9(self):
+    def test_case_09(self):
         # example with correlation: the site collection must not be filtered
-        self.run_calc(case_9.__file__, 'job.ini', exports='csv')
+        self.run_calc(case_09.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
         self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 39)
 
@@ -499,7 +499,7 @@ class EventBasedTestCase(CalculatorTestCase):
                          for period in numpy.arange(0.1,  1, 0.001)}
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(
-                case_2.__file__, 'job.ini',
+                case_02.__file__, 'job.ini',
                 intensity_measure_types_and_levels=str(too_many_imts))
         self.assertEqual(str(ctx.exception),
                          'The event_based calculator is restricted '
