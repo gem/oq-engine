@@ -2,9 +2,7 @@ version: "3.7"
 
 networks:
   frontend:
-    enable_ipv6: false
   backend:
-    enable_ipv6: false
     internal: true
 
 volumes:
@@ -44,7 +42,7 @@ services:
   worker:
     <<: *service_default
     # don't use name if want to scale
-    container_name: engine-worker
+    # container_name: engine-worker
     hostname: engine-worker
     image: openquake/engine-worker-zmq:daily
     volumes:
