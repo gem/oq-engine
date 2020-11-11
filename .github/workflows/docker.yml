@@ -10,7 +10,7 @@ name: docker
 
 jobs:
   docker:
-    name: build and run a calc on docker 
+    name: build and up compose 
     runs-on: ubuntu-latest
 
     steps:
