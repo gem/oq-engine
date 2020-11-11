@@ -40,7 +40,7 @@ $ docker build -t openquake/engine-worker-zmq -f zmq/Dockerfile.worker .
 ### ZMQ
 
 ```bash
-$ docker-compose -f docker-compose.yml <build,up,down...> [--scale worker=N]
+$ docker-compose -f docker-compose.yml <build,up,down...> 
 ```
 
 ### Debug
