@@ -10,7 +10,7 @@ name: docker
 
 jobs:
   docker:
-    name: build and run a calc on docker compose infrastructure
+    name: build and run a calc on docker 
     runs-on: ubuntu-latest
 
     steps:
@@ -38,7 +38,3 @@ jobs:
           docker-compose up -d
           sleep 30
           docker-compose ps
-      - name: Run test demos on cluster
-        run: |
-          docker exec engine-master oq-engine/bin/run-demos.sh oq-engine/demos
-          curl http://localhost:8800/v1/calc/list
