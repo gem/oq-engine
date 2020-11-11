@@ -315,7 +315,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # tot_losses-rlzs has shape (L=5, R=9)
         # tot_losses-stats has shape (L=5, S=4)
         fname = export(('tot_losses-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-4)
 
         fname = export(('tot_curves-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
