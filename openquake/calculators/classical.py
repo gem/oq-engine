@@ -559,7 +559,8 @@ class ClassicalCalculator(base.HazardCalculator):
         pgetter = getters.PmapGetter(
             self.datastore, weights, self.sitecol.sids, oq.imtls)
         logging.info('Saving _poes')
-        srcid = {row[0]: srcid for srcid, row in self.csm.source_info.items()}
+        enum = enumerate(self.datastore['source_info']['source_id'])
+        srcid = {source_id: i for i, source_id in enum}
         with self.monitor('saving probability maps'):
             for key, pmap in pmap_by_key.items():
                 if isinstance(key, str):  # disagg_by_src
