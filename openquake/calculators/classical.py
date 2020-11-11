@@ -38,7 +38,7 @@ from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_sources, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, util, logs, readinput
+from openquake.commonlib import calc, util, logs
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -145,7 +145,7 @@ def preclassical(srcs, srcfilter, monitor):
             continue
         src.weight
         dt = time.time() - t0
-        calc_times[src.source_id] += F32([src.num_ruptures, len(sites), dt])
+        calc_times[src.id] += F32([src.num_ruptures, len(sites), dt])
     return calc_times
 
 
@@ -207,7 +207,7 @@ class ClassicalCalculator(base.HazardCalculator):
             eff_rups = 0
             eff_sites = 0
             for srcid, rec in d.items():
-                srcids.add(re.sub(r':\d+$', '', srcid))
+                srcids.add(srcid)
                 eff_rups += rec[0]
                 if rec[0]:
                     eff_sites += rec[1] / rec[0]
@@ -231,7 +231,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         zd = AccumDict()
         params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
-                  'nsites', 'probs_occur_', 'sids_'}
+                  'nsites', 'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
             cm = ContextMaker(trt, gsims)
@@ -251,6 +251,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = hdf5.vfloat64
                 elif param.endswith('_'):
                     dt = hdf5.vfloat32
+                elif param == 'src_id':
+                    dt = U32
                 elif param in {'nsites', 'grp_id'}:
                     dt = U16
                 else:
@@ -399,7 +401,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.store_rlz_info(acc.eff_ruptures)
         finally:
             with self.monitor('store source_info'):
-                self.store_source_info(self.calc_times)
+                source_ids = self.store_source_info(self.calc_times)
             if self.by_task:
                 logging.info('Storing by_task information')
                 num_tasks = max(self.by_task) + 1,
@@ -414,7 +416,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     effrups, effsites, srcids = rec
                     er[task_no] = effrups
                     es[task_no] = effsites
-                    si[task_no] = ' '.join(srcids)
+                    si[task_no] = ' '.join(source_ids[s] for s in srcids)
                 self.by_task.clear()
         self.numrups = sum(arr[0] for arr in self.calc_times.values())
         numsites = sum(arr[1] for arr in self.calc_times.values())
@@ -557,12 +559,12 @@ class ClassicalCalculator(base.HazardCalculator):
         pgetter = getters.PmapGetter(
             self.datastore, weights, self.sitecol.sids, oq.imtls)
         logging.info('Saving _poes')
+        srcid = {row[0]: srcid for srcid, row in self.csm.source_info.items()}
         with self.monitor('saving probability maps'):
             for key, pmap in pmap_by_key.items():
                 if isinstance(key, str):  # disagg_by_src
-                    serial = self.csm.source_info[key][readinput.SERIAL]
                     rlzs_by_gsim = rlzs_by_gsim_list[pmap.grp_id]
-                    self.datastore['disagg_by_src'][..., serial] = (
+                    self.datastore['disagg_by_src'][..., srcid[key]] = (
                         pgetter.get_hcurves(pmap, rlzs_by_gsim))
                 elif pmap:  # pmap can be missing if the group is filtered away
                     # key is the group ID
