@@ -220,7 +220,7 @@ class ContextMaker(object):
         """
         :returns: the interesting attributes of the context
         """
-        params = {'occurrence_rate', 'sids_',
+        params = {'occurrence_rate', 'sids_', 'src_id',
                   'probs_occur_', 'clon_', 'clat_', 'rrup_'}
         params.update(self.REQUIRES_RUPTURE_PARAMETERS)
         for dparam in self.REQUIRES_DISTANCES:
@@ -517,7 +517,7 @@ class PmapMaker(object):
         with self.ir_mon:
             return list(it)
 
-    def _make_ctxs(self, rups, sites):
+    def _make_ctxs(self, rups, sites, srcid):
         with self.ctx_mon:
             if self.rup_indep and self.pointsource_distance != {}:
                 rups = self.collapse_point_ruptures(rups, sites)
@@ -527,11 +527,13 @@ class PmapMaker(object):
             if self.fewsites:  # keep the contexts in memory
                 self.rupdata.extend(ctxs)
             self.numrups += len(ctxs)
-            self.numsites += sum(len(ctx.sids) for ctx in ctxs)
+            for ctx in ctxs:
+                ctx.src_id = srcid
+                self.numsites += len(ctx.sids)
         return ctxs
 
     def _make_src_indep(self):
-        # srcs with the same source_id and et_ids
+        # sources with the same ID
         if self.fewsites:
             srcs_sites = [(self.group, self.srcfilter.sitecol)]
         elif self.split_sources:
@@ -541,11 +543,11 @@ class PmapMaker(object):
                           for src, idx in self.srcfilter.filter(self.group))
         for srcs, sites in srcs_sites:
             t0 = time.time()
-            src_id = srcs[0].source_id
+            src_id = srcs[0].id
             self.numrups = 0
             self.numsites = 0
             rups = self._get_rups(srcs, sites)
-            ctxs = self._make_ctxs(rups, sites)
+            ctxs = self._make_ctxs(rups, sites, src_id)
             if ctxs:
                 self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
@@ -562,7 +564,7 @@ class PmapMaker(object):
             rups = self._ruptures(src)
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
             pmap = ProbabilityMap(L, G)
-            ctxs = self._make_ctxs(rups, sites)
+            ctxs = self._make_ctxs(rups, sites, src.id)
             if ctxs:
                 self._update_pmap(ctxs, pmap)
             p = pmap
@@ -570,7 +572,7 @@ class PmapMaker(object):
                 p = ~p
             p *= src.mutex_weight
             self.pmap += p
-            self.calc_times[src.source_id] += numpy.array(
+            self.calc_times[src.id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return self.pmap
 

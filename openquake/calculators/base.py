@@ -55,7 +55,7 @@ F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
-CALC_TIME, NUM_SITES, EFF_RUPTURES, SERIAL = 3, 4, 5, 6
+CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
@@ -901,14 +901,13 @@ class HazardCalculator(BaseCalculator):
         """
         srcs = self.csm.get_sources()
         for src_id, arr in calc_times.items():
-            src_id = re.sub(r':\d+$', '', src_id)
             row = self.csm.source_info[src_id]
             row[CALC_TIME] += arr[2]
             if nsites:
                 row[EFF_RUPTURES] += arr[0]
                 row[NUM_SITES] += arr[1]
-                srcs[row[SERIAL]].num_ruptures = int(arr[0])
-                srcs[row[SERIAL]].nsites = int(arr[1])
+                srcs[src_id].num_ruptures = int(arr[0])
+                srcs[src_id].nsites = int(arr[1])
 
     def store_source_info(self, calc_times, nsites=False):
         """
@@ -918,6 +917,7 @@ class HazardCalculator(BaseCalculator):
         recs = [tuple(row) for row in self.csm.source_info.values()]
         hdf5.extend(self.datastore['source_info'],
                     numpy.array(recs, readinput.source_info_dt))
+        return [rec[0] for rec in recs]  # return source_ids
 
     def post_process(self):
         """For compatibility with the engine"""
