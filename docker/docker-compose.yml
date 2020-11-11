@@ -5,19 +5,13 @@ networks:
     driver: bridge
     driver_opts:
       com.docker.network.enable_ipv6: "false"
-    ipam:
       driver: default
-      config:
-      - subnet: 192.168.238.0/24
   backend:
     driver: bridge
     driver_opts:
       com.docker.network.enable_ipv6: "false"
     internal: true
-    ipam:
       driver: default
-      config:
-      - subnet: 192.168.239.0/24
 
 volumes:
   oqdata:
