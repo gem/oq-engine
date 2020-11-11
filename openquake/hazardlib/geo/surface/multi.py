@@ -590,7 +590,7 @@ class MultiSurface(BaseSurface):
         # If the GC2 calculations have already been computed (by invoking Ry0
         # first) and the mesh is identical then class has GC2 attributes
         # already pre-calculated
-        if not self.tmp_mesh:
+        if not self.tmp_mesh or self.tmp_mesh == mesh:
             self.gc2t, self.gc2u = self.get_generalised_coordinates(mesh.lons,
                                                                     mesh.lats)
             # Update mesh
@@ -610,7 +610,7 @@ class MultiSurface(BaseSurface):
         # If the GC2 calculations have already been computed (by invoking Ry0
         # first) and the mesh is identical then class has GC2 attributes
         # already pre-calculated
-        if not self.tmp_mesh:
+        if not self.tmp_mesh or self.tmp_mesh == mesh:
             # If that's not the case, or the mesh is different then
             # re-compute GC2 configuration
             self.gc2t, self.gc2u = self.get_generalised_coordinates(mesh.lons,
