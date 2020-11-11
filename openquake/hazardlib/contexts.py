@@ -26,7 +26,6 @@ import itertools
 import functools
 import collections
 import numpy
-import h5py
 from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, parallel
@@ -103,8 +102,9 @@ def get_num_distances(gsims):
 
 
 # used only in contexts_test.py
-def _make_pmap(ctxs, cmaker, investigation_time):
-    RuptureContext.temporal_occurrence_model = PoissonTOM(investigation_time)
+def _make_pmap(ctxs, cmaker):
+    RuptureContext.temporal_occurrence_model = PoissonTOM(
+        cmaker.investigation_time)
     # easy case of independent ruptures, useful for debugging
     pmap = ProbabilityMap(len(cmaker.loglevels.array), len(cmaker.gsims))
     for ctx, poes in cmaker.gen_ctx_poes(ctxs):
@@ -114,43 +114,25 @@ def _make_pmap(ctxs, cmaker, investigation_time):
     return ~pmap
 
 
-def read_ctxs(dstore, rctx_or_magstr, grp_id=0, req_site_params=None):
+def read_ctxs(dstore, slc=slice(None), req_site_params=None):
     """
-    Use it as `read_ctxs(dstore, 'mag_5.50')`.
-    :returns: a pair (contexts, [contexts close to site for each site])
+     :returns: a list of contexts
     """
-    sitecol = dstore['sitecol']
+    sitecol = dstore['sitecol'].complete
     site_params = {par: sitecol[par]
                    for par in req_site_params or sitecol.array.dtype.names}
-    if isinstance(rctx_or_magstr, str):
-        rctx = dstore[rctx_or_magstr]['rctx'][:]
-        rctx = rctx[rctx['grp_id'] == grp_id]
-    else:
-        # in disaggregation
-        rctx = rctx_or_magstr
-    magstr = 'mag_%.2f' % rctx[0]['mag']
-    if h5py.version.version_tuple >= (2, 10, 0):
-        # this version is spectacularly better in cluster1; for
-        # Colombia with 1.2M ruptures I measured a speedup of 8.5x
-        grp = {n: d[rctx['idx']] for n, d in dstore[magstr].items()
-               if n.endswith('_')}
-    else:
-        # for old h5py read the whole array and then filter on the indices
-        grp = {n: d[:][rctx['idx']] for n, d in dstore[magstr].items()
-               if n.endswith('_')}
+    params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
     ctxs = []
-    for u, rec in enumerate(rctx):
+    for u in range(len(params['mag'])):
         ctx = RuptureContext()
-        for par in rctx.dtype.names:
-            setattr(ctx, par, rec[par])
-        for par, arr in grp.items():
-            setattr(ctx, par[:-1], arr[u])
+        for par, arr in params.items():
+            if par.endswith('_'):
+                par = par[:-1]
+            setattr(ctx, par, arr[u])
         for par, arr in site_params.items():
             setattr(ctx, par, arr[ctx.sids])
         ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
         ctxs.append(ctx)
-    # sorting for debugging convenience
-    ctxs.sort(key=lambda ctx: ctx.occurrence_rate)
     close_ctxs = [[] for sid in sitecol.sids]
     for ctx in ctxs:
         for sid in ctx.idx:
@@ -175,7 +157,9 @@ class ContextMaker(object):
         self.gsims = gsims
         self.maximum_distance = (
             param.get('maximum_distance') or MagDepDistance({}))
+        self.investigation_time = param.get('investigation_time')
         self.trunclevel = param.get('truncation_level')
+        self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.effect = param.get('effect')
         for req in self.REQUIRES:
             reqset = set()
@@ -236,8 +220,8 @@ class ContextMaker(object):
         """
         :returns: the interesting attributes of the context
         """
-        params = {'occurrence_rate', 'sids_',
-                  'probs_occur', 'clon_', 'clat_', 'rrup_'}
+        params = {'occurrence_rate', 'sids_', 'src_id',
+                  'probs_occur_', 'clon_', 'clat_', 'rrup_'}
         params.update(self.REQUIRES_RUPTURE_PARAMETERS)
         for dparam in self.REQUIRES_DISTANCES:
             params.add(dparam + '_')
@@ -533,7 +517,7 @@ class PmapMaker(object):
         with self.ir_mon:
             return list(it)
 
-    def _make_ctxs(self, rups, sites):
+    def _make_ctxs(self, rups, sites, srcid):
         with self.ctx_mon:
             if self.rup_indep and self.pointsource_distance != {}:
                 rups = self.collapse_point_ruptures(rups, sites)
@@ -543,11 +527,13 @@ class PmapMaker(object):
             if self.fewsites:  # keep the contexts in memory
                 self.rupdata.extend(ctxs)
             self.numrups += len(ctxs)
-            self.numsites += sum(len(ctx.sids) for ctx in ctxs)
+            for ctx in ctxs:
+                ctx.src_id = srcid
+                self.numsites += len(ctx.sids)
         return ctxs
 
     def _make_src_indep(self):
-        # srcs with the same source_id and et_ids
+        # sources with the same ID
         if self.fewsites:
             srcs_sites = [(self.group, self.srcfilter.sitecol)]
         elif self.split_sources:
@@ -557,11 +543,11 @@ class PmapMaker(object):
                           for src, idx in self.srcfilter.filter(self.group))
         for srcs, sites in srcs_sites:
             t0 = time.time()
-            src_id = srcs[0].source_id
+            src_id = srcs[0].id
             self.numrups = 0
             self.numsites = 0
             rups = self._get_rups(srcs, sites)
-            ctxs = self._make_ctxs(rups, sites)
+            ctxs = self._make_ctxs(rups, sites, src_id)
             if ctxs:
                 self._update_pmap(ctxs)
             self.calc_times[src_id] += numpy.array(
@@ -578,7 +564,7 @@ class PmapMaker(object):
             rups = self._ruptures(src)
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
             pmap = ProbabilityMap(L, G)
-            ctxs = self._make_ctxs(rups, sites)
+            ctxs = self._make_ctxs(rups, sites, src.id)
             if ctxs:
                 self._update_pmap(ctxs, pmap)
             p = pmap
@@ -586,7 +572,7 @@ class PmapMaker(object):
                 p = ~p
             p *= src.mutex_weight
             self.pmap += p
-            self.calc_times[src.source_id] += numpy.array(
+            self.calc_times[src.id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return self.pmap
 
@@ -610,9 +596,7 @@ class PmapMaker(object):
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
-        rupdata = groupby(self.rupdata, lambda ctx: '%.2f' % ctx.mag)
-        for mag, ctxs in rupdata.items():
-            rupdata[mag] = self.dictarray(ctxs)
+        rupdata = self.dictarray(self.rupdata)
         return (pmap, rupdata, self.calc_times, dict(totrups=self.totrups))
 
     def collapse_point_ruptures(self, rups, sites):

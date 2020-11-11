@@ -31,6 +31,8 @@ class StochasticEventSetTestCase(unittest.TestCase):
         source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
         # it has a single group containing 15 mutex sources
         [group] = nrml.to_python(source_model)
+        for i, src in enumerate(group):
+            src.id = i
         aae([src.mutex_weight for src in group],
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])

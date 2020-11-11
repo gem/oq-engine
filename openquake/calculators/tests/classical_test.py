@@ -33,7 +33,8 @@ from openquake.qa_tests_data.classical import (
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
-    case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57)
+    case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
+    case_058)
 
 aac = numpy.testing.assert_allclose
 
@@ -53,12 +54,11 @@ def check_disagg_by_src(dstore):
 
 def get_dists(dstore):
     dic = general.AccumDict(accum=[])  # site_id -> distances
-    for name, dset in dstore.items():
-        if name.startswith('mag_'):
-            for sids, dsts in zip(dset['sids_'], dset['rrup_']):
-                for sid, dst in zip(sids, dsts):
-                    dic[sid].append(int(round(dst)))
-    return dic
+    rup = dstore['rup']
+    for sids, dsts in zip(rup['sids_'], rup['rrup_']):
+        for sid, dst in zip(sids, dsts):
+            dic[sid].append(int(round(dst)))
+    return {sid: sorted(dsts, reverse=True) for sid, dsts in dic.items()}
 
 
 class ClassicalTestCase(CalculatorTestCase):
@@ -435,7 +435,7 @@ hazard_uhs-std.csv
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
-        self.assertEqual(len(self.calc.datastore['mag_5.25/rctx']), 34)
+        self.assertEqual(len(self.calc.datastore['rup/mag']), 174)
         self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
@@ -448,9 +448,9 @@ hazard_uhs-std.csv
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__)
         # make sure probs_occur are stored as expected
-        probs_occur = self.calc.datastore['mag_8.20/rctx']['probs_occur']
+        probs_occur = self.calc.datastore['rup/probs_occur_'][:]
         tot_probs_occur = sum(len(po) for po in probs_occur)
-        self.assertEqual(tot_probs_occur, 4)  # 2 nonparam rups x 2
+        self.assertEqual(tot_probs_occur, 28)  # 14 x 2
 
         # make sure there is an error when trying to disaggregate
         with self.assertRaises(NotImplementedError):
@@ -486,8 +486,8 @@ hazard_uhs-std.csv
                                    'hazard_curve-SA(1.0).csv'],
                                   case_30.__file__)
             # check rupdata
-            nruptures = len(self.calc.datastore['mag_5.05/rctx'])
-            self.assertEqual(nruptures, 28)
+            nruptures = len(self.calc.datastore['rup/mag'])
+            self.assertEqual(nruptures, 3202)
 
     def test_case_30_sampling(self):
         # IMT-dependent weights with sampling by cheating
@@ -764,3 +764,28 @@ hazard_uhs-std.csv
         f1, f2 = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve_PGA.csv', f1)
         self.assertEqualFiles('expected/hcurve_SA.csv', f2)
+
+    def test_case_058(self):
+        # Logic tree with SimpleFault uncertainty on geometry and MFD (from
+        # slip)
+
+        # First calculation
+        self.run_calc(case_058.__file__, 'job.ini')
+        f01, f02 = export(('hcurves/rlz-000', 'csv'), self.calc.datastore)
+        f03, f04 = export(('hcurves/rlz-003', 'csv'), self.calc.datastore)
+
+        # Second calculation. Same LT structure for case 1 but with only one
+        # branch for each branch set
+        self.run_calc(case_058.__file__, 'job_case01.ini')
+        f11, f12 = export(('hcurves/', 'csv'), self.calc.datastore)
+
+        # Third calculation. In this case we use a source model containing one
+        # source with the geometry of branch b22 and slip rate of branch b32
+        self.run_calc(case_058.__file__, 'job_case02.ini')
+        f21, f22 = export(('hcurves/', 'csv'), self.calc.datastore)
+
+        # First test
+        self.assertEqualFiles(f01, f11)
+
+        # Second test
+        self.assertEqualFiles(f03, f21)

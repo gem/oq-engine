@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt1">
+
+    <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+        <logicTreeBranch branchID="b11">
+            <uncertaintyModel>source_model.xml</uncertaintyModel>
+            <uncertaintyWeight>1.0</uncertaintyWeight>
+        </logicTreeBranch>
+    </logicTreeBranchSet>
+
+    <logicTreeBranchSet uncertaintyType="simpleFaultGeometryAbsolute"
+                        branchSetID="bs2" applyToSources="src1">
+
+        <logicTreeBranch branchID="b21">
+            <uncertaintyModel>
+                 <simpleFaultGeometry spacing="1.0">
+                    <gml:LineString>
+                        <gml:posList>
+                            1.0 -0.2 1.4 0.0 1.7 0.0
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip> 30 </dip>
+                    <upperSeismoDepth> 0.0 </upperSeismoDepth>
+                    <lowerSeismoDepth> 15.0 </lowerSeismoDepth>
+                </simpleFaultGeometry>
+            </uncertaintyModel>
+            <uncertaintyWeight>1.0</uncertaintyWeight>
+        </logicTreeBranch>
+
+    </logicTreeBranchSet>
+
+    <logicTreeBranchSet uncertaintyType="truncatedGRFromSlipAbsolute"
+                        branchSetID="bs2" applyToBranches="b21">
+
+        <logicTreeBranch branchID="b31">
+            <uncertaintyModel>
+                <faultActivityData slipRate="5.0" rigidity="32"/>
+            </uncertaintyModel>
+            <uncertaintyWeight>1.0</uncertaintyWeight>
+        </logicTreeBranch>
+
+    </logicTreeBranchSet>
+
+  </logicTree>
+</nrml>

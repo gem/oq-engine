@@ -71,10 +71,8 @@ source_info_dt = numpy.dtype([
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
     ('eff_ruptures', numpy.uint32),    # 5
-    ('serial', numpy.uint32),          # 6
-    ('trti', numpy.uint8),             # 7
+    ('trti', numpy.uint8),             # 6
 ])
-SERIAL = 6
 
 
 class DuplicatedPoint(Exception):
@@ -737,9 +735,9 @@ def get_composite_source_model(oqparam, h5=None):
             lens.append(len(src.et_ids))
             src.grp_id = grp_id[tuple(src.et_ids)]
             row = [src.source_id, src.grp_id, src.code,
-                   0, 0, 0, src.id, full_lt.trti[src.tectonic_region_type]]
+                   0, 0, 0, full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
-            data[src.source_id] = row
+            data[src.id] = row
             if hasattr(src, 'mags'):  # UCERF
                 continue  # already accounted for in sg.mags
             elif hasattr(src, 'data'):  # nonparametric
