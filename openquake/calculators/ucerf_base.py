@@ -495,6 +495,10 @@ def ucerf_classical(srcs, gsims, params, slc, monitor=None):
                     setattr(ctx, par, dst[ok])
                 for par in self.REQUIRES_SITES_PARAMETERS:
                     setattr(ctx, par, sitecol[par][ok])
+                if fewsites:
+                    closest = rup.surface.get_closest_points(sites.complete)
+                    ctx.clon = closest.lons[ctx.sids]
+                    ctx.clat = closest.lats[ctx.sids]
                 ctxs.append(ctx)
         return ctxs
 
