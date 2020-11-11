@@ -29,7 +29,7 @@ services:
     # Uncomment to expose demos inside the container
     # - ../demos:/home/openquake/demos:ro
     # Uncomment to expose oq-engine inside the container
-    # - ../../oq-engine:/home/openquake/oq-engine:ro
+     - ../../oq-engine:/home/openquake/oq-engine:ro
     # Uncomment to use a local copy of the oq-engine
     #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
     # Use zmq openquake.cfg
