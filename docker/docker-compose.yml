@@ -2,16 +2,10 @@ version: "3.7"
 
 networks:
   frontend:
-    driver: bridge
-    driver_opts:
-      com.docker.network.enable_ipv6: "false"
-      driver: default
+    enable_ipv6: false
   backend:
-    driver: bridge
-    driver_opts:
-      com.docker.network.enable_ipv6: "false"
+    enable_ipv6: false
     internal: true
-      driver: default
 
 volumes:
   oqdata:
