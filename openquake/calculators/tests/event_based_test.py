@@ -481,7 +481,9 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertGreater(nd_mean, 0)
         [fname, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         arr = read_csv(fname)[:2]
-        self.assertEqual(arr.dtype.names, ('site_id', 'event_id', 'gmv_PGA'))
+        self.assertEqual(arr.dtype.names,
+                         ('site_id', 'event_id', 'gmv_PGA',
+                          'newmark_disp', 'prob_disp'))
 
     def test_case_26_liq(self):
         # cali liquefaction simplified
