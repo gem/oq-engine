@@ -395,24 +395,15 @@ def export_hazard_npz(ekey, dstore):
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
     imts = list(oq.imtls)
-    sc = dstore['sitecol'].array
-    arr = sc[['lon', 'lat']]
-    gmfa = numpy.zeros(len(dstore['gmf_data/eid']), oq.gmf_data_dt())
-    df = dstore.read_df('gmf_data', 'sid')
-    gmfa['eid'] = df.eid.to_numpy()
-    gmfa['sid'] = df.index.to_numpy()
-    for m in range(len(imts)):
-        gmfa['gmv'][:, m] = df[f'gmv_{m}'].to_numpy()
+    df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
+    ren = {'sid': 'site_id', 'eid': 'event_id'}
+    for m, imt in enumerate(imts):
+        ren[f'gmv_{m}'] = imt
+    df.rename(columns=ren, inplace=True)
     event_id = dstore['events']['id']
-    gmfa['eid'] = event_id[gmfa['eid']]
     f = dstore.build_fname('sitemesh', '', 'csv')
-    sids = numpy.arange(len(arr), dtype=U32)
-    sites = util.compose_arrays(sids, arr, 'site_id')
-    writers.write_csv(f, sites)
     fname = dstore.build_fname('gmf', 'data', 'csv')
-    gmfa.sort(order=['eid', 'sid'])
-    writers.write_csv(fname, _expand_gmv(gmfa, imts),
-                      renamedict={'sid': 'site_id', 'eid': 'event_id'})
+    df.to_csv(fname, index=False)
     if 'sigma_epsilon' in dstore['gmf_data']:
         sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
         sig_eps = dstore['gmf_data/sigma_epsilon'][()]
@@ -437,6 +428,8 @@ def _expand_gmv(array, imts):
             for imt in imts:
                 dtlist.append(('gmv_' + imt, F32))
         elif name in ('sid', 'eid'):
+            dtlist.append((name, dt))
+        else:  # secondary perils
             dtlist.append((name, dt))
     new = numpy.zeros(len(array), dtlist)
     imti = {imt: i for i, imt in enumerate(imts)}
