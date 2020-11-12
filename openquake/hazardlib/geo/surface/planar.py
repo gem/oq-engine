@@ -181,7 +181,7 @@ class PlanarSurface(BaseSurface):
     @classmethod
     def from_ucerf(cls, array43):
         """
-        :param array34: an array of shape (4, 3) in order tl, tr, br, bl
+        :param array43: an array of shape (4, 3) in order tl, tr, br, bl
         :returns: a :class:`PlanarSurface` instance
         """
         tl, tr, br, bl = [Point(*p) for p in array43]
