@@ -23,6 +23,7 @@ Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 import numpy
 from copy import deepcopy
 from scipy.spatial.distance import pdist, squareform
+from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.geo.surface.base import BaseSurface, downsample_trace
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
@@ -85,6 +86,23 @@ class MultiSurface(BaseSurface):
         For GC2, determines the length of the fault (km) in its own GC2
         configuration
     """
+
+    @classmethod
+    def from_csv(cls, fname):
+        """
+        :param fname:
+            path to a CSV file with header (lon, lat, dep) and 4 x P
+            rows describing planes in terms of corner points in the order
+            topleft, topright, bottomright, bottomleft
+        :returns:
+            a MultiSurface made of P planar surfaces
+        """
+        surfaces = []
+        array = read_csv(fname).array.reshape(4, -1)  # shape (4, P)
+        for plane in array.T:
+            arr = plane.view((float, 3))  # shape (4, 3)
+            surfaces.append(PlanarSurface.from_ucerf(arr))
+        return cls(surfaces)
 
     @property
     def surface_nodes(self):
