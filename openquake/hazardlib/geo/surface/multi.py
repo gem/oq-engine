@@ -90,7 +90,12 @@ class MultiSurface(BaseSurface):
     @classmethod
     def from_csv(cls, fname):
         """
-        :returns: a MultiSurface made of planar ruptures stored in a CSV
+        :param fname:
+            path to a CSV file with header (lon, lat, dep) and 4 x P
+            rows describing planes in terms of corner points in the order
+            topleft, topright, bottomright, bottomleft
+        :returns:
+            a MultiSurface made of P planar surfaces
         """
         surfaces = []
         array = read_csv(fname).array.reshape(4, -1)  # shape (4, P)
