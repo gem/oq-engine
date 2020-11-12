@@ -225,7 +225,7 @@ class MultiRiskCalculator(base.RiskCalculator):
         Compute aggregated risk
         """
         md = json.loads(extract(self.datastore, 'exposure_metadata').json)
-        categories = [cat.replace('value-', 'loss-') for cat in md['names']] + [
+        categories = [n.replace('value-', 'loss-') for n in md['names']] + [
             ds + '-structural' for ds in self.crmodel.damage_states]
         multi_risk = md['names']
         multi_risk += sorted(
