@@ -544,9 +544,8 @@ class PlanarSurface(BaseSurface):
         make use of the mesh.
         """
         return geodetic.distance_to_arc(
-            self.corner_lons[0], self.corner_lats[0], self.strike, mesh.lons,
-            mesh.lats
-        )
+            self.corner_lons[0], self.corner_lats[0], self.strike,
+            mesh.lons, mesh.lats)
 
     def get_ry0_distance(self, mesh):
         """
