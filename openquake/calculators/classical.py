@@ -116,20 +116,23 @@ def classical_split_filter(srcs, gsims, params, monitor):
         if not blocks:
             yield {'pmap': {}, 'extra': {}}
             continue
+        heavy = []
         light = list(blocks[-1])
         for block in blocks[:-1]:
             if block.weight > params['min_weight']:
-                msg += 'producing subtask with weight %d\n' % block.weight
-                try:
-                    logs.dbcmd(
-                        'log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                        'classical_split_filter#%d' % monitor.task_no, msg)
-                except Exception:
-                    # a foreign key error in case of `oq run` is expected
-                    print(msg)
                 yield classical, block, gsims, params, sf.slc
+                heavy.append(int(block.weight))
             else:
                 light.extend(block)
+        if heavy:
+            msg += 'produced %d subtask with weights %s' % (len(heavy), heavy)
+            try:
+                logs.dbcmd(
+                    'log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                    'classical_split_filter#%d' % monitor.task_no, msg)
+            except Exception:
+                # a foreign key error in case of `oq run` is expected
+                print(msg)
         yield classical(light, gsims, params, sf.slc, monitor)
 
 

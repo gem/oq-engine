@@ -19,6 +19,7 @@ import sys
 import collections
 import numpy
 from openquake.baselib import sap
+from openquake.commonlib import util
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
@@ -61,6 +62,36 @@ def get_diff_idxs(array, rtol, atol, threshold):
     return numpy.fromiter(diff_idxs, int)
 
 
+def _print_diff(a1, a2, idx1, idx2, col):
+    if col.endswith('_'):
+        for i, (v1, v2) in enumerate(zip(a1, a2)):
+            idx = numpy.where(numpy.abs(v1-v2) > 1e-5)
+            if len(idx[0]):
+                print(col, idx1[i], v1[idx])
+                print(col, idx2[i], v2[idx])
+                break
+    else:
+        i, = numpy.where(numpy.abs(a1-a2) > 1e-5)
+        if len(i):
+            print(col, idx1[i], a1[i])
+            print(col, idx2[i], a2[i])
+
+
+def compare_rups(calc_1, calc_2):
+    """
+    Compare the ruptures of two calculations as pandas DataFrames
+    """
+    with util.read(calc_1) as ds1, util.read(calc_2) as ds2:
+        df1 = ds1.read_df('rup').sort_values(['src_id', 'mag'])
+        df2 = ds2.read_df('rup').sort_values(['src_id', 'mag'])
+    cols = [col for col in df1.columns if col not in
+            {'probs_occur_', 'clon_', 'clat_'}]
+    for col in cols:
+        a1 = df1[col].to_numpy()
+        a2 = df2[col].to_numpy()
+        _print_diff(a1, a2, df1.index, df2.index, col)
+
+
 @sap.script
 def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             threshold=1E-2):
@@ -75,6 +106,8 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             data.append((calc_id, time))
         print(views.rst_table(data, ['calc_id', 'time']))
         return
+    if what == 'rups':
+        return compare_rups(int(imt), calc_ids[0])
     sitecol = Extractor(calc_ids[0]).get('sitecol')
     sids = sitecol['sids']
     if samplesites:
@@ -132,7 +165,7 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
 
 
 compare.arg('what', '"hmaps", "hcurves" or "cumtime of"',
-            choices={'hmaps', 'hcurves', 'cumtime'})
+            choices={'rups', 'hmaps', 'hcurves', 'cumtime'})
 compare.arg('imt', 'intensity measure type to compare')
 compare.arg('calc_ids', 'calculation IDs', type=int, nargs='+')
 compare.flg('files', 'write the results in multiple files')

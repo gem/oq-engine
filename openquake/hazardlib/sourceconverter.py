@@ -620,6 +620,12 @@ class SourceConverter(RuptureConverter):
         source_id = getattr(obj, 'source_id', '')
         if self.source_id and source_id and source_id not in self.source_id:
             return
+        if hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):
+            # TruncatedGRMFD with slip rate
+            m = obj.mfd
+            obj.mfd = m.from_slip_rate(
+                m.min_mag, m.max_mag, m.bin_width, m.b_val,
+                m.slip_rate, m.rigidity, obj.get_fault_surface_area())
         return obj
 
     def get_tom(self, node):
@@ -942,12 +948,6 @@ class SourceConverter(RuptureConverter):
             src = self.convert_node(src_node)
             if src is None:  # filtered out by source_id
                 continue
-            if hasattr(src, 'mfd') and hasattr(src.mfd, 'slip_rate'):
-                # TruncatedGRMFD with slip rate
-                m = src.mfd
-                src.mfd = m.from_slip_rate(
-                    m.min_mag, m.max_mag, m.bin_width, m.b_val,
-                    m.slip_rate, m.rigidity, src.get_fault_surface_area())
             # transmit the group attributes to the underlying source
             for attr, value in grp_attrs.items():
                 if attr == 'tectonicRegion':
