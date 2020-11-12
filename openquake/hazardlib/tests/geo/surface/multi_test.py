@@ -30,20 +30,34 @@ class MultiSurfaceTestCase(unittest.TestCase):
     """
     Test multiplanar surfaces used in UCERF
     """
-    def test(self):
+    def test_rx(self):
         mesh = Mesh(numpy.array([-118.]), numpy.array([33]))
         surf18 = MultiSurface.from_csv(cd / 'msurface18.csv')  # 2 planes
         surf19 = MultiSurface.from_csv(cd / 'msurface19.csv')  # 2 planes
         surf20 = MultiSurface.from_csv(cd / 'msurface20.csv')  # 1 plane
+        rx18 = surf18.get_rx_distance(mesh)[0]
+        rx19 = surf19.get_rx_distance(mesh)[0]
+        rx20 = surf20.get_rx_distance(mesh)[0]
+        aac([rx18, rx19, rx20], [51.610675, 54.441119, -60.205692])
+
         surf_a = MultiSurface(surf18.surfaces + surf19.surfaces)
         surf_b = MultiSurface(surf19.surfaces + surf20.surfaces)
-        rx18 = surf18.get_rx_distance(mesh)
-        aac(rx18, 51.610675)
-        rx19 = surf19.get_rx_distance(mesh)
-        aac(rx19, 54.441119)
-        rx20 = surf20.get_rx_distance(mesh)
-        aac(rx20, -60.205692)
-        rxa = surf_a.get_rx_distance(mesh)
-        aac(rxa, 53.034889)
-        rxb = surf_b.get_rx_distance(mesh)
-        aac(rxb, -56.064366)
+        rxa = surf_a.get_rx_distance(mesh)[0]
+        rxb = surf_b.get_rx_distance(mesh)[0]
+        aac([rxa, rxb], [53.034889, -56.064366])
+
+    def test_rjb(self):
+        mesh = Mesh(numpy.array([-118.]), numpy.array([33]))
+        surf18 = MultiSurface.from_csv(cd / 'msurface18.csv')  # 2 planes
+        surf19 = MultiSurface.from_csv(cd / 'msurface19.csv')  # 2 planes
+        surf20 = MultiSurface.from_csv(cd / 'msurface20.csv')  # 1 plane
+        rjb18 = surf18.get_joyner_boore_distance(mesh)[0]
+        rjb19 = surf19.get_joyner_boore_distance(mesh)[0]
+        rjb20 = surf20.get_joyner_boore_distance(mesh)[0]
+        aac([rjb18, rjb19, rjb20], [85.676294, 89.225542, 92.937021])
+
+        surf_a = MultiSurface(surf18.surfaces + surf19.surfaces)
+        surf_b = MultiSurface(surf19.surfaces + surf20.surfaces)
+        rjba = surf_a.get_joyner_boore_distance(mesh)[0]
+        rjbb = surf_b.get_joyner_boore_distance(mesh)[0]
+        aac([rjba, rjbb], [85.676294, 89.225542])
