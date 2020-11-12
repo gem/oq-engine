@@ -312,7 +312,9 @@ class ClassicalCalculator(base.HazardCalculator):
         for rlzs_by_gsim in rlzs_by_gsim_list:
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
-        self.datastore['rlzs_by_g'] = [U32(rlzs) for rlzs in rlzs_by_g]
+        self.datastore.create_dset('rlzs_by_grp', hdf5.vuint32)
+        self.datastore.hdf5.save_vlen(
+            'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
         poes_shape = (self.N, len(self.oqparam.imtls.array), len(rlzs_by_g))
         size = numpy.prod(poes_shape) * 8
         logging.info('Requiring %s for ProbabilityMap of shape %s',
