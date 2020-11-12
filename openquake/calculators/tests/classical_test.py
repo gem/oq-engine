@@ -632,7 +632,7 @@ hazard_uhs-std.csv
         # serious test of amplification + uhs
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.21).csv',
                                'hcurves-SA(1.057).csv', 'uhs.csv'],
-                              case_49.__file__)
+                              case_49.__file__, delta=1E-5)
 
     def test_case_50(self):
         # serious test of amplification + uhs
