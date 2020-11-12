@@ -403,8 +403,7 @@ class ClassicalCalculator(base.HazardCalculator):
             acc = smap.reduce(self.agg_dicts, acc0)
             self.store_rlz_info(acc.eff_ruptures)
         finally:
-            with self.monitor('store source_info'):
-                source_ids = self.store_source_info(self.calc_times)
+            source_ids = self.store_source_info(self.calc_times)
             if self.by_task:
                 logging.info('Storing by_task information')
                 num_tasks = max(self.by_task) + 1,
