@@ -398,10 +398,14 @@ def export_gmf_data_csv(ekey, dstore):
     df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
     ren = {'sid': 'site_id', 'eid': 'event_id'}
     for m, imt in enumerate(imts):
-        ren[f'gmv_{m}'] = imt
+        ren[f'gmv_{m}'] = 'gmv_' + imt
     df.rename(columns=ren, inplace=True)
     event_id = dstore['events']['id']
     f = dstore.build_fname('sitemesh', '', 'csv')
+    arr = dstore['sitecol'][['lon', 'lat']]
+    sids = numpy.arange(len(arr), dtype=U32)
+    sites = util.compose_arrays(sids, arr, 'site_id')
+    writers.write_csv(f, sites)
     fname = dstore.build_fname('gmf', 'data', 'csv')
     df.to_csv(fname, index=False)
     if 'sigma_epsilon' in dstore['gmf_data']:
