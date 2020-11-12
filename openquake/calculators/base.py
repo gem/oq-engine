@@ -496,7 +496,7 @@ class HazardCalculator(BaseCalculator):
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
                                  gsim_lt.values)
 
-    def save_multi_peril(self):
+    def import_perils(self):
         """Defined in MultiRiskCalculator"""
 
     def pre_execute(self):
@@ -526,7 +526,7 @@ class HazardCalculator(BaseCalculator):
                 else:  # set the number of GMFs from the file
                     oq.number_of_ground_motion_fields = E
             else:
-                self.save_multi_peril()
+                self.import_perils()
             self.save_crmodel()
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
