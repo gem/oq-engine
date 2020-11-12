@@ -53,5 +53,5 @@ $ docker-compose -f docker-compose.yml <build,up,down...> --scale worker=NUM
 It's possible to enter a container as `root`, for debug purposes, running
 
 ```bash
-$ docker exec -u 0 -t -i enigne-master /bin/bash
+$ docker exec -u 0 -t -i engine-master /bin/bash
 ```
