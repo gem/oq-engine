@@ -1,25 +1,30 @@
 Ansible Role: oqengine
-=========
+======================
 
-Installs oq-engine from pypip on CentOS 7,8 or Ubuntu 1804, 2004.
+Installs the OpenQuake engine on CentOS 7,8 or Ubuntu 18.04, 20.04.
 
-The Role first of all check if on the system there is installed python and if the version the installed version is not the 3.8 it setup the python virtual environment on the system using python3.8 that is installed using the follow repository:
+The Role installs Python 3.8 (it is is not available on the
+system already) using the follow repositories:
 
 - CentOS 7: CentOS SCLo RH
 - CentOS 8: PowerTools 
-- Ubuntu 1804: Universe
-- Ubuntu 2004: python3.8 is the default version 
+- Ubuntu 18.04: Universe
 
-Role also create the user openquake and generated the ssh keys for this user and the virtual environment of oq engine will be created for user openquake
+In Ubuntu 20.04 Python 3.8 is already installed. The Role also creates an
+ser `openquake` and generates ssh keys for this user. Then it creates
+a virtual environment for the user `openquake` in the directory
+`/opt/openquake`.
 
 Requirements
 ------------
 
-**Ansible 2.9** or later. (NOTE: it might be possible to use earlier versions, in case of issues please try updating Ansible to 2.9+)
+**Ansible 2.9** or later. (NOTE: it might be possible to use earlier
+  versions, in case of issues please try upgrading Ansible to 2.9+)
 
-**Openssh-server** to have ssh-keygen for creation of ssh key for user openquake 
+**Openssh-server** to have ssh-keygen.
 
-This role requires root access, so either run it in a playbook with a global become: yes, or invoke the role in your playbook like:
+This role requires root access, so either run it in a playbook with a
+global `become: yes` or invoke the role in your playbook as follows:
 
     - hosts: server
       become: yes
@@ -28,11 +33,13 @@ This role requires root access, so either run it in a playbook with a global bec
       roles:
         - oqengine
 
-You can use the option sorted as you prefer if you don't want that ansible will play the hosts in the order they were mentioned in the inventory file
+You can use the option `sorted` as you prefer.
 
 Role Variables
 --------------
-Available variables are listed below, along with default values (see defaults/main.yml):
+
+Available variables are listed below, along with default values (see
+defaults/main.yml):
 
 - The version of the engine that is installed
     
@@ -46,7 +53,7 @@ Available variables are listed below, along with default values (see defaults/ma
     req_py38: https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-linux64.txt
     ```
     
-- The setting of the virtual environment that is used
+- The location of the virtual environment
 
     ```
     venv_dir: /opt/openquake
@@ -61,9 +68,7 @@ None.
 Example Playbook
 ----------------
 
-Example playbook of how to use your role to install the oq engine.
-
-Inventory file example for defition of the servers section.
+Inventory file example for the servers section:
 
     [servers]
     192.168.22.21 vm_name=vm-centos-7-01
@@ -74,13 +79,6 @@ Inventory file example for defition of the servers section.
     [web-server]
     192.168.22.25 vm_name=vm-centos-8-03
     192.168.22.26 vm_name=vm-centos-8-04
-    
-The playbook to use:
-
-    - hosts: servers
-      become: yes
-      roles:
-        - oqengine
         
 Inside vars/main.yml:
 
@@ -89,16 +87,7 @@ Inside vars/main.yml:
     venv_dir: /opt/openquake
     venv_bin: "{{ venv_dir }}/bin"
     
-Use also pre_tasks to assure to update the cache for Ubuntu derivate
-
-      pre_tasks:
-        - name: Update apt cache.
-          apt:
-            update_cache: true
-            cache_valid_time: 600
-          when: ansible_os_family == 'Ubuntu'
-
-To have the follow playbook:
+Use also `pre_tasks` to update the cache for Ubuntu derivatives:
 
         - hosts: servers
           become: yes
@@ -115,44 +104,46 @@ To have the follow playbook:
 Example of usage
 ----------------
 
-To use this role you need to have ansible installed on a control machine from what you can control the execution of the tasks to the server.
-Follow an example of installation ansible in one virtual environment
+To use this role you need to have ansible installed on the control
+machine. Here is how to install ansible in a virtual environment:
 
-    python3.8 -m venv venv
-    source venv/bin/activate
-    pip install ansible
+    $ python3 -m venv venv
+    $ source venv/bin/activate
+    $ pip install ansible
     Successfully installed MarkupSafe-1.1.1 PyYAML-5.3.1 ansible-2.10.3 ansible-base-2.10.3 cffi-1.14.3 cryptography-3.2.1 jinja2-2.11.2 packaging-20.4 pycparser-2.20 pyparsing-2.4.7 six-1.15.0
     
- After the installation of ansible you have to define an file to use as inventory, for example you can define hosts file as follow
+ After the installation of ansible you have to define an file to use
+ as inventory, for example you can define the hosts file as follow
       
     [servers]
     192.168.22.21 vm_name=vm-centos-7-01
     #
     controlmachine ansible_connection=local
  
- As you can see on that files you see also an entry for control machine to use in you want to execute the play on localhost.
+ As you can see it is also possible to execute the playbook on localhost.
  
- To istall the role, since it is not galaxy repo you need to create one requirements.yml ans use it with ansible-galaxy
+ To istall the role you need to create a requirements.yml file
+ and use it with ansible-galaxy
   
     # from GitHub
     # 
     - name: oqengine
       src: https://github.com/gem/oq-engine/
   
-  After you can install it:
+Then you can install it:
   
-     ansible-galaxy install -r requirements.yml
+     $ ansible-galaxy install -r requirements.yml
  
      Starting galaxy role install process
 
      - extracting oqengine to /home/users/.ansible/roles/oqengine
      - oqengine was installed successfully
  
-   To run the playbook just use the ansible way on all systems listed in servers section of inventory file:
+To run the playbook on all systems listed in servers section of inventory file:
    
       ansible-playbook -i hosts  oqengine.yml
       
-   the oqengine.yml file is the follow: 
+The oqengine.yml file is the following: 
       
       - hosts: servers
         become: yes
@@ -166,11 +157,9 @@ Follow an example of installation ansible in one virtual environment
                cache_valid_time: 600
              when: ansible_os_family == 'Ubuntu'
              
-   If you want to run it on controlmachine:
+If you want to run to install on localhost:
         
-        ansible-playbook -i hosts --limit controlmachine oqengine.yml
-      
- 
+       $ ansible-playbook -i hosts --limit controlmachine oqengine.yml
 
 License
 -------
