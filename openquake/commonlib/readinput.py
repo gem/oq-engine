@@ -283,6 +283,24 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
     if hc_id:
         job_ini.update(hazard_calculation_id=str(hc_id))
     job_ini.update(kw)
+    re = os.environ.get('OQ_REDUCE')  # debugging facility
+    if re:
+        # reduce the imtls to the first imt
+        # reduce the logic tree to one random realization
+        # reduce the sites by a factor of `re`
+        # reduce the ses by a factor of `re`
+        os.environ['SAMPLE_SITES'] = str(1 / float(re))
+        job_ini['number_of_logic_tree_samples'] = '1'
+        ses = job_ini.get('ses_per_logic_tree_path')
+        if ses:
+            ses = str(int(numpy.ceil(int(ses) / float(re))))
+            job_ini['ses_per_logic_tree_path'] = ses
+        imtls = job_ini.get('intensity_measure_types_and_levels')
+        if imtls:
+            imtls = valid.intensity_measure_types_and_levels(imtls)
+            imt = next(iter(imtls))
+            job_ini['intensity_measure_types_and_levels'] = repr(
+                {imt: imtls[imt]})
     oqparam = OqParam(**job_ini)
     if validate and '_job_id' not in job_ini:
         oqparam.check_source_model()
