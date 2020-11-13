@@ -432,7 +432,8 @@ hazard_uhs-std.csv
             'hazard_curve-SA(0.025).csv', 'hazard_curve-SA(0.05).csv',
             'hazard_curve-SA(0.1).csv', 'hazard_curve-SA(0.2).csv',
             'hazard_curve-SA(0.5).csv', 'hazard_curve-SA(1.0).csv',
-            'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'], case_24.__file__)
+            'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'],
+                              case_24.__file__, delta=1E-5)
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
         self.assertEqual(len(self.calc.datastore['rup/mag']), 174)
@@ -637,8 +638,7 @@ hazard_uhs-std.csv
     def test_case_50(self):
         # serious test of amplification + uhs
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(1.0).csv',
-                               'uhs.csv'],
-                              case_50.__file__)
+                               'uhs.csv'], case_50.__file__, delta=1E-5)
 
     def test_case_51(self):
         # Modifiable GMPE
