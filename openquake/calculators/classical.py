@@ -34,7 +34,7 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize, get_nbytes_msg)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
-from openquake.hazardlib.calc.filters import split_sources, SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, logs
