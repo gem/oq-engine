@@ -74,6 +74,8 @@ Inventory file example for defition of the servers section.
     [web-server]
     192.168.22.25 vm_name=vm-centos-8-03
     192.168.22.26 vm_name=vm-centos-8-04
+    
+The playbook to use:
 
     - hosts: servers
       become: yes
