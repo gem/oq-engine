@@ -7,13 +7,14 @@ CentOS 7: CentOS SCLo RH
 CentOS 8: PowerTools 
 Ubuntu 1804: Universe
 Ubuntu 2004: python3.8 is the default version 
-
+Role also create the user openquake and generated the ssh keys for this user and the virtual environment of oq engine will be created for user openquake
 
 Requirements
 ------------
 
 Ansible 2.9 or later. (NOTE: it might be possible to use earlier versions, in case of issues please try updating Ansible to 2.9+)
-note that this role requires root access, so either run it in a playbook with a global become: yes, or invoke the role in your playbook like:
+Openssh-server to have ssh-keygen for creation of ssh key for user openquake 
+This role requires root access, so either run it in a playbook with a global become: yes, or invoke the role in your playbook like:
 
     - hosts: server
       become: yes
@@ -22,40 +23,58 @@ note that this role requires root access, so either run it in a playbook with a 
       roles:
          - oqengine
 
-You can use the option sorted as you prefer
+You can use the option sorted as you prefer if you don't want that ansible will play the hosts in the order they were mentioned in the inventory file
 
 Role Variables
 --------------
+Available variables are listed below, along with default values (see defaults/main.yml):
 
+The version of the engine that is installed
 
+    engine_release: "3.10.0"
+    
+The requirement file for the engine 
+ 
+    req_py38: https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-linux64.txt
 
+The setting of the virtual environment that is used
+
+    venv_dir: /opt/openquake
+    venv_bin: "{{ venv_dir }}/bin"
+    
 Dependencies
 ------------
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+None.
 
 Example Playbook
 ----------------
 
 Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
 
+    - hosts: db-servers
+      become: yes
+      roles:
+        - { role: oqengine }
+        
+Inside vars/main.yml:
 
-Use also pre_tasks to assure to update the cache for Debian derivate
+    engine_release: "3.10.0"
+    req_py38: https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-linux64.txt
+    venv_dir: /opt/openquake
+    venv_bin: "{{ venv_dir }}/bin"
+    
+Use also pre_tasks to assure to update the cache for Ubuntu derivate
 
       pre_tasks:
         - name: Update apt cache.
           apt:
             update_cache: true
             cache_valid_time: 600
-          when: ansible_os_family == 'Debian'
-
+          when: ansible_os_family == 'Ubuntu'
+        
 
 License
 -------
 
 AGPL3
-
-Author Information
-------------------
-
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
