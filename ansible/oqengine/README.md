@@ -26,7 +26,7 @@ This role requires root access, so either run it in a playbook with a global bec
       order: sorted
 
       roles:
-         - oqengine
+        - oqengine
 
 You can use the option sorted as you prefer if you don't want that ansible will play the hosts in the order they were mentioned in the inventory file
 
@@ -78,7 +78,7 @@ Inventory file example for defition of the servers section.
     - hosts: servers
       become: yes
       roles:
-        - { role: oqengine }
+        - oqengine
         
 Inside vars/main.yml:
 
