@@ -31,6 +31,16 @@ $ oq engine --run job.ini --reuse-hazard --exports csv
 Hazard maps and UHS can be regenerated from an existing calculation
 quite efficiently.
 
+### How do I set the pointsource_distance?
+
+In several hazard models (for instance Australia, Canada, etc) it is
+possible to improve significantly the performance by tuning a parameter
+called `pointsource_distance`. The parameter is discussed in the [advanced
+manual](https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance). You can calibrate the value of the `pointsource_distance`
+by taking a few reference sites, computing the hazard map values there, and
+then playing with the parameter until you get good performance without loosing
+too much precision.
+
 ## disaggregation calculations
 
 ### I am getting an error "disaggregation matrix is too large"!
@@ -79,9 +89,9 @@ postprocessing:
 ```python
 In[3]: calc.datastore.open('r')  # open the datastore for reading
 ```
-The inner format of the databook is not guaranteed to be the same
+The inner format of the datastore is not guaranteed to be the same
 across releases and it is not documented, so this approach is
-recommended only to the most adventurous people.
+recommended to the most adventurous people.
 
 ### how do I plot/analyze/postprocess the results of a calculation?
 

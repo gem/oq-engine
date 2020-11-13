@@ -31,7 +31,6 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
 
 F32 = numpy.float32
-point3d = numpy.dtype([('lon', F32), ('lat', F32), ('depth', F32)])
 
 
 def sqrt(array):

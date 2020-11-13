@@ -28,7 +28,8 @@ from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
-from openquake.hazardlib.source import NonParametricSeismicSource
+from openquake.hazardlib.source import (
+    NonParametricSeismicSource, check_complex_fault)
 from openquake.hazardlib.tom import PoissonTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
@@ -57,7 +58,7 @@ def build_area_source_geometry(area_source):
     lower_depth_node = Node(
         "lowerSeismoDepth", text=area_source.lower_seismogenic_depth)
     return Node(
-        "areaGeometry", {'discretization': area_source.area_discretization},
+        "areaGeometry",
         nodes=[polygon_node, upper_depth_node, lower_depth_node])
 
 
@@ -183,6 +184,11 @@ def build_truncated_gr_mfd(mfd):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
+    if hasattr(mfd, 'slip_rate'):
+        return Node("truncGutenbergRichterMFD",
+                    {"bValue": mfd.b_val, "slipRate": mfd.slip_rate,
+                     "rigidity": mfd.rigidity,
+                     "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
     return Node("truncGutenbergRichterMFD",
                 {"aValue": mfd.a_val, "bValue": mfd.b_val,
                  "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
@@ -554,6 +560,8 @@ def build_complex_fault_source_node(fault_source):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
+    list(check_complex_fault(fault_source))  # check get_dip
+
     # Parse geometry
     source_nodes = [build_complex_fault_geometry(fault_source)]
     # Parse common fault source attributes
@@ -657,7 +665,8 @@ def write_source_model(dest, sources_or_groups, name=None,
         # remove duplicate content from nodes
         for grp_node in nodes:
             for src_node in grp_node:
-                src_node.nodes = []
+                if src_node["id"] in ddict:
+                    src_node.nodes = []
         # save HDF5 file
         dest5 = os.path.splitext(dest)[0] + '.hdf5'
         with hdf5.File(dest5, 'w') as h:

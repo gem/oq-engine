@@ -70,6 +70,10 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
         SA
     ])
 
+    #: Vs30 value representing typical rock conditions in Switzerland.
+    #: confirmed by the Swiss GMPE group
+    DEFINED_FOR_REFERENCE_VELOCITY = 1105.
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method

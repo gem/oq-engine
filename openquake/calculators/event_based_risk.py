@@ -35,12 +35,10 @@ F64 = numpy.float64
 getweight = operator.attrgetter('weight')
 
 
-def event_based_risk(riskinputs, crmodel, param, monitor):
+def event_based_risk(riskinputs, param, monitor):
     """
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param crmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         a dictionary of parameters
     :param monitor:
@@ -48,6 +46,7 @@ def event_based_risk(riskinputs, crmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
+    crmodel = monitor.read('crmodel')
     L = len(crmodel.lti)
     tempname = param['tempname']
     for ri in riskinputs:

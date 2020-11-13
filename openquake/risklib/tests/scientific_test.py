@@ -538,13 +538,13 @@ class FragilityFunctionTestCase(unittest.TestCase):
         self.assertEqual(pickle.loads(pickle.dumps(ffd)), ffd)
 
     def test_continuous_pickle(self):
-        ffs = scientific.FragilityFunctionContinuous('LS1', 0, 1)
+        ffs = scientific.FragilityFunctionContinuous('LS1', 0, 1, 0, 2.)
 
         pickle.loads(pickle.dumps(ffs))
 
     def test_call(self):
-        ffs = scientific.FragilityFunctionContinuous('LS1', 0.5, 1)
-        self._close_to(0.26293, ffs(0.1))
+        ffs = scientific.FragilityFunctionContinuous('LS1', 0.5, 1, 0, 2.)
+        self._close_to(0.26293, ffs(numpy.array([0.1])))
 
     def test_discrete_ne(self):
         ffd1 = scientific.FragilityFunctionDiscrete('LS1', [], [])
@@ -619,7 +619,7 @@ class ClassicalDamageTestCase(unittest.TestCase):
     def test_discrete(self):
         hazard_imls = [0.05, 0.2, 0.4, 0.6, 0.8, 1, 1.2, 1.4]
         fragility_functions = scientific.FragilityFunctionList(
-            [], imls=hazard_imls, steps_per_interval=None, format='discrete')
+            [], imls=hazard_imls, format='discrete')
         fragility_functions.extend([
             scientific.FragilityFunctionDiscrete(
                 'slight', hazard_imls,
@@ -658,16 +658,16 @@ class ClassicalDamageTestCase(unittest.TestCase):
              0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2,
              1.25, 1.3, 1.35, 1.4])
         fragility_functions = scientific.FragilityFunctionList(
-            [], imls=hazard_imls, steps_per_interval=None, format='continuous')
+            [], imls=hazard_imls, format='continuous')
         fragility_functions.extend([
             scientific.FragilityFunctionContinuous(
-                'slight', 0.160, 0.104),
+                'slight', 0.160, 0.104, 0, 2.),
             scientific.FragilityFunctionContinuous(
-                'moderate', 0.225, 0.158),
+                'moderate', 0.225, 0.158, 0, 2.),
             scientific.FragilityFunctionContinuous(
-                'extreme', 0.400, 0.300),
+                'extreme', 0.400, 0.300, 0, 2.),
             scientific.FragilityFunctionContinuous(
-                'complete', 0.600, 0.480),
+                'complete', 0.600, 0.480, 0, 2.),
         ])
         hazard_poes = numpy.array([
             0.5917765421,

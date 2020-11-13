@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.baselib.general import gettemp
 from openquake.calculators.export import export
 from openquake.calculators.views import view
 from openquake.calculators import ucerf_base
@@ -29,11 +28,6 @@ class UcerfTestCase(CalculatorTestCase):
     def test_event_based(self):
         self.run_calc(ucerf.__file__, 'job.ini')
         gmv_uc = view('global_gmfs', self.calc.datastore)
-        # check the distribution of the events
-        self.assertEventsByRlz(
-            [1, 1, 2, 2, 0, 0, 1, 1, 1, 1, 2, 2, 1, 1, 3, 3, 0, 0, 1, 1, 0, 0,
-             1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0,
-             0, 0, 0, 0])
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=2E-5)
@@ -59,11 +53,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
         # check the distribution of the events
-        self.assertEventsByRlz([15, 19])
-
-        # check the mean hazard map
-        got = gettemp(view('hmap', self.calc.datastore))
-        self.assertEqualFiles('expected/hmap.rst', got)
+        self.assertEventsByRlz([16, 19])
 
     def test_classical(self):
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini',

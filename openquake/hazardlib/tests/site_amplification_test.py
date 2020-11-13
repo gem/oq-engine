@@ -18,11 +18,13 @@
 
 import unittest
 import numpy
+from openquake.hazardlib.const import TRT
 from openquake.baselib import InvalidFile
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import Amplifier
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
 aac = numpy.testing.assert_allclose
 
@@ -107,7 +109,8 @@ class AmplifierTestCase(unittest.TestCase):
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         a = Amplifier(self.imtls, df, self.soil_levels)
-        a.check(self.vs30, 0)
+        gmm = BooreAtkinson2008()
+        a.check(self.vs30, 0, {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
         numpy.testing.assert_allclose(
             a.midlevels, [0.0015, 0.0035, 0.0075, 0.015, 0.035, 0.075,
                           0.15, 0.35, 0.75, 1.1])
@@ -125,27 +128,31 @@ class AmplifierTestCase(unittest.TestCase):
             atol=1E-6)
 
     def test_simple(self):
+        #
+        # MP: checked using hand calculations some values of the poes computed
+        # considering uncertainty
+        #
         fname = gettemp(simple_ampl_func)
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         a = Amplifier(self.imtls, df, self.soil_levels)
-        a.check(self.vs30, vs30_tolerance=1)
+        # a.check(self.vs30, vs30_tolerance=1)
         poes = a.amplify_one(b'A', 'SA(0.1)', self.hcurve[1]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985002, 0.979996, 0.969991, 0.940012, 0.889958, 0.79,
-                   0.690037], atol=1E-6)
+            poes, [0.985008, 0.980001, 0.970019, 0.94006, 0.890007, 0.790198,
+                   0.690201], atol=1E-6)
 
         poes = a.amplify_one(b'A', 'SA(0.2)', self.hcurve[2]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985002, 0.979996, 0.969991, 0.940012, 0.889958, 0.79,
-                   0.690037], atol=1E-6)
+            poes, [0.985008, 0.980001, 0.970019, 0.94006, 0.890007, 0.790198,
+                   0.690201], atol=1E-6)
 
         poes = a.amplify_one(b'A', 'SA(0.5)', self.hcurve[3]).flatten()
         numpy.testing.assert_allclose(
-            poes, [0.985039, 0.980002, 0.970098, 0.940294, 0.890025, 0.790981,
-                   0.690981], atol=1E-6)
+            poes, [0.985109, 0.980022, 0.970272, 0.940816, 0.890224, 0.792719,
+                   0.692719], atol=1E-6)
 
-        # amplify GMFs with sigmas
+        # Amplify GMFs with sigmas
         numpy.random.seed(42)
         gmvs = a._amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
         numpy.testing.assert_allclose(gmvs, [0.005401, 0.010356, 0.016704],

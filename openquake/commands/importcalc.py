@@ -36,7 +36,6 @@ def importcalc(calc_id):
     try:
         calc_id = int(calc_id)
     except ValueError:  # assume calc_id is a pathname
-        status = 'complete'
         remote = False
     else:
         remote = True
@@ -46,7 +45,6 @@ def importcalc(calc_id):
     if remote:
         datadir = datastore.get_datadir()
         webex = WebExtractor(calc_id)
-        status = webex.status['status']
         hc_id = webex.oqparam.hazard_calculation_id
         if hc_id:
             sys.exit('The job has a parent (#%d) and cannot be '
@@ -54,7 +52,7 @@ def importcalc(calc_id):
         webex.dump('%s/calc_%d.hdf5' % (datadir, calc_id))
         webex.close()
     with datastore.read(calc_id) as dstore:
-        engine.expose_outputs(dstore, status=status)
+        engine.expose_outputs(dstore, status='complete')
     logging.info('Imported calculation %s successfully', calc_id)
 
 

@@ -48,8 +48,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenQuake for Advanced Users'
-copyright = u'2018, M. Simionato, R. Anirudh'
-author = u'M. Simionato, A. Rao'
+copyright = u'2018-2020, Michele Simionato, Anirudh Rao'
+author = u'Michele Simionato, Anirudh Rao'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -224,7 +224,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'OpenQuakeforAdvancedUsers.tex', u'OpenQuake for Advanced Users Documentation',
-     u'M. Simionato, R. Anirudh', 'manual'),
+     u'Michele Simionato, Anirudh Rao', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

@@ -1,34 +1,34 @@
 Classical Hazard QA Test, Case 2
 ================================
 
-============== ===================
-checksum32     4_177_765_270      
-date           2020-03-13T11:23:10
-engine_version 3.9.0-gitfb3ef3a732
-============== ===================
+============== ====================
+checksum32     1_768_482_896       
+date           2020-11-02T09:37:38 
+engine_version 3.11.0-git82b78631ac
+============== ====================
 
 num_sites = 1, num_levels = 4, num_rlzs = 1
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'preclassical'    
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 200.0}
-investigation_time              1.0               
-ses_per_logic_tree_path         1                 
-truncation_level                0.0               
-rupture_mesh_spacing            1.0               
-complex_fault_mesh_spacing      1.0               
-width_of_mfd_bin                0.001             
-area_source_discretization      None              
-pointsource_distance            {'default': 0}    
-ground_motion_correlation_model None              
-minimum_intensity               {}                
-random_seed                     1066              
-master_seed                     0                 
-ses_seed                        42                
-=============================== ==================
+=============================== ==========================================
+calculation_mode                'preclassical'                            
+number_of_logic_tree_samples    0                                         
+maximum_distance                {'default': [(1.0, 200.0), (10.0, 200.0)]}
+investigation_time              1.0                                       
+ses_per_logic_tree_path         1                                         
+truncation_level                0.0                                       
+rupture_mesh_spacing            1.0                                       
+complex_fault_mesh_spacing      1.0                                       
+width_of_mfd_bin                0.001                                     
+area_source_discretization      None                                      
+pointsource_distance            {'default': [(1.0, 0), (10.0, 0)]}        
+ground_motion_correlation_model None                                      
+minimum_intensity               {}                                        
+random_seed                     1066                                      
+master_seed                     0                                         
+ses_seed                        42                                        
+=============================== ==========================================
 
 Input files
 -----------
@@ -44,72 +44,62 @@ source_model_logic_tree   `source_model_logic_tree.xml <source_model_logic_tree.
 
 Composite source model
 ----------------------
-========= ======= ================
-smlt_path weight  num_realizations
-========= ======= ================
-b1        1.00000 1               
-========= ======= ================
+====== ================== ====
+grp_id gsim               rlzs
+====== ================== ====
+0      '[SadighEtAl1997]' [0] 
+1      '[SadighEtAl1997]' [0] 
+====== ================== ====
 
 Required parameters per tectonic region type
 --------------------------------------------
-====== ================== ========= ========== ==========
-grp_id gsims              distances siteparams ruptparams
-====== ================== ========= ========== ==========
-0      '[SadighEtAl1997]' rrup      vs30       mag rake  
-1      '[SadighEtAl1997]' rrup      vs30       mag rake  
-====== ================== ========= ========== ==========
-
-Number of ruptures per source group
------------------------------------
-====== ========= ============ ============
-grp_id num_sites num_ruptures eff_ruptures
-====== ========= ============ ============
-0      3.333E-04 3_000        3_000       
-1      3.333E-04 3_000        3_000       
-====== ========= ============ ============
+===== ================== ========= ========== ==========
+et_id gsims              distances siteparams ruptparams
+===== ================== ========= ========== ==========
+0     '[SadighEtAl1997]' rrup      vs30       mag rake  
+1     '[SadighEtAl1997]' rrup      vs30       mag rake  
+===== ================== ========= ========== ==========
 
 Slowest sources
 ---------------
-========= ====== ==== ============ ========= ========= ============
-source_id grp_id code num_ruptures calc_time num_sites eff_ruptures
-========= ====== ==== ============ ========= ========= ============
-1         0      P    3_000        0.01266   3.333E-04 3_000       
-2         1      P    3_000        0.01258   3.333E-04 3_000       
-========= ====== ==== ============ ========= ========= ============
+========= ==== ========= ========= ============
+source_id code calc_time num_sites eff_ruptures
+========= ==== ========= ========= ============
+2         P    0.00372   1         3_000       
+1         P    0.00371   1         3_000       
+========= ==== ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
 ==== =========
 code calc_time
 ==== =========
-P    0.02524  
+P    0.00743  
 ==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ========= ======= ======= =======
-operation-duration mean    stddev    min     max     outputs
-preclassical       0.01396 1.586E-04 0.01384 0.01407 2      
-read_source_model  0.00789 NaN       0.00789 0.00789 1      
-================== ======= ========= ======= ======= =======
+================== ====== ======= ====== ======= =======
+operation-duration counts mean    stddev min     max    
+preclassical       2      0.00419 0%     0.00418 0.00421
+read_source_model  1      0.00214 nan    0.00214 0.00214
+================== ====== ======= ====== ======= =======
 
 Data transfer
 -------------
-================= ============================================= ========
-task              sent                                          received
-read_source_model                                               1.96 KB 
-preclassical      params=441.04 KB srcs=2.26 KB srcfilter=446 B 740 B   
-================= ============================================= ========
+================= =============================== ========
+task              sent                            received
+read_source_model                                 1.93 KB 
+preclassical      srcfilter=32.28 KB srcs=2.32 KB 478 B   
+================= =============================== ========
 
 Slowest operations
 ------------------
-=========================== ========= ========= ======
-calc_67011                  time_sec  memory_mb counts
-=========================== ========= ========= ======
-composite source model      0.03170   0.0       1     
-total preclassical          0.02791   0.48438   2     
-total read_source_model     0.00789   0.0       1     
-store source_info           0.00218   0.0       1     
-splitting/filtering sources 8.433E-04 0.0       2     
-aggregate curves            4.807E-04 0.0       2     
-=========================== ========= ========= ======
+========================= ======== ========= ======
+calc_47373, maxmem=1.0 GB time_sec memory_mb counts
+========================= ======== ========= ======
+importing inputs          0.13001  0.0       1     
+composite source model    0.12500  0.0       1     
+total preclassical        0.00839  0.63672   2     
+total read_source_model   0.00214  0.0       1     
+========================= ======== ========= ======

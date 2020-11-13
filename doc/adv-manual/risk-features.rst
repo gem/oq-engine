@@ -78,9 +78,9 @@ Scenario damage calculations produce the so called *asset damage table*,
 i.e. a set of damage distributions (the probability of being in each
 damage state listed in the fragility functions) per each asset, event
 and loss type. From the asset damage table it is possible to compute
-generic consequences by multiplying for known coefficients that are
-what is called the *consequence model*. For instance, from the probability
-of being in the collapsed damage state one can estimate the number of
+generic consequences by multiplying for known coefficients specified in
+what are called *consequence model*. For instance, from the probability
+of being in the collapsed damage state, one might estimate the number of
 fatalities, given the right multiplicative coefficient.
 
 By default the engine allows to compute economic losses; in that case the
@@ -102,11 +102,12 @@ represented as a CSV file like the following:
 ===================	========	============	========	==========	===========	==========	
 
 The first field in the header is the name of a tag in the exposure; in
-this case it is the taxonomy but it can be something else; for instance
-for volcanic ash fall consequences the kind of roof you have will be
-relevant. The framework is meant to be used for generic consequences,
-even not related to earthquakes, because since version 3.6 the engine
-provides a multi-risk calculator.
+this case it is the taxonomy but it could be any other tag — for instance,
+for volcanic ash-fall consequences, the roof-type might be more relevant,
+and for recovery time estimates, the occupancy class might be more relevant.
+The framework is meant to be used for generic consequences,
+not necessarily limited to earthquakes, because since version 3.6 the engine
+provides a multi-hazard risk calculator.
 
 The second field of the header, the ``cname``, is a string identifying
 the kind of consequence we are considering. It is important because it
@@ -121,10 +122,10 @@ to additional plugin functions. For instance we could have outputs
 ``fatalities_by_event`` and ``fatalities_by_asset``.
 
 The other fields in the header are the loss_type and the damage states.
-For instance the coefficient 0.05 for "moderate" means that 5% of the
-value of the asset will be lost if we are in that damage state, while
-the coefficient 1 for "complete" means that everything will be lost if
-are in that state.
+For instance the coefficient 0.25 for "moderate" means that the cost to
+bring a structure in "moderate damage" back to its undamaged state is
+25% of the total replacement value of the asset.
+
 
 Scenarios from ShakeMaps
 --------------------------
@@ -216,15 +217,15 @@ cross correlation between different intensity measure types. For each kind
 of correlation you have three choices, that you can set in the `job.ini`,
 for a total of nine combinations::
 
-spatial_correlation = yes, cross_correlation = yes  # the default
-spatial_correlation = no, cross_correlation = no   # disable everything
-spatial_correlation = yes, cross_correlation = no
-spatial_correlation = no, cross_correlation = yes
-spatial_correlation = full, cross_correlation = full
-spatial_correlation = yes, cross_correlation = full
-spatial_correlation = no, cross_correlation = full
-spatial_correlation = full, cross_correlation = no
-spatial_correlation = full, cross_correlation = yes
+- spatial_correlation = yes, cross_correlation = yes  # the default
+- spatial_correlation = no, cross_correlation = no   # disable everything
+- spatial_correlation = yes, cross_correlation = no
+- spatial_correlation = no, cross_correlation = yes
+- spatial_correlation = full, cross_correlation = full
+- spatial_correlation = yes, cross_correlation = full
+- spatial_correlation = no, cross_correlation = full
+- spatial_correlation = full, cross_correlation = no
+- spatial_correlation = full, cross_correlation = yes
 
 `yes` means using the correlation matrix of the Silva-Horspool paper;
 `no` mean using a unity correlation matrix; `full` means using an 
@@ -247,15 +248,16 @@ or reduce the number of sites because that can make the numerical instability
 go away. The easiest way to reduce the number of sites is setting a
 `region_grid_spacing` parameter in the `prepare_job.ini` file, then the
 engine will automatically put the assets on a grid. The larger the grid
-spacing, the smaller the number of points, until the calculation can be done.
+spacing, the fewer the number of points, and the closer the calculation
+will be to tractability.
 
 If the ground motion values or the standard deviations are particularly
-large the user will get a warning about suspicious GMFs.
+large, the user will get a warning about suspicious GMFs.
 
 Moreover, especially for old ShakeMaps, the USGS can provide them in a
 format that the engine cannot read.
 
-So you should not expect the functionality to work in 100% of the cases.
+Thus, this feature is not expected to work in 100% of the cases.
 
 Note: on macOS make sure to run the script located under
 ``/Applications/Python 3.6/Install Certificates.command``,

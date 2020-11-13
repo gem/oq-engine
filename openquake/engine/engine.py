@@ -27,9 +27,11 @@ import time
 import signal
 import getpass
 import logging
+import itertools
 import traceback
 import platform
 import psutil
+import numpy
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -45,7 +47,6 @@ from openquake.calculators import base, export
 from openquake.commonlib import logs
 
 OQ_API = 'https://api.openquake.org'
-TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
 MB = 1024 ** 2
@@ -55,6 +56,15 @@ _PPID = os.getppid()  # the controlling terminal PID
 GET_JOBS = '''--- executing or submitted
 SELECT * FROM job WHERE status IN ('executing', 'submitted')
 AND is_running=1 AND pid > 0 ORDER BY id'''
+
+
+def get_zmq_ports():
+    """
+    :returns: an array with the receiver ports
+    """
+    start, stop = config.dbserver.receiver_ports.split('-')
+    return numpy.arange(int(start), int(stop))
+
 
 if OQ_DISTRIBUTE == 'zmq':
 
@@ -235,51 +245,13 @@ def register_signals():
         pass
 
 
-def job_from_file(job_ini, job_id, username, **kw):
-    """
-    Create a full job profile from a job config file.
-
-    :param job_ini:
-        Path to a job.ini file
-    :param job_id:
-        ID of the created job
-    :param username:
-        The user who will own this job profile and all results
-    :param kw:
-         Extra parameters including `calculation_mode` and `exposure_file`
-    :returns:
-        an oqparam instance
-    """
-    hc_id = kw.pop('hazard_calculation_id', None)
-    try:
-        oq = readinput.get_oqparam(job_ini, hc_id=hc_id, **kw)
-    except Exception:
-        logs.dbcmd('finish', job_id, 'deleted')
-        raise
-    if 'calculation_mode' in kw:
-        oq.calculation_mode = kw.pop('calculation_mode')
-    if 'description' in kw:
-        oq.description = kw.pop('description')
-    if 'exposure_file' in kw:  # hack used in commands.engine
-        fnames = kw.pop('exposure_file').split()
-        if fnames:
-            oq.inputs['exposure'] = fnames
-        elif 'exposure' in oq.inputs:
-            del oq.inputs['exposure']
-    logs.dbcmd('update_job', job_id,
-               dict(calculation_mode=oq.calculation_mode,
-                    description=oq.description,
-                    user_name=username,
-                    hazard_calculation_id=hc_id))
-    return oq
-
-
-def poll_queue(job_id, pid, poll_time):
+def poll_queue(job_id, poll_time):
     """
     Check the queue of executing/submitted jobs and exit when there is
     a free slot.
     """
-    if config.distribution.serialize_jobs:
+    offset = config.distribution.serialize_jobs - 1
+    if offset >= 0:
         first_time = True
         while True:
             jobs = logs.dbcmd(GET_JOBS)
@@ -288,20 +260,20 @@ def poll_queue(job_id, pid, poll_time):
                 for job in failed:
                     logs.dbcmd('update_job', job,
                                {'status': 'failed', 'is_running': 0})
-            elif any(job.id < job_id for job in jobs):
+            elif any(j.id < job_id - offset for j in jobs):
                 if first_time:
                     logging.warning(
-                        'Waiting for jobs %s', [j.id for j in jobs])
+                        'Waiting for jobs %s', [j.id for j in jobs
+                                                if j.id < job_id - offset])
                     logs.dbcmd('update_job', job_id,
-                               {'status': 'submitted', 'pid': pid})
+                               {'status': 'submitted', 'pid': _PID})
                     first_time = False
                 time.sleep(poll_time)
             else:
                 break
-    logs.dbcmd('update_job', job_id, {'status': 'executing', 'pid': _PID})
 
 
-def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
+def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
     """
     Run a calculation.
 
@@ -314,68 +286,166 @@ def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
     """
     register_signals()
     setproctitle('oq-job-%d' % job_id)
-    calc = base.calculators(oqparam, calc_id=job_id)
-    logging.info('%s running %s [--hc=%s]',
-                 getpass.getuser(),
-                 calc.oqparam.inputs['job_ini'],
-                 calc.oqparam.hazard_calculation_id)
-    logging.info('Using engine version %s', __version__)
-    msg = check_obsolete_version(oqparam.calculation_mode)
-    if msg:
-        logging.warning(msg)
-    calc.from_engine = True
-    tb = 'None\n'
+    logs.init(job_id, getattr(logging, log_level.upper()))
+    with logs.handle(job_id, log_level, log_file):
+        calc = base.calculators(oqparam, calc_id=job_id)
+        logging.info('%s running %s [--hc=%s]',
+                     getpass.getuser(),
+                     calc.oqparam.inputs['job_ini'],
+                     calc.oqparam.hazard_calculation_id)
+        logging.info('Using engine version %s', __version__)
+        msg = check_obsolete_version(oqparam.calculation_mode)
+        if msg:
+            logging.warning(msg)
+        calc.from_engine = True
+        tb = 'None\n'
+        try:
+            if OQ_DISTRIBUTE.endswith('pool'):
+                logging.warning('Using %d cores on %s',
+                                parallel.CT // 2, platform.node())
+            set_concurrent_tasks_default(calc)
+            t0 = time.time()
+            calc.run(exports=exports, **kw)
+            logging.info('Exposing the outputs to the database')
+            expose_outputs(calc.datastore)
+            path = calc.datastore.filename
+            size = general.humansize(os.path.getsize(path))
+            logging.info('Stored %s on %s in %d seconds',
+                         size, path, time.time() - t0)
+            logs.dbcmd('finish', job_id, 'complete')
+            calc.datastore.close()
+            for line in logs.dbcmd('list_outputs', job_id, False):
+                general.safeprint(line)
+        except BaseException as exc:
+            if isinstance(exc, MasterKilled):
+                msg = 'aborted'
+            else:
+                msg = 'failed'
+            tb = traceback.format_exc()
+            try:
+                logging.critical(tb)
+                logs.dbcmd('finish', job_id, msg)
+            except BaseException:  # an OperationalError may always happen
+                sys.stderr.write(tb)
+            raise
+        finally:
+            parallel.Starmap.shutdown()
+    return calc
+
+
+def _init_logs(dic, lvl):
+    if '_job_id' in dic:
+        logs.init(dic['_job_id'], lvl)
+    else:
+        dic['_job_id'] = logs.init('job', lvl)
+
+
+def create_jobs(job_inis, loglvl, kw):
+    """
+    Create job records on the database (if not already there) and configure
+    the logging.
+    """
+    dicts = []
+    # setting the handlers before any call to `readinput.get_oqparam`
+    # to avoid using the default logger which is in WARN level
+    fmt = '[%(asctime)s %(levelname)s] %(message)s'
+    for handler in logging.root.handlers:
+        f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
+        handler.setFormatter(f)
+    for i, job_ini in enumerate(job_inis):
+        dic = job_ini if isinstance(job_ini, dict) else vars(
+            readinput.get_oqparam(job_ini, validate=0, **kw))
+        if 'sensitivity_analysis' in dic:
+            for values in itertools.product(
+                    *dic['sensitivity_analysis'].values()):
+                new = dic.copy()
+                _init_logs(new, loglvl)
+                if '_job_id' in dic:
+                    del dic['_job_id']
+                pars = dict(zip(dic['sensitivity_analysis'], values))
+                for param, value in pars.items():
+                    new[param] = value
+                new['description'] = '%s %s' % (new['description'], pars)
+                logging.info('Job with %s', pars)
+                dicts.append(new)
+        else:
+            _init_logs(dic, loglvl)
+            dicts.append(dic)
+    return dicts
+
+
+def run_jobs(job_inis, log_level='info', log_file=None, exports='',
+             username=getpass.getuser(), **kw):
+    """
+    Run jobs using the specified config file and other options.
+
+    :param str job_inis:
+        A list of paths to .ini files, or a list of job dictionaries
+    :param str log_level:
+        'debug', 'info', 'warn', 'error', or 'critical'
+    :param str log_file:
+        Path to log file.
+    :param exports:
+        A comma-separated string of export types requested by the user.
+    :param username:
+        Name of the user running the job
+    :param kw:
+        Extra parameters like hazard_calculation_id and calculation_mode
+    """
+    dist = parallel.oq_distribute()
+    jobparams = []
+    multi = kw.pop('multi', None)
+    loglvl = getattr(logging, log_level.upper())
+    jobs = create_jobs(job_inis, loglvl, kw)
+    hc_id = kw.pop('hazard_calculation_id', None)
+    for job in jobs:
+        job_id = job['_job_id']
+        with logs.handle(job_id, log_level, log_file):
+            oqparam = readinput.get_oqparam(job, hc_id=hc_id, **kw)
+        logs.dbcmd('update_job', job_id,
+                   dict(calculation_mode=oqparam.calculation_mode,
+                        description=oqparam.description,
+                        user_name=username,
+                        hazard_calculation_id=hc_id))
+        if (not jobparams and not multi and hc_id is None
+                and 'sensitivity_analysis' not in job):
+            hc_id = job_id
+        jobparams.append((job_id, oqparam))
+    jobarray = len(jobparams) > 1 and multi
     try:
-        poll_queue(job_id, _PID, poll_time=15)
+        poll_queue(job_id, poll_time=15)
+        # wait for an empty slot or a CTRL-C
     except BaseException:
         # the job aborted even before starting
-        logs.dbcmd('finish', job_id, 'aborted')
-        return
+        for job_id, oqparam in jobparams:
+            logs.dbcmd('finish', job_id, 'aborted')
+        return jobparams
+    else:
+        for job_id, oqparam in jobparams:
+            dic = {'status': 'executing', 'pid': _PID}
+            if jobarray:
+                dic['hazard_calculation_id'] = jobparams[0][0]
+            logs.dbcmd('update_job', job_id, dic)
     try:
-        if OQ_DISTRIBUTE.endswith('pool'):
-            logging.warning('Using %d cores on %s',
-                            parallel.CT // 2, platform.node())
-        if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
+        if dist == 'zmq' and config.zworkers['host_cores']:
             logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('zmq_start')  # start the zworkers
             logs.dbcmd('zmq_wait')  # wait for them to go up
-        set_concurrent_tasks_default(calc)
-        t0 = time.time()
-        calc.run(exports=exports,
-                 hazard_calculation_id=hazard_calculation_id, **kw)
-        logging.info('Exposing the outputs to the database')
-        expose_outputs(calc.datastore)
-        logging.info('Calculation %d finished correctly in %d seconds',
-                     job_id, time.time() - t0)
-        logs.dbcmd('finish', job_id, 'complete')
-        calc.datastore.close()
-    except BaseException as exc:
-        if isinstance(exc, MasterKilled):
-            msg = 'aborted'
+        allargs = [(job_id, oqparam, exports, log_level, log_file)
+                   for job_id, oqparam in jobparams]
+        if jobarray:
+            with general.start_many(run_calc, allargs):
+                pass
         else:
-            msg = 'failed'
-        tb = traceback.format_exc()
-        try:
-            logging.critical(tb)
-            logs.dbcmd('finish', job_id, msg)
-        except BaseException:  # an OperationalError may always happen
-            sys.stderr.write(tb)
-        raise
+            for args in allargs:
+                run_calc(*args)
     finally:
-        parallel.Starmap.shutdown()
-        # if there was an error in the calculation, this part may fail;
-        # in such a situation, we simply log the cleanup error without
-        # taking further action, so that the real error can propagate
-        if OQ_DISTRIBUTE == 'zmq' and config.zworkers['host_cores']:
-            logs.dbcmd('zmq_stop')  # stop the zworkers
-        try:
-            if OQ_DISTRIBUTE.startswith('celery'):
-                celery_cleanup(TERMINATE)
-        except BaseException:
-            # log the finalization error only if there is no real error
-            if tb == 'None\n':
-                logging.error('finalizing', exc_info=True)
-    return calc
+        if dist == 'zmq' and config.zworkers['host_cores']:
+            logging.info('Stopping the zworkers')
+            logs.dbcmd('zmq_stop')
+        elif dist.startswith('celery'):
+            celery_cleanup(config.distribution.terminate_workers_on_revoke)
+    return jobparams
 
 
 def version_triple(tag):

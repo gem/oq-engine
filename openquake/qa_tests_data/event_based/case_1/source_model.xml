@@ -24,7 +24,8 @@
             </nodalPlaneDist>
 
             <hypoDepthDist>
-                <hypoDepth probability="1.0" depth="4.0" />
+                <hypoDepth probability="0.6" depth="4.0" />
+                <hypoDepth probability="0.4" depth="5.0" />
             </hypoDepthDist>
         </pointSource>
     </sourceModel>

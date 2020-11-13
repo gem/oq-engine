@@ -29,7 +29,6 @@ import numpy
 import scipy.stats
 
 from openquake.hazardlib import contexts
-from openquake.baselib import performance
 from openquake.baselib.general import AccumDict, groupby, pprod
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -75,7 +74,7 @@ def get_edges_shapedic(oq, sitecol, mags_by_trt):
         int(numpy.ceil(max(mags) / oq.mag_bin_width) + 1))
 
     # build dist_edges
-    maxdist = max(filters.getdefault(oq.maximum_distance, trt) for trt in trts)
+    maxdist = max(oq.maximum_distance(trt) for trt in trts)
     dist_edges = oq.distance_bin_width * numpy.arange(
         0, int(numpy.ceil(maxdist / oq.distance_bin_width) + 1))
 
@@ -112,58 +111,74 @@ def _eps3(truncation_level, n_epsilons):
     return tn, eps, eps_bands
 
 
+DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
+
+
 # this is inside an inner loop
-def disaggregate(ctxs, imts, zs_by_gsim, iml3, eps3, bin_edges=(),
-                 ms_mon=performance.Monitor(),
-                 pne_mon=performance.Monitor(),
-                 mat_mon=performance.Monitor()):
+def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     """
     :param ctxs: a list of U fat RuptureContexts
     :param imts: a list of Intensity Measure Type objects
-    :param zs_by_gims: a dictionary gsim -> Z indices
+    :param g_by_z: an array of gsim indices
     :param imt: an Intensity Measure Type
-    :param iml3: an array of shape (M, P, Z)
+    :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
-    :param ms_mon: monitor for the mean_std calculation
-    :param pne_mon: monitor for the probabilities of no exceedance
     """
     # disaggregate (separate) PoE in different contributions
-    U, E, G = len(ctxs), len(eps3[2]), len(zs_by_gsim)
-    M, P, Z = iml3.shape
+    U, E, M = len(ctxs), len(eps3[2]), len(iml2dict)
+    iml2 = next(iter(iml2dict.values()))
+    P, Z = iml2.shape
     dists = numpy.zeros(U)
     lons = numpy.zeros(U)
     lats = numpy.zeros(U)
-    iml3 = iml3.copy()
-    with ms_mon:
-        truncnorm, epsilons, eps_bands = eps3
-        cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
-        for m, imt in enumerate(imts):
-            iml3[m] = to_distribution_values(iml3[m], imt)
-        mean_std = numpy.zeros((2, U, M, G), numpy.float32)
-        for u, ctx in enumerate(ctxs):
-            for g, gsim in enumerate(zs_by_gsim):
-                mean_std[:, u, :, g] = ctx.get_mean_std(
-                    imts, [gsim]).reshape(2, M)
-            dists[u] = ctx.rrup[0]  # distance to the site
-            lons[u] = ctx.clon[0]  # closest point of the rupture lon
-            lats[u] = ctx.clat[0]  # closest point of the rupture lat
-    with pne_mon:
-        poes = numpy.zeros((U, E, M, P, Z))
-        pnes = numpy.ones((U, E, M, P, Z))
-        for g, zs in enumerate(zs_by_gsim.values()):
-            for (m, p, z), iml in numpy.ndenumerate(iml3):
-                if z in zs:
-                    lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
-                    idxs = numpy.searchsorted(epsilons, lvls)
-                    poes[:, :, m, p, z] = _disagg_eps(
-                        truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
-        for u, ctx in enumerate(ctxs):
-            pnes[u] *= ctx.get_probability_no_exceedance(poes[u])
+
+    # switch to logarithmic intensities
+    iml3 = numpy.zeros((M, P, Z))
+    for m, (imt, iml2) in enumerate(iml2dict.items()):
+        # 0 values are converted into -inf
+        iml3[m] = to_distribution_values(iml2, imt)
+
+    truncnorm, epsilons, eps_bands = eps3
+    cum_bands = numpy.array([eps_bands[e:].sum() for e in range(E)] + [0])
+    G = len(ctxs[0].mean_std)
+    mean_std = numpy.zeros((2, U, M, G), numpy.float32)
+    for u, ctx in enumerate(ctxs):
+        if not hasattr(ctx, 'idx'):  # assume single site
+            idx = 0
+        else:
+            idx = ctx.idx[sid]
+        dists[u] = ctx.rrup[idx]  # distance to the site
+        lons[u] = ctx.clon[idx]  # closest point of the rupture lon
+        lats[u] = ctx.clat[idx]  # closest point of the rupture lat
+        for g in range(G):
+            mean_std[:, u, :, g] = ctx.mean_std[g][:, idx]  # (2, M)
+    poes = numpy.zeros((U, E, M, P, Z))
+    pnes = numpy.ones((U, E, M, P, Z))
+    for (m, p, z), iml in numpy.ndenumerate(iml3):
+        if iml == -numpy.inf:  # zero hazard
+            continue
+        # discard the z contributions coming from wrong realizations: see
+        # the test disagg/case_2
+        try:
+            g = g_by_z[z]
+        except KeyError:
+            continue
+        lvls = (iml - mean_std[0, :, m, g]) / mean_std[1, :, m, g]
+        idxs = numpy.searchsorted(epsilons, lvls)
+        poes[:, :, m, p, z] = _disagg_eps(
+            truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
+    for u, ctx in enumerate(ctxs):
+        pnes[u] *= ctx.get_probability_no_exceedance(poes[u])  # this is slow
     bindata = BinData(dists, lons, lats, pnes)
+    DEBUG[idx].append(pnes.mean())
     if not bin_edges:
         return bindata
-    with mat_mon:
-        return _build_disagg_matrix(bindata, bin_edges)
+    return _build_disagg_matrix(bindata, bin_edges)
+
+
+def set_mean_std(ctxs, imts, gsims):
+    for u, ctx in enumerate(ctxs):
+        ctx.mean_std = [gsim.get_mean_std([ctx], imts) for gsim in gsims]
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
@@ -347,7 +362,7 @@ def disaggregation(
     by_trt = groupby(sources, operator.attrgetter('tectonic_region_type'))
     bdata = {}  # by trt, magi
     sitecol = SiteCollection([site])
-    iml3 = numpy.array([[[iml]]])
+    iml2 = numpy.array([[iml]])
     eps3 = _eps3(truncation_level, n_epsilons)
 
     rups = AccumDict(accum=[])
@@ -370,8 +385,8 @@ def disaggregation(
     for trt in cmaker:
         gsim = gsim_by_trt[trt]
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
-            bdata[trt, magi] = disaggregate(
-                ctxs, [imt], {gsim: [0]}, iml3, eps3)
+            set_mean_std(ctxs, [imt], [gsim])
+            bdata[trt, magi] = disaggregate(ctxs, [0], {imt: iml2}, eps3)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(

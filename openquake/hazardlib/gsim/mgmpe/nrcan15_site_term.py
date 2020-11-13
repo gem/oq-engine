@@ -46,8 +46,8 @@ class NRCan15SiteTerm(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name):
-        super().__init__(gmpe_name=gmpe_name)
+    def __init__(self, gmpe_name, **kwargs):
+        super().__init__(gmpe_name=gmpe_name, **kwargs)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
         #

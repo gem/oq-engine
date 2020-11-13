@@ -189,7 +189,7 @@ def worker(sock, executing):
     setproctitle('oq-zworker')
     with sock:
         for cmd, args, taskno, mon in sock:
-            fname = os.path.join(executing, str(taskno))
+            fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
             open(fname, 'w').close()
             parallel.safely_call(cmd, args, taskno, mon)
             os.remove(fname)

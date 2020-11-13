@@ -123,7 +123,6 @@ site_param_dt = {
     'z1pt4': numpy.float64,
     'backarc': numpy.bool,
     'xvf': numpy.float64,
-    'backarc_distance': numpy.float64,
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
@@ -131,19 +130,32 @@ site_param_dt = {
     'ec8_p18': (numpy.string_, 2),
     'h800': numpy.float64,
     'geology': (numpy.string_, 20),
+    'amplfactor': numpy.float64,
 
-    # parameters for geotechnic hazard
-    'liquefaction_susceptibility': numpy.int16,
-    'landsliding_susceptibility': numpy.int16,
+    # parameters for secondary perils
+    'friction_mid': numpy.float64,
+    'cohesion_mid': numpy.float64,
+    'saturation': numpy.float64,
+    'dry_density': numpy.float64,
+    'Fs': numpy.float64,
+    'crit_accel': numpy.float64,
+    'unit': (numpy.string_, 5),
+    'liq_susc_cat': (numpy.string_, 2),
     'dw': numpy.float64,
     'yield_acceleration': numpy.float64,
     'slope': numpy.float64,
+    'gwd': numpy.float64,
     'cti': numpy.float64,
     'dc': numpy.float64,
     'dr': numpy.float64,
     'dwb': numpy.float64,
     'hwater': numpy.float64,
-    'precip': numpy.float64
+    'precip': numpy.float64,
+    'fpeak': numpy.float64,
+
+    # other parameters
+    'custom_site_id': numpy.uint32,
+    'region': numpy.uint32
 }
 
 
@@ -253,10 +265,9 @@ class SiteCollection(object):
         return self
 
     def _set(self, param, value):
-        # param comes from the file site_model.xml file which usually contains
-        # a lot of parameters; the parameters that are not required are ignored
-        if param in self.array.dtype.names:  # is required
-            self.array[param] = value
+        if param not in self.array.dtype.names:
+            self.add_col(param, site_param_dt[param])
+        self.array[param] = value
 
     xyz = Mesh.xyz
 
@@ -276,7 +287,7 @@ class SiteCollection(object):
         new.complete = self.complete
         return new
 
-    def add_col(self, colname, dtype):
+    def add_col(self, colname, dtype, values=None):
         """
         Add a column to the underlying array
         """
@@ -286,6 +297,8 @@ class SiteCollection(object):
         arr = numpy.zeros(len(self), dtlist)
         for name in names:
             arr[name] = self.array[name]
+        if values is not None:
+            arr[colname] = values
         self.array = arr
 
     def make_complete(self):
@@ -369,6 +382,7 @@ class SiteCollection(object):
         for seq in split_in_blocks(range(len(self)), hint or 1):
             sc = SiteCollection.__new__(SiteCollection)
             sc.array = self.array[numpy.array(seq, int)]
+            sc.complete = self
             tiles.append(sc)
         return tiles
 
@@ -472,7 +486,7 @@ class SiteCollection(object):
 
     def geohash(self, length):
         """
-        :param length: length of the geohash
+        :param length: length of the geohash in the range 1..8
         :returns: an array of N geohashes, one per site
         """
         lst = [geohash(lon, lat, length)
@@ -481,7 +495,7 @@ class SiteCollection(object):
 
     def num_geohashes(self, length):
         """
-        :param length: length of the geohash
+        :param length: length of the geohash in the range 1..8
         :returns: number of distinct geohashes in the site collection
         """
         return len(numpy.unique(self.geohash(length)))

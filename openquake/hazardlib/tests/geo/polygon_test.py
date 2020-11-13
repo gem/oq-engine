@@ -291,7 +291,8 @@ class PolygonEdgesTestCase(unittest.TestCase):
 
 class PolygonFromWktTestCase(unittest.TestCase):
     def test(self):
-        wktstring = 'POLYGON((22.0 -15.0, 24.0 -15.0, 24.0 -10.0, 22.0 -15.0))'
+        wktstring = ('POLYGON((22.00000 -15.00000, 24.00000 -15.00000, '
+                     '24.00000 -10.00000, 22.00000 -15.00000))')
         poly = polygon.Polygon.from_wkt(wktstring)
         self.assertEqual(list(poly.lats), [-15, -15, -10])
         self.assertEqual(list(poly.lons), [22, 24, 24])
@@ -451,13 +452,9 @@ class PolygonWKTTestCase(unittest.TestCase):
 
     def test_wkt(self):
         expected_wkt = (
-            'POLYGON((-1.111111 2.222222, -3.333333 4.444444, '
-            '5.555555 -6.666666, -1.111111 2.222222))'
-        )
-
+            'POLYGON((-1.11111 2.22222, -3.33333 4.44444, '
+            '5.55555 -6.66666, -1.11111 2.22222))')
         poly = polygon.Polygon(
-            [geo.Point(-1.111111, 2.222222), geo.Point(-3.333333, 4.444444),
-             geo.Point(5.555555, -6.666666)]
-        )
-
+            [geo.Point(-1.11111, 2.22222), geo.Point(-3.33333, 4.44444),
+             geo.Point(5.55555, -6.66666)])
         self.assertEqual(expected_wkt, poly.wkt)

@@ -7,7 +7,7 @@ xmlns:gml="http://www.opengis.net/gml"
     name="Example source model consisting of of a single area source belonging to Active Shallow Crust"
     >
         <areaSource
-        id="1"
+        id="3"
         name="area"
         tectonicRegion="Active Shallow Crust"
         >

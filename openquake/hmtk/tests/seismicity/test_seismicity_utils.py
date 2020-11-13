@@ -219,6 +219,7 @@ class TestSeismicityUtilities(unittest.TestCase):
         Tests the function to sample a truncated Gaussian distribution
         """
         data = 10.0 * np.ones(100)
+        np.random.seed(42)
         uncertainties = np.random.uniform(0., 2., 100)
         # Add bounds between 5.0 and 15.0
         self._tester_for_truncated_gaussian(data, uncertainties, 5., 15.)
@@ -255,6 +256,7 @@ class TestBootstrapHistograms(unittest.TestCase):
         Tests the 1D hmtk histogram with the general case (i.e. no edge-cases)
         Should be exactly equivalent to numpy's histogram function
         """
+        np.random.seed(42)
         xdata = np.random.uniform(0., 10., 100)
         xbins = np.arange(0., 11., 1.)
         np.testing.assert_array_almost_equal(
@@ -280,6 +282,7 @@ class TestBootstrapHistograms(unittest.TestCase):
         Tests the 2D hmtk histogram with the general case (i.e. no edge-cases)
         Should be exactly equivalent to numpy's histogram function
         """
+        np.random.seed(42)
         xdata = np.random.uniform(0., 10., 100)
         ydata = np.random.uniform(10., 20., 100)
         xbins = np.arange(0., 11., 1.)

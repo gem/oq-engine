@@ -174,7 +174,12 @@ The following attributes are needed to define a continuous \gls{fragilityfunctio
       must be provided on a separate line. The number and names of the limit 
       states in each \gls{fragilityfunction} must be equal to the number of limit 
       states defined earlier in the metadata section of the \gls{fragilitymodel}
-      using the attribute \Verb+limitStates+.
+      using the attribute \Verb+limitStates+. A point worth clarifying is that the
+      parameters to be defined in the fragility input file are the mean and 
+      standard deviation of the intensity measure level (IML) for each damage state,
+      and not the mean and standard deviation of log(IML). Thus, if the intensity
+      measure is PGA or SA for instance, the units for the input parameters will be 'g'.
+
 
 \end{itemize}
 

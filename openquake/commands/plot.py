@@ -21,7 +21,7 @@ import shapely
 import numpy
 from openquake.baselib import sap
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
-from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
+from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
 from openquake.calculators.extract import Extractor, WebExtractor
 
 
@@ -49,9 +49,26 @@ def make_figure_hcurves(extractors, what):
         for ck, arr in got.items():
             if (arr == 0).all():
                 logging.warning('There is a zero curve %s_%s', *ck)
-            ax.loglog(imls, arr[0], '-', label='%s_%s' % ck)
+            ax.loglog(imls, arr.flat, '-', label='%s_%s' % ck)
         ax.grid(True)
         ax.legend()
+    return plt
+
+
+def make_figure_vs30(extractors, what):
+    """
+    $ oq plot 'vs30?'
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    [ex] = extractors
+    sitecol = ex.get('sitecol')
+    ax = fig.add_subplot(111)
+    ax.grid(True)
+    ax.set_xlabel('vs30 for calculation %d' % ex.calc_id)
+    vs30 = sitecol['vs30']
+    vs30[numpy.isnan(vs30)] = 0
+    ax.scatter(sitecol['lon'], sitecol['lat'], c=vs30, cmap='jet')
     return plt
 
 
@@ -73,7 +90,7 @@ def make_figure_hmaps(extractors, what):
         itime = oq1.investigation_time
         assert oq2.investigation_time == itime
         sitecol = ex1.get('sitecol')
-        assert ex1.get('sitecol') == sitecol
+        assert (ex2.get('sitecol').array == sitecol.array).all()
         hmaps1 = ex1.get(what)
         hmaps2 = ex2.get(what)
         [imt] = hmaps1.imt
@@ -89,8 +106,9 @@ def make_figure_hmaps(extractors, what):
                           'inv_time=%dy\nmaxdiff=%s' %
                           (imt, kind, poe, ex1.calc_id, ex2.calc_id,
                            itime, maxdiff))
-            ax.scatter(sitecol['lon'], sitecol['lat'],
-                       c=diff, cmap='jet')
+            coll = ax.scatter(sitecol['lon'], sitecol['lat'],
+                              c=diff, cmap='jet')
+            plt.colorbar(coll)
     elif ncalcs == 1:  # plot the hmap
         [ex] = extractors
         oq = ex.oqparam
@@ -105,8 +123,9 @@ def make_figure_hmaps(extractors, what):
             ax.set_xlabel('hmap for IMT=%s, kind=%s, poe=%s\ncalculation %d, '
                           'inv_time=%dy' %
                           (imt, kind, poe, ex.calc_id, oq.investigation_time))
-            ax.scatter(sitecol['lon'], sitecol['lat'],
-                       c=hmaps[kind][:, 0, j], cmap='jet')
+            coll = ax.scatter(sitecol['lon'], sitecol['lat'],
+                              c=hmaps[kind][:, 0, j], cmap='jet')
+            plt.colorbar(coll)
     return plt
 
 
@@ -131,8 +150,9 @@ def make_figure_uhs(extractors, what):
                       (site, poe, oq.investigation_time))
         ax.set_ylabel('SA')
         for ck, arr in got.items():
-            ax.plot(periods, arr[0, :, j], '-', label='%s_%s' % ck)
-            ax.plot(periods, arr[0, :, j], '.')
+            curve = list(arr[site][str(poe)])
+            ax.plot(periods, curve, '-', label='%s_%s' % ck)
+            ax.plot(periods, curve, '.')
         ax.grid(True)
         ax.legend()
     return plt
@@ -157,32 +177,57 @@ def make_figure_disagg(extractors, what):
     $ oq plot 'disagg?kind=Mag&imt=PGA'
     """
     import matplotlib.pyplot as plt
+    from matplotlib import cm
     fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
     oq = extractors[0].oqparam
     disagg = extractors[0].get(what)
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
-                  (disagg.kind, sid, imt, poe_id, oq.investigation_time))
     y = disagg.array
     print(y)
     ndims = len(y.shape)
     axis = disagg.kind.split('_')
     bins = getattr(disagg, axis[0])
-    ax.set_xlabel(axis[0])
-    ax.set_xticks(bins)
-    x = middle(bins)
-    width = (x[1] - x[0]) * 0.8
+    ncalcs = len(extractors)
+    width = (bins[1] - bins[0]) * 0.5
+    x = middle(bins) if ncalcs == 1 else middle(bins) - width
     if ndims == 1:  # simple bar chart
-        ax.bar(x, y)
-    elif ndims == 2:  # stacked bar chart
-        stacked_bar(ax, x, y.T, width)
-        ys = ['%.1f' % y for y in getattr(disagg, axis[1])]
-        ax.legend(ys)
+        ax = fig.add_subplot(1, 1, 1)
+        ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
+                      (disagg.kind, sid, imt, poe_id, oq.investigation_time))
+        ax.set_xlabel(axis[0])
+        ax.set_xticks(bins)
+        ax.bar(x, y, width)
+        for ex in extractors[1:]:
+            ax.bar(x + width, ex.get(what).array, width)
+        return plt
+    if ncalcs > 1:
+        raise NotImplementedError('Comparison for %s' % disagg.kind)
+    # 2D images
+    if ndims == 2:
+        y = y.reshape(y.shape + (1,))
+        zbins = ['']
     else:
-        raise NotImplementedError('Plot of kind %s' % disagg.kind)
+        zbins = getattr(disagg, axis[2])
+    Z = y.shape[-1]
+    axes = []
+    for z in range(Z):
+        arr = y[:, :, z]
+        ax = fig.add_subplot(Z, 1, z + 1)
+        axes.append(ax)
+        ax.set_ylabel(axis[1])
+        ax.set_title(zbins[z])
+        vbins = getattr(disagg, axis[1])  # vertical bins
+        cmap = cm.get_cmap('jet', 100)
+        extent = bins[0], bins[-1], vbins[0], vbins[-1]
+        im = ax.imshow(arr, cmap=cmap, extent=extent,
+                       aspect='auto', vmin=y.min(), vmax=y.max())
+        # stacked bar chart
+        # stacked_bar(ax, x, y.T, width)
+        # ys = ['%.1f' % y for y in getattr(disagg, axis[1])]
+        # ax.legend(ys)
+    fig.colorbar(im, ax=axes)
     return plt
 
 
@@ -444,7 +489,7 @@ def make_figure_effect_by_mag(extractors, what):
         effect = ex.get('effect')
     except KeyError:
         onesite = ex.get('sitecol').one()
-        maximum_distance = IntegrationDistance(ex.oqparam.maximum_distance)
+        maximum_distance = MagDepDistance(ex.oqparam.maximum_distance)
         imtls = ex.oqparam.imtls
         ebm = get_effect_by_mag(
             mags, onesite, gsims_by_trt, maximum_distance, imtls)

@@ -11,14 +11,14 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <logicTreeBranchSet
             applyToTectonicRegionType="Subduction Interface"
-            branchSetID="SERASInter"
+            branchSetID="ESHM20SInter"
             uncertaintyType="gmpeModel"
             >
                 <logicTreeBranch
                 branchID="BCHSIFastSigmaLow"
                 >
                     <uncertaintyModel>
-                        [BCHydroSERASInter]
+                        [BCHydroESHM20SInter]
 theta6_adjustment = -0.0015
 sigma_mu_epsilon = -1.732051
                     </uncertaintyModel>
@@ -30,7 +30,7 @@ sigma_mu_epsilon = -1.732051
                 branchID="BCHSIFast"
                 >
                     <uncertaintyModel>
-                        [BCHydroSERASInter]
+                        [BCHydroESHM20SInter]
 theta6_adjustment = -0.0015
                     </uncertaintyModel>
                     <uncertaintyWeight>
@@ -41,7 +41,7 @@ theta6_adjustment = -0.0015
                 branchID="BCHSIFastSigmaHigh"
                 >
                     <uncertaintyModel>
-                        [BCHydroSERASInter]
+                        [BCHydroESHM20SInter]
 theta6_adjustment = -0.0015
 sigma_mu_epsilon = 1.732051
                     </uncertaintyModel>
@@ -53,7 +53,7 @@ sigma_mu_epsilon = 1.732051
                 branchID="BCHSISigmaLow"
                 >
                     <uncertaintyModel>
-                        [BCHydroSERASInter]
+                        [BCHydroESHM20SInter]
 sigma_mu_epsilon = -1.732051
                     </uncertaintyModel>
                     <uncertaintyWeight>
@@ -64,7 +64,7 @@ sigma_mu_epsilon = -1.732051
                 branchID="BCHSI"
                 >
                     <uncertaintyModel>
-                        BCHydroSERASInter
+                        BCHydroESHM20SInter
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.44435556
@@ -74,7 +74,7 @@ sigma_mu_epsilon = -1.732051
                 branchID="BCHSISigmaHigh"
                 >
                     <uncertaintyModel>
-                        [BCHydroSERASInter]
+                        [BCHydroESHM20SInter]
 sigma_mu_epsilon = 1.732051
                     </uncertaintyModel>
                     <uncertaintyWeight>
@@ -85,7 +85,7 @@ sigma_mu_epsilon = 1.732051
                 branchID="BCHSISlowSigmaLow"
                 >
                     <uncertaintyModel>
-                        [BCHydroSERASInter]
+                        [BCHydroESHM20SInter]
 theta6_adjustment = 0.0015
 sigma_mu_epsilon = -1.732051
                     </uncertaintyModel>
@@ -97,7 +97,7 @@ sigma_mu_epsilon = -1.732051
                 branchID="BCHSISlow"
                 >
                     <uncertaintyModel>
-                        [BCHydroSERASInter]
+                        [BCHydroESHM20SInter]
 theta6_adjustment = 0.0015
                     </uncertaintyModel>
                     <uncertaintyWeight>
@@ -108,7 +108,7 @@ theta6_adjustment = 0.0015
                 branchID="BCHSISlowSigmaHigh"
                 >
                     <uncertaintyModel>
-                        [BCHydroSERASInter]
+                        [BCHydroESHM20SInter]
 theta6_adjustment = 0.0015
 sigma_mu_epsilon = 1.732051
                     </uncertaintyModel>

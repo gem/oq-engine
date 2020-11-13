@@ -5,27 +5,26 @@ Since version 3.3 the OpenQuake engine is able to handle continental
 scale (event based) risk calculations, a feat previously impossible due
 to memory limitations. Here I will document the new feature.
 
-First of all, *the recommended way to run large event based risk calculations
-is to use a single job.ini file*. This is the opposite of the previous
-recommendation of using two files, one for hazard `job_hazard.ini`
-and one for risk `job_risk.ini`. In the past using a single file was
-discourage since a single computation was performed and the engine had to
-transfer the generated ground motion fields, thus causing RabbitMQ to run out
-of memory if the calculation was large enough. Instead, with two files
-two separated calculations were performed, and the GMFs could be read
-from the hazard datastore, provided the
-hazard was stored on a shared file system. In a non-cluster situation
-the data transfer does not use RabbitMQ, however it is still slow,
-inefficient and memory consuming, so the recommendation was to use
-two files even in that situation.
+First of all, the recommended way to run large event based risk
+calculations is to use a single `job.ini` file with
+`calculation_mode=ebrisk`. This is the opposite of the previous
+recommendation of using two files, one for hazard (`job_hazard.ini`)
+and one for risk (`job_risk.ini`). In the past using a single file was
+discouraged since a single computation was performed and the engine
+had to transfer the generated ground motion fields, thus causing
+RabbitMQ to run out of memory if the calculation was large
+enough. Instead, with two files two separated calculations were
+performed, and the GMFs could be read from the hazard datastore,
+provided the hazard was stored on a shared file system. In a
+non-cluster situation the data transfer does not use RabbitMQ, however
+it is still slow, inefficient and memory consuming, so the
+recommendation was to use two files even in that situation.
 
-Starting from engine 3.3 the engine automatically splits a single file
-`event_based_risk` calculation in two jobs, one for hazard and one for
-risk. It basically does the splitting of the `job.ini` for you, so that the
-GMFs are never transferred, just read, which is a lot more efficient.
-Having a single `job.ini` is more convenient and less error-prone, so
-you should always do that, even if the old approach of using two files
-will still work and will work forever to keep compatibility with the past.
+In recent versions of the engine the GMFs are never transferred, just
+read, which is a lot more efficient.  Having a single `job.ini` is
+more convenient and less error-prone, so you should always do that,
+even if the old approach of using two files will still work and will
+work forever to keep compatibility with the past.
 
 Continental scale calculations use typically multiple exposure files, one
 per country. Since version 3.3 the OpenQuake engine is able to manage
@@ -106,25 +105,3 @@ from the name of the exposure file, which must contain a valid country
 name. We may change this behaviour in the future and make the country tag
 mandatory in the exposure, but it will require to change all of the exposures
 we have, so it is still undecided.
-
-For the rest, the `job.ini` file is the same as always, except for a
-new parameter `fast_sampling`, added in version 3.3 of the OpenQuake
-engine.  By default it is `false` for compatibility with the past. However,
-it is possible to set `fast_sampling=true` and use a different and a
-lot more efficient logic for the sampling of the ruptures. The
-difference in the case of South America is of more than an order of
-magnitude, so the new logic is to be preferred for large calculations
-and will probably become the default in the future.
-
-The reason for the performance improvement is in the number of calls
-to the random number generator.  Consider a calculation with 25 realizations
-and 20,000 stochastic event sets, the parameters we actually used for
-South America; with `fast_sampling=false` a half million calls to
-`numpy.random.poisson` are performed for each rupture, while with
-`fast_sampling=true` only one call per rupture is performed, at least
-for time-independent sources.  Clearly the two approaches produce
-different ruptures, but if your effective investigation time is large
-enough they will produce statistically convergent results. Be warned that
-the effective investigation time to get convergent results -
-independent from the random seed choice - can be rather long,
-depending on the level of precision required.

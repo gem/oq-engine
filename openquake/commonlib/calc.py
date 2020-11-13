@@ -15,14 +15,42 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""
+Here is an example of how to convert GMFs into mean hazard curves. Works
+in the case of sampling, when the weights are all equal. It keeps
+everything in memory and it is extremely fast.
+NB: parallelization would kill the performance::
+
+ def gmvs_to_mean_hcurves(dstore):
+    # Convert GMFs into mean hazard curves. Works by keeping everything in
+    # memory and it is extremely fast.
+    # NB: parallelization would kill the performance.
+    oq = dstore['oqparam']
+    N = len(dstore['sitecol'])
+    M = len(oq.imtls)
+    L1 = len(oq.imtls.array) // M
+    gmf_df = dstore.read_df('gmf_data', 'sid')
+    mean = numpy.zeros((N, 1, M, L1))
+    for sid, df in gmf_df.groupby(gmf_df.index):
+        gmvs = [df[col].to_numpy() for col in df.columns
+                if col.startswith('gmv_')]
+        mean[sid, 0] = calc.gmvs_to_poes(
+            gmvs, oq.imtls, oq.ses_per_logic_tree_path)
+    return mean
+"""
+import itertools
 import warnings
+import logging
 import numpy
 
-from openquake.baselib import hdf5
-from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib import calc, probability_map
+from openquake.baselib import parallel
+from openquake.baselib.general import get_indices
+from openquake.hazardlib.source import rupture
+from openquake.hazardlib import probability_map
+from openquake.commonlib import util
 
 TWO16 = 2 ** 16
+TWO32 = numpy.float64(2 ** 32)
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
 # in this way even on 32 bit machines Python will not have to convert
 # the generated seed into a long integer
@@ -35,7 +63,7 @@ F32 = numpy.float32
 U64 = numpy.uint64
 F64 = numpy.float64
 
-code2cls = BaseRupture.init()
+code2cls = rupture.BaseRupture.init()
 
 # ############## utilities for the classical calculator ############### #
 
@@ -75,8 +103,8 @@ EPSILON = 1E-30
 
 def compute_hazard_maps(curves, imls, poes):
     """
-    Given a set of hazard curve poes, interpolate a hazard map at the specified
-    ``poe``.
+    Given a set of hazard curve poes, interpolate hazard maps at the specified
+    ``poes``.
 
     :param curves:
         2D array of floats. Each row represents a curve, where the values
@@ -92,50 +120,44 @@ def compute_hazard_maps(curves, imls, poes):
         An array of shape N x P, where N is the number of curves and P the
         number of poes.
     """
-    poes = numpy.array(poes)
-
-    if len(poes.shape) == 0:
+    log_poes = numpy.log(poes)
+    if len(log_poes.shape) == 0:
         # `poes` was passed in as a scalar;
         # convert it to 1D array of 1 element
-        poes = poes.reshape(1)
+        log_poes = log_poes.reshape(1)
+    P = len(log_poes)
 
     if len(curves.shape) == 1:
         # `curves` was passed as 1 dimensional array, there is a single site
         curves = curves.reshape((1,) + curves.shape)  # 1 x L
 
-    L = curves.shape[1]  # number of levels
+    N, L = curves.shape  # number of levels
     if L != len(imls):
         raise ValueError('The curves have %d levels, %d were passed' %
                          (L, len(imls)))
-    result = []
+
+    hmap = numpy.zeros((N, P))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        # avoid RuntimeWarning: divide by zero encountered in log
-        # happening in the classical_tiling tests
+        # avoid RuntimeWarning: divide by zero for zero levels
         imls = numpy.log(numpy.array(imls[::-1]))
-    for curve in curves:
+    for n, curve in enumerate(curves):
         # the hazard curve, having replaced the too small poes with EPSILON
-        curve_cutoff = [max(poe, EPSILON) for poe in curve[::-1]]
-        hmap_val = []
-        for poe in poes:
-            # special case when the interpolation poe is bigger than the
-            # maximum, i.e the iml must be smaller than the minumum
-            if poe > curve_cutoff[-1]:  # the greatest poes in the curve
+        log_cutoff = numpy.log([max(poe, EPSILON) for poe in curve[::-1]])
+        for p, log_poe in enumerate(log_poes):
+            if log_poe > log_cutoff[-1]:
+                # special case when the interpolation poe is bigger than the
+                # maximum, i.e the iml must be smaller than the minumum
                 # extrapolate the iml to zero as per
                 # https://bugs.launchpad.net/oq-engine/+bug/1292093
                 # a consequence is that if all poes are zero any poe > 0
                 # is big and the hmap goes automatically to zero
-                hmap_val.append(0)
+                pass
             else:
                 # exp-log interpolation, to reduce numerical errors
                 # see https://bugs.launchpad.net/oq-engine/+bug/1252770
-                val = numpy.exp(
-                    numpy.interp(
-                        numpy.log(poe), numpy.log(curve_cutoff), imls))
-                hmap_val.append(val)
-
-        result.append(hmap_val)
-    return numpy.array(result)
+                hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_cutoff, imls))
+    return hmap
 
 
 # #########################  GMF->curves #################################### #
@@ -147,7 +169,7 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     (``imls``), compute hazard curve probabilities of exceedance.
 
     :param gmvs:
-        A list of ground motion values, as floats.
+        Am array of ground motion values, as floats.
     :param imls:
         A list of intensity measure levels, as floats.
     :param ses_per_logic_tree_path:
@@ -161,9 +183,25 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     # here is an example: imls = [0.03, 0.04, 0.05], gmvs=[0.04750576]
     # => num_exceeding = [1, 1, 0] coming from 0.04750576 > [0.03, 0.04, 0.05]
     imls = numpy.array(imls).reshape((len(imls), 1))
-    num_exceeding = numpy.sum(numpy.array(gmvs) >= imls, axis=1)
+    num_exceeding = numpy.sum(gmvs >= imls, axis=1)
     poes = 1 - numpy.exp(- num_exceeding / ses_per_logic_tree_path)
     return poes
+
+
+def gmvs_to_poes(gmvs, imtls, ses_per_logic_tree_path):
+    """
+    :param gmvs: an array of GMVs of shape (M, E)
+    :param imtls: a dictionary imt -> imls with M IMTs and L levels
+    :param ses_per_logic_tree_path: a positive integer
+    :returns: an array of PoEs of shape (M, L)
+    """
+    M = len(imtls)
+    assert len(gmvs) == M, (len(gmvs), M)
+    L = len(imtls[next(iter(imtls))])
+    arr = numpy.zeros((M, L))
+    for m, imls in enumerate(imtls.values()):
+        arr[m] = _gmvs_to_haz_curve(gmvs[m], imls, ses_per_logic_tree_path)
+    return arr
 
 
 # ################## utilities for classical calculators ################ #
@@ -197,21 +235,6 @@ def make_hmap(pmap, imtls, poes, sid=None):
     return hmap
 
 
-def make_hmap_array(pmap, imtls, poes, nsites):
-    """
-    :returns: a compound array of hazard maps of shape nsites
-    """
-    hcurves = pmap[()]
-    dtlist = [('%s-%s' % (imt, poe), F32) for imt in imtls for poe in poes]
-    array = numpy.zeros(len(pmap), dtlist)
-    for imt, imls in imtls.items():
-        curves = hcurves[:, imtls(imt)]
-        for poe in poes:
-            array['%s-%s' % (imt, poe)] = compute_hazard_maps(
-                curves, imls, poe).flat
-    return array  # array of shape N
-
-
 def make_uhs(hmap, info):
     """
     Make Uniform Hazard Spectra curves for each location.
@@ -231,40 +254,110 @@ def make_uhs(hmap, info):
     return uhs
 
 
-class RuptureSerializer(object):
+class RuptureImporter(object):
     """
-    Serialize event based ruptures on an HDF5 files. Populate the datasets
-    `ruptures` and `sids`.
+    Import an array of ruptures correctly, i.e. by populating the datasets
+    ruptures, rupgeoms, events.
     """
-    def __init__(self, datastore):
-        self.datastore = datastore
-        self.nbytes = 0
-        self.nruptures = 0
-        datastore.create_dset('ruptures', calc.stochastic.rupture_dt,
-                              attrs={'nbytes': 0})
-        datastore.create_dset('rupgeoms', calc.stochastic.point3d)
+    def __init__(self, dstore):
+        self.datastore = dstore
+        self.oqparam = dstore['oqparam']
 
-    def save(self, rup_array):
+    def import_rups(self, rup_array):
         """
-         Store the ruptures in array format.
+        Import an array of ruptures in the proper format
         """
-        self.nruptures += len(rup_array)
-        offset = len(self.datastore['rupgeoms'])
-        rup_array.array['gidx1'] += offset
-        rup_array.array['gidx2'] += offset
-        hdf5.extend(self.datastore['ruptures'], rup_array)
-        hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
-        # TODO: PMFs for nonparametric ruptures are not stored
-        self.datastore.flush()
+        logging.info('Reordering the ruptures and storing the events')
+        # order the ruptures by serial
+        rup_array.sort(order='serial')
+        nr = len(rup_array)
+        serials, counts = numpy.unique(rup_array['serial'], return_counts=True)
+        if len(serials) != nr:
+            dupl = serials[counts > 1]
+            logging.info('The following %d rupture seeds are duplicated: %s',
+                         len(dupl), dupl)
+        rup_array['geom_id'] = rup_array['id']
+        rup_array['id'] = numpy.arange(nr)
+        self.datastore['ruptures'] = rup_array
+        self.save_events(rup_array)
 
-    def close(self):
+    def save_events(self, rup_array):
         """
-        Save information about the rupture codes as attributes of the
-        'ruptures' dataset.
+        :param rup_array: an array of ruptures with fields et_id
+        :returns: a list of RuptureGetters
         """
-        if 'ruptures' not in self.datastore:  # for UCERF
-            return
-        codes = numpy.unique(self.datastore['ruptures']['code'])
-        attr = {'code_%d' % code: ' '.join(
-            cls.__name__ for cls in code2cls[code]) for code in codes}
-        self.datastore.set_attrs('ruptures', **attr)
+        from openquake.calculators.getters import (
+            get_eid_rlz, gen_rupture_getters)
+        # this is very fast compared to saving the ruptures
+        E = rup_array['n_occ'].sum()
+        self.check_overflow(E)  # check the number of events
+        events = numpy.zeros(E, rupture.events_dt)
+        # when computing the events all ruptures must be considered,
+        # including the ones far away that will be discarded later on
+        rgetters = gen_rupture_getters(
+            self.datastore, self.oqparam.concurrent_tasks)
+        # build the associations eid -> rlz sequentially or in parallel
+        # this is very fast: I saw 30 million events associated in 1 minute!
+        logging.info('Associating event_id -> rlz_id for {:_d} events '
+                     'and {:_d} ruptures'.format(len(events), len(rup_array)))
+        iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
+        if len(events) < 1E5:
+            it = itertools.starmap(get_eid_rlz, iterargs)
+        else:
+            it = parallel.Starmap(
+                get_eid_rlz, iterargs, progress=logging.debug,
+                h5=self.datastore.hdf5)
+        i = 0
+        for eid_rlz in it:
+            for er in eid_rlz:
+                events[i] = er
+                i += 1
+                if i >= TWO32:
+                    raise ValueError('There are more than %d events!' % i)
+        events.sort(order='rup_id')  # fast too
+        # sanity check
+        n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
+        assert n_unique_events == len(events), (n_unique_events, len(events))
+        events['id'] = numpy.arange(len(events))
+        # set event year and event ses starting from 1
+        nses = self.oqparam.ses_per_logic_tree_path
+        extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
+        numpy.random.seed(self.oqparam.ses_seed)
+        if self.oqparam.investigation_time:
+            itime = int(self.oqparam.investigation_time)
+            extra['year'] = numpy.random.choice(itime, len(events)) + 1
+        extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
+        self.datastore['events'] = util.compose_arrays(events, extra)
+        eindices = get_indices(events['rup_id'])
+        arr = numpy.array(list(eindices.values()))[:, 0, :]
+        self.datastore['ruptures']['e0'] = arr[:, 0]
+        self.datastore['ruptures']['e1'] = arr[:, 1]
+
+    def check_overflow(self, E):
+        """
+        Raise a ValueError if the number of sites is larger than 65,536 or the
+        number of IMTs is larger than 256 or the number of ruptures is larger
+        than 4,294,967,296. The limits are due to the numpy dtype used to
+        store the GMFs (gmv_dt). There also a limit of max_potential_gmfs on
+        the number of sites times the number of events, to avoid producing too
+        many GMFs. In that case split the calculation or be smarter.
+        """
+        oq = self.oqparam
+        max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
+        num_ = dict(events=E, imts=len(self.oqparam.imtls))
+        n = len(getattr(self, 'sitecol', ()) or ())
+        num_['sites'] = n
+        if oq.calculation_mode == 'event_based' and oq.ground_motion_fields:
+            if n > oq.max_sites_per_gmf:
+                raise ValueError(
+                    'You cannot compute the GMFs for %d > %d sites' %
+                    (n, oq.max_sites_per_gmf))
+            elif n * E > oq.max_potential_gmfs:
+                raise ValueError(
+                    'A GMF calculation with %d sites and %d events is '
+                    'impossibly large' % (n, E))
+        for var in num_:
+            if num_[var] > max_[var]:
+                raise ValueError(
+                    'The %s calculator is restricted to %d %s, got %d' %
+                    (oq.calculation_mode, max_[var], var, num_[var]))

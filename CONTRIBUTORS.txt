@@ -37,6 +37,7 @@ Laurentiu Danciu        August 2014
 Nick Horspool           September 2014
 Anirudh Rao             January 2015
 Robin Gee               September 2015
+Catalina Yepes-Estrada  November 2015
 Silvia Canessa          December 2015
 Nick Ackerley           December 2015
 Trevor Allen            July 2016
@@ -56,6 +57,9 @@ Guillaume Daniel        April 2019
 Richard Styron          July 2019
 Kris Vanneste           September 2019
 Alberto Chiusole        November 2019
+‪Iason Grigoratos        April 2020
+Francis Jenner Bernales August 2020
+Athanasios Papadopoulos September 2020
 
 Project management
 ------------------

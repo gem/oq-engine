@@ -81,10 +81,10 @@ purge command
     :undoc-members:
     :show-inheritance:
 
-reduce command
+sample command
 --------------------------------
 
-.. automodule:: openquake.commands.reduce
+.. automodule:: openquake.commands.sample
     :members:
     :undoc-members:
     :show-inheritance:

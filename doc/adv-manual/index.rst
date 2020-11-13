@@ -18,10 +18,12 @@ Contents:
    common-mistakes
    hazard
    risk
-   effective-realizations       
+   effective-realizations
+   sampling
    event-based-with-large-logic-tree
    site-specific
    extract-api
+   pandas
    parametric-gmpes
    multipoint
    parallelization

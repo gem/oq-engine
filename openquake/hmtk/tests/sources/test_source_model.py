@@ -110,7 +110,7 @@ class TestSourceModel(unittest.TestCase):
         parser = nrmlSourceModelParser(MODEL_PATH)
         source_model = parser.read_file(2.0)
         # Write to file
-        source_model.serialise_to_nrml(TEST_PATH, True)
+        source_model.serialise_to_nrml(TEST_PATH, 10, True)
         # Load file back
         parser = nrmlSourceModelParser(TEST_PATH)
         source_model_test = parser.read_file(2.0)
@@ -133,7 +133,7 @@ class TestSourceModel(unittest.TestCase):
         parser = nrmlSourceModelParser(MODEL_PATH)
         source_model = parser.read_file(2.0)
         oq_source_model = source_model.convert_to_oqhazardlib(TOM,
-                                                              1.0,
+                                                              5.0,
                                                               10.0,
                                                               10.0,
                                                               True)
@@ -146,7 +146,7 @@ class TestSourceModel(unittest.TestCase):
         source_model.sources[3] = 'Rubbish!'
         with self.assertRaises(ValueError) as ver:
             oq_source_model = source_model.convert_to_oqhazardlib(TOM,
-                                                                  1.0,
+                                                                  5.0,
                                                                   10.0,
                                                                   10.0,
                                                                   True)

@@ -27,7 +27,7 @@ import numpy
 import h5py
 import pandas
 
-from openquake.baselib import hdf5, config, performance
+from openquake.baselib import hdf5, config, performance, python3compat, general
 
 
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
@@ -137,29 +137,60 @@ def read(calc_id, mode='r', datadir=None):
     return dstore
 
 
-def dset2df(dset, index):
+def _range(value):
+    if hasattr(value, '__len__'):
+        return list(value)
+    else:
+        return list(range(value))
+
+
+def sel(dset, filterdict):
+    """
+    Select a dataset with shape_descr. For instance
+    dstore.sel('hcurves', imt='PGA', sid=2)
+    """
+    assert 'shape_descr' in dset.attrs, 'Missing %s.shape_descr' % dset.name
+    lst = []
+    for dim in python3compat.decode(dset.attrs['shape_descr']):
+        if dim in filterdict:
+            val = filterdict[dim]
+            values = _range(dset.attrs[dim])
+            idx = values.index(val)
+            lst.append(slice(idx, idx + 1))
+        else:
+            lst.append(slice(None))
+    return dset[tuple(lst)]
+
+
+def dset2df(dset, indexfield, filterdict):
     """
     Converts an HDF5 dataset with an attribute shape_descr into a Pandas
     dataframe. NB: this is very slow for large datasets.
     """
-    shape_descr = [v.decode('utf-8') for v in dset.attrs['shape_descr']]
-    out = []
+    arr = sel(dset, filterdict)
+    shape_descr = python3compat.decode(dset.attrs['shape_descr'])
     tags = []
     idxs = []
-    dtlist = []
-    for i, field in enumerate(shape_descr):
-        values = dset.attrs[field]
-        if isinstance(values[0], str):  # like the loss_type
-            dt = '<S16'
+    for dim in shape_descr:
+        values = _range(dset.attrs[dim])
+        if dim in filterdict:
+            val = filterdict[dim]
+            idx = values.index(val)
+            idxs.append([idx])
+            values = [val]
         else:
-            dt = values[0].dtype
-        dtlist.append((field, dt))
+            idxs.append(range(len(values)))
         tags.append(values)
-        idxs.append(range(len(values)))
-    dtlist.append(('value', dset.dtype))
+    dic = general.AccumDict(accum=[])
+    index = []
     for idx, vals in zip(itertools.product(*idxs), itertools.product(*tags)):
-        out.append(vals + (dset[idx],))
-    return pandas.DataFrame.from_records(numpy.array(out, dtlist), index)
+        for field, val in zip(shape_descr, vals):
+            if field == indexfield:
+                index.append(val)
+            else:
+                dic[field].append(val)
+        dic['value'].append(arr[idx])
+    return pandas.DataFrame(dic, index)
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -441,23 +472,27 @@ class DataStore(collections.abc.MutableMapping):
         data = bytes(numpy.asarray(self[key][()]))
         return io.BytesIO(gzip.decompress(data))
 
-    def read_df(self, key, index=None):
+    def read_df(self, key, index=None, sel=(), slc=slice(None)):
         """
         :param key: name of the structured dataset
-        :param index: if given, name of the "primary key" field
+        :param index: pandas index (or multi-index), possibly None
+        :param sel: dictionary used to select subsets of the dataset
+        :param slc: slice object to extract a slice of the dataset
         :returns: pandas DataFrame associated to the dataset
         """
-        try:
-            dset = self.getitem(key)
-        except KeyError:
-            if self.parent:
-                dset = self.parent.getitem(key)
-            else:
-                raise
+        dset = self.getitem(key)
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
-        if 'shape_descr' in dset.attrs:
-            return dset2df(dset, index)
+        elif 'shape_descr' in dset.attrs:
+            return dset2df(dset, index, sel)
+        elif '__pdcolumns__' in dset.attrs:
+            columns = dset.attrs['__pdcolumns__'].split()
+            dic = {col: dset[col][slc] for col in columns}
+            if index is None:
+                df = pandas.DataFrame(dic)
+            else:
+                df = pandas.DataFrame(dic).set_index(index)
+            return df
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]
@@ -478,6 +513,27 @@ class DataStore(collections.abc.MutableMapping):
             else:  # scalar field
                 data[name] = arr
         return pandas.DataFrame.from_records(data, index=index)
+
+    def read_unique(self, key, field):
+        """
+        :param key: key to a dataset containing a structured array
+        :param field: a field in the structured array
+        :returns: sorted, unique values
+        Works with chunks of 1M records
+        """
+        unique = set()
+        dset = self.getitem(key)
+        for slc in general.gen_slices(0, len(dset), 10_000_000):
+            arr = numpy.unique(dset[slc][field])
+            unique.update(arr)
+        return sorted(unique)
+
+    def sel(self, key, **kw):
+        """
+        Select a dataset with shape_descr. For instance
+        dstore.sel('hcurves', imt='PGA', sid=2)
+        """
+        return sel(self.getitem(key), kw)
 
     @property
     def metadata(self):

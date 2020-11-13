@@ -115,7 +115,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
                  z1pt0=40., z2pt5=2.)])
         ses = stochastic_event_set(
             [self.area1, self.area2],
-            filters.SourceFilter(sites, {'default': 100.}))
+            filters.SourceFilter(sites, filters.MagDepDistance.new('100')))
 
         rates = self._extract_rates(ses, time_span=self.time_span,
                                     bins=numpy.arange(5., 6.6, 0.1))

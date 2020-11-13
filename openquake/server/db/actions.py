@@ -237,8 +237,9 @@ def list_outputs(db, job_id, full=True):
                 break
             out.append('%4d | %s' % (o.id, o.display_name))
         if truncated:
-            out.append('Some outputs where not shown. You can see the full '
-                       'list with the command\n`oq engine --list-outputs`')
+            out.append(
+                'Some outputs were not shown. You can see the full list '
+                f'with the command\n`oq engine --list-outputs {job_id}`')
     return out
 
 
@@ -259,8 +260,6 @@ DISPLAY_NAME = {
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Damage Distributions',
     'damages-stats': 'Asset Damage Statistics',
-    'avg_damages-rlzs': 'Average Asset Damages',
-    'avg_damages-stats': 'Average Asset Damages Statistics',
     'dmg_by_event': 'Aggregate Event Damages',
     'losses_by_event': 'Aggregate Event Losses',
     'events': 'Events',
@@ -287,7 +286,6 @@ DISPLAY_NAME = {
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
     'disagg': 'Disaggregation Outputs',
-    'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
     'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
@@ -346,7 +344,18 @@ def del_calc(db, job_id, user, force=False):
     dependent = db(
         "SELECT id FROM job WHERE hazard_calculation_id=?x "
         "AND status != 'deleted'", job_id)
-    if not force and dependent:
+    job_ids = [dep.id for dep in dependent]
+    if not force and job_id in job_ids:  # jobarray
+        err = []
+        for jid in job_ids:
+            res = del_calc(db, jid, user, force=True)
+            if "error" in res:
+                err.append(res["error"])
+        if err:
+            return {"error": ' '.join(err)}
+        else:
+            return {"success": 'children_of_%s' % job_id}
+    elif not force and dependent:
         return {"error": 'Cannot delete calculation %d: there '
                 'are calculations '
                 'dependent from it: %s' % (job_id, [j.id for j in dependent])}

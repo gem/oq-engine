@@ -23,7 +23,7 @@ from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, SourceFilter, angular_distance, split_sources)
+    MagDepDistance, SourceFilter, angular_distance, split_sources)
 
 
 class AngularDistanceTestCase(unittest.TestCase):
@@ -32,9 +32,9 @@ class AngularDistanceTestCase(unittest.TestCase):
         aae(angular_distance(km=1000, lat=88), 257.68853)
 
 
-class IntegrationDistanceTestCase(unittest.TestCase):
+class MagDepDistanceTestCase(unittest.TestCase):
     def test_bounding_box(self):
-        maxdist = IntegrationDistance({'default': 400})
+        maxdist = MagDepDistance.new('400')
 
         aae(maxdist('ANY_TRT'), 400)
         bb = maxdist.get_bounding_box(0, 10, 'ANY_TRT')
@@ -48,7 +48,7 @@ class SourceFilterTestCase(unittest.TestCase):
         fname = gettemp(characteric_source)
         [[src]] = nrml.to_python(fname)
         os.remove(fname)
-        maxdist = IntegrationDistance({'default': 200})
+        maxdist = MagDepDistance.new('200')
         sitecol = SiteCollection([
             Site(location=Point(176.919, -39.489),
                  vs30=760, vs30measured=True, z1pt0=100, z2pt5=5)])
@@ -109,14 +109,14 @@ xmlns:gml="http://www.opengis.net/gml"
 
 class SplitSourcesTestCase(unittest.TestCase):
     def test(self):
-        # make sure the grp_id is transferred also for single split
+        # make sure the et_id is transferred also for single split
         # sources, since this caused hard to track bugs
         fname = gettemp(characteric_source)
         [[char]] = nrml.to_python(fname)
         char.id = 1
-        char.grp_id = 1
+        char.et_id = 1
         os.remove(fname)
         [src], _ = split_sources([char])
         self.assertEqual(char.id, src.id)
         self.assertEqual(char.source_id, src.source_id)
-        self.assertEqual(char.grp_id, src.grp_id)
+        self.assertEqual(char.et_id, src.et_id)

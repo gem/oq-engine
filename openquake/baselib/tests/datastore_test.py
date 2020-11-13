@@ -113,3 +113,35 @@ class DataStoreTestCase(unittest.TestCase):
         arr2 = numpy.load(fname)['array']
         self.assertEqual(arr2.dtype, dt)
         os.remove(fname)
+
+    def test_sel(self):
+        # test dstore.sel
+        N, M, L = 1, 2, 3
+        imts = 'PGA', 'SA(1.0)'
+        self.dstore['hcurves'] = numpy.zeros((N, M, L))
+        self.dstore.set_shape_attrs(
+            'hcurves', sid=[0], imt=imts, lvl=range(L))
+        arr = self.dstore.sel('hcurves', imt='PGA', lvl=2)
+        self.assertEqual(arr.shape, (1, 1, 1))
+
+    def test_pandas(self):
+        sids = numpy.arange(3)
+        eids = [2, 2, 0]
+        vals = [.1, .2, .3]
+        self.dstore['df/sid'] = sids
+        self.dstore['df/eid'] = eids
+        self.dstore['df/val'] = vals
+        self.dstore.getitem('df').attrs['__pdcolumns__'] = 'sid eid val'
+        df = self.dstore.read_df('df', 'sid', slc=slice(1, 3))
+        print(df)
+        df = self.dstore.read_df('df', 'eid')
+        print(df)
+
+    def test_pandas_vlen(self):
+        self.dstore['test/val'] = [.2, .3]
+        self.dstore.hdf5.save_vlen(
+            'test/val_', [numpy.array([1]), numpy.array([2, 3])])
+        self.dstore.getitem('test').attrs['__pdcolumns__'] = 'val val_'
+        df = self.dstore.read_df('test')
+        numpy.testing.assert_equal(df['val_'].loc[0], [1])
+        numpy.testing.assert_equal(df['val_'].loc[1], [2, 3])

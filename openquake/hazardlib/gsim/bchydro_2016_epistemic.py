@@ -172,8 +172,7 @@ class FABATaperSigmoid(FABATaperStep):
     Implements tapering of x according to a sigmoid function
     (Note that this only tends to 1, 0 it does not reach it)
 
-    :param float c:
-    `Bandwidth' (km) of the sigmoid function
+    :param float c: Bandwidth in km of the sigmoid function
     """
     def __init__(self, **kwargs):
         super().__init__()
@@ -200,7 +199,7 @@ class FABATaperGaussian(FABATaperStep):
     Implements tapering of x according to a truncated Gaussian function
 
     :param float sigma:
-        `Bandwidth' of function (according to a Gaussian standard deviation)
+        Bandwidth of function (according to a Gaussian standard deviation)
     :param float a:
         Initiation point of tapering (km)
     :param float b:
@@ -241,34 +240,34 @@ FABA_ALL_MODELS = {
 }
 
 
-class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
+class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction interface events with
+    ESHM20 adjustment of the BC Hydro GMPE for subduction interface events with
     theta6 calibrated to Mediterranean data.
 
     Introduces several configurable parameters:
 
     :param float theta6_adjustment:
-    The amount to increase or decrease the theta6 - should be +0.0015 (for
-    slower attenuation) and -0.0015 (for faster attenuation)
+        The amount to increase or decrease the theta6 - should be +0.0015 (for
+        slower attenuation) and -0.0015 (for faster attenuation)
 
     :param float sigma_mu_epsilon:
-    The number of standard deviations above or below the mean to apply the
-    statistical uncertainty sigma_mu term.
+        The number of standard deviations above or below the mean to apply the
+        statistical uncertainty sigma_mu term.
 
     :param faba_model:
-    Choice of model for the forearc/backarc tapering function, choice of
-    {"Step", "Linear", "SFunc", "Sigmoid", "Gaussian"}
+        Choice of model for the forearc/backarc tapering function, choice of
+        {"Step", "Linear", "SFunc", "Sigmoid", "Gaussian"}
 
     Depending on the choice of taper model, additional parameters may be passed
     """
     experimental = True
 
-    # Requires Vs30 and proximity to backarc margin (backarc distance)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
@@ -303,7 +302,7 @@ class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
         max_dist = np.copy(dists.rrup)
         max_dist[max_dist < 100.0] = 100.0
         f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(sites.backarc_distance)
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -333,18 +332,18 @@ class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
     """)
 
 
-class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
+class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction interface events
+    ESHM20 Adjustment of the BC Hydro GMPE for subduction interface events
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
     experimental = True
-    # Requires Vs30 and proximity to backarc margin (backarc distance)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
@@ -379,7 +378,7 @@ class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
         max_dist = np.copy(dists.rrup)
         max_dist[max_dist < 100.0] = 100.0
         f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(sites.backarc_distance)
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -409,20 +408,20 @@ class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
     """)
 
 
-class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
+class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction interface events
+    ESHM20 adjustment of the BC Hydro GMPE for subduction interface events
     with theta6 calibrated to Mediterranean data, for the high
     magnitude scaling branch.
     """
 
     experimental = True
 
-    # Requires Vs30 and proximity to backarc margin (backarc distance)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
@@ -457,7 +456,7 @@ class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
         max_dist = np.copy(dists.rrup)
         max_dist[max_dist < 100.0] = 100.0
         f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(sites.backarc_distance)
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -487,9 +486,9 @@ class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
     """)
 
 
-class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
+class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction in-slab events with
+    ESHM20 adjustment of the BC Hydro GMPE for subduction in-slab events with
     theta6 calibrated to Mediterranean data.
 
     Introduces two configurable parameters:
@@ -503,11 +502,11 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
 
     experimental = True
 
-    # Requires Vs30 and proximity to backarc margin (backarc distance)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
@@ -542,7 +541,7 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
         max_dist = np.copy(dists.rhypo)
         max_dist[max_dist < 85.0] = 85.0
         f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(sites.backarc_distance)
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -572,20 +571,20 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
     """)
 
 
-class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
+class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction in-slab events
+    ESHM20 adjustment of the BC Hydro GMPE for subduction in-slab events
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
 
     experimental = True
 
-    # Requires Vs30 and proximity to backarc margin (backarc distance)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
@@ -620,7 +619,7 @@ class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
         max_dist = np.copy(dists.rhypo)
         max_dist[max_dist < 85.0] = 85.0
         f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(sites.backarc_distance)
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -650,20 +649,20 @@ class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
     """)
 
 
-class BCHydroSERASSlabHigh(AbrahamsonEtAl2015SSlabHigh):
+class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction interface events
+    ESHM20 adjustment of the BC Hydro GMPE for subduction interface events
     with theta6 calibrated to Mediterranean data, for the high magnitude
     scaling branch.
     """
 
     experimental = True
 
-    # Requires Vs30 and proximity to backarc margin (backarc distance)
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc_distance'))
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
 
     def __init__(self, **kwargs):
-        super().__init__(ergodic=kwargs.get("ergodic", True))
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
         self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
@@ -698,7 +697,7 @@ class BCHydroSERASSlabHigh(AbrahamsonEtAl2015SSlabHigh):
         max_dist = np.copy(dists.rhypo)
         max_dist[max_dist < 85.0] = 85.0
         f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
-        return f_faba * self.faba_model(sites.backarc_distance)
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss

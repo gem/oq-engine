@@ -24,8 +24,8 @@ import abc
 import numpy
 import math
 import itertools
-import toml
-from openquake.baselib import general
+import json
+from openquake.baselib import general, hdf5
 from openquake.hazardlib import geo, contexts
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import (
@@ -36,41 +36,104 @@ from openquake.hazardlib.near_fault import (
     get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
 from openquake.hazardlib.geo.surface.base import BaseSurface
 
+U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
 events_dt = numpy.dtype([('id', U32), ('rup_id', U32), ('rlz_id', U16)])
+rupture_dt = numpy.dtype([('serial', U32),
+                          ('mag', F32),
+                          ('rake', F32),
+                          ('lon', F32),
+                          ('lat', F32),
+                          ('dep', F32),
+                          ('multiplicity', U32),
+                          ('trt', hdf5.vstr),
+                          ('kind', hdf5.vstr),
+                          ('mesh', hdf5.vstr),
+                          ('extra', hdf5.vstr)])
+
 code2cls = {}
 
 
-def _get_rupture(dic, geom=None, trt=None):
-    # dic: a dictionary or a record
-    # geom: if any, an array with fields lon, lat, depth
+def to_csv_array(ruptures):
+    """
+    :param ruptures: a list of ruptures
+    :returns: an array of ruptures suitable for serialization in CSV
+    """
+    if not code2cls:
+        code2cls.update(BaseRupture.init())
+    arr = numpy.zeros(len(ruptures), rupture_dt)
+    for rec, rup in zip(arr, ruptures):
+        mesh = surface_to_array(rup.surface)  # shape (3, s1, s2)
+        rec['serial'] = rup.rup_id
+        rec['mag'] = rup.mag
+        rec['rake'] = rup.rake
+        rec['lon'] = rup.hypocenter.x
+        rec['lat'] = rup.hypocenter.y
+        rec['dep'] = rup.hypocenter.z
+        rec['multiplicity'] = rup.multiplicity
+        rec['trt'] = rup.tectonic_region_type
+        rec['kind'] = ' '.join(cls.__name__ for cls in code2cls[rup.code])
+        rec['mesh'] = json.dumps(
+            [[[float5(z) for z in y] for y in x] for x in mesh])
+        extra = {}
+        if hasattr(rup, 'probs_occur'):
+            extra['probs_occur'] = rup.probs_occur
+        else:
+            extra['occurrence_rate'] = rup.occurrence_rate
+        if hasattr(rup, 'weight'):
+            extra['weight'] = rup.weight
+        _fixfloat32(extra)
+        rec['extra'] = json.dumps(extra)
+    return arr
+
+
+def from_array(aw):
+    """
+    :returns: a list of ruptures from an ArrayWrapper
+    """
+    rups = []
+    names = aw.array.dtype.names
+    for rec in aw.array:
+        dic = dict(zip(names, rec))
+        dic['trt'] = aw.trts[int(dic.pop('et_id'))]
+        dic['hypo'] = dic.pop('lon'), dic.pop('lat'), dic.pop('dep')
+        dic.update(json.loads(dic.pop('extra')))
+        rups.append(_get_rupture(dic))
+    return rups
+
+
+def _get_rupture(rec, geom=None, trt=None):
+    # rec: a dictionary or a record
+    # geom: if any, an array of floats32 convertible into a mesh
     if not code2cls:
         code2cls.update(BaseRupture.init())
     if geom is None:
-        lons = dic['lons']
+        lons = rec['lons']
         mesh = numpy.zeros((3, len(lons), len(lons[0])), F32)
-        mesh[0] = dic['lons']
-        mesh[1] = dic['lats']
-        mesh[2] = dic['depths']
+        mesh[0] = rec['lons']
+        mesh[1] = rec['lats']
+        mesh[2] = rec['depths']
     else:
-        mesh = numpy.zeros((3,) + geom.shape, F32)
-        mesh[0] = geom['lon']
-        mesh[1] = geom['lat']
-        mesh[2] = geom['depth']
-    rupture_cls, surface_cls = code2cls[dic['code']]
+        mesh = geom.reshape(rec['s1'], rec['s2'], 3).transpose(2, 0, 1)
+    rupture_cls, surface_cls = code2cls[rec['code']]
     rupture = object.__new__(rupture_cls)
-    rupture.rup_id = dic['serial']
+    rupture.rup_id = rec['serial']
     rupture.surface = object.__new__(surface_cls)
-    rupture.mag = dic['mag']
-    rupture.rake = dic['rake']
-    rupture.hypocenter = geo.Point(*dic['hypo'])
-    rupture.occurrence_rate = dic['occurrence_rate']
-    rupture.tectonic_region_type = trt or dic['trt']
+    rupture.mag = rec['mag']
+    rupture.rake = rec['rake']
+    rupture.hypocenter = geo.Point(*rec['hypo'])
+    rupture.occurrence_rate = rec['occurrence_rate']
+    try:
+        rupture.probs_occur = rec['probs_occur']
+    except (KeyError, ValueError):  # rec can be a numpy record
+        pass
+    rupture.tectonic_region_type = trt or rec['trt']
     if surface_cls is geo.PlanarSurface:
         rupture.surface = geo.PlanarSurface.from_array(
             mesh[:, 0, :])
@@ -87,15 +150,8 @@ def _get_rupture(dic, geom=None, trt=None):
         # fault surface, strike and dip will be computed
         rupture.surface.strike = rupture.surface.dip = None
         rupture.surface.__init__(RectangularMesh(*mesh))
+    rupture.multiplicity = rec['n_occ']
     return rupture
-
-
-def from_toml(toml_str):
-    """
-    :param toml_str: a string in TOML format
-    :returns: a rupture instance
-    """
-    return _get_rupture(toml.loads(toml_str))
 
 
 def float5(x):
@@ -111,18 +167,17 @@ def _fixfloat32(dic):
         elif isinstance(v, tuple):
             dic[k] = [float5(x) for x in v]
         elif isinstance(v, numpy.ndarray):
-            dic[k] = [[float5(y) for y in x] for x in v]
+            if len(v.shape) == 3:  # 3D array
+                dic[k] = [[[float5(z) for z in y] for y in x] for x in v]
+            elif len(v.shape) == 2:  # 2D array
+                dic[k] = [[float5(y) for y in x] for x in v]
+            elif len(v.shape) == 1:  # 1D array
+                dic[k] = [float5(x) for x in v]
+            else:
+                raise NotImplementedError
 
 
-def to_toml(rup):
-    """
-    :param rup: a rupture instance
-    :returns: a TOML string
-    """
-    return toml.dumps(rup.todict())
-
-
-def to_checksum(cls1, cls2):
+def to_checksum8(cls1, cls2):
     """
     Convert a pair of classes into a numeric code (uint8)
     """
@@ -173,13 +228,15 @@ class BaseRupture(metaclass=abc.ABCMeta):
             general.gen_subclasses(BaseRupture))
         surface_classes = list(general.gen_subclasses(BaseSurface))
         code2cls = {}
+        BaseRupture.str2code = {}
         for rup, sur in itertools.product(rupture_classes, surface_classes):
-            chk = to_checksum(rup, sur)
+            chk = to_checksum8(rup, sur)
             if chk in code2cls and code2cls[chk] != (rup, sur):
                 raise ValueError('Non-unique checksum %d for %s, %s' %
                                  (chk, rup, sur))
             cls._code[rup, sur] = chk
             code2cls[chk] = rup, sur
+            BaseRupture.str2code['%s %s' % (rup.__name__, sur.__name__)] = chk
         return code2cls
 
     def __init__(self, mag, rake, tectonic_region_type, hypocenter,
@@ -202,25 +259,6 @@ class BaseRupture(metaclass=abc.ABCMeta):
 
     get_probability_no_exceedance = (
         contexts.RuptureContext.get_probability_no_exceedance)
-
-    def todict(self):
-        """
-        :returns: a representation of the rupture as a dict
-        """
-        if not code2cls:
-            code2cls.update(BaseRupture.init())
-        hypo = self.hypocenter.x, self.hypocenter.y, self.hypocenter.z
-        mesh = surface_to_array(self.surface)  # shape (3, sy, sz)
-        sy, sz = mesh.shape[1:]
-        dic = {'serial': int(self.rup_id),
-               'mag': self.mag, 'rake': self.rake, 'hypo': hypo,
-               'trt': self.tectonic_region_type,
-               'code': self.code, 'occurrence_rate': self.occurrence_rate,
-               'rupture_cls': self.__class__.__name__,
-               'surface_cls': self.surface.__class__.__name__,
-               'lons': mesh[0], 'lats': mesh[1], 'depths': mesh[2]}
-        _fixfloat32(dic)
-        return dic
 
     def sample_number_of_occurrences(self, n=1):
         """
@@ -272,8 +310,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
             mag, rake, tectonic_region_type, hypocenter, surface,
             rupture_slip_direction, weight)
         # an array of probabilities with sum 1
-        self.probs_occur = numpy.array(
-            [prob for (prob, occ) in pmf.data], numpy.float32)
+        self.probs_occur = numpy.array([prob for (prob, occ) in pmf.data])
         self.occurrence_rate = numpy.nan
 
     def sample_number_of_occurrences(self, n=1):
@@ -627,39 +664,22 @@ class ExportedRupture(object):
         self.indices = indices
 
 
-def get_eids(rup_array, samples_by_grp, num_rlzs_by_grp):
-    """
-    :param rup_array: a composite array with fields rup_id, n_occ and grp_id
-    :param samples_by_grp: a dictionary grp_id -> samples
-    :param num_rlzs_by_grp: a dictionary grp_id -> num_rlzs
-    """
-    all_eids = []
-    for rup in rup_array:
-        grp_id = rup['grp_id']
-        samples = samples_by_grp[grp_id]
-        num_rlzs = num_rlzs_by_grp[grp_id]
-        num_events = rup['n_occ'] if samples > 1 else rup['n_occ'] * num_rlzs
-        eids = numpy.arange(num_events, dtype=U32)
-        all_eids.append(eids)
-    return numpy.concatenate(all_eids)
-
-
 class EBRupture(object):
     """
     An event based rupture. It is a wrapper over a hazardlib rupture
     object, containing an array of site indices affected by the rupture,
     as well as the IDs of the corresponding seismic events.
     """
-    def __init__(self, rupture, source_id, grp_id, n_occ, samples=1, id=None):
+    def __init__(self, rupture, source_id, et_id, n_occ, id=None, e0=0):
         # NB: when reading an exported ruptures.xml the rup_id will be 0
         # for the first rupture; it used to be the seed instead
         assert rupture.rup_id >= 0  # sanity check
         self.rupture = rupture
         self.source_id = source_id
-        self.grp_id = grp_id
+        self.et_id = et_id
         self.n_occ = n_occ
-        self.samples = samples
-        self.id = id  # id of the rupture on the DataStore, to be overridden
+        self.id = id  # id of the rupture on the DataStore
+        self.e0 = e0
 
     @property
     def rup_id(self):
@@ -670,35 +690,24 @@ class EBRupture(object):
 
     def get_eids_by_rlz(self, rlzs_by_gsim):
         """
-        :param n_occ: number of occurrences
         :params rlzs_by_gsim: a dictionary gsims -> rlzs array
-        :param samples: number of samples in current source group
         :returns: a dictionary rlz index -> eids array
         """
         j = 0
         dic = {}
-        if self.samples == 1:  # full enumeration or akin to it
-            for rlzs in rlzs_by_gsim.values():
-                for rlz in rlzs:
-                    dic[rlz] = numpy.arange(j, j + self.n_occ, dtype=U32)
-                    j += self.n_occ
-        else:  # associated eids to the realizations
-            rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-            assert len(rlzs) == self.samples, (len(rlzs), self.samples)
-            histo = general.random_histogram(
-                self.n_occ, self.samples, self.rup_id)
-            for rlz, n in zip(rlzs, histo):
-                dic[rlz] = numpy.arange(j, j + n, dtype=U32)
-                j += n
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        histo = general.random_histogram(
+            self.n_occ, len(rlzs), self.rup_id)
+        for rlz, n in zip(rlzs, histo):
+            dic[rlz] = numpy.arange(j, j + n, dtype=U32) + self.e0
+            j += n
         return dic
 
-    def get_eids(self, num_rlzs):
+    def get_eids(self):
         """
-        :param num_rlzs: the number of realizations for the given group
         :returns: an array of event IDs
         """
-        num_events = self.n_occ if self.samples > 1 else self.n_occ * num_rlzs
-        return numpy.arange(num_events, dtype=U32)
+        return numpy.arange(self.n_occ, dtype=U32)
 
     def export(self, events_by_ses):
         """
@@ -754,12 +763,10 @@ class RuptureProxy(object):
 
     :param rec: a record with the rupture parameters
     :param nsites: approx number of sites affected by the rupture
-    :param samples: how many times the rupture is sampled
     """
-    def __init__(self, rec, nsites=None, samples=1):
+    def __init__(self, rec, nsites=None):
         self.rec = rec
         self.nsites = nsites
-        self.samples = samples
 
     @property
     def weight(self):
@@ -768,21 +775,19 @@ class RuptureProxy(object):
             heuristic weight for the underlying rupture, depending on the
             number of occurrences, number of samples and number of sites
         """
-        return self.samples * self['n_occ'] * (
+        return self['n_occ'] * (
             100 if self.nsites is None else max(self.nsites, 100))
 
     def __getitem__(self, name):
         return self.rec[name]
 
     # NB: requires the .geom attribute to be set
-    def to_ebr(self, trt, samples):
+    def to_ebr(self, trt):
         """
         :returns: EBRupture instance associated to the underlying rupture
         """
         # not implemented: rupture_slip_direction
         rupture = _get_rupture(self.rec, self.geom, trt)
-        ebr = EBRupture(rupture, self.rec['source_id'], self.rec['grp_id'],
-                        self.rec['n_occ'], samples)
-        ebr.id = self.rec['id']
-        ebr.e0 = self.rec['e0']
+        ebr = EBRupture(rupture, self.rec['source_id'], self.rec['et_id'],
+                        self.rec['n_occ'], self.rec['id'], self.rec['e0'])
         return ebr

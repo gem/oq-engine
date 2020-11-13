@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+<logicTree logicTreeID='lt1'>
+  <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="active shallow crust">
+    <logicTreeBranch branchID="b1">
+      <uncertaintyModel>AkkarBommer2010</uncertaintyModel>
+      <uncertaintyWeight>0.9</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="b2">
+      <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+      <uncertaintyWeight>0.1</uncertaintyWeight>
+    </logicTreeBranch>    
+  </logicTreeBranchSet>
+</logicTree>
+</nrml>

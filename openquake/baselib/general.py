@@ -21,8 +21,10 @@ Utility functions of general interest.
 """
 import os
 import sys
+import zlib
 import copy
 import math
+import pickle
 import socket
 import random
 import atexit
@@ -34,6 +36,8 @@ import tempfile
 import importlib
 import itertools
 import subprocess
+import multiprocessing
+from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
@@ -44,6 +48,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
+mp = multiprocessing.get_context('spawn')
 
 
 def duplicated(items):
@@ -196,12 +201,14 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
+def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
+                   sort=False):
     """
     :param items: an iterator over items
     :param max_weight: the max weight to split on
     :param weight: a function returning the weigth of a given item
     :param key: a function returning the kind of a given item
+    :param sort: if True, sort the items by reverse weight before splitting
 
     Group together items of the same kind until the total weight exceeds the
     `max_weight` and yield `WeightedSequence` instances. Items
@@ -224,7 +231,7 @@ def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
         raise ValueError('max_weight=%s' % max_weight)
     ws = WeightedSequence([])
     prev_key = 'Unspecified'
-    for item in items:
+    for item in sorted(items, key=weight, reverse=True) if sort else items:
         w = weight(item)
         k = key(item)
         if w < 0:  # error
@@ -364,7 +371,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
 _tmp_paths = []
 
 
-def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
+def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     """Create temporary file with the given content.
 
     Please note: the temporary file can be deleted by the caller or not.
@@ -379,7 +386,8 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         if not os.path.exists(dir):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
-    _tmp_paths.append(path)
+    if remove:
+        _tmp_paths.append(path)
     with os.fdopen(fh, "wb") as fh:
         if content:
             if hasattr(content, 'encode'):
@@ -452,6 +460,23 @@ def run_in_process(code, *args):
         # produce escape sequences in stdout, see for instance
         # https://bugs.python.org/issue19884
         return eval(out, {}, {})
+
+
+@contextmanager
+def start_many(func, allargs, **kw):
+    """
+    Start multiple processes simultaneously
+    """
+    procs = []
+    for args in allargs:
+        proc = mp.Process(target=func, args=args, kwargs=kw)
+        proc.start()
+        procs.append(proc)
+    try:
+        yield
+    finally:
+        for proc in procs:
+            proc.join()
 
 
 class CodeDependencyError(Exception):
@@ -593,7 +618,7 @@ class AccumDict(dict):
      >>> acc - 1
      {'a': 1, 'b': 0}
 
-    The multiplication has been defined::
+    The multiplication has been defined:
 
      >>> prob1 = AccumDict(dict(a=0.4, b=0.5))
      >>> prob2 = AccumDict(dict(b=0.5))
@@ -604,7 +629,7 @@ class AccumDict(dict):
      >>> 1.2 * prob1
      {'a': 0.48, 'b': 0.6}
 
-    And even the power::
+    And even the power:
 
     >>> prob2 ** 2
     {'b': 0.25}
@@ -720,6 +745,16 @@ class AccumDict(dict):
         """
         return self.__class__({key: func(value, *extras)
                                for key, value in self.items()})
+
+
+def copyobj(obj, **kwargs):
+    """
+    :returns: a shallow copy of obj with some changed attributes
+    """
+    new = copy.copy(obj)
+    for k, v in kwargs.items():
+        setattr(new, k, v)
+    return new
 
 
 # return a dict imt -> slice and the total number of levels
@@ -1126,6 +1161,8 @@ def random_filter(objects, reduction_factor, seed=42):
     list compared to the original list.
     """
     assert 0 < reduction_factor <= 1, reduction_factor
+    if reduction_factor == 1:  # do not reduce
+        return objects
     rnd = random.Random(seed)
     out = []
     for obj in objects:
@@ -1138,13 +1175,15 @@ def random_histogram(counts, nbins, seed):
     """
     Distribute a total number of counts on a set of bins homogenously.
 
-    >>> random_histogram(1, 2, 42)
+    >>> random_histogram(1, 2, seed=42)
     array([1, 0])
-    >>> random_histogram(100, 5, 42)
+    >>> random_histogram(100, 5, seed=42)
     array([28, 18, 17, 19, 18])
-    >>> random_histogram(10000, 5, 42)
+    >>> random_histogram(10000, 5, seed=42)
     array([2043, 2015, 2050, 1930, 1962])
     """
+    if nbins == 1:
+        return numpy.array([counts])
     numpy.random.seed(seed)
     return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
 
@@ -1263,14 +1302,13 @@ def println(msg):
     sys.stdout.flush()
 
 
-def debug(templ, *args):
+def debug(line):
     """
     Append a debug line to the file /tmp/debug.txt
     """
-    msg = templ % args if args else templ
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
-        f.write(msg + '\n')
+        f.write(line + '\n')
 
 
 builtins.debug = debug
@@ -1342,14 +1380,14 @@ def get_duplicates(array, *fields):
 def add_columns(a, b, on, cols=None):
     """
     >>> a_dt = [('aid', int), ('eid', int), ('loss', float)]
-    >>> b_dt = [('ordinal', int), ('zipcode', int)]
+    >>> b_dt = [('ordinal', int), ('custom_site_id', int)]
     >>> a = numpy.array([(1, 0, 2.4), (2, 0, 2.2),
     ...                  (1, 1, 2.1), (2, 1, 2.3)], a_dt)
     >>> b = numpy.array([(0, 20126), (1, 20127), (2, 20128)], b_dt)
-    >>> add_columns(a, b, 'aid', ['zipcode'])
+    >>> add_columns(a, b, 'aid', ['custom_site_id'])
     array([(1, 0, 2.4, 20127), (2, 0, 2.2, 20128), (1, 1, 2.1, 20127),
            (2, 1, 2.3, 20128)],
-          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('zipcode', '<i8')])
+          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('custom_site_id', '<i8')])
     """
     if cols is None:
         cols = b.dtype.names
@@ -1392,17 +1430,18 @@ def categorize(values, nchars=2):
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 
 
-def get_array_nbytes(sizedict):
+def get_nbytes_msg(sizedict, size=8):
     """
     :param sizedict: mapping name -> num_dimensions
     :returns: (size of the array in bytes, descriptive message)
 
-    >>> get_array_nbytes(dict(nsites=2, nbins=5))
+    >>> get_nbytes_msg(dict(nsites=2, nbins=5))
     (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
     """
-    nbytes = numpy.prod(list(sizedict.values())) * 8
-    prod = ' * '.join('(%s=%d)' % item for item in sizedict.items())
-    return nbytes, '%s * 8 bytes = %s' % (prod, humansize(nbytes))
+    nbytes = numpy.prod(list(sizedict.values())) * size
+    prod = ' * '.join('({}={:_d})'.format(k, int(v))
+                      for k, v in sizedict.items())
+    return nbytes, '%s * %d bytes = %s' % (prod, size, humansize(nbytes))
 
 
 def gen_subclasses(cls):
@@ -1419,3 +1458,39 @@ def pprod(p, axis=None):
     Probability product 1 - prod(1-p)
     """
     return 1. - numpy.prod(1. - p, axis)
+
+
+def agg_probs(*probs):
+    """
+    Aggregate probabilities with the usual formula 1 - (1 - P1) ... (1 - Pn)
+    """
+    acc = 1. - probs[0]
+    for prob in probs[1:]:
+        acc *= 1. - prob
+    return 1. - acc
+
+# ###########]]]###### COMPRESSION/DECOMPRESSION ##################### #
+
+# Compressing the task outputs makes everything slower, so you should NOT
+# do that, except in one case. The case if when you have a lot of workers
+# (say 320) sending a lot of data (say 320 GB) to a master node which is
+# not able to keep up. Then the zmq queue fills all of the avalaible RAM
+# until the master node blows up. With compression you can reduce the queue
+# size a lot (say one order of magnitude).
+# Therefore by losing a bit of speed (say 3%) you can convert a failing
+# calculation into a successful one.
+
+
+def compress(obj):
+    """
+    gzip a Python object
+    """
+    # level=1: compress the least, but fast, good choice for us
+    return zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL), level=1)
+
+
+def decompress(cbytes):
+    """
+    gunzip compressed bytes into a Python object
+    """
+    return pickle.loads(zlib.decompress(cbytes))

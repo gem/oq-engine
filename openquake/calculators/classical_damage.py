@@ -16,35 +16,40 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import numpy
-
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib import stats
-from openquake.calculators import base, classical_risk
+from openquake.calculators import base, classical_risk, views
+
+F32 = numpy.float32
 
 
-def classical_damage(riskinputs, crmodel, param, monitor):
+def classical_damage(riskinputs, param, monitor):
     """
     Core function for a classical damage computation.
 
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param crmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
-    :returns:
-        a nested dictionary lt_idx, rlz_idx -> asset_idx -> <damage array>
+    :yields:
+        dictionaries asset_ordinal -> damage(R, L, D)
     """
-    result = AccumDict(accum=AccumDict())
+    crmodel = monitor.read('crmodel')
     for ri in riskinputs:
+        R = ri.hazard_getter.num_rlzs
+        L = len(crmodel.lti)
+        D = len(crmodel.damage_states)
+        result = AccumDict(accum=numpy.zeros((R, L, D), F32))
         for out in ri.gen_outputs(crmodel, monitor):
+            r = out.rlzi
             for l, loss_type in enumerate(crmodel.loss_types):
-                ordinals = ri.assets['ordinal']
-                result[l, out.rlzi] += dict(zip(ordinals, out[loss_type]))
-    return result
+                for a, frac in zip(ri.assets['ordinal'], out[loss_type]):
+                    result[a][r, l] = frac
+        yield result
 
 
 @base.calculators.add('classical_damage')
@@ -60,15 +65,15 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         Export the result in CSV format.
 
         :param result:
-            a dictionary (l, r) -> asset_ordinal -> fractions per damage state
+            a dictionary asset_ordinal -> array(R, L, D)
         """
         D = len(self.crmodel.damage_states)
         damages = numpy.zeros((self.A, self.R, self.L, D), numpy.float32)
-        for l, r in result:
-            for aid, fractions in result[l, r].items():
-                damages[aid, r, l] = fractions
+        for a in result:
+            damages[a] = result[a]
         self.datastore['damages-rlzs'] = damages
         stats.set_rlzs_stats(self.datastore, 'damages',
                              assets=self.assetcol['id'],
-                             loss_types=self.oqparam.loss_names,
+                             loss_type=self.oqparam.loss_names,
                              dmg_state=self.crmodel.damage_states)
+        logging.info('\n' + views.view('portfolio_damage', self.datastore))

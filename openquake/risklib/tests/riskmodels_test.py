@@ -260,7 +260,7 @@ lossCategory="contents">
         oq = mock.Mock()
         oq.inputs = dict(structural_consequence=ccm, contents_consequence=scm)
         with self.assertRaises(ValueError) as ctx:
-            riskmodels.get_risk_models(oq, 'consequence')
+            riskmodels.get_risk_functions(oq, 'consequence')
         self.assertIn('structural_consequence_model.xml": lossCategory is of '
                       'type "structural", expected "contents"',
                       str(ctx.exception))
@@ -271,7 +271,7 @@ lossCategory="contents">
         oq = mock.Mock()
         oq.inputs = dict(contents_consequence=cfm)
         with self.assertRaises(ValueError) as ctx:
-            riskmodels.get_risk_models(oq, 'consequence')
+            riskmodels.get_risk_functions(oq, 'consequence')
         self.assertIn('is of kind FragilityModel, '
                       'expected ConsequenceModel', str(ctx.exception))
 
