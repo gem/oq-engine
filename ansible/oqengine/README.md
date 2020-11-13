@@ -3,7 +3,7 @@ Ansible Role: oqengine
 
 Installs the OpenQuake engine on CentOS 7,8 or Ubuntu 18.04, 20.04.
 
-The Role installs Python 3.8 (it is is not available on the
+The Role installs Python 3.8 (if is is not available on the
 system already) using the follow repositories:
 
 - CentOS 7: CentOS SCLo RH
@@ -11,7 +11,7 @@ system already) using the follow repositories:
 - Ubuntu 18.04: Universe
 
 In Ubuntu 20.04 Python 3.8 is already installed. The Role also creates an
-ser `openquake` and generates ssh keys for this user. Then it creates
+user `openquake` and generates ssh keys. Then it creates
 a virtual environment for the user `openquake` in the directory
 `/opt/openquake`.
 
@@ -122,7 +122,7 @@ machine. Here is how to install ansible in a virtual environment:
  
  As you can see it is also possible to execute the playbook on localhost.
  
- To istall the role you need to create a requirements.yml file
+ To install the role you need to create a `requirements.yml` file
  and use it with ansible-galaxy
   
     # from GitHub
