@@ -257,8 +257,8 @@ class ComplexFaultSource(ParametricSeismicSource):
             src = copy.copy(self)
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]
-            for s in split(src):
-                yield s
+            src.source_id = '%s:%d' % (self.source_id, i)
+            yield src
 
     @property
     def polygon(self):
