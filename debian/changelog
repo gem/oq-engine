@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Moved the parameter `num_cores` into openquake.cfg
+  * Internal: introduced the environment variable OQ_REDUCE
   * Using pandas to export the GMF in CSV format
   * Internal: required h5py == 2.10.0
   * Internal: made the classical ruptures pandas-friendly

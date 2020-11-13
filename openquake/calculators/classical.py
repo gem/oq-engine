@@ -34,7 +34,7 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize, get_nbytes_msg)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
-from openquake.hazardlib.calc.filters import split_sources, SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, logs
@@ -82,25 +82,22 @@ def classical(srcs, rlzs_by_gsim, params, monitor):
 
 def classical_split_filter(srcs, rlzs_by_gsim, params, monitor):
     """
-    Split the given sources, filter the subsources and the compute the
+    Split the given sources, filter the subsources and then compute the
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
     srcfilter = monitor.read('srcfilter')
-    maxw = params['max_weight'] / 2
-    splits = []
-    if params['split_sources'] is False:
-        sources = srcs
-    else:
-        sources = []
+    minw = params['min_weight']
+    if params['split_sources']:
+        maxw = params['max_weight'] / 5  # produce more subtasks
+        sources = [s for s in srcs if s.weight < minw]
         with monitor("splitting sources"):
-            for src in srcs:
-                splits.append(src.source_id)
-                for s, _ in srcfilter.filter(split_sources([src])[0]):
-                    sources.append(s)
-    if splits:  # produce more subtasks
-        maxw /= 3
-    msg = 'split %s; ' % ' '.join(splits) if splits else ''
+            for [src], _sites in srcfilter.split(
+                    s for s in srcs if s.weight >= minw):
+                sources.append(src)
+    else:
+        maxw = params['max_weight'] / 2
+        sources = srcs
 
     blocks = list(block_splitter(sources, maxw, get_weight))
     if not blocks:
@@ -109,13 +106,13 @@ def classical_split_filter(srcs, rlzs_by_gsim, params, monitor):
     heavy = []
     light = list(blocks[-1])
     for block in blocks[:-1]:
-        if block.weight > params['min_weight']:
-            yield classical, block, rlzs_by_gsim, params
-            heavy.append(int(block.weight))
-        else:
+        if block.weight < params['min_weight']:  # extend light sources
             light.extend(block)
+        else:  # heavy block, turn it into a subtask
+            heavy.append(int(block.weight))
+            yield classical, block, rlzs_by_gsim, params
     if heavy:
-        msg += 'produced %d subtask with weights %s' % (len(heavy), heavy)
+        msg = 'produced %d subtask with weights %s' % (len(heavy), heavy)
         try:
             logs.dbcmd(
                 'log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
@@ -336,7 +333,7 @@ class ClassicalCalculator(base.HazardCalculator):
             preclassical,
             (srcs, SourceFilter(self.sitecol, oq.maximum_distance)),
             concurrent_tasks=oq.concurrent_tasks or 1,
-            num_cores=oq.num_cores, h5=self.datastore.hdf5).reduce()
+            h5=self.datastore.hdf5).reduce()
         if oq.calculation_mode == 'preclassical':
             self.store_source_info(calc_times, nsites=True)
             self.datastore['full_lt'] = self.csm.full_lt
@@ -383,8 +380,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.info('pointsource_distance=\n%s', pprint.pformat(dic))
             if len(vars(aw)) > 1:  # more than _extra
                 self.datastore['effect_by_mag_dst'] = aw
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
-                                num_cores=oq.num_cores)
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', srcfilter)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
