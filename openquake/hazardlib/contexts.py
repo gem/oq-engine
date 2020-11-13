@@ -485,7 +485,6 @@ class PmapMaker(object):
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
-        self.gss_mon = cmaker.mon('get_sources_sites', measuremem=False)
         self.ir_mon = cmaker.mon('iter_ruptures', measuremem=False)
         self.maxsites = 5.12E7 / len(self.gsims) / len(self.imtls.array)
 
@@ -537,7 +536,7 @@ class PmapMaker(object):
         if self.fewsites:
             srcs_sites = [(self.group, self.srcfilter.sitecol)]
         elif self.split_sources:
-            srcs_sites = self.srcfilter.split(self.group, self.gss_mon)
+            srcs_sites = self.srcfilter.split(self.group)
         else:
             srcs_sites = (([src], self.srcfilter.sitecol.filtered(idx))
                           for src, idx in self.srcfilter.filter(self.group))
