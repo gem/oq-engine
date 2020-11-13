@@ -123,7 +123,7 @@ Follow an example of installation ansible in one virtual environment
     pip install ansible
     Successfully installed MarkupSafe-1.1.1 PyYAML-5.3.1 ansible-2.10.3 ansible-base-2.10.3 cffi-1.14.3 cryptography-3.2.1 jinja2-2.11.2 packaging-20.4 pycparser-2.20 pyparsing-2.4.7 six-1.15.0
     
- After the installation of ansible you have to define an hosts file to use as inventoty 
+ After the installation of ansible you have to define an file to use as inventory, for example you can define hosts file as follow
       
     [servers]
     192.168.22.21 vm_name=vm-centos-7-01
@@ -143,9 +143,33 @@ Follow an example of installation ansible in one virtual environment
   
      ansible-galaxy install -r requirements.yml
  
+     Starting galaxy role install process
+
+     - extracting oqengine to /home/users/.ansible/roles/oqengine
+     - oqengine was installed successfully
  
- 
- 
+   To run the playbook just use the ansible way on all systems listed in servers section of inventory file:
+   
+      ansible-playbook -i hosts  oqengine.yml
+      
+   the oqengine.yml file is the follow: 
+      
+      - hosts: servers
+        become: yes
+        roles:
+          - oqengine
+
+        pre_tasks:
+           - name: Update apt cache.
+             apt:
+               update_cache: true
+               cache_valid_time: 600
+             when: ansible_os_family == 'Ubuntu'
+             
+   If you want to run it on controlmachine:
+        
+        ansible-playbook -i hosts --limit controlmachine oqengine.yml
+      
  
 
 License
