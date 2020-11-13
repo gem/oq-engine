@@ -1161,6 +1161,8 @@ def random_filter(objects, reduction_factor, seed=42):
     list compared to the original list.
     """
     assert 0 < reduction_factor <= 1, reduction_factor
+    if reduction_factor == 1:  # do not reduce
+        return objects
     rnd = random.Random(seed)
     out = []
     for obj in objects:
