@@ -746,7 +746,7 @@ def get_composite_source_model(oqparam, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags[sg.trt].update(srcmags)
-    logging.info('There are %d groups and %d sources with len(et_ids)=%.1f',
+    logging.info('There are %d groups and %d sources with len(et_ids)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
     if h5:

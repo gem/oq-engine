@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
 import os
-import re
 import time
 import copy
 import psutil
@@ -109,7 +108,7 @@ def classical_split_filter(srcs, gsims, params, monitor):
                 else:
                     sources.append(src)
     if splits:  # produce more subtasks
-        maxw /= 5
+        maxw /= 3
     msg = 'split %s; ' % ' '.join(splits) if splits else ''
     for sf in sf_tiles:
         blocks = list(block_splitter(sources, maxw, get_weight))
