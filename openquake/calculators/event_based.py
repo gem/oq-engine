@@ -312,8 +312,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     for rgetter in gen_rupture_getters(
                             self.datastore, oq.concurrent_tasks))
         smap = parallel.Starmap(
-            self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores)
+            self.core_task.__func__, iterargs, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in self.datastore:
