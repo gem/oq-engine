@@ -331,7 +331,7 @@ class ClassicalCalculator(base.HazardCalculator):
             preclassical,
             (srcs, SourceFilter(self.sitecol, oq.maximum_distance)),
             concurrent_tasks=oq.concurrent_tasks or 1,
-            num_cores=oq.num_cores, h5=self.datastore.hdf5).reduce()
+            h5=self.datastore.hdf5).reduce()
         if oq.calculation_mode == 'preclassical':
             self.store_source_info(calc_times, nsites=True)
             self.datastore['full_lt'] = self.csm.full_lt
@@ -378,8 +378,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.info('pointsource_distance=\n%s', pprint.pformat(dic))
             if len(vars(aw)) > 1:  # more than _extra
                 self.datastore['effect_by_mag_dst'] = aw
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5,
-                                num_cores=oq.num_cores)
+        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', srcfilter)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
