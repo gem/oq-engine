@@ -863,10 +863,7 @@ class Starmap(object):
                 yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
-                if self.num_cores is None:
-                    self._submit_many(1)  # oversubmit
-                elif self.todo < self.num_cores:
-                    self._submit_many(self.num_cores - self.todo)
+                self._submit_many(1)
             else:
                 yield res
         self.log_percent()
