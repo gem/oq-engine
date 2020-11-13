@@ -134,7 +134,7 @@ Then you can install it:
   
      $ ansible-galaxy install -r requirements.yml
  
-     Starting galaxy role install process
+     Starting galaxy role installation process
 
      - extracting oqengine to /home/users/.ansible/roles/oqengine
      - oqengine was installed successfully
