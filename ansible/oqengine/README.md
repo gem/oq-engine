@@ -112,6 +112,41 @@ To have the follow playbook:
                  cache_valid_time: 600
                when: ansible_os_family == 'Ubuntu'
 
+Example of usage
+----------------
+
+To use this role you need to have ansible installed on a control machine from what you can control the execution of the tasks to the server.
+Follow an example of installation ansible in one virtual environment
+
+    python3.8 -m venv venv
+    source venv/bin/activate
+    pip install ansible
+    Successfully installed MarkupSafe-1.1.1 PyYAML-5.3.1 ansible-2.10.3 ansible-base-2.10.3 cffi-1.14.3 cryptography-3.2.1 jinja2-2.11.2 packaging-20.4 pycparser-2.20 pyparsing-2.4.7 six-1.15.0
+    
+ After the installation of ansible you have to define an hosts file to use as inventoty 
+      
+    [servers]
+    192.168.22.21 vm_name=vm-centos-7-01
+    #
+    controlmachine ansible_connection=local
+ 
+ As you can see on that files you see also an entry for control machine to use in you want to execute the play on localhost.
+ 
+ To istall the role, since it is not galaxy repo you need to create one requirements.yml ans use it with ansible-galaxy
+  
+    # from GitHub
+    # 
+    - name: oqengine
+      src: https://github.com/gem/oq-engine/
+  
+  After you can install it:
+  
+     ansible-galaxy install -r requirements.yml
+ 
+ 
+ 
+ 
+ 
 
 License
 -------
