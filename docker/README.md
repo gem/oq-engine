@@ -7,16 +7,6 @@
 The main documentation, intended for end users, is available under the [documentation area](../doc/installing/docker.md)
 
 
-## Images
-
-Images are based on **CentOS 8**
-
-### Python3 base image (required by all images)
-
-```bash
-$ docker build -t openquake/base -f Dockerfile.base .
-```
-
 ### OpenQuake Engine (single node)
 
 ```bash
@@ -27,23 +17,10 @@ $ docker build -t openquake/engine -f Dockerfile.engine .
 
 ```bash
 --build-arg oq_branch=master      ## oq-engine branch
---build-arg tools_branch=mater    ## oq standalone tools branch
 ```
 
 
 ## Master/worker images (clustered setup)
-
-### OpenQuake Engine master node container (celery)
-
-```bash
-$ docker build -t openquake/engine-master-celery -f celery/Dockerfile.master .
-```
-
-### OpenQuake Engine worker node container (celery)
-
-```bash
-$ docker build -t openquake/engine-worker-celery -f celery/Dockerfile.worker .
-```
 
 ### OpenQuake Engine master node container (zmq)
 
@@ -62,13 +39,13 @@ $ docker build -t openquake/engine-worker-zmq -f zmq/Dockerfile.worker .
 ### ZMQ
 
 ```bash
-$ docker-compose -f docker-compose.yml <build,up,down...> [--scale worker=N]
+$ docker-compose -f docker-compose.yml <build,up,down...> 
 ```
 
-### Celery
-
+If you want more to scale the worker service start with follow:
 ```bash
-$ docker-compose -f docker-compose.yml -f docker-compose.celery.yml <build,up,down...> [--scale worker=N]
+$ docker-compose -f docker-compose.yml <build,up,down...> --scale worker=NUM
+
 ```
 
 ### Debug
@@ -76,5 +53,5 @@ $ docker-compose -f docker-compose.yml -f docker-compose.celery.yml <build,up,do
 It's possible to enter a container as `root`, for debug purposes, running
 
 ```bash
-$ docker exec -u 0 -t -i oq-cluster-master /bin/bash
+$ docker exec -u 0 -t -i engine-master /bin/bash
 ```

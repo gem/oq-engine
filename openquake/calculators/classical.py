@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
 import os
-import re
 import time
 import copy
 import psutil
@@ -73,67 +72,58 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def classical(srcs, gsims, params, slc, monitor=None):
+def classical(srcs, rlzs_by_gsim, params, monitor):
     """
-    Read the SourceFilter, get the current slice of it (if tiling is
-    enabled) and then call the classical calculator in hazardlib
+    Read the SourceFilter and call the classical calculator in hazardlib
     """
-    if monitor is None:  # fix mispassed parameters (for disagg_by_src)
-        monitor = slc
-        slc = slice(None)
-    srcfilter = monitor.read('srcfilter')[slc]
-    return hazclassical(srcs, srcfilter, gsims, params, monitor)
+    srcfilter = monitor.read('srcfilter')
+    return hazclassical(srcs, srcfilter, rlzs_by_gsim, params, monitor)
 
 
-def classical_split_filter(srcs, gsims, params, monitor):
+def classical_split_filter(srcs, rlzs_by_gsim, params, monitor):
     """
     Split the given sources, filter the subsources and the compute the
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
     srcfilter = monitor.read('srcfilter')
-    sf_tiles = srcfilter.split_in_tiles(params['hint'])
-    nt = len(sf_tiles)
-    maxw = params['max_weight'] / 2 * nt
+    maxw = params['max_weight'] / 2
     splits = []
-    if nt > 1 or params['split_sources'] is False:
+    if params['split_sources'] is False:
         sources = srcs
     else:
         sources = []
         with monitor("splitting sources"):
             for src in srcs:
-                if src.weight > maxw or src.num_ruptures > 10_000:
-                    splits.append(src.source_id)
-                    for s, _ in srcfilter.filter(split_sources([src])[0]):
-                        sources.append(s)
-                else:
-                    sources.append(src)
+                splits.append(src.source_id)
+                for s, _ in srcfilter.filter(split_sources([src])[0]):
+                    sources.append(s)
     if splits:  # produce more subtasks
-        maxw /= 5
+        maxw /= 3
     msg = 'split %s; ' % ' '.join(splits) if splits else ''
-    for sf in sf_tiles:
-        blocks = list(block_splitter(sources, maxw, get_weight))
-        if not blocks:
-            yield {'pmap': {}, 'extra': {}}
-            continue
-        heavy = []
-        light = list(blocks[-1])
-        for block in blocks[:-1]:
-            if block.weight > params['min_weight']:
-                yield classical, block, gsims, params, sf.slc
-                heavy.append(int(block.weight))
-            else:
-                light.extend(block)
-        if heavy:
-            msg += 'produced %d subtask with weights %s' % (len(heavy), heavy)
-            try:
-                logs.dbcmd(
-                    'log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                    'classical_split_filter#%d' % monitor.task_no, msg)
-            except Exception:
-                # a foreign key error in case of `oq run` is expected
-                print(msg)
-        yield classical(light, gsims, params, sf.slc, monitor)
+
+    blocks = list(block_splitter(sources, maxw, get_weight))
+    if not blocks:
+        yield {'pmap': {}, 'extra': {}}
+        return
+    heavy = []
+    light = list(blocks[-1])
+    for block in blocks[:-1]:
+        if block.weight > params['min_weight']:
+            yield classical, block, rlzs_by_gsim, params
+            heavy.append(int(block.weight))
+        else:
+            light.extend(block)
+    if heavy:
+        msg += 'produced %d subtask with weights %s' % (len(heavy), heavy)
+        try:
+            logs.dbcmd(
+                'log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
+                'classical_split_filter#%d' % monitor.task_no, msg)
+        except Exception:
+            # a foreign key error in case of `oq run` is expected
+            print(msg)
+    yield classical(light, rlzs_by_gsim, params, monitor)
 
 
 def preclassical(srcs, srcfilter, monitor):
@@ -312,7 +302,9 @@ class ClassicalCalculator(base.HazardCalculator):
         for rlzs_by_gsim in rlzs_by_gsim_list:
             for rlzs in rlzs_by_gsim.values():
                 rlzs_by_g.append(rlzs)
-        self.datastore['rlzs_by_g'] = [U32(rlzs) for rlzs in rlzs_by_g]
+        self.datastore.create_dset('rlzs_by_grp', hdf5.vuint32)
+        self.datastore.hdf5.save_vlen(
+            'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
         poes_shape = (self.N, len(self.oqparam.imtls.array), len(rlzs_by_g))
         size = numpy.prod(poes_shape) * 8
         logging.info('Requiring %s for ProbabilityMap of shape %s',
@@ -403,8 +395,7 @@ class ClassicalCalculator(base.HazardCalculator):
             acc = smap.reduce(self.agg_dicts, acc0)
             self.store_rlz_info(acc.eff_ruptures)
         finally:
-            with self.monitor('store source_info'):
-                source_ids = self.store_source_info(self.calc_times)
+            source_ids = self.store_source_info(self.calc_times)
             if self.by_task:
                 logging.info('Storing by_task information')
                 num_tasks = max(self.by_task) + 1,
@@ -458,20 +449,16 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.max_sites_per_tile, oq.max_sites_disagg)
         hint = 1 if self.N <= oq.max_sites_disagg else numpy.ceil(
             self.N / oq.max_sites_per_tile)
-        sf = self.src_filter()
-        srcfilters = sf.split_in_tiles(hint)
-        ntiles = len(srcfilters)
-        T = len(srcfilters[0].sitecol)
-        if ntiles > 1:
-            logging.info('Generated %d tiles with %d sites each', ntiles, T)
+        srcfilter = self.src_filter()
+        N = len(srcfilter.sitecol)
 
         # estimate max memory per core
         max_num_gsims = max(len(gsims) for gsims in rlzs_by_gsim_list)
         L = len(oq.imtls.array)
-        pmapbytes = T * L * max_num_gsims * 8
+        pmapbytes = N * L * max_num_gsims * 8
         if pmapbytes > TWO32:
-            logging.warning(TOOBIG, T, L, max_num_gsims, humansize(pmapbytes))
-        logging.info(MAXMEMORY, T, L, max_num_gsims, humansize(pmapbytes))
+            logging.warning(TOOBIG, N, L, max_num_gsims, humansize(pmapbytes))
+        logging.info(MAXMEMORY, N, L, max_num_gsims, humansize(pmapbytes))
 
         C = oq.concurrent_tasks or 1
         if oq.is_ucerf():
@@ -641,6 +628,8 @@ class ClassicalCalculator(base.HazardCalculator):
             dist = 'no'
         else:
             dist = None  # parallelize as usual
+        if oq.hazard_calculation_id is None:  # essential before Starmap
+            self.datastore.swmr_on()
         parallel.Starmap(
             build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)

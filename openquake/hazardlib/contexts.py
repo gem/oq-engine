@@ -485,9 +485,8 @@ class PmapMaker(object):
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
-        self.gss_mon = cmaker.mon('get_sources_sites', measuremem=False)
         self.ir_mon = cmaker.mon('iter_ruptures', measuremem=False)
-        self.maxsites = 1E8 / len(self.gsims) / len(self.imtls.array)
+        self.maxsites = 5.12E7 / len(self.gsims) / len(self.imtls.array)
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
@@ -495,7 +494,7 @@ class PmapMaker(object):
             pmap = self.pmap
         rup_indep = self.rup_indep
         # splitting in blocks makes sure that the maximum poes array
-        # generated has size N x L x G x 8 = 8E8 bytes = 0.745 GB
+        # generated has size N x L x G x 8 = 5.12E7 bytes = 400 MB
         for block in block_splitter(
                 ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
             for ctx, poes in self.cmaker.gen_ctx_poes(block):
@@ -537,7 +536,7 @@ class PmapMaker(object):
         if self.fewsites:
             srcs_sites = [(self.group, self.srcfilter.sitecol)]
         elif self.split_sources:
-            srcs_sites = self.srcfilter.split(self.group, self.gss_mon)
+            srcs_sites = self.srcfilter.split(self.group)
         else:
             srcs_sites = (([src], self.srcfilter.sitecol.filtered(idx))
                           for src, idx in self.srcfilter.filter(self.group))
