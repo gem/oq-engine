@@ -333,15 +333,13 @@ class SourceFilter(object):
         if source_indices:
             return self.sitecol.filtered(source_indices[0][1])
 
-    def split(self, sources, mon):
+    def split(self, sources):
         """
         :yields: pairs ([split], sites)
         """
-        with mon:
-            split, dt = split_sources(sources)
+        split, dt = split_sources(sources)
         for s in split:
-            with mon:
-                sites = self.get_close_sites(s)
+            sites = self.get_close_sites(s)
             if sites is not None:
                 yield [s], sites
 
