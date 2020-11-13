@@ -97,7 +97,21 @@ Use also pre_tasks to assure to update the cache for Ubuntu derivate
             update_cache: true
             cache_valid_time: 600
           when: ansible_os_family == 'Ubuntu'
-        
+
+To have the follow playbook:
+
+        - hosts: servers
+          become: yes
+          roles:
+            - oqengine
+
+          pre_tasks:
+             - name: Update apt cache.
+               apt:
+                 update_cache: true
+                 cache_valid_time: 600
+               when: ansible_os_family == 'Ubuntu'
+
 
 License
 -------
