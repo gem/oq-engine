@@ -428,15 +428,12 @@ def _get_planar_surfaces(plane):
             for p in range(plane.shape[2])]
 
 
-def ucerf_classical(srcs, gsims, params, slc, monitor=None):
+def ucerf_classical(srcs, gsims, params, monitor):
     """
     Compute the distances planes -> sites only once and then call classical
     as usual
     """
-    if monitor is None:  # fix mispassed parameters (for disagg_by_src)
-        monitor = slc
-        slc = slice(None)
-    srcfilter = monitor.read('srcfilter')[slc]
+    srcfilter = monitor.read('srcfilter')
     if not hasattr(srcs[0], 'start'):  # all point sources
         return hazclassical(srcs, srcfilter, gsims, params, monitor)
 
