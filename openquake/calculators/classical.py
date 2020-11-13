@@ -82,25 +82,20 @@ def classical(srcs, rlzs_by_gsim, params, monitor):
 
 def classical_split_filter(srcs, rlzs_by_gsim, params, monitor):
     """
-    Split the given sources, filter the subsources and the compute the
+    Split the given sources, filter the subsources and then compute the
     PoEs. Yield back subtasks if the split sources contain more than
     maxweight ruptures.
     """
     srcfilter = monitor.read('srcfilter')
-    maxw = params['max_weight'] / 2
-    splits = []
-    if params['split_sources'] is False:
-        sources = srcs
-    else:
+    if params['split_sources']:
+        maxw = params['max_weight'] / 5  # produce more subtasks
         sources = []
         with monitor("splitting sources"):
-            for src in srcs:
-                splits.append(src.source_id)
-                for s, _ in srcfilter.filter(split_sources([src])[0]):
-                    sources.append(s)
-    if splits:  # produce more subtasks
-        maxw /= 3
-    msg = 'split %s; ' % ' '.join(splits) if splits else ''
+            for [src], _sites in srcfilter.split(srcs):
+                sources.append(src)
+    else:
+        maxw = params['max_weight'] / 2
+        sources = srcs
 
     blocks = list(block_splitter(sources, maxw, get_weight))
     if not blocks:
@@ -115,7 +110,7 @@ def classical_split_filter(srcs, rlzs_by_gsim, params, monitor):
         else:
             light.extend(block)
     if heavy:
-        msg += 'produced %d subtask with weights %s' % (len(heavy), heavy)
+        msg = 'produced %d subtask with weights %s' % (len(heavy), heavy)
         try:
             logs.dbcmd(
                 'log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
