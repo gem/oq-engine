@@ -87,11 +87,13 @@ def classical_split_filter(srcs, rlzs_by_gsim, params, monitor):
     maxweight ruptures.
     """
     srcfilter = monitor.read('srcfilter')
+    minw = params['min_weight']
     if params['split_sources']:
         maxw = params['max_weight'] / 5  # produce more subtasks
-        sources = []
+        sources = [s for s in srcs if s.weight < minw]
         with monitor("splitting sources"):
-            for [src], _sites in srcfilter.split(srcs):
+            for [src], _sites in srcfilter.split(
+                    s for s in srcs if s.weight >= minw):
                 sources.append(src)
     else:
         maxw = params['max_weight'] / 2
