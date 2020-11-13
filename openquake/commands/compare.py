@@ -160,7 +160,7 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
         print(views.rst_table(rows['all'], header))
         if len(calc_ids) == 2 and what == 'hmaps':
             ms = numpy.mean((array_imt[0] - array_imt[1])**2, axis=0)  # P
-            rows = [(str(poe), m) for poe, m in zip(poes, ms)]
+            rows = [(str(poe), m) for poe, m in zip(poes, numpy.sqrt(ms))]
             print(views.rst_table(rows, ['poe', 'rms-diff']))
 
 
