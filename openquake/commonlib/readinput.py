@@ -289,7 +289,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
         # reduce the logic tree to one random realization
         # reduce the sites by a factor of `re`
         # reduce the ses by a factor of `re`
-        os.environ['SAMPLE_SITES'] = str(1 / float(re))
+        os.environ['OQ_SAMPLE_SITES'] = str(1 / float(re))
         job_ini['number_of_logic_tree_samples'] = '1'
         ses = job_ini.get('ses_per_logic_tree_path')
         if ses:
