@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a check for zero coefficient of variations for the Beta distribution
   * Moved the parameter `num_cores` into openquake.cfg
   * Internal: introduced the environment variable OQ_REDUCE
   * Using pandas to export the GMF in CSV format

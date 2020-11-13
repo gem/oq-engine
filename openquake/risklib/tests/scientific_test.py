@@ -64,6 +64,13 @@ class BetaDistributionTestCase(unittest.TestCase):
         self.assertIn('The coefficient of variation 3.0 > 2.0 is too large',
                       str(ctx.exception))
 
+    def test_zero_covs(self):
+        with self.assertRaises(ValueError) as ctx:
+            scientific.VulnerabilityFunction(
+                'v1', 'PGA', [.1, .2, .3], [.3, .1, .2], [0, .2, .3], 'BT')
+        self.assertIn('zero coefficient of variation in [0.  0.2 0.3]',
+                      str(ctx.exception))
+
 
 epsilons = scientific.make_epsilons(
     numpy.zeros((1, 3)), seed=3, correlation=0)[0]

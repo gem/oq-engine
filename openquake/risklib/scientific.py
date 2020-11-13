@@ -131,6 +131,10 @@ class VulnerabilityFunction(object):
                     pass
                 elif lr > 1:
                     raise ValueError('The meanLRs must be <= 1, got %s' % lr)
+                elif cov == 0:
+                    raise ValueError(
+                        'Found a zero coefficient of variation in %s' %
+                        self.covs)
                 elif cov ** 2 > 1 / lr - 1:
                     # see https://github.com/gem/oq-engine/issues/4841
                     raise ValueError(
