@@ -22,7 +22,6 @@ import numpy
 
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture_collection import split
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -247,12 +246,12 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.rupture_mesh_spacing = spacing
 
     def __iter__(self):
+        mag_rates = self.get_annual_occurrence_rates()
+        if len(mag_rates) == 1:  # not splittable
+            yield self
+            return
         if not hasattr(self, '_nr'):
             self.count_ruptures()
-        if self.num_ruptures <= MINWEIGHT:
-            yield self  # not splittable
-            return
-        mag_rates = self.get_annual_occurrence_rates()
         for i, (mag, rate) in enumerate(mag_rates):
             src = copy.copy(self)
             src.mfd = mfd.ArbitraryMFD([mag], [rate])

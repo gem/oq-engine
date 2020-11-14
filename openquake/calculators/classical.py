@@ -106,7 +106,7 @@ def classical_split_filter(srcs, rlzs_by_gsim, params, monitor):
     heavy = []
     light = list(blocks[-1])
     for block in blocks[:-1]:
-        if block.weight < params['min_weight']:  # extend light sources
+        if block.weight < minw:  # extend light sources
             light.extend(block)
         else:  # heavy block, turn it into a subtask
             heavy.append(int(block.weight))
