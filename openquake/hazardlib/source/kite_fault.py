@@ -12,7 +12,7 @@
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 Module :mod:`openquake.hazardlib.source.kite_fault` defines
 :class:`KiteFaultSource`.
@@ -66,6 +66,7 @@ class KiteFaultSource(ParametricSeismicSource):
         tom = self.temporal_occurrence_model
 
         # Get the surface of the fault
+        # TODO we must automate the definition of the idl parameter
         surface = KiteFaultSurface.from_profiles(self.profiles,
                                                  self.profiles_sampling,
                                                  self.rupture_mesh_spacing,
@@ -84,18 +85,18 @@ class KiteFaultSource(ParametricSeismicSource):
 
             # TODO replace
             hypocenter = Point(0, 0, 0)
-            occurrence_rate = 0.1
 
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
             ruptures = self._get_ruptures(surface.mesh, rup_len, rup_wid)
+            occurrence_rate = mag_occ_rate / len([r for r in ruptures])
 
             # Rupture generator
             for rup in ruptures:
                 yield ppr(mag, self.rake, self.tectonic_region_type,
                           hypocenter, rup, occurrence_rate, tom)
 
-    def _get_ruptures(omsh, rup_s, rup_d, f_strike=1, f_dip=1):
+    def _get_ruptures(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1):
         """
         Returns all the ruptures admitted by a given geometry i.e. number of
         nodes along strike and dip
@@ -139,9 +140,6 @@ class KiteFaultSource(ParametricSeismicSource):
                     yield ((omsh.lons[j:j + rup_d, i:i + rup_s],
                             omsh.lats[j:j + rup_d, i:i + rup_s],
                             omsh.depths[j:j + rup_d, i:i + rup_s]), j, i)
-
-
-
 
     # TODO
     def get_fault_surface_area(self):

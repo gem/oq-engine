@@ -16,7 +16,10 @@
 
 import numpy
 import unittest
+import matplotlib.pyplot as plt
 
+from matplotlib import animation
+from mpl_toolkits.mplot3d import Axes3D  # This is needed
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.geo import Point, Line
@@ -24,6 +27,8 @@ from openquake.hazardlib.tests import assert_pickleable
 from openquake.hazardlib.scalerel import PeerMSR, WC1994
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+
+MOVIE = True
 
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
@@ -67,12 +72,23 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
     def _test_ruptures(self, expected_ruptures, source):
         ruptures = list(source.iter_ruptures())
 
+    def _ruptures_animation(self, ruptures):
+
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.add_subplot(111, projection='3d')
+        plt.style.use('seaborn-bright')
+
 
 class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
 
     def test01(self):
         """ Simplest test """
-        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.0, max_mag=6.0,
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.6, max_mag=6.4,
                              bin_width=0.2)
-        computed = self._make_source(mfd=mfd, aspect_ratio=1.0)
-        self._test_ruptures(None, computed)
+        source = self._make_source(mfd=mfd, aspect_ratio=1.0)
+        # self._test_ruptures(None, computed)
+
+        if MOVIE:
+            ruptures = list(source.iter_ruptures())
+            self._ruptures_animation(ruptures)
+

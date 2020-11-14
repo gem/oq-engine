@@ -25,6 +25,7 @@ import copy
 import numpy as np
 
 from pyproj import Geod
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import npoints_towards
@@ -42,8 +43,9 @@ class KiteFaultSurface(BaseSurface):
     can be easily implemented.
 
     """
+
     def __init__(self, mesh):
-        self.mesh = mesh
+        super().__init__(mesh)
         assert 1 not in self.mesh.shape, (
             "Mesh must have at least 2 nodes along both length and width.")
         self.strike = self.dip = None
@@ -159,7 +161,7 @@ class KiteFaultSurface(BaseSurface):
             j = int(add[i])
             coo = get_coords(pro, idl)
             tmp = [[np.nan, np.nan, np.nan] for a in range(0, j)]
-            if len(tmp):
+            if len(tmp) > 0:
                 points = tmp + coo
             else:
                 points = coo
@@ -188,7 +190,7 @@ class KiteFaultSurface(BaseSurface):
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
 
-        return msh
+        return cls(Mesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]))
 
 
 def _resample_profile(line, sampling_dist):
@@ -679,7 +681,7 @@ def fix_mesh(msh):
         A :class:`numpy.ndarray` instance with the coordinates of the mesh
     :returns:
         A revised :class:`numpy.ndarray` instance with the coordinates of
-        the mesh
+        the mesh. The shape of this array num_rows x num_cols x 3
     """
     for i in range(msh.shape[0]):
         ru = i+1
