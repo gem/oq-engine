@@ -512,7 +512,7 @@ class PmapMaker(object):
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.ir_mon = cmaker.mon('iter_ruptures', measuremem=False)
-        self.maxsites = 5.12E7 / len(self.gsims) / len(self.imtls.array)
+        self.maxsites = 512000 / len(self.gsims) / len(self.imtls.array)
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
@@ -520,7 +520,7 @@ class PmapMaker(object):
             pmap = self.pmap
         rup_indep = self.rup_indep
         # splitting in blocks makes sure that the maximum poes array
-        # generated has size N x L x G x 8 = 5.12E7 bytes = 400 MB
+        # generated has size N x L x G x 8 = 4 MB
         for block in block_splitter(
                 ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
             for ctx, poes in self.cmaker.gen_ctx_poes(block):
