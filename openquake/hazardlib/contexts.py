@@ -512,6 +512,8 @@ class PmapMaker(object):
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.ir_mon = cmaker.mon('iter_ruptures', measuremem=False)
+        # NB: if maxsites is too big or too small the performance of
+        # get_poes can easily become 2-3 times worse!
         self.maxsites = 512000 / len(self.gsims) / len(self.imtls.array)
 
     def _update_pmap(self, ctxs, pmap=None):
