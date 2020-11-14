@@ -164,27 +164,24 @@ class BooreAtkinson2008(GMPE):
         """
         Compute magnitude-scaling term, equations (5a) and (5b), pag 107.
         """
-        U = ctx.size()
-        if U == 1:
+        if ctx.size() == 1:  # single rupture
             return self._compute_ms(ctx, C)
-        else:
-            lst = [self._compute_ms(c, C) for c in ctx.ctxs]
-            return np.array(lst)
+        return np.array([self._compute_ms(c, C) for c in ctx.ctxs])
 
-    def _compute_ms(self, ctx, C):
+    def _compute_ms(self, rup, C):
         """
         Compute magnitude-scaling term, equations (5a) and (5b), pag 107.
         """
-        U, SS, NS, RS = self._get_fault_type_dummy_variables(ctx)
-        if ctx.mag <= C['Mh']:
+        U, SS, NS, RS = self._get_fault_type_dummy_variables(rup)
+        if rup.mag <= C['Mh']:
             return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-                C['e5'] * (ctx.mag - C['Mh']) + \
-                C['e6'] * (ctx.mag - C['Mh']) ** 2
+                C['e5'] * (rup.mag - C['Mh']) + \
+                C['e6'] * (rup.mag - C['Mh']) ** 2
         else:
             return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-                C['e7'] * (ctx.mag - C['Mh'])
+                C['e7'] * (rup.mag - C['Mh'])
 
-    def _get_fault_type_dummy_variables(self, ctx):
+    def _get_fault_type_dummy_variables(self, rup):
         """
         Get fault type dummy variables, see Table 2, pag 107.
         Fault type (Strike-slip, Normal, Thrust/reverse) is
@@ -197,12 +194,12 @@ class BooreAtkinson2008(GMPE):
         because rake is always given.
         """
         U, SS, NS, RS = 0, 0, 0, 0
-        if ctx.rake == 'undefined':
+        if rup.rake == 'undefined':
             U = 1
-        elif np.abs(ctx.rake) <= 30.0 or (180.0 - np.abs(ctx.rake)) <= 30.0:
+        elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
             # strike-slip
             SS = 1
-        elif ctx.rake > 30.0 and ctx.rake < 150.0:
+        elif rup.rake > 30.0 and rup.rake < 150.0:
             # reverse
             RS = 1
         else:
@@ -281,7 +278,7 @@ class BooreAtkinson2008(GMPE):
         """
         fnl = np.zeros(pga4nl.shape)
         if len(bnl) < len(fnl):  # single site case, fix shape
-            bnl = np.repeat(bnl[0], len(fnl))
+            bnl = np.repeat(bnl, len(fnl))
         a1 = 0.03
         a2 = 0.09
         pga_low = 0.06
