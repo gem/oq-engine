@@ -155,6 +155,8 @@ class ContextMaker(object):
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
         self.trt = trt
         self.gsims = gsims
+        self.single_site_opt = numpy.array(
+            [hasattr(gsim, 'get_mean_std1') for gsim in gsims])
         self.maximum_distance = (
             param.get('maximum_distance') or MagDepDistance({}))
         self.investigation_time = param.get('investigation_time')
@@ -196,19 +198,43 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
 
+    def multi(self, ctxs):
+        """
+        :params ctxs: a list of contexts, all referring to a single point
+        :returns: a multiple RuptureContext
+        """
+        ctx = RuptureContext()
+        for par in self.REQUIRES_SITES_PARAMETERS:
+            setattr(ctx, par, getattr(ctxs[0], par))
+        for par in self.REQUIRES_RUPTURE_PARAMETERS:
+            vals = [getattr(ctx, par) for ctx in ctxs]
+            setattr(ctx, par, numpy.array(vals))
+        for par in self.REQUIRES_DISTANCES:
+            dists = [getattr(ctx, par)[0] for ctx in ctxs]
+            setattr(ctx, par, numpy.array(dists))
+        ctx.ctxs = ctxs
+        return ctx
+
     def gen_ctx_poes(self, ctxs):
         """
         :param ctxs: a list of C context objects
         :yields: C pairs (ctx, poes of shape (N, L, G))
         """
-        nsites = [len(ctx.sids) for ctx in ctxs]
-        N = sum(nsites)
+        nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
+        C = len(ctxs)
+        N = nsites.sum()
         poes = numpy.zeros((N, len(self.loglevels.array), len(self.gsims)))
+        if self.single_site_opt.any():
+            ctx = self.multi(ctxs)
         for g, gsim in enumerate(self.gsims):
             with self.gmf_mon:
-                # shape (2, N, M)
-                mean_std = gsim.get_mean_std(ctxs, self.imts)
+                # builds mean_std of shape (2, N, M)
+                if self.single_site_opt[g] and C > 1 and (nsites == 1).all():
+                    mean_std = gsim.get_mean_std1(ctx, self.imts)
+                else:
+                    mean_std = gsim.get_mean_std(ctxs, self.imts)
             with self.poe_mon:
+                # builds poes of shape (N, L, G)
                 poes[:, :, g] = gsim.get_poes(
                     mean_std, self.loglevels, self.trunclevel, self.af, ctxs)
         s = 0
@@ -790,6 +816,16 @@ class RuptureContext(BaseContext):
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:
             setattr(self, param, value)
+
+    def size(self):
+        """
+        If the context is a multi rupture context, i.e. it contains an array
+        of magnitudes and it refers to a single site, returns the size of
+        the array, otherwise returns 1.
+        """
+        if isinstance(self.mag, numpy.ndarray) and len(self.vs30) == 1:
+            return len(self.mag)
+        return 1
 
     def roundup(self, minimum_distance):
         """
