@@ -170,7 +170,7 @@ def view_slow_ruptures(token, dstore, maxrows=25):
     """
     Show the slowest ruptures
     """
-    fields = ['code', 'n_occ', 'mag', 'grp_id']
+    fields = ['code', 'n_occ', 'mag', 'et_id']
     rups = dstore['ruptures'][()][fields]
     time = dstore['gmf_data/time_by_rup'][()]
     arr = util.compose_arrays(rups, time)
@@ -198,15 +198,15 @@ def view_contents(token, dstore):
 @view.add('full_lt')
 def view_full_lt(token, dstore):
     full_lt = dstore['full_lt']
-    if full_lt.num_samples == 0:
-        num_rlzs = full_lt.gsim_lt.get_num_paths()
-    header = ['smlt_path', 'weight', 'num_realizations']
+    try:
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['et_ids'])
+    except KeyError:  # for scenario et_ids is missing
+        rlzs_by_gsim_list = [full_lt.get_rlzs_by_gsim(0)]
+    header = ['grp_id', 'gsim', 'rlzs']
     rows = []
-    for sm in full_lt.sm_rlzs:
-        if full_lt.num_samples:
-            num_rlzs = sm.samples
-        row = ('_'.join(sm.lt_path), sm.weight, num_rlzs)
-        rows.append(row)
+    for grp_id, rbg in enumerate(rlzs_by_gsim_list):
+        for gsim, rlzs in rbg.items():
+            rows.append([grp_id, repr(str(gsim)), str(list(rlzs))])
     return rst_table(rows, header)
 
 
@@ -375,6 +375,52 @@ def view_portfolio_loss(token, dstore):
     return(rst_table(rows, ['loss'] + oq.loss_names))
 
 
+def portfolio_damage_error(dstore, avg=None):
+    """
+    The damages and errors for the full portfolio, extracted from
+    the asset damage table.
+    """
+    df = dstore.read_df('dd_data', 'eid')
+    dset = dstore.getitem('damages-rlzs')
+    A, R, L, D = dset.shape
+    dmg_states = dset.attrs['dmg_state']
+    loss_types = dset.attrs['loss_type']
+
+    sums = numpy.zeros((10, L, D-1))
+    for i in range(10):
+        section = df[df.index % 10 == i]
+        for l, grp in section.groupby('lid'):
+            ser = grp.sum()  # aid, lid, ds...
+            sums[i, l, :] = numpy.array(ser)[2:]
+
+    if avg is None:
+        if 'damages-stats' in dstore:
+            arr = dstore.sel('damages-stats', stat='mean')
+        else:
+            arr = dstore.sel('damages-rlzs', rlz=0)  # shape (A, 1, L, D)
+        avg = arr.sum(axis=(0, 1))[:, 1:]  # shape (L, D)
+
+    errors = avg * numpy.std(sums, axis=0) / numpy.mean(sums, axis=0)
+    dic = dict(dmg_state=[], loss_type=[], mean=[], error=[])
+    for l, lt in enumerate(loss_types):
+        for d, dmg in enumerate(dmg_states[1:]):
+            dic['dmg_state'].append(dmg)
+            dic['loss_type'].append(lt)
+            dic['mean'].append(avg[l, d])
+            dic['error'].append(errors[l, d])
+    return pandas.DataFrame(dic)
+
+
+@view.add('portfolio_damage_error')
+def view_portfolio_damage_error(token, dstore):
+    """
+    The damages and errors for the full portfolio, extracted from
+    the asset damage table.
+    """
+    df = portfolio_damage_error(dstore)
+    return rst_table(numpy.array(df), list(df.columns))
+
+
 @view.add('portfolio_damage')
 def view_portfolio_damage(token, dstore):
     """
@@ -510,16 +556,16 @@ def view_required_params_per_trt(token, dstore):
     """
     full_lt = dstore['full_lt']
     tbl = []
-    for grp_id, trt in enumerate(full_lt.trt_by_grp):
+    for et_id, trt in enumerate(full_lt.trt_by_et):
         gsims = full_lt.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((grp_id, ' '.join(map(repr, map(repr, gsims))),
+        tbl.append((et_id, ' '.join(map(repr, map(repr, gsims))),
                     distances, siteparams, ruptparams))
     return rst_table(
-        tbl, header='grp_id gsims distances siteparams ruptparams'.split(),
+        tbl, header='et_id gsims distances siteparams ruptparams'.split(),
         fmt=scientificformat)
 
 
@@ -543,7 +589,7 @@ def view_task_info(token, dstore):
         data.sort(order='duration')
         return rst_table(data)
 
-    data = ['operation-duration outputs mean stddev min max'.split()]
+    data = ['operation-duration counts mean stddev min max'.split()]
     for task, arr in group_array(task_info[()], 'taskname').items():
         val = arr['duration']
         if len(val):
@@ -639,7 +685,7 @@ def view_global_poes(token, dstore):
     """
     tbl = []
     imtls = dstore['oqparam'].imtls
-    header = ['grp_id'] + [str(poe) for poe in imtls.array]
+    header = ['et_id'] + [str(poe) for poe in imtls.array]
     for grp in sorted(dstore['poes']):
         poes = dstore['poes/' + grp]
         nsites = len(poes)
@@ -713,14 +759,14 @@ def view_gmf_error(token, dstore):
 class GmpeExtractor(object):
     def __init__(self, dstore):
         full_lt = dstore['full_lt']
-        self.trt_by_grp = full_lt.trt_by_grp
+        self.trt_by_et = full_lt.trt_by_et
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()
 
-    def extract(self, grp_ids, rlz_ids):
+    def extract(self, et_ids, rlz_ids):
         out = []
-        for grp_id, rlz_id in zip(grp_ids, rlz_ids):
-            trt = self.trt_by_grp[grp_id]
+        for et_id, rlz_id in zip(et_ids, rlz_ids):
+            trt = self.trt_by_et[et_id]
             out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
         return out
 
@@ -742,8 +788,8 @@ def view_extreme_gmvs(token, dstore):
         ev = dstore['events'][()][extreme_df.index]
         extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
-        grp_ids = dstore['ruptures']['grp_id'][extreme_df.rup]
-        extreme_df['gmpe'] = gmpe.extract(grp_ids, ev['rlz_id'])
+        et_ids = dstore['ruptures']['et_id'][extreme_df.rup]
+        extreme_df['gmpe'] = gmpe.extract(et_ids, ev['rlz_id'])
         return extreme_df.sort_values('gmv_0').groupby('sid').head(1)
     return 'Could not do anything for ' + imt0
 

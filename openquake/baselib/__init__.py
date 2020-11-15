@@ -100,7 +100,10 @@ def read(*paths, **validators):
     for section in parser.sections():
         config[section] = sec = DotDict(parser.items(section))
         for k, v in sec.items():
-            sec[k] = validators.get(k, lambda x: x)(v)
+            try:
+                sec[k] = validators.get(k, lambda x: x)(v)
+            except ValueError as err:
+                raise ValueError('%s for %s in %s' % (err, k, found[0]))
 
 
 config.read = read

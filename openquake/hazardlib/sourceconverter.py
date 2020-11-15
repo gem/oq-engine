@@ -566,12 +566,12 @@ class RuptureConverter(object):
     def convert_ruptureCollection(self, node):
         """
         :param node: a ruptureCollection node
-        :returns: a dictionary grp_id -> EBRuptures
+        :returns: a dictionary et_id -> EBRuptures
         """
         coll = {}
         for grpnode in node:
-            grp_id = int(grpnode['id'])
-            coll[grp_id] = ebrs = []
+            et_id = int(grpnode['id'])
+            coll[et_id] = ebrs = []
             for node in grpnode:
                 rup = self.convert_node(node)
                 rup.rup_id = int(node['id'])
@@ -620,6 +620,12 @@ class SourceConverter(RuptureConverter):
         source_id = getattr(obj, 'source_id', '')
         if self.source_id and source_id and source_id not in self.source_id:
             return
+        if hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):
+            # TruncatedGRMFD with slip rate
+            m = obj.mfd
+            obj.mfd = m.from_slip_rate(
+                m.min_mag, m.max_mag, m.bin_width, m.b_val,
+                m.slip_rate, m.rigidity, obj.get_fault_surface_area())
         return obj
 
     def get_tom(self, node):
@@ -654,10 +660,21 @@ class SourceConverter(RuptureConverter):
                     min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
                     occurrence_rates=~mfd_node.occurRates)
             elif mfd_node.tag.endswith('truncGutenbergRichterMFD'):
-                return mfd.TruncatedGRMFD(
-                    a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
-                    min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
-                    bin_width=self.width_of_mfd_bin)
+                slip_rate = mfd_node.get('slipRate')
+                rigidity = mfd_node.get('rigidity')
+                if slip_rate:
+                    assert rigidity
+                    # instantiate with a NaN area, to be fixed later on
+                    gr_mfd = mfd.TruncatedGRMFD.from_slip_rate(
+                        mfd_node['minMag'], mfd_node['maxMag'],
+                        self.width_of_mfd_bin, mfd_node['bValue'],
+                        slip_rate, rigidity, area=numpy.nan)
+                else:
+                    gr_mfd = mfd.TruncatedGRMFD(
+                        a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
+                        min_mag=mfd_node['minMag'], max_mag=mfd_node['maxMag'],
+                        bin_width=self.width_of_mfd_bin)
+                return gr_mfd
             elif mfd_node.tag.endswith('arbitraryMFD'):
                 return mfd.ArbitraryMFD(
                     magnitudes=~mfd_node.magnitudes,

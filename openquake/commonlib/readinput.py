@@ -66,15 +66,13 @@ smlt_cache = {}  # fname, seed, samples, meth -> SourceModelLogicTree instance
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
-    ('gidx', numpy.uint16),            # 1
+    ('grp_id', numpy.uint16),            # 1
     ('code', (numpy.string_, 1)),      # 2
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
     ('eff_ruptures', numpy.uint32),    # 5
-    ('serial', numpy.uint32),          # 6
-    ('trti', numpy.uint8),             # 7
+    ('trti', numpy.uint8),             # 6
 ])
-SERIAL = 6
 
 
 class DuplicatedPoint(Exception):
@@ -285,6 +283,26 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
     if hc_id:
         job_ini.update(hazard_calculation_id=str(hc_id))
     job_ini.update(kw)
+    re = os.environ.get('OQ_REDUCE')  # debugging facility
+    if re:
+        # reduce the imtls to the first imt
+        # reduce the logic tree to one random realization
+        # reduce the sites by a factor of `re`
+        # reduce the ses by a factor of `re`
+        # set save_disk_space = true
+        os.environ['OQ_SAMPLE_SITES'] = str(1 / float(re))
+        job_ini['number_of_logic_tree_samples'] = 1
+        ses = job_ini.get('ses_per_logic_tree_path')
+        if ses:
+            ses = str(int(numpy.ceil(int(ses) / float(re))))
+            job_ini['ses_per_logic_tree_path'] = ses
+        imtls = job_ini.get('intensity_measure_types_and_levels')
+        if imtls:
+            imtls = valid.intensity_measure_types_and_levels(imtls)
+            imt = next(iter(imtls))
+            job_ini['intensity_measure_types_and_levels'] = repr(
+                {imt: imtls[imt]})
+        job_ini['save_disk_space'] = True
     oqparam = OqParam(**job_ini)
     if validate and '_job_id' not in job_ini:
         oqparam.check_source_model()
@@ -717,30 +735,29 @@ def get_composite_source_model(oqparam, h5=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
+    logging.info('Reading the CompositeSourceModel')
     full_lt = get_full_lt(oqparam)
     if oqparam.cachedir and not oqparam.is_ucerf():
         csm = _get_cachedir(oqparam, full_lt, h5)
     else:
         csm = get_csm(oqparam, full_lt,  h5)
-    grp_ids = csm.get_grp_ids()
-    gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
-    if oqparam.is_event_based():
-        csm.init_serials(oqparam.ses_seed)
+    et_ids = csm.get_et_ids()
+    logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
+    grp_id = {tuple(arr): i for i, arr in enumerate(et_ids)}
     data = {}  # src_id -> row
     mags = AccumDict(accum=set())  # trt -> mags
     wkts = []
-    ns = -1
+    lens = []
     for sg in csm.src_groups:
         if hasattr(sg, 'mags'):  # UCERF
             mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
-            ns += 1
-            src.gidx = gidx[tuple(src.grp_ids)]
-            row = [src.source_id, src.gidx, src.code,
-                   0, 0, 0, src.serial or ns,
-                   full_lt.trti[src.tectonic_region_type]]
+            lens.append(len(src.et_ids))
+            src.grp_id = grp_id[tuple(src.et_ids)]
+            row = [src.source_id, src.grp_id, src.code,
+                   0, 0, 0, full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
-            data[src.source_id] = row
+            data[src.id] = row
             if hasattr(src, 'mags'):  # UCERF
                 continue  # already accounted for in sg.mags
             elif hasattr(src, 'data'):  # nonparametric
@@ -749,13 +766,15 @@ def get_composite_source_model(oqparam, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags[sg.trt].update(srcmags)
-    logging.info('There are %d sources', ns + 1)
+    logging.info('There are %d groups and %d sources with len(et_ids)=%.2f',
+                 len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
+                 numpy.mean(lens))
     if h5:
         attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
         # avoid hdf5 damned bug by creating source_info in advance
         hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        h5['grp_ids'] = grp_ids
+        h5['et_ids'] = et_ids
         mags_by_trt = {}
         for trt in mags:
             mags_by_trt[trt] = arr = numpy.array(sorted(mags[trt]))

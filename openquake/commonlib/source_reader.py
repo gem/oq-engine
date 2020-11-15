@@ -32,6 +32,10 @@ TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
 
 
+def et_ids(src):
+    return tuple(src.et_ids)
+
+
 def random_filtered_sources(sources, srcfilter, seed):
     """
     :param sources: a list of sources
@@ -93,26 +97,35 @@ def get_csm(oq, full_lt, h5=None):
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
         not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
-    logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
     classical = not oq.is_event_based()
+    full_lt.ses_seed = oq.ses_seed
     if oq.is_ucerf():
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         src_groups = []
-        for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
+        for et_id, sm_rlz in enumerate(full_lt.sm_rlzs):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
             sg.mags = numpy.unique(numpy.round(src.mags, 2))
             del src.__dict__['mags']  # remove cache
-            src.checksum = src.grp_id = src.id = grp_id
+            src.checksum = src.et_id = src.id = et_id
             src.samples = sm_rlz.samples
+            logging.info('Reading sections and rupture planes for %s', src)
+            planes = src.get_planes()
             if classical:
                 src.ruptures_per_block = oq.ruptures_per_block
                 sg.sources = list(src)
+                for s in sg:
+                    s.planes = planes
+                    s.sections = s.get_sections()
                 # add background point sources
-                sg.sources.extend(src.get_background_sources())
+                sg = copy.copy(grp)
+                src_groups.append(sg)
+                sg.sources = src.get_background_sources()
             else:  # event_based, use one source
                 sg.sources = [src]
+                src.planes = planes
+                src.sections = src.get_sections()
         return CompositeSourceModel(full_lt, src_groups)
 
     logging.info('Reading the source model(s) in parallel')
@@ -166,10 +179,10 @@ def _build_groups(full_lt, smdict):
                     (value, common, rlz.value))
             src_groups.extend(extra)
         for src_group in src_groups:
-            grp_id = full_lt.get_grp_id(src_group.trt, rlz.ordinal)
+            et_id = full_lt.get_et_id(src_group.trt, rlz.ordinal)
             sg = apply_uncertainties(bset_values, src_group)
             for src in sg:
-                src.grp_id = grp_id
+                src.et_id = et_id
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             groups.append(sg)
@@ -190,23 +203,23 @@ def _build_groups(full_lt, smdict):
 def reduce_sources(sources_with_same_id):
     """
     :param sources_with_same_id: a list of sources with the same source_id
-    :returns: a list of truly unique sources, ordered by grp_id
+    :returns: a list of truly unique sources, ordered by et_id
     """
     out = []
     for src in sources_with_same_id:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id grp_id samples'}
+               if k not in 'source_id et_id samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
         # duplicate sources: same id, same checksum
         src = srcs[0]
         if len(srcs) > 1:  # happens in classical/case_20
-            src.grp_id = tuple(s.grp_id for s in srcs)
+            src.et_id = tuple(s.et_id for s in srcs)
         else:
-            src.grp_id = src.grp_id,
+            src.et_id = src.et_id,
         out.append(src)
-    out.sort(key=operator.attrgetter('grp_id'))
+    out.sort(key=operator.attrgetter('et_id'))
     return out
 
 
@@ -221,7 +234,6 @@ def _get_csm(full_lt, groups):
         elif grp:
             acc[grp.trt].extend(grp)
     key = operator.attrgetter('source_id', 'code')
-    idx = 0
     src_groups = []
     for trt in acc:
         lst = []
@@ -229,16 +241,13 @@ def _get_csm(full_lt, groups):
             if len(srcs) > 1:
                 srcs = reduce_sources(srcs)
             for src in srcs:
-                src.id = idx
                 src._wkt = src.wkt()
-                idx += 1
                 lst.append(src)
-        src_groups.append(sourceconverter.SourceGroup(trt, lst))
+        for grp in general.groupby(lst, et_ids).values():
+            src_groups.append(sourceconverter.SourceGroup(trt, grp))
     for ag in atomic:
         for src in ag:
-            src.id = idx
             src._wkt = src.wkt()
-            idx += 1
     src_groups.extend(atomic)
     _check_dupl_ids(src_groups)
     return CompositeSourceModel(full_lt, src_groups)
@@ -246,14 +255,10 @@ def _get_csm(full_lt, groups):
 
 class CompositeSourceModel:
     """
-    :param gsim_lt:
-        a :class:`openquake.commonlib.logictree.GsimLogicTree` instance
     :param full_lt:
         a :class:`FullLogicTree` instance
-    :param groups:
+    :param src_groups:
         a list of SourceGroups
-    :param ses_seed:
-        a seed used in event based
     :param event_based:
         a flag True for event based calculations, flag otherwise
     """
@@ -263,26 +268,20 @@ class CompositeSourceModel:
         self.sm_rlzs = full_lt.sm_rlzs
         self.full_lt = full_lt
         self.src_groups = src_groups
-
-    def init_serials(self, ses_seed):
-        """
-        Called only for event based calculations
-        """
-        serial = ses_seed
-        for sg in self.src_groups:
+        idx = 0
+        for sg in src_groups:
+            assert len(sg)  # sanity check
             for src in sg:
-                src.serial = serial
-                if not src.num_ruptures:
-                    src.num_ruptures = src.count_ruptures()
-                serial += src.num_ruptures * len(src.grp_ids)
+                src.id = idx
+                idx += 1
 
-    def get_grp_ids(self):
+    def get_et_ids(self):
         """
-        :returns: an array of grp_ids (to be stored as an hdf5.vuint32 array)
+        :returns: an array of et_ids (to be stored as an hdf5.vuint32 array)
         """
-        keys = set(tuple(src.grp_ids) for sg in self.src_groups for src in sg)
+        keys = [sg.sources[0].et_ids for sg in self.src_groups]
         assert len(keys) < TWO16, len(keys)
-        return [numpy.array(grp_ids, numpy.uint32) for grp_ids in sorted(keys)]
+        return [numpy.array(et_ids, numpy.uint32) for et_ids in keys]
 
     def get_sources(self):
         """
@@ -298,9 +297,9 @@ class CompositeSourceModel:
         """
         src_groups = []
         for sg in self.src_groups:
-            grp_id = self.full_lt.get_grp_id(sg.trt, eri)
+            et_id = self.full_lt.get_et_id(sg.trt, eri)
             src_group = copy.copy(sg)
-            src_group.sources = [src for src in sg if grp_id in src.grp_ids]
+            src_group.sources = [src for src in sg if et_id in src.et_ids]
             if len(src_group):
                 src_groups.append(src_group)
         return src_groups

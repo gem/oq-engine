@@ -204,5 +204,4 @@ Then the hazard curve can be computed as follows:
 >>> gsim_lt = readinput.get_gsim_lt(oq)
 >>> calc_hazard_curve(sitecol, src, gsim_lt.values, oq)
 <ProbabilityCurve
-[[0.00507997]]>
-
+[[0.00508693]]>

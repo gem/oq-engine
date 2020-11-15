@@ -262,14 +262,6 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
-        full_lt = dstore['full_lt']
-        self.trt_by_grp = full_lt.trt_by_grp
-        self.rlzs_by_gsim_grp = full_lt.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = full_lt.get_samples_by_grp()
-        self.num_rlzs_by_grp = {
-            grp_id:
-            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
-            for grp_id in self.rlzs_by_gsim_grp}
 
     def import_rups(self, rup_array):
         """
@@ -279,7 +271,11 @@ class RuptureImporter(object):
         # order the ruptures by serial
         rup_array.sort(order='serial')
         nr = len(rup_array)
-        assert len(numpy.unique(rup_array['serial'])) == nr  # sanity
+        serials, counts = numpy.unique(rup_array['serial'], return_counts=True)
+        if len(serials) != nr:
+            dupl = serials[counts > 1]
+            logging.info('The following %d rupture seeds are duplicated: %s',
+                         len(dupl), dupl)
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
         self.datastore['ruptures'] = rup_array
@@ -287,7 +283,7 @@ class RuptureImporter(object):
 
     def save_events(self, rup_array):
         """
-        :param rup_array: an array of ruptures with fields grp_id
+        :param rup_array: an array of ruptures with fields et_id
         :returns: a list of RuptureGetters
         """
         from openquake.calculators.getters import (

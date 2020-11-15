@@ -18,7 +18,6 @@
 
 import os.path
 import logging
-import operator
 import numpy
 
 from openquake.baselib import hdf5, parallel
@@ -46,7 +45,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = numpy.float64(2 ** 32)
-by_grp = operator.attrgetter('grp_id')
 
 
 # ######################## GMF calculator ############################ #
@@ -100,7 +98,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def acc0(self):
         """
-        Initial accumulator, a dictionary (grp_id, gsim) -> curves
+        Initial accumulator, a dictionary (et_id, gsim) -> curves
         """
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
@@ -160,8 +158,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # must be called before storing the events
         self.store_rlz_info(eff_ruptures)  # store full_lt
-        with self.monitor('store source_info'):
-            self.store_source_info(calc_times)
+        self.store_source_info(calc_times)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
             imp.import_rups(self.datastore.getitem('ruptures')[()])
@@ -220,7 +217,7 @@ class EventBasedCalculator(base.HazardCalculator):
             oqparam=oq,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
-            imtls=oq.imtls, filter_distance=oq.filter_distance,
+            imtls=oq.imtls,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path, **kw)
 
     def _read_scenario_ruptures(self):
@@ -315,8 +312,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     for rgetter in gen_rupture_getters(
                             self.datastore, oq.concurrent_tasks))
         smap = parallel.Starmap(
-            self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores)
+            self.core_task.__func__, iterargs, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in self.datastore:

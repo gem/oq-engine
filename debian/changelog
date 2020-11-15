@@ -1,4 +1,49 @@
   [Michele Simionato]
+  * Reduced slow tasks due to big complex fault sources
+  * Moved the parameter `num_cores` into openquake.cfg
+  * Internal: introduced the environment variable OQ_REDUCE
+  * Using pandas to export the GMF in CSV format
+  * Internal: required h5py == 2.10.0
+  * Internal: made the classical ruptures pandas-friendly
+  * Internal: made the damage distributions pandas-friendly
+
+  [Marco Pagani]
+  * Added a new type of undertainty for the seismic source characterisation
+    logic tree called `TruncatedGRFromSlipAbsolute`
+  * Added a get_fault_surface_area method to sources
+
+  [Michele Simionato]
+  * Changed the source seed algorithm in event based calculations
+  * Added an estimate of the portfolio damage error due to the seed dependency
+  * Stored the damage distributions in a pandas-friendly way and extended
+    `DataStore.read_df` to accept multi-indices
+
+ [Viktor Polak]
+  * Added the Phung et al. (2020) GMPE
+
+  [Michele Simionato]
+  * Implemented `truncGutenbergRichterMFD` from slip rate and rigidity
+  * Fixed bug when computing the damage distributions per asset and event
+  * Simplified/optimized the UCERF filtering
+
+  [Viktor Polak]
+  * Added the Chao et al. (2020) GMPE
+
+  [Michele Simionato]
+  * Introduced an early memory check in classical calculations
+  * Reduced the memory occupation in classical calculations
+  * Implemented AvgPoeGMPE
+  * Forbidded the usage of `aggregate_by` except in ebrisk calculations
+  * Added a check on valid branch ID names: only letters, digits and
+    the characters "#:-_." are accepted
+  * Huge performance improvement for very complex logic trees
+  * Shortened the logic tree paths when exporting the realizations
+
+  [Graeme Weatherill]
+  * Refactor of the Kotha et al. (2020) GMM and its adjustments for ESHM20
+
+  [Michele Simionato]
+  * Huge speedup in models with src_multiplicity > 1
   * Fixed bug in source model logic tree sampling with more than 2 branchsets
   * Fixed hazard maps all zeros for individual_curves=true and more than 1 site
   * Fixed a bug in `oq prepare_site_model` when sites.csv is
@@ -19,6 +64,11 @@
 
   [Marco Pagani]
   * Added a check on DEFINED_FOR_REFERENCE_VELOCITY when using amplification
+  * Added a method to create a TruncatedGRMFD from a value of scalar seismic
+    moment
+  * Added a method to the modifiable GMPE to add (or subtract) a delta std
+  * Added a method to the modifiable GMPE to set the total std as the sum of
+	tau plus a delta
 
 python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
 

@@ -62,8 +62,6 @@ class ZhaoEtAl2006Asc(GMPE):
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT}
 
-    DEFINED_FOR_REFERENCE_VELOCITY = 1100.
-
     #: Required site parameters is Vs30.
     #: See table 2, p. 901.
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -75,6 +73,12 @@ class ZhaoEtAl2006Asc(GMPE):
     #: Required distance measure is Rrup.
     #: See paragraph 'Development of Base Model', p. 902.
     REQUIRES_DISTANCES = {'rrup'}
+
+    #: Reference conditions. See Table 2 at page 901. The hard rock conditions
+    #: is 1100 m/s. Here we force it to 800 to make it compatible with a 
+    #: generic site term
+    #  DEFINED_FOR_REFERENCE_VELOCITY = 1100
+    DEFINED_FOR_REFERENCE_VELOCITY = 800
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

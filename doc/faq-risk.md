@@ -12,11 +12,10 @@ seed should result in identical random numbers being generated each time.
 Three different seeds are currently recognized and used by the OpenQuake
 engine.
 
-1. `random_seed` is the seed used for sampling branches from the source 
-model logic tree when the parameter `number_of_logic_tree_samples`
-is non-zero. By changing it, different paths in the source model 
-logic tree will be sampled. It affects both classical calculations 
-and event based calculations.
+1. `random_seed` is the seed that controls the sampling of branches 
+from both the source model logic tree and the ground motion model logic tree,
+when the parameter `number_of_logic_tree_samples` is non-zero.
+It affects both classical calculations and event based calculations.
 
 2. `ses_seed` is used to generate the seeds for the ruptures involved in
 a scenario or event based calculation. In an event based calculation

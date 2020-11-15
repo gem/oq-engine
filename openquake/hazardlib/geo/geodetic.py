@@ -520,8 +520,7 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
     # http://en.wikipedia.org/wiki/Spherical_trigonometry#Napier.27s_Pentagon
     angle = numpy.arccos(
         (numpy.sin(numpy.radians(t_angle))
-         * numpy.sin(distance_to_target / EARTH_RADIUS))
-    )
+         * numpy.sin(distance_to_target / EARTH_RADIUS)))
     return (numpy.pi / 2 - angle) * EARTH_RADIUS
 
 

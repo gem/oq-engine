@@ -175,6 +175,38 @@ class ModifiableGMPETest(unittest.TestCase):
                                            sfact * np.ones(stddev.shape))
 
 
+    def test_add_delta(self):
+        """Check adding/removing a delta std to the total std"""
+        gmpe_name = 'AkkarEtAlRjb2014'
+        stddevs = [const.StdDev.TOTAL]
+
+        gmm = ModifiableGMPE(
+            gmpe={gmpe_name: {}},
+            add_delta_std_to_total_std={"delta": -0.20})
+        imt = PGA()
+        [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup,
+                                            self.dists, imt, stddevs)[1]
+
+        # Original total std for PGA is 0.7121
+        np.testing.assert_almost_equal(stddev[0], 0.68344277, decimal=6)
+
+
+    def test_set_total_std_as_tau_plus_phi(self):
+        """Check set total std as between plus phi SS"""
+        gmpe_name = 'AkkarEtAlRjb2014'
+        stddevs = [const.StdDev.TOTAL]
+
+        gmm = ModifiableGMPE(
+            gmpe={gmpe_name: {}},
+            set_total_std_as_tau_plus_delta={"delta": 0.45})
+        imt = PGA()
+        [stddev] = gmm.get_mean_and_stddevs(self.sites, self.rup,
+                                            self.dists, imt, stddevs)[1]
+
+        # Original tau for PGA is 0.6201
+        np.testing.assert_almost_equal(stddev[0], 0.5701491121, decimal=6)
+
+
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
     """
     Tests the implementation of a correction factor for intensity

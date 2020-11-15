@@ -1,0 +1,50 @@
+  - name: Ensure user openquake exist and generate ssh key
+    user:
+      name: openquake
+      home: /home/openquake
+      shell: /bin/bash
+      state: present
+      generate_ssh_key: yes
+      ssh_key_bits: 2048
+      ssh_key_file: .ssh/id_rsa
+
+  - name: Check if dbserver is running on the hosts
+    script: files/db_server.bash
+    ignore_errors: true
+    changed_when: false
+    register: dbserver_pid
+
+  - name: Kill dbserver
+    shell: "kill -9 {{ item }}"
+    with_items: "{{ dbserver_pid.stdout_lines }}"
+
+  - name: Install latest wheel setuptools and pip in virtualenv
+    pip:
+      name: "{{ item }} "
+      virtualenv: /opt/openquake
+      virtualenv_command: /usr/bin/python3.8 -m venv
+      state: latest
+    loop: [ 'pip']
+#
+
+#python3.8
+  - name: Install the requirementes files for python 3.8 in virtualenv
+    pip:
+      virtualenv: /opt/openquake
+      requirements: "{{ req_py38 }}"
+      virtualenv_command: /usr/bin/python3.8 -m venv
+      state: present
+
+  - name: "Install the OpenQuake Engine version: {{ engine_release }}"
+    pip:
+      name: openquake.engine
+      version: "{{ engine_release }}"
+      virtualenv: /opt/openquake
+      virtualenv_command: /usr/bin/python3.8 -m venv
+      state: present
+
+  - name: Set symbolic link for venv
+    file:
+      src: "{{ venv_bin }}/oq"
+      dest: "/usr/bin/oq"
+      state: link

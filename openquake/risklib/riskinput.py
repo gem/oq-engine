@@ -61,28 +61,29 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         eids = []
         data = [haz.array[crmodel.imtls(imt), 0] for imt in crmodel.imtls]
     elif isinstance(haz, pandas.DataFrame):
-        # NB: in GMF-based calculations the order in which
-        # the gmfs are stored is random since it depends on
-        # which hazard task ends first; here we reorder
-        # the gmfs by event ID; this is convenient in
-        # general and mandatory for the case of
-        # VulnerabilityFunctionWithPMF, otherwise the
-        # sample method would receive the means in random
-        # order and produce random results even if the
-        # seed is set correctly; very tricky indeed! (MS)
-        haz.sort_values('eid', inplace=True)
-        eids = haz.eid.to_numpy()
-        lst = [haz[col].to_numpy() for col in haz.columns
-               if col.startswith('gmv_')]
-        data = numpy.array(lst).T  # shape (E, M)
+        if 'gmv_0' in haz.columns:  # regular case
+            # NB: in GMF-based calculations the order in which
+            # the gmfs are stored is random since it depends on
+            # which hazard task ends first; here we reorder
+            # the gmfs by event ID; this is convenient in
+            # general and mandatory for the case of
+            # VulnerabilityFunctionWithPMF, otherwise the
+            # sample method would receive the means in random
+            # order and produce random results even if the
+            # seed is set correctly; very tricky indeed! (MS)
+            haz.sort_values('eid', inplace=True)
+            eids = haz.eid.to_numpy()
+            lst = [haz[col].to_numpy() for col in haz.columns
+                   if col.startswith('gmv_')]
+            data = numpy.array(lst).T  # shape (E, M)
+        else:  # ZeroGetterfor this site (event based)
+            eids = numpy.arange(1)
+            data = []
     elif isinstance(haz, numpy.ndarray):
         # ebrisk
         haz.sort(order='eid')
         eids = haz['eid']
         data = haz['gmv']  # shape (E, M)
-    elif haz == 0:  # no hazard for this site (event based)
-        eids = numpy.arange(1)
-        data = []
     else:
         raise ValueError('Unexpected haz=%s' % haz)
     dic = dict(eids=eids, assets=assets_by_taxo.assets,

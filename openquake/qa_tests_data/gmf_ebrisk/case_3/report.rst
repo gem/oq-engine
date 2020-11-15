@@ -1,11 +1,11 @@
 Event Based Risk from GMF
 =========================
 
-============== ===================
-checksum32     178_525_834        
-date           2020-03-13T11:20:14
-engine_version 3.9.0-gitfb3ef3a732
-============== ===================
+============== ====================
+checksum32     648_091_558         
+date           2020-11-02T09:35:30 
+engine_version 3.11.0-git82b78631ac
+============== ====================
 
 num_sites = 13, num_levels = 2, num_rlzs = 1
 
@@ -22,7 +22,7 @@ rupture_mesh_spacing            5.0
 complex_fault_mesh_spacing      5.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
-pointsource_distance            {'default': {}}   
+pointsource_distance            None              
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     42                
@@ -45,11 +45,11 @@ structural_vulnerability `cr_vulnerability_v5.xml <cr_vulnerability_v5.xml>`_
 
 Composite source model
 ----------------------
-========= ======= ================
-smlt_path weight  num_realizations
-========= ======= ================
-b_1       1.00000 1               
-========= ======= ================
+====== ============ ====
+grp_id gsim         rlzs
+====== ============ ====
+0      '[FromFile]' [0] 
+====== ============ ====
 
 Estimated data transfer for the avglosses
 -----------------------------------------
@@ -62,20 +62,20 @@ Exposure model
 #taxonomies 10 
 =========== ===
 
-==================================== ======= ======= === === ========= ==========
-taxonomy                             mean    stddev  min max num_sites num_assets
-MCF/LWALL+DLO/HEX:1/YBET:1980-2010   1.57143 0.97590 1   3   7         11        
-W+WLI/LWALL+DNO/HEX:1/YPRE:1980      2.20000 1.09545 1   4   5         11        
-CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010 1.60000 1.26491 1   5   10        16        
-MCF/LWALL+DUC/HEX:2/YBET:1980-2010   1.62500 0.91613 1   3   8         13        
-MATO/LN+DNO/HEX:1/Y99                1.54545 0.82020 1   3   11        17        
-W+WLI/LWALL+DLO/HEX:1/YPRE:1980      2.00000 1.82574 1   6   7         14        
-CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010 2.25000 0.95743 1   3   4         9         
-MCF/LWALL+DUC/HEX:1/YBET:1980-2010   2.00000 1.26491 1   4   6         12        
-MR/LWALL+DUC/HEX:1/YBET:1980-2010    1.85714 1.06904 1   4   7         13        
-MR/LWALL+DLO/HEX:1/YBET:1980-2010    1.00000 0.0     1   1   4         4         
-*ALL*                                9.23077 9.16655 2   36  13        120       
-==================================== ======= ======= === === ========= ==========
+==================================== ========== ======= ====== === === =========
+taxonomy                             num_assets mean    stddev min max num_sites
+MCF/LWALL+DLO/HEX:1/YBET:1980-2010   7          1.57143 57%    1   3   11       
+W+WLI/LWALL+DNO/HEX:1/YPRE:1980      5          2.20000 44%    1   4   11       
+CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010 10         1.60000 74%    1   5   16       
+MCF/LWALL+DUC/HEX:2/YBET:1980-2010   8          1.62500 52%    1   3   13       
+MATO/LN+DNO/HEX:1/Y99                11         1.54545 50%    1   3   17       
+W+WLI/LWALL+DLO/HEX:1/YPRE:1980      7          2.00000 84%    1   6   14       
+CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010 4          2.25000 36%    1   3   9        
+MCF/LWALL+DUC/HEX:1/YBET:1980-2010   6          2.00000 57%    1   4   12       
+MR/LWALL+DUC/HEX:1/YBET:1980-2010    7          1.85714 53%    1   4   13       
+MR/LWALL+DLO/HEX:1/YBET:1980-2010    4          1.00000 0%     1   1   4        
+*ALL*                                13         9.23077 95%    2   36  120      
+==================================== ========== ======= ====== === === =========
 
 Information about the tasks
 ---------------------------
@@ -90,7 +90,8 @@ task sent received
 Slowest operations
 ------------------
 ================ ======== ========= ======
-calc_66860       time_sec memory_mb counts
+calc_47208       time_sec memory_mb counts
 ================ ======== ========= ======
-reading exposure 0.00936  0.0       1     
+importing inputs 0.05266  0.67578   1     
+reading exposure 0.01030  0.01172   1     
 ================ ======== ========= ======

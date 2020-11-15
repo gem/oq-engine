@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
 import abc
+import zlib
 import numpy
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -36,11 +37,11 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
+    et_id = 0  # set by the engine
     nsites = 0  # set when filtering the source
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
-    serial = 0  # set in init_serials
     checksum = 0  # set in source_reader
 
     @abc.abstractproperty
@@ -60,22 +61,27 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 self.hypocenter_distribution.data)
         else:
             rescale = 1
-        g = len(self.grp_ids)
-        return self.num_ruptures * self.ngsims * nsites_factor * g / rescale
+        return self.num_ruptures * self.ngsims * nsites_factor / rescale
 
     @property
-    def grp_ids(self):
+    def et_ids(self):
         """
         :returns: a list of source group IDs (usually of 1 element)
         """
-        grp_id = self.grp_id
-        return [grp_id] if isinstance(grp_id, int) else grp_id
+        et_id = self.et_id
+        return [et_id] if isinstance(et_id, int) else et_id
+
+    def serial(self, ses_seed):
+        """
+        :returns: a random seed derived from source_id and ses_seed
+        """
+        return zlib.adler32(self.source_id.encode('ascii'), ses_seed)
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
         self.name = name
         self.tectonic_region_type = tectonic_region_type
-        self.grp_id = -1  # set by the engine
+        self.et_id = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
         self.min_mag = 0  # set by the SourceConverter
@@ -97,18 +103,18 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             `~openquake.hazardlib.source.rupture.BaseProbabilisticRupture`.
         """
 
-    def sample_ruptures(self, eff_num_ses):
+    def sample_ruptures(self, eff_num_ses, ses_seed):
         """
         :param eff_num_ses: number of stochastic event sets * number of samples
         :yields: pairs (rupture, num_occurrences[num_samples])
         """
-        rup_id = self.serial
-        numpy.random.seed(self.serial)
-        for grp_id in self.grp_ids:
+        seed = self.serial(ses_seed)
+        numpy.random.seed(seed)
+        for et_id in self.et_ids:
             for rup, num_occ in self._sample_ruptures(eff_num_ses):
-                rup.rup_id = rup_id
-                rup_id += 1
-                yield rup, grp_id, num_occ
+                rup.rup_id = seed
+                seed += 1
+                yield rup, et_id, num_occ
 
     def _sample_ruptures(self, eff_num_ses):
         tom = getattr(self, 'temporal_occurrence_model', None)
@@ -184,7 +190,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 yield rup, num_occ
 
     @abc.abstractmethod
-    def get_one_rupture(self, rupture_mutex=False):
+    def get_one_rupture(self, ses_seed, rupture_mutex=False):
         """
         Yields one random rupture from a source
         """
@@ -318,7 +324,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         return '<%s %s>' % (self.__class__.__name__, self.source_id)
 
-    def get_one_rupture(self, rupture_mutex=False):
+    def get_one_rupture(self, ses_seed, rupture_mutex=False):
         """
         Yields one random rupture from a source
         """
@@ -328,7 +334,8 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         assert (not rupture_mutex), msg
         # Set random seed and get the number of ruptures
         num_ruptures = self.count_ruptures()
-        numpy.random.seed(self.seed)
+        seed = self.serial(ses_seed)
+        numpy.random.seed(seed)
         idx = numpy.random.choice(num_ruptures)
         # NOTE Would be nice to have a method generating a rupture given two
         # indexes, one for magnitude and one setting the position

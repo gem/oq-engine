@@ -89,6 +89,12 @@ class ModifyCharacteristicFaultSurfaceTestCase(_BaseFaultSourceTestCase):
     def setUp(self):
         self.fault = self._make_source()
 
+    def test_get_area(self):
+        computed = self.fault.get_fault_surface_area()
+        # Checked with an approx calculaton by hand
+        expected = 2221.701960081241
+        self.assertAlmostEqual(computed, expected, places=5) 
+
     def test_modify_set_geometry(self):
         new_corner_lons = numpy.array([-1.1, 1.1, -1.1, 1.1])
         new_corner_lats = numpy.array([0., 0., 0., 0.])

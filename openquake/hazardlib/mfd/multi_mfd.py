@@ -45,6 +45,7 @@ ALIAS = dict(min_mag='minMag', max_mag='maxMag',
 
 TOML2PY = dict(_minMag='min_mag', _maxMag='max_mag',
                _aValue='a_val', _bValue='b_val',
+               _slipRate='slip_rate',
                _binWidth='bin_width',
                _characteristicMag='char_mag',
                _characteristicRate='char_rate',
