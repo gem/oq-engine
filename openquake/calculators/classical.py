@@ -50,18 +50,6 @@ get_weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('et_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
-MAXMEMORY = '''Estimated upper memory limit per core:
-%d sites x %d levels x %d gsims x 8 bytes = %s'''
-
-TOOBIG = '''\
-The calculation is too big and will likely fail:
-num_sites = %d
-num_levels = %d
-num_gsims = %d
-The estimated memory per core is %s > 4 GB.
-You should reduce one or more of the listed parameters.'''
-
-
 def get_extreme_poe(array, imtls):
     """
     :param array: array of shape (L, G) with L=num_levels, G=num_gsims
@@ -307,7 +295,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Requiring %s for ProbabilityMap of shape %s',
                      humansize(size), poes_shape)
         avail = psutil.virtual_memory().available
-        if avail < 2 * size:
+        if avail < 1.5 * size:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
         self.datastore.create_dset('_poes', F64, poes_shape)
@@ -445,17 +433,6 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.max_sites_per_tile, oq.max_sites_disagg)
         hint = 1 if self.N <= oq.max_sites_disagg else numpy.ceil(
             self.N / oq.max_sites_per_tile)
-        srcfilter = self.src_filter()
-        N = len(srcfilter.sitecol)
-
-        # estimate max memory per core
-        max_num_gsims = max(len(gsims) for gsims in rlzs_by_gsim_list)
-        L = len(oq.imtls.array)
-        pmapbytes = N * L * max_num_gsims * 8
-        if pmapbytes > TWO32:
-            logging.warning(TOOBIG, N, L, max_num_gsims, humansize(pmapbytes))
-        logging.info(MAXMEMORY, N, L, max_num_gsims, humansize(pmapbytes))
-
         C = oq.concurrent_tasks or 1
         if oq.disagg_by_src or oq.is_ucerf():
             f1, f2 = classical, classical
