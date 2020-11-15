@@ -139,7 +139,7 @@ class InfoTestCase(unittest.TestCase):
         with Print.patch() as p:
             info('sources')
         lines = str(p).split()
-        self.assertGreaterEqual(len(lines), 10)
+        self.assertGreaterEqual(len(lines), 9)
 
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
