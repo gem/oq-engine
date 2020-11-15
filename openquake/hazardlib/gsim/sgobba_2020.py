@@ -21,9 +21,10 @@ Module :mod:`openquake.hazardlib.gsim.sgobba_2020` implements
 """
 
 import numpy as np
-from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.geo.polygon import Polygon
+from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 
 
 class SgobbaEtAl2020(GMPE):
@@ -71,6 +72,7 @@ class SgobbaEtAl2020(GMPE):
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
+        Eq.1 - page 2
         """
         # Ergodic coeffs
         C = self.COEFFS[imt]
@@ -78,16 +80,19 @@ class SgobbaEtAl2020(GMPE):
         # Get mean
         mean = (self._get_magnitude_term(C, rup.mag) +
                 self._get_distance_term(C, dists) +
-                self._get_adjustments(C)
-                )
+                self._get_adjustments(C))
 
         # Get stds
         stds = []
+
+        # Get cluster region
+        get_cluster_region(rup.hypocenter)
 
         return mean, stds
 
     def _get_magnitude_term(self, C, mag):
         """
+        Eq.2 - page 3
         """
         if mag <= self.consts['Mh']:
             return C['b1']*(mag-consts['Mh'])
@@ -96,8 +101,9 @@ class SgobbaEtAl2020(GMPE):
 
     def _get_distance_term(self, C, mag, dists):
         """
+        Eq.3 - page 3
         """
-        term1 = C['c1']*(mag-C['Mref'])
+        term1 = C['c1']*(mag-C['Mref']) + C['c2']
         tmp = np.sqrt(dists.rjb**2+consts['PseudoDepth']**2)
         term2 = np.log10(tmp/consts['Rref'])
         term3 = C['c3']*(tmp-consts['Rref'])
@@ -121,13 +127,25 @@ class SgobbaEtAl2020(GMPE):
                self._get_delta_P2P_adj())
 
 
+def get_cluster_region(hypo):
+
+    for key in REGIONS:
+        pass
+
+
+DELTA_BETWEEN = {
+    
+    }
+
+
 consts = {'Mh': 5.0,
           'Rref': 1.0,
           'PseudoDepth': 6.0}
 
 
-DELTA_BETWEEN = {
-    '090317011253': CoeffsTable(sa_damping=5, table="""\
-                        imt             adj
-                        pga      -0.32324576 """)
-}
+REGIONS = {'1': [13.37, 42.13, 14.94, 41.10, 15.23, 42.32, 13.26, 42.41,
+                 13.03, 42.90, 14.81, 41.80],
+           '4': [13.19, 42.36, 14.83, 41.17, 15.13, 42.38, 12.96, 42.86,
+                 12.90, 43.06, 14.73, 41.85],
+           '5': [13.37, 42.13, 14.94, 41.10, 15.23, 42.32, 13.26, 42.41,
+                 13.03, 42.90, 14.81, 41.80]}
