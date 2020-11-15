@@ -18,6 +18,8 @@ It is possibile to set `num_cores` in openquake.cfg.
 
 # Optimizations
 
+We can now row Australia with 48 GB.
+
 We optimized the GMF saving and export by using pandas.
 We worked at the UCERF calculator.
 Optimized get_poes and the storage of _poes.
