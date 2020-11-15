@@ -20,6 +20,8 @@ Module :mod:`openquake.hazardlib.source.kite_fault` defines
 
 import numpy as np
 from typing import Tuple, Optional
+from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.kite_fault import KiteFaultSurface
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture \
@@ -53,6 +55,19 @@ class KiteFaultSource(ParametricSeismicSource):
 
         min_mag, max_mag = self.mfd.get_min_max_mag()
 
+    @property
+    def surface(self) -> KiteFaultSurface:
+        """
+        :returns:
+            The surface of the fault
+        """
+        # Get the surface of the fault
+        # TODO we must automate the definition of the idl parameter
+        return KiteFaultSurface.from_profiles(self.profiles,
+                                              self.profiles_sampling,
+                                              self.rupture_mesh_spacing,
+                                              idl=False, align=False)
+
     # TODO
     def count_ruptures(self):
         pass
@@ -61,16 +76,11 @@ class KiteFaultSource(ParametricSeismicSource):
 
         from openquake.hazardlib.geo import Point
 
-        # Magnitude scaling relationship and temporal occurrence model
+        # Set magnitude scaling relationship, temporal occurrence model and
+        # mesh of the fault surface
         msr = self.magnitude_scaling_relationship
         tom = self.temporal_occurrence_model
-
-        # Get the surface of the fault
-        # TODO we must automate the definition of the idl parameter
-        surface = KiteFaultSurface.from_profiles(self.profiles,
-                                                 self.profiles_sampling,
-                                                 self.rupture_mesh_spacing,
-                                                 idl=False, align=False)
+        surface = self.surface
 
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
 
@@ -88,13 +98,19 @@ class KiteFaultSource(ParametricSeismicSource):
 
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
-            ruptures = self._get_ruptures(surface.mesh, rup_len, rup_wid)
-            occurrence_rate = mag_occ_rate / len([r for r in ruptures])
+            ruptures = []
+            for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid):
+                ruptures.append(rup)
+            if len(ruptures) < 1:
+                continue
+            occurrence_rate = mag_occ_rate / len(ruptures)
 
             # Rupture generator
             for rup in ruptures:
+                # TODO rup must be a surface
+                rup_surf = BaseSurface(Mesh(rup[0][0], rup[0][1], rup[0][2]))
                 yield ppr(mag, self.rake, self.tectonic_region_type,
-                          hypocenter, rup, occurrence_rate, tom)
+                          hypocenter, rup_surf, occurrence_rate, tom)
 
     def _get_ruptures(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1):
         """
@@ -136,7 +152,9 @@ class KiteFaultSource(ParametricSeismicSource):
                 nel = np.size(omsh.lons[j:j + rup_d, i:i + rup_s])
                 nna = np.sum(np.isfinite(omsh.lons[j:j + rup_d, i:i + rup_s]))
                 prc = nna/nel*100.
-                if prc > 95. and nna >= 4:
+
+                # Yield only the ruptures that do not contain NaN
+                if prc > 99.99 and nna >= 4:
                     yield ((omsh.lons[j:j + rup_d, i:i + rup_s],
                             omsh.lats[j:j + rup_d, i:i + rup_s],
                             omsh.depths[j:j + rup_d, i:i + rup_s]), j, i)

@@ -28,7 +28,7 @@ from openquake.hazardlib.scalerel import PeerMSR, WC1994
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 
-MOVIE = True
+MAKE_MOVIES = True
 
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
@@ -53,8 +53,8 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         rupture_aspect_ratio = aspect_ratio
         tom = self.TOM
         if profiles is None:
-            profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.0, 15.0)]),
-                        Line([Point(0.3, 0.0, 0.0), Point(0.3, 0.0, 15.0)])]
+            profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.01, 15.0)]),
+                        Line([Point(0.3, 0.0, 0.0), Point(0.3, 0.01, 15.0)])]
         floating_x_step = 10.0
         floating_y_step = 5.0
 
@@ -70,25 +70,88 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         return kfs
 
     def _test_ruptures(self, expected_ruptures, source):
-        ruptures = list(source.iter_ruptures())
+        self.ruptures = list(source.iter_ruptures())
 
-    def _ruptures_animation(self, ruptures):
+    def _ruptures_animation(self, surface, ruptures, profiles, first_azi=70):
 
-        fig = plt.figure(figsize=(10, 8))
+        # Create the figure
+        fig = plt.figure(figsize=(15, 8))
         ax = fig.add_subplot(111, projection='3d')
-        plt.style.use('seaborn-bright')
+        ax.set_facecolor((0.5, 0.5, 0.5))
+
+        # Plot the fault surface
+        mesh = surface.mesh
+        x = mesh.lons.flatten()
+        y = mesh.lats.flatten()
+        z = mesh.depths.flatten()*0.01
+        plt.plot(x, y, z, 'o', markersize=1)
+
+        # Plot the first rupture
+        x = ruptures[0].surface.mesh.lons.flatten()
+        y = ruptures[0].surface.mesh.lats.flatten()
+        z = ruptures[0].surface.mesh.depths.flatten()*0.01
+        sctt = ax.scatter(x, y, z, marker='s', s=10, c='red')
+
+        fmt = 'Rupture num: {:d} magnitude: {:3.1f}'
+        tmp = fmt.format(0, ruptures[0].mag)
+        txt = ax.text2D(0.05, 0.95, tmp, transform=ax.transAxes)
+
+        for pro in profiles:
+            coo = [(p.longitude, p.latitude, p.depth) for p in pro.points]
+            coo = numpy.array(coo)
+            plt.plot(coo[:, 0], coo[:, 1], coo[:, 2]*0.01, '--g', lw=3)
+
+        ax.invert_zaxis()
+
+        def animate(i, ruptures, sctt, ax, txt):
+            ax.view_init(elev=10., azim=first_azi+i*0.25 % 360)
+            x = ruptures[i].surface.mesh.lons.flatten()
+            y = ruptures[i].surface.mesh.lats.flatten()
+            z = ruptures[i].surface.mesh.depths.flatten()*0.01
+            sctt._offsets3d = (x, y, z)
+            tmp = fmt.format(i, ruptures[i].mag)
+            txt.set_text(tmp)
+            return sctt, txt
+
+        anim = animation.FuncAnimation(fig, animate, frames=len(ruptures),
+                                       repeat=False,
+                                       fargs=(ruptures, sctt, ax, txt),
+                                       blit=False, interval=1000)
+
+        Writer = animation.writers['ffmpeg']
+        writer = Writer(fps=5, metadata=dict(artist='GEM'),
+                        bitrate=1800, extra_args=['-vcodec', 'libx264'])
+        anim.save('/tmp/kite_fault_source_test01.mp4', writer=writer)
 
 
 class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
 
-    def test01(self):
+    def aa_test01(self):
         """ Simplest test """
-        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.6, max_mag=6.4,
-                             bin_width=0.2)
-        source = self._make_source(mfd=mfd, aspect_ratio=1.0)
-        # self._test_ruptures(None, computed)
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=6.2, max_mag=6.4,
+                             bin_width=0.1)
+        source = self._make_source(mfd=mfd, aspect_ratio=1.5)
+        self._test_ruptures(None, source)
 
-        if MOVIE:
-            ruptures = list(source.iter_ruptures())
-            self._ruptures_animation(ruptures)
+        if MAKE_MOVIES:
+            self._ruptures_animation(source.surface, self.ruptures)
 
+    def test02(self):
+        """ Simplest test """
+
+        profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.001, 15.0)]),
+                    Line([Point(0.1, 0.0, 0.0), Point(0.1, 0.010, 12.0)]),
+                    Line([Point(0.2, 0.0, 0.0), Point(0.2, 0.020,  9.0)]),
+                    Line([Point(0.3, 0.0, 0.0), Point(0.3, 0.030,  6.0)])]
+
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.8, max_mag=6.2,
+                             bin_width=0.1)
+
+        source = self._make_source(mfd=mfd, aspect_ratio=1.5,
+                                   profiles=profiles)
+
+        self._test_ruptures(None, source)
+
+        if MAKE_MOVIES:
+            self._ruptures_animation(source.surface, self.ruptures,
+                                     source.profiles)
