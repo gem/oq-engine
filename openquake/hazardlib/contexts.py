@@ -41,9 +41,9 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 bymag = operator.attrgetter('mag')
 bydist = operator.attrgetter('dist')
 I16 = numpy.int16
-tmp = 'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc '
-tmp += 'closest_point'
-KNOWN_DISTANCES = frozenset(tmp.split())
+KNOWN_DISTANCES = frozenset(
+    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
+    .split())
 
 
 def get_distances(rupture, sites, param):
@@ -75,9 +75,7 @@ def get_distances(rupture, sites, param):
         dist = rupture.surface.get_azimuth_of_closest_point(sites)
     elif param == 'closest_point':
         t = rupture.surface.get_closest_points(sites)
-        dist = numpy.array([(lo, la, de) for lo, la, de in zip(t.lons,
-                                                               t.lats,
-                                                               t.depths)])
+        dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)
@@ -539,7 +537,7 @@ class PmapMaker(object):
     def _ruptures(self, src, filtermag=None):
         it = src.iter_ruptures(
             shift_hypo=self.shift_hypo, mag=filtermag)
-        if hasattr(src, 'loc'):  # do not store millions of performance_data
+        if hasattr(src, 'location'):  # do not store too much performance_data
             return list(it)
         with self.ir_mon:
             return list(it)
