@@ -283,12 +283,17 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(et_ids, numpy.uint32) for et_ids in keys]
 
-    def get_sources(self):
+    def get_sources(self, atomic=None):
         """
         :returns: list of sources in the composite source model
         """
-        return [src for src_group in self.src_groups
-                for src in src_group]
+        srcs = []
+        for src_group in self.src_groups:
+            if atomic is None:  # get all sources
+                srcs.extend(src_group)
+            elif atomic == src_group.atomic:
+                srcs.extend(src_group)
+        return srcs
 
     def get_groups(self, eri):
         """

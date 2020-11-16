@@ -337,11 +337,12 @@ class SourceFilter(object):
         """
         :yields: pairs ([split], sites)
         """
-        split, dt = split_sources(sources)
-        for s in split:
-            sites = self.get_close_sites(s)
-            if sites is not None:
-                yield [s], sites
+        for src, _ in self.filter(sources):
+            split, dt = split_sources([src])
+            for s in split:
+                sites = self.get_close_sites(s)
+                if sites is not None:
+                    yield [s], sites
 
     # used in the rupture prefiltering: it should not discard too much
     def close_sids(self, rec, trt):
