@@ -337,7 +337,7 @@ class SourceFilter(object):
         """
         :yields: pairs (split, sites)
         """
-        for src, _sites in self.filter(sources):
+        for src, _indices in self.filter(sources):
             split, dt = split_sources([src])
             for s in split:
                 sites = self.get_close_sites(s)
