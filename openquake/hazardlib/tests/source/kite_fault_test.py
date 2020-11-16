@@ -72,7 +72,8 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
     def _test_ruptures(self, expected_ruptures, source):
         self.ruptures = list(source.iter_ruptures())
 
-    def _ruptures_animation(self, surface, ruptures, profiles, first_azi=70):
+    def _ruptures_animation(self, lab, surface, ruptures, profiles, 
+                            first_azi=70):
 
         # Create the figure
         fig = plt.figure(figsize=(15, 8))
@@ -121,7 +122,8 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         Writer = animation.writers['ffmpeg']
         writer = Writer(fps=5, metadata=dict(artist='GEM'),
                         bitrate=1800, extra_args=['-vcodec', 'libx264'])
-        anim.save('/tmp/kite_fault_source_test01.mp4', writer=writer)
+        fname = '/tmp/kite_fault_source_{:s}.mp4'.format(lab)
+        anim.save(fname, writer=writer)
 
 
 class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
@@ -134,9 +136,9 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         self._test_ruptures(None, source)
 
         if MAKE_MOVIES:
-            self._ruptures_animation(source.surface, self.ruptures)
+            self._ruptures_animation('test01', source.surface, self.ruptures)
 
-    def test02(self):
+    def atest02(self):
         """ Simplest test """
 
         profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.001, 15.0)]),
@@ -153,5 +155,5 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         self._test_ruptures(None, source)
 
         if MAKE_MOVIES:
-            self._ruptures_animation(source.surface, self.ruptures,
+            self._ruptures_animation('test02', source.surface, self.ruptures,
                                      source.profiles)

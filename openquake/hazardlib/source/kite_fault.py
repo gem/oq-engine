@@ -74,6 +74,7 @@ class KiteFaultSource(ParametricSeismicSource):
 
     def iter_ruptures(self):
 
+        # TODO remove
         from openquake.hazardlib.geo import Point
 
         # Set magnitude scaling relationship, temporal occurrence model and
@@ -160,9 +161,9 @@ class KiteFaultSource(ParametricSeismicSource):
                             omsh.depths[j:j + rup_d, i:i + rup_s]), j, i)
 
     # TODO
-    def get_fault_surface_area(self):
+    def get_fault_surface_area(self) -> float:
         """
-        Computes the area of the
+        Returns the area of the fault surface
         """
         pass
 
