@@ -29,12 +29,11 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel, performance, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize, get_nbytes_msg)
 from openquake.hazardlib.contexts import ContextMaker, get_effect
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -50,6 +49,10 @@ TWO32 = 2 ** 32
 get_weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('et_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
+
+
+def get_source_id(src):  # used in submit_tasks
+    return src.source_id.split(':')[0]
 
 
 def get_extreme_poe(array, imtls):
@@ -111,14 +114,12 @@ def preclassical(srcs, params, monitor):
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
     sources = []
     filt = srcfilter.split if params['split_sources'] else srcfilter.filter
-    for srcs, sites in filt(srcs):
-        nsites = len(sites)
-        for s in srcs:
-            t0 = time.time()
-            s.num_ruptures = s.count_ruptures()
-            dt = time.time() - t0
-            calc_times[s.id] += F32([s.num_ruptures, nsites, dt])
-            sources.extend(srcs)
+    for src, sites in filt(srcs):
+        t0 = time.time()
+        src.num_ruptures = src.count_ruptures()
+        dt = time.time() - t0
+        calc_times[src.id] += F32([src.num_ruptures, len(sites), dt])
+        sources.extend(srcs)
     return dict(sources=sources, calc_times=calc_times)
 
 
@@ -168,7 +169,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
             pmap.grp_id = grp_id
-            acc[extra['source_id']] = pmap
+            acc[extra['source_id'].split(':')[0]] = pmap
 
         trt = extra.pop('trt')
         self.maxradius = max(self.maxradius, extra.pop('maxradius'))
@@ -312,38 +313,30 @@ class ClassicalCalculator(base.HazardCalculator):
 
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
             oq.max_sites_per_tile, oq.max_sites_disagg)
-        hint = 1 if self.N <= oq.max_sites_disagg else numpy.ceil(
-            self.N / oq.max_sites_per_tile)
-        self.params = dict(
-            truncation_level=oq.truncation_level,
-            imtls=oq.imtls, reqv=oq.get_reqv(),
-            pointsource_distance=getattr(oq.pointsource_distance, 'ddic', {}),
-            point_rupture_bins=oq.point_rupture_bins,
-            shift_hypo=oq.shift_hypo,
-            min_weight=oq.min_weight,
-            collapse_level=oq.collapse_level, hint=hint,
-            max_sites_disagg=oq.max_sites_disagg,
-            split_sources=oq.split_sources, af=self.af)
-        smap = parallel.Starmap.apply(
-            preclassical,
-            (self.csm.get_sources(atomic=False), self.params),
-            concurrent_tasks=oq.concurrent_tasks or 1,
-            h5=self.datastore.hdf5)
-        srcfilter = self.src_filter()
-        smap.monitor.save('srcfilter', srcfilter)
-        res = smap.reduce()
-        if oq.calculation_mode == 'preclassical':
-            self.store_source_info(res['calc_times'], nsites=True)
-            self.datastore['full_lt'] = self.csm.full_lt
-            self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
-            return
+        psd = self.set_psd()
+        performance.Monitor.save(
+            self.datastore, 'srcfilter', self.src_filter())
+        srcs = self.csm.get_sources(atomic=False)
+        if srcs:
+            res = parallel.Starmap.apply(
+                preclassical,
+                (srcs, self.params),
+                concurrent_tasks=oq.concurrent_tasks or 1,
+                h5=self.datastore.hdf5).reduce()
+            if oq.calculation_mode == 'preclassical':
+                self.store_source_info(res['calc_times'], nsites=True)
+                self.datastore['full_lt'] = self.csm.full_lt
+                self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
+                return
 
-        dic = groupby(res['sources'], operator.attrgetter('grp_id'))
-        self.csm.src_groups = [sg for sg in self.csm.src_groups if sg.atomic]
-        for grp_id, srcs in dic.items():
-            self.csm.src_groups.append(
-                SourceGroup(srcs[0].tectonic_region_type, srcs))
-        self.update_source_info(res['calc_times'], nsites=True)
+            dic = groupby(res['sources'], operator.attrgetter('grp_id'))
+            self.csm.src_groups = [
+                sg for sg in self.csm.src_groups if sg.atomic]
+            for grp_id, srcs in dic.items():
+                self.csm.src_groups.append(
+                    SourceGroup(srcs[0].tectonic_region_type, srcs))
+            self.update_source_info(res['calc_times'], nsites=True)
+
         # if OQ_SAMPLE_SOURCES is set extract one source for group
         ss = os.environ.get('OQ_SAMPLE_SOURCES')
         if ss:
@@ -353,36 +346,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     src = max(
                         sg, key=operator.attrgetter('nsites', 'source_id'))
                     sg.sources = [src]
-
-        mags = self.datastore['source_mags']  # by TRT
-        if len(mags) == 0:  # everything was discarded
-            raise RuntimeError('All sources were discarded!?')
-        gsims_by_trt = self.full_lt.get_gsims_by_trt()
-        mags_by_trt = {}
-        for trt in mags:
-            mags_by_trt[trt] = mags[trt][()]
-        psd = oq.pointsource_distance
-        if psd is not None:
-            psd.interp(mags_by_trt)
-            for trt, dic in psd.ddic.items():
-                # the sum is zero for {'default': [(1, 0), (10, 0)]}
-                if sum(dic.values()):
-                    it = list(dic.items())
-                    md = '%s->%d ... %s->%d' % (it[0] + it[-1])
-                    logging.info('ps_dist %s: %s', trt, md)
-        imts_with_period = [imt for imt in oq.imtls
-                            if imt == 'PGA' or imt.startswith('SA')]
-        imts_ok = len(imts_with_period) == len(oq.imtls)
-        if (imts_ok and psd and psd.suggested()) or (
-                imts_ok and oq.minimum_intensity):
-            aw = get_effect(mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
-            if psd:
-                dic = {trt: [(float(mag), int(dst))
-                             for mag, dst in psd.ddic[trt].items()]
-                       for trt in psd.ddic if trt != 'default'}
-                logging.info('pointsource_distance=\n%s', pprint.pformat(dic))
-            if len(vars(aw)) > 1:  # more than _extra
-                self.datastore['effect_by_mag_dst'] = aw
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
@@ -425,6 +388,54 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times.clear()  # save a bit of memory
         return acc
 
+    def set_psd(self):
+        """
+        Set the pointsource_distance
+        """
+        oq = self.oqparam
+        mags = self.datastore['source_mags']  # by TRT
+        if len(mags) == 0:  # everything was discarded
+            raise RuntimeError('All sources were discarded!?')
+        gsims_by_trt = self.full_lt.get_gsims_by_trt()
+        mags_by_trt = {}
+        for trt in mags:
+            mags_by_trt[trt] = mags[trt][()]
+        psd = oq.pointsource_distance
+        if psd is not None:
+            psd.interp(mags_by_trt)
+            for trt, dic in psd.ddic.items():
+                # the sum is zero for {'default': [(1, 0), (10, 0)]}
+                if sum(dic.values()):
+                    it = list(dic.items())
+                    md = '%s->%d ... %s->%d' % (it[0] + it[-1])
+                    logging.info('ps_dist %s: %s', trt, md)
+        imts_with_period = [imt for imt in oq.imtls
+                            if imt == 'PGA' or imt.startswith('SA')]
+        imts_ok = len(imts_with_period) == len(oq.imtls)
+        if (imts_ok and psd and psd.suggested()) or (
+                imts_ok and oq.minimum_intensity):
+            aw = get_effect(mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
+            if psd:
+                dic = {trt: [(float(mag), int(dst))
+                             for mag, dst in psd.ddic[trt].items()]
+                       for trt in psd.ddic if trt != 'default'}
+                logging.info('pointsource_distance=\n%s', pprint.pformat(dic))
+            if len(vars(aw)) > 1:  # more than _extra
+                self.datastore['effect_by_mag_dst'] = aw
+        hint = 1 if self.N <= oq.max_sites_disagg else numpy.ceil(
+            self.N / oq.max_sites_per_tile)
+        self.params = dict(
+            truncation_level=oq.truncation_level,
+            imtls=oq.imtls, reqv=oq.get_reqv(),
+            pointsource_distance=getattr(oq.pointsource_distance, 'ddic', {}),
+            point_rupture_bins=oq.point_rupture_bins,
+            shift_hypo=oq.shift_hypo,
+            min_weight=oq.min_weight,
+            collapse_level=oq.collapse_level, hint=hint,
+            max_sites_disagg=oq.max_sites_disagg,
+            split_sources=oq.split_sources, af=self.af)
+        return psd
+
     def submit_tasks(self, smap):
         """
         Submit tasks to the passed Starmap
@@ -460,7 +471,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 nb += 1
                 smap.submit((sg, rlzs_by_gsim, self.params), f1)
             else:  # regroup the sources in blocks
-                blks = (groupby(sg, operator.attrgetter('source_id')).values()
+                blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src
                         else block_splitter(sg, 2 * max_weight,
                                             get_weight, sort=True))
