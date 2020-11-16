@@ -91,7 +91,6 @@ class BooreAtkinson2008(GMPE):
                         self._get_site_amplification_linear(ctx.vs30, C_SR) +
                         self._get_site_amplification_non_linear(
                             ctx.vs30, pga4nl, C_SR))
-
             [stddev] = self._get_stddevs(C, [const.StdDev.TOTAL], U)
             res[0, :, m] = mean
             res[1, :, m] = stddev
@@ -131,7 +130,7 @@ class BooreAtkinson2008(GMPE):
                 self._get_site_amplification_non_linear(sites.vs30, pga4nl,
                                                         C_SR)
 
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
+        stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
 
         return mean, stddevs
 
