@@ -192,6 +192,9 @@ class AreaSource(ParametricSeismicSource):
                 hypocenter_distribution=self.hypocenter_distribution,
                 temporal_occurrence_model=self.temporal_occurrence_model)
             pt.num_ruptures = pt.count_ruptures()
+            pt.grp_id = self.grp_id
+            pt.et_id = self.et_id
+            pt.id = self.id
             yield pt
 
     def wkt(self):
