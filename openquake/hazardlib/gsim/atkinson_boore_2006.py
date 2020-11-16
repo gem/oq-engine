@@ -66,11 +66,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see paragraph
     #: 'Methodology and Model Parameters', p. 2182
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`,
