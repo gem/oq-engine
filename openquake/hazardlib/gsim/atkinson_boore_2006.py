@@ -79,9 +79,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
 
     #: Supported standard deviation type is total, see table 6
     #: and 9, p. 2192 and 2202, respectively.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters is Vs30.
     #: See paragraph 'Equations for soil sites', p. 2200
