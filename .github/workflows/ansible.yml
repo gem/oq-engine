@@ -2,8 +2,6 @@
 name: ansible
 'on':
   push:
-    branches:
-      - ansible
   schedule:
     - cron: "0 4 * * *"
 
