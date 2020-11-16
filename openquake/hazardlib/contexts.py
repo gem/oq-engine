@@ -564,7 +564,8 @@ class PmapMaker(object):
         if self.fewsites:
             srcs_sites = [(self.group, self.srcfilter.sitecol)]
         elif self.split_sources:
-            srcs_sites = self.srcfilter.split(self.group)
+            srcs_sites = (([src], sites)
+                          for src, sites in self.srcfilter.split(self.group))
         else:
             srcs_sites = (([src], self.srcfilter.sitecol.filtered(idx))
                           for src, idx in self.srcfilter.filter(self.group))
