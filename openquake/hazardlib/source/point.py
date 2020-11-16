@@ -330,7 +330,7 @@ class PointSource(ParametricSeismicSource):
         return 'POINT(%s %s)' % (loc.x, loc.y)
 
 
-class CollapsedSource(ParametricSeismicSource):
+class CollapsedPointSource(ParametricSeismicSource):
     """
     Source typology representing a cluster of point sources around a
     specific location.

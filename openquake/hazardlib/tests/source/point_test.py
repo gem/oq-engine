@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 from openquake.hazardlib.const import TRT
-from openquake.hazardlib.source.point import PointSource, CollapsedSource
+from openquake.hazardlib.source.point import PointSource, CollapsedPointSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
@@ -428,7 +428,7 @@ class PointSourceMaxRupProjRadiusTestCase(unittest.TestCase):
         self.assertAlmostEqual(radius, 3.8712214)
 
 
-class CollapsedSourceTestCase(unittest.TestCase):
+class CollapsedPointSourceTestCase(unittest.TestCase):
     def test(self):
         ps1 = make_point_source(lon=1.2, lat=3.4)
         ps2 = make_point_source(
@@ -437,12 +437,12 @@ class CollapsedSourceTestCase(unittest.TestCase):
                          [(3.5, 9.9e-06), (4.5, 9.9e-08)])
         self.assertEqual(ps2.get_annual_occurrence_rates(),
                          [(3.5, 9.9e-06), (4.5, 9.9e-08)])
-        cs = CollapsedSource([ps1, ps2])
-        self.assertEqual(cs.location.x, 1.25)
-        self.assertEqual(cs.location.y, 3.4)
-        self.assertEqual(cs.location.z, 3.75)
-        rates = cs.get_annual_occurrence_rates()
+        cps = CollapsedPointSource([ps1, ps2])
+        self.assertEqual(cps.location.x, 1.25)
+        self.assertEqual(cps.location.y, 3.4)
+        self.assertEqual(cps.location.z, 3.75)
+        rates = cps.get_annual_occurrence_rates()
         self.assertEqual(rates, [(3.5, 1.98e-05), (4.5, 1.98e-07)])
         self.assertEqual(ps1.count_ruptures(), 2)
         self.assertEqual(ps2.count_ruptures(), 4)
-        self.assertEqual(cs.count_ruptures(), 2)
+        self.assertEqual(cps.count_ruptures(), 2)
