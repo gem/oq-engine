@@ -43,6 +43,7 @@ import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
+U8 = numpy.uint8
 U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
@@ -913,10 +914,10 @@ def groupby2(records, kfield, vfield):
     return list(dic.items())  # Python3 compatible
 
 
-def bin_idxs(values, nbins, key=None, minval=None, maxval=None):
+def get_bins(values, nbins, key=None, minval=None, maxval=None):
     """
     :param values: an array of N floats (or arrays)
-    :returns: an array of N indices
+    :returns: an array of N bin indices plus an array of B bins
     """
     assert len(values)
     if key is not None:
@@ -929,7 +930,41 @@ def bin_idxs(values, nbins, key=None, minval=None, maxval=None):
         bins = [minval] * nbins
     else:
         bins = numpy.arange(minval, maxval, (maxval-minval) / nbins)
-    return numpy.searchsorted(bins, values, side='right')
+    return numpy.searchsorted(bins, values, side='right'), bins
+
+
+def groupby_grid(xs, ys, deltax, deltay):
+    """
+    :param xs: an array of P abscissas
+    :param ys: an array of P ordinates
+    :param deltax: grid spacing on the x-axis
+    :param deltay: grid spacing on the y-axis
+    :returns:
+        dictionary centroid -> indices (of the points around each centroid)
+    """
+    lx, ly = len(xs), len(ys)
+    assert lx == ly, (lx, ly)
+    assert lx > 1, lx
+    assert deltax > 0, deltax
+    assert deltay > 0, deltay
+    xmin = xs.min()
+    xmax = xs.max()
+    ymin = ys.min()
+    ymax = ys.max()
+    nx = numpy.ceil((xmax - xmin) / deltax)
+    ny = numpy.ceil((ymax - ymin) / deltay)
+    assert nx > 0, nx
+    assert ny > 0, ny
+    xbins = get_bins(xs, nx, None, xmin, xmax)[0]
+    ybins = get_bins(ys, ny, None, ymin, ymax)[0]
+    acc = AccumDict(accum=[])
+    for p, ij in enumerate(zip(xbins, ybins)):
+        acc[ij].append(p)
+    dic = {}
+    for (i, j), ps in acc.items():
+        idxs = numpy.array(ps)
+        dic[xs[idxs].mean(), ys[idxs].mean()] = idxs
+    return dic
 
 
 def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
@@ -943,7 +978,7 @@ def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
     """
     if len(values) == 0:  # do nothing
         return values
-    idxs = bin_idxs(values, nbins, key, minval, maxval)
+    idxs = get_bins(values, nbins, key, minval, maxval)[0]
     acc = AccumDict(accum=[])
     for idx, val in zip(idxs, values):
         if isinstance(idx, numpy.ndarray):

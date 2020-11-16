@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
 import numpy
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -101,7 +102,7 @@ class PointSource(ParametricSeismicSource):
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
     code = b'P'
-    MODIFICATIONS = set(())
+    MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -327,6 +328,65 @@ class PointSource(ParametricSeismicSource):
         """
         loc = self.location
         return 'POINT(%s %s)' % (loc.x, loc.y)
+
+
+class CollapsedPointSource(ParametricSeismicSource):
+    """
+    Source typology representing a cluster of point sources around a
+    specific location.
+    """
+    code = b'P'
+    MODIFICATIONS = set()
+
+    def __init__(self, pointsources):
+        self.tectonic_region_type = pointsources[0].tectonic_region_type
+        self.temporal_occurrence_model = (
+            pointsources[0].temporal_occurrence_model)
+        self.pointsources = pointsources
+        self.pointruptures = []
+        lons, lats, weights, depths = [], [], [], []
+        for src in pointsources:
+            assert src.tectonic_region_type == self.tectonic_region_type
+            lons.append(src.location.x)
+            lats.append(src.location.y)
+            ws, ds = zip(*src.hypocenter_distribution.data)
+            weights.extend(ws)
+            depths.extend(ds)
+        self.location = Point(longitude=numpy.mean(lons),
+                              latitude=numpy.mean(lats),
+                              depth=numpy.average(depths, weights=weights))
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            pr = PointRupture(mag, self.tectonic_region_type, self.location,
+                              mag_occ_rate, self.temporal_occurrence_model)
+            self.pointruptures.append(pr)
+
+    def get_annual_occurrence_rates(self):
+        """
+        :returns: a list of pairs [(mag, mag_occur_rate), ...]
+        """
+        acc = AccumDict(accum=0)
+        for psource in self.pointsources:
+            acc += dict(psource.get_annual_occurrence_rates())
+        return sorted(acc.items())
+
+    def iter_ruptures(self, **kwargs):
+        """
+        :returns: an iterator over the underlying ruptures
+        """
+        for src in self.pointsources:
+            yield from src.iter_ruptures(**kwargs)
+
+    def point_ruptures(self):
+        """
+        :returns: the underlying point ruptures
+        """
+        return self.pointruptures
+
+    def count_ruptures(self):
+        """
+        :returns: the number of underlying point ruptures
+        """
+        return len(self.pointruptures)
 
 
 def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),

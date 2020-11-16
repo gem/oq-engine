@@ -47,7 +47,7 @@ class BBoxError(ValueError):
     """Bounding box too large"""
 
 
-def angular_distance(km, lat, lat2=None):
+def angular_distance(km, lat=0, lat2=None):
     """
     Return the angular distance of two points at the given latitude.
 
