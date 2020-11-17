@@ -95,8 +95,6 @@ def grid_point_sources(sources, ps_grid_spacing):
     coords = _coords(ps)
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
-    deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
-    deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
     for idxs in grid.values():
         cps = CollapsedPointSource(ps[idxs])
