@@ -323,5 +323,9 @@ class CompositeSourceModel:
         """
         Return a string representation of the composite model
         """
-        return '<%s with %d source group(s)>' % (
-            self.__class__.__name__, len(self.src_groups))
+        contents = []
+        for sg in self.src_groups:
+            arr = numpy.array([src.source_id for src in sg])
+            line = f'grp_id={sg.sources[0].grp_id} {arr}'
+            contents.append(line)
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(contents))

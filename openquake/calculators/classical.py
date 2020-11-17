@@ -338,6 +338,7 @@ class ClassicalCalculator(base.HazardCalculator):
                         sg, key=operator.attrgetter('nsites', 'source_id'))
                     sg.sources = [src]
 
+        print(self.csm)
         mags = self.datastore['source_mags']  # by TRT
         if len(mags) == 0:  # everything was discarded
             raise RuntimeError('All sources were discarded!?')
