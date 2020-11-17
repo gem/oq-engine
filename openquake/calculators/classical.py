@@ -153,14 +153,16 @@ def preclassical(srcs, params, monitor):
     Prefilter and weight the sources. Also split if split_sources is true.
     """
     srcfilter = monitor.read('srcfilter')
-    calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
+    # nrups, nsites, time, task_no
+    calc_times = AccumDict(accum=numpy.zeros(4, F32))
     sources = []
     filt = srcfilter.split if params['split_sources'] else srcfilter.filter
     for src, sites in filt(srcs):
         t0 = time.time()
         src.num_ruptures = src.count_ruptures()
         dt = time.time() - t0
-        calc_times[src.id] += F32([src.num_ruptures, len(sites), dt])
+        calc_times[src.id] += F32([src.num_ruptures, len(sites), dt,
+                                   monitor.task_no])
         sources.append(src)
     return dict(sources=sources, calc_times=calc_times)
 
@@ -365,6 +367,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 (srcs, self.params),
                 concurrent_tasks=oq.concurrent_tasks or 1,
                 h5=self.datastore.hdf5).reduce()
+
             if oq.calculation_mode == 'preclassical':
                 self.store_source_info(res['calc_times'], nsites=True)
                 self.datastore['full_lt'] = self.csm.full_lt
