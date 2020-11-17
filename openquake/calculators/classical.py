@@ -333,7 +333,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.csm.src_groups = [
                 sg for sg in self.csm.src_groups if sg.atomic]
             for grp_id, sources in dic.items():
-                sg = SourceGroup(srcs[0].tectonic_region_type)
+                sg = SourceGroup(sources[0].tectonic_region_type)
                 sg.sources = sources
                 self.csm.src_groups.append(sg)
             self.update_source_info(res['calc_times'], nsites=True)
