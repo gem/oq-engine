@@ -24,10 +24,10 @@ Currently two different set of *TAGS* are provided. Images are hosted on [Docker
 
 ### master
 
-This container is updated on weekly basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what's the next stable version will have. It is not recommended for production.
+This container is updated on daily basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what's the next stable version will have. It is not recommended for production.
 
 ```bash
-$ docker pull docker.io/openquake/engine:latest
+$ docker pull docker.io/openquake/engine:nightly
 ```
 
 ### X.Y
@@ -35,7 +35,7 @@ $ docker pull docker.io/openquake/engine:latest
 For each stable release (starting with 2.2) a container is published and tagged with its release version. This contains the stable release of the OpenQuake Engine and its software stack.
 
 ```bash
-$ docker pull docker.io/openquake/engine:2.9
+$ docker pull docker.io/openquake/engine:3.10
 ```
 
 ## Deployment
