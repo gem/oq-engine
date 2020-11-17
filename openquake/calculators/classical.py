@@ -332,9 +332,10 @@ class ClassicalCalculator(base.HazardCalculator):
             dic = groupby(res['sources'], operator.attrgetter('grp_id'))
             self.csm.src_groups = [
                 sg for sg in self.csm.src_groups if sg.atomic]
-            for grp_id, srcs in dic.items():
-                self.csm.src_groups.append(
-                    SourceGroup(srcs[0].tectonic_region_type, srcs))
+            for grp_id, sources in dic.items():
+                sg = SourceGroup(srcs[0].tectonic_region_type)
+                sg.sources = sources
+                self.csm.src_groups.append(sg)
             self.update_source_info(res['calc_times'], nsites=True)
 
         # if OQ_SAMPLE_SOURCES is set extract one source for group
