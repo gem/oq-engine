@@ -32,7 +32,10 @@ except ImportError:
 from openquake.baselib import parallel, performance, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize, get_nbytes_msg)
+    AccumDict, DictArray, block_splitter, groupby, humansize,
+    get_nbytes_msg, groupby_grid)
+from openquake.hazardlib.geo.utils import angular_distance
+from openquake.hazardlib.source.point import CollapsedPointSource
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -64,6 +67,48 @@ def get_extreme_poe(array, imtls):
     """
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
+
+def _coords(psources):
+    arr = numpy.zeros((len(psources), 3))
+    for p, psource in enumerate(psources):
+        arr[p, 0] = psource.location.x
+        arr[p, 1] = psource.location.y
+        arr[p, 2] = psource.location.z
+    return arr
+
+
+def grid_point_sources(sources, ps_grid_spacing):
+    """
+    :param sources:
+        a list of sources with the same grp_id (point sources and not)
+    :param ps_grid_spacing:
+        value of the point source grid spacing in km; if None, do nothing
+    :returns:
+        a list of both non-point sources and collapsed point sources
+    """
+    if ps_grid_spacing is None:
+        return sources
+    out = [src for src in sources if not hasattr(src, 'location')]
+    ps = numpy.array([src for src in sources if hasattr(src, 'location')])
+    coords = _coords(ps)
+    deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
+    deltay = angular_distance(ps_grid_spacing)
+    deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
+    deltay = angular_distance(ps_grid_spacing)
+    grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
+    for idxs in grid.values():
+        cps = CollapsedPointSource(ps[idxs])
+        cps.num_ruptures = cps.count_ruptures()
+        cps.id = ps[0].id
+        cps.grp_id = ps[0].grp_id
+        cps.et_id = ps[0].et_id
+        cps.nsites = numpy.mean([p.nsites for p in ps])
+        out.append(cps)
+    logging.info('Reduced point sources %d->%d', len(ps), len(grid))
+    return out
+
+
+#  ########################### task functions ############################ #
 
 def classical(srcs, rlzs_by_gsim, params, monitor):
     """
@@ -326,12 +371,13 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
                 return
 
-            dic = groupby(res['sources'], operator.attrgetter('grp_id'))
+            sources_by_grp = groupby(
+                res['sources'], operator.attrgetter('grp_id'))
             self.csm.src_groups = [
                 sg for sg in self.csm.src_groups if sg.atomic]
-            for grp_id, sources in dic.items():
+            for grp_id, sources in sources_by_grp.items():
                 sg = SourceGroup(sources[0].tectonic_region_type)
-                sg.sources = sources
+                sg.sources = grid_point_sources(sources, oq.ps_grid_spacing)
                 self.csm.src_groups.append(sg)
             self.update_source_info(res['calc_times'], nsites=True)
 
@@ -440,28 +486,29 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         src_groups = self.csm.src_groups
-        totweight = 0
+        tot_weight = 0
         et_ids = self.datastore['et_ids'][:]
         rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(et_ids)
         for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
             for src in sg:
                 src.ngsims = len(rlzs_by_gsim)
-                totweight += src.weight
+                tot_weight += src.weight
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
                            'ruptures with complex_fault_mesh_spacing={} km')
                     spc = oq.complex_fault_mesh_spacing
                     logging.info(msg.format(src, src.num_ruptures, spc))
+        assert tot_weight
         C = oq.concurrent_tasks or 1
         if oq.disagg_by_src or oq.is_ucerf():
             f1, f2 = classical, classical
-            max_weight = max(totweight / C, oq.min_weight) / 5
+            max_weight = max(tot_weight / C, oq.min_weight) / 5
         else:
             f1, f2 = classical, classical_split_filter
-            max_weight = max(totweight / C, oq.min_weight)
+            max_weight = max(tot_weight / C, oq.min_weight)
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
-            int(totweight), int(max_weight)))
+            int(tot_weight), int(max_weight)))
         for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
             nb = 0
             if sg.atomic:
