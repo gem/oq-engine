@@ -212,66 +212,56 @@ class MagDepDistance(dict):
         return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
 
 
-def split_sources(srcs):
+def split_source(src):
     """
-    :param srcs: sources
-    :returns: a pair (split sources, split time) or just the split_sources
+    :param src: a source
+    :returns: the split_sources
     """
-    from openquake.hazardlib.source import splittable
-    sources = []
-    split_time = {}  # src.id -> time
-    for src in srcs:
-        if not splittable(src):
-            sources.append(src)
-            continue
-        t0 = time.time()
-        if not src.num_ruptures:  # not set yet
-            src.num_ruptures = src.count_ruptures()
-        mag_a, mag_b = src.get_min_max_mag()
-        min_mag = src.min_mag
-        if mag_b < min_mag:  # discard the source completely
-            continue
-        if min_mag:
-            splits = []
-            for s in src:
-                s.min_mag = min_mag
-                mag_a, mag_b = s.get_min_max_mag()
-                if mag_b < min_mag:
-                    continue
-                s.num_ruptures = s.count_ruptures()
-                if s.num_ruptures:
-                    splits.append(s)
-        else:
-            splits = list(src)
-        try:
-            split_time[src.id] = time.time() - t0
-        except AttributeError as exc:  # missing .id, should never happen
-            raise AttributeError('%s: %s' % (exc, src.source_id))
-        sources.extend(splits)
-        has_samples = hasattr(src, 'samples')
-        has_scaling_rate = hasattr(src, 'scaling_rate')
-        grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
-        if len(splits) > 1:
-            for i, split in enumerate(splits):
-                split.source_id = '%s:%s' % (src.source_id, i)
-                split.et_id = src.et_id
-                split.grp_id = grp_id
-                split.id = src.id
-                if has_samples:
-                    split.samples = src.samples
-                if has_scaling_rate:
-                    s.scaling_rate = src.scaling_rate
-        elif splits:  # single source
-            [s] = splits
-            s.source_id = src.source_id
-            s.et_id = src.et_id
-            s.grp_id = grp_id
-            s.id = src.id
+    from openquake.hazardlib.source import splittable  # avoid circular import
+    if not splittable(src):
+        return [src]
+    if not src.num_ruptures:  # not set yet
+        src.num_ruptures = src.count_ruptures()
+    mag_a, mag_b = src.get_min_max_mag()
+    min_mag = src.min_mag
+    if mag_b < min_mag:  # discard the source completely
+        return [src]
+    if min_mag:
+        splits = []
+        for s in src:
+            s.min_mag = min_mag
+            mag_a, mag_b = s.get_min_max_mag()
+            if mag_b < min_mag:
+                continue
+            s.num_ruptures = s.count_ruptures()
+            if s.num_ruptures:
+                splits.append(s)
+    else:
+        splits = list(src)
+    has_samples = hasattr(src, 'samples')
+    has_scaling_rate = hasattr(src, 'scaling_rate')
+    grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
+    if len(splits) > 1:
+        for i, split in enumerate(splits):
+            split.source_id = '%s:%s' % (src.source_id, i)
+            split.et_id = src.et_id
+            split.grp_id = grp_id
+            split.id = src.id
             if has_samples:
-                s.samples = src.samples
+                split.samples = src.samples
             if has_scaling_rate:
                 s.scaling_rate = src.scaling_rate
-    return sources, split_time
+    elif splits:  # single source
+        [s] = splits
+        s.source_id = src.source_id
+        s.et_id = src.et_id
+        s.grp_id = grp_id
+        s.id = src.id
+        if has_samples:
+            s.samples = src.samples
+        if has_scaling_rate:
+            s.scaling_rate = src.scaling_rate
+    return splits
 
 
 class SourceFilter(object):
@@ -338,8 +328,7 @@ class SourceFilter(object):
         :yields: pairs (split, sites)
         """
         for src, _indices in self.filter(sources):
-            split, dt = split_sources([src])
-            for s in split:
+            for s in split_source(src):
                 sites = self.get_close_sites(s)
                 if sites is not None:
                     yield s, sites

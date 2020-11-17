@@ -23,7 +23,7 @@ from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.calc.filters import (
-    MagDepDistance, SourceFilter, angular_distance, split_sources)
+    MagDepDistance, SourceFilter, angular_distance, split_source)
 
 
 class AngularDistanceTestCase(unittest.TestCase):
@@ -116,7 +116,7 @@ class SplitSourcesTestCase(unittest.TestCase):
         char.id = 1
         char.et_id = 1
         os.remove(fname)
-        [src], _ = split_sources([char])
+        src = split_source(char)
         self.assertEqual(char.id, src.id)
         self.assertEqual(char.source_id, src.source_id)
         self.assertEqual(char.et_id, src.et_id)
