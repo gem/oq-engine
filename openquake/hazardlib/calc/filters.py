@@ -212,6 +212,16 @@ class MagDepDistance(dict):
         return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
 
 
+def get_centroid(src):
+    """
+    :returns: the centroid of the source as a tuple of 3 coordinates
+    """
+    if hasattr(src, 'location'):
+        return src.location.x, src.location.y, src.location.z
+    p = src.polygon.centroid
+    return p.x, p.y, 0
+
+
 def split_source(src):
     """
     :param src: a source
@@ -344,20 +354,44 @@ class SourceFilter(object):
            the site indices within the maximum_distance of the hypocenter,
            plus the maximum size of the bounding box
         """
+        dlon = get_longitudinal_extent(rec['minlon'], rec['maxlon'])
+        dlat = rec['maxlat'] - rec['minlat']
+        delta = max(dlon, dlat) / KM_TO_DEGREES
+        return self.get_around_sids(rec, delta)
+
+    def get_around_sids(self, src_or_rec, delta=0):
+        """
+        :param src: a source or a rupture record
+        :returns: the site indices within the maximum_distance + delta
+        """
         if self.sitecol is None:
             return []
         elif not self.integration_distance:  # do not filter
             return self.sitecol.sids
         if not hasattr(self, 'kdt'):
             self.kdt = cKDTree(self.sitecol.xyz)
-        xyz = spherical_to_cartesian(*rec['hypo'])
-        dlon = get_longitudinal_extent(rec['minlon'], rec['maxlon'])
-        dlat = rec['maxlat'] - rec['minlat']
-        delta = max(dlon, dlat) / KM_TO_DEGREES
-        maxradius = self.integration_distance(trt) + delta
-        sids = U32(self.kdt.query_ball_point(xyz, maxradius, eps=.001))
+        try:  # record
+            trt = src_or_rec['tectonic_region_type']
+            xyz = spherical_to_cartesian(*src_or_rec['hypo'])
+        except TypeError:  # source
+            trt = src_or_rec.tectonic_region_type
+            xyz = spherical_to_cartesian(*get_centroid(src_or_rec))
+        maxdist = self.integration_distance(trt)
+        sids = U32(self.kdt.query_ball_point(xyz, maxdist + delta, eps=.001))
         sids.sort()
         return sids
+
+    def split_source(self, src, ok=True):
+        """
+        :returns: a list of subsources with the parameter .nsites correctly set
+        """
+        split = split_source(src) if ok else [src]
+        for s in split:
+            s.nsites = len(self.get_around_sids(s)) or .01
+            s.weight
+        if len(split) > 1:  # also set .nsites on the original source
+            src.nsites = len(self.get_around_sids(src)) or .01
+        return split
 
     # used for debugging purposes
     def get_cdist(self, rec):

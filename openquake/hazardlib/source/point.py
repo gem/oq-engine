@@ -388,9 +388,9 @@ class CollapsedPointSource(ParametricSeismicSource):
 
     def count_ruptures(self):
         """
-        :returns: the number of underlying point ruptures
+        :returns: the number of underlying point ruptures * P
         """
-        return len(self.pointruptures)
+        return len(self.pointruptures) * len(self.pointsources)
 
     def get_bounding_box(self, maxdist):
         """

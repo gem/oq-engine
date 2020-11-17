@@ -115,13 +115,11 @@ def preclassical(srcs, params, monitor):
     # nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
     sources = []
-    filt = srcfilter.split if params['split_sources'] else srcfilter.filter
-    for src, sites in filt(srcs):
+    for src in srcs:
         t0 = time.time()
-        src.num_ruptures = src.count_ruptures()
+        sources.extend(srcfilter.split_source(src, params['split_sources']))
         dt = time.time() - t0
-        calc_times[src.id] += F32([src.num_ruptures, len(sites), dt, 0])
-        sources.append(src)
+        calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt, 0])
     for arr in calc_times.values():
         arr[3] = monitor.task_no
     return dict(sources=sources, calc_times=calc_times)
