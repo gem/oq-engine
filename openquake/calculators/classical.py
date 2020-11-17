@@ -91,7 +91,7 @@ def grid_point_sources(sources, ps_grid_spacing):
     out = [src for src in sources if not hasattr(src, 'location')]
     ps = numpy.array([src for src in sources if hasattr(src, 'location')])
     if len(ps) < 2:  # nothing to collapse
-        return out + ps
+        return out + list(ps)
     coords = _coords(ps)
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
