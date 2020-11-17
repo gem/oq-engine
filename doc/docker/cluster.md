@@ -21,9 +21,9 @@ where `N` is the number of expected worker containers.
 
 ### Shared directory
 
-Starting with the OpenQuake Engine 3.3 a [shared directory](../installing/cluster.md) must exists between the master node and workers. Docker compose already set a shared volume between containers ([docker-compose.yml#L36](../../docker/docker-compose.yml#L36)).
+Starting with the OpenQuake Engine 3.3 a [shared directory](../installing/cluster.md) must exists between the master node and workers. Docker compose already set a shared volume between containers ([docker-compose.yml#L9](../../docker/docker-compose.yml#L9)).
 When running containers on different hosts (which should be the case) you must adjust `docker-compose.yml` properly to use a shared storage backend.
-A configuration example for NFS is provided via the `oqdata-nfs` volume in [docker-compose.yml#L71](../../docker/docker-compose.yml#L71).
+A configuration example for NFS is provided via the `oqdata-nfs` volume in [docker-compose.yml#L10](../../docker/docker-compose.yml#L10).
 
 ### Docker
 
