@@ -17,9 +17,10 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
+import logging
 import itertools
 import numpy
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, groupby_grid
 from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -27,7 +28,7 @@ from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
-from openquake.hazardlib.geo.utils import get_bounding_box
+from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 
 def _get_rupture_dimensions(src, mag, rake, dip):
@@ -398,6 +399,47 @@ class CollapsedPointSource(ParametricSeismicSource):
         return get_bounding_box([self.location], maxdist)
 
 
+def _coords(psources):
+    arr = numpy.zeros((len(psources), 3))
+    for p, psource in enumerate(psources):
+        arr[p, 0] = psource.location.x
+        arr[p, 1] = psource.location.y
+        arr[p, 2] = psource.location.z
+    return arr
+
+
+def grid_point_sources(sources, ps_grid_spacing):
+    """
+    :param sources:
+        a list of sources with the same grp_id (point sources and not)
+    :param ps_grid_spacing:
+        value of the point source grid spacing in km; if None, do nothing
+    :returns:
+        a list of both non-point sources and collapsed point sources
+    """
+    if ps_grid_spacing is None:
+        return sources
+    out = [src for src in sources if not hasattr(src, 'location')]
+    ps = numpy.array([src for src in sources if hasattr(src, 'location')])
+    if len(ps) < 2:  # nothing to collapse
+        return out + list(ps)
+    coords = _coords(ps)
+    deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
+    deltay = angular_distance(ps_grid_spacing)
+    grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
+    for idxs in grid.values():
+        cps = CollapsedPointSource(ps[idxs])
+        cps.num_ruptures = cps.count_ruptures()
+        cps.id = ps[0].id
+        cps.grp_id = ps[0].grp_id
+        cps.et_id = ps[0].et_id
+        cps.nsites = sum(p.nsites for p in ps)
+        out.append(cps)
+    logging.info('Reduced point sources %d->%d', len(ps), len(grid))
+    return out
+
+
+# used in the tests
 def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
                  nodal_plane_tup=(0, 90, 0), hc_tup=(0, 0, 20),
                  occurrence_rate=1, tom=None):

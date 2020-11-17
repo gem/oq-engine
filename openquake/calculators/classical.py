@@ -33,9 +33,8 @@ from openquake.baselib import parallel, performance, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_nbytes_msg, groupby_grid)
-from openquake.hazardlib.geo.utils import angular_distance
-from openquake.hazardlib.source.point import CollapsedPointSource
+    get_nbytes_msg)
+from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -66,46 +65,6 @@ def get_extreme_poe(array, imtls):
         the maximum PoE corresponding to the maximum level for IMTs and GSIMs
     """
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
-
-
-def _coords(psources):
-    arr = numpy.zeros((len(psources), 3))
-    for p, psource in enumerate(psources):
-        arr[p, 0] = psource.location.x
-        arr[p, 1] = psource.location.y
-        arr[p, 2] = psource.location.z
-    return arr
-
-
-def grid_point_sources(sources, ps_grid_spacing):
-    """
-    :param sources:
-        a list of sources with the same grp_id (point sources and not)
-    :param ps_grid_spacing:
-        value of the point source grid spacing in km; if None, do nothing
-    :returns:
-        a list of both non-point sources and collapsed point sources
-    """
-    if ps_grid_spacing is None:
-        return sources
-    out = [src for src in sources if not hasattr(src, 'location')]
-    ps = numpy.array([src for src in sources if hasattr(src, 'location')])
-    if len(ps) < 2:  # nothing to collapse
-        return out + list(ps)
-    coords = _coords(ps)
-    deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
-    deltay = angular_distance(ps_grid_spacing)
-    grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
-    for idxs in grid.values():
-        cps = CollapsedPointSource(ps[idxs])
-        cps.num_ruptures = cps.count_ruptures()
-        cps.id = ps[0].id
-        cps.grp_id = ps[0].grp_id
-        cps.et_id = ps[0].et_id
-        cps.nsites = sum(p.nsites for p in ps)
-        out.append(cps)
-    logging.info('Reduced point sources %d->%d', len(ps), len(grid))
-    return out
 
 
 #  ########################### task functions ############################ #
