@@ -897,15 +897,12 @@ class HazardCalculator(BaseCalculator):
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        srcs = self.csm.get_sources()
         for src_id, arr in calc_times.items():
             row = self.csm.source_info[src_id]
             row[CALC_TIME] += arr[2]
             if nsites:
                 row[EFF_RUPTURES] += arr[0]
                 row[NUM_SITES] += arr[1]
-                srcs[src_id].num_ruptures = int(arr[0])
-                srcs[src_id].nsites = int(arr[1])
 
     def store_source_info(self, calc_times, nsites=False):
         """

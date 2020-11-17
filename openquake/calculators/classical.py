@@ -119,7 +119,7 @@ def preclassical(srcs, params, monitor):
         src.num_ruptures = src.count_ruptures()
         dt = time.time() - t0
         calc_times[src.id] += F32([src.num_ruptures, len(sites), dt])
-        sources.extend(srcs)
+        sources.append(src)
     return dict(sources=sources, calc_times=calc_times)
 
 
@@ -347,7 +347,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     src = max(
                         sg, key=operator.attrgetter('nsites', 'source_id'))
                     sg.sources = [src]
-        print(self.csm)
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
@@ -451,7 +450,6 @@ class ClassicalCalculator(base.HazardCalculator):
             for src in sg:
                 src.ngsims = len(rlzs_by_gsim)
                 totweight += src.weight
-                print('-------', src, src.weight, totweight)
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
                            'ruptures with complex_fault_mesh_spacing={} km')
