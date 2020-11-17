@@ -78,10 +78,7 @@ def classical_split_filter(sources, rlzs_by_gsim, params, monitor):
     Compute the PoEs from filtered sources.
     """
     minw = params['min_weight']
-    if params['split_sources']:
-        maxw = params['max_weight'] / 5  # produce more subtasks
-    else:
-        maxw = params['max_weight'] / 2
+    maxw = params['max_weight'] / 2
     blocks = list(block_splitter(sources, maxw, get_weight))
     if not blocks:
         yield {'pmap': {}, 'extra': {}}
@@ -108,7 +105,7 @@ def classical_split_filter(sources, rlzs_by_gsim, params, monitor):
 
 def preclassical(srcs, params, monitor):
     """
-    Prefilter and weight the sources
+    Prefilter and weight the sources. Also split if split_sources is true.
     """
     srcfilter = monitor.read('srcfilter')
     calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nrups, nsites, time
