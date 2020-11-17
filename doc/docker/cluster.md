@@ -6,7 +6,7 @@ For a clustered multi node deployment an orchestrator like [Kubernetes](https://
 As a _reference_ a Docker compose is included. It creates an OpenQuake Engine cluster with **dynamic scaling capabilities**:
 
 ```bash
-$ docker-compose -f docker-compose.yml -f docker-compose.celery.yml up
+$ docker-compose  up
 ```
 
 Containers can be also started in background using `$ docker-compose up -d`.
@@ -14,16 +14,10 @@ Containers can be also started in background using `$ docker-compose up -d`.
 More workers can be started via
 
 ```bash
-$ docker-compose -f docker-compose.yml -f docker-compose.celery.yml up --scale worker=N
+$ docker-compose  up --scale worker=N
 ```
 where `N` is the number of expected worker containers.
 
-
-### Using ZMQ instead of Celery (experimental)
-
-```bash
-$ docker-compose -f docker-compose.yml up --scale worker=N
-```
 
 ### Shared directory
 
