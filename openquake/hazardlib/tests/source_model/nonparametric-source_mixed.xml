@@ -4,44 +4,22 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
-    investigation_time="1.0"
-    name="Test Source Model"
+        name="Test Source Model"
+        investigation_time="50"
     >
         <sourceGroup
-        rup_interdep="indep"
-        src_interdep="indep"
-        tectonicRegion="Some TRT"
+        tectonicRegion="Active Shallow Crust"
         >
             <nonParametricSeismicSource
             id="1"
             name="Fake Non Parametric Source"
-            probs_occur="0.54 0.46"
             >
-                <magnitude>
-                    7.3
-                </magnitude>
-                <rake>
-                    90.0
-                </rake>
-                <hypocenter depth="28.101" lat="42.726" lon="140.0"/>
-                
-                <singlePlaneRupture>
-                    <planarSurface>
-                        <topLeft depth="10.0" lat="41.6" lon="143.1"/>
-                        <topRight depth="10.0" lat="40.2" lon="143.91"/>
-                        <bottomLeft depth="43.202" lat="41.252" lon="142.07"/>
-                        <bottomRight depth="43.202" lat="39.852" lon="142.91"/>
-                    </planarSurface>
-                </singlePlaneRupture>
-                <singlePlaneRupture>
-                    <planarSurface>
-                        <topLeft depth="9.0" lat="41.6" lon="143.1"/>
-                        <topRight depth="9.0" lat="40.2" lon="143.91"/>
-                        <bottomLeft depth="43.202" lat="41.252" lon="142.07"/>
-                        <bottomRight depth="43.202" lat="39.852" lon="142.91"/>
-                    </planarSurface>
-                </singlePlaneRupture>
-                <multiPlanesRupture>
+                <multiPlanesRupture
+                probs_occur="0.9244 0.0756"
+                >
+                    <magnitude> 6.9 </magnitude>
+                    <rake> 0.0 </rake>
+                    <hypocenter depth="7.1423" lat="35.296" lon="139.31"/>
                     <planarSurface>
                         <topLeft depth="2.0" lat="35.363" lon="139.16"/>
                         <topRight depth="2.0" lat="35.394" lon="138.99"/>
@@ -54,52 +32,43 @@ xmlns:gml="http://www.opengis.net/gml"
                         <bottomLeft depth="12.285" lat="35.234" lon="139.45"/>
                         <bottomRight depth="12.285" lat="35.423" lon="139.28"/>
                     </planarSurface>
+
+                    <simpleFaultSurface>
+                        <simpleFaultGeometry>
+                            <gml:LineString>
+                                <gml:posList>
+                                    147.96 43.202 148.38 43.438 148.51 43.507 148.68 43.603 148.76 43.64
+                                </gml:posList>
+                            </gml:LineString>
+                            <dip> 30.0 </dip>
+                            <upperSeismoDepth> 14.5 </upperSeismoDepth>
+                            <lowerSeismoDepth> 35.5 </lowerSeismoDepth>
+                        </simpleFaultGeometry>
+                    </simpleFaultSurface>
+
+                   <complexFaultSurface>
+                        <complexFaultGeometry>
+                            <faultTopEdge>
+                                <gml:LineString>
+                                    <gml:posList>
+                                        148.76 43.64 5.0 148.68 43.603 5.0 148.51 43.507 5.0 148.38 43.438 5.0 147.96 43.202 5.0
+                                    </gml:posList>
+                                </gml:LineString>
+                            </faultTopEdge>
+                            <faultBottomEdge>
+                                <gml:LineString>
+                                    <gml:posList>
+                                        147.92 44.002 35.5 147.81 43.946 35.5 147.71 43.897 35.5 147.5 43.803 35.5 147.36 43.727 35.5
+                                    </gml:posList>
+                                </gml:LineString>
+                            </faultBottomEdge>
+                        </complexFaultGeometry>
+                    </complexFaultSurface>
+
                 </multiPlanesRupture>
-                <simpleFaultRupture>
-                    <simpleFaultGeometry>
-                        <gml:LineString>
-                            <gml:posList>
-                                147.96 43.202 148.38 43.438 148.51 43.507 148.68 43.603 148.76 43.64
-                            </gml:posList>
-                        </gml:LineString>
-                        <dip>
-                            30.0
-                        </dip>
-                        <upperSeismoDepth>
-                            14.5
-                        </upperSeismoDepth>
-                        <lowerSeismoDepth>
-                            35.5
-                        </lowerSeismoDepth>
-                    </simpleFaultGeometry>
-                </simpleFaultRupture>
-                <complexFaultRupture>
-                    <complexFaultGeometry>
-                        <faultTopEdge>
-                            <gml:LineString>
-                                <gml:posList>
-                                    148.76 43.64 5.0 148.68 43.603 5.0 148.51 43.507 5.0 148.38 43.438 5.0 147.96 43.202 5.0
-                                </gml:posList>
-                            </gml:LineString>
-                        </faultTopEdge>
-                        <faultBottomEdge>
-                            <gml:LineString>
-                                <gml:posList>
-                                    147.92 44.002 35.5 147.81 43.946 35.5 147.71 43.897 35.5 147.5 43.803 35.5 147.36 43.727 35.5
-                                </gml:posList>
-                            </gml:LineString>
-                        </faultBottomEdge>
-                    </complexFaultGeometry>
-                </complexFaultRupture>
-                <griddedRupture
-                >
-                    <griddedSurface>
-                        <gml:posList>
-                            -124.704 40.363 5.49326 -124.977 41.214 4.98856 -125.14 42.096 4.89734
-                        </gml:posList>
-                    </griddedSurface>
-                </griddedRupture>
+
             </nonParametricSeismicSource>
         </sourceGroup>
     </sourceModel>
 </nrml>
+

@@ -223,9 +223,8 @@ class SourceConverterTestCase(unittest.TestCase):
         fname = 'nonparametric-source_mixed.xml'
         testfile = os.path.join(testdir, fname)
         grp = nrml.to_python(testfile)[0]
-        src = grp[0]
-        expected = numpy.array([0.2, 0.8])
-        computed = numpy.array([src.data[0][0].weight, src.data[1][0].weight])
+        computed = type(grp[0].data[0][0].surface).__name__
+        expected = 'MultiSurface'
         numpy.testing.assert_equal(computed, expected)
 
     def test_tom_poisson_with_rate(self):
