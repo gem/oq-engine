@@ -224,8 +224,8 @@ def get_centroid(src):
 
 def split_source(src):
     """
-    :param src: a source
-    :returns: the split_sources
+    :param src: a splittable (or not splittable) source
+    :returns: the underlying sources (or the source itself)
     """
     from openquake.hazardlib.source import splittable  # avoid circular import
     if not splittable(src):
@@ -357,11 +357,13 @@ class SourceFilter(object):
         dlon = get_longitudinal_extent(rec['minlon'], rec['maxlon'])
         dlat = rec['maxlat'] - rec['minlat']
         delta = max(dlon, dlat) / KM_TO_DEGREES
-        return self.get_around_sids(rec, delta)
+        return self.get_around_sids(rec, delta, trt)
 
-    def get_around_sids(self, src_or_rec, delta=0):
+    def get_around_sids(self, src_or_rec, delta=0, trt=None):
         """
-        :param src: a source or a rupture record
+        :param src_or_rec: a source or a rupture record
+        :param delta: increase the maximum_distance by this
+        :param trt: passed only if src_or_rec is a record
         :returns: the site indices within the maximum_distance + delta
         """
         if self.sitecol is None:
@@ -370,10 +372,9 @@ class SourceFilter(object):
             return self.sitecol.sids
         if not hasattr(self, 'kdt'):
             self.kdt = cKDTree(self.sitecol.xyz)
-        try:  # record
-            trt = src_or_rec['tectonic_region_type']
+        if trt:  # record
             xyz = spherical_to_cartesian(*src_or_rec['hypo'])
-        except TypeError:  # source
+        else:  # source
             trt = src_or_rec.tectonic_region_type
             xyz = spherical_to_cartesian(*get_centroid(src_or_rec))
         maxdist = self.integration_distance(trt)
