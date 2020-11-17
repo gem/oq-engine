@@ -30,7 +30,6 @@ A configuration example for NFS is provided via the `oqdata-nfs` volume in [dock
 - [Introduction](../installing/docker.md)
 - [Single node deployment](single.md)
 - [Advanced options](advanced.md)
-- [Build from sources](../../docker.md#build-openquake-docker-images)
 
 ***
 
