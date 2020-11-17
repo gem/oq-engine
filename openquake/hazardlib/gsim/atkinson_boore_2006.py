@@ -66,11 +66,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see paragraph
     #: 'Methodology and Model Parameters', p. 2182
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`,
@@ -79,9 +75,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
 
     #: Supported standard deviation type is total, see table 6
     #: and 9, p. 2192 and 2202, respectively.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters is Vs30.
     #: See paragraph 'Equations for soil sites', p. 2200
@@ -101,8 +95,9 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        mean = self._get_mean(sites.vs30, rup.mag, dists.rrup, imt, scale_fac=0)
-        stddevs = self._get_stddevs(stddev_types, num_sites=sites.vs30.size)
+        mean = self._get_mean(
+            sites.vs30, rup.mag, dists.rrup, imt, scale_fac=0)
+        stddevs = self._get_stddevs(None, stddev_types, sites.vs30.size)
 
         return mean, stddevs
 
@@ -246,7 +241,9 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         idxs = vs30 < 2000.0
         mean[idxs] = mean[idxs] + sal[idxs] + sanl[idxs]
 
-    def _get_stddevs(self, stddev_types, num_sites):
+    # notice the presence of a dummy parameter `C` to keep the same
+    # interface as the base class BooreAtkinson2008
+    def _get_stddevs(self, C, stddev_types, num_sites):
         """
         Return total standard deviation (see table 6, p. 2192).
         """
@@ -400,7 +397,7 @@ class AtkinsonBoore2006MblgAB1987bar140NSHMP2008(AtkinsonBoore2006):
         mag = self._convert_magnitude(rup.mag)
 
         mean = self._get_mean(sites.vs30, mag, dists.rrup, imt, scale_fac=0)
-        stddevs = self._get_stddevs(stddev_types, num_sites=sites.vs30.size)
+        stddevs = self._get_stddevs(None, stddev_types, sites.vs30.size)
 
         mean = clip_mean(imt, mean)
 
@@ -457,7 +454,7 @@ class AtkinsonBoore2006MblgAB1987bar200NSHMP2008(AtkinsonBoore2006):
         mean = self._get_mean(
             sites.vs30, mag, dists.rrup, imt, scale_fac=0.5146
         )
-        stddevs = self._get_stddevs(stddev_types, num_sites=sites.vs30.size)
+        stddevs = self._get_stddevs(None, stddev_types, sites.vs30.size)
 
         mean = clip_mean(imt, mean)
 
@@ -515,7 +512,7 @@ class AtkinsonBoore2006Modified2011(AtkinsonBoore2006):
         # Stress drop scaling factor is now a property of magnitude
         scale_fac = self._get_stress_drop_scaling_factor(rup.mag)
         mean = self._get_mean(sites.vs30, rup.mag, dists.rrup, imt, scale_fac)
-        stddevs = self._get_stddevs(stddev_types, num_sites=sites.vs30.size)
+        stddevs = self._get_stddevs(None, stddev_types, sites.vs30.size)
 
         return mean, stddevs
 

@@ -1,7 +1,6 @@
 ---
 name: ansible
 'on':
-  push:
   schedule:
     - cron: "0 4 * * *"
 

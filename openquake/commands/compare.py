@@ -89,6 +89,7 @@ def compare_rups(calc_1, calc_2):
     for col in cols:
         a1 = df1[col].to_numpy()
         a2 = df2[col].to_numpy()
+        assert len(a1) == len(a2), (len(a1), len(a2))
         _print_diff(a1, a2, df1.index, df2.index, col)
 
 
