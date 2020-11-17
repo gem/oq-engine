@@ -356,8 +356,8 @@ class ClassicalCalculator(base.HazardCalculator):
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
             oq.max_sites_per_tile, oq.max_sites_disagg)
         psd = self.set_psd()
-        performance.Monitor.save(
-            self.datastore, 'srcfilter', self.src_filter())
+        srcfilter = self.src_filter()
+        performance.Monitor.save(self.datastore, 'srcfilter', srcfilter)
         srcs = self.csm.get_sources(atomic=False)
         if srcs:
             res = parallel.Starmap.apply(
@@ -371,15 +371,20 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
                 return
 
+            self.update_source_info(res['calc_times'], nsites=True)
             sources_by_grp = groupby(
                 res['sources'], operator.attrgetter('grp_id'))
-            self.csm.src_groups = [
-                sg for sg in self.csm.src_groups if sg.atomic]
-            for grp_id, sources in sources_by_grp.items():
-                sg = SourceGroup(sources[0].tectonic_region_type)
-                sg.sources = grid_point_sources(sources, oq.ps_grid_spacing)
-                self.csm.src_groups.append(sg)
-            self.update_source_info(res['calc_times'], nsites=True)
+        else:
+            for src in self.csm.get_sources(atomic=True):
+                src.num_ruptures = src.count_ruptures()
+                src.nsites = self.N
+            sources_by_grp = {}
+        self.csm.src_groups = [
+            sg for sg in self.csm.src_groups if sg.atomic]
+        for grp_id, sources in sources_by_grp.items():
+            sg = SourceGroup(sources[0].tectonic_region_type)
+            sg.sources = grid_point_sources(sources, oq.ps_grid_spacing)
+            self.csm.src_groups.append(sg)
 
         # if OQ_SAMPLE_SOURCES is set extract one source for group
         ss = os.environ.get('OQ_SAMPLE_SOURCES')
