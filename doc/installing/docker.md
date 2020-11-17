@@ -11,8 +11,7 @@ For more information about operating system support (which includes Linux, macOS
 
 Each container includes:
 
-- CentOS 8
-- Python 3.6
+- Python 3.8 from official docker image
 - Python dependencies (numpy, scipy, h5py...)
 - OpenQuake Engine and Hazardlib
 - The `oq` command line tool
