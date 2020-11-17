@@ -15,17 +15,17 @@ xmlns:gml="http://www.opengis.net/gml"
             <nonParametricSeismicSource
             id="1"
             name="Fake Non Parametric Source"
+            probs_occur="0.54 0.46"
             >
-                <singlePlaneRupture
-                probs_occur="0.54 0.46"
-                >
-                    <magnitude>
-                        7.3
-                    </magnitude>
-                    <rake>
-                        90.0
-                    </rake>
-                    <hypocenter depth="28.101" lat="42.726" lon="140.0"/>
+                <magnitude>
+                    7.3
+                </magnitude>
+                <rake>
+                    90.0
+                </rake>
+                <hypocenter depth="28.101" lat="42.726" lon="140.0"/>
+                
+                <singlePlaneRupture>
                     <planarSurface>
                         <topLeft depth="10.0" lat="41.6" lon="143.1"/>
                         <topRight depth="10.0" lat="40.2" lon="143.91"/>
@@ -33,16 +33,7 @@ xmlns:gml="http://www.opengis.net/gml"
                         <bottomRight depth="43.202" lat="39.852" lon="142.91"/>
                     </planarSurface>
                 </singlePlaneRupture>
-                <singlePlaneRupture
-                probs_occur="0.544 0.456"
-                >
-                    <magnitude>
-                        8.3
-                    </magnitude>
-                    <rake>
-                        90.0
-                    </rake>
-                    <hypocenter depth="26.101" lat="40.726" lon="143.0"/>
+                <singlePlaneRupture>
                     <planarSurface>
                         <topLeft depth="9.0" lat="41.6" lon="143.1"/>
                         <topRight depth="9.0" lat="40.2" lon="143.91"/>
@@ -50,16 +41,7 @@ xmlns:gml="http://www.opengis.net/gml"
                         <bottomRight depth="43.202" lat="39.852" lon="142.91"/>
                     </planarSurface>
                 </singlePlaneRupture>
-                <multiPlanesRupture
-                probs_occur="0.9244 0.0756"
-                >
-                    <magnitude>
-                        6.9
-                    </magnitude>
-                    <rake>
-                        0.0
-                    </rake>
-                    <hypocenter depth="7.1423" lat="35.296" lon="139.31"/>
+                <multiPlanesRupture>
                     <planarSurface>
                         <topLeft depth="2.0" lat="35.363" lon="139.16"/>
                         <topRight depth="2.0" lat="35.394" lon="138.99"/>
@@ -73,16 +55,7 @@ xmlns:gml="http://www.opengis.net/gml"
                         <bottomRight depth="12.285" lat="35.423" lon="139.28"/>
                     </planarSurface>
                 </multiPlanesRupture>
-                <simpleFaultRupture
-                probs_occur="0.157 0.843"
-                >
-                    <magnitude>
-                        7.8
-                    </magnitude>
-                    <rake>
-                        90.0
-                    </rake>
-                    <hypocenter depth="22.341" lat="43.624" lon="147.94"/>
+                <simpleFaultRupture>
                     <simpleFaultGeometry>
                         <gml:LineString>
                             <gml:posList>
@@ -100,16 +73,7 @@ xmlns:gml="http://www.opengis.net/gml"
                         </lowerSeismoDepth>
                     </simpleFaultGeometry>
                 </simpleFaultRupture>
-                <complexFaultRupture
-                probs_occur="0.157 0.843"
-                >
-                    <magnitude>
-                        7.8
-                    </magnitude>
-                    <rake>
-                        90.0
-                    </rake>
-                    <hypocenter depth="22.341" lat="43.624" lon="147.94"/>
+                <complexFaultRupture>
                     <complexFaultGeometry>
                         <faultTopEdge>
                             <gml:LineString>
@@ -128,15 +92,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     </complexFaultGeometry>
                 </complexFaultRupture>
                 <griddedRupture
-                probs_occur="0.6 0.4"
                 >
-                    <magnitude>
-                        8.2
-                    </magnitude>
-                    <rake>
-                        90.0
-                    </rake>
-                    <hypocenter depth="26.001" lat="40.7" lon="143.1"/>
                     <griddedSurface>
                         <gml:posList>
                             -124.704 40.363 5.49326 -124.977 41.214 4.98856 -125.14 42.096 4.89734
