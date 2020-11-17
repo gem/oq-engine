@@ -391,6 +391,12 @@ class CollapsedPointSource(ParametricSeismicSource):
         """
         return len(self.pointruptures)
 
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box of the point, enlarged by the maximum distance
+        """
+        return get_bounding_box([self.location], maxdist)
+
 
 def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
                  nodal_plane_tup=(0, 90, 0), hc_tup=(0, 0, 20),
