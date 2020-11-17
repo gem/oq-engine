@@ -347,6 +347,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     src = max(
                         sg, key=operator.attrgetter('nsites', 'source_id'))
                     sg.sources = [src]
+        print(self.csm)
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
@@ -450,6 +451,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for src in sg:
                 src.ngsims = len(rlzs_by_gsim)
                 totweight += src.weight
+                print('-------', src, src.weight, totweight)
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
                            'ruptures with complex_fault_mesh_spacing={} km')
