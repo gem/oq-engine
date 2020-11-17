@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
+import itertools
 import numpy
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.scalerel import PointMSR
@@ -337,8 +338,10 @@ class CollapsedPointSource(ParametricSeismicSource):
     """
     code = b'P'
     MODIFICATIONS = set()
+    counter = itertools.count(1)
 
     def __init__(self, pointsources):
+        self.source_id = 'cps-%d' % next(self.counter)
         self.tectonic_region_type = pointsources[0].tectonic_region_type
         self.temporal_occurrence_model = (
             pointsources[0].temporal_occurrence_model)
@@ -387,6 +390,12 @@ class CollapsedPointSource(ParametricSeismicSource):
         :returns: the number of underlying point ruptures
         """
         return len(self.pointruptures)
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box of the point, enlarged by the maximum distance
+        """
+        return get_bounding_box([self.location], maxdist)
 
 
 def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),

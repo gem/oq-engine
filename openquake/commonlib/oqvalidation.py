@@ -176,6 +176,7 @@ class OqParam(valid.ParamSet):
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.MagDepDistance.new, None)
     point_rupture_bins = valid.Param(valid.positiveint, 20)
+    ps_grid_spacing = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
