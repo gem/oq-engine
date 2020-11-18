@@ -18,7 +18,7 @@
 
 """
 Module :mod:`openquake.hazardlib.geo.surface.kite_fault` defines
-:class:`KiteFaultSurface`.
+:class:`KiteSurface`.
 """
 
 import copy
@@ -35,7 +35,7 @@ TOL = 0.5
 TOLERANCE = 0.2
 
 
-class KiteFaultSurface(BaseSurface):
+class KiteSurface(BaseSurface):
     """
     The Kite Fault Surface allows the construction of faults with variable
     width along the strike, variable dip angle along the dip and strike

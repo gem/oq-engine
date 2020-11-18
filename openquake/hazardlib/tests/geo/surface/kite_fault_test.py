@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # This is needed
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.geodetic import distance
-from openquake.hazardlib.geo.surface import KiteFaultSurface
+from openquake.hazardlib.geo.surface import KiteSurface
 
 from typing import Optional
 
@@ -31,7 +31,7 @@ BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
 
 
-def ppp(profiles: list, smsh: KiteFaultSurface, title: Optional[str] = ''):
+def ppp(profiles: list, smsh: KiteSurface, title: Optional[str] = ''):
 
     """
     Plots the 3D mesh
@@ -70,7 +70,7 @@ def ppp(profiles: list, smsh: KiteFaultSurface, title: Optional[str] = ''):
     plt.show()
 
 
-class KiteFaultSurfaceSimpleTests(unittest.TestCase):
+class KiteSurfaceSimpleTests(unittest.TestCase):
 
     def setUp(self):
         path = os.path.join(BASE_DATA_PATH, 'profiles05')
@@ -82,11 +82,11 @@ class KiteFaultSurfaceSimpleTests(unittest.TestCase):
         vsmpl = 2
         idl = False
         alg = False
-        smsh = KiteFaultSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+        smsh = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
         
  
 
-class KiteFaultSurfaceTestCase(unittest.TestCase):
+class KiteSurfaceTestCase(unittest.TestCase):
     """ Test the construction of a Kite fault surface. """
 
     def setUp(self):
@@ -126,7 +126,7 @@ class KiteFaultSurfaceTestCase(unittest.TestCase):
         # Build the fault surface
         p_sd = 2.0
         e_sd = 5.0
-        msh = KiteFaultSurface.from_profiles(self.profiles1, p_sd, e_sd)
+        msh = KiteSurface.from_profiles(self.profiles1, p_sd, e_sd)
 
         # The fault trace has a length of 0.5 degrees at the equator (along
         # meridians) which corresponds to a length of # 111.3/2km = 55.65km.
@@ -147,7 +147,7 @@ class KiteFaultSurfaceTestCase(unittest.TestCase):
         # Build the fault surface
         p_sd = 2.5
         e_sd = 5.0
-        srfc = KiteFaultSurface.from_profiles(self.profiles2, p_sd, e_sd)
+        srfc = KiteSurface.from_profiles(self.profiles2, p_sd, e_sd)
 
         # The fault trace has a length of 0.5 degrees at the equator (along
         # meridians) which corresponds to a length of # 111.3/2km = 55.65km.
@@ -183,7 +183,7 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         vsmpl = 4
         idl = False
         alg = False
-        srfc = KiteFaultSurface.from_profiles(self.prf, hsmpl, vsmpl, idl, alg)
+        srfc = KiteSurface.from_profiles(self.prf, hsmpl, vsmpl, idl, alg)
         smsh = srfc.mesh 
 
         #
@@ -234,7 +234,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         self.v_sampl = 4
         idl = False
         alg = False
-        self.smsh = KiteFaultSurface.from_profiles(self.profiles, self.v_sampl,
+        self.smsh = KiteSurface.from_profiles(self.profiles, self.v_sampl,
                                                    self.h_sampl, idl, alg)
 
     def test_h_spacing(self):
@@ -289,7 +289,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         v_sampl = 5
         idl = False
         alg = False
-        srfc = KiteFaultSurface.from_profiles(self.profiles, v_sampl, h_sampl,
+        srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                               idl, alg)
         smsh = srfc.mesh
         self.assertTrue(np.all(~np.isnan(smsh.lons[0, :])))
@@ -304,7 +304,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         v_sampl = 2.5
         idl = False
         alg = True
-        srfc = KiteFaultSurface.from_profiles(self.profiles, v_sampl, h_sampl,
+        srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                               idl, alg)
         self.assertTrue(np.any(np.isnan(srfc.mesh.lons[0, :])))
 
@@ -325,7 +325,7 @@ class IdealizedATest(unittest.TestCase):
         v_sampl = 4
         idl = False
         alg = False
-        smsh = KiteFaultSurface.from_profiles(self.profiles, v_sampl, h_sampl,
+        smsh = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                               idl, alg)
         self.assertTrue(np.all(~np.isnan(smsh.mesh.lons[0, :])))
 
@@ -339,7 +339,7 @@ class IdealizedATest(unittest.TestCase):
         v_sampl = 4
         idl = False
         alg = True
-        smsh = KiteFaultSurface.from_profiles(self.profiles, v_sampl, h_sampl,
+        smsh = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                               idl, alg)
         self.assertTrue(np.any(np.isnan(smsh.mesh.lons[0, :])))
 
@@ -359,7 +359,7 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         sampling = 40
         idl = False
         alg = False
-        smsh = KiteFaultSurface.from_profiles(self.profiles, sampling,
+        smsh = KiteSurface.from_profiles(self.profiles, sampling,
                                               sampling, idl, alg)
         idx = np.isfinite(smsh.mesh.lons[:, :])
         self.assertEqual(np.sum(np.sum(idx)), 202)
