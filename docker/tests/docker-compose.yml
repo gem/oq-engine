@@ -1,10 +1,32 @@
-version: '2'
+version: '3.7'
+
+networks:
+  frontend:
+  backend:
+    internal: true
+volumes:
+  oqdata:
+#definizione di un yaml template da usare poi negli altri servizi
+x-op-service-default: &service_default
+  restart: unless-stopped
+  init: true
+
 services:
   master:
+    <<: *service_default
+    container_name: engine-master
+    hostname: engine-master
     image: openquake/engine-master-zmq:nightly
+    networks:
+     backend:
+      aliases:
+       - engine-master
+     frontend:
+    ports:
+      - 8800:8800
     volumes:
       - oqdata:/home/openquake/oqdata
-      - ../../:/i../../oq-engine
+      - ../../:/oq-engine
       - ../../openquake/baselib:/opt/openquake/lib/python3.6/site-packages/openquake/baselib
       - ../../openquake/calculators:/opt/openquake/lib/python3.6/site-packages/openquake/calculators
       - ../../openquake/commands:/opt/openquake/lib/python3.6/site-packages/openquake/commands
@@ -15,12 +37,17 @@ services:
       - ../../openquake/qa_tests_data:/opt/openquake/lib/python3.6/site-packages/openquake/qa_tests_data
       - ../../openquake/risklib:/opt/openquake/lib/python3.6/site-packages/openquake/risklib
       - ../../openquake/server:/opt/openquake/lib/python3.6/site-packages/openquake/server
-    networks:
-      - cluster
-    ports:
-      - 8800:8800
+
   worker:
+    <<: *service_default
+    # don't use name if want to scale
+    # container_name: engine-worker
+    hostname: engine-worker
     image: openquake/engine-worker-zmq:nightly
+    networks:
+     backend:
+      aliases:
+       - engine-worker
     volumes:
       - oqdata:/home/openquake/oqdata:ro
       - ../../openquake/baselib:/opt/openquake/lib/python3.6/site-packages/openquake/baselib
@@ -33,13 +60,5 @@ services:
       - ../../openquake/qa_tests_data:/opt/openquake/lib/python3.6/site-packages/openquake/qa_tests_data
       - ../../openquake/risklib:/opt/openquake/lib/python3.6/site-packages/openquake/risklib
       - ../../openquake/server:/opt/openquake/lib/python3.6/site-packages/openquake/server
-    networks:
-      - cluster
     depends_on:
       - master
-
-volumes:
-  oqdata:
-
-networks:
-  cluster:
