@@ -30,4 +30,4 @@ jobs:
           docker exec -u 0 engine-master /bin/bash -c "chown -R 1000:1000 oq-engine"
           time docker exec engine-master oq-engine/bin/run-demos.sh oq-engine/demos
           curl http://localhost:8800/v1/calc/list
-          docke-compose down
+          docker-compose down
