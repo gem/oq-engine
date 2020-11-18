@@ -400,16 +400,10 @@ class SourceFilter(object):
                 yield src, None
             return
         for src in sources:
-            try:
-                box = self.integration_distance.get_enlarged_box(src)
-            except BBoxError:  # too large, don't filter
-                src.nsites = len(self.sitecol)
-                yield src, self.sitecol.sids
-                continue
-            indices = self.sitecol.within_bbox(box)
-            if len(indices):
-                src.nsites = len(indices)
-                yield src, indices
+            sids = self.close_sids(src)
+            if len(sids):
+                src.nsites = len(sids)
+                yield src, sids
 
     def within_bbox(self, srcs):
         """

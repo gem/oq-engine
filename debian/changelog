@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized the prefiltering by using a KDTree
   * Experimental: implemented gridding of point sources
   * Reduced slow tasks due to big complex fault sources
   * Moved the parameter `num_cores` into openquake.cfg
