@@ -125,7 +125,7 @@ class KiteSurface(BaseSurface):
         idx = np.isfinite(self.mesh.lons)
         azi = azimuth(self.mesh.lons[:-1, :], self.mesh.lats[:-1, :],
                       self.mesh.lons[1:, :], self.mesh.lats[1:, :])
-        return np.mean(((azi+0.001) % 360))
+        return np.mean(((azi[idx[:-1, :]]+0.001) % 360))
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
