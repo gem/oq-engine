@@ -61,7 +61,18 @@ class KiteFaultSurface(BaseSurface):
         :returns:
             The average dip, in decimal degrees.
         """
-        pass
+        if self.dip is None:
+            dips = []
+            lens = []
+            for col_idx in self.mesh.lons.shape[0]:
+                hdists = distance(self.mesh.lons[:-1, col_idx],
+                                  self.mesh.lats[:-1, col_idx],
+                                  self.mesh.lons[1:, col_idx],
+                                  self.mesh.lats[1:, col_idx])
+                vdists = (self.mesh.lons[1:, col_idx] - 
+                          self.mesh.lons[:-1, col_idx])
+                dips.append(np.mean(np.arctan(vdists, hdists)))
+                lens.append(sum((hdists**2 + vdists**2)**0.5))
 
     def get_strike(self):
         """
