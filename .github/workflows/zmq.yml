@@ -25,9 +25,8 @@ jobs:
           docker-compose up -d
           sleep 30
           docker-compose ps
-      - name: Run a calculation on cluster
+      - name: Run a calculation on cluster and retrieve with curl
         run: |
           docker exec -u 0 engine-master /bin/bash -c "chown -R 1000:1000 oq-engine"
           time docker exec engine-master oq-engine/bin/run-demos.sh oq-engine/demos
           curl http://localhost:8800/v1/calc/list
-          docker-compose down
