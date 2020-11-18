@@ -45,7 +45,7 @@ class KiteFaultSurface(BaseSurface):
     """
 
     def __init__(self, mesh):
-        super().__init__(mesh)
+        self.mesh = mesh
         assert 1 not in self.mesh.shape, (
             "Mesh must have at least 2 nodes along both length and width.")
         self.strike = self.dip = None
