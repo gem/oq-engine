@@ -40,10 +40,6 @@ def value(asset, loss_type):
     return asset['value-' + loss_type]
 
 
-def _event_slice(num_gmfs, r):
-    return slice(r * num_gmfs, (r + 1) * num_gmfs)
-
-
 def ael_dt(loss_names, rlz=False):
     """
     :returns: (asset_id, event_id, loss) or (asset_id, event_id, loss)
@@ -83,6 +79,7 @@ def scenario_risk(riskinputs, param, monitor):
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
             r = out.rlzi
+            num_events = param['num_events'][r]
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
                 if numpy.product(losses.shape) == 0:  # happens for all NaNs
@@ -90,8 +87,7 @@ def scenario_risk(riskinputs, param, monitor):
                 avg = numpy.zeros(len(ri.assets), F32)
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
-                    avg[a] = losses[a].sum() / E
-                    import pdb; pdb.set_trace()
+                    avg[a] = losses[a].sum() / num_events
                     result['avg'].append((l, r, asset['ordinal'], avg[a]))
                     for loss, eid in zip(losses[a], out.eids):
                         acc[aid, eid][l] = loss
@@ -121,8 +117,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         super().pre_execute()
         self.assetcol = self.datastore['assetcol']
-        self.event_slice = functools.partial(
-            _event_slice, oq.number_of_ground_motion_fields)
         E = oq.number_of_ground_motion_fields * self.R
         self.riskinputs = self.build_riskinputs('gmf')
         self.param['tempname'] = riskinput.cache_epsilons(
@@ -134,6 +128,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         except KeyError:
             self.param['weights'] = [1 / self.R for _ in range(self.R)]
         self.param['ael_dt'] = dt = ael_dt(oq.loss_names)
+        self.rlzs = self.datastore['events']['rlz_id']
+        self.param['num_events'] = numpy.bincount(self.rlzs)  # events by rlz
         A = len(self.assetcol)
         self.datastore.create_dset('loss_data/data', dt)
         self.datastore.create_dset('loss_data/indices', U32, (A, 2))
@@ -167,7 +163,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             E, L = res.shape
             agglosses = numpy.zeros((R, L), stat_dt)
             for r in range(R):
-                mean, std = scientific.mean_std(res[self.event_slice(r)])
+                mean, std = scientific.mean_std(res[self.rlzs == r])
                 agglosses[r]['mean'] = F32(mean)
                 agglosses[r]['stddev'] = F32(std)
 
@@ -192,6 +188,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
             # sanity check
             numpy.testing.assert_allclose(
-                losses_by_asset[:, 0, 0].sum(), agglosses[0, 0]['mean'])
+                losses_by_asset.sum(axis=0), agglosses['mean'],
+                rtol=1E-5)
         logging.info('Mean portfolio loss\n' +
                      views.view('portfolio_loss', self.datastore))
