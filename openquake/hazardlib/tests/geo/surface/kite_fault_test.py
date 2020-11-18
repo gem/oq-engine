@@ -26,7 +26,7 @@ from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.surface import KiteFaultSurface
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-PLOTTING = True
+PLOTTING = False
 
 
 def ppp(profiles, smsh, title=''):
