@@ -25,16 +25,21 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.surface import KiteFaultSurface
 
+from typing import Optional
+
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
 
 
-def ppp(profiles, smsh, title=''):
+def ppp(profiles: list, smsh: KiteFaultSurface, title: Optional[str] = ''):
+
     """
     Plots the 3D mesh
 
+    :param profiles:
+        A list of profiles
     :param smsh:
-        The mesh representing the Kite fault surface
+        The kite surface
     """
 
     # Scaling factor on the z-axis

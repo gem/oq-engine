@@ -88,11 +88,14 @@ class KiteFaultSource(ParametricSeismicSource):
             # Compute the area, length and width of the ruptures
             area = msr.get_median_area(mag=mag, rake=self.rake)
             lng, wdt = get_discrete_dimensions(area, self.rupture_mesh_spacing,
-                                               self.rupture_aspect_ratio)
+                                               self.rupture_aspect_ratio,
+                                               self.profiles_sampling)
 
-            # Get the number of nodes along the strike and dip
-            rup_len = int(lng/self.rupture_mesh_spacing) + 1
-            rup_wid = int(wdt/self.profiles_sampling) + 1
+            # Get the number of nodes along the strike and dip. Note that 
+            # len and wdt should be both multiples of the sampling distances
+            # used along the strike and width
+            rup_len = int(np.round(lng/self.rupture_mesh_spacing)) + 1
+            rup_wid = int(np.round(wdt/self.profiles_sampling)) + 1
 
             # TODO replace
             hypocenter = Point(0, 0, 0)
@@ -108,10 +111,8 @@ class KiteFaultSource(ParametricSeismicSource):
 
             # Rupture generator
             for rup in ruptures:
-                # TODO rup must be a surface
-                rup_surf = BaseSurface(Mesh(rup[0][0], rup[0][1], rup[0][2]))
                 yield ppr(mag, self.rake, self.tectonic_region_type,
-                          hypocenter, rup_surf, occurrence_rate, tom)
+                          hypocenter, rup[0], occurrence_rate, tom)
 
     def _get_ruptures(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1):
         """
@@ -156,9 +157,10 @@ class KiteFaultSource(ParametricSeismicSource):
 
                 # Yield only the ruptures that do not contain NaN
                 if prc > 99.99 and nna >= 4:
-                    yield ((omsh.lons[j:j + rup_d, i:i + rup_s],
-                            omsh.lats[j:j + rup_d, i:i + rup_s],
-                            omsh.depths[j:j + rup_d, i:i + rup_s]), j, i)
+                    msh = Mesh(omsh.lons[j:j + rup_d, i:i + rup_s],
+                               omsh.lats[j:j + rup_d, i:i + rup_s],
+                               omsh.depths[j:j + rup_d, i:i + rup_s])
+                    yield (BaseSurface(msh), j, i)
 
     # TODO
     def get_fault_surface_area(self) -> float:
@@ -184,7 +186,7 @@ def get_discrete_dimensions(area: float, sampling: float, aspr: float,
     :param sampling_y:
         The sampling distance [km] along the dip
     :returns:
-        Two lenght [km] and the width [km] of the rupture, respectively
+        Lenght [km] and the width [km] of the rupture, respectively
     """
 
     lenghts = []
@@ -201,14 +203,14 @@ def get_discrete_dimensions(area: float, sampling: float, aspr: float,
     # Computing possible length and width - length rounded up to a multiple of
     # the sampling distance along strike
     lenghts.append(np.ceil((area * aspr)**0.5/sampling)*sampling)
-    widths.append(np.ceil(lenghts[-1]/aspr/sampling_y)*sampling)
-    widths.append(np.floor(lenghts[-1]/aspr/sampling_y)*sampling)
+    widths.append(np.ceil(lenghts[-1]/aspr/sampling_y)*sampling_y)
+    widths.append(np.floor(lenghts[-1]/aspr/sampling_y)*sampling_y)
 
     # Computing possible length and width - length rounded down to a multiple
     # of the sampling distance along strike
     lenghts.append(np.floor((area * aspr)**0.5/sampling)*sampling)
-    widths.append(np.ceil(lenghts[-1]/aspr/sampling_y)*sampling)
-    widths.append(np.floor(lenghts[-1]/aspr/sampling_y)*sampling)
+    widths.append(np.ceil(lenghts[-1]/aspr/sampling_y)*sampling_y)
+    widths.append(np.floor(lenghts[-1]/aspr/sampling_y)*sampling_y)
 
     # Select the best combination of length and width taking into account
     # the input values of the rupture area and aspect ratio
@@ -227,11 +229,11 @@ def get_discrete_dimensions(area: float, sampling: float, aspr: float,
 
     # Check that the rupture size is compatible with the original value
     # provided. If not, we raise a Value Error
-    if (abs(wdt-sampling) < 1e-10 or abs(lng-sampling) < 1e-10 and
+    if (abs(wdt-sampling_y) < 1e-10 or abs(lng-sampling) < 1e-10 and
             area_error > 0.3):
         wdt = None
         lng = None
     elif area_error > 0.25 and lng > 1e-10 and wdt > 1e-10:
-        raise ValueError('Area discrepancy: ', area, lng*wdt, lng, wdt, aspr)
-
+        raise ValueError('Area discrepancy: ', area, lng*wdt, lng, wdt)
+    
     return lng, wdt

@@ -28,8 +28,11 @@ from openquake.hazardlib.scalerel import PeerMSR, WC1994
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 
-MAKE_MOVIES = True
+from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 
+# Movies are in /tmp
+MAKE_MOVIES = False
+MAKE_PICTURES = False
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
     TRT = TRT.ACTIVE_SHALLOW_CRUST
@@ -40,15 +43,18 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         """
         Utility method for creating quickly fault instances
         :param mfd:
+            An instance of :class:`openquake.hazardlib.scalerel.base.`
         :param aspect_ratio:
+            The rupture aspect ratio
         :param profiles:
+            A list of profiles used to build the fault surface 
         """
 
         # Set the fault source parameter
         source_id = name = 'test-source'
         trt = self.TRT
         rake = self.RAKE
-        rupture_mesh_spacing = 1.
+        rupture_mesh_spacing = 2.5
         magnitude_scaling_relationship = PeerMSR()
         rupture_aspect_ratio = aspect_ratio
         tom = self.TOM
@@ -128,17 +134,50 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
 
 class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
 
-    def aa_test01(self):
+    def test01(self):
         """ Simplest test """
+
+        # Create the magnitude-frequency distribution
         mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=6.2, max_mag=6.4,
                              bin_width=0.1)
         source = self._make_source(mfd=mfd, aspect_ratio=1.5)
         self._test_ruptures(None, source)
 
-        if MAKE_MOVIES:
-            self._ruptures_animation('test01', source.surface, self.ruptures)
+        # The fault surface created should contain 13 quadrilaterals along 
+        # the strike and 9 quadrilaterals along the dip. The distance between 
+        # the two profiles is 33 km. Given that we use a grid spacing of 
+        # 2.5 km, 2.5 * 13 gives 32.5 km. The grid spacing along dip is scaled
+        # by the aspect ratio so that the sampling is proportional along 
+        # strike and dip. In this case the sampling along strike is 1.66km
 
-    def atest02(self):
+        msg = 'Wrong surface mesh'
+        self.assertEqual(source.surface.mesh.lons.shape[1], 14, msg)
+        self.assertEqual(source.surface.mesh.lons.shape[0], 10, msg)
+
+        # Regarding ruptures, the lowest magnitude admitted by the MFD is 6.25
+        # hence - given that the corresponding area of the rupture is 178 km
+        # and the aspect ratio is 1.5 the mesh covered by this rupture must 
+        # have the following dimensions: 
+        # - width = 10.68 km i.e. 6 quadrilaterals and 7 vertexes
+        # - lenght = 16.02 km i.e. 7 quadrilaterals and 8 vertexes
+
+        for idx, tmp in enumerate(source.iter_ruptures()):
+            rup = tmp
+            if idx == 0: 
+                break
+
+        msg = 'Wrong dimension of the rupture' 
+        self.assertEqual(rup.surface.mesh.lons.shape[0], 7, msg)
+        self.assertEqual(rup.surface.mesh.lons.shape[1], 8, msg)
+
+        if MAKE_PICTURES:
+            ppp(source.profiles, source.surface)
+
+        if MAKE_MOVIES:
+            self._ruptures_animation('test01', source.surface, self.ruptures,
+                                     source.profiles)
+
+    def test02(self):
         """ Simplest test """
 
         profiles = [Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.001, 15.0)]),
