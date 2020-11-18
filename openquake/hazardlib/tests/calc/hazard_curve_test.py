@@ -129,11 +129,6 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(result[0], 0)  # no contrib to site 1
         numpy.testing.assert_allclose(result[1], 0)  # no contrib to site 2
 
-        # test that depths are kept after filtering (sites 3 and 4 remain)
-        s_filter = SourceFilter(sitecol, MagDepDistance.new('100'))
-        numpy.testing.assert_array_equal(
-            s_filter.get_close_sites(sources[0]).depths, ([1, -1]))
-
 
 # this example originally came from the Hazard Modeler Toolkit
 def example_calc(apply):

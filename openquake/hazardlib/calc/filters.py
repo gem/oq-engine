@@ -382,12 +382,17 @@ class SourceFilter(object):
             src.nsites = len(self.close_sids(src)) or .01
         return split
 
-    # used for debugging purposes
-    def get_cdist(self, rec):
+    # used for debugging purposes and in a test
+    def get_cdist(self, rec_or_loc):
         """
+        :param rec_or_loc: a record with field 'hypo' or a Point instance
         :returns: array of N euclidean distances from rec['hypo']
         """
-        xyz = spherical_to_cartesian(*rec['hypo']).reshape(1, 3)
+        try:
+            lon, lat, dep = rec_or_loc['hypo']
+        except TypeError:
+            lon, lat, dep = rec_or_loc.x, rec_or_loc.y, rec_or_loc.z
+        xyz = spherical_to_cartesian(lon, lat, dep).reshape(1, 3)
         return distance.cdist(self.sitecol.xyz, xyz)[:, 0]
 
     def filter(self, sources):
