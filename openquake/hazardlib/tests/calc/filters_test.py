@@ -116,7 +116,7 @@ class SplitSourcesTestCase(unittest.TestCase):
         char.id = 1
         char.et_id = 1
         os.remove(fname)
-        src = split_source(char)
+        [src] = split_source(char)
         self.assertEqual(char.id, src.id)
         self.assertEqual(char.source_id, src.source_id)
         self.assertEqual(char.et_id, src.et_id)
