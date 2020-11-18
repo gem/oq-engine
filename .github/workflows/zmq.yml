@@ -5,11 +5,11 @@ name: zmq
     branches:
       - multistagedocker
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 3 * * *"
 
 jobs:
   docker:
-    name: build and up compose 
+    name: build compose and run a calculation
     runs-on: ubuntu-latest
 
     steps:
@@ -25,3 +25,9 @@ jobs:
           docker-compose up -d
           sleep 30
           docker-compose ps
+      - name: Run a calculation on cluster
+        run: |
+          docker exec -u 0 engine-master /bin/bash -c "chown -R 1000:1000 oq-engine"
+          time docker exec engine-master oq-engine/bin/run-demos.sh oq-engine/demos
+          curl http://localhost:8800/v1/calc/list
+          docke-compose down
