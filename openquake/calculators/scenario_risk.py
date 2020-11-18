@@ -90,7 +90,8 @@ def scenario_risk(riskinputs, param, monitor):
                 avg = numpy.zeros(len(ri.assets), F32)
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
-                    avg[a] = losses[a].mean()
+                    avg[a] = losses[a].sum() / E
+                    import pdb; pdb.set_trace()
                     result['avg'].append((l, r, asset['ordinal'], avg[a]))
                     for loss, eid in zip(losses[a], out.eids):
                         acc[aid, eid][l] = loss
@@ -170,10 +171,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 agglosses[r]['mean'] = F32(mean)
                 agglosses[r]['stddev'] = F32(std)
 
-            # losses by asset
+            # avg losses
             losses_by_asset = numpy.zeros((A, R, L), F32)
             for (l, r, aid, avg) in result['avg']:
                 losses_by_asset[aid, r, l] = avg
+
             self.datastore['avg_losses-rlzs'] = losses_by_asset
             set_rlzs_stats(self.datastore, 'avg_losses',
                            asset_id=self.assetcol['id'],
@@ -187,5 +189,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.datastore['losses_by_event'] = lbe
             loss_types = self.oqparam.loss_dt().names
             self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
+
+            # sanity check
+            numpy.testing.assert_allclose(
+                losses_by_asset[:, 0, 0].sum(), agglosses[0, 0]['mean'])
         logging.info('Mean portfolio loss\n' +
                      views.view('portfolio_loss', self.datastore))
