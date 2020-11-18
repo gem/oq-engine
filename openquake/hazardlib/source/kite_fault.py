@@ -23,7 +23,7 @@ from typing import Tuple, Optional
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.geo.surface.kite_fault import KiteFaultSurface
+from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture \
     as ppr
 
@@ -56,14 +56,14 @@ class KiteFaultSource(ParametricSeismicSource):
         min_mag, max_mag = self.mfd.get_min_max_mag()
 
     @property
-    def surface(self) -> KiteFaultSurface:
+    def surface(self) -> KiteSurface:
         """
         :returns:
             The surface of the fault
         """
         # Get the surface of the fault
         # TODO we must automate the definition of the idl parameter
-        return KiteFaultSurface.from_profiles(self.profiles,
+        return KiteSurface.from_profiles(self.profiles,
                                               self.profiles_sampling,
                                               self.rupture_mesh_spacing,
                                               idl=False, align=False)
