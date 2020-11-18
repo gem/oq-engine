@@ -191,7 +191,7 @@ class MagDepDistance(dict):
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
-    def get_affected_box(self, src):
+    def get_enlarged_box(self, src):
         """
         Get the enlarged bounding box of a source.
 
@@ -210,16 +210,6 @@ class MagDepDistance(dict):
         :returns: an array of distance bins, from 10m to maxdist
         """
         return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
-
-
-def get_centroid(src):
-    """
-    :returns: the centroid of the source as a tuple of 3 coordinates
-    """
-    if hasattr(src, 'location'):
-        return src.location.x, src.location.y, src.location.z
-    p = src.polygon.centroid
-    return p.x, p.y, 0
 
 
 def split_source(src):
@@ -321,7 +311,7 @@ class SourceFilter(object):
         :returns: ((min_lon, min_lat), width, height), useful for plotting
         """
         min_lon, min_lat, max_lon, max_lat = (
-            self.integration_distance.get_affected_box(src))
+            self.integration_distance.get_enlarged_box(src))
         return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
 
     def get_close_sites(self, source):
@@ -343,28 +333,14 @@ class SourceFilter(object):
                 if sites is not None:
                     yield s, sites
 
-    # used in the rupture prefiltering: it should not discard too much
-    def close_sids(self, rec, trt):
+    # used in source and rupture prefiltering: it should not discard too much
+    def close_sids(self, src_or_rec, trt=None):
         """
-        :param rec:
-           a record with fields mag, minlon, minlat, maxlon, maxlat, hypo
-        :param trt:
-           tectonic region type string
+        :param src_or_rec: a source or a rupture record
+        :param trt: passed only if src_or_rec is a record
         :returns:
            the site indices within the maximum_distance of the hypocenter,
            plus the maximum size of the bounding box
-        """
-        dlon = get_longitudinal_extent(rec['minlon'], rec['maxlon'])
-        dlat = rec['maxlat'] - rec['minlat']
-        delta = max(dlon, dlat) / KM_TO_DEGREES
-        return self.get_around_sids(rec, delta, trt)
-
-    def get_around_sids(self, src_or_rec, delta=0, trt=None):
-        """
-        :param src_or_rec: a source or a rupture record
-        :param delta: increase the maximum_distance by this
-        :param trt: passed only if src_or_rec is a record
-        :returns: the site indices within the maximum_distance + delta
         """
         if self.sitecol is None:
             return []
@@ -372,13 +348,25 @@ class SourceFilter(object):
             return self.sitecol.sids
         if not hasattr(self, 'kdt'):
             self.kdt = cKDTree(self.sitecol.xyz)
-        if trt:  # record
-            xyz = spherical_to_cartesian(*src_or_rec['hypo'])
+        if trt:  # rupture
+            dlon = get_longitudinal_extent(
+                src_or_rec['minlon'], src_or_rec['maxlon']) / 2.
+            dlat = (src_or_rec['maxlat'] - src_or_rec['minlat']) / 2.
+            lon, lat, dep = src_or_rec['hypo']
+            dist = self.integration_distance(trt) + numpy.sqrt(
+                dlon**2 + dlat**2) / KM_TO_DEGREES
         else:  # source
             trt = src_or_rec.tectonic_region_type
-            xyz = spherical_to_cartesian(*get_centroid(src_or_rec))
-        maxdist = self.integration_distance(trt)
-        sids = U32(self.kdt.query_ball_point(xyz, maxdist + delta, eps=.001))
+            try:
+                bbox = self.integration_distance.get_enlarged_box(src_or_rec)
+            except BBoxError:  # do not filter
+                return self.sitecol.sids
+            dlon, dlat = (bbox[2] - bbox[0]) / 2., (bbox[3] - bbox[1]) / 2.
+            lon, lat, dep = (
+                (bbox[2] + bbox[0]) / 2., (bbox[3] + bbox[1]) / 2, 0)
+            dist = numpy.sqrt(dlon**2 + dlat**2) / KM_TO_DEGREES
+        xyz = spherical_to_cartesian(lon, lat, dep)
+        sids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
         sids.sort()
         return sids
 
@@ -388,10 +376,10 @@ class SourceFilter(object):
         """
         split = split_source(src) if ok else [src]
         for s in split:
-            s.nsites = len(self.get_around_sids(s)) or .01
+            s.nsites = len(self.close_sids(s)) or .01
             s.weight
         if len(split) > 1:  # also set .nsites on the original source
-            src.nsites = len(self.get_around_sids(src)) or .01
+            src.nsites = len(self.close_sids(src)) or .01
         return split
 
     # used for debugging purposes
@@ -413,7 +401,7 @@ class SourceFilter(object):
             return
         for src in sources:
             try:
-                box = self.integration_distance.get_affected_box(src)
+                box = self.integration_distance.get_enlarged_box(src)
             except BBoxError:  # too large, don't filter
                 src.nsites = len(self.sitecol)
                 yield src, self.sitecol.sids
@@ -434,7 +422,7 @@ class SourceFilter(object):
         lats = []
         for src in srcs:
             try:
-                box = self.integration_distance.get_affected_box(src)
+                box = self.integration_distance.get_enlarged_box(src)
             except BBoxError as exc:
                 logging.error(exc)
                 continue
