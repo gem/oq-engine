@@ -1,0 +1,45 @@
+version: '2'
+services:
+  master:
+    image: openquake/engine-master-zmq:nightly
+    volumes:
+      - oqdata:/home/openquake/oqdata
+      - ./oq-engine:/io/oq-engine
+      - ./oq-engine/openquake/baselib:/opt/openquake/lib/python3.6/site-packages/openquake/baselib
+      - ./oq-engine/openquake/calculators:/opt/openquake/lib/python3.6/site-packages/openquake/calculators
+      - ./oq-engine/openquake/commands:/opt/openquake/lib/python3.6/site-packages/openquake/commands
+      - ./oq-engine/openquake/commonlib:/opt/openquake/lib/python3.6/site-packages/openquake/commonlib
+      - ./oq-engine/openquake/engine:/opt/openquake/lib/python3.6/site-packages/openquake/engine
+      - ./oq-engine/openquake/hazardlib:/opt/openquake/lib/python3.6/site-packages/openquake/hazardlib
+      - ./oq-engine/openquake/hmtk:/opt/openquake/lib/python3.6/site-packages/openquake/hmtk
+      - ./oq-engine/openquake/qa_tests_data:/opt/openquake/lib/python3.6/site-packages/openquake/qa_tests_data
+      - ./oq-engine/openquake/risklib:/opt/openquake/lib/python3.6/site-packages/openquake/risklib
+      - ./oq-engine/openquake/server:/opt/openquake/lib/python3.6/site-packages/openquake/server
+    networks:
+      - cluster
+    ports:
+      - 8800:8800
+  worker:
+    image: openquake/engine-worker-zmq:nightly
+    volumes:
+      - oqdata:/home/openquake/oqdata:ro
+      - ./oq-engine/openquake/baselib:/opt/openquake/lib/python3.6/site-packages/openquake/baselib
+      - ./oq-engine/openquake/calculators:/opt/openquake/lib/python3.6/site-packages/openquake/calculators
+      - ./oq-engine/openquake/commands:/opt/openquake/lib/python3.6/site-packages/openquake/commands
+      - ./oq-engine/openquake/commonlib:/opt/openquake/lib/python3.6/site-packages/openquake/commonlib
+      - ./oq-engine/openquake/engine:/opt/openquake/lib/python3.6/site-packages/openquake/engine
+      - ./oq-engine/openquake/hazardlib:/opt/openquake/lib/python3.6/site-packages/openquake/hazardlib
+      - ./oq-engine/openquake/hmtk:/opt/openquake/lib/python3.6/site-packages/openquake/hmtk
+      - ./oq-engine/openquake/qa_tests_data:/opt/openquake/lib/python3.6/site-packages/openquake/qa_tests_data
+      - ./oq-engine/openquake/risklib:/opt/openquake/lib/python3.6/site-packages/openquake/risklib
+      - ./oq-engine/openquake/server:/opt/openquake/lib/python3.6/site-packages/openquake/server
+    networks:
+      - cluster
+    depends_on:
+      - master
+
+volumes:
+  oqdata:
+
+networks:
+  cluster:
