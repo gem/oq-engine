@@ -445,4 +445,4 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
         self.assertEqual(rates, [(3.5, 1.98e-05), (4.5, 1.98e-07)])
         self.assertEqual(ps1.count_ruptures(), 2)
         self.assertEqual(ps2.count_ruptures(), 4)
-        self.assertEqual(cps.count_ruptures(), 2)
+        self.assertEqual(cps.count_ruptures(), 4)

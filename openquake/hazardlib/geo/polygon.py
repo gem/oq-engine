@@ -82,6 +82,15 @@ class Polygon(object):
         pairs.append(pairs[0])
         return 'POLYGON((%s))' % ', '.join(pairs)
 
+    @property
+    def centroid(self):
+        """
+        :returns: the centroid of the underlying 2D polygon
+        """
+        if self._polygon2d is None:
+            self._init_polygon2d()
+        return self._polygon2d.centroid
+
     @classmethod
     def from_wkt(cls, wkt_string):
         """
