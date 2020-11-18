@@ -48,15 +48,51 @@ class KiteSurface(BaseSurface):
         self.mesh = mesh
         assert 1 not in self.mesh.shape, (
             "Mesh must have at least 2 nodes along both length and width.")
+        # Make sure the mesh respects the right hand rule
+        self._fix_right_hand()
         self.strike = self.dip = None
 
-    def get_dip(self):
+    def _fix_right_hand(self):
+        """
+        """
+        found = False
+        irow = 0
+        icol = 0
+        while 1:
+            if np.all(np.isfinite(self.mesh.lons[irow:irow+2, icol:icol+2])):
+                found = True
+                break
+            else:
+                icol += 1
+                if (icol+1) >= self.mesh.lons.shape[1]:
+                    irow += 1
+                    icol = 1
+                    if (irow+1) >= self.mesh.lons.shape[0]:
+                        break
+        if found:
+            azi_strike = azimuth(self.mesh.lons[irow, icol],
+                                 self.mesh.lats[irow, icol],
+                                 self.mesh.lons[irow+1, icol],
+                                 self.mesh.lats[irow+1, icol])
+            azi_dip = azimuth(self.mesh.lons[irow, icol],
+                              self.mesh.lats[irow, icol],
+                              self.mesh.lons[irow, icol+1],
+                              self.mesh.lats[irow, icol+1])
+
+            if abs((azi_strike + 90) % 360 - azi_dip) < 10:
+                tlo = np.fliplr(copy.copy(self.mesh.lons))
+                tla = np.fliplr(copy.copy(self.mesh.lats))
+                tde = np.fliplr(copy.copy(self.mesh.depths))
+                mesh = Mesh(tlo, tla, tde)
+                self.mesh = mesh
+        else:
+            msg = 'Could not find a valid quadrilateral for strike calculation'
+            raise ValueError(msg)
+
+
+    def get_dip(self) -> float:
         """
         Return the fault dip as the average dip over the fault surface mesh.
-
-        The average dip is defined as the weighted mean inclination of top
-        row of mesh cells. See
-        :meth:`openquake.hazardlib.geo.mesh.RectangularMesh.get_mean_inclination_and_azimuth`
 
         :returns:
             The average dip, in decimal degrees.
@@ -64,28 +100,32 @@ class KiteSurface(BaseSurface):
         if self.dip is None:
             dips = []
             lens = []
-            for col_idx in self.mesh.lons.shape[0]:
+            for col_idx in range(self.mesh.lons.shape[1]):
                 hdists = distance(self.mesh.lons[:-1, col_idx],
                                   self.mesh.lats[:-1, col_idx],
+                                  np.zeros_like(self.mesh.depths[1:, col_idx]),
                                   self.mesh.lons[1:, col_idx],
-                                  self.mesh.lats[1:, col_idx])
-                vdists = (self.mesh.lons[1:, col_idx] - 
-                          self.mesh.lons[:-1, col_idx])
-                dips.append(np.mean(np.arctan(vdists, hdists)))
-                lens.append(sum((hdists**2 + vdists**2)**0.5))
+                                  self.mesh.lats[1:, col_idx],
+                                  np.zeros_like(self.mesh.depths[1:, col_idx]))
+                vdists = (self.mesh.depths[1:, col_idx] -
+                          self.mesh.depths[:-1, col_idx])
+                dips.append(np.mean(np.degrees(np.arctan(vdists/hdists))))
+                lens.append(np.sum((hdists**2 + vdists**2)**0.5))
+            lens = np.array(lens)
+            return np.sum(np.array(dips) * lens/np.sum(lens))
 
-    def get_strike(self):
+    def get_strike(self) -> float:
         """
-        Return the fault strike as the average strike along the fault trace.
-
-        The average strike is defined as the weighted mean azimuth of top
-        row of mesh cells. See
-        :meth:`openquake.hazardlib.geo.mesh.RectangularMesh.get_mean_inclination_and_azimuth`
+        Return the fault strike as the average strike along the top of the
+        fault surface.
 
         :returns:
             The average strike, in decimal degrees.
         """
-        pass
+        idx = np.isfinite(self.mesh.lons)
+        azi = azimuth(self.mesh.lons[:-1, :], self.mesh.lats[:-1, :],
+                      self.mesh.lons[1:, :], self.mesh.lats[1:, :])
+        return np.mean(((azi+0.001) % 360))
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,

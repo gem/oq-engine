@@ -25,13 +25,11 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.surface import KiteSurface
 
-from typing import Optional
-
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
 
 
-def ppp(profiles: list, smsh: KiteSurface, title: Optional[str] = ''):
+def ppp(profiles: list, smsh: KiteSurface, title: str = ''):
 
     """
     Plots the 3D mesh
@@ -59,10 +57,10 @@ def ppp(profiles: list, smsh: KiteSurface, title: Optional[str] = ''):
 
     # Plotting mesh
     for i in range(smsh.mesh.lons.shape[0]):
-        ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :], 
+        ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :],
                 smsh.mesh.depths[i, :]*scl, '-r', lw=0.5)
     for i in range(smsh.mesh.lons.shape[1]):
-        ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i], 
+        ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
                 smsh.mesh.depths[:, i]*scl, '-r', lw=0.5)
 
     plt.title(title)
@@ -82,9 +80,12 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         vsmpl = 2
         idl = False
         alg = False
-        smsh = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
-        
- 
+        srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+
+        if PLOTTING:
+            title = 'Test mesh creation'
+            ppp(self.prf, srfc, title)
+
 
 class KiteSurfaceTestCase(unittest.TestCase):
     """ Test the construction of a Kite fault surface. """
@@ -115,7 +116,6 @@ class KiteSurfaceTestCase(unittest.TestCase):
         tmp = [Point(0.0, 0.000, 0.0),
                Point(0.0, 0.001, 15.0)]
         self.profiles2.append(Line(tmp))
-
         tmp = [Point(0.5, 0.000, 0.0),
                Point(0.5, 0.001, 15.0)]
         self.profiles2.append(Line(tmp))
@@ -135,7 +135,9 @@ class KiteSurfaceTestCase(unittest.TestCase):
         # 22.36km. With a sampling of 2.0km we get exactly 7 edges.
 
         np.testing.assert_equal(msh.mesh.lons.shape, (12, 12))
-        self.assertTrue(np.all(np.abs(msh.mesh.lons[:, 0]) < 1e-3))
+        # We take the last index since we are flipping the mesh to comply with
+        # the right hand rule
+        self.assertTrue(np.all(np.abs(msh.mesh.lons[:, -1]) < 1e-3))
 
         if PLOTTING:
             title = 'Trivial case - Fault dipping at about 45 degrees'
@@ -150,16 +152,25 @@ class KiteSurfaceTestCase(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.profiles2, p_sd, e_sd)
 
         # The fault trace has a length of 0.5 degrees at the equator (along
-        # meridians) which corresponds to a length of # 111.3/2km = 55.65km.
+        # meridians) which corresponds to a length of 111.3/2km = 55.65km.
         # Using a sampling distance of 5 km we get 12 equally spaced profiles.
         # Along the dip the fault width is 15 km. With a sampling of 2.5km
         # we get exactly 7 edges.
         msh = srfc.mesh
         np.testing.assert_equal(msh.lons.shape, (7, 12))
+        # Note that this mesh is flipped at the construction level
         self.assertTrue(np.all(np.abs(msh.depths[0, :]) < 1e-3))
         self.assertTrue(np.all(np.abs(msh.depths[6, :]-15.) < 1e-3))
-        self.assertTrue(np.all(np.abs(msh.lons[:, 0]) < 1e-3))
-        self.assertTrue(np.all(np.abs(msh.lons[:, 11]-0.5) < 1e-2))
+        self.assertTrue(np.all(np.abs(msh.lons[:, -1]) < 1e-3))
+        self.assertTrue(np.all(np.abs(msh.lons[:, 0]-0.5) < 1e-2))
+
+        dip = srfc.get_dip()
+        msg = "The value of dip computed is wrong: {:.3f}".format(dip)
+        self.assertTrue(abs(dip-90) < 0.5, msg)
+
+        strike = srfc.get_strike()
+        msg = "The value of strike computed is wrong: {:.3f}".format(strike)
+        self.assertTrue(abs(strike) < 0.01, msg)
 
         if PLOTTING:
             title = 'Trivial case - Vertical fault'
@@ -184,7 +195,7 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         idl = False
         alg = False
         srfc = KiteSurface.from_profiles(self.prf, hsmpl, vsmpl, idl, alg)
-        smsh = srfc.mesh 
+        smsh = srfc.mesh
 
         #
         # Check the horizontal mesh spacing
@@ -193,8 +204,8 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
             tmp = []
             for j in range(0, smsh.lons.shape[1]-1):
                 k = j + 1
-                dst = distance(smsh.lons[i, j], smsh.lats[i, j], 
-                               smsh.depths[i, j], smsh.lons[i, k], 
+                dst = distance(smsh.lons[i, j], smsh.lats[i, j],
+                               smsh.depths[i, j], smsh.lons[i, k],
                                smsh.lats[i, k], smsh.depths[i, k])
                 tmp.append(dst)
             computed.append(dst)
@@ -208,8 +219,8 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
             tmp = []
             k = i + 1
             for j in range(0, smsh.lons.shape[1]):
-                dst = distance(smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i, j],
-                               smsh.lons[k, j], smsh.lats[k, j], smsh.depths[k, j])
+                dst = distance(smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i,j],
+                               smsh.lons[k, j], smsh.lats[k, j], smsh.depths[k,j])
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
@@ -290,7 +301,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         idl = False
         alg = False
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
-                                              idl, alg)
+                                         idl, alg)
         smsh = srfc.mesh
         self.assertTrue(np.all(~np.isnan(smsh.lons[0, :])))
 
@@ -305,7 +316,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         idl = False
         alg = True
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
-                                              idl, alg)
+                                         idl, alg)
         self.assertTrue(np.any(np.isnan(srfc.mesh.lons[0, :])))
 
         if PLOTTING:
@@ -340,7 +351,7 @@ class IdealizedATest(unittest.TestCase):
         idl = False
         alg = True
         smsh = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
-                                              idl, alg)
+                                         idl, alg)
         self.assertTrue(np.any(np.isnan(smsh.mesh.lons[0, :])))
 
         if PLOTTING:
