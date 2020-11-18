@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in the calculation of averages losses in scenario_risk
+    calculations in presence of sites with zero hazard
   * Optimized the prefiltering by using a KDTree
   * Experimental: implemented gridding of point sources
   * Reduced slow tasks due to big complex fault sources
