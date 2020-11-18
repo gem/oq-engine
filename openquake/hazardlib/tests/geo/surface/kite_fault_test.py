@@ -26,7 +26,7 @@ from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.surface import KiteFaultSurface
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-PLOTTING = False
+PLOTTING = True
 
 
 def ppp(profiles, smsh, title=''):
@@ -53,10 +53,12 @@ def ppp(profiles, smsh, title=''):
         ax.plot(coo[:, 0], coo[:, 1], coo[:, 2]*scl, 'og', lw=1, markersize=3)
 
     # Plotting mesh
-    for i in range(smsh.shape[0]):
-        ax.plot(smsh[i, :, 0], smsh[i, :, 1], smsh[i, :, 2]*scl, '-r', lw=0.5)
-    for i in range(smsh.shape[1]):
-        ax.plot(smsh[:, i, 0], smsh[:, i, 1], smsh[:, i, 2]*scl, '-r', lw=0.5)
+    for i in range(smsh.mesh.lons.shape[0]):
+        ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :], 
+                smsh.mesh.depths[i, :]*scl, '-r', lw=0.5)
+    for i in range(smsh.mesh.lons.shape[1]):
+        ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i], 
+                smsh.mesh.depths[:, i]*scl, '-r', lw=0.5)
 
     plt.title(title)
     ax.invert_zaxis()
@@ -126,8 +128,9 @@ class KiteFaultSurfaceTestCase(unittest.TestCase):
         # Using a sampling distance of 5 km we get 12 equally spaced profiles.
         # Along the dip the fault width is ((0.15*110.567)**2+15**2)**.5 i.e.
         # 22.36km. With a sampling of 2.0km we get exactly 7 edges.
-        np.testing.assert_equal(msh.shape, (12, 12, 3))
-        self.assertTrue(np.all(np.abs(msh[:, 0, 0]) < 1e-3))
+
+        np.testing.assert_equal(msh.mesh.lons.shape, (12, 12))
+        self.assertTrue(np.all(np.abs(msh.mesh.lons[:, 0]) < 1e-3))
 
         if PLOTTING:
             title = 'Trivial case - Fault dipping at about 45 degrees'
@@ -139,22 +142,23 @@ class KiteFaultSurfaceTestCase(unittest.TestCase):
         # Build the fault surface
         p_sd = 2.5
         e_sd = 5.0
-        msh = KiteFaultSurface.from_profiles(self.profiles2, p_sd, e_sd)
+        srfc = KiteFaultSurface.from_profiles(self.profiles2, p_sd, e_sd)
 
         # The fault trace has a length of 0.5 degrees at the equator (along
         # meridians) which corresponds to a length of # 111.3/2km = 55.65km.
         # Using a sampling distance of 5 km we get 12 equally spaced profiles.
         # Along the dip the fault width is 15 km. With a sampling of 2.5km
         # we get exactly 7 edges.
-        np.testing.assert_equal(msh.shape, (7, 12, 3))
-        self.assertTrue(np.all(np.abs(msh[0, :, 2]) < 1e-3))
-        self.assertTrue(np.all(np.abs(msh[6, :, 2]-15.) < 1e-3))
-        self.assertTrue(np.all(np.abs(msh[:, 0, 0]) < 1e-3))
-        self.assertTrue(np.all(np.abs(msh[:, 11, 0]-0.5) < 1e-2))
+        msh = srfc.mesh
+        np.testing.assert_equal(msh.lons.shape, (7, 12))
+        self.assertTrue(np.all(np.abs(msh.depths[0, :]) < 1e-3))
+        self.assertTrue(np.all(np.abs(msh.depths[6, :]-15.) < 1e-3))
+        self.assertTrue(np.all(np.abs(msh.lons[:, 0]) < 1e-3))
+        self.assertTrue(np.all(np.abs(msh.lons[:, 11]-0.5) < 1e-2))
 
         if PLOTTING:
             title = 'Trivial case - Vertical fault'
-            ppp(self.profiles2, msh, title)
+            ppp(self.profiles2, srfc, title)
 
 
 class IdealisedSimpleMeshTest(unittest.TestCase):
@@ -174,17 +178,19 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         vsmpl = 4
         idl = False
         alg = False
-        smsh = KiteFaultSurface.from_profiles(self.prf, hsmpl, vsmpl, idl, alg)
+        srfc = KiteFaultSurface.from_profiles(self.prf, hsmpl, vsmpl, idl, alg)
+        smsh = srfc.mesh 
 
         #
         # Check the horizontal mesh spacing
         computed = []
-        for i in range(0, smsh.shape[0]):
+        for i in range(0, smsh.lons.shape[0]):
             tmp = []
-            for j in range(0, smsh.shape[1]-1):
+            for j in range(0, smsh.lons.shape[1]-1):
                 k = j + 1
-                dst = distance(smsh[i, j, 0], smsh[i, j, 1], smsh[i, j, 2],
-                               smsh[i, k, 0], smsh[i, k, 1], smsh[i, k, 2])
+                dst = distance(smsh.lons[i, j], smsh.lats[i, j], 
+                               smsh.depths[i, j], smsh.lons[i, k], 
+                               smsh.lats[i, k], smsh.depths[i, k])
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
@@ -193,12 +199,12 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         #
         # Check the vertical mesh spacing
         computed = []
-        for i in range(0, smsh.shape[0]-1):
+        for i in range(0, smsh.lons.shape[0]-1):
             tmp = []
             k = i + 1
-            for j in range(0, smsh.shape[1]):
-                dst = distance(smsh[i, j, 0], smsh[i, j, 1], smsh[i, j, 2],
-                               smsh[k, j, 0], smsh[k, j, 1], smsh[k, j, 2])
+            for j in range(0, smsh.lons.shape[1]):
+                dst = distance(smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i, j],
+                               smsh.lons[k, j], smsh.lats[k, j], smsh.depths[k, j])
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
@@ -206,7 +212,7 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
 
         if PLOTTING:
             title = 'Two parallel profiles'
-            ppp(self.prf, smsh, title)
+            ppp(self.prf, srfc, title)
 
 
 class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
@@ -228,16 +234,17 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
 
     def test_h_spacing(self):
         """ Check v-spacing: two misaligned profiles - no top alignment """
-        smsh = self.smsh
+        srfc = self.smsh
+        smsh = srfc.mesh
         #
         # Check the horizontal mesh spacing
         computed = []
-        for i in range(0, smsh.shape[0]):
+        for i in range(0, smsh.lons.shape[0]):
             tmp = []
-            for j in range(0, smsh.shape[1]-1):
+            for j in range(0, smsh.lons.shape[1]-1):
                 k = j + 1
-                dst = distance(smsh[i, j, 0], smsh[i, j, 1], smsh[i, j, 2],
-                               smsh[i, k, 0], smsh[i, k, 1], smsh[i, k, 2])
+                dst = distance(smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i, j],
+                               smsh.lons[i, k], smsh.lats[i, k], smsh.depths[i, k])
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
@@ -245,18 +252,19 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         self.assertTrue(np.all(tmp < 0.02))
 
         if PLOTTING:
-            ppp(self.profiles, self.smsh)
+            ppp(self.profiles, srfc)
 
     def test__spacing(self):
         """ Check v-spacing: two misaligned profiles - no top alignment """
-        smsh = self.smsh
+        srfc = self.smsh
+        smsh = srfc.mesh
         computed = []
-        for i in range(0, smsh.shape[0]-1):
+        for i in range(0, smsh.lons.shape[0]-1):
             tmp = []
             k = i + 1
-            for j in range(0, smsh.shape[1]):
-                dst = distance(smsh[i, j, 0], smsh[i, j, 1], smsh[i, j, 2],
-                               smsh[k, j, 0], smsh[k, j, 1], smsh[k, j, 2])
+            for j in range(0, smsh.lons.shape[1]):
+                dst = distance(smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i, j],
+                               smsh.lons[k, j], smsh.lats[k, j], smsh.depths[k, j])
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
@@ -276,13 +284,14 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         v_sampl = 5
         idl = False
         alg = False
-        smsh = KiteFaultSurface.from_profiles(self.profiles, v_sampl, h_sampl,
+        srfc = KiteFaultSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                               idl, alg)
-        self.assertTrue(np.all(~np.isnan(smsh[0, :, 0])))
+        smsh = srfc.mesh
+        self.assertTrue(np.all(~np.isnan(smsh.lons[0, :])))
 
         if PLOTTING:
             title = 'Simple case: No top alignment'
-            ppp(self.profiles, smsh, title)
+            ppp(self.profiles, srfc, title)
 
     def test_mesh_creation_with_alignment(self):
         """ Test construction of the mesh """
@@ -290,13 +299,13 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         v_sampl = 2.5
         idl = False
         alg = True
-        smsh = KiteFaultSurface.from_profiles(self.profiles, v_sampl, h_sampl,
+        srfc = KiteFaultSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                               idl, alg)
-        self.assertTrue(np.any(np.isnan(smsh[0, :, 0])))
+        self.assertTrue(np.any(np.isnan(srfc.mesh.lons[0, :])))
 
         if PLOTTING:
             title = 'Simple case: Top alignment'
-            ppp(self.profiles, smsh, title)
+            ppp(self.profiles, srfc, title)
 
 
 class IdealizedATest(unittest.TestCase):
@@ -313,7 +322,7 @@ class IdealizedATest(unittest.TestCase):
         alg = False
         smsh = KiteFaultSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                               idl, alg)
-        self.assertTrue(np.all(~np.isnan(smsh[0, :, 0])))
+        self.assertTrue(np.all(~np.isnan(smsh.mesh.lons[0, :])))
 
         if PLOTTING:
             title = 'Simple mesh creation - no top alignment'
@@ -327,7 +336,7 @@ class IdealizedATest(unittest.TestCase):
         alg = True
         smsh = KiteFaultSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                               idl, alg)
-        self.assertTrue(np.any(np.isnan(smsh[0, :, 0])))
+        self.assertTrue(np.any(np.isnan(smsh.mesh.lons[0, :])))
 
         if PLOTTING:
             title = 'Simple case: Top alignment'
@@ -347,7 +356,7 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         alg = False
         smsh = KiteFaultSurface.from_profiles(self.profiles, sampling,
                                               sampling, idl, alg)
-        idx = np.isfinite(smsh[:, :, 0])
+        idx = np.isfinite(smsh.mesh.lons[:, :])
         self.assertEqual(np.sum(np.sum(idx)), 202)
 
         if PLOTTING:
