@@ -194,7 +194,6 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         source = self._make_source(mfd=mfd, aspect_ratio=1.5,
                                    profiles=profiles)
 
-
         msg = 'Wrong number of ruptures'
         self.assertEqual(source.count_ruptures(), 42, msg)
 

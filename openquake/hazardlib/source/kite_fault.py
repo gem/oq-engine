@@ -48,7 +48,7 @@ class KiteFaultSource(ParametricSeismicSource):
         # TODO add checks
         self.profiles = profiles
         if profiles_sampling is None:
-            self.profiles_sampling = (rupture_mesh_spacing / 
+            self.profiles_sampling = (rupture_mesh_spacing /
                                       rupture_aspect_ratio)
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
@@ -130,7 +130,8 @@ class KiteFaultSource(ParametricSeismicSource):
         :param f_dip:
             Floating distance along dip (multiple of sampling distance)
         :returns:
-            ADD
+            A tuple containing the rupture and the indexes of the top right 
+            node of the mesh representing the rupture.
         """
 
         # When f_strike is negative, the floating distance is interpreted as
@@ -234,5 +235,5 @@ def get_discrete_dimensions(area: float, sampling: float, aspr: float,
         lng = None
     elif area_error > 0.25 and lng > 1e-10 and wdt > 1e-10:
         raise ValueError('Area discrepancy: ', area, lng*wdt, lng, wdt)
-    
+
     return lng, wdt
