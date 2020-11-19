@@ -41,6 +41,7 @@ class BooreAtkinson2008(GMPE):
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see table 3
     #: pag. 110
+
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
@@ -50,8 +51,11 @@ class BooreAtkinson2008(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 2, pag 106.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.TOTAL,
+        const.StdDev.INTER_EVENT,
+        const.StdDev.INTRA_EVENT
+    ])
 
     #: Required site parameters is Vs30.
     #: See paragraph 'Predictor Variables', pag 103
@@ -68,34 +72,6 @@ class BooreAtkinson2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    def get_mean_std1(self, ctx, imts):
-        """
-        :param ctx: a multi-RuptureContext of size U
-        :param imts: a list of M intensity measure types
-        :returns: means and total stddevs as an array of shape (2, U, M)
-        """
-        U = ctx.size()
-        res = np.zeros((2, U, len(imts)))
-        for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
-            C_SR = self.COEFFS_SOIL_RESPONSE[imt]
-            pga4nl = self._get_pga_on_rock(ctx, C)
-            if isinstance(imt, PGA):
-                mean = (np.log(pga4nl) +
-                        self._get_site_amplification_linear(ctx.vs30, C_SR) +
-                        self._get_site_amplification_non_linear(
-                            ctx.vs30, pga4nl, C_SR))
-            else:
-                mean = (self._compute_magnitude_scaling(ctx, C) +
-                        self._compute_distance_scaling(ctx, C) +
-                        self._get_site_amplification_linear(ctx.vs30, C_SR) +
-                        self._get_site_amplification_non_linear(
-                            ctx.vs30, pga4nl, C_SR))
-            [stddev] = self._get_stddevs(C, [const.StdDev.TOTAL], U)
-            res[0, :, m] = mean
-            res[1, :, m] = stddev
-        return res
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -109,8 +85,7 @@ class BooreAtkinson2008(GMPE):
 
         # compute PGA on rock conditions - needed to compute non-linear
         # site amplification term
-        vars(rup).update(vars(dists))  # update RuptureContext with distances
-        pga4nl = self._get_pga_on_rock(rup, C)
+        pga4nl = self._get_pga_on_rock(rup, dists, C)
 
         # equation 1, pag 106, without sigma term, that is only the first 3
         # terms. The third term (site amplification) is computed as given in
@@ -125,7 +100,7 @@ class BooreAtkinson2008(GMPE):
                                                         C_SR)
         else:
             mean = self._compute_magnitude_scaling(rup, C) + \
-                self._compute_distance_scaling(rup, C) + \
+                self._compute_distance_scaling(rup, dists, C) + \
                 self._get_site_amplification_linear(sites.vs30, C_SR) + \
                 self._get_site_amplification_non_linear(sites.vs30, pga4nl,
                                                         C_SR)
@@ -149,25 +124,17 @@ class BooreAtkinson2008(GMPE):
                 stddevs.append(C['tau'] + np.zeros(num_sites))
         return stddevs
 
-    def _compute_distance_scaling(self, ctx, C):
+    def _compute_distance_scaling(self, rup, dists, C):
         """
         Compute distance-scaling term, equations (3) and (4), pag 107.
         """
         Mref = 4.5
         Rref = 1.0
-        R = np.sqrt(ctx.rjb ** 2 + C['h'] ** 2)
-        return (C['c1'] + C['c2'] * (ctx.mag - Mref)) * np.log(R / Rref) + \
+        R = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
+        return (C['c1'] + C['c2'] * (rup.mag - Mref)) * np.log(R / Rref) + \
             C['c3'] * (R - Rref)
 
-    def _compute_magnitude_scaling(self, ctx, C):
-        """
-        Compute magnitude-scaling term, equations (5a) and (5b), pag 107.
-        """
-        if ctx.size() == 1:  # single rupture
-            return self._compute_ms(ctx, C)
-        return np.array([self._compute_ms(c, C) for c in ctx.ctxs])
-
-    def _compute_ms(self, rup, C):
+    def _compute_magnitude_scaling(self, rup, C):
         """
         Compute magnitude-scaling term, equations (5a) and (5b), pag 107.
         """
@@ -204,6 +171,7 @@ class BooreAtkinson2008(GMPE):
         else:
             # normal
             NS = 1
+
         return U, SS, NS, RS
 
     def _get_site_amplification_linear(self, vs30, C):
@@ -213,7 +181,7 @@ class BooreAtkinson2008(GMPE):
         """
         return C['blin'] * np.log(vs30 / 760.0)
 
-    def _get_pga_on_rock(self, ctx, _C):
+    def _get_pga_on_rock(self, rup, dists, _C):
         """
         Compute and return PGA on rock conditions (that is vs30 = 760.0 m/s).
         This is needed to compute non-linear site amplification term
@@ -229,8 +197,8 @@ class BooreAtkinson2008(GMPE):
         # Table 6 should read "Distance-scaling coefficients (Mref=4.5 and
         # Rref=1.0 km for all periods)".
         C_pga = self.COEFFS[PGA()]
-        pga4nl = np.exp(self._compute_magnitude_scaling(ctx, C_pga) +
-                        self._compute_distance_scaling(ctx, C_pga))
+        pga4nl = np.exp(self._compute_magnitude_scaling(rup, C_pga) +
+                        self._compute_distance_scaling(rup, dists, C_pga))
 
         return pga4nl
 
@@ -263,7 +231,7 @@ class BooreAtkinson2008(GMPE):
         # equation (13b)
         idx = np.where((vs30 > V1) & (vs30 <= V2))
         bnl[idx] = (C['b1'] - C['b2']) * \
-            np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
+                   np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
 
         # equation (13c)
         idx = np.where((vs30 > V2) & (vs30 < Vref))
@@ -275,9 +243,8 @@ class BooreAtkinson2008(GMPE):
         Compute non-linear term,
         equation (8a) to (8c), pag 108.
         """
+
         fnl = np.zeros(pga4nl.shape)
-        if len(bnl) < len(fnl):  # single site case, fix shape
-            bnl = np.repeat(bnl, len(fnl))
         a1 = 0.03
         a2 = 0.09
         pga_low = 0.06

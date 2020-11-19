@@ -39,7 +39,7 @@ class BaseGSIMTestCase(unittest.TestCase):
         if hasattr(gsim, 'DO_NOT_CHECK_DISTANCES'):
             d_att = d_att.difference(gsim.DO_NOT_CHECK_DISTANCES)
         self.assertEqual(gsim.REQUIRES_SITES_PARAMETERS, s_att)
-        self.assertGreaterEqual(r_att, gsim.REQUIRES_RUPTURE_PARAMETERS)
+        self.assertEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, r_att)
         self.assertEqual(gsim.REQUIRES_DISTANCES, d_att)
         if errors:
             raise AssertionError(stats)
