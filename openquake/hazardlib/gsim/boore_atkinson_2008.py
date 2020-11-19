@@ -19,7 +19,6 @@
 """
 Module exports :class:`BooreAtkinson2008`.
 """
-import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
