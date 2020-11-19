@@ -41,7 +41,7 @@ class BooreAtkinson2008(GMPE):
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see table 3
     #: pag. 110
-   q
+
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
