@@ -818,6 +818,14 @@ class RuptureContext(BaseContext):
         for param, value in param_pairs:
             setattr(self, param, value)
 
+    def update_dists(self, ctx):
+        """
+        Update the distance parameters by reading them from another context
+        """
+        for name, value in vars(ctx).items():
+            if name in KNOWN_DISTANCES:
+                setattr(self, name, value)
+
     def size(self):
         """
         If the context is a multi rupture context, i.e. it contains an array
