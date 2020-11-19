@@ -22,7 +22,7 @@ Module exports :class:`BooreAtkinson2008`.
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
-from openquake.hazardlib import const
+from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
@@ -110,7 +110,7 @@ class BooreAtkinson2008(GMPE):
 
         # compute PGA on rock conditions - needed to compute non-linear
         # site amplification term
-        rup.update_dists(dists)  # update RuptureContext with distances
+        vars(rup).update(contexts.get_dists(dists))  # update distances
         pga4nl = self._get_pga_on_rock(rup, C)
 
         # equation 1, pag 106, without sigma term, that is only the first 3

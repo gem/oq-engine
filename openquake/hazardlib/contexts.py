@@ -781,6 +781,16 @@ class DistancesContext(BaseContext):
         return ctx
 
 
+def get_dists(ctx):
+    """
+    Extract the distance parameters from a context.
+
+    :returns: a dictionary dist_name -> distances
+    """
+    return {par: dist for par, dist in vars(ctx).items()
+            if par in KNOWN_DISTANCES}
+
+
 # mock of a rupture used in the tests and in the SMTK
 class RuptureContext(BaseContext):
     """
@@ -817,14 +827,6 @@ class RuptureContext(BaseContext):
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:
             setattr(self, param, value)
-
-    def update_dists(self, ctx):
-        """
-        Update the distance parameters by reading them from another context
-        """
-        for name, value in vars(ctx).items():
-            if name in KNOWN_DISTANCES:
-                setattr(self, name, value)
 
     def size(self):
         """
