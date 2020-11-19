@@ -1,9 +1,6 @@
 ---
 name: zmq
 'on':
-  push:
-    branches:
-      - multistagedocker
   schedule:
     - cron: "0 3 * * *"
 
