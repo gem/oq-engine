@@ -256,13 +256,12 @@ class BooreAtkinson2008(GMPE):
         bnl = np.zeros(vs30.shape)
 
         # equation (13a)
-        idx = vs30 <= V1
-        bnl[idx] = C['b1']
+        bnl[vs30 <= V1] = C['b1']
 
         # equation (13b)
         idx = np.where((vs30 > V1) & (vs30 <= V2))
-        bnl[idx] = (C['b1'] - C['b2']) * (
-            np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2'])
+        bnl[idx] = (C['b1'] - C['b2']) * \
+            np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
 
         # equation (13c)
         idx = np.where((vs30 > V2) & (vs30 < Vref))
