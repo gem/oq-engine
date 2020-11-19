@@ -257,6 +257,14 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """Returns the code (integer in the range 0 .. 255) of the rupture"""
         return self._code[self.__class__, self.surface.__class__]
 
+    def size(self):
+        """
+        Dummy method for compatibility with the RuptureContext.
+
+        :returns: 1
+        """
+        return 1
+
     get_probability_no_exceedance = (
         contexts.RuptureContext.get_probability_no_exceedance)
 

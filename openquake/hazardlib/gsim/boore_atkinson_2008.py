@@ -245,6 +245,8 @@ class BooreAtkinson2008(GMPE):
         """
 
         fnl = np.zeros(pga4nl.shape)
+        if len(bnl) < len(fnl):  # single site case, fix shape
+            bnl = np.repeat(bnl, len(fnl))
         a1 = 0.03
         a2 = 0.09
         pga_low = 0.06
