@@ -53,8 +53,8 @@ class KiteSurface(BaseSurface):
         self.strike = self.dip = None
 
     def _fix_right_hand(self):
-        """
-        """
+        # This method fixes the mesh used to represent the grid surface so 
+        # that it complies with the right hand rule.
         found = False
         irow = 0
         icol = 0
@@ -80,9 +80,9 @@ class KiteSurface(BaseSurface):
                               self.mesh.lats[irow, icol+1])
 
             if abs((azi_strike + 90) % 360 - azi_dip) < 10:
-                tlo = np.fliplr(copy.copy(self.mesh.lons))
-                tla = np.fliplr(copy.copy(self.mesh.lats))
-                tde = np.fliplr(copy.copy(self.mesh.depths))
+                tlo = np.fliplr(self.mesh.lons)
+                tla = np.fliplr(self.mesh.lats)
+                tde = np.fliplr(self.mesh.depths)
                 mesh = Mesh(tlo, tla, tde)
                 self.mesh = mesh
         else:
@@ -130,7 +130,8 @@ class KiteSurface(BaseSurface):
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
                       align=False):
-        """
+        # TODO split this function into smaller components.
+        """ 
         This method creates a quadrilateral mesh from a set of profiles. The
         construction of the mesh is done trying to get quadrilaterals as much
         as possible close to a square. Nonetheless some distorsions are

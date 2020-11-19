@@ -34,6 +34,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 MAKE_MOVIES = False
 MAKE_PICTURES = False
 
+
 class _BaseFaultSourceTestCase(unittest.TestCase):
     TRT = TRT.ACTIVE_SHALLOW_CRUST
     RAKE = 0
@@ -78,7 +79,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
     def _test_ruptures(self, expected_ruptures, source):
         self.ruptures = list(source.iter_ruptures())
 
-    def _ruptures_animation(self, lab, surface, ruptures, profiles, 
+    def _ruptures_animation(self, lab, surface, ruptures, profiles,
                             first_azi=70):
 
         # Create the figure
@@ -143,11 +144,11 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         source = self._make_source(mfd=mfd, aspect_ratio=1.5)
         self._test_ruptures(None, source)
 
-        # The fault surface created should contain 13 quadrilaterals along 
-        # the strike and 9 quadrilaterals along the dip. The distance between 
-        # the two profiles is 33 km. Given that we use a grid spacing of 
+        # The fault surface created should contain 13 quadrilaterals along
+        # the strike and 9 quadrilaterals along the dip. The distance between
+        # the two profiles is 33 km. Given that we use a grid spacing of
         # 2.5 km, 2.5 * 13 gives 32.5 km. The grid spacing along dip is scaled
-        # by the aspect ratio so that the sampling is proportional along 
+        # by the aspect ratio so that the sampling is proportional along
         # strike and dip. In this case the sampling along strike is 1.66km
 
         msg = 'Wrong surface mesh'
@@ -156,17 +157,17 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
 
         # Regarding ruptures, the lowest magnitude admitted by the MFD is 6.25
         # hence - given that the corresponding area of the rupture is 178 km
-        # and the aspect ratio is 1.5 the mesh covered by this rupture must 
-        # have the following dimensions: 
+        # and the aspect ratio is 1.5 the mesh covered by this rupture must
+        # have the following dimensions:
         # - width = 10.68 km i.e. 6 quadrilaterals and 7 vertexes
         # - lenght = 16.02 km i.e. 7 quadrilaterals and 8 vertexes
 
         for idx, tmp in enumerate(source.iter_ruptures()):
             rup = tmp
-            if idx == 0: 
+            if idx == 0:
                 break
 
-        msg = 'Wrong dimension of the rupture' 
+        msg = 'Wrong dimension of the rupture'
         self.assertEqual(rup.surface.mesh.lons.shape[0], 7, msg)
         self.assertEqual(rup.surface.mesh.lons.shape[1], 8, msg)
 
