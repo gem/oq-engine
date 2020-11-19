@@ -73,11 +73,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
 
         # Check we can create a pickled version of this object
         assert_pickleable(kfs)
-
         return kfs
-
-    def _test_ruptures(self, expected_ruptures, source):
-        self.ruptures = list(source.iter_ruptures())
 
     def _ruptures_animation(self, lab, surface, ruptures, profiles,
                             first_azi=70):
@@ -132,6 +128,10 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         fname = '/tmp/kite_fault_source_{:s}.mp4'.format(lab)
         anim.save(fname, writer=writer)
 
+        fname = '/tmp/kite_fault_source_{:s}.html'.format(lab)
+        with open(fname, "w") as f:
+            print(anim.to_html5_video(), file=f)
+
 
 class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
 
@@ -142,7 +142,6 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=6.2, max_mag=6.4,
                              bin_width=0.1)
         source = self._make_source(mfd=mfd, aspect_ratio=1.5)
-        self._test_ruptures(None, source)
 
         # The fault surface created should contain 13 quadrilaterals along
         # the strike and 9 quadrilaterals along the dip. The distance between
@@ -171,6 +170,9 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         self.assertEqual(rup.surface.mesh.lons.shape[0], 7, msg)
         self.assertEqual(rup.surface.mesh.lons.shape[1], 8, msg)
 
+        msg = 'Wrong number of ruptures'
+        self.assertEqual(source.count_ruptures(), 42, msg)
+
         if MAKE_PICTURES:
             ppp(source.profiles, source.surface)
 
@@ -192,7 +194,9 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         source = self._make_source(mfd=mfd, aspect_ratio=1.5,
                                    profiles=profiles)
 
-        self._test_ruptures(None, source)
+
+        msg = 'Wrong number of ruptures'
+        self.assertEqual(source.count_ruptures(), 42, msg)
 
         if MAKE_MOVIES:
             self._ruptures_animation('test02', source.surface, self.ruptures,

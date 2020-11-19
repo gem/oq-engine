@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.source.kite_fault` defines
 import numpy as np
 from typing import Tuple, Optional
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture \
@@ -40,7 +39,7 @@ class KiteFaultSource(ParametricSeismicSource):
                  rupture_aspect_ratio, temporal_occurrence_model,
                  # kite fault specific parameters
                  profiles, floating_x_step,
-                 floating_y_step, rake):
+                 floating_y_step, rake, profiles_sampling=None):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -48,7 +47,9 @@ class KiteFaultSource(ParametricSeismicSource):
 
         # TODO add checks
         self.profiles = profiles
-        self.profiles_sampling = rupture_mesh_spacing / rupture_aspect_ratio
+        if profiles_sampling is None:
+            self.profiles_sampling = (rupture_mesh_spacing / 
+                                      rupture_aspect_ratio)
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
         self.rake = rake
@@ -68,9 +69,12 @@ class KiteFaultSource(ParametricSeismicSource):
                                               self.rupture_mesh_spacing,
                                               idl=False, align=False)
 
-    # TODO
-    def count_ruptures(self):
-        pass
+    def count_ruptures(self) -> int:
+        """
+        :returns:
+            The number of ruptures that this source generates
+        """
+        return len([r for r in self.iter_ruptures()])
 
     def iter_ruptures(self):
 
@@ -105,7 +109,7 @@ class KiteFaultSource(ParametricSeismicSource):
 
             # Rupture generator
             for rup in ruptures:
-                hypocenter = rup.surface.get_center()
+                hypocenter = rup[0].get_center()
                 yield ppr(mag, self.rake, self.tectonic_region_type,
                           hypocenter, rup[0], occurrence_rate, tom)
 
@@ -155,7 +159,7 @@ class KiteFaultSource(ParametricSeismicSource):
                     msh = Mesh(omsh.lons[j:j + rup_d, i:i + rup_s],
                                omsh.lats[j:j + rup_d, i:i + rup_s],
                                omsh.depths[j:j + rup_d, i:i + rup_s])
-                    yield (BaseSurface(msh), j, i)
+                    yield (KiteSurface(msh), j, i)
 
     # TODO
     def get_fault_surface_area(self) -> float:
@@ -166,7 +170,7 @@ class KiteFaultSource(ParametricSeismicSource):
 
 
 def get_discrete_dimensions(area: float, sampling: float, aspr: float,
-            sampling_y: Optional[float] = None) -> Tuple[float, float]:
+            sampling_y: float = None) -> Tuple[float, float]:
     """
     Computes the discrete dimensions of a rupture given rupture area, sampling
     distance (along strike) and aspect ratio.
