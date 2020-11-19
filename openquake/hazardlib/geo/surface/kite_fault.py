@@ -53,15 +53,14 @@ class KiteSurface(BaseSurface):
         self.strike = self.dip = None
 
     def _fix_right_hand(self):
-        # This method fixes the mesh used to represent the grid surface so 
+        # This method fixes the mesh used to represent the grid surface so
         # that it complies with the right hand rule.
         found = False
         irow = 0
         icol = 0
-        while 1:
+        while not found:
             if np.all(np.isfinite(self.mesh.lons[irow:irow+2, icol:icol+2])):
                 found = True
-                break
             else:
                 icol += 1
                 if (icol+1) >= self.mesh.lons.shape[1]:
@@ -89,7 +88,6 @@ class KiteSurface(BaseSurface):
             msg = 'Could not find a valid quadrilateral for strike calculation'
             raise ValueError(msg)
 
-
     def get_dip(self) -> float:
         """
         Return the fault dip as the average dip over the fault surface mesh.
@@ -112,7 +110,8 @@ class KiteSurface(BaseSurface):
                 dips.append(np.mean(np.degrees(np.arctan(vdists/hdists))))
                 lens.append(np.sum((hdists**2 + vdists**2)**0.5))
             lens = np.array(lens)
-            return np.sum(np.array(dips) * lens/np.sum(lens))
+            self.dip = np.sum(np.array(dips) * lens/np.sum(lens))
+        return self.dip
 
     def get_strike(self) -> float:
         """
@@ -122,16 +121,18 @@ class KiteSurface(BaseSurface):
         :returns:
             The average strike, in decimal degrees.
         """
-        idx = np.isfinite(self.mesh.lons)
-        azi = azimuth(self.mesh.lons[:-1, :], self.mesh.lats[:-1, :],
-                      self.mesh.lons[1:, :], self.mesh.lats[1:, :])
-        return np.mean(((azi[idx[:-1, :]]+0.001) % 360))
+        if self.strike is None:
+            idx = np.isfinite(self.mesh.lons)
+            azi = azimuth(self.mesh.lons[:-1, :], self.mesh.lats[:-1, :],
+                          self.mesh.lons[1:, :], self.mesh.lats[1:, :])
+            self.strike = np.mean(((azi[idx[:-1, :]]+0.001) % 360))
+        return self.strike
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
                       align=False):
         # TODO split this function into smaller components.
-        """ 
+        """
         This method creates a quadrilateral mesh from a set of profiles. The
         construction of the mesh is done trying to get quadrilaterals as much
         as possible close to a square. Nonetheless some distorsions are
@@ -241,11 +242,25 @@ class KiteSurface(BaseSurface):
         # Convert from profiles to edges
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
-
         return cls(Mesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]))
 
+    def get_center(self):
+        """
+        Finds a point on the mesh in proximity of the surface center. Can be
+        used as a first guess of hypocenter position (in absence of better
+        info).
+
+        :returns:
+            The point on the mesh closer to its center
+        """
+        mesh = self.mesh
+        irow = int(np.round(mesh.shape[0]/2))
+        icol = int(np.round(mesh.shape[1]/2))
+        return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
+                     mesh.depths[irow, icol])
 
 def _resample_profile(line, sampling_dist):
+    # TODO split this function into smaller components.
     """
     :parameter line:
         An instance of :class:`openquake.hazardlib.geo.line.Line`
@@ -264,16 +279,16 @@ def _resample_profile(line, sampling_dist):
     # Add a tolerance length to the last point of the profile
     # check that final portion of the profile is not vertical
     if abs(lo[-2]-lo[-1]) > 1e-5 and abs(la[-2]-la[-1]) > 1e-5:
-        az12, az21, odist = g.inv(lo[-2], la[-2], lo[-1], la[-1])
+        az12, _, odist = g.inv(lo[-2], la[-2], lo[-1], la[-1])
         odist /= 1e3
         slope = np.arctan((de[-1] - de[-2]) / odist)
         hdist = TOLERANCE * sampling_dist * np.cos(slope)
         vdist = TOLERANCE * sampling_dist * np.sin(slope)
-        endlon, endlat, backaz = g.fwd(lo[-1], la[-1], az12, hdist*1e3)
+        endlon, endlat, _ = g.fwd(lo[-1], la[-1], az12, hdist*1e3)
         lo[-1] = endlon
         la[-1] = endlat
         de[-1] = de[-1] + vdist
-        az12, az21, odist = g.inv(lo[-2], la[-2], lo[-1], la[-1])
+        az12, _, odist = g.inv(lo[-2], la[-2], lo[-1], la[-1])
 
         # Checking
         odist /= 1e3
@@ -457,7 +472,7 @@ def get_mesh(pfs, rfi, sd, idl):
     laidx = [0 for _ in range(0, len(pfs[0]))]
 
     # New profiles
-    npr = list([copy.deepcopy(pfs[rfi])])
+    npr = list([copy.copy(pfs[rfi])])
 
     # Run for all the profiles 'after' the reference one
     for i in range(rfi, len(pfs)-1):

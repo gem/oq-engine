@@ -132,12 +132,21 @@ class KiteSurfaceTestCase(unittest.TestCase):
         # meridians) which corresponds to a length of # 111.3/2km = 55.65km.
         # Using a sampling distance of 5 km we get 12 equally spaced profiles.
         # Along the dip the fault width is ((0.15*110.567)**2+15**2)**.5 i.e.
-        # 22.36km. With a sampling of 2.0km we get exactly 7 edges.
-
+        # 22.36km. With a sampling of 2.0km we get 12 edges.
         np.testing.assert_equal(msh.mesh.lons.shape, (12, 12))
+
         # We take the last index since we are flipping the mesh to comply with
         # the right hand rule
         self.assertTrue(np.all(np.abs(msh.mesh.lons[:, -1]) < 1e-3))
+
+        # Tests the position of the center
+        pnt = msh.get_center()
+        tmp = (abs(msh.mesh.lons-pnt.longitude) +
+               abs(msh.mesh.lats-pnt.latitude) +
+               abs(msh.mesh.depths-pnt.depth)*0.01)
+        idx = np.unravel_index(np.argmin(tmp, axis=None), tmp.shape)
+        msg = "We computed center of the surface is wrong"
+        self.assertEqual(idx, (6, 6), msg)
 
         if PLOTTING:
             title = 'Trivial case - Fault dipping at about 45 degrees'
