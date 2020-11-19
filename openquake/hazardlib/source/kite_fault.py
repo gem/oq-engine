@@ -74,9 +74,6 @@ class KiteFaultSource(ParametricSeismicSource):
 
     def iter_ruptures(self):
 
-        # TODO remove
-        from openquake.hazardlib.geo import Point
-
         # Set magnitude scaling relationship, temporal occurrence model and
         # mesh of the fault surface
         msr = self.magnitude_scaling_relationship
@@ -91,14 +88,11 @@ class KiteFaultSource(ParametricSeismicSource):
                                                self.rupture_aspect_ratio,
                                                self.profiles_sampling)
 
-            # Get the number of nodes along the strike and dip. Note that 
+            # Get the number of nodes along the strike and dip. Note that
             # len and wdt should be both multiples of the sampling distances
             # used along the strike and width
             rup_len = int(np.round(lng/self.rupture_mesh_spacing)) + 1
             rup_wid = int(np.round(wdt/self.profiles_sampling)) + 1
-
-            # TODO replace
-            hypocenter = Point(0, 0, 0)
 
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
@@ -111,6 +105,7 @@ class KiteFaultSource(ParametricSeismicSource):
 
             # Rupture generator
             for rup in ruptures:
+                hypocenter = rup.surface.get_center()
                 yield ppr(mag, self.rake, self.tectonic_region_type,
                           hypocenter, rup[0], occurrence_rate, tom)
 
