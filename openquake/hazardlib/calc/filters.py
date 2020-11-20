@@ -357,7 +357,7 @@ class SourceFilter(object):
                 dlon**2 + dlat**2) / KM_TO_DEGREES
             dist += 10  # added 10 km of buffer to guard against numeric errors
             # the test most sensitive to the buffer effect is in oq-risk-tests,
-            # case_ucerf/job_eb.ini; without buffer rare ruptures are discarded
+            # case_ucerf/job_eb.ini; without buffer, sites can be discarded
             # even if within the maximum_distance
         else:  # source
             trt = src_or_rec.tectonic_region_type
