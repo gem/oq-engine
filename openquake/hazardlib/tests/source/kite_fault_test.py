@@ -195,7 +195,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
                                    profiles=profiles)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 42, msg)
+        self.assertEqual(source.count_ruptures(), 28, msg)
 
         if MAKE_MOVIES:
             self._ruptures_animation('test02', source.surface, self.ruptures,
