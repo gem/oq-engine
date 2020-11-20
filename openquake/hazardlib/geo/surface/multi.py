@@ -111,7 +111,10 @@ class MultiSurface(BaseSurface):
         :returns:
             a list of surface nodes from the underlying single node surfaces
         """
-        return [surf.surface_nodes[0] for surf in self.surfaces]
+        if type(self.surfaces[0]).__name__ == 'PlanarSurface':
+            return [surf.surface_nodes[0] for surf in self.surfaces]
+        else:
+            return [surf.surface_nodes for surf in self.surfaces]
 
     @property
     def mesh(self):

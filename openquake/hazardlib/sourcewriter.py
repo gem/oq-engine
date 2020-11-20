@@ -472,6 +472,8 @@ def build_rupture_node(rupt, probs_occur):
         name = 'complexFaultRupture'
     elif geom == 'griddedSurface':
         name = 'griddedRupture'
+    elif geom == 'kiteSurface':
+        name = 'kiteSurface'
     return Node(name, {'probs_occur': probs_occur}, nodes=rupt_nodes)
 
 

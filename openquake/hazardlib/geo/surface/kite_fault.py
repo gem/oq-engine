@@ -25,14 +25,40 @@ import copy
 import numpy as np
 
 from pyproj import Geod
+from openquake.baselib.node import Node
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.geodetic import distance, azimuth
 
-TOL = 0.5
-TOLERANCE = 0.2
+TOL = 0.2
+
+
+def profile_node(points):
+    """
+    :param points: a list of Point objects
+    :returns: a Node of kind profile
+    """
+    line = []
+    for point in points:
+        line.append(point.longitude)
+        line.append(point.latitude)
+        line.append(point.depth)
+    pos = Node('gml:posList', {}, line)
+    node = Node('profile', nodes=[Node('gml:LineString', nodes=[pos])])
+    return node
+
+
+def kite_surface_node(profiles):
+    """
+    :param profiles: a list of lists of points
+    :returns: a Node of kind complexFaultGeometry
+    """
+    node = Node('kiteSurface')
+    for profile in profiles:
+        node.append(profile_node(profile))
+    return node
 
 
 class KiteSurface(BaseSurface):
@@ -44,13 +70,23 @@ class KiteSurface(BaseSurface):
 
     """
 
-    def __init__(self, mesh):
+    def __init__(self, mesh, profiles=None):
         self.mesh = mesh
+        self.profiles = profiles
         assert 1 not in self.mesh.shape, (
             "Mesh must have at least 2 nodes along both length and width.")
         # Make sure the mesh respects the right hand rule
         self._fix_right_hand()
         self.strike = self.dip = None
+
+    @property
+    def surface_nodes(self):
+        """
+        A single element list containing a kiteSurface node
+        """
+        # TODO if the object is created without profiles we must extract them 
+        # from the mesh. 
+        return kite_surface_node(self.profiles)
 
     def _fix_right_hand(self):
         # This method fixes the mesh used to represent the grid surface so
@@ -242,7 +278,7 @@ class KiteSurface(BaseSurface):
         # Convert from profiles to edges
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
-        return cls(Mesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]))
+        return cls(Mesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]), profiles)
 
     def get_center(self):
         """
@@ -282,8 +318,8 @@ def _resample_profile(line, sampling_dist):
         az12, _, odist = g.inv(lo[-2], la[-2], lo[-1], la[-1])
         odist /= 1e3
         slope = np.arctan((de[-1] - de[-2]) / odist)
-        hdist = TOLERANCE * sampling_dist * np.cos(slope)
-        vdist = TOLERANCE * sampling_dist * np.sin(slope)
+        hdist = TOL * sampling_dist * np.cos(slope)
+        vdist = TOL * sampling_dist * np.sin(slope)
         endlon, endlat, _ = g.fwd(lo[-1], la[-1], az12, hdist*1e3)
         lo[-1] = endlon
         la[-1] = endlat
@@ -295,7 +331,7 @@ def _resample_profile(line, sampling_dist):
         slopec = np.arctan((de[-1] - de[-2]) / odist)
         assert abs(slope-slopec) < 1e-3
     else:
-        de[-1] = de[-1] + TOLERANCE * sampling_dist
+        de[-1] = de[-1] + TOL * sampling_dist
 
     # Initialise the cumulated distance
     cdist = 0.
