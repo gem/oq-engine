@@ -29,7 +29,7 @@
 | case_26 | |
 | case_27 | |
 | case_28 | |
-| case_29 | |
+| case_29 | Non-parametric source with one rupture represente by 2 kite surfaces |
 | case_30 | |
 | case_31 | |
 | case_32 | |
