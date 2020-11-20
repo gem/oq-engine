@@ -33,7 +33,7 @@ from openquake.baselib import parallel, performance, hdf5
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
-    get_nbytes_msg)
+    get_nbytes_msg, random_filter)
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -352,9 +352,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Reducing the number of sources')
             for sg in self.csm.src_groups:
                 if not sg.atomic:
-                    src = max(
-                        sg, key=operator.attrgetter('nsites', 'source_id'))
-                    sg.sources = [src]
+                    sg.sources = random_filter(sg, .1)
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
