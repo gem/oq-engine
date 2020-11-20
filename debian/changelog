@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato, Thomas Chartier]
+  * Added experimental version of KiteSource and KiteSurface
+
   [Michele Simionato]
   * Moved the parameter `num_cores` into openquake.cfg
   * Internal: introduced the environment variable OQ_REDUCE
