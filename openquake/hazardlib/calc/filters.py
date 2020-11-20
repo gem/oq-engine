@@ -337,7 +337,7 @@ class SourceFilter(object):
     def close_sids(self, src_or_rec, trt=None):
         """
         :param src_or_rec: a source or a rupture record
-        :param trt: passed only if src_or_rec is a record
+        :param trt: passed only if src_or_rec is a rupture record
         :returns:
            the site indices within the maximum_distance of the hypocenter,
            plus the maximum size of the bounding box
@@ -348,13 +348,17 @@ class SourceFilter(object):
             return self.sitecol.sids
         if not hasattr(self, 'kdt'):
             self.kdt = cKDTree(self.sitecol.xyz)
-        if trt:  # rupture
+        if trt:  # rupture, called by GmfGetter.gen_computers
             dlon = get_longitudinal_extent(
                 src_or_rec['minlon'], src_or_rec['maxlon']) / 2.
             dlat = (src_or_rec['maxlat'] - src_or_rec['minlat']) / 2.
             lon, lat, dep = src_or_rec['hypo']
             dist = self.integration_distance(trt) + numpy.sqrt(
                 dlon**2 + dlat**2) / KM_TO_DEGREES
+            dist += 10  # added 10 km of buffer to guard against numeric errors
+            # the test most sensitive to the buffer effect is in oq-risk-tests,
+            # case_ucerf/job_eb.ini; without buffer rare ruptures are discarded
+            # even if within the maximum_distance
         else:  # source
             trt = src_or_rec.tectonic_region_type
             try:
