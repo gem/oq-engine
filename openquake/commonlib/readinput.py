@@ -1143,8 +1143,6 @@ def get_checksum32(oqparam, h5=None):
 
     :param oqparam: an OqParam instance
     """
-    # NB: using adler32 & 0xffffffff is the documented way to get a checksum
-    # which is the same between Python 2 and Python 3
     checksum = _checksum(get_input_files(oqparam, hazard=True))
     hazard_params = []
     for key, val in vars(oqparam).items():
