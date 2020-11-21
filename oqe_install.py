@@ -15,15 +15,15 @@ VENV = '/opt/openquake'
 OQ_CFG = os.path.join(VENV, 'openquake.cfg')
 OQ = '/usr/bin/oq'
 OQL = ['sudo', '-H', '-u', USER, OQ]
-OQDATA = '/var/lib/oqdata'
+OQDATA = '/var/lib/openquake/oqdata'
 DBPATH = os.path.join(OQDATA, 'db.sqlite3')
 DBSERVER_PORT = 1907
 CONFIG = '''[dbserver]
 port = %d
 multi_user = true
 file = %s
-shared_dir = %s
-''' % (DBSERVER_PORT, DBPATH, OQDATA)
+shared_dir = /var/lib
+''' % (DBSERVER_PORT, DBPATH)
 PACKAGES = '''It looks like you have an installation from packages.
 Please remove it with `sudo apt remove python3-oq-engine`
 on Debian derivatives or with `sudo yum remove python3-oq-engine`
@@ -98,7 +98,7 @@ def install():
 
     # create the database
     if not os.path.exists(OQDATA):
-        os.mkdir(OQDATA)
+        os.makedirs(OQDATA)
         subprocess.check_call(['chown', USER, OQDATA])
 
     # create the openquake venv if necessary
