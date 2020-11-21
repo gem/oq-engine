@@ -65,16 +65,16 @@ class KiteFaultSource(ParametricSeismicSource):
         # Get the surface of the fault
         # TODO we must automate the definition of the idl parameter
         return KiteSurface.from_profiles(self.profiles,
-                                              self.profiles_sampling,
-                                              self.rupture_mesh_spacing,
-                                              idl=False, align=False)
+                                         self.profiles_sampling,
+                                         self.rupture_mesh_spacing,
+                                         idl=False, align=False)
 
     def count_ruptures(self) -> int:
         """
         :returns:
             The number of ruptures that this source generates
         """
-        return len([r for r in self.iter_ruptures()])
+        return sum(1 for r in self.iter_ruptures())
 
     def iter_ruptures(self):
 
@@ -130,7 +130,7 @@ class KiteFaultSource(ParametricSeismicSource):
         :param f_dip:
             Floating distance along dip (multiple of sampling distance)
         :returns:
-            A tuple containing the rupture and the indexes of the top right 
+            A tuple containing the rupture and the indexes of the top right
             node of the mesh representing the rupture.
         """
 
