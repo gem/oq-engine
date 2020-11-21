@@ -14,14 +14,41 @@ USER = 'openquake'
 VENV = '/opt/openquake'
 OQ_CFG = os.path.join(VENV, 'openquake.cfg')
 OQ = '/usr/bin/oq'
-OQL = ['sudo', '-u', USER, OQ]
+OQL = ['sudo', '-H', '-u', USER, OQ]
+OQDATA = '/var/lib/oqdata'
+DBPATH = os.path.join(OQDATA, 'db.sqlite3')
 DBSERVER_PORT = 1907
-
+CONFIG = '''[dbserver]
+port = %d
+multi_user = true
+file = %s
+shared_dir = %s
+''' % (DBSERVER_PORT, DBPATH, OQDATA)
 PACKAGES = '''It looks like you have an installation from packages.
 Please remove it with `sudo apt remove python3-oq-engine`
 on Debian derivatives or with `sudo yum remove python3-oq-engine`
 on Red Hat derivatives. If it does not work, just remove everything with
 sudo rm -rf /opt/openquake /etc/openquake/openquake.cfg /usr/bin/oq
+'''
+SERVICE = '''\
+[Unit]
+Description=The OpenQuake Engine {service}
+Documentation=https://github.com/gem/oq-engine/
+After=network.target
+
+[Service]
+User=openquake
+Group=openquake
+Environment=
+WorkingDirectory={OQDATA}
+ExecStart=/opt/openquake/bin/oq {service} start
+Restart=always
+RestartSec=30
+KillMode=control-group
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target
 '''
 
 
@@ -43,7 +70,9 @@ def before_checks():
         sock.close()
     if errcode == 0:  # no error, the DbServer is up
         sys.exit('There is DbServer running on port %d from a previous '
-                 'installation. Please run `oq dbserver stop`' % DBSERVER_PORT)
+                 'installation. Please run `oq dbserver stop`. '
+                 'If it does not work, try `sudo fuser -k %d/tcp`' %
+                 (DBSERVER_PORT, DBSERVER_PORT))
 
     # check if there is an installation from packages
     if os.path.exists('/etc/openquake/openquake.cfg'):
@@ -67,6 +96,11 @@ def install():
         subprocess.check_call(['useradd', USER])
         print('Created user %s' % USER)
 
+    # create the database
+    if not os.path.exists(OQDATA):
+        os.mkdir(OQDATA)
+        subprocess.check_call(['chown', USER, OQDATA])
+
     # create the openquake venv if necessary
     if not os.path.exists(VENV):
         # create venv
@@ -83,18 +117,21 @@ def install():
     # create openquake.cfg
     if not os.path.exists(OQ_CFG):
         with open(OQ_CFG, 'w') as cfg:
-            cfg.write('[dbserver]\nport = %d\n' % DBSERVER_PORT)
+            cfg.write(CONFIG)
         print('Created %s' % OQ_CFG)
 
     # create symlink to oq
     if not os.path.exists(OQ):
         os.symlink('%s/bin/oq' % VENV, OQ)
 
-    # start the DbServer
-    subprocess.check_call(OQL + ['dbserver', 'start'])
-
-    # start the WebUI
-    subprocess.check_call(OQL + ['webui', 'start'])
+    # create systemd services
+    for service in ['dbserver', 'webui']:
+        service_name = 'openquake-%s.service' % service
+        service_path = '/lib/systemd/system/' + service_name
+        with open(service_path, 'w') as f:
+            f.write(SERVICE.format(OQDATA=OQDATA, service=service))
+        subprocess.check_call(['systemctl', 'enable', service_name])
+        subprocess.check_call(['systemctl', 'start', service_name])
 
 
 if __name__ == '__main__':
