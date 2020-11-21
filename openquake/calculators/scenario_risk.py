@@ -188,7 +188,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
 
             # sanity check
             numpy.testing.assert_allclose(
-                losses_by_asset.sum(axis=0), agglosses['mean'],
-                rtol=1E-5)
+                losses_by_asset.sum(axis=0), agglosses['mean'], rtol=1E-4)
         logging.info('Mean portfolio loss\n' +
                      views.view('portfolio_loss', self.datastore))
