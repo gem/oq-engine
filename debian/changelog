@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Fixed a small bug of logic in the WebUI: if the authentication is
-    turned off, every one must be able to see all calculations
+    turned off, everyone must be able to see all calculations
   * Fixed a bug in the calculation of averages losses in scenario_risk
     calculations in presence of sites with zero hazard
   * Optimized the prefiltering by using a KDTree
