@@ -115,7 +115,10 @@ def install():
                            'openquake.engine', '--upgrade'])
 
     # create openquake.cfg
-    if not os.path.exists(OQ_CFG):
+    if os.path.exists(OQ_CFG):
+        print('There is an old file %s, I not touching it, but consider '
+              'updating it with\n%s' % (OQ_CFG, CONFIG))
+    else:
         with open(OQ_CFG, 'w') as cfg:
             cfg.write(CONFIG)
         print('Created %s' % OQ_CFG)
@@ -125,13 +128,15 @@ def install():
         os.symlink('%s/bin/oq' % VENV, OQ)
 
     # create systemd services
-    for service in ['dbserver', 'webui']:
-        service_name = 'openquake-%s.service' % service
-        service_path = '/lib/systemd/system/' + service_name
-        with open(service_path, 'w') as f:
-            f.write(SERVICE.format(OQDATA=OQDATA, service=service))
-        subprocess.check_call(['systemctl', 'enable', service_name])
-        subprocess.check_call(['systemctl', 'start', service_name])
+    if os.path.exists('/lib/systemd/system'):
+        for service in ['dbserver', 'webui']:
+            service_name = 'openquake-%s.service' % service
+            service_path = '/lib/systemd/system/' + service_name
+            if not os.path.exists(service_path):
+                with open(service_path, 'w') as f:
+                    f.write(SERVICE.format(OQDATA=OQDATA, service=service))
+            subprocess.check_call(['systemctl', 'enable', service_name])
+            subprocess.check_call(['systemctl', 'start', service_name])
 
 
 if __name__ == '__main__':
