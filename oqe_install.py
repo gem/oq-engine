@@ -14,6 +14,7 @@ USER = 'openquake'
 VENV = '/opt/openquake'
 OQ_CFG = os.path.join(VENV, 'openquake.cfg')
 OQ = '/usr/bin/oq'
+OQL = ['sudo', '-u', USER, OQ]
 DBSERVER_PORT = 1907
 
 PACKAGES = '''It looks like you have an installation from packages.
@@ -25,6 +26,10 @@ sudo rm -rf /opt/openquake /etc/openquake/openquake.cfg /usr/bin/oq
 
 
 def before_checks():
+    # check platform
+    if sys.platform != 'linux':
+        sys.exit('Error: this installation method is meant for linux!')
+
     # check python version
     if sys.version_info[:2] < (3, 6):
         sys.exit('Error: you need at least Python 3.6, but you have %s' %
@@ -86,10 +91,10 @@ def install():
         os.symlink('%s/bin/oq' % VENV, OQ)
 
     # start the DbServer
-    subprocess.check_call(['%s/bin/oq' % VENV, 'dbserver', 'start'])
+    subprocess.check_call(OQL + ['dbserver', 'start'])
 
     # start the WebUI
-    subprocess.check_call(['%s/bin/oq' % VENV, 'webui', 'start'])
+    subprocess.check_call(OQL + ['webui', 'start'])
 
 
 if __name__ == '__main__':
