@@ -51,6 +51,7 @@ Implemented AvgPoeGMPE.
 # oq commands
 
 Added command `oq compare rups calc1 calc2`.
+Enhanced `oq plot sources` to plot point sources and to manage the IDL.
 
 # WebUI/WebAPI/QGIS plugin
 
