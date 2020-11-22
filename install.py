@@ -77,10 +77,12 @@ TimeoutStopSec=10
 WantedBy=multi-user.target
 '''
 
+PYVER = sys.version_info[:2]
+
 
 def before_checks(kind):
     # check python version
-    if sys.version_info[:2] < (3, 6):
+    if PYVER < (3, 6):
         sys.exit('Error: you need at least Python 3.6, but you have %s' %
                  '.'.join(map(str, sys.version_info)))
 
@@ -106,9 +108,9 @@ def before_checks(kind):
 
     user = getpass.getuser()
     if kind is server and user != 'root':
-        sys.exit('Error: you cannot run this script unless you are root. If '
-                 'you do not have root permissions, you can always install '
-                 'the engine in single-user mode.')
+        sys.exit('Error: you cannot perform a server installation unless '
+                 'you are root. If you do not have root permissions, you '
+                 'can install the engine in user mode.')
     if (kind is server and os.path.exists(kind.OQ) and
             os.readlink(kind.OQ) != '%s/bin/oq' % kind.VENV):
         sys.exit('Error: there is already a link %s->%s; please remove it' %
@@ -127,7 +129,8 @@ def install(kind):
     # create the database
     if not os.path.exists(kind.OQDATA):
         os.makedirs(kind.OQDATA)
-        subprocess.check_call(['chown', 'openquake', kind.OQDATA])
+        if kind is server:
+            subprocess.check_call(['chown', 'openquake', kind.OQDATA])
 
     # create the openquake venv if necessary
     if not os.path.exists(kind.VENV):
@@ -140,6 +143,9 @@ def install(kind):
                            '--upgrade'])
     # install the engine
     if kind is devel:
+        req = 'requirements-py%d%d-linux64.txt' % PYVER
+        subprocess.check_call(['%s/bin/pip' % kind.VENV, 'install',
+                               '-r', req])
         subprocess.check_call(['%s/bin/pip' % kind.VENV, 'install',
                                '-e', '.'])
     else:
@@ -147,13 +153,14 @@ def install(kind):
                                'openquake.engine', '--upgrade'])
 
     # create openquake.cfg
-    if os.path.exists(kind.OQ_CFG):
-        print('There is an old file %s, I not touching it, but consider '
-              'updating it with\n%s' % (kind.OQ_CFG, kind.CONFIG))
-    else:
-        with open(kind.OQ_CFG, 'w') as cfg:
-            cfg.write(kind.CONFIG)
-        print('Created %s' % kind.OQ_CFG)
+    if kind is server:
+        if os.path.exists(kind.OQ_CFG):
+            print('There is an old file %s, I not touching it, but consider '
+                  'updating it with\n%s' % (kind.OQ_CFG, kind.CONFIG))
+        else:
+            with open(kind.OQ_CFG, 'w') as cfg:
+                cfg.write(kind.CONFIG)
+            print('Created %s' % kind.OQ_CFG)
 
     # create symlink to oq
     if kind is server and not os.path.exists(kind.OQ):
@@ -175,7 +182,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("kind", choices=['devel', 'user', 'server'],
                         default='server', nargs='?',
-                        help='the kind of installation you want')
+                        help='the kind of installation you want '
+                        '(default server)')
     kind = globals()[parser.parse_args().kind]
     before_checks(kind)
     install(kind)
