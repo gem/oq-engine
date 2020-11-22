@@ -230,14 +230,13 @@ def _get_csm(full_lt, groups):
             # check if OQ_SAMPLE_SOURCES is set
             ss = os.environ.get('OQ_SAMPLE_SOURCES')
             if ss:
-                logging.info('Reducing the number of sources')
+                logging.info('Reducing the number of sources for %s', trt)
                 split = []
                 for src in sources:
                     for s in src:
                         s.et_id = src.et_id
                         split.append(s)
-                sources = general.random_filter(
-                    split, float(ss)) or split[0]
+                sources = general.random_filter(split, float(ss)) or split[0]
             src_groups.append(sourceconverter.SourceGroup(trt, sources))
     for ag in atomic:
         for src in ag:
