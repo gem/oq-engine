@@ -757,10 +757,7 @@ def get_composite_source_model(oqparam, h5=None):
             src.grp_id = grp_id[tuple(src.et_ids)]
             row = [src.source_id, src.grp_id, src.code,
                    0, 0, 0, full_lt.trti[src.tectonic_region_type], 0]
-            try:
-                wkts.append(src._wkt)  # this is a bit slow but okay
-            except AttributeError:  # no ._wkt with OQ_SAMPLE_SOURCES
-                wkts.append('')
+            wkts.append(src._wkt)
             data[src.id] = row
             if hasattr(src, 'mags'):  # UCERF
                 continue  # already accounted for in sg.mags

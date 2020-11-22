@@ -223,9 +223,7 @@ def _get_csm(full_lt, groups):
         for srcs in general.groupby(acc[trt], key).values():
             if len(srcs) > 1:
                 srcs = reduce_sources(srcs)
-            for src in srcs:
-                src._wkt = src.wkt()
-                lst.append(src)
+            lst.extend(srcs)
         for sources in general.groupby(lst, et_ids).values():
             # check if OQ_SAMPLE_SOURCES is set
             ss = os.environ.get('OQ_SAMPLE_SOURCES')
@@ -237,6 +235,9 @@ def _get_csm(full_lt, groups):
                         s.et_id = src.et_id
                         split.append(s)
                 sources = general.random_filter(split, float(ss)) or split[0]
+            # set ._wkt attribute (for later storage in the source_wkt dataset)
+            for src in sources:
+                src._wkt = src.wkt()
             src_groups.append(sourceconverter.SourceGroup(trt, sources))
     for ag in atomic:
         for src in ag:
