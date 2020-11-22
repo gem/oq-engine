@@ -730,7 +730,9 @@ def _get_cachedir(oq, full_lt, h5=None):
             if not sg.atomic:
                 srcs = []
                 for src in sg:
-                    srcs.extend(split_source(src))
+                    for s in split_source(src):
+                        s.source_id = s.source_id.replace(':', '_')
+                        srcs.append(s)
                 sg.sources = random_filter(srcs, float(ss)) or srcs[0]
     logging.info('Saving %s', fname)
     with open(fname, 'wb') as f:
