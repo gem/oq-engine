@@ -81,45 +81,49 @@ WantedBy=multi-user.target
 PYVER = sys.version_info[:2]
 
 
-def before_checks(kind):
+def before_checks(inst):
     # check python version
     if PYVER < (3, 6):
         sys.exit('Error: you need at least Python 3.6, but you have %s' %
                  '.'.join(map(str, sys.version_info)))
 
     # check platform
-    if kind is server and sys.platform != 'linux':
+    if inst is server and sys.platform != 'linux':
         sys.exit('Error: this installation method is meant for linux!')
+
+    # check user
+    user = getpass.getuser()
+    if inst is server and user != 'root':
+        sys.exit('Error: you cannot perform a server installation unless '
+                 'you are root. If you do not have root permissions, you '
+                 'can install the engine in user mode.')
+    elif user == 'root':
+        sys.exit('Error: you cannot perform a user or devel installation'
+                 ' as root.')
 
     # check if there is a DbServer running
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        errcode = sock.connect_ex(('localhost', kind.DBPORT))
+        errcode = sock.connect_ex(('localhost', inst.DBPORT))
     finally:
         sock.close()
     if errcode == 0:  # no error, the DbServer is up
         sys.exit('There is DbServer running on port %d from a previous '
                  'installation. Please run `oq dbserver stop`. '
                  'If it does not work, try `sudo fuser -k %d/tcp`' %
-                 (kind.DBPORT, kind.DBPORT))
+                 (inst.DBPORT, inst.DBPORT))
 
     # check if there is an installation from packages
-    if kind is server and os.path.exists('/etc/openquake/openquake.cfg'):
+    if inst is server and os.path.exists('/etc/openquake/openquake.cfg'):
         sys.exit(PACKAGES)
-
-    user = getpass.getuser()
-    if kind is server and user != 'root':
-        sys.exit('Error: you cannot perform a server installation unless '
-                 'you are root. If you do not have root permissions, you '
-                 'can install the engine in user mode.')
-    if (kind is server and os.path.exists(kind.OQ) and
-            os.readlink(kind.OQ) != '%s/bin/oq' % kind.VENV):
+    if (inst is server and os.path.exists(inst.OQ) and
+            os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV):
         sys.exit('Error: there is already a link %s->%s; please remove it' %
-                 (kind.OQ, os.readlink(kind.OQ)))
+                 (inst.OQ, os.readlink(inst.OQ)))
 
 
-def install(kind):
-    if kind is server:
+def install(inst):
+    if inst is server:
         # create the openquake user if necessary
         try:
             pwd.getpwnam('openquake')
@@ -128,61 +132,61 @@ def install(kind):
             print('Created user openquake')
 
     # create the database
-    if not os.path.exists(kind.OQDATA):
-        os.makedirs(kind.OQDATA)
-        if kind is server:
-            subprocess.check_call(['chown', 'openquake', kind.OQDATA])
+    if not os.path.exists(inst.OQDATA):
+        os.makedirs(inst.OQDATA)
+        if inst is server:
+            subprocess.check_call(['chown', 'openquake', inst.OQDATA])
 
     # create the openquake venv if necessary
-    if not os.path.exists(kind.VENV):
+    if not os.path.exists(inst.VENV):
         # create venv
-        venv.EnvBuilder(with_pip=True).create(kind.VENV)
-        print('Created %s' % kind.VENV)
+        venv.EnvBuilder(with_pip=True).create(inst.VENV)
+        print('Created %s' % inst.VENV)
 
     # upgrade pip
-    subprocess.check_call(['%s/bin/pip' % kind.VENV, 'install', 'pip', 'wheel',
+    subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', 'pip', 'wheel',
                            '--upgrade'])
     # install the engine
-    if kind is devel:
+    if inst is devel:
         req = 'requirements-py%d%d-linux64.txt' % PYVER
-        subprocess.check_call(['%s/bin/pip' % kind.VENV, 'install',
+        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
                                '-r', req])
-        subprocess.check_call(['%s/bin/pip' % kind.VENV, 'install',
+        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
                                '-e', '.'])
     else:
-        subprocess.check_call(['%s/bin/pip' % kind.VENV, 'install',
+        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
                                'openquake.engine', '--upgrade'])
 
     # create openquake.cfg
-    if kind is server:
-        if os.path.exists(kind.OQ_CFG):
+    if inst is server:
+        if os.path.exists(inst.OQ_CFG):
             print('There is an old file %s, I not touching it, but consider '
-                  'updating it with\n%s' % (kind.OQ_CFG, kind.CONFIG))
+                  'updating it with\n%s' % (inst.OQ_CFG, inst.CONFIG))
         else:
-            with open(kind.OQ_CFG, 'w') as cfg:
-                cfg.write(kind.CONFIG)
-            print('Created %s' % kind.OQ_CFG)
+            with open(inst.OQ_CFG, 'w') as cfg:
+                cfg.write(inst.CONFIG)
+            print('Created %s' % inst.OQ_CFG)
 
     # create symlink to oq
-    oqreal = '%s/bin/oq' % kind.VENV
-    if kind is server and not os.path.exists(kind.OQ):
-        os.symlink(oqreal, kind.OQ)
-    if kind is not server:
+    oqreal = '%s/bin/oq' % inst.VENV
+    if inst is server and not os.path.exists(inst.OQ):
+        os.symlink(oqreal, inst.OQ)
+    if inst is not server:
         print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
 
     # create systemd services
-    if kind is server and os.path.exists('/lib/systemd/system'):
+    if inst is server and os.path.exists('/lib/systemd/system'):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
             service_path = '/lib/systemd/system/' + service_name
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
-                    f.write(SERVICE.format(vars(kind)))
+                    f.write(SERVICE.format(vars(inst)))
             subprocess.check_call(['systemctl', 'enable', service_name])
             subprocess.check_call(['systemctl', 'start', service_name])
 
     # download a test calculation
-    path = os.path.join(os.path.dirname(kind.OQDATA), 'classical.zip')
+    path = os.path.join(os.path.dirname(inst.OQDATA), 'classical.zip')
     with urlopen('https://github.com/gem/oq-engine/blob/master/openquake/'
                  'server/tests/data/classical.zip?raw=true') as f:
         open(path, 'wb').write(f.read())
@@ -193,10 +197,10 @@ def install(kind):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("kind", choices=['devel', 'user', 'server'],
+    parser.add_argument("inst", choices=['devel', 'user', 'server'],
                         default='server', nargs='?',
                         help='the kind of installation you want '
                         '(default server)')
-    kind = globals()[parser.parse_args().kind]
-    before_checks(kind)
-    install(kind)
+    inst = globals()[parser.parse_args().inst]
+    before_checks(inst)
+    install(inst)
