@@ -40,6 +40,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.calc.filters import split_source
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -721,6 +722,16 @@ def _get_cachedir(oq, full_lt, h5=None):
     csm = get_csm(oq, full_lt, h5)
     if not csm.src_groups:  # everything was filtered away
         return csm
+    # check if OQ_SAMPLE_SOURCES is set
+    ss = os.environ.get('OQ_SAMPLE_SOURCES')
+    if ss:
+        logging.info('Reducing the number of sources')
+        for sg in csm.src_groups:
+            if not sg.atomic:
+                srcs = []
+                for src in sg:
+                    srcs.extend(split_source(src))
+                sg.sources = random_filter(srcs, float(ss)) or srcs[0]
     logging.info('Saving %s', fname)
     with open(fname, 'wb') as f:
         pickle.dump(csm, f)
@@ -757,7 +768,10 @@ def get_composite_source_model(oqparam, h5=None):
             src.grp_id = grp_id[tuple(src.et_ids)]
             row = [src.source_id, src.grp_id, src.code,
                    0, 0, 0, full_lt.trti[src.tectonic_region_type], 0]
-            wkts.append(src._wkt)  # this is a bit slow but okay
+            try:
+                wkts.append(src._wkt)  # this is a bit slow but okay
+            except AttributeError:  # no ._wkt with OQ_SAMPLE_SOURCES
+                wkts.append('')
             data[src.id] = row
             if hasattr(src, 'mags'):  # UCERF
                 continue  # already accounted for in sg.mags
