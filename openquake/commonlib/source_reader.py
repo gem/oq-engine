@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import copy
-import random
 import os.path
 import pickle
 import operator
@@ -34,22 +33,6 @@ by_id = operator.attrgetter('source_id')
 
 def et_ids(src):
     return tuple(src.et_ids)
-
-
-def random_filtered_sources(sources, srcfilter, seed):
-    """
-    :param sources: a list of sources
-    :param srcfilter: a SourceFilter instance
-    :param seed: a random seed
-    :returns: an empty list or a list with a single filtered source
-    """
-    random.seed(seed)
-    while sources:
-        src = random.choice(sources)
-        if srcfilter.get_close_sites(src) is not None:
-            return [src]
-        sources.remove(src)
-    return []
 
 
 def read_source_model(fname, converter, monitor):
@@ -243,8 +226,19 @@ def _get_csm(full_lt, groups):
             for src in srcs:
                 src._wkt = src.wkt()
                 lst.append(src)
-        for grp in general.groupby(lst, et_ids).values():
-            src_groups.append(sourceconverter.SourceGroup(trt, grp))
+        for sources in general.groupby(lst, et_ids).values():
+            # check if OQ_SAMPLE_SOURCES is set
+            ss = os.environ.get('OQ_SAMPLE_SOURCES')
+            if ss:
+                logging.info('Reducing the number of sources')
+                split = []
+                for src in sources:
+                    for s in src:
+                        s.et_id = src.et_id
+                        split.append(s)
+                sources = general.random_filter(
+                    split, float(ss)) or split[0]
+            src_groups.append(sourceconverter.SourceGroup(trt, sources))
     for ag in atomic:
         for src in ag:
             src._wkt = src.wkt()

@@ -40,7 +40,6 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.filters import split_source
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
@@ -722,18 +721,6 @@ def _get_cachedir(oq, full_lt, h5=None):
     csm = get_csm(oq, full_lt, h5)
     if not csm.src_groups:  # everything was filtered away
         return csm
-    # check if OQ_SAMPLE_SOURCES is set
-    ss = os.environ.get('OQ_SAMPLE_SOURCES')
-    if ss:
-        logging.info('Reducing the number of sources')
-        for sg in csm.src_groups:
-            if not sg.atomic:
-                srcs = []
-                for src in sg:
-                    for s in split_source(src):
-                        s.source_id = s.source_id.replace(':', '_')
-                        srcs.append(s)
-                sg.sources = random_filter(srcs, float(ss)) or srcs[0]
     logging.info('Saving %s', fname)
     with open(fname, 'wb') as f:
         pickle.dump(csm, f)
