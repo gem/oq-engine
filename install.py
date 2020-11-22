@@ -5,6 +5,7 @@ import socket
 import getpass
 import argparse
 import subprocess
+from urllib.request import urlopen
 try:
     import venv
 except ImportError:
@@ -163,8 +164,11 @@ def install(kind):
             print('Created %s' % kind.OQ_CFG)
 
     # create symlink to oq
+    oqreal = '%s/bin/oq' % kind.VENV
     if kind is server and not os.path.exists(kind.OQ):
-        os.symlink('%s/bin/oq' % kind.VENV, kind.OQ)
+        os.symlink(oqreal, kind.OQ)
+    if kind is not server:
+        print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
 
     # create systemd services
     if kind is server and os.path.exists('/lib/systemd/system'):
@@ -176,6 +180,15 @@ def install(kind):
                     f.write(SERVICE.format(vars(kind)))
             subprocess.check_call(['systemctl', 'enable', service_name])
             subprocess.check_call(['systemctl', 'start', service_name])
+
+    # download a test calculation
+    path = os.path.join(os.path.dirname(kind.OQDATA), 'classical.zip')
+    with urlopen('https://github.com/gem/oq-engine/blob/master/openquake/'
+                 'server/tests/data/classical.zip?raw=true') as f:
+        open(path, 'wb').write(f.read())
+    print('The engine was installed successfully.')
+    print('You can run a test calculation with the command')
+    print(f'{oqreal} engine --run {path}')
 
 
 if __name__ == '__main__':
