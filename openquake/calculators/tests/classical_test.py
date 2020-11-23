@@ -474,9 +474,15 @@ hazard_uhs-std.csv
             'hazard_curve-mean-SA(0.5)', 'hazard_curve-mean-SA(1.0).csv',
             'hazard_curve-mean-SA(2.0).csv'], case_28.__file__, delta=1E-6)
 
-    def test_case_29(self):  # non parametric source
-        # check the high IMLs are zeros: this is a test for
-        # NonParametricProbabilisticRupture.get_probability_no_exceedance
+    def test_case_29(self):  # non parametric source with 2 KiteSurfaces
+
+        # first test the serialization of the ruptures
+        self.run_calc(case_29.__file__, 'job.ini',
+                      calculation_mode='event_based',
+                      ses_per_logic_tree_path='1000')
+        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+
+        # then perform a classical calculation
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
 
     def test_case_30(self):

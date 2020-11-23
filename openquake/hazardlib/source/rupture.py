@@ -134,10 +134,16 @@ def _get_rupture(rec, geom=None, trt=None):
     if surface_cls is geo.PlanarSurface:
         surface = geo.PlanarSurface.from_array(mesh[:, 0, :])
     elif surface_cls is geo.MultiSurface:
-        # for PlanarSurfaces each array has shape (3, n, 4)
-        surface.__init__([
-            geo.PlanarSurface.from_array(array[:, 0, :])
-            for array in arrays])
+        if all(array.shape == (3, 1, 4) for array in arrays):
+            # for PlanarSurfaces each array has shape (3, 1, 4)
+            surface.__init__([
+                geo.PlanarSurface.from_array(array[:, 0, :])
+                for array in arrays])
+        else:
+            # assume KyteSurfaces
+            surface.__init__([geo.KiteSurface(RectangularMesh(*array))
+                              for array in arrays])
+
     elif surface_cls is geo.GriddedSurface:
         # fault surface, strike and dip will be computed
         surface.strike = surface.dip = None

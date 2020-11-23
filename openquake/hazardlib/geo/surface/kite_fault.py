@@ -67,9 +67,7 @@ class KiteSurface(BaseSurface):
     width along the strike, variable dip angle along the dip and strike
     composed by several disaligned segments. Thrust faults and listric faults
     can be easily implemented.
-
     """
-
     def __init__(self, mesh, profiles=None):
         self.mesh = mesh
         self.profiles = profiles
@@ -84,8 +82,8 @@ class KiteSurface(BaseSurface):
         """
         A single element list containing a kiteSurface node
         """
-        # TODO if the object is created without profiles we must extract them 
-        # from the mesh. 
+        # TODO if the object is created without profiles we must extract them
+        # from the mesh
         return kite_surface_node(self.profiles)
 
     def _fix_right_hand(self):
