@@ -32,10 +32,10 @@ jobs:
           python-version: '3.8'
 
       - name: Install test dependencies.
-        run: pip3 install -U pip3 pytest
+        run: pip install -U pip
 
       - name: Install oq engine 
-        run: pip3 install . 
+        run: pip install . 
 
       - name: Upload oqdata.zip to  http://artifacts.openquake.org/travis/
         run: |
