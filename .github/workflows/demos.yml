@@ -31,8 +31,7 @@ jobs:
         run: |
           pip install -U pip pytest
           pip install -r ./requirements-py38-linux64.txt
-          pytest --doctest-modules -xv openquake/baselib && 
-          OQ_DISTRIBUTE=no pytest --doctest-modules -xv -nauto openquake/hazardlib openquake/hmtk openquake/sep && pytest -vsx doc/adv-manual/developing.rst
+          pytest --doctest-modules -xv openquake/baselib && OQ_DISTRIBUTE=no pytest --doctest-modules -xv openquake/hazardlib openquake/hmtk openquake/sep && pytest -vsx doc/adv-manual/developing.rst
 
       - name: Run pytest on hazardlib
         run: |
