@@ -66,12 +66,13 @@ smlt_cache = {}  # fname, seed, samples, meth -> SourceModelLogicTree instance
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
-    ('grp_id', numpy.uint16),            # 1
+    ('grp_id', numpy.uint16),          # 1
     ('code', (numpy.string_, 1)),      # 2
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
     ('eff_ruptures', numpy.uint32),    # 5
     ('trti', numpy.uint8),             # 6
+    ('task_no', numpy.uint16),         # 7
 ])
 
 
@@ -755,8 +756,8 @@ def get_composite_source_model(oqparam, h5=None):
             lens.append(len(src.et_ids))
             src.grp_id = grp_id[tuple(src.et_ids)]
             row = [src.source_id, src.grp_id, src.code,
-                   0, 0, 0, full_lt.trti[src.tectonic_region_type]]
-            wkts.append(src._wkt)  # this is a bit slow but okay
+                   0, 0, 0, full_lt.trti[src.tectonic_region_type], 0]
+            wkts.append(src._wkt)
             data[src.id] = row
             if hasattr(src, 'mags'):  # UCERF
                 continue  # already accounted for in sg.mags
@@ -1142,8 +1143,6 @@ def get_checksum32(oqparam, h5=None):
 
     :param oqparam: an OqParam instance
     """
-    # NB: using adler32 & 0xffffffff is the documented way to get a checksum
-    # which is the same between Python 2 and Python 3
     checksum = _checksum(get_input_files(oqparam, hazard=True))
     hazard_params = []
     for key, val in vars(oqparam).items():

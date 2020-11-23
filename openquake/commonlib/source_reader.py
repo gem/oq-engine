@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import copy
-import random
 import os.path
 import pickle
 import operator
@@ -34,22 +33,6 @@ by_id = operator.attrgetter('source_id')
 
 def et_ids(src):
     return tuple(src.et_ids)
-
-
-def random_filtered_sources(sources, srcfilter, seed):
-    """
-    :param sources: a list of sources
-    :param srcfilter: a SourceFilter instance
-    :param seed: a random seed
-    :returns: an empty list or a list with a single filtered source
-    """
-    random.seed(seed)
-    while sources:
-        src = random.choice(sources)
-        if srcfilter.get_close_sites(src) is not None:
-            return [src]
-        sources.remove(src)
-    return []
 
 
 def read_source_model(fname, converter, monitor):
@@ -240,11 +223,22 @@ def _get_csm(full_lt, groups):
         for srcs in general.groupby(acc[trt], key).values():
             if len(srcs) > 1:
                 srcs = reduce_sources(srcs)
-            for src in srcs:
+            lst.extend(srcs)
+        for sources in general.groupby(lst, et_ids).values():
+            # check if OQ_SAMPLE_SOURCES is set
+            ss = os.environ.get('OQ_SAMPLE_SOURCES')
+            if ss:
+                logging.info('Reducing the number of sources for %s', trt)
+                split = []
+                for src in sources:
+                    for s in src:
+                        s.et_id = src.et_id
+                        split.append(s)
+                sources = general.random_filter(split, float(ss)) or split[0]
+            # set ._wkt attribute (for later storage in the source_wkt dataset)
+            for src in sources:
                 src._wkt = src.wkt()
-                lst.append(src)
-        for grp in general.groupby(lst, et_ids).values():
-            src_groups.append(sourceconverter.SourceGroup(trt, grp))
+            src_groups.append(sourceconverter.SourceGroup(trt, sources))
     for ag in atomic:
         for src in ag:
             src._wkt = src.wkt()
@@ -283,12 +277,17 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(et_ids, numpy.uint32) for et_ids in keys]
 
-    def get_sources(self):
+    def get_sources(self, atomic=None):
         """
         :returns: list of sources in the composite source model
         """
-        return [src for src_group in self.src_groups
-                for src in src_group]
+        srcs = []
+        for src_group in self.src_groups:
+            if atomic is None:  # get all sources
+                srcs.extend(src_group)
+            elif atomic == src_group.atomic:
+                srcs.extend(src_group)
+        return srcs
 
     def get_groups(self, eri):
         """
@@ -323,5 +322,9 @@ class CompositeSourceModel:
         """
         Return a string representation of the composite model
         """
-        return '<%s with %d source group(s)>' % (
-            self.__class__.__name__, len(self.src_groups))
+        contents = []
+        for sg in self.src_groups:
+            arr = numpy.array([src.source_id for src in sg])
+            line = f'grp_id={sg.sources[0].grp_id} {arr}'
+            contents.append(line)
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(contents))

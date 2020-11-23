@@ -41,9 +41,9 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 bymag = operator.attrgetter('mag')
 bydist = operator.attrgetter('dist')
 I16 = numpy.int16
-tmp = 'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc '
-tmp += 'closest_point'
-KNOWN_DISTANCES = frozenset(tmp.split())
+KNOWN_DISTANCES = frozenset(
+    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
+    .split())
 
 
 def get_distances(rupture, sites, param):
@@ -75,9 +75,7 @@ def get_distances(rupture, sites, param):
         dist = rupture.surface.get_azimuth_of_closest_point(sites)
     elif param == 'closest_point':
         t = rupture.surface.get_closest_points(sites)
-        dist = numpy.array([(lo, la, de) for lo, la, de in zip(t.lons,
-                                                               t.lats,
-                                                               t.depths)])
+        dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)
@@ -155,6 +153,8 @@ class ContextMaker(object):
         self.point_rupture_bins = param.get('point_rupture_bins', 20)
         self.trt = trt
         self.gsims = gsims
+        self.single_site_opt = numpy.array(
+            [hasattr(gsim, 'get_mean_std1') for gsim in gsims])
         self.maximum_distance = (
             param.get('maximum_distance') or MagDepDistance({}))
         self.investigation_time = param.get('investigation_time')
@@ -196,19 +196,43 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
 
+    def multi(self, ctxs):
+        """
+        :params ctxs: a list of contexts, all referring to a single point
+        :returns: a multiple RuptureContext
+        """
+        ctx = RuptureContext()
+        for par in self.REQUIRES_SITES_PARAMETERS:
+            setattr(ctx, par, getattr(ctxs[0], par))
+        for par in self.REQUIRES_RUPTURE_PARAMETERS:
+            vals = [getattr(ctx, par) for ctx in ctxs]
+            setattr(ctx, par, numpy.array(vals))
+        for par in self.REQUIRES_DISTANCES:
+            dists = [getattr(ctx, par)[0] for ctx in ctxs]
+            setattr(ctx, par, numpy.array(dists))
+        ctx.ctxs = ctxs
+        return ctx
+
     def gen_ctx_poes(self, ctxs):
         """
         :param ctxs: a list of C context objects
         :yields: C pairs (ctx, poes of shape (N, L, G))
         """
-        nsites = [len(ctx.sids) for ctx in ctxs]
-        N = sum(nsites)
+        nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
+        C = len(ctxs)
+        N = nsites.sum()
         poes = numpy.zeros((N, len(self.loglevels.array), len(self.gsims)))
+        if self.single_site_opt.any():
+            ctx = self.multi(ctxs)
         for g, gsim in enumerate(self.gsims):
             with self.gmf_mon:
-                # shape (2, N, M)
-                mean_std = gsim.get_mean_std(ctxs, self.imts)
+                # builds mean_std of shape (2, N, M)
+                if self.single_site_opt[g] and C > 1 and (nsites == 1).all():
+                    mean_std = gsim.get_mean_std1(ctx, self.imts)
+                else:
+                    mean_std = gsim.get_mean_std(ctxs, self.imts)
             with self.poe_mon:
+                # builds poes of shape (N, L, G)
                 poes[:, :, g] = gsim.get_poes(
                     mean_std, self.loglevels, self.trunclevel, self.af, ctxs)
         s = 0
@@ -486,7 +510,9 @@ class PmapMaker(object):
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         self.ir_mon = cmaker.mon('iter_ruptures', measuremem=False)
-        self.maxsites = 5.12E7 / len(self.gsims) / len(self.imtls.array)
+        # NB: if maxsites is too big or too small the performance of
+        # get_poes can easily become 2-3 times worse!
+        self.maxsites = 512000 / len(self.gsims) / len(self.imtls.array)
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
@@ -494,7 +520,7 @@ class PmapMaker(object):
             pmap = self.pmap
         rup_indep = self.rup_indep
         # splitting in blocks makes sure that the maximum poes array
-        # generated has size N x L x G x 8 = 5.12E7 bytes = 400 MB
+        # generated has size N x L x G x 8 = 4 MB
         for block in block_splitter(
                 ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
             for ctx, poes in self.cmaker.gen_ctx_poes(block):
@@ -511,7 +537,7 @@ class PmapMaker(object):
     def _ruptures(self, src, filtermag=None):
         it = src.iter_ruptures(
             shift_hypo=self.shift_hypo, mag=filtermag)
-        if hasattr(src, 'loc'):  # do not store millions of performance_data
+        if hasattr(src, 'location'):  # do not store too much performance_data
             return list(it)
         with self.ir_mon:
             return list(it)
@@ -536,7 +562,8 @@ class PmapMaker(object):
         if self.fewsites:
             srcs_sites = [(self.group, self.srcfilter.sitecol)]
         elif self.split_sources:
-            srcs_sites = self.srcfilter.split(self.group)
+            srcs_sites = (([src], sites)
+                          for src, sites in self.srcfilter.split(self.group))
         else:
             srcs_sites = (([src], self.srcfilter.sitecol.filtered(idx))
                           for src, idx in self.srcfilter.filter(self.group))
@@ -754,6 +781,16 @@ class DistancesContext(BaseContext):
         return ctx
 
 
+def get_dists(ctx):
+    """
+    Extract the distance parameters from a context.
+
+    :returns: a dictionary dist_name -> distances
+    """
+    return {par: dist for par, dist in vars(ctx).items()
+            if par in KNOWN_DISTANCES}
+
+
 # mock of a rupture used in the tests and in the SMTK
 class RuptureContext(BaseContext):
     """
@@ -790,6 +827,16 @@ class RuptureContext(BaseContext):
     def __init__(self, param_pairs=()):
         for param, value in param_pairs:
             setattr(self, param, value)
+
+    def size(self):
+        """
+        If the context is a multi rupture context, i.e. it contains an array
+        of magnitudes and it refers to a single site, returns the size of
+        the array, otherwise returns 1.
+        """
+        if isinstance(self.mag, numpy.ndarray) and len(self.vs30) == 1:
+            return len(self.mag)
+        return 1
 
     def roundup(self, minimum_distance):
         """

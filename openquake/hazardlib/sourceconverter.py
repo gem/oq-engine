@@ -231,6 +231,16 @@ class SourceGroup(collections.abc.Sequence):
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag = max_mag
 
+    def count_ruptures(self):
+        """
+        Set src.num_ruptures on each source in the group
+        """
+        for src in self:
+            src.nsites = 1
+            src.num_ruptures = src.count_ruptures()
+            print(src.weight)
+        return self
+
     def split(self, maxweight):
         """
         Split the group in subgroups with weight <= maxweight, unless it

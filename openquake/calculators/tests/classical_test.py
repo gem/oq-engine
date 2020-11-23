@@ -34,7 +34,7 @@ from openquake.qa_tests_data.classical import (
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
-    case_58)
+    case_58, case_59)
 
 aac = numpy.testing.assert_allclose
 
@@ -789,3 +789,9 @@ hazard_uhs-std.csv
 
         # Second test
         self.assertEqualFiles(f03, f21)
+
+    def test_case_59(self):
+        # test NRCan15SiteTerm
+        self.run_calc(case_59.__file__, 'job.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f)

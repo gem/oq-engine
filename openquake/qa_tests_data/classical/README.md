@@ -59,3 +59,4 @@
 | case_56 | Another test for oversampling (10 samples out of 6) |
 | case_57 | Test for sampling AvgPoeGMPE |
 | case_58 | Test for the truncatedGRFromSlipAbsolute epistemic uncertainty |
+| case_59 | Test for NRCan15SiteTerm |

@@ -18,6 +18,8 @@ It is possibile to set `num_cores` in openquake.cfg.
 
 # Optimizations
 
+We can now row Australia with 48 GB.
+
 We optimized the GMF saving and export by using pandas.
 We worked at the UCERF calculator.
 Optimized get_poes and the storage of _poes.
@@ -49,6 +51,7 @@ Implemented AvgPoeGMPE.
 # oq commands
 
 Added command `oq compare rups calc1 calc2`.
+Enhanced `oq plot sources` to plot point sources and to manage the IDL.
 
 # WebUI/WebAPI/QGIS plugin
 

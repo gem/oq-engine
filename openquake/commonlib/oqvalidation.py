@@ -176,6 +176,7 @@ class OqParam(valid.ParamSet):
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.MagDepDistance.new, None)
     point_rupture_bins = valid.Param(valid.positiveint, 20)
+    ps_grid_spacing = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
@@ -221,7 +222,7 @@ class OqParam(valid.ParamSet):
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 5E9)  # used in ebrisk
-    # NB: you cannot reduce too much min_weight otherwise too few tasks will
+    # NB: you cannot increase too much min_weight otherwise too few tasks will
     # be generated in cases like Ecuador inside full South America
     min_weight = valid.Param(valid.positiveint, 200)  # used in classical
     max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
