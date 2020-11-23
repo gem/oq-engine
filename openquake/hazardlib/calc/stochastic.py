@@ -138,7 +138,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
                minlon, minlat, maxlon, maxlat, hypo, 0, shapes, 0, 0)
         rups.append(tup)
-        geoms.append(F32(points))
+        geoms.append(points)
     if not rups:
         return ()
     dic = dict(geom=numpy.array(geoms, object))
