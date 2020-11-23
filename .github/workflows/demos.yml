@@ -1,0 +1,32 @@
+---
+name: demos
+'on':
+  push:
+    branches: actions
+  pull_request:
+    branches: master 
+
+
+jobs:
+
+  artifacts:
+    name: HAZARDLIB
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        distro:
+          - centos8
+    env:
+      working-directory: ./ansible/oqengine
+
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      - name: Install test dependencies.
+        run: pip3 install pytest
