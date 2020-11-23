@@ -197,7 +197,6 @@ class KiteSurface(BaseSurface):
             Lower edge  |____________________|
 
         """
-
         # Resample profiles using the resampling distance provided
         rprofiles = []
         for prf in profiles:

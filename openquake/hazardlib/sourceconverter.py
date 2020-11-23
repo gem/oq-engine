@@ -496,6 +496,7 @@ class RuptureConverter(object):
             points = [geo.Point(*p) for p in coords]
             surface = geo.GriddedSurface.from_points_list(points)
         elif surface_node.tag.endswith('kiteSurface'):
+            # single or multiple kite surfaces
             profs = []
             for surface_node in surface_nodes:
                 profs.append(self.geo_lines(surface_node))
@@ -561,6 +562,7 @@ class RuptureConverter(object):
             surface=self.convert_surfaces(surfaces))
         return rupt
 
+    # used in scenario only (?)
     def convert_multiPlanesRupture(self, node):
         """
         Convert a multiPlanesRupture node.
