@@ -30,7 +30,7 @@ from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import EBRupture
-from openquake.hazardlib.geo.mesh import surface_to_array
+from openquake.hazardlib.geo.mesh import surface_to_arrays
 from openquake.commonlib import calc, util, logs, readinput, logictree
 from openquake.risklib.riskinput import str2rsi
 from openquake.calculators import base, views
@@ -231,7 +231,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 '*', self.gsims, {'maximum_distance': oq.maximum_distance,
                                   'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
-            mesh = surface_to_array(rup.surface).transpose(1, 2, 0).flatten()
+            mesh = surface_to_arrays(rup.surface)[0].transpose(
+                1, 2, 0).flatten()
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
                                   0, 0, G, e0=i * G) for i in range(ngmfs)]

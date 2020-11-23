@@ -110,22 +110,24 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         arrays = surface_to_arrays(rup.surface)
         points = []
         shapes = []
-        for array in arrays:  # shape (3, N, M)
-            for row in array.transpose(1, 0, 2):  # shape (3, M)
-                
-                points.append(row)
-                shapes.append(shape)
-        sy, sz = mesh.shape[1:]  # sanity checks;  sx == 3
-        assert sy < TWO16, 'Too many multisurfaces: %d' % sy
-        assert sz < TWO16, 'The rupture mesh spacing is too small'
+        for array in arrays:
+            s0, s1, s2 = array.shape
+            assert s0 == 3, s0
+            assert s1 < TWO16, 'Too many lines'
+            assert s2 < TWO16, 'The rupture mesh spacing is too small'
+            shapes.append(TWO16 * s1 + s2)
+            points.extend(array.flat)
+        points = F32(points)
+        shapes = U32(shapes)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-        points = mesh.reshape(3, -1).T   # shape (n, 3)
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['serial'] = rup.rup_id
-        rec['minlon'] = minlon = points[:, 0].min()
-        rec['minlat'] = minlat = points[:, 1].min()
-        rec['maxlon'] = maxlon = points[:, 0].max()
-        rec['maxlat'] = maxlat = points[:, 1].max()
+        lons = points[slice(0, None, 3)]
+        lats = points[slice(1, None, 3)]
+        rec['minlon'] = minlon = lons.min()
+        rec['minlat'] = minlat = lats.min()
+        rec['maxlon'] = maxlon = lons.max()
+        rec['maxlat'] = maxlat = lats.max()
         rec['mag'] = rup.mag
         rec['hypo'] = hypo
         if srcfilter.integration_distance and len(
@@ -136,7 +138,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
                minlon, minlat, maxlon, maxlat, hypo, 0, shapes, 0, 0)
         rups.append(tup)
-        geoms.append(points.flatten())
+        geoms.append(F32(points))
     if not rups:
         return ()
     dic = dict(geom=numpy.array(geoms, object))
