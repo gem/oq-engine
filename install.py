@@ -1,6 +1,63 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# 
+# Copyright (C) 2020, GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Installation script for the OpenQuake engine on linux.
+Three installation methods are supported:
+
+1. "server" installation, i.e. system-wide installation on /opt/openquake:
+
+$ wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+$ sudo -H python3 install.py server
+
+Use this installation method if you want to set up a multi-user installation
+or if have no idea what a virtualenv is and you do not need to interact
+with any other Python software. This installation method also sets up
+automatically two systemd services, openquake-dbserver and openquake-webui.
+
+2. "user" installation on $HOME/openquake:
+
+$ wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+$ python3 install.py user
+
+Use this installation method if you do not have root permissions, or
+if you need to use the engine as a library to be imported by other
+Python software (the additional software must be installed in the
+virtual environment of the engine, i.e. $HOME/openquake).
+
+3. "devel" installation on $HOME/openquake:
+
+$ git clone https://github.com/gem/oq-engine.git
+$ cd oq-engine && python3 install.py devel
+
+Use this installation method if you need to develop with the engine.
+Recommended to GMPE authors and users wanting to contribute to the engine.
+
+If you need a custom installation you can use `pip` and install as you wish.
+To disinstall use the --remove flag, which remove the services and the
+directories /opt/openquake or $HOME/openquake.
+The calculations will NOT be removed since they live in
+/var/lib/openquake/oqdata or $HOME/oqdata respectively.
+You have to remove the data directories manually, if you so wish.
+"""
 import os
 import sys
 import pwd
+import shutil
 import socket
 import getpass
 import argparse
@@ -81,7 +138,7 @@ WantedBy=multi-user.target
 PYVER = sys.version_info[:2]
 
 
-def before_checks(inst):
+def before_checks(inst, remove):
     # check python version
     if PYVER < (3, 6):
         sys.exit('Error: you need at least Python 3.6, but you have %s' %
@@ -97,21 +154,24 @@ def before_checks(inst):
         sys.exit('Error: you cannot perform a server installation unless '
                  'you are root. If you do not have root permissions, you '
                  'can install the engine in user mode.')
-    elif user == 'root':
+    elif inst is not server and user == 'root':
         sys.exit('Error: you cannot perform a user or devel installation'
                  ' as root.')
 
     # check if there is a DbServer running
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        errcode = sock.connect_ex(('localhost', inst.DBPORT))
-    finally:
-        sock.close()
-    if errcode == 0:  # no error, the DbServer is up
-        sys.exit('There is DbServer running on port %d from a previous '
-                 'installation. Please run `oq dbserver stop`. '
-                 'If it does not work, try `sudo fuser -k %d/tcp`' %
-                 (inst.DBPORT, inst.DBPORT))
+    if not remove:
+        cmd = ('sudo systemctl stop openquake-dbserver' if inst is server
+               else 'oq dbserver stop')
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            errcode = sock.connect_ex(('localhost', inst.DBPORT))
+        finally:
+            sock.close()
+        if errcode == 0:  # no error, the DbServer is up
+            sys.exit('There is DbServer running on port %d from a previous '
+                     'installation. Please run `%s`. '
+                     'If it does not work, try `sudo fuser -k %d/tcp`' %
+                     (inst.DBPORT, cmd, inst.DBPORT))
 
     # check if there is an installation from packages
     if inst is server and os.path.exists('/etc/openquake/openquake.cfg'):
@@ -181,7 +241,8 @@ def install(inst):
             service_path = '/lib/systemd/system/' + service_name
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
-                    f.write(SERVICE.format(vars(inst)))
+                    srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)
+                    f.write(srv)
             subprocess.check_call(['systemctl', 'enable', service_name])
             subprocess.check_call(['systemctl', 'start', service_name])
 
@@ -195,12 +256,40 @@ def install(inst):
     print(f'{oqreal} engine --run {path}')
 
 
+def remove(inst):
+    """
+    Removed the installation. If it is a server installation, also remove
+    the systemd services.
+    """
+    if inst is server:
+        for service in ['dbserver', 'webui']:
+            service_name = 'openquake-%s.service' % service
+            service_path = '/lib/systemd/system/' + service_name
+            if os.path.exists(service_path):
+                subprocess.check_call(['systemctl', 'stop', service_name])
+                print('stopping ' + service_name)
+                os.remove(service_path)
+        subprocess.check_call(['systemctl', 'daemon-reload'])
+    shutil.rmtree(inst.VENV)
+    if inst is server and os.path.exists(server.OQ):
+        os.remove(server.OQ)
+    print('%s has been removed' % inst.VENV)
+
+        
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("inst", choices=['devel', 'user', 'server'],
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("inst", choices=['server', 'user', 'devel'],
                         default='server', nargs='?',
                         help='the kind of installation you want '
                         '(default server)')
-    inst = globals()[parser.parse_args().inst]
-    before_checks(inst)
-    install(inst)
+    parser.add_argument("--remove",  action="store_true",
+                        help="disinstall the engine")
+    args = parser.parse_args()
+    inst = globals()[args.inst]
+    before_checks(inst, args.remove)
+    if args.remove:
+        remove(inst)
+    else:
+        install(inst)
