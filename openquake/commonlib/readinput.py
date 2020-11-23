@@ -612,7 +612,7 @@ def get_ruptures(fname_csv):
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, 0, 0)
         rups.append(tup)
-        points = mesh.transpose(1, 2, 0).flatten()
+        points = mesh.flatten()  # lons + lats + deps
         geoms.append(numpy.concatenate([[1], [s1, s2], points]))
     if not rups:
         return ()
