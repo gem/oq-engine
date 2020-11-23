@@ -231,8 +231,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 '*', self.gsims, {'maximum_distance': oq.maximum_distance,
                                   'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
-            mesh = surface_to_arrays(rup.surface)[0].transpose(
-                1, 2, 0).flatten()
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
                                   0, 0, G, e0=i * G) for i in range(ngmfs)]
