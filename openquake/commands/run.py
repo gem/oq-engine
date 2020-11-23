@@ -110,8 +110,8 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, loglevel, hc, exports,
                 rlz_ids = ()
             oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
             vars(oqparam).update(params)  # params already checked
-            if not oqparam.cachedir:  # enable caching
-                oqparam.cachedir = datastore.get_datadir()
+            # if not oqparam.cachedir:  # enable caching
+            #    oqparam.cachedir = datastore.get_datadir()
             if hc_id and hc_id < 0:  # interpret negative calculation ids
                 calc_ids = datastore.get_calc_ids()
                 try:

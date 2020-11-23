@@ -564,12 +564,28 @@ def make_figure_tot_curves(extractors, what):
     return plt
 
 
+def plot_wkt(wkt_string):
+    """
+    Plot a WKT string describing a polygon
+    """
+    from shapely import wkt
+    import matplotlib.pyplot as plt
+    poly = wkt.loads(wkt_string)
+    coo = numpy.array(poly.exterior.coords)
+    plt.plot(coo[:,0], coo[:, 1], '-')
+    return plt
+
+
 @sap.script
 def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
          local=False):
     """
     Generic plotter for local and remote calculations.
     """
+    if what.startswith('POLYGON'):
+        plt = plot_wkt(what)
+        plt.show()
+        return
     if what == 'examples':
         help_msg = ['Examples of possible plots:']
         for k, v in globals().items():
