@@ -613,6 +613,7 @@ def get_ruptures(fname_csv):
                minlon, minlat, maxlon, maxlat, hypo, u, 0, 0)
         rups.append(tup)
         points = mesh.flatten()  # lons + lats + deps
+        # FIXME: extend to MultiSurfaces
         geoms.append(numpy.concatenate([[1], [s1, s2], points]))
     if not rups:
         return ()
