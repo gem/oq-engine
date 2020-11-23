@@ -246,7 +246,8 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
-            calc = run._run([job_ini], 0, 'nojob', False, 'info', None, '', {})
+            calc = run._run([job_ini], 0, 'nojob', False,
+                            False, 'info', None, '', {})
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
@@ -577,7 +578,8 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         shutil.copytree(calc_dir, os.path.join(temp_dir, 'data'))
         job_ini = os.path.join(temp_dir, 'data', 'job.ini')
         with Print.patch():
-            calc = run._run([job_ini], 0, 'nojob', False, 'info', None, '', {})
+            calc = run._run([job_ini], 0, 'nojob', False, False,
+                            'info', None, '', {})
         calc_id = calc.datastore.calc_id
         with mock.patch('logging.info') as info:
             reduce_sm(calc_id)
