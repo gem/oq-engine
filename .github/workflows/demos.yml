@@ -31,9 +31,10 @@ jobs:
         run: |
           pip install -U pip
           pip install -r ./requirements-py38-linux64.txt
+          pip install fiona
 
       - name: Install oq engine 
-        run: pip install . 
+        run: pip install -e . 
 
       - name: Upload oqdata.zip to  http://artifacts.openquake.org/travis/
         run: |
