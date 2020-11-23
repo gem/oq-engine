@@ -139,6 +139,9 @@ PYVER = sys.version_info[:2]
 
 
 def before_checks(inst, remove):
+    """
+    Checks to perform before the installation
+    """
     # check python version
     if PYVER < (3, 6):
         sys.exit('Error: you need at least Python 3.6, but you have %s' %
@@ -183,6 +186,9 @@ def before_checks(inst, remove):
 
 
 def install(inst):
+    """
+    Install the engine in one of the three possible modes
+    """
     if inst is server:
         # create the openquake user if necessary
         try:
@@ -258,8 +264,8 @@ def install(inst):
 
 def remove(inst):
     """
-    Removed the installation. If it is a server installation, also remove
-    the systemd services.
+    Remove the virtualenv directory. In case of a server installation, also
+    remove the systemd services.
     """
     if inst is server:
         for service in ['dbserver', 'webui']:
@@ -267,15 +273,16 @@ def remove(inst):
             service_path = '/lib/systemd/system/' + service_name
             if os.path.exists(service_path):
                 subprocess.check_call(['systemctl', 'stop', service_name])
-                print('stopping ' + service_name)
+                print('stopped ' + service_name)
                 os.remove(service_path)
         subprocess.check_call(['systemctl', 'daemon-reload'])
     shutil.rmtree(inst.VENV)
+    print('%s has been removed' % inst.VENV)
     if inst is server and os.path.exists(server.OQ):
         os.remove(server.OQ)
-    print('%s has been removed' % inst.VENV)
+        print('%s has been removed' % server.OQ)
 
-        
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=__doc__,
