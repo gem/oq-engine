@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import gzip
 import unittest
 import numpy
 from openquake.baselib import parallel, general
@@ -480,7 +481,10 @@ hazard_uhs-std.csv
         self.run_calc(case_29.__file__, 'job.ini',
                       calculation_mode='event_based',
                       ses_per_logic_tree_path='1000')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+        # check what QGIS will be seeing
+        aw = extract(self.calc.datastore, 'rupture_info')
+        poly = gzip.decompress(aw.boundaries).decode('ascii')
+        self.assertEqual(poly, '''POLYGON((0.17961 0.00000, 0.13492 0.00000, 0.08980 0.00000, 0.04512 0.00000, 0.00000 0.00000, 0.00000 0.04054, 0.00000 0.08109, 0.00000 0.12163, 0.00000 0.16217, 0.00000 0.20272, 0.00000 0.24326, 0.00000 0.28381, 0.04512 0.28381, 0.08980 0.28381, 0.13492 0.28381, 0.17961 0.28381, 0.17961 0.24326, 0.17961 0.20272, 0.17961 0.16217, 0.17961 0.12163, 0.17961 0.08109, 0.17961 0.04054, 0.17961 0.00000, 0.17961 0.10000, 0.13492 0.10000, 0.08980 0.10000, 0.04512 0.10000, 0.00000 0.10000, 0.00000 0.14054, 0.00000 0.18109, 0.00000 0.22163, 0.00000 0.26217, 0.00000 0.30272, 0.00000 0.34326, 0.00000 0.38381, 0.04512 0.38381, 0.08980 0.38381, 0.13492 0.38381, 0.17961 0.38381, 0.17961 0.34326, 0.17961 0.30272, 0.17961 0.26217, 0.17961 0.22163, 0.17961 0.18109, 0.17961 0.14054, 0.17961 0.10000))''')
 
         # then perform a classical calculation
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_29.__file__)
