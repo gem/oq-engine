@@ -27,6 +27,7 @@ from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.geo.surface.base import BaseSurface, downsample_trace
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
+from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import (
     PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
@@ -110,7 +111,10 @@ class MultiSurface(BaseSurface):
         :returns:
             a list of surface nodes from the underlying single node surfaces
         """
-        return [surf.surface_nodes[0] for surf in self.surfaces]
+        if type(self.surfaces[0]).__name__ == 'PlanarSurface':
+            return [surf.surface_nodes[0] for surf in self.surfaces]
+        else:
+            return [surf.surface_nodes for surf in self.surfaces]
 
     @property
     def mesh(self):
@@ -159,7 +163,8 @@ class MultiSurface(BaseSurface):
         """
         edges = []
         for surface in self.surfaces:
-            if isinstance(surface, GriddedSurface):
+            if isinstance(surface, (GriddedSurface,
+                                    geo.surface.kite_fault.KiteSurface)):
                 return edges.append(surface.mesh)
             elif isinstance(surface, PlanarSurface):
                 # Top edge determined from two end points

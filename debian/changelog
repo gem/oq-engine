@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato, Thomas Chartier]
+  * Added experimental version of KiteSource and KiteSurface
+
   [Michele Simionato]
   * Fixed a bug in the calculation of averages losses in scenario_risk
     calculations in presence of sites with zero hazard

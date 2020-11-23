@@ -470,6 +470,11 @@ class RuptureConverter(object):
            :class:`openquake.hazardlib.geo.GriddedSurface` instance
         4. there is a list of PlanarSurface nodes; returns a
            :class:`openquake.hazardlib.geo.MultiSurface` instance
+        5. there is either a single a kiteSurface or a list of kiteSurface
+           nodes; returns a
+           :class:`openquake.hazardlib.geo.MultiSurface` instance
+           or a :class:`openquake.hazardlib.geo.MultiSurface` instance,
+           respectively
 
         :param surface_nodes: surface nodes as just described
         """
@@ -490,6 +495,21 @@ class RuptureConverter(object):
                 coords = split_coords_3d(~surface_node.posList)
             points = [geo.Point(*p) for p in coords]
             surface = geo.GriddedSurface.from_points_list(points)
+        elif surface_node.tag.endswith('kiteSurface'):
+            profs = []
+            for surface_node in surface_nodes:
+                profs.append(self.geo_lines(surface_node))
+            if len(profs) < 2:
+                surface = geo.KiteSurface.from_profiles(
+                    profs[0], self.rupture_mesh_spacing,
+                    self.rupture_mesh_spacing)
+            else:
+                surfaces = []
+                for prof in profs:
+                    surfaces.append(geo.KiteSurface.from_profiles(
+                        prof, self.rupture_mesh_spacing,
+                        self.rupture_mesh_spacing))
+                surface = geo.MultiSurface(surfaces)
         else:  # a collection of planar surfaces
             planar_surfaces = list(map(self.geo_planar, surface_nodes))
             surface = geo.MultiSurface(planar_surfaces)
@@ -550,6 +570,7 @@ class RuptureConverter(object):
         mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
             surfaces = list(node.getnodes('planarSurface'))
+            surfaces += list(node.getnodes('kiteSurface'))
         rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
