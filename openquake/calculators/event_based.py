@@ -236,17 +236,14 @@ class EventBasedCalculator(base.HazardCalculator):
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
                                   0, 0, G, e0=i * G) for i in range(ngmfs)]
-                meshes = numpy.array([mesh] * ngmfs, object)
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]
-                meshes = numpy.array([mesh] * ngmfs, object)
-            rup_array = get_rup_array(ebrs, self.srcfilter).array
-            hdf5.extend(self.datastore['rupgeoms'], meshes)
+            aw = get_rup_array(ebrs, self.srcfilter)
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
             aw.array['n_occ'] = G
-            rup_array = aw.array
-            hdf5.extend(self.datastore['rupgeoms'], aw.geom)
+        rup_array = aw.array
+        hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
         if len(rup_array) == 0:
             raise RuntimeError(

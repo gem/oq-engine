@@ -126,7 +126,6 @@ def _get_rupture(rec, geom=None, trt=None):
         s1, s2 = int(geom[i]), int(geom[i + 1])
         size = s1 * s2 * 3
         array = geom[start:start + size].reshape(3, s1, s2)
-        # import pudb; pudb.set_trace()
         arrays.append(array)
         start += size
     mesh = arrays[0]

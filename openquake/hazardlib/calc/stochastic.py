@@ -117,13 +117,15 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
             shapes.append(s1)
             shapes.append(s2)
             points.extend(array.flat)
+            # example of points: [25.0, -24.0, 5, 25.1, -24.0, 5, ...]
         points = F32(points)
         shapes = U32(shapes)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['serial'] = rup.rup_id
-        lons = points[slice(0, None, 3)]
-        lats = points[slice(1, None, 3)]
+        n = len(points) // 3
+        lons = points[0:n]
+        lats = points[n:2*n]
         rec['minlon'] = minlon = lons.min()
         rec['minlat'] = minlat = lats.min()
         rec['maxlon'] = maxlon = lons.max()
