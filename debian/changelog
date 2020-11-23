@@ -1,7 +1,8 @@
   [Marco Pagani, Michele Simionato, Thomas Chartier]
   * Added experimental version of KiteSource and KiteSurface
 
-  [Michele Simionato]
+[Michele Simionato]
+  * Changed the serialization of ruptures to support MultiSurfaces
   * Fixed a bug in the calculation of averages losses in scenario_risk
     calculations in presence of sites with zero hazard
   * Optimized the prefiltering by using a KDTree
