@@ -115,19 +115,23 @@ def _get_rupture(rec, geom=None, trt=None):
     if not code2cls:
         code2cls.update(BaseRupture.init())
     if geom is None:
-        geom = numpy.array([rec['lons'], rec['lats'], rec['depths']]).flatten()
+        points = F32([rec['lons'], rec['lats'], rec['depths']]).flat
+        geom = numpy.concatenate([[1], [len(rec['lons']), 1], points])
 
     # build surface
     arrays = []
-    start = 0
-    for s in rec['shapes']:
-        s1, s2 = divmod(s, TWO16)
+    num_surfaces = int(geom[0])
+    start = num_surfaces * 2 + 1
+    for i in range(1, 2 * num_surfaces, 2):
+        s1, s2 = int(geom[i]), int(geom[i + 1])
         size = s1 * s2 * 3
         array = geom[start:start + size].reshape(3, s1, s2)
+        # import pudb; pudb.set_trace()
         arrays.append(array)
         start += size
     mesh = arrays[0]
     rupture_cls, surface_cls = code2cls[rec['code']]
+    surface = object.__new__(surface_cls)
     if surface_cls is geo.PlanarSurface:
         surface = geo.PlanarSurface.from_array(mesh[:, 0, :])
     elif surface_cls is geo.MultiSurface:

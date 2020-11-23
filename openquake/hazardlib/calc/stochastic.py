@@ -90,8 +90,7 @@ rupture_dt = numpy.dtype([
     ('code', U8), ('n_occ', U32), ('mag', F32), ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
-    ('hypo', (F32, 3)), ('geom_id', U32), ('shapes', hdf5.vuint32),
-    ('e0', U32), ('e1', U32)])
+    ('hypo', (F32, 3)), ('geom_id', U32), ('e0', U32), ('e1', U32)])
 
 
 # this is really fast
@@ -115,7 +114,8 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
             assert s0 == 3, s0
             assert s1 < TWO16, 'Too many lines'
             assert s2 < TWO16, 'The rupture mesh spacing is too small'
-            shapes.append(TWO16 * s1 + s2)
+            shapes.append(s1)
+            shapes.append(s2)
             points.extend(array.flat)
         points = F32(points)
         shapes = U32(shapes)
@@ -136,9 +136,10 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (0, ebrupture.rup_id, ebrupture.source_id, ebrupture.et_id,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
-               minlon, minlat, maxlon, maxlat, hypo, 0, shapes, 0, 0)
+               minlon, minlat, maxlon, maxlat, hypo, 0, 0, 0)
         rups.append(tup)
-        geoms.append(points)
+        geom = numpy.concatenate([[len(shapes) // 2], shapes, points])
+        geoms.append(geom)
     if not rups:
         return ()
     dic = dict(geom=numpy.array(geoms, object))
