@@ -30,7 +30,7 @@ from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import EBRupture
-from openquake.hazardlib.geo.mesh import surface_to_array
+from openquake.hazardlib.geo.mesh import surface_to_arrays
 from openquake.commonlib import calc, util, logs, readinput, logictree
 from openquake.risklib.riskinput import str2rsi
 from openquake.calculators import base, views
@@ -231,21 +231,17 @@ class EventBasedCalculator(base.HazardCalculator):
                 '*', self.gsims, {'maximum_distance': oq.maximum_distance,
                                   'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
-            mesh = surface_to_array(rup.surface).transpose(1, 2, 0).flatten()
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
                                   0, 0, G, e0=i * G) for i in range(ngmfs)]
-                meshes = numpy.array([mesh] * ngmfs, object)
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]
-                meshes = numpy.array([mesh] * ngmfs, object)
-            rup_array = get_rup_array(ebrs, self.srcfilter).array
-            hdf5.extend(self.datastore['rupgeoms'], meshes)
+            aw = get_rup_array(ebrs, self.srcfilter)
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
             aw.array['n_occ'] = G
-            rup_array = aw.array
-            hdf5.extend(self.datastore['rupgeoms'], aw.geom)
+        rup_array = aw.array
+        hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
         if len(rup_array) == 0:
             raise RuntimeError(

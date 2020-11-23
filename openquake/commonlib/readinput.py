@@ -610,9 +610,11 @@ def get_ruptures(fname_csv):
         rate = dic.get('occurrence_rate', numpy.nan)
         tup = (u, row['serial'], 'no-source', trts.index(row['trt']),
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
-               minlon, minlat, maxlon, maxlat, hypo, u, s1, s2, 0, 0)
+               minlon, minlat, maxlon, maxlat, hypo, u, 0, 0)
         rups.append(tup)
-        geoms.append(mesh.transpose(1, 2, 0).flatten())
+        points = mesh.flatten()  # lons + lats + deps
+        # FIXME: extend to MultiSurfaces
+        geoms.append(numpy.concatenate([[1], [s1, s2], points]))
     if not rups:
         return ()
     dic = dict(geom=numpy.array(geoms, object))
