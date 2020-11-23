@@ -9,7 +9,50 @@ name: demos
 
 jobs:
 
-  artifacts:
+  documentation:
+    name: DOCS
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      TRAVIS_BUILD_DIR: ${{ github.workspace }}
+      TRAVIS_COMMIT: ${{ github.sha }}
+      BRANCH: ${{ github.ref }}
+
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      - name: Run pytest on hazardlib
+        run: |
+          pip install -U pip pytest
+          pytest --doctest-modules -xv openquake/baselib && 
+          OQ_DISTRIBUTE=no pytest --doctest-modules -xv -nauto openquake/hazardlib openquake/hmtk openquake/sep && pytest -vsx doc/adv-manual/developing.rst
+
+      - name: Run pytest on hazardlib
+        run: |
+          pip install sphinx==1.6.5
+          sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk
+          cd doc/sphinx && make html && cd ../adv-manual && make html && make latexpdf
+
+      - name: Shell for ssh
+        env:
+            SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          whoami
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          cat ~/.ssh/known_hosts
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          #ssh-add - <<< "${{ secrets.SSH_PRIVATE_KEY }}"
+          ssh -v travis@ci.openquake.org
+
+
+  demos:
     name: DEMOS
     runs-on: ubuntu-latest
     env:
@@ -39,12 +82,12 @@ jobs:
       - name: Upload oqdata.zip to  http://artifacts.openquake.org/travis/
         run: |
           zip -q -r /tmp/demos.zip demos/
-          OQ_DISTRIBUTE=zmq bin/run-demos.sh $TRAVIS_BUILD_DIR/demos
+          OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
           oq dump /tmp/oqdata.zip
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos
-          openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in $TRAVIS_BUILD_DIR/.deploy_rsa.enc -out $TRAVIS_BUILD_DIR/.deploy_rsa -d 
-          chmod 600 $TRAVIS_BUILD_DIR/.deploy_rsa
-          eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa 
-          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${BRANCH}.zip
-          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip
+          #openssl aes-256-cbc -K $encrypted_806ab0daf95c_key -iv $encrypted_806ab0daf95c_iv -in $TRAVIS_BUILD_DIR/.deploy_rsa.enc -out $TRAVIS_BUILD_DIR/.deploy_rsa -d 
+          #chmod 600 /.deploy_rsa
+          #eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa 
+          #scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${BRANCH}.zip
+          #scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip travis@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip
