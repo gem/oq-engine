@@ -12,10 +12,6 @@ jobs:
   artifacts:
     name: DEMOS
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        distro:
-          - centos8
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       TRAVIS_BUILD_DIR: ${{ github.workspace }}
@@ -31,8 +27,10 @@ jobs:
         with:
           python-version: '3.8'
 
-      - name: Install test dependencies.
-        run: pip install -U pip
+      - name: Upgrade pip and install requirements
+        run: |
+          pip install -U pip
+          pip install -r ./requirements-py38-linux64.txt
 
       - name: Install oq engine 
         run: pip install . 
