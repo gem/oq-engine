@@ -467,7 +467,7 @@ class RuptureGetter(object):
     def num_ruptures(self):
         return len(self.proxies)
 
-    def get_rupdict(self):
+    def get_rupdict(self):  # used in extract_rupture_info
         """
         :returns: a dictionary with the parameters of the rupture
         """
@@ -476,11 +476,18 @@ class RuptureGetter(object):
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             rec = self.proxies[0].rec
-            geom = rupgeoms[rec['id']].reshape(
-                rec['s1'], rec['s2'], 3).transpose(2, 0, 1)
-            dic['lons'] = geom[0]
-            dic['lats'] = geom[1]
-            dic['deps'] = geom[2]
+            geom = rupgeoms[rec['id']]
+            num_surfaces = int(geom[0])
+            start = 2 * num_surfaces + 1
+            dic['lons'], dic['lats'], dic['deps'] = [], [], []
+            for i in range(1, num_surfaces * 2, 2):
+                s1, s2 = int(geom[i]), int(geom[i + 1])
+                size = s1 * s2 * 3
+                arr = geom[start:start + size].reshape(3, -1)
+                dic['lons'].append(arr[0])
+                dic['lats'].append(arr[1])
+                dic['deps'].append(arr[2])
+                start += size
             rupclass, surclass = code2cls[rec['code']]
             dic['rupture_class'] = rupclass.__name__
             dic['surface_class'] = surclass.__name__
