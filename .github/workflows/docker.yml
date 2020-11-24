@@ -8,7 +8,7 @@ name: docker
 jobs:
   docker:
     name: build and up compose 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     steps:
   # This Checkout is necessary when using a context in docker/build-push-action
