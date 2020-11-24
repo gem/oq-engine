@@ -98,8 +98,7 @@ def _get_poes(mean_std, loglevels, truncation_level):
             if truncation_level == 0:  # just compare imls to mean
                 out[:, lvl] = iml <= mean[:, m]
             else:
-                ok = stddev[:, m] > 0  # avoid division by zero
-                out[ok, lvl] = (iml - mean[ok, m]) / stddev[ok, m]
+                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
             lvl += 1
     return _truncnorm_sf(truncation_level, out)
 
