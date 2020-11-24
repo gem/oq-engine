@@ -256,11 +256,12 @@ class ContextMaker(object):
         :returns: a list RuptureContexts
         """
         allctxs = []
-        for src in srcs:
+        for i, src in enumerate(srcs):
+            src.id = i
             ctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
                 ctxs.append(self.make_rctx(rup))
-            allctxs.extend(self.make_ctxs(ctxs, site1, True, src.id))
+            allctxs.extend(self.make_ctxs(ctxs, site1, src.id))
         return allctxs
 
     def filter(self, sites, rup):

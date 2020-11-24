@@ -165,6 +165,19 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError('You ran out of memory!')
         pmap = dic['pmap']
         extra = dic['extra']
+        ctimes = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
+        self.calc_times += ctimes
+        srcids = set()
+        eff_rups = 0
+        eff_sites = 0
+        for srcid, rec in ctimes.items():
+            srcids.add(srcid)
+            eff_rups += rec[0]
+            if rec[0]:
+                eff_sites += rec[1] / rec[0]
+        self.by_task[extra['task_no']] = (
+            eff_rups, eff_sites, sorted(srcids))
+        acc.eff_ruptures[extra.pop('trt')] += eff_rups
         if not pmap:
             return acc
         grp_id = extra['grp_id']
@@ -172,29 +185,13 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             pmap.grp_id = grp_id
             acc[extra['source_id'].split(':')[0]] = pmap
-
-        trt = extra.pop('trt')
         self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
             self.totrups += extra['totrups']
-            d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
-            self.calc_times += d
-            srcids = set()
-            eff_rups = 0
-            eff_sites = 0
-            for srcid, rec in d.items():
-                srcids.add(srcid)
-                eff_rups += rec[0]
-                if rec[0]:
-                    eff_sites += rec[1] / rec[0]
-            self.by_task[extra['task_no']] = (
-                eff_rups, eff_sites, sorted(srcids))
             if pmap and grp_id in acc:
                 acc[grp_id] |= pmap
             else:
                 acc[grp_id] = copy.copy(pmap)
-            acc.eff_ruptures[trt] += eff_rups
-
             # store rup_data if there are few sites
             if self.few_sites:
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
