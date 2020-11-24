@@ -205,21 +205,21 @@ def calc_hazard_curves(
 
 
 # called in adv-manual/developing.rst
-def calc_hazard_curve(site1, src, gsim, oqparam):
+def calc_hazard_curve(site1, src, gsims, oqparam):
     """
     :param site1: site collection with a single site
     :param src: a seismic source object
-    :param gsim: a GSIM object
+    :param gsims: a list of GSIM objects
     :param oqparam: an object with attributes .maximum_distance, .imtls
     :returns: a ProbabilityCurve object
     """
     assert len(site1) == 1, site1
     trt = src.tectonic_region_type
-    cmaker = ContextMaker(trt, {gsim: [0]}, vars(oqparam))
+    cmaker = ContextMaker(trt, gsims, vars(oqparam))
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
     pmap, rup_data, calc_times, extra = PmapMaker(
         cmaker, srcfilter, [src]).make()
     if not pmap:  # filtered away
-        zero = numpy.zeros((len(oqparam.imtls.array), 1))
+        zero = numpy.zeros((len(oqparam.imtls.array), len(gsims)))
         return ProbabilityCurve(zero)
     return pmap[0]  # pcurve with shape (L, G) on site 0

@@ -202,7 +202,7 @@ Then the hazard curve can be computed as follows:
 >>> from openquake.hazardlib.calc.hazard_curve import calc_hazard_curve
 >>> from openquake.hazardlib import valid
 >>> sitecol = readinput.get_site_collection(oq)
->>> gsim = valid.gsim('ToroEtAl2002SHARE')
->>> calc_hazard_curve(sitecol, src, gsim, oq)
+>>> gsims = readinput.get_gsim_lt(oq).values['*']
+>>> calc_hazard_curve(sitecol, src, gsims, oq)
 <ProbabilityCurve
 [[0.00508693]]>
