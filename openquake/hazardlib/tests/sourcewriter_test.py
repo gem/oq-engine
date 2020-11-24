@@ -29,7 +29,7 @@ from openquake.hazardlib import nrml
 NONPARAM = os.path.join(os.path.dirname(__file__),
                         'source_model/nonparametric-source.xml')
 NONPARAM_KITE = os.path.join(os.path.dirname(__file__),
-                        'source_model/nonparametric-kite.xml')
+                             'source_model/nonparametric-kite.xml')
 MIXED = os.path.join(os.path.dirname(__file__),
                      'source_model/mixed.xml')
 SLIP_RATE = os.path.join(os.path.dirname(__file__),
