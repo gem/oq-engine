@@ -373,12 +373,13 @@ class ClassicalCalculator(base.HazardCalculator):
                     es[task_no] = effsites
                     si[task_no] = ' '.join(source_ids[s] for s in srcids)
                 self.by_task.clear()
-        self.numrups = sum(arr[0] for arr in self.calc_times.values())
-        numsites = sum(arr[1] for arr in self.calc_times.values())
-        logging.info('Effective number of ruptures: {:_d}/{:_d}'.format(
-            int(self.numrups), self.totrups))
-        logging.info('Effective number of sites per rupture: %d',
-                     numsites / self.numrups)
+        if self.calc_times:  # can be empty in case of errors
+            self.numrups = sum(arr[0] for arr in self.calc_times.values())
+            numsites = sum(arr[1] for arr in self.calc_times.values())
+            logging.info('Effective number of ruptures: {:_d}/{:_d}'.format(
+                int(self.numrups), self.totrups))
+            logging.info('Effective number of sites per rupture: %d',
+                         numsites / self.numrups)
         if psd:
             psdist = max(max(psd.ddic[trt].values()) for trt in psd.ddic)
             if psdist and self.maxradius >= psdist / 2:
