@@ -20,11 +20,12 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
+from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib.general import (
     split_in_blocks, not_equal, get_duplicates)
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects, geohash)
+    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
@@ -318,6 +319,19 @@ class SiteCollection(object):
         else:
             idx = 0
         return self.filtered([self.sids[idx]])
+
+    # used for debugging purposes
+    def get_cdist(self, rec_or_loc):
+        """
+        :param rec_or_loc: a record with field 'hypo' or a Point instance
+        :returns: array of N euclidean distances from rec['hypo']
+        """
+        try:
+            lon, lat, dep = rec_or_loc['hypo']
+        except TypeError:
+            lon, lat, dep = rec_or_loc.x, rec_or_loc.y, rec_or_loc.z
+        xyz = spherical_to_cartesian(lon, lat, dep).reshape(1, 3)
+        return distance.cdist(self.xyz, xyz)[:, 0]
 
     def __init__(self, sites):
         """
