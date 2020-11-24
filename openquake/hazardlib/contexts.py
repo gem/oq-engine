@@ -167,8 +167,9 @@ class ContextMaker(object):
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
             setattr(self, 'REQUIRES_' + req, reqset)
         # self.pointsource_distance is a dict mag -> dist, possibly empty
-        if param.get('pointsource_distance'):
-            self.pointsource_distance = param['pointsource_distance'][trt]
+        psd = param.get('pointsource_distance')
+        if hasattr(psd, 'ddic'):
+            self.pointsource_distance = psd.ddic.get(trt, {})
         else:
             self.pointsource_distance = {}
         if 'imtls' in param:

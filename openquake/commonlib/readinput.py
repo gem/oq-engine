@@ -747,26 +747,16 @@ def get_composite_source_model(oqparam, h5=None):
     et_ids = csm.get_et_ids()
     logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
     data = {}  # src_id -> row
-    mags = AccumDict(accum=set())  # trt -> mags
+    mags_by_trt = csm.get_mags_by_trt()
     wkts = []
     lens = []
     for sg in csm.src_groups:
-        if hasattr(sg, 'mags'):  # UCERF
-            mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
             lens.append(len(src.et_ids))
             row = [src.source_id, src.grp_id, src.code,
                    0, 0, 0, full_lt.trti[src.tectonic_region_type], 0]
             wkts.append(src._wkt)
             data[src.id] = row
-            if hasattr(src, 'mags'):  # UCERF
-                continue  # already accounted for in sg.mags
-            elif hasattr(src, 'data'):  # nonparametric
-                srcmags = ['%.2f' % item[0].mag for item in src.data]
-            else:
-                srcmags = ['%.2f' % item[0] for item in
-                           src.get_annual_occurrence_rates()]
-            mags[sg.trt].update(srcmags)
     logging.info('There are %d groups and %d sources with len(et_ids)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
@@ -776,10 +766,8 @@ def get_composite_source_model(oqparam, h5=None):
         hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
         h5['et_ids'] = et_ids
-        mags_by_trt = {}
-        for trt in mags:
-            mags_by_trt[trt] = arr = numpy.array(sorted(mags[trt]))
-            h5['source_mags/' + trt] = arr
+        for trt in mags_by_trt:
+            h5['source_mags/' + trt] = numpy.array(mags_by_trt[trt])
         oqparam.maximum_distance.interp(mags_by_trt)
     csm.gsim_lt.check_imts(oqparam.imtls)
     csm.source_info = data  # src_id -> row

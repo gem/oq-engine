@@ -304,6 +304,25 @@ class CompositeSourceModel:
                 src_groups.append(src_group)
         return src_groups
 
+    def get_mags_by_trt(self):
+        """
+        :returns: a dictionary trt -> magnitudes in the sources as strings
+        """
+        mags = general.AccumDict(accum=set())  # trt -> mags
+        for sg in self.src_groups:
+            if hasattr(sg, 'mags'):  # UCERF
+                mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
+            for src in sg:
+                if hasattr(src, 'mags'):  # UCERF
+                    continue  # already accounted for in sg.mags
+                elif hasattr(src, 'data'):  # nonparametric
+                    srcmags = ['%.2f' % item[0].mag for item in src.data]
+                else:
+                    srcmags = ['%.2f' % item[0] for item in
+                               src.get_annual_occurrence_rates()]
+                mags[sg.trt].update(srcmags)
+        return {trt: sorted(mags[trt]) for trt in mags}
+
     def get_floating_spinning_factors(self):
         """
         :returns: (floating rupture factor, spinning rupture factor)

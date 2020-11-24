@@ -425,7 +425,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.params = dict(
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, reqv=oq.get_reqv(),
-            pointsource_distance=getattr(oq.pointsource_distance, 'ddic', {}),
+            pointsource_distance=oq.pointsource_distance,
             point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo,
             min_weight=oq.min_weight,
