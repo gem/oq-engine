@@ -9,13 +9,11 @@ name: demos
 
 jobs:
 
-  documentation:
+  docs:
     name: DOCS
     runs-on: ubuntu-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
-      TRAVIS_BUILD_DIR: ${{ github.workspace }}
-      TRAVIS_COMMIT: ${{ github.sha }}
       BRANCH: ${{ github.ref }}
 
     steps:
@@ -34,11 +32,11 @@ jobs:
           pip install -r ./requirements-py38-linux64.txt
           pip install -e .
 
-          #- name: Run Hazard test
-          #run: |
-          #pytest --doctest-modules -xv openquake/baselib 
-          #OQ_DISTRIBUTE=no pytest --doctest-modules -xv openquake/hazardlib openquake/hmtk openquake/sep 
-          #pytest -vsx doc/adv-manual/developing.rst
+      - name: Run Hazard test
+        run: |
+          pytest --doctest-modules -xv openquake/baselib 
+          OQ_DISTRIBUTE=no pytest --doctest-modules -xv openquake/hazardlib openquake/hmtk openquake/sep 
+          pytest -vsx doc/adv-manual/developing.rst
 
       - name: Make latex docs
         run: |
@@ -52,10 +50,10 @@ jobs:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
         run: |
           pwd
-          cd doc/sphinx
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa 
+          cd doc/sphinx
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/master/ 
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
 
@@ -94,7 +92,7 @@ jobs:
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
-          chmod 600 /.deploy_rsa
-          eval $(ssh-agent -s) && ssh-add $TRAVIS_BUILD_DIR/.deploy_rsa 
+          chmod 600 ./.deploy_rsa
+          eval $(ssh-agent -s) && ssh-add ./.deploy_rsa 
           scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${BRANCH}.zip
           scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip
