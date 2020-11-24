@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-18.04
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
-      BRANCH: ${{ github.ref }}
 
     steps:
       - name: Check out the codebase.
@@ -31,5 +30,7 @@ jobs:
           echo "-- Environment variables ----------------------------------------------"
           env
           echo "-----------------------------------------------------------------------"
+
+          BRANCH=`print ${{ github.ref }}  | cut -f 3 -d \/  `
           echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${BRANCH}.zip"
           echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip"
