@@ -43,10 +43,12 @@ the engine manages all the realizations at once.
 """
 
 import operator
+import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import (
+    ProbabilityMap, ProbabilityCurve)
 from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -217,4 +219,7 @@ def calc_hazard_curve(site1, src, gsim, oqparam):
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
     pmap, rup_data, calc_times, extra = PmapMaker(
         cmaker, srcfilter, [src]).make()
+    if not pmap:  # filtered away
+        zero = numpy.zeros((len(oqparam.imtls.array), 1))
+        return ProbabilityCurve(zero)
     return pmap[0]  # pcurve with shape (L, G) on site 0
