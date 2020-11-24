@@ -746,7 +746,6 @@ def get_composite_source_model(oqparam, h5=None):
         csm = get_csm(oqparam, full_lt,  h5)
     et_ids = csm.get_et_ids()
     logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
-    grp_id = {tuple(arr): i for i, arr in enumerate(et_ids)}
     data = {}  # src_id -> row
     mags = AccumDict(accum=set())  # trt -> mags
     wkts = []
@@ -756,7 +755,6 @@ def get_composite_source_model(oqparam, h5=None):
             mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
             lens.append(len(src.et_ids))
-            src.grp_id = grp_id[tuple(src.et_ids)]
             row = [src.source_id, src.grp_id, src.code,
                    0, 0, 0, full_lt.trti[src.tectonic_region_type], 0]
             wkts.append(src._wkt)
@@ -1151,7 +1149,7 @@ def get_checksum32(oqparam, h5=None):
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
                    'width_of_mfd_bin', 'area_source_discretization',
                    'random_seed', 'number_of_logic_tree_samples',
-                   'pointsource_distance', 'minimum_magnitude'):
+                   'minimum_magnitude'):
             hazard_params.append('%s = %s' % (key, val))
         data = '\n'.join(hazard_params).encode('utf8')
         checksum = zlib.adler32(data, checksum)

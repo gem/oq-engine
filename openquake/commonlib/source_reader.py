@@ -263,10 +263,11 @@ class CompositeSourceModel:
         self.full_lt = full_lt
         self.src_groups = src_groups
         idx = 0
-        for sg in src_groups:
+        for grp_id, sg in enumerate(src_groups):
             assert len(sg)  # sanity check
             for src in sg:
                 src.id = idx
+                src.grp_id = grp_id
                 idx += 1
 
     def get_et_ids(self):
