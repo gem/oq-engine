@@ -635,8 +635,7 @@ class SourceConverter(RuptureConverter):
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
-                 spinning_floating=True, source_id=None,
-                 discard_trts=''):
+                 source_id=None, discard_trts=''):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -644,7 +643,6 @@ class SourceConverter(RuptureConverter):
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
         self.width_of_mfd_bin = width_of_mfd_bin
-        self.spinning_floating = spinning_floating
         self.source_id = source_id
         self.discard_trts = discard_trts
 
@@ -749,8 +747,6 @@ class SourceConverter(RuptureConverter):
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
         with context(self.fname, npnode):
             fix_dupl(npdist, self.fname, npnode.lineno)
-            if not self.spinning_floating:
-                npdist = [(1, npdist[0][1])]  # consider the first nodal plane
             return pmf.PMF(npdist)
 
     def convert_hddist(self, node):
@@ -766,8 +762,6 @@ class SourceConverter(RuptureConverter):
             hddist = [(hd['probability'], hd['depth']) for hd in hdnode]
         with context(self.fname, hdnode):
             fix_dupl(hddist, self.fname, hdnode.lineno)
-            if not self.spinning_floating:  # consider the first hypocenter
-                hddist = [(1, hddist[0][1])]
             return pmf.PMF(hddist)
 
     def convert_areaSource(self, node):

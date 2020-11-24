@@ -69,17 +69,11 @@ def get_csm(oq, full_lt, h5=None):
     Build source models from the logic tree and to store
     them inside the `source_full_lt` dataset.
     """
-    if oq.pointsource_distance is None:
-        spinning_off = False
-    else:
-        spinning_off = sum(oq.pointsource_distance.max().values()) == 0
-    if spinning_off:
-        logging.info('Removing nodal plane and hypocenter distributions')
     converter = sourceconverter.SourceConverter(
         oq.investigation_time, oq.rupture_mesh_spacing,
         oq.complex_fault_mesh_spacing, oq.width_of_mfd_bin,
         oq.area_source_discretization, oq.minimum_magnitude,
-        not spinning_off, oq.source_id, discard_trts=oq.discard_trts)
+        oq.source_id, discard_trts=oq.discard_trts)
     classical = not oq.is_event_based()
     full_lt.ses_seed = oq.ses_seed
     if oq.is_ucerf():
