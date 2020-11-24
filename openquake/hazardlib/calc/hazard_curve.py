@@ -43,10 +43,12 @@ the engine manages all the realizations at once.
 """
 
 import operator
+import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import (
+    ProbabilityMap, ProbabilityCurve)
 from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -202,19 +204,22 @@ def calc_hazard_curves(
     return pmap.convert(imtls, len(sitecol.complete))
 
 
-def calc_hazard_curve(site1, src, gsims_by_trt, oqparam):
+# called in adv-manual/developing.rst
+def calc_hazard_curve(site1, src, gsims, oqparam):
     """
     :param site1: site collection with a single site
     :param src: a seismic source object
-    :param gsims_by_trt: a dictionary trt -> gsims
+    :param gsims: a list of GSIM objects
     :param oqparam: an object with attributes .maximum_distance, .imtls
     :returns: a ProbabilityCurve object
     """
     assert len(site1) == 1, site1
     trt = src.tectonic_region_type
-    gsims = gsims_by_trt['*'] if '*' in gsims_by_trt else gsims_by_trt[trt]
     cmaker = ContextMaker(trt, gsims, vars(oqparam))
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
     pmap, rup_data, calc_times, extra = PmapMaker(
         cmaker, srcfilter, [src]).make()
-    return pmap[0]  # pcurve with shape (L, G)
+    if not pmap:  # filtered away
+        zero = numpy.zeros((len(oqparam.imtls.array), len(gsims)))
+        return ProbabilityCurve(zero)
+    return pmap[0]  # pcurve with shape (L, G) on site 0

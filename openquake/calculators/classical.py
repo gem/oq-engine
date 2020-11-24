@@ -165,6 +165,19 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError('You ran out of memory!')
         pmap = dic['pmap']
         extra = dic['extra']
+        ctimes = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
+        self.calc_times += ctimes
+        srcids = set()
+        eff_rups = 0
+        eff_sites = 0
+        for srcid, rec in ctimes.items():
+            srcids.add(srcid)
+            eff_rups += rec[0]
+            if rec[0]:
+                eff_sites += rec[1] / rec[0]
+        self.by_task[extra['task_no']] = (
+            eff_rups, eff_sites, sorted(srcids))
+        acc.eff_ruptures[extra.pop('trt')] += eff_rups
         if not pmap:
             return acc
         grp_id = extra['grp_id']
@@ -172,29 +185,13 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             pmap.grp_id = grp_id
             acc[extra['source_id'].split(':')[0]] = pmap
-
-        trt = extra.pop('trt')
         self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
             self.totrups += extra['totrups']
-            d = dic['calc_times']  # srcid -> eff_rups, eff_sites, dt
-            self.calc_times += d
-            srcids = set()
-            eff_rups = 0
-            eff_sites = 0
-            for srcid, rec in d.items():
-                srcids.add(srcid)
-                eff_rups += rec[0]
-                if rec[0]:
-                    eff_sites += rec[1] / rec[0]
-            self.by_task[extra['task_no']] = (
-                eff_rups, eff_sites, sorted(srcids))
             if pmap and grp_id in acc:
                 acc[grp_id] |= pmap
             else:
                 acc[grp_id] = copy.copy(pmap)
-            acc.eff_ruptures[trt] += eff_rups
-
             # store rup_data if there are few sites
             if self.few_sites:
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
@@ -373,12 +370,13 @@ class ClassicalCalculator(base.HazardCalculator):
                     es[task_no] = effsites
                     si[task_no] = ' '.join(source_ids[s] for s in srcids)
                 self.by_task.clear()
-        self.numrups = sum(arr[0] for arr in self.calc_times.values())
-        numsites = sum(arr[1] for arr in self.calc_times.values())
-        logging.info('Effective number of ruptures: {:_d}/{:_d}'.format(
-            int(self.numrups), self.totrups))
-        logging.info('Effective number of sites per rupture: %d',
-                     numsites / self.numrups)
+        if self.calc_times:  # can be empty in case of errors
+            self.numrups = sum(arr[0] for arr in self.calc_times.values())
+            numsites = sum(arr[1] for arr in self.calc_times.values())
+            logging.info('Effective number of ruptures: {:_d}/{:_d}'.format(
+                int(self.numrups), self.totrups))
+            logging.info('Effective number of sites per rupture: %d',
+                         numsites / self.numrups)
         if psd:
             psdist = max(max(psd.ddic[trt].values()) for trt in psd.ddic)
             if psdist and self.maxradius >= psdist / 2:
@@ -427,7 +425,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.params = dict(
             truncation_level=oq.truncation_level,
             imtls=oq.imtls, reqv=oq.get_reqv(),
-            pointsource_distance=getattr(oq.pointsource_distance, 'ddic', {}),
+            pointsource_distance=oq.pointsource_distance,
             point_rupture_bins=oq.point_rupture_bins,
             shift_hypo=oq.shift_hypo,
             min_weight=oq.min_weight,
