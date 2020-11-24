@@ -431,7 +431,7 @@ def grid_point_sources(sources, ps_grid_spacing):
     :param ps_grid_spacing:
         value of the point source grid spacing in km; if None, do nothing
     :returns:
-        a list of both non-point sources and collapsed point sources
+        a dict grp_id -> list of non-point sources and collapsed point sources
     """
     if ps_grid_spacing is None:
         return sources
@@ -451,8 +451,7 @@ def grid_point_sources(sources, ps_grid_spacing):
         cps.et_id = ps[0].et_id
         cps.nsites = sum(p.nsites for p in ps)
         out.append(cps)
-    logging.info('Reduced point sources %d->%d', len(ps), len(grid))
-    return out
+    return {sources[0].grp_id: out}
 
 
 # used in the tests
