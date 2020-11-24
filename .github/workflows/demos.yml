@@ -39,14 +39,14 @@ jobs:
 
 
       - name: Shell for ssh
+        shell: bash 
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
         run: |
-          pwd
           ls -lrta
-          gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output .deploy_rsa .deploy_docs.enc
-          chmod 600 .deploy_rsa
-          eval $(ssh-agent -s) && ssh-add .deploy_rsa 
+          gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output $PWD/.deploy_rsa $PWD/.deploy_docs.enc
+          chmod 600 $PWD/.deploy_rsa
+          eval $(ssh-agent -s) && ssh-add $PWD/.deploy_rsa 
           cd doc/sphinx
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/master/ 
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
