@@ -1,6 +1,6 @@
   [Michele Simionato]
-  * Fixed the dip angle of PointRuptures to 90 degrees when using the
-    `pointsource_distance` approximation
+  * Fixed the strike, dip and rake parameters in PointRuptures when using
+    the `pointsource_distance` approximation
 
   [Marco Pagani, Michele Simionato, Thomas Chartier]
   * Added experimental version of KiteSource and KiteSurface
