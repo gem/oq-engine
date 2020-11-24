@@ -188,9 +188,14 @@ class PointSource(ParametricSeismicSource):
         depth = numpy.average(depths, weights=weights)
         hc = Point(latitude=self.location.latitude,
                    longitude=self.location.longitude, depth=depth)
+        weights, planes = list(zip(*self.nodal_plane_distribution.data))
+        strike = numpy.average([p.strike for p in planes], weights=weights)
+        dip = numpy.average([p.dip for p in planes], weights=weights)
+        rake = numpy.average([p.rake for p in planes], weights=weights)
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             yield PointRupture(mag, self.tectonic_region_type, hc,
-                               mag_occ_rate, self.temporal_occurrence_model)
+                               strike, dip, rake, mag_occ_rate,
+                               self.temporal_occurrence_model)
 
     def count_nphc(self):
         """

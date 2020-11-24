@@ -18,7 +18,6 @@
 
 import unittest
 import numpy
-import pytest
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.baselib.general import DictArray
