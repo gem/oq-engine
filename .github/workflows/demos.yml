@@ -8,7 +8,7 @@ name: demos
 jobs:
   demos:
     name: DEMOS
-    runs-on: ubuntu-1804
+    runs-on: ubuntu-18.04
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       BRANCH: ${{ github.ref }}
