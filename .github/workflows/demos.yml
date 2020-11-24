@@ -31,6 +31,6 @@ jobs:
           env
           echo "-----------------------------------------------------------------------"
 
-          BRANCH=`print ${{ github.ref }}  | cut -f 3 -d \/  `
+          BRANCH=`echo ${{ github.ref }}  | cut -f 3 -d \/  `
           echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${BRANCH}.zip"
           echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip"
