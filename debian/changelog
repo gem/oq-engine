@@ -1,7 +1,11 @@
+  [Michele Simionato]
+  * Fixed the dip angle of PointRuptures to 90 degrees when using the
+    `pointsource_distance` approximation
+
   [Marco Pagani, Michele Simionato, Thomas Chartier]
   * Added experimental version of KiteSource and KiteSurface
 
-[Michele Simionato]
+  [Michele Simionato]
   * Changed the serialization of ruptures to support MultiSurfaces
   * Fixed a small bug of logic in the WebUI: if the authentication is
     turned off, everyone must be able to see all calculations

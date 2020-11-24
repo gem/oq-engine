@@ -568,7 +568,7 @@ class PointSurface:
         return 0
 
     def get_dip(self):
-        return 0
+        return 90  # suggested by M. Pagani
 
     def get_top_edge_depth(self):
         return self.hypocenter.depth
