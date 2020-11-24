@@ -188,9 +188,14 @@ class PointSource(ParametricSeismicSource):
         depth = numpy.average(depths, weights=weights)
         hc = Point(latitude=self.location.latitude,
                    longitude=self.location.longitude, depth=depth)
+        weights, planes = list(zip(*self.nodal_plane_distribution.data))
+        strike = numpy.average([p.strike for p in planes], weights=weights)
+        dip = numpy.average([p.dip for p in planes], weights=weights)
+        rake = numpy.average([p.rake for p in planes], weights=weights)
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             yield PointRupture(mag, self.tectonic_region_type, hc,
-                               mag_occ_rate, self.temporal_occurrence_model)
+                               strike, dip, rake, mag_occ_rate,
+                               self.temporal_occurrence_model)
 
     def count_nphc(self):
         """
@@ -349,6 +354,7 @@ class CollapsedPointSource(ParametricSeismicSource):
         self.pointsources = pointsources
         self.pointruptures = []
         lons, lats, weights, depths = [], [], [], []
+        np_weights, strikes, dips, rakes = [], [], [], []
         for src in pointsources:
             assert src.tectonic_region_type == self.tectonic_region_type
             lons.append(src.location.x)
@@ -356,12 +362,22 @@ class CollapsedPointSource(ParametricSeismicSource):
             ws, ds = zip(*src.hypocenter_distribution.data)
             weights.extend(ws)
             depths.extend(ds)
+            ws, ds = zip(*src.nodal_plane_distribution.data)
+            np_weights.extend(ws)
+            for np in ds:
+                strikes.append(np.strike)
+                dips.append(np.dip)
+                rakes.append(np.rake)
         self.location = Point(longitude=numpy.mean(lons),
                               latitude=numpy.mean(lats),
                               depth=numpy.average(depths, weights=weights))
+        strike = numpy.average(strikes, weights=np_weights)
+        dip = numpy.average(dips, weights=np_weights)
+        rake = numpy.average(rakes, weights=np_weights)
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             pr = PointRupture(mag, self.tectonic_region_type, self.location,
-                              mag_occ_rate, self.temporal_occurrence_model)
+                              strike, dip, rake, mag_occ_rate,
+                              self.temporal_occurrence_model)
             self.pointruptures.append(pr)
 
     def get_annual_occurrence_rates(self):
