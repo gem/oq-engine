@@ -7,7 +7,7 @@ name: zmq
 jobs:
   docker:
     name: build compose and run a calculation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     steps:
   # This Checkout is necessary when using a context in docker/build-push-action

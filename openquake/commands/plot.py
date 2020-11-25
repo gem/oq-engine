@@ -353,7 +353,7 @@ def make_figure_sources(extractors, what):
         tot += 1
     lons = [p.x for p in psources]
     lats = [p.y for p in psources]
-    if cross_idl(*lons):
+    if lons and cross_idl(*lons):
         lons = [lon % 360 for lon in lons]
         sitecol['lon'] = sitecol['lon'] % 360
     ax.plot(sitecol['lon'], sitecol['lat'], '+')
@@ -361,7 +361,7 @@ def make_figure_sources(extractors, what):
     if lons:
         pp.set_lim(lons, lats)
     else:
-        pp.set_lim(sitecol.lons, sitecol.lats)
+        pp.set_lim(sitecol['lon'], sitecol['lat'])
     ax.set_title('%d/%d sources' % (n, tot))
     return plt
 
