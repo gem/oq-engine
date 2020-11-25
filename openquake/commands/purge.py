@@ -46,7 +46,7 @@ def purge_all(user=None):
     if os.path.exists(datadir):
         for fname in os.listdir(datadir):
             if fname.endswith('.pik'):
-                os.remove(fname)
+                os.remove(os.path.join(datadir, fname))
             mo = re.match(r'(calc_|cache_)(\d+)\.hdf5', fname)
             if mo is not None:
                 calc_id = int(mo.group(2))
