@@ -2154,9 +2154,9 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     def test_sampling_early_weights(self):
         fname_ini = os.path.join(
             os.path.join(DATADIR, 'source_specific_uncertainty'), 'job.ini')
-        oqparam = readinput.get_oqparam(
-            fname_ini, number_of_logic_tree_samples='10',
-            sampling_method='early_weights')
+        oqparam = readinput.get_oqparam(fname_ini)
+        oqparam.number_of_logic_tree_samples = 10
+        oqparam.sampling_method = 'early_weights'
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
@@ -2172,9 +2172,9 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     def test_sampling_late_weights(self):
         fname_ini = os.path.join(
             os.path.join(DATADIR, 'source_specific_uncertainty'), 'job.ini')
-        oqparam = readinput.get_oqparam(
-            fname_ini, number_of_logic_tree_samples='10',
-            sampling_method='late_weights')
+        oqparam = readinput.get_oqparam(fname_ini)
+        oqparam.number_of_logic_tree_samples = 10
+        oqparam.sampling_method = 'late_weights'
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b25', 'b1_b26',

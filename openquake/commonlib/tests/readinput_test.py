@@ -520,8 +520,8 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         readinput.exposure = None
 
     def test_grid_site_model_exposure(self):
-        oq = readinput.get_oqparam(
-            'job.ini', case_16, region_grid_spacing='15')
+        oq = readinput.get_oqparam('job.ini', case_16)
+        oq.region_grid_spacing = 15
         sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
@@ -542,7 +542,3 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             site_amplification.Amplifier(oq.imtls, df)
         self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
-
-    def test_site_model_sites(self):
-        # you can set them at the same time
-        readinput.get_oqparam('job.ini', case_16, sites='0 0')
