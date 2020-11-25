@@ -36,7 +36,6 @@ jobs:
             else
                   echo "$GITHUB_HEAD is NOT NULL"
             fi
-
           if [ -z "$GITHUB_HEAD" ]
              then
               echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
@@ -47,4 +46,4 @@ jobs:
               echo ${{ github.head_ref }}
               GITHUB_BR=echo ${{ github.head_ref }}
           fi
-          echo $GITHUB_BR
+          more $GITHUB_BR
