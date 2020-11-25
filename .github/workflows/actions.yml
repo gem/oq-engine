@@ -4,12 +4,13 @@ on:
   push:
     branches: actions
 jobs:
-  docs:
-    name: DOCS
+  env:
+    name: ENV
     runs-on: ubuntu-18.04
     env:
+      #use ${{ github.event.pull_request.base.ref }} to get the target branch name
       GITHUB_BRANCH: ${{ github.base_ref }}
-      GITHUB_PR_BRANCH_BASE : ${{ github.event.pull_request.base.ref }} 
+      GITHUB_PR_BRANCH : ${{ github.event.pull_request.compare.ref }} 
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR: ${{ github.event.repository.default_branch }}
     steps:
@@ -26,4 +27,11 @@ jobs:
           echo ${{ github.ref }}
           echo ${{ github.base_ref }}
           echo ${{ github.sha }}
-          more $GITHUB_DEF_BR
+          echo ${{ github.event.pull_request.head.repo.name }}
+          echo ${{ github.event.pull_request.base.repo.name }}
+          echo ${{ github.event.pull_request.compare.ref }} 
+          echo ${{ github.event.pull_request.base.ref }} 
+          echo ${{ github.event.base.repo.name }}
+          echo $GITHUB_DEF_BR
+          echo $GITHUB_PR_BRANCH
+          more $GITHUB_EVENT
