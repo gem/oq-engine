@@ -518,7 +518,6 @@ class PmapMaker(object):
         self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
-        self.ir_mon = cmaker.mon('iter_ruptures', measuremem=False)
         # NB: if maxsites is too big or too small the performance of
         # get_poes can easily become 2-3 times worse!
         self.maxsites = 512000 / len(self.gsims) / len(self.imtls.array)
@@ -544,12 +543,8 @@ class PmapMaker(object):
                             probs += (1. - pne) * ctx.weight
 
     def _ruptures(self, src, filtermag=None):
-        it = src.iter_ruptures(
+        return src.iter_ruptures(
             shift_hypo=self.shift_hypo, mag=filtermag)
-        if hasattr(src, 'location'):  # do not store too much performance_data
-            return list(it)
-        with self.ir_mon:
-            return list(it)
 
     def _make_ctxs(self, rups, sites, srcid):
         with self.ctx_mon:
