@@ -348,7 +348,8 @@ class ClassicalCalculator(base.HazardCalculator):
         for grp_id, sources in sources_by_grp.items():
             before += len(sources)
             after += len(dic[grp_id])
-            sg = SourceGroup(sources[0].tectonic_region_type, dic[grp_id])
+            sg = SourceGroup(sources[0].tectonic_region_type)
+            sg.sources = dic[grp_id]
             self.csm.src_groups.append(sg)
         logging.info('Reduced point sources %d->%d', before, after)
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)

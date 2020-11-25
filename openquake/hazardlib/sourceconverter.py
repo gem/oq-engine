@@ -142,6 +142,7 @@ class SourceGroup(collections.abc.Sequence):
 
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
                  rup_interdep='indep', grp_probability=None,
+                 min_mag={'default': 0}, max_mag=None,
                  temporal_occurrence_model=None, cluster=False):
         # checks
         self.trt = trt
@@ -151,6 +152,8 @@ class SourceGroup(collections.abc.Sequence):
         self.rup_interdep = rup_interdep
         self._check_init_variables(sources, name, src_interdep, rup_interdep)
         self.grp_probability = grp_probability
+        self.min_mag = min_mag
+        self.max_mag = max_mag
         if sources:
             for src in sorted(sources, key=operator.attrgetter('source_id')):
                 self.update(src)
@@ -211,7 +214,10 @@ class SourceGroup(collections.abc.Sequence):
         """
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
-
+        src.min_mag = max(src.min_mag, self.min_mag.get(self.trt)
+                          or self.min_mag['default'])
+        if src.min_mag and not src.get_mags():  # filtered out
+            return
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and
                 self.rup_interdep == 'mutex'):
@@ -220,6 +226,10 @@ class SourceGroup(collections.abc.Sequence):
             raise ValueError(msg)
 
         self.sources.append(src)
+        _, max_mag = src.get_min_max_mag()
+        prev_max_mag = self.max_mag
+        if prev_max_mag is None or max_mag > prev_max_mag:
+            self.max_mag = max_mag
 
     def count_ruptures(self):
         """
