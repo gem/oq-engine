@@ -433,8 +433,11 @@ def grid_point_sources(sources, ps_grid_spacing):
     :returns:
         a dict grp_id -> list of non-point sources and collapsed point sources
     """
+    grp_id = sources[0].grp_id
+    for src in sources[1:]:
+        assert src.grp_id == grp_id, (src.grp_id, grp_id)
     if ps_grid_spacing is None:
-        return {sources[0].grp_id: sources}
+        return {grp_id: sources}
     out = [src for src in sources if not hasattr(src, 'location')]
     ps = numpy.array([src for src in sources if hasattr(src, 'location')])
     if len(ps) < 2:  # nothing to collapse

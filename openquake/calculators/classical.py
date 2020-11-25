@@ -338,20 +338,18 @@ class ClassicalCalculator(base.HazardCalculator):
             sources_by_grp = {}
         self.csm.src_groups = [
             sg for sg in self.csm.src_groups if sg.atomic]
-        if len(sources_by_grp) > 1:  # parallelize
-            smap = parallel.Starmap(grid_point_sources, h5=self.datastore.hdf5)
-            for grp_id, sources in sources_by_grp.items():
-                smap.submit((sources, oq.ps_grid_spacing))
-            dic = smap.reduce()
-        else:  # in core
-            [sources] = sources_by_grp.values()
-            dic = grid_point_sources(sources, oq.ps_grid_spacing)
+        smap = parallel.Starmap(
+            grid_point_sources, h5=self.datastore.hdf5,
+            distribute=None if len(sources_by_grp) > 1 else 'no')
+        for grp_id, sources in sources_by_grp.items():
+            smap.submit((sources, oq.ps_grid_spacing))
+        dic = smap.reduce()
         for grp_id, sources in sources_by_grp.items():
             sg = SourceGroup(sources[0].tectonic_region_type)
             logging.info('Reduced point sources %d->%d',
                          len(sources), len(dic[grp_id]))
             sg.sources = dic[grp_id]
-            self.csm.src_groups.append(sg)
+        self.csm.src_groups.append(sg)
 
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         self.submit_tasks(smap)
