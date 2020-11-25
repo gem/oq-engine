@@ -1,8 +1,8 @@
 ---
 name: docs & demos
-'on':
+on:
   pull_request:
-    branches: master 
+    branches: [ master ]
 jobs:
   docs:
     name: DOCS
