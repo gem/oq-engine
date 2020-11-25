@@ -451,7 +451,6 @@ def grid_point_sources(sources, ps_grid_spacing):
         cps.et_id = ps[0].et_id
         cps.nsites = sum(p.nsites for p in ps)
         out.append(cps)
-    logging.info('Reduced point sources %d->%d', len(ps), len(grid))
     return out
 
 
