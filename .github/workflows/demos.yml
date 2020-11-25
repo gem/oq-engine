@@ -67,18 +67,18 @@ jobs:
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
         run: |
-          if [ -z "$GITHUB_HD_REF" ]
-             then
-              GITHUB_BR=$GITHUB_HD_REF
-             else
-              GITHUB_BR=$GITHUB_DEF_BR
-          fi
-          echo $GITHUB_BR
           zip -q -r /tmp/demos.zip demos/
           OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
           oq dump /tmp/oqdata.zip
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos
+          if [ -z "$GITHUB_HD_REF" ]
+             then
+              GITHUB_BR=$GITHUB_DEF_REF
+             else
+              GITHUB_BR=$GITHUB_HD_BR
+          fi
+          echo $GITHUB_BR
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa 
