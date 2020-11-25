@@ -44,6 +44,10 @@ jobs:
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+      GITHUB_REF:  ${{ github.ref }}
+      GITHUB_HD_REF:  ${{ github.head_ref }}
+      GITHUB_BS_REF:  ${{ github.base_ref }}
+        #more $GITHUB_EVENT_PATH
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -53,10 +57,6 @@ jobs:
           python-version: '3.8'
       - name: Upgrade pip and install requirements
         run: |
-          echo " github.ref  ${{ github.ref }}"
-          echo " github.head_ref ${{ github.head_ref }}"
-          echo " github.base_ref ${{ github.base_ref }}"
-          more $GITHUB_EVENT_PATH
           pip install -U pip
           pip install -r ./requirements-py38-linux64.txt
           pip install fiona
@@ -66,8 +66,14 @@ jobs:
         shell: bash
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
-            #$GITHUB_EVENT_PATH
         run: |
+          if [ -z "$GITHUB_HEAD" ]
+             then
+              GITHUB_BR=$GITHUB_HD_REF
+             else
+              GITHUB_BR=$GITHUB_DEF_BR
+          fi
+          echo $GITHUB_BR
           zip -q -r /tmp/demos.zip demos/
           OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
           oq dump /tmp/oqdata.zip
@@ -76,7 +82,7 @@ jobs:
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa 
-          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_DEF_BR}.zip"
-          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_DEF_BR}.zip
-          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_DEF_BR}.zip"
-          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_DEF_BR}.zip
+          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip"
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip
+          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip"
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip
