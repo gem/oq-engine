@@ -353,8 +353,11 @@ def create_jobs(job_inis, loglvl, kw):
         f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
         handler.setFormatter(f)
     for i, job_ini in enumerate(job_inis):
-        dic = job_ini if isinstance(job_ini, dict) else vars(
-            readinput.get_oqparam(job_ini, validate=0, **kw))
+        if isinstance(job_ini, dict):
+            dic = job_ini
+        else:
+            dic = vars(readinput.get_oqparam(job_ini, validate=0))
+            dic.update(kw)
         if 'sensitivity_analysis' in dic:
             for values in itertools.product(
                     *dic['sensitivity_analysis'].values()):
@@ -401,7 +404,8 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     for job in jobs:
         job_id = job['_job_id']
         with logs.handle(job_id, log_level, log_file):
-            oqparam = readinput.get_oqparam(job, hc_id=hc_id, **kw)
+            oqparam = readinput.get_oqparam(job, hc_id=hc_id)
+            vars(oqparam).update(kw)  # kw already checked
         logs.dbcmd('update_job', job_id,
                    dict(calculation_mode=oqparam.calculation_mode,
                         description=oqparam.description,

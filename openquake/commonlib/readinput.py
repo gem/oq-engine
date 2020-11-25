@@ -248,8 +248,7 @@ def get_params(job_ini, **kw):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
-                **kw):
+def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -264,8 +263,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
         Not None only when called from a post calculation
     :param validate:
         Flag. By default it is true and the parameters are validated
-    :param kw:
-        String-valued keyword arguments used to override the job.ini parameters
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
@@ -283,7 +280,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
         job_ini = get_params(os.path.join(basedir, job_ini))
     if hc_id:
         job_ini.update(hazard_calculation_id=str(hc_id))
-    job_ini.update(kw)
     re = os.environ.get('OQ_REDUCE')  # debugging facility
     if re:
         # reduce the imtls to the first imt
