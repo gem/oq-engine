@@ -37,3 +37,14 @@ jobs:
                   echo "$GITHUB_HEAD is NOT NULL"
             fi
 
+          if [ -z "$GITHUB_HEAD" ]
+             then
+              echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
+              echo ${{ github.event.repository.default_branch }}
+              GITHUB_BR=echo ${{ github.event.repository.default_branch }}
+             else
+              echo " Is a pull request, use branch: $GITHUB_HEAD"
+              echo ${{ github.head_ref }}
+              GITHUB_BR=echo ${{ github.head_ref }}
+          fi
+          echo $GITHUB_BR

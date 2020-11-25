@@ -75,13 +75,13 @@ jobs:
           echo " Check if this is a pull request or not"
           if [ -z "$GITHUB_HD_REF" ]
              then
-               echo " Is not a pull request"
-               echo $GITHUB_DEF_REF
-               GITHUB_BR=$GITHUB_DEF_REF
+              echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
+              echo ${{ github.event.repository.default_branch }}
+              GITHUB_BR=echo ${{ github.event.repository.default_branch }}
              else
-               echo " Is a pull request"
-               echo $GITHUB_HD_BR
-               GITHUB_BR=$GITHUB_HD_BR
+              echo " Is a pull request, use branch: $GITHUB_HD_BR"
+              echo ${{ github.head_ref }}
+              GITHUB_BR=echo ${{ github.head_ref }}
           fi
           echo $GITHUB_BR
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
