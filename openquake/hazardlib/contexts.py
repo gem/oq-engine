@@ -564,23 +564,21 @@ class PmapMaker(object):
     def _make_src_indep(self):
         # sources with the same ID
         if self.fewsites:
-            srcs_sites = [(self.group, self.srcfilter.sitecol)]
+            src_sites = [(src, self.srcfilter.sitecol) for src in self.group]
         elif self.split_sources:
-            srcs_sites = (([src], sites)
-                          for src, sites in self.srcfilter.split(self.group))
+            src_sites = self.srcfilter.split(self.group)
         else:
-            srcs_sites = (([src], self.srcfilter.sitecol.filtered(idx))
-                          for src, idx in self.srcfilter.filter(self.group))
-        for srcs, sites in srcs_sites:
+            src_sites = ((src, self.srcfilter.sitecol.filtered(idx))
+                         for src, idx in self.srcfilter.filter(self.group))
+        for src, sites in src_sites:
             t0 = time.time()
-            src_id = srcs[0].id
             self.numrups = 0
             self.numsites = 0
-            rups = self._get_rups(srcs, sites)
-            ctxs = self._make_ctxs(rups, sites, src_id)
+            rups = self._get_rups(src, sites)
+            ctxs = self._make_ctxs(rups, sites, src.id)
             if ctxs:
                 self._update_pmap(ctxs)
-            self.calc_times[src_id] += numpy.array(
+            self.calc_times[src.id] += numpy.array(
                 [self.numrups, self.numsites, time.time() - t0])
         return ~self.pmap if self.rup_indep else self.pmap
 
@@ -654,7 +652,7 @@ class PmapMaker(object):
                 output.extend(_collapse(rs))
         return output
 
-    def _get_rups(self, srcs, sites):
+    def _get_rups(self, src, sites):
         # returns a list of ruptures, each one with a .sites attribute
         rups = []
 
@@ -662,33 +660,32 @@ class PmapMaker(object):
             for rup in rupiter:
                 rup.sites = sites
                 rups.append(rup)
-        for src in srcs:
-            self.totrups += src.num_ruptures
-            loc = getattr(src, 'location', None)
-            if loc and self.pointsource_distance == 0:
-                # all finite size effects are ignored
-                _add(src.point_ruptures(), sites)
-            elif loc and self.pointsource_distance:
-                # finite site effects are ignored only for sites over the
-                # pointsource_distance from the rupture (if any)
-                for pr in src.point_ruptures():
-                    pdist = self.pointsource_distance['%.2f' % pr.mag]
-                    close, far = sites.split(pr.hypocenter, pdist)
-                    if self.fewsites:
-                        if close is None:  # all is far, common for small mag
-                            _add([pr], sites)
-                        else:  # something is close
-                            _add(self._ruptures(src, pr.mag), sites)
-                    else:  # many sites
-                        if close is None:  # all is far
-                            _add([pr], far)
-                        elif far is None:  # all is close
-                            _add(self._ruptures(src, pr.mag), close)
-                        else:  # some sites are far, some are close
-                            _add([pr], far)
-                            _add(self._ruptures(src, pr.mag), close)
-            else:  # just add the ruptures
-                _add(self._ruptures(src), sites)
+        self.totrups += src.num_ruptures
+        loc = getattr(src, 'location', None)
+        if loc and self.pointsource_distance == 0:
+            # all finite size effects are ignored
+            _add(src.point_ruptures(), sites)
+        elif loc and self.pointsource_distance:
+            # finite site effects are ignored only for sites over the
+            # pointsource_distance from the rupture (if any)
+            for pr in src.point_ruptures():
+                pdist = self.pointsource_distance['%.2f' % pr.mag]
+                close, far = sites.split(pr.hypocenter, pdist)
+                if self.fewsites:
+                    if close is None:  # all is far, common for small mag
+                        _add([pr], sites)
+                    else:  # something is close
+                        _add(self._ruptures(src, pr.mag), sites)
+                else:  # many sites
+                    if close is None:  # all is far
+                        _add([pr], far)
+                    elif far is None:  # all is close
+                        _add(self._ruptures(src, pr.mag), close)
+                    else:  # some sites are far, some are close
+                        _add([pr], far)
+                        _add(self._ruptures(src, pr.mag), close)
+        else:  # just add the ruptures
+            _add(self._ruptures(src), sites)
         return rups
 
 
