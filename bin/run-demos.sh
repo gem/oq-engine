@@ -56,6 +56,10 @@ oq show exposed_values/agg_NAME_1
 oq show exposed_values/agg_taxonomy
 oq show exposed_values/agg
 
+# recompute losses
+oq recompute_losses -1 NAME_1
+oq engine --list-outputs -1
+
 # display the calculations
 oq db find %
 
