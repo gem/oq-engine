@@ -431,14 +431,17 @@ def grid_point_sources(sources, ps_grid_spacing):
     :param ps_grid_spacing:
         value of the point source grid spacing in km; if None, do nothing
     :returns:
-        a list of both non-point sources and collapsed point sources
+        a dict grp_id -> list of non-point sources and collapsed point sources
     """
+    grp_id = sources[0].grp_id
+    for src in sources[1:]:
+        assert src.grp_id == grp_id, (src.grp_id, grp_id)
     if ps_grid_spacing is None:
-        return sources
+        return {grp_id: sources}
     out = [src for src in sources if not hasattr(src, 'location')]
     ps = numpy.array([src for src in sources if hasattr(src, 'location')])
     if len(ps) < 2:  # nothing to collapse
-        return out + list(ps)
+        return {grp_id: out + list(ps)}
     coords = _coords(ps)
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
@@ -451,8 +454,7 @@ def grid_point_sources(sources, ps_grid_spacing):
         cps.et_id = ps[0].et_id
         cps.nsites = sum(p.nsites for p in ps)
         out.append(cps)
-    logging.info('Reduced point sources %d->%d', len(ps), len(grid))
-    return out
+    return {sources[0].grp_id: out}
 
 
 # used in the tests
