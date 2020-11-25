@@ -67,7 +67,7 @@ jobs:
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
         run: |
-          if [ -z "$GITHUB_HEAD" ]
+          if [ -z "$GITHUB_HD_REF" ]
              then
               GITHUB_BR=$GITHUB_HD_REF
              else
