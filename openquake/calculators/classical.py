@@ -338,11 +338,26 @@ class ClassicalCalculator(base.HazardCalculator):
             sources_by_grp = {}
         self.csm.src_groups = [
             sg for sg in self.csm.src_groups if sg.atomic]
-        for grp_id, sources in sources_by_grp.items():
-            sg = SourceGroup(sources[0].tectonic_region_type)
-            sg.sources = grid_point_sources(sources, oq.ps_grid_spacing)
-            self.csm.src_groups.append(sg)
-
+        if oq.ps_grid_spacing:
+            smap = parallel.Starmap(
+                grid_point_sources, h5=self.datastore.hdf5,
+                distribute=None if len(sources_by_grp) > 1 else 'no')
+            for grp_id, sources in sources_by_grp.items():
+                smap.submit((sources, oq.ps_grid_spacing))
+            dic = smap.reduce()
+            before, after = 0, 0
+            for grp_id, sources in sources_by_grp.items():
+                before += len(sources)
+                after += len(dic[grp_id])
+                sg = SourceGroup(sources[0].tectonic_region_type)
+                sg.sources = dic[grp_id]
+                self.csm.src_groups.append(sg)
+            logging.info('Reduced point sources %d->%d', before, after)
+        else:
+            for grp_id, sources in sources_by_grp.items():
+                sg = SourceGroup(sources[0].tectonic_region_type)
+                sg.sources = sources
+                self.csm.src_groups.append(sg)
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
