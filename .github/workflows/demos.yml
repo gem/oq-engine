@@ -61,7 +61,7 @@ jobs:
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
         run: |
-          BRANCH=`echo ${{ github.ref }}  | cut -f 3 -d \/`
+          BRANCH=`echo ${{ github.ref }}  | cut -f 2 -d \/`
           zip -q -r /tmp/demos.zip demos/
           OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
           oq dump /tmp/oqdata.zip
