@@ -67,7 +67,7 @@ jobs:
           echo ${{ github.ref }}
           echo ${{ github.base_ref }}
           echo ${{ github.sha }}
-          BRANCH=`echo ${{ github.ref }}  | cut -f 2 -d \/`
+          BRANCH=`echo ${{ github.base_ref }}`
           zip -q -r /tmp/demos.zip demos/
           OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
           oq dump /tmp/oqdata.zip
