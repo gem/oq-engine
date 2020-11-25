@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-18.04
     env:
       GITHUB_BRANCH: ${{ github.base_ref }}
-      GITHUB_BRANCH_BASE : ${{ github.event.pull_request.base.ref }} 
+      GITHUB_PR_BRANCH_BASE : ${{ github.event.pull_request.base.ref }} 
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
     steps:
       - name: Check out the codebase.
@@ -22,12 +22,12 @@ jobs:
       - name: Display ENV
         shell: bash
         run: |
-          env
           echo ${{ github.ref }}
           echo ${{ github.base_ref }}
           echo ${{ github.sha }}
           echo  ${{ github.base_ref }}
           echo  ${{ github.event.pull_request.base.ref }} 
           echo ${{ github.event.number }}
+          echo ${{ github.event.repository.default_branch }}
           more $GITHUB_EVENT_PATH
           echo $GITHUB_EVENT_PATH
