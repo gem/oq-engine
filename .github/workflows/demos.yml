@@ -3,6 +3,8 @@ name: docs & demos
 on:
   pull_request:
     branches: [ master ]
+  push:
+    branches: actions
 jobs:
   docs:
     name: DOCS
@@ -61,6 +63,10 @@ jobs:
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
         run: |
+          env
+          echo ${{ github.ref }}
+          echo ${{ github.base_ref }}
+          echo ${{ github.sha }}
           BRANCH=`echo ${{ github.ref }}  | cut -f 2 -d \/`
           zip -q -r /tmp/demos.zip demos/
           OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
