@@ -3,6 +3,8 @@ name: actions for env
 on:
   push:
     branches: actions
+  pull:
+    branches: master
 jobs:
   env:
     name: ENV
@@ -34,4 +36,4 @@ jobs:
           echo ${{ github.event.base.repo.name }}
           echo $GITHUB_DEF_BR
           echo $GITHUB_PR_BRANCH
-          more $GITHUB_EVENT
+          more $GITHUB_EVENT_PATH

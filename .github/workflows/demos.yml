@@ -62,6 +62,7 @@ jobs:
         shell: bash
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
+            #$GITHUB_EVENT_PATH
         run: |
           zip -q -r /tmp/demos.zip demos/
           OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
