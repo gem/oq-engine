@@ -30,7 +30,7 @@ from openquake.commonlib.logs import dbcmd
 tablecounter = itertools.count(0)
 
 
-def html(header_rows):
+def htmltable(header_rows):
     """
     Convert a list of tuples describing a table into a HTML string
     """
@@ -178,7 +178,7 @@ def make_report(isodate='today'):
                     str(exc), quote=True),
                 fragment='')
         page = report['html_title']
-        page += html([stats._fields, stats])
+        page += htmltable([stats._fields, stats])
         page += report['fragment']
         tag_contents.append(page)
 
