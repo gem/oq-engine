@@ -11,6 +11,7 @@ jobs:
       GITHUB_BRANCH: ${{ github.base_ref }}
       GITHUB_PR_BRANCH_BASE : ${{ github.event.pull_request.base.ref }} 
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR: ${{ github.event.repository.default_branch }}
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -25,9 +26,4 @@ jobs:
           echo ${{ github.ref }}
           echo ${{ github.base_ref }}
           echo ${{ github.sha }}
-          echo  ${{ github.base_ref }}
-          echo  ${{ github.event.pull_request.base.ref }} 
-          echo ${{ github.event.number }}
-          echo ${{ github.event.repository.default_branch }}
-          more $GITHUB_EVENT_PATH
-          echo $GITHUB_EVENT_PATH
+          more $GITHUB_DEF_BR
