@@ -25,14 +25,7 @@ jobs:
       - name: Display ENV
         shell: bash
         run: |
-          echo ${{ github.ref }}
-          echo ${{ github.base_ref }}
-          echo ${{ github.sha }}
-          echo ${{ github.event.pull_request.head.repo.name }}
-          echo ${{ github.event.pull_request.base.repo.name }}
-          echo ${{ github.event.pull_request.compare.ref }} 
-          echo ${{ github.event.pull_request.base.ref }} 
-          echo ${{ github.event.base.repo.name }}
-          echo $GITHUB_DEF_BR
-          echo $GITHUB_PR_BRANCH
+          echo " github.ref  ${{ github.ref }}"
+          echo " github.head_ref ${{ github.head_ref }}"
+          echo " github.base_ref ${{ github.base_ref }}"
           more $GITHUB_EVENT_PATH

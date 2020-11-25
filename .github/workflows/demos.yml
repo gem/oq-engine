@@ -53,6 +53,9 @@ jobs:
           python-version: '3.8'
       - name: Upgrade pip and install requirements
         run: |
+          echo " github.ref  ${{ github.ref }}"
+          echo " github.head_ref ${{ github.head_ref }}"
+          echo " github.base_ref ${{ github.base_ref }}"
           more $GITHUB_EVENT_PATH
           pip install -U pip
           pip install -r ./requirements-py38-linux64.txt
