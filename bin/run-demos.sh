@@ -15,16 +15,13 @@ done
 
 # run the other demos
 for ini in $(find $1 -name job.ini | sort); do
-    oq engine --run $ini --exports xml,hdf5 -p pointsource_distance=0
+    oq engine --run $ini --exports xml,hdf5 -p pointsource_distance=0 -r
 done
 
 oq export hcurves 16  # export with GMPETables
 
 # test the --eos option
 oq engine --eos -1 /tmp
-
-# test generation of statistical hazard curves from previous calculation
-oq engine --run $1/hazard/LogicTreeCase3ClassicalPSHA/job.ini --reuse-input
 
 # extract disaggregation data
 oq extract "disagg_layer?" 14
