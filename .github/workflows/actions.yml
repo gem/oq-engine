@@ -1,0 +1,33 @@
+---
+name: actions for env
+on:
+  push:
+    branches: actions
+jobs:
+  docs:
+    name: DOCS
+    runs-on: ubuntu-18.04
+    env:
+      GITHUB_BRANCH: ${{ github.base_ref }}
+      GITHUB_BRANCH_BASE : ${{ github.event.pull_request.base.ref }} 
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      - name: Display ENV
+        shell: bash
+        run: |
+          env
+          echo ${{ github.ref }}
+          echo ${{ github.base_ref }}
+          echo ${{ github.sha }}
+          echo  ${{ github.base_ref }}
+          echo  ${{ github.event.pull_request.base.ref }} 
+          echo ${{ github.event.number }}
+          more $GITHUB_EVENT_PATH
+          echo $GITHUB_EVENT_PATH

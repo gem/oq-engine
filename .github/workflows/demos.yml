@@ -3,8 +3,6 @@ name: docs & demos
 on:
   pull_request:
     branches: [ master ]
-  push:
-    branches: actions
 jobs:
   docs:
     name: DOCS
