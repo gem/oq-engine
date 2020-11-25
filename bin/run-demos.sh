@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -x
 if [ ! -d "$1" ]; then
     echo "Please specify the location of the folder containing the demos. Aborting." >&2
     exit 1
@@ -26,13 +26,13 @@ oq engine --eos -1 /tmp
 # extract disaggregation data
 oq extract "disagg_layer?" 14
 
-# do something with the generated data
+# do something with the generated data, 9 is the AreaSource demo
 oq engine --lhc
-MPLBACKEND=Agg oq plot 'hcurves?kind=stats&imt=PGA' 16
-MPLBACKEND=Agg oq plot 'hmaps?kind=mean&imt=PGA' 16
-MPLBACKEND=Agg oq plot 'uhs?kind=stats' 16
+MPLBACKEND=Agg oq plot 'hcurves?kind=stats&imt=PGA' 9
+MPLBACKEND=Agg oq plot 'hmaps?kind=mean&imt=PGA' 9
+MPLBACKEND=Agg oq plot 'uhs?kind=stats' 9
 MPLBACKEND=Agg oq plot 'disagg?kind=Mag&imt=PGA&poe_id=1&rlz=0' 14
-MPLBACKEND=Agg oq plot 'task_info?kind=classical_split_filter' 16
+MPLBACKEND=Agg oq plot 'task_info?kind=classical_split_filter' 9
 MPLBACKEND=Agg oq plot_sites -1
 MPLBACKEND=Agg oq plot memory?
 MPLBACKEND=Agg oq plot sources?
