@@ -138,7 +138,7 @@ WantedBy=multi-user.target
 PYVER = sys.version_info[:2]
 
 
-def before_checks(inst, remove):
+def before_checks(inst, remove, usage):
     """
     Checks to perform before the installation
     """
@@ -156,7 +156,7 @@ def before_checks(inst, remove):
     if inst is server and user != 'root':
         sys.exit('Error: you cannot perform a server installation unless '
                  'you are root. If you do not have root permissions, you '
-                 'can install the engine in user mode.')
+                 'can install the engine in user mode.\n\n' + usage)
     elif inst is not server and user == 'root':
         sys.exit('Error: you cannot perform a user or devel installation'
                  ' as root.')
@@ -237,8 +237,10 @@ def install(inst):
     oqreal = '%s/bin/oq' % inst.VENV
     if inst is server and not os.path.exists(inst.OQ):
         os.symlink(oqreal, inst.OQ)
-    if inst is not server:
+    if inst is user:
         print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
+    elif inst is devel:
+        print(f'Please activate the venv with {inst.VENV}/bin/activate')
 
     # create systemd services
     if inst is server and os.path.exists('/lib/systemd/system'):
@@ -295,7 +297,7 @@ if __name__ == '__main__':
                         help="disinstall the engine")
     args = parser.parse_args()
     inst = globals()[args.inst]
-    before_checks(inst, args.remove)
+    before_checks(inst, args.remove, parser.format_usage())
     if args.remove:
         remove(inst)
     else:
