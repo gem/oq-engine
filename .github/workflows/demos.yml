@@ -53,6 +53,7 @@ jobs:
           python-version: '3.8'
       - name: Upgrade pip and install requirements
         run: |
+          more $GITHUB_EVENT_PATH
           pip install -U pip
           pip install -r ./requirements-py38-linux64.txt
           pip install fiona
