@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Example Source Model Containing a Characteristic Fault Source"
+    >
+    <characteristicFaultSource id="1" name="test" tectonicRegion="Active Shallow Crust">
+      <incrementalMFD minMag="7.5" binWidth="0.1">
+        <occurRates>0.00011904761904761905</occurRates>
+      </incrementalMFD>
+      <rake>0</rake>
+      <surface>
+        <complexFaultGeometry>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>172.577 -43.132 0.000 171.970 -43.252 0.000 171.715 -43.298 0.000 171.607 -43.342 0.000 171.520 -43.363 0.000</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>172.577 -43.132 12.000 171.970 -43.252 12.000 171.715 -43.298 12.000 171.607 -43.342 12.000 171.520 -43.363 12.000</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </complexFaultGeometry>
+      </surface>
+    </characteristicFaultSource>
+    </sourceModel>
+</nrml>

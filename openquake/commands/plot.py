@@ -20,6 +20,7 @@ import logging
 import shapely
 import numpy
 from openquake.baselib import sap
+from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
 from openquake.calculators.extract import Extractor, WebExtractor
@@ -302,12 +303,13 @@ class PolygonPlotter():
         except ValueError:  # LINESTRING, not POLYGON
             pass
 
-    def set_lim(self, sitecol=None):
-        if sitecol:
-            self.minxs.append(min(sitecol['lon']))
-            self.maxxs.append(max(sitecol['lon']))
-            self.minys.append(min(sitecol['lat']))
-            self.maxys.append(max(sitecol['lat']))
+    def set_lim(self, xs=None, ys=None):
+        if xs:
+            self.minxs.append(min(xs))
+            self.maxxs.append(max(xs))
+        if ys:
+            self.minys.append(min(ys))
+            self.maxys.append(max(ys))
         if self.minxs and self.maxxs:
             self.ax.set_xlim(min(self.minxs), max(self.maxxs))
         if self.minys and self.maxys:
@@ -329,10 +331,10 @@ def make_figure_sources(extractors, what):
     fig, ax = plt.subplots()
     ax.grid(True)
     sitecol = ex.get('sitecol')
-    ax.plot(sitecol['lon'], sitecol['lat'], '+')
     pp = PolygonPlotter(ax)
     n = 0
     tot = 0
+    psources = []
     for rec, srcid, wkt in zip(info, srcs, wkts):
         if not wkt:
             logging.warning('No geometries for source id %s', srcid)
@@ -344,9 +346,22 @@ def make_figure_sources(extractors, what):
         else:
             color = 'yellow'
             alpha = .1
-        pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
+        if wkt.startswith('POINT'):
+            psources.append(shapely.wkt.loads(wkt))
+        else:
+            pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
         tot += 1
-    pp.set_lim(sitecol)
+    lons = [p.x for p in psources]
+    lats = [p.y for p in psources]
+    if lons and cross_idl(*lons):
+        lons = [lon % 360 for lon in lons]
+        sitecol['lon'] = sitecol['lon'] % 360
+    ax.plot(sitecol['lon'], sitecol['lat'], '+')
+    ax.plot(lons, lats, '.')
+    if lons:
+        pp.set_lim(lons, lats)
+    else:
+        pp.set_lim(sitecol['lon'], sitecol['lat'])
     ax.set_title('%d/%d sources' % (n, tot))
     return plt
 
@@ -549,12 +564,28 @@ def make_figure_tot_curves(extractors, what):
     return plt
 
 
+def plot_wkt(wkt_string):
+    """
+    Plot a WKT string describing a polygon
+    """
+    from shapely import wkt
+    import matplotlib.pyplot as plt
+    poly = wkt.loads(wkt_string)
+    coo = numpy.array(poly.exterior.coords)
+    plt.plot(coo[:,0], coo[:, 1], '-')
+    return plt
+
+
 @sap.script
 def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
          local=False):
     """
     Generic plotter for local and remote calculations.
     """
+    if what.startswith('POLYGON'):
+        plt = plot_wkt(what)
+        plt.show()
+        return
     if what == 'examples':
         help_msg = ['Examples of possible plots:']
         for k, v in globals().items():

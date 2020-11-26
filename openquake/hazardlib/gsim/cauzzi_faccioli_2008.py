@@ -73,6 +73,8 @@ class CauzziFaccioli2008(GMPE):
     #: functional forms', page 462.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
+    DEFINED_FOR_REFERENCE_VELOCITY = 1000.
+
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soils), see paragraph 'On functional forms', page 463.
     REQUIRES_SITES_PARAMETERS = {'vs30'}

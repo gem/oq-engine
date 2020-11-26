@@ -38,16 +38,13 @@ def extract(what, calc_id=-1, webapi=False, local=False, extract_dir='.'):
         else:
             aw = Extractor(calc_id).get(what)
         w = what.replace('/', '-').replace('?', '-')
-        if isinstance(aw.array, str):  # a big string
+        if hasattr(aw, 'array') and isinstance(aw.array, str):  # CSV string
             fname = os.path.join(extract_dir, '%s_%d.csv' % (w, calc_id))
             with open(fname, 'w', encoding='utf-8') as f:
                 f.write(aw.array)
-        elif aw.is_good():  # a regular ArrayWrapper
+        else:  # save as npz
             fname = os.path.join(extract_dir, '%s_%d.npz' % (w, calc_id))
             hdf5.save_npz(aw, fname)
-        else:  # ArrayWrapper of strings, dictionaries or other types
-            fname = os.path.join(extract_dir, '%s_%d.txt' % (w, calc_id))
-            open(fname, 'w').write(aw.toml())
         print('Saved', fname)
     if mon.duration > 1:
         print(mon)

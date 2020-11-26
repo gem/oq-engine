@@ -21,6 +21,7 @@ import ast
 import csv
 import inspect
 import tempfile
+import warnings
 import importlib
 import itertools
 from urllib.parse import quote_plus, unquote_plus
@@ -400,41 +401,6 @@ def array_of_vstr(lst):
     return numpy.array(ls, vstr)
 
 
-def fix_array(arr, key):
-    """
-    :param arr: array or array-like object
-    :param key: string associated to the error (appear in the error message)
-
-    If `arr` is a numpy array with dtype object containing strings, convert
-    it into a numpy array containing bytes, unless it has more than 2
-    dimensions or contains non-strings (these are errors). Return `arr`
-    unchanged in the other cases.
-    """
-    if arr is None:
-        return ()
-    if not isinstance(arr, numpy.ndarray):
-        return arr
-    if arr.dtype != numpy.dtype('O'):
-        d = arr.dtype.descr
-        if len(d) > 1 and isinstance(d[0][1], tuple):
-            # for extract_assets d[0] is the pair
-            # ('id', ('|S20', {'h5py_encoding': 'ascii'}))
-            # this is a horrible workaround for the h5py 2.10.0 issue
-            # https://github.com/numpy/numpy/issues/14142#issuecomment-620980980
-            arr.dtype = [(n, str(arr.dtype[n])) for n in arr.dtype.names]
-        return arr
-    if arr.ndim == 1:
-        return numpy.array([s.encode('utf8') for s in arr])
-    elif arr.ndim == 2:
-        return numpy.array([[col.encode('utf8') for col in row]
-                            for row in arr])
-    else:
-        raise NotImplementedError('The array for %s has shape %s' %
-                                  (key, arr.shape))
-
-    return arr
-
-
 def set_shape_attrs(hdf5file, dsetname, kw):
     """
     Set shape attributes on a dataset (and possibly other attributes)
@@ -573,6 +539,8 @@ class ArrayWrapper(object):
          ('RC', 'IND', 5000.0),
          ('WOOD', 'RES', 500.0)]
         """
+        if hasattr(self, 'json'):
+            vars(self).update(json.loads(self.json))
         shape = self.shape
         tup = len(self._extra) > 1
         if tup:
@@ -609,13 +577,6 @@ class ArrayWrapper(object):
         """
         return {k: v for k, v in vars(self).items()
                 if k != 'array' and not k.startswith('_')}
-
-    def is_good(self):
-        """
-        An ArrayWrapper is good if it only contains arrays
-        """
-        return all(isinstance(v, numpy.ndarray) for k, v in vars(self).items()
-                   if k != 'json' and not k.startswith('_'))
 
 
 def decode_array(values):
@@ -659,7 +620,10 @@ def build_dt(dtypedict, names):
         try:
             dt = dtypedict[name]
         except KeyError:
-            dt = dtypedict[None]
+            if None in dtypedict:
+                dt = dtypedict[None]
+            else:
+                raise KeyError('Missing dtype for field %r' % name)
         lst.append((name, vstr if dt is str else dt))
     return numpy.dtype(lst)
 
@@ -727,6 +691,35 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     return ArrayWrapper(arr, attrs)
 
 
+def _fix_array(arr, key):
+    """
+    :param arr: array or array-like object
+    :param key: string associated to the error (appear in the error message)
+
+    If `arr` is a numpy array with dtype object containing strings, convert
+    it into a numpy array containing bytes, unless it has more than 2
+    dimensions or contains non-strings (these are errors). Return `arr`
+    unchanged in the other cases.
+    """
+    if arr is None:
+        return ()
+    if not isinstance(arr, numpy.ndarray):
+        return arr
+    if arr.dtype.names:
+        # for extract_assets d[0] is the pair
+        # ('id', ('|S50', {'h5py_encoding': 'ascii'}))
+        # this is a horrible workaround for the h5py 2.10.0 issue
+        # https://github.com/numpy/numpy/issues/14142
+        dtlist = []
+        for i, n in enumerate(arr.dtype.names):
+            if isinstance(arr.dtype.descr[i][1], tuple):
+                dtlist.append((n, str(arr.dtype[n])))
+            else:
+                dtlist.append((n, arr.dtype[n]))
+        arr.dtype = dtlist
+    return arr
+
+
 def save_npz(obj, path):
     """
     :param obj: object to serialize
@@ -738,7 +731,10 @@ def save_npz(obj, path):
             continue
         elif isinstance(val, str):
             # without this oq extract would fail
-            a[key] = numpy.array(val.encode('utf-8'))
+            a[key] = val.encode('utf-8')
         else:
-            a[key] = fix_array(val, key)
-    numpy.savez_compressed(path, **a)
+            a[key] = _fix_array(val, key)
+    # turn into an error https://github.com/numpy/numpy/issues/14142
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=UserWarning)
+        numpy.savez_compressed(path, **a)

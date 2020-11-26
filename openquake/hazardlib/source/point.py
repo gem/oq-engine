@@ -17,7 +17,10 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
+import logging
+import itertools
 import numpy
+from openquake.baselib.general import AccumDict, groupby_grid
 from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -25,7 +28,7 @@ from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
-from openquake.hazardlib.geo.utils import get_bounding_box
+from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 
 def _get_rupture_dimensions(src, mag, rake, dip):
@@ -101,7 +104,7 @@ class PointSource(ParametricSeismicSource):
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
     code = b'P'
-    MODIFICATIONS = set(())
+    MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -185,9 +188,14 @@ class PointSource(ParametricSeismicSource):
         depth = numpy.average(depths, weights=weights)
         hc = Point(latitude=self.location.latitude,
                    longitude=self.location.longitude, depth=depth)
+        weights, planes = list(zip(*self.nodal_plane_distribution.data))
+        strike = numpy.average([p.strike for p in planes], weights=weights)
+        dip = numpy.average([p.dip for p in planes], weights=weights)
+        rake = numpy.average([p.rake for p in planes], weights=weights)
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             yield PointRupture(mag, self.tectonic_region_type, hc,
-                               mag_occ_rate, self.temporal_occurrence_model)
+                               strike, dip, rake, mag_occ_rate,
+                               self.temporal_occurrence_model)
 
     def count_nphc(self):
         """
@@ -329,6 +337,127 @@ class PointSource(ParametricSeismicSource):
         return 'POINT(%s %s)' % (loc.x, loc.y)
 
 
+class CollapsedPointSource(ParametricSeismicSource):
+    """
+    Source typology representing a cluster of point sources around a
+    specific location.
+    """
+    code = b'P'
+    MODIFICATIONS = set()
+    counter = itertools.count(1)
+
+    def __init__(self, pointsources):
+        self.source_id = 'cps-%d' % next(self.counter)
+        self.tectonic_region_type = pointsources[0].tectonic_region_type
+        self.temporal_occurrence_model = (
+            pointsources[0].temporal_occurrence_model)
+        self.pointsources = pointsources
+        self.pointruptures = []
+        lons, lats, weights, depths = [], [], [], []
+        np_weights, strikes, dips, rakes = [], [], [], []
+        for src in pointsources:
+            assert src.tectonic_region_type == self.tectonic_region_type
+            lons.append(src.location.x)
+            lats.append(src.location.y)
+            ws, ds = zip(*src.hypocenter_distribution.data)
+            weights.extend(ws)
+            depths.extend(ds)
+            ws, ds = zip(*src.nodal_plane_distribution.data)
+            np_weights.extend(ws)
+            for np in ds:
+                strikes.append(np.strike)
+                dips.append(np.dip)
+                rakes.append(np.rake)
+        self.location = Point(longitude=numpy.mean(lons),
+                              latitude=numpy.mean(lats),
+                              depth=numpy.average(depths, weights=weights))
+        strike = numpy.average(strikes, weights=np_weights)
+        dip = numpy.average(dips, weights=np_weights)
+        rake = numpy.average(rakes, weights=np_weights)
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            pr = PointRupture(mag, self.tectonic_region_type, self.location,
+                              strike, dip, rake, mag_occ_rate,
+                              self.temporal_occurrence_model)
+            self.pointruptures.append(pr)
+
+    def get_annual_occurrence_rates(self):
+        """
+        :returns: a list of pairs [(mag, mag_occur_rate), ...]
+        """
+        acc = AccumDict(accum=0)
+        for psource in self.pointsources:
+            acc += dict(psource.get_annual_occurrence_rates())
+        return sorted(acc.items())
+
+    def iter_ruptures(self, **kwargs):
+        """
+        :returns: an iterator over the underlying ruptures
+        """
+        for src in self.pointsources:
+            yield from src.iter_ruptures(**kwargs)
+
+    def point_ruptures(self):
+        """
+        :returns: the underlying point ruptures
+        """
+        return self.pointruptures
+
+    def count_ruptures(self):
+        """
+        :returns: the number of underlying point ruptures * P
+        """
+        return len(self.pointruptures) * len(self.pointsources)
+
+    def get_bounding_box(self, maxdist):
+        """
+        Bounding box of the point, enlarged by the maximum distance
+        """
+        return get_bounding_box([self.location], maxdist)
+
+
+def _coords(psources):
+    arr = numpy.zeros((len(psources), 3))
+    for p, psource in enumerate(psources):
+        arr[p, 0] = psource.location.x
+        arr[p, 1] = psource.location.y
+        arr[p, 2] = psource.location.z
+    return arr
+
+
+def grid_point_sources(sources, ps_grid_spacing):
+    """
+    :param sources:
+        a list of sources with the same grp_id (point sources and not)
+    :param ps_grid_spacing:
+        value of the point source grid spacing in km; if None, do nothing
+    :returns:
+        a dict grp_id -> list of non-point sources and collapsed point sources
+    """
+    grp_id = sources[0].grp_id
+    for src in sources[1:]:
+        assert src.grp_id == grp_id, (src.grp_id, grp_id)
+    if ps_grid_spacing is None:
+        return {grp_id: sources}
+    out = [src for src in sources if not hasattr(src, 'location')]
+    ps = numpy.array([src for src in sources if hasattr(src, 'location')])
+    if len(ps) < 2:  # nothing to collapse
+        return {grp_id: out + list(ps)}
+    coords = _coords(ps)
+    deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
+    deltay = angular_distance(ps_grid_spacing)
+    grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
+    for idxs in grid.values():
+        cps = CollapsedPointSource(ps[idxs])
+        cps.num_ruptures = cps.count_ruptures()
+        cps.id = ps[0].id
+        cps.grp_id = ps[0].grp_id
+        cps.et_id = ps[0].et_id
+        cps.nsites = sum(p.nsites for p in ps)
+        out.append(cps)
+    return {sources[0].grp_id: out}
+
+
+# used in the tests
 def make_rupture(trt, mag, msr=PointMSR(), aspect_ratio=1.0, seismo=(10, 30),
                  nodal_plane_tup=(0, 90, 0), hc_tup=(0, 0, 20),
                  occurrence_rate=1, tom=None):

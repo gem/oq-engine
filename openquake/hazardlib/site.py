@@ -20,11 +20,12 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
+from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib.general import (
     split_in_blocks, not_equal, get_duplicates)
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects, geohash)
+    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
@@ -123,7 +124,6 @@ site_param_dt = {
     'z1pt4': numpy.float64,
     'backarc': numpy.bool,
     'xvf': numpy.float64,
-    'backarc_distance': numpy.float64,
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
@@ -131,22 +131,32 @@ site_param_dt = {
     'ec8_p18': (numpy.string_, 2),
     'h800': numpy.float64,
     'geology': (numpy.string_, 20),
+    'amplfactor': numpy.float64,
 
-    # parameters for geotechnic hazard
-    'liquefaction_susceptibility': numpy.int16,
-    'landsliding_susceptibility': numpy.int16,
+    # parameters for secondary perils
+    'friction_mid': numpy.float64,
+    'cohesion_mid': numpy.float64,
+    'saturation': numpy.float64,
+    'dry_density': numpy.float64,
+    'Fs': numpy.float64,
+    'crit_accel': numpy.float64,
+    'unit': (numpy.string_, 5),
+    'liq_susc_cat': (numpy.string_, 2),
     'dw': numpy.float64,
     'yield_acceleration': numpy.float64,
     'slope': numpy.float64,
+    'gwd': numpy.float64,
     'cti': numpy.float64,
     'dc': numpy.float64,
     'dr': numpy.float64,
     'dwb': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
+    'fpeak': numpy.float64,
 
     # other parameters
     'custom_site_id': numpy.uint32,
+    'region': numpy.uint32
 }
 
 
@@ -309,6 +319,19 @@ class SiteCollection(object):
         else:
             idx = 0
         return self.filtered([self.sids[idx]])
+
+    # used for debugging purposes
+    def get_cdist(self, rec_or_loc):
+        """
+        :param rec_or_loc: a record with field 'hypo' or a Point instance
+        :returns: array of N euclidean distances from rec['hypo']
+        """
+        try:
+            lon, lat, dep = rec_or_loc['hypo']
+        except TypeError:
+            lon, lat, dep = rec_or_loc.x, rec_or_loc.y, rec_or_loc.z
+        xyz = spherical_to_cartesian(lon, lat, dep).reshape(1, 3)
+        return distance.cdist(self.xyz, xyz)[:, 0]
 
     def __init__(self, sites):
         """

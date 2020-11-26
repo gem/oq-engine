@@ -1,0 +1,76 @@
+---
+name: docs & demos
+on:
+  pull_request:
+    branches: [ master ]
+jobs:
+  docs:
+    name: DOCS
+    runs-on: ubuntu-18.04
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Upgrade pip and install openquake
+        run: |
+          pip install -U pip pytest
+          pip install -r ./requirements-py38-linux64.txt
+          pip install -e .
+      - name: Run Hazard test
+        run: pytest -x openquake/hazardlib -k gsim --disable-warnings --color=yes --durations=10
+      - name: Make docs and rsync to ci.openquake.org
+        shell: bash
+        env:
+          DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
+        run: |
+          gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
+          chmod 600 ./.deploy_rsa
+          eval $(ssh-agent -s) && ssh-add ./.deploy_rsa 
+          pip install sphinx==1.6.5
+          sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
+          cd doc/sphinx && make html && cd ../adv-manual && make html && make latexpdf
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete ../sphinx/build/html/ docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/master/ 
+          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ build/latex/OpenQuakeforAdvancedUsers.pdf docs@ci.openquake.org:/var/www/docs.openquake.org/oq-engine/advanced/;
+
+  demos:
+    name: DEMOS
+    runs-on: ubuntu-18.04
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Upgrade pip and install requirements
+        run: |
+          pip install -U pip
+          pip install -r ./requirements-py38-linux64.txt
+          pip install fiona
+      - name: Install oq engine 
+        run: pip install -e . 
+      - name: Run demos and upload to http://artifacts.openquake.org/travis/
+        shell: bash
+        env:
+          DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
+        run: |
+          BRANCH=`echo ${{ github.ref }}  | cut -f 2 -d \/`
+          zip -q -r /tmp/demos.zip demos/
+          OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
+          oq dump /tmp/oqdata.zip
+          oq restore /tmp/oqdata.zip /tmp/oqdata
+          helpers/zipdemos.sh $(pwd)/demos
+          gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
+          chmod 600 ./.deploy_rsa
+          eval $(ssh-agent -s) && ssh-add ./.deploy_rsa 
+          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${BRANCH}.zip"
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${BRANCH}.zip
+          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip"
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip

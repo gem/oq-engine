@@ -18,15 +18,15 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from openquake.baselib import sap, datastore, parallel
-from openquake.commonlib import logs
+from openquake.baselib import sap, parallel
+from openquake.commonlib import logs, util
 from openquake.calculators.post_risk import PostRiskCalculator
-
+from openquake.engine import engine
 
 @sap.Script
 def recompute_losses(calc_id, aggregate_by):
     """Re-run the postprocessing after an event based risk calculation"""
-    parent = datastore.read(calc_id)
+    parent = util.read(calc_id)
     oqp = parent['oqparam']
     aggby = aggregate_by.split(',')
     for tagname in aggby:
@@ -41,6 +41,7 @@ def recompute_losses(calc_id, aggregate_by):
         prc = PostRiskCalculator(oqp, job_id)
         try:
             prc.run(aggregate_by=aggby)
+            engine.expose_outputs(prc.datastore)
         finally:
             parallel.Starmap.shutdown()
 

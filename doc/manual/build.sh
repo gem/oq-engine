@@ -17,11 +17,11 @@ sed -i "s/version X\.Y\.Z/version $VERSION/; s/ENGINE\.X\.Y\.Z/ENGINE\.$VERSION/
 
 (pdflatex -halt-on-error -shell-escape -interaction=nonstopmode oq-manual.tex
 bibtex oq-manual
-pdflatex -halt-on-error -shell-escape -interaction=nonstopmode oq-manual.tex
-makeindex oq-manual.idx
+makeindex oq-manual
 makeglossaries oq-manual
 pdflatex -halt-on-error -shell-escape -interaction=nonstopmode oq-manual.tex
-makeglossaries oq-manual) | tee -a full_log.log | egrep -i "error|warning|missing"
+makeglossaries oq-manual
+pdflatex -halt-on-error -shell-escape -interaction=nonstopmode oq-manual.tex) | tee -a full_log.log | egrep -i "error|warning|missing"
 
 echo -e "\n\n=== FINAL RUN ===\n\n"
 pdflatex -halt-on-error -shell-escape -interaction=nonstopmode oq-manual.tex | tee -a full_log.log | egrep -i "error|warning|missing"

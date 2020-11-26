@@ -28,6 +28,7 @@ from openquake.hazardlib.pmf import PMF
 
 
 class MultiPointTestCase(unittest.TestCase):
+
     def test(self):
         npd = PMF([(0.5, NodalPlane(1, 20, 3)),
                    (0.5, NodalPlane(2, 2, 4))])
@@ -46,7 +47,7 @@ class MultiPointTestCase(unittest.TestCase):
         splits = list(mps)
         self.assertEqual(len(splits), 2)
         for split in splits:
-            self.assertEqual(split.grp_id, mps.grp_id)
+            self.assertEqual(split.et_id, mps.et_id)
 
         got = obj_to_node(mps).to_str()
         print(got)

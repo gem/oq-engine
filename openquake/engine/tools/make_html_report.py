@@ -17,8 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
-import cgi
+import html
 import time
 from datetime import date, datetime, timedelta
 import itertools
@@ -31,7 +30,7 @@ from openquake.commonlib.logs import dbcmd
 tablecounter = itertools.count(0)
 
 
-def html(header_rows):
+def htmltable(header_rows):
     """
     Convert a list of tuples describing a table into a HTML string
     """
@@ -70,7 +69,7 @@ class HtmlTable(object):
     def render(self, dummy_ctxt=None):
         out = "\n%s\n" % "".join(list(self._gen_table()))
         if not self.rows:
-            out += '<em>%s</em>' % cgi.escape(self.empty_table, quote=True)
+            out += '<em>%s</em>' % html.escape(self.empty_table, quote=True)
         return out
 
     def _gen_table(self):
@@ -175,11 +174,11 @@ def make_report(isodate='today'):
             report = html_parts(txt)
         except Exception as exc:
             report = dict(
-                html_title='Could not generate report: %s' % cgi.escape(
+                html_title='Could not generate report: %s' % html.escape(
                     str(exc), quote=True),
                 fragment='')
         page = report['html_title']
-        page += html([stats._fields, stats])
+        page += htmltable([stats._fields, stats])
         page += report['fragment']
         tag_contents.append(page)
 

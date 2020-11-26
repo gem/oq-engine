@@ -1,52 +1,10 @@
-version: '2'
-services:
-  # Engine is not actually executed and is
-  # exposed only to make sure it is built via
-  # docker-compose build
-  # engine:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.engine
-  #   image: openquake/engine
-  #   command: '-c true'
-  master:
-    build:
-      context: .
-      dockerfile: zmq/Dockerfile.master
-    image: openquake/engine-master-zmq
-    # Uncomment to enable auth in WebUI/API
-    # environment:
-    #   - LOCKDOWN=true
-    volumes:
-      - oqdata:/home/openquake/oqdata
-    # Uncomment to expose demos inside the container
-    #   - ../demos:/home/openquake/demos:ro
-    # Uncomment to use a local copy of the oq-engine
-    #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
-    # Uncomment to use a custom openquake.cfg
-    #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
-    networks:
-      - cluster
-    ports:
-      - 8800:8800
-  worker:
-    build:
-      context: .
-      dockerfile: zmq/Dockerfile.worker
-    image: openquake/engine-worker-zmq
-    volumes:
-      - oqdata:/home/openquake/oqdata:ro
-    # Uncomment to use a local copy of the oq-engine
-    #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
-    # Uncomment to use a custom openquake.cfg
-    #   - ./path/to/openquake.cfg:/etc/openquake/openquake.cfg
-    networks:
-      - cluster
-    depends_on:
-      - master
+version: "3.7"
 
-# When running on multiple host the volume must be shared between every node
-# see the 'oqdata-nfs' example below
+networks:
+  frontend:
+  backend:
+    internal: true
+
 volumes:
   oqdata:
   # oqdata-nfs:
@@ -56,5 +14,52 @@ volumes:
   #     o: nfsvers=4,addr=nfs-server,rw
   #     device: ":/oqdata"
 
-networks:
-  cluster:
+#definizione di un yaml template da usare poi negli altri servizi
+x-op-service-default: &service_default
+  restart: unless-stopped
+  init: true
+
+services:
+  master:
+    <<: *service_default
+    container_name: engine-master
+    hostname: engine-master
+    image: openquake/engine-master-zmq:nightly
+    ports:
+     - 8800:8800
+    # Uncomment to enable auth in WebUI/API
+    # environment:
+    #   - LOCKDOWN=true
+    volumes:
+     - oqdata:/home/openquake/oqdata
+    # Uncomment to expose demos inside the container
+    # - ../demos:/home/openquake/demos:ro
+    # Uncomment to expose oq-engine inside the container
+     - ../../oq-engine:/home/openquake/oq-engine:ro
+    # Uncomment to use a local copy of the oq-engine
+    #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
+    # Use zmq openquake.cfg
+     - ./zmq/openquake.cfg:/etc/openquake/openquake.cfg
+    networks:
+     backend:
+      aliases:
+       - engine-master
+     frontend:
+     #labels:
+
+  worker:
+    <<: *service_default
+    # don't use name if want to scale
+    # container_name: engine-worker
+    hostname: engine-worker
+    image: openquake/engine-worker-zmq:nightly
+    volumes:
+     - oqdata:/home/openquake/oqdata:ro
+    # Use zmq openquake.cfg
+     - ./zmq/openquake.cfg:/etc/openquake/openquake.cfg
+    networks:
+     backend:
+      aliases:
+       - engine-worker
+    depends_on:
+      - master

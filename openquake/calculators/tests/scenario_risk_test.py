@@ -69,7 +69,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # test agglosses
         tot = extract(self.calc.datastore, 'agg_losses/occupants')
-        aac(tot.array, [0.031716], atol=1E-5)
+        aac(tot.array, [0.031719], atol=1E-5)
 
         # test agglosses with *
         tbl = extract(self.calc.datastore, 'agg_losses/occupants?taxonomy=*')
@@ -175,7 +175,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2611.7139]])  # extracted from avg_losses-stats
+        aac(obj.array, [[2698.1318]])  # extracted from avg_losses-stats
 
     def test_case_7(self):
         # check independence from concurrent_tasks

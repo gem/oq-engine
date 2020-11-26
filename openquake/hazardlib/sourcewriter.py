@@ -58,7 +58,7 @@ def build_area_source_geometry(area_source):
     lower_depth_node = Node(
         "lowerSeismoDepth", text=area_source.lower_seismogenic_depth)
     return Node(
-        "areaGeometry", {'discretization': area_source.area_discretization},
+        "areaGeometry",
         nodes=[polygon_node, upper_depth_node, lower_depth_node])
 
 
@@ -184,6 +184,11 @@ def build_truncated_gr_mfd(mfd):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
+    if hasattr(mfd, 'slip_rate'):
+        return Node("truncGutenbergRichterMFD",
+                    {"bValue": mfd.b_val, "slipRate": mfd.slip_rate,
+                     "rigidity": mfd.rigidity,
+                     "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
     return Node("truncGutenbergRichterMFD",
                 {"aValue": mfd.a_val, "bValue": mfd.b_val,
                  "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
@@ -467,6 +472,8 @@ def build_rupture_node(rupt, probs_occur):
         name = 'complexFaultRupture'
     elif geom == 'griddedSurface':
         name = 'griddedRupture'
+    elif geom == 'kiteSurface':
+        name = 'kiteSurface'
     return Node(name, {'probs_occur': probs_occur}, nodes=rupt_nodes)
 
 

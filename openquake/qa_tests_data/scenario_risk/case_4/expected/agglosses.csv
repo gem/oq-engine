@@ -1,3 +1,3 @@
-#,,,,"generated_by='OpenQuake engine 3.10.0-gita8aaa843f4', start_date='2020-06-19T06:27:47', checksum=2743600684"
+#,,,,"generated_by='OpenQuake engine 3.11.0-git96c2644d86', start_date='2020-10-06T04:48:53', checksum=1765750151"
 rlz_id,loss_type,unit,mean,stddev
-0,structural,USD,1.370416E+07,5.312043E+06
+0,structural,USD,1.328442E+07,4.729584E+06

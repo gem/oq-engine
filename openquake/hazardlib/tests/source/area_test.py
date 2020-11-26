@@ -47,8 +47,8 @@ def make_area_source(polygon, discretization, **kwargs):
     source = AreaSource(**kwargs)
     return source
 
-
 class AreaSourceIterRupturesTestCase(unittest.TestCase):
+
     def make_area_source(self, polygon, discretization, **kwargs):
         source = make_area_source(polygon, discretization, **kwargs)
         for key in kwargs:

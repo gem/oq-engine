@@ -65,6 +65,9 @@ class Idriss2014(GMPE):
     #: Required distance measure is Rrup
     REQUIRES_DISTANCES = {'rrup'}
 
+    #: The reference Vs30. See paper.
+    DEFINED_FOR_REFERENCE_VELOCITY = 2000
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
