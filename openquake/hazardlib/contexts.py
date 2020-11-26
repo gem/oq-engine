@@ -553,12 +553,12 @@ class PmapMaker(object):
             ctxs = self.cmaker.gen_ctxs(rups, sites, srcid)
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(list(ctxs))
-            for ctx in ctxs:
-                self.numsites += len(ctx.sids)
-                self.numrups += 1
-                if self.fewsites:  # keep the contexts in memory
-                    self.rupdata.append(ctx)
-                yield ctx
+        for ctx in ctxs:
+            self.numsites += len(ctx.sids)
+            self.numrups += 1
+            if self.fewsites:  # keep the contexts in memory
+                self.rupdata.append(ctx)
+            yield ctx
 
     def _make_src_indep(self):
         # sources with the same ID
