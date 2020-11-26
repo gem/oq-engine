@@ -64,7 +64,7 @@ jobs:
           pip install fiona
       - name: Install oq engine 
         run: pip install -e . 
-      - name: Run demos and upload to http://artifacts.openquake.org/travis/
+      - name: Run demos and upload to ci.openquake.org
         shell: bash
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
