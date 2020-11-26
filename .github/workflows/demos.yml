@@ -6,6 +6,7 @@ on:
 jobs:
   docs:
     name: DOCS
+    if: "!contains(github.event.head_commit.message, 'skip CI')"
     runs-on: ubuntu-18.04
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
@@ -39,6 +40,7 @@ jobs:
 
   demos:
     name: DEMOS
+    if: "!contains(github.event.head_commit.message, 'skip CI')"
     runs-on: ubuntu-18.04
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
