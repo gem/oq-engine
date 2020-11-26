@@ -229,8 +229,9 @@ def install(inst):
     # create openquake.cfg
     if inst is server:
         if os.path.exists(inst.OQ_CFG):
-            print('There is an old file %s, I not touching it, but consider '
-                  'updating it with\n%s' % (inst.OQ_CFG, inst.CONFIG))
+            print('There is an old file %s; it will not be overwritten, '
+                  'but consider updating it with\n%s' %
+                  (inst.OQ_CFG, inst.CONFIG))
         else:
             with open(inst.OQ_CFG, 'w') as cfg:
                 cfg.write(inst.CONFIG)
