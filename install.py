@@ -136,6 +136,9 @@ WantedBy=multi-user.target
 '''
 
 PYVER = sys.version_info[:2]
+PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
+            'darwin': ('macos',),
+            'win32': ('win64',)}
 
 
 def before_checks(inst, remove, usage):
@@ -214,7 +217,7 @@ def install(inst):
                            '--upgrade'])
     # install the engine
     if inst is devel:
-        req = 'requirements-py%d%d-linux64.txt' % PYVER
+        req = 'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
                                '-r', req])
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
