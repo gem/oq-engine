@@ -836,7 +836,9 @@ class HazardCalculator(BaseCalculator):
             sp.prepare(self.sitecol)  # add columns as needed
 
         self.param = dict(individual_curves=oq.individual_curves,
+                          ps_grid_spacing=oq.ps_grid_spacing,
                           collapse_level=oq.collapse_level,
+                          split_sources=oq.split_sources,
                           avg_losses=oq.avg_losses,
                           amplifier=self.amplifier,
                           sec_perils=sec_perils,

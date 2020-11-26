@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
-import os
 import time
 import copy
 import psutil
@@ -122,7 +121,9 @@ def preclassical(srcs, params, monitor):
         calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt, 0])
     for arr in calc_times.values():
         arr[3] = monitor.task_no
-    return dict(sources=sources, calc_times=calc_times)
+    dic = grid_point_sources(sources, params['ps_grid_spacing'])
+    dic['calc_times'] = calc_times
+    return dic
 
 
 def store_ctxs(dstore, rupdata, grp_id):
@@ -314,50 +315,33 @@ class ClassicalCalculator(base.HazardCalculator):
         psd = self.set_psd()
         srcfilter = self.src_filter()
         performance.Monitor.save(self.datastore, 'srcfilter', srcfilter)
-        srcs = self.csm.get_sources(atomic=False)
-        if srcs:
-            res = parallel.Starmap.apply(
-                preclassical,
-                (srcs, self.params),
-                concurrent_tasks=oq.concurrent_tasks or 1,
-                h5=self.datastore.hdf5).reduce()
 
-            if oq.calculation_mode == 'preclassical':
-                self.store_source_info(res['calc_times'], nsites=True)
-                self.datastore['full_lt'] = self.csm.full_lt
-                self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
-                return
+        # do nothing for atomic sources
+        for src in self.csm.get_sources(atomic=True):
+            src.num_ruptures = src.count_ruptures()
+            src.nsites = self.N
 
-            self.update_source_info(res['calc_times'], nsites=True)
-            sources_by_grp = groupby(
-                res['sources'], operator.attrgetter('grp_id'))
-        else:
-            for src in self.csm.get_sources(atomic=True):
-                src.num_ruptures = src.count_ruptures()
-                src.nsites = self.N
-            sources_by_grp = {}
-        self.csm.src_groups = [
-            sg for sg in self.csm.src_groups if sg.atomic]
-        if oq.ps_grid_spacing:
-            smap = parallel.Starmap(
-                grid_point_sources, h5=self.datastore.hdf5,
-                distribute=None if len(sources_by_grp) > 1 else 'no')
-            for grp_id, sources in sources_by_grp.items():
-                smap.submit((sources, oq.ps_grid_spacing))
-            dic = smap.reduce()
-            before, after = 0, 0
-            for grp_id, sources in sources_by_grp.items():
-                before += len(sources)
-                after += len(dic[grp_id])
-                sg = SourceGroup(sources[0].tectonic_region_type)
-                sg.sources = dic[grp_id]
-                self.csm.src_groups.append(sg)
-            logging.info('Reduced point sources %d->%d', before, after)
-        else:
-            for grp_id, sources in sources_by_grp.items():
-                sg = SourceGroup(sources[0].tectonic_region_type)
-                sg.sources = sources
-                self.csm.src_groups.append(sg)
+        # run preclassical for non-atomic sources
+        sources_by_grp = groupby(
+            self.csm.get_sources(atomic=False), operator.attrgetter('grp_id'))
+        res = parallel.Starmap(
+            preclassical,
+            ((srcs, self.param) for srcs in sources_by_grp.values()),
+            h5=self.datastore.hdf5,
+            distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
+        for grp_id, sources in sources_by_grp.items():
+            sg = SourceGroup(sources[0].tectonic_region_type)
+            sg.sources = res[grp_id]
+            self.csm.src_groups[grp_id] = sg
+
+        # exit early if we want to perform only a preclassical
+        if oq.calculation_mode == 'preclassical':
+            self.store_source_info(res.get('calc_times', {}), nsites=True)
+            self.datastore['full_lt'] = self.csm.full_lt
+            self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
+            return
+
+        self.update_source_info(res.get('calc_times', {}), nsites=True)
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
