@@ -30,7 +30,7 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, groupby_bin, block_splitter)
+    AccumDict, DictArray, groupby, block_splitter)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.tom import PoissonTOM
@@ -38,9 +38,6 @@ from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
 
-bymag = operator.attrgetter('mag')
-bydist = operator.attrgetter('dist')
-I16 = numpy.int16
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
@@ -626,31 +623,6 @@ class PmapMaker(object):
             pmap = self._make_src_indep()
         rupdata = self.dictarray(self.rupdata)
         return (pmap, rupdata, self.calc_times, dict(totrups=self.totrups))
-
-    def collapse_point_ruptures(self, rups, sites):
-        """
-        Collapse ruptures more distant than the pointsource_distance
-        """
-        pointlike, output = [], []
-        for rup in rups:
-            if not rup.surface:
-                pointlike.append(rup)
-            else:
-                output.append(rup)
-        for mag, mrups in groupby(pointlike, bymag).items():
-            if len(mrups) == 1:  # nothing to do
-                output.extend(mrups)
-                continue
-            mdist = self.maximum_distance(self.trt, mag)
-            coll = []
-            for rup in mrups:  # called on a single site
-                rup.dist = get_distances(rup, sites, 'rrup').min()
-                if rup.dist <= mdist:
-                    coll.append(rup)
-            for rs in groupby_bin(coll, self.point_rupture_bins, bydist):
-                # group together ruptures in the same distance bin
-                output.extend(_collapse(rs))
-        return output
 
     def _get_rups(self, srcs, sites):
         # returns a list of ruptures, each one with a .sites attribute
