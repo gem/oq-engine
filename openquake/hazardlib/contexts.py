@@ -548,8 +548,6 @@ class PmapMaker(object):
 
     def _make_ctxs(self, rups, sites, srcid):
         with self.ctx_mon:
-            if self.rup_indep and self.pointsource_distance != {}:
-                rups = self.collapse_point_ruptures(rups, sites)
             ctxs = self.cmaker.make_ctxs(rups, sites, srcid)
             if self.collapse_level > 1:
                 ctxs = self.cmaker.collapse_the_ctxs(ctxs)
