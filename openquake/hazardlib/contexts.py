@@ -21,7 +21,6 @@ import copy
 import time
 import logging
 import warnings
-import operator
 import itertools
 import functools
 import collections
