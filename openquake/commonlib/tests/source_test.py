@@ -731,6 +731,7 @@ Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
+        oqparam.split_sources = False
         csm = readinput.get_composite_source_model(oqparam)
         self.assertEqual(len(csm.sm_rlzs), 9)  # example with 1 x 3 x 3 paths
         # there are 2 distinct tectonic region types and 18 src_groups
