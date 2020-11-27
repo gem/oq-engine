@@ -832,6 +832,11 @@ def get_composite_source_model(oqparam, h5=None):
         sg.sources = res[grp_id]
         csm.src_groups[grp_id] = sg
 
+    if h5:
+        csm.update_source_info(res['calc_times'], nsites=True)
+        recs = [tuple(row) for row in csm.source_info.values()]
+        hdf5.extend(h5['source_info'], numpy.array(recs, source_info_dt))
+
     if oqparam.cachedir:
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
