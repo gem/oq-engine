@@ -215,11 +215,14 @@ def install(inst):
     # upgrade pip
     subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', 'pip', 'wheel',
                            '--upgrade'])
+
+    # install the requirements
+    req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \
+        'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
+    subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', '-r', req])
+
     # install the engine
     if inst is devel:
-        req = 'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
-        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
-                               '-r', req])
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
                                '-e', '.'])
     else:
