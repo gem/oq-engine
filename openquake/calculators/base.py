@@ -54,8 +54,6 @@ F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
-CALC_TIME, NUM_SITES, EFF_RUPTURES, TASK_NO = 3, 4, 5, 7
-
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
 
@@ -472,13 +470,11 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
-                srcs = [src for sg in csm.src_groups for src in sg]
-                if not srcs:
-                    raise RuntimeError('All sources were discarded!?')
-                logging.info('Checking the sources bounding box')
-                sids = self.src_filter().within_bbox(srcs)
-                if len(sids) == 0:
-                    raise RuntimeError('All sources were discarded!?')
+                mags_by_trt = csm.get_mags_by_trt()
+                oq.maximum_distance.interp(mags_by_trt)
+                for trt in mags_by_trt:
+                    self.datastore['source_mags/' + trt] = numpy.array(
+                        mags_by_trt[trt])
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
 
@@ -894,24 +890,11 @@ class HazardCalculator(BaseCalculator):
                                                   oq.inputs['job_ini'])
             logging.warning(msg)
 
-    def update_source_info(self, calc_times, nsites=False):
-        """
-        Update (eff_ruptures, num_sites, calc_time) inside the source_info
-        """
-        for src_id, arr in calc_times.items():
-            row = self.csm.source_info[src_id]
-            row[CALC_TIME] += arr[2]
-            if len(arr) == 4:  # after preclassical
-                row[TASK_NO] = arr[3]
-            if nsites:
-                row[EFF_RUPTURES] += arr[0]
-                row[NUM_SITES] += arr[1]
-
     def store_source_info(self, calc_times, nsites=False):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        self.update_source_info(calc_times, nsites)
+        self.csm.update_source_info(calc_times, nsites)
         recs = [tuple(row) for row in self.csm.source_info.values()]
         hdf5.extend(self.datastore['source_info'],
                     numpy.array(recs, readinput.source_info_dt))
