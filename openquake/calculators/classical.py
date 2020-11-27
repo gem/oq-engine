@@ -335,7 +335,7 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = SourceGroup(sources[0].tectonic_region_type)
             sg.sources = res[grp_id]
             self.csm.src_groups[grp_id] = sg
-        if res['before'] != res['after']:
+        if res and res['before'] != res['after']:
             logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
                          format(res['before'], res['after']))
 
