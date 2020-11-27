@@ -772,7 +772,9 @@ def get_composite_source_model(oqparam, h5=None):
     full_lt = get_full_lt(oqparam)
     if sitecol is None:
         fewsites = None
-    else:
+    elif len(sitecol) <= oqparam.max_sites_disagg:
+        fewsites = sitecol
+    else:  # long sitecol
         fewsites = sitecol.filter(sitecol.sids % 10 == 0)
     # performance hack: use 1 site over 10 when weighting the sources!
     srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
