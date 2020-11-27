@@ -36,7 +36,7 @@ import collections
 import numpy
 import requests
 
-from openquake.baselib import hdf5, parallel, performance
+from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, random_filter, countby, groupby, group_array, get_duplicates)
 from openquake.baselib.python3compat import zip
@@ -713,9 +713,9 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def preclassical(srcs, srcfilter, params, monitor):
+def weight_sources(srcs, srcfilter, params, monitor):
     """
-    Prefilter and weight the sources. Also split if split_sources is true.
+    Weight the sources. Also split them if split_sources is true.
     """
     # nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
@@ -769,7 +769,9 @@ def get_composite_source_model(oqparam, h5=None):
     # first of all, read the sites and the logic tree
     sitecol = get_site_collection(oqparam, h5)
     full_lt = get_full_lt(oqparam)
-    srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
+    fewsites = sitecol.filter(sitecol.sids % 10 == 0)
+    # performance hack: use 1 site over 10 when weighting the sources!
+    srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
 
     # then read the composite source model from the cache if possible
     if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
@@ -810,14 +812,14 @@ def get_composite_source_model(oqparam, h5=None):
         src.num_ruptures = src.count_ruptures()
         src.nsites = len(sitecol)
 
-    # run preclassical for non-atomic sources
+    # run weight_sources for non-atomic sources
     sources_by_grp = groupby(
         csm.get_sources(atomic=False), operator.attrgetter('grp_id'))
     param = dict(ps_grid_spacing=oqparam.ps_grid_spacing,
                  split_sources=False if oqparam.is_event_based()
                  else oqparam.split_sources)
     res = parallel.Starmap(
-        preclassical,
+        weight_sources,
         ((srcs, srcfilter, param) for srcs in sources_by_grp.values()), h5=h5,
         distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
 
