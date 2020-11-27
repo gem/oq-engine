@@ -782,7 +782,8 @@ def get_composite_source_model(oqparam, h5=None):
     # then read the composite source model from the cache if possible
     if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
         os.makedirs(oqparam.cachedir)
-    if oqparam.cachedir:
+    if oqparam.cachedir and not oqparam.is_ucerf():
+        # for UCERF pickling the csm makes no sense
         checksum = get_checksum32(oqparam, h5)
         fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
         if os.path.exists(fname):
