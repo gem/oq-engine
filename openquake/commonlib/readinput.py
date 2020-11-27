@@ -713,11 +713,10 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def preclassical(srcs, params, monitor):
+def preclassical(srcs, srcfilter, params, monitor):
     """
     Prefilter and weight the sources. Also split if split_sources is true.
     """
-    srcfilter = monitor.read('srcfilter')
     # nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
     sources = []
@@ -771,7 +770,6 @@ def get_composite_source_model(oqparam, h5=None):
     sitecol = get_site_collection(oqparam, h5)
     full_lt = get_full_lt(oqparam)
     srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
-    performance.Monitor.save(h5, 'srcfilter', srcfilter)
 
     # then read the composite source model from the cache if possible
     if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
@@ -819,7 +817,7 @@ def get_composite_source_model(oqparam, h5=None):
                  split_sources=oqparam.split_sources)
     res = parallel.Starmap(
         preclassical,
-        ((srcs, param) for srcs in sources_by_grp.values()), h5=h5,
+        ((srcs, srcfilter, param) for srcs in sources_by_grp.values()), h5=h5,
         distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
 
     if res and res['before'] != res['after']:

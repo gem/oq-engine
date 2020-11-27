@@ -300,6 +300,7 @@ class ClassicalCalculator(base.HazardCalculator):
             return
 
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        smap.monitor.save('srcfilter', self.src_filter())
         self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
