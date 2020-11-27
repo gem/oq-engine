@@ -123,6 +123,8 @@ def preclassical(srcs, params, monitor):
         arr[3] = monitor.task_no
     dic = grid_point_sources(sources, params['ps_grid_spacing'])
     dic['calc_times'] = calc_times
+    dic['before'] = len(sources)
+    dic['after'] = len(dic[sources[0].grp_id])
     return dic
 
 
@@ -333,6 +335,9 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = SourceGroup(sources[0].tectonic_region_type)
             sg.sources = res[grp_id]
             self.csm.src_groups[grp_id] = sg
+        if res['before'] != res['after']:
+            logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
+                         format(res['before'], res['after']))
 
         # exit early if we want to perform only a preclassical
         if oq.calculation_mode == 'preclassical':
