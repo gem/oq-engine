@@ -823,20 +823,20 @@ def get_composite_source_model(oqparam, h5=None):
         ((srcs, srcfilter, param) for srcs in sources_by_grp.values()), h5=h5,
         distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
 
-    if res and res['before'] != res['after']:
-        logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
-                     format(res['before'], res['after']))
+    if res and h5:
+        csm.update_source_info(res['calc_times'], nsites=True)
+        if oqparam.calculation_mode == 'preclassical':
+            recs = [tuple(row) for row in csm.source_info.values()]
+            hdf5.extend(h5['source_info'], numpy.array(recs, source_info_dt))
 
     for grp_id, sources in sources_by_grp.items():
         sg = SourceGroup(sources[0].tectonic_region_type)
         sg.sources = res[grp_id]
         csm.src_groups[grp_id] = sg
 
-    if h5:
-        csm.update_source_info(res['calc_times'], nsites=True)
-        if oqparam.calculation_mode == 'preclassical':
-            recs = [tuple(row) for row in csm.source_info.values()]
-            hdf5.extend(h5['source_info'], numpy.array(recs, source_info_dt))
+    if res and res['before'] != res['after']:
+        logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
+                     format(res['before'], res['after']))
 
     if oqparam.cachedir:
         logging.info('Saving %s', fname)
