@@ -533,7 +533,6 @@ class HazardCalculator(BaseCalculator):
             self.read_exposure(haz_sitecol)  # define .assets_by_site
             poes = fix_ones(readinput.pmap).array(len(haz_sitecol))
             self.datastore['_poes'] = poes
-            self.datastore['sitecol'] = self.sitecol
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['rlzs_by_g'] = sum(
@@ -637,6 +636,7 @@ class HazardCalculator(BaseCalculator):
             self.sitecol, self.assetcol, discarded = (
                 readinput.get_sitecol_assetcol(
                     oq, haz_sitecol, self.crmodel.loss_types))
+            self.datastore['sitecol'] = self.sitecol
             if len(discarded):
                 self.datastore['discarded'] = discarded
                 if 'scenario' in oq.calculation_mode:
@@ -646,7 +646,6 @@ class HazardCalculator(BaseCalculator):
                                  'to show them and `oq plot_assets` to plot '
                                  'them' % len(discarded))
                 elif not oq.discard_assets:  # raise an error
-                    self.datastore['sitecol'] = self.sitecol
                     self.datastore['assetcol'] = self.assetcol
                     raise RuntimeError(
                         '%d assets were discarded; use `oq show discarded` to'
@@ -752,6 +751,7 @@ class HazardCalculator(BaseCalculator):
             if oq.shakemap_id or 'shakemap' in oq.inputs:
                 self.sitecol, self.assetcol = self.read_shakemap(
                     haz_sitecol, assetcol)
+                self.datastore['sitecol'] = self.sitecol
                 self.datastore['assetcol'] = self.assetcol
                 logging.info('Extracted %d/%d assets',
                              len(self.assetcol), len(assetcol))
@@ -812,7 +812,7 @@ class HazardCalculator(BaseCalculator):
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq)
                 self.sitecol.complete.assoc(sm, assoc_dist)
-            self.datastore['sitecol'] = self.sitecol.complete
+                self.datastore['sitecol'] = self.sitecol
 
         # store amplification functions if any
         self.af = None
@@ -836,7 +836,9 @@ class HazardCalculator(BaseCalculator):
             sp.prepare(self.sitecol)  # add columns as needed
 
         self.param = dict(individual_curves=oq.individual_curves,
+                          ps_grid_spacing=oq.ps_grid_spacing,
                           collapse_level=oq.collapse_level,
+                          split_sources=oq.split_sources,
                           avg_losses=oq.avg_losses,
                           amplifier=self.amplifier,
                           sec_perils=sec_perils,
