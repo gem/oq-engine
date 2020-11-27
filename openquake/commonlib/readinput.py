@@ -51,6 +51,7 @@ from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
@@ -769,7 +770,10 @@ def get_composite_source_model(oqparam, h5=None):
     # first of all, read the sites and the logic tree
     sitecol = get_site_collection(oqparam, h5)
     full_lt = get_full_lt(oqparam)
-    fewsites = sitecol.filter(sitecol.sids % 10 == 0)
+    if sitecol is None:
+        fewsites = None
+    else:
+        fewsites = sitecol.filter(sitecol.sids % 10 == 0)
     # performance hack: use 1 site over 10 when weighting the sources!
     srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
 
@@ -802,10 +806,32 @@ def get_composite_source_model(oqparam, h5=None):
     if os.environ.get('OQ_CHECK_INPUT'):
         source.check_complex_faults(csm.get_sources())
 
-    logging.info('Checking the sources bounding box')
-    sids = srcfilter.within_bbox(srcs)
-    if len(sids) == 0:
-        raise RuntimeError('All sources were discarded!?')
+    if sitecol:  # missing in test_case_1_ruptures
+        logging.info('Checking the sources bounding box')
+        lons = []
+        lats = []
+        for src in srcs:
+            try:
+                box = srcfilter.integration_distance.get_enlarged_box(src)
+            except BBoxError as exc:
+                logging.error(exc)
+                continue
+            lons.append(box[0])
+            lats.append(box[1])
+            lons.append(box[2])
+            lats.append(box[3])
+        if cross_idl(*(list(sitecol.lons) + lons)):
+            lons = numpy.array(lons) % 360
+        else:
+            lons = numpy.array(lons)
+        bbox = (lons.min(), min(lats), lons.max(), max(lats))
+        if bbox[2] - bbox[0] > 180:
+            raise BBoxError(
+                'The bounding box of the sources is larger than half '
+                'the globe: %d degrees' % (bbox[2] - bbox[0]))
+        sids = sitecol.within_bbox(bbox)
+        if len(sids) == 0:
+            raise RuntimeError('All sources were discarded!?')
 
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):

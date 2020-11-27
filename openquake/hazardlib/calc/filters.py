@@ -18,7 +18,6 @@
 
 import ast
 import sys
-import logging
 import operator
 from contextlib import contextmanager
 import numpy
@@ -27,7 +26,7 @@ from scipy.spatial import cKDTree
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 U32 = numpy.uint32
@@ -399,36 +398,6 @@ class SourceFilter(object):
             if len(sids):
                 src.nsites = len(sids)
                 yield src, sids
-
-    def within_bbox(self, srcs):
-        """
-        :param srcs: a list of source objects
-        :returns: the site IDs within the enlarged bounding box of the sources
-        """
-        if self.sitecol is None:  # for test_case_1_ruptures
-            return [0]
-        lons = []
-        lats = []
-        for src in srcs:
-            try:
-                box = self.integration_distance.get_enlarged_box(src)
-            except BBoxError as exc:
-                logging.error(exc)
-                continue
-            lons.append(box[0])
-            lats.append(box[1])
-            lons.append(box[2])
-            lats.append(box[3])
-        if cross_idl(*(list(self.sitecol.lons) + lons)):
-            lons = numpy.array(lons) % 360
-        else:
-            lons = numpy.array(lons)
-        bbox = (lons.min(), min(lats), lons.max(), max(lats))
-        if bbox[2] - bbox[0] > 180:
-            raise BBoxError(
-                'The bounding box of the sources is larger than half '
-                'the globe: %d degrees' % (bbox[2] - bbox[0]))
-        return self.sitecol.within_bbox(bbox)
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:
