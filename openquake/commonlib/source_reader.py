@@ -30,6 +30,8 @@ from openquake.hazardlib.lt import apply_uncertainties
 TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
 
+CALC_TIME, NUM_SITES, EFF_RUPTURES, TASK_NO = 3, 4, 5, 7
+
 
 def et_ids(src):
     return tuple(src.et_ids)
@@ -331,6 +333,19 @@ class CompositeSourceModel:
         if not data:
             return numpy.array([1, 1])
         return numpy.array(data).mean(axis=0)
+
+    def update_source_info(self, calc_times, nsites=False):
+        """
+        Update (eff_ruptures, num_sites, calc_time) inside the source_info
+        """
+        for src_id, arr in calc_times.items():
+            row = self.source_info[src_id]
+            row[CALC_TIME] += arr[2]
+            if len(arr) == 4:  # after preclassical
+                row[TASK_NO] = arr[3]
+            if nsites:
+                row[EFF_RUPTURES] += arr[0]
+                row[NUM_SITES] += arr[1]
 
     def __repr__(self):
         """
