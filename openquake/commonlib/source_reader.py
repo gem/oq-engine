@@ -85,8 +85,6 @@ def get_csm(oq, full_lt, h5=None):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
-            sg.mags = numpy.unique(numpy.round(src.mags, 2))
-            del src.__dict__['mags']  # remove cache
             src.checksum = src.et_id = src.id = et_id
             src.samples = sm_rlz.samples
             logging.info('Reading sections and rupture planes for %s', src)
@@ -306,11 +304,10 @@ class CompositeSourceModel:
         """
         mags = general.AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
-            if hasattr(sg, 'mags'):  # UCERF
-                mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
             for src in sg:
                 if hasattr(src, 'mags'):  # UCERF
-                    continue  # already accounted for in sg.mags
+                    srcmags = ['%.2f' % mag for mag in numpy.unique(
+                        numpy.round(src.mags, 2))]
                 elif hasattr(src, 'data'):  # nonparametric
                     srcmags = ['%.2f' % item[0].mag for item in src.data]
                 else:
