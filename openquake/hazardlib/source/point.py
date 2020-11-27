@@ -371,14 +371,9 @@ class CollapsedPointSource(ParametricSeismicSource):
         self.location = Point(longitude=numpy.mean(lons),
                               latitude=numpy.mean(lats),
                               depth=numpy.average(depths, weights=weights))
-        strike = numpy.average(strikes, weights=np_weights)
-        dip = numpy.average(dips, weights=np_weights)
-        rake = numpy.average(rakes, weights=np_weights)
-        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
-            pr = PointRupture(mag, self.tectonic_region_type, self.location,
-                              strike, dip, rake, mag_occ_rate,
-                              self.temporal_occurrence_model)
-            self.pointruptures.append(pr)
+        self.strike = numpy.average(strikes, weights=np_weights)
+        self.dip = numpy.average(dips, weights=np_weights)
+        self.rake = numpy.average(rakes, weights=np_weights)
 
     def get_annual_occurrence_rates(self):
         """
@@ -398,15 +393,19 @@ class CollapsedPointSource(ParametricSeismicSource):
 
     def point_ruptures(self):
         """
-        :returns: the underlying point ruptures
+        :yields: the underlying point ruptures
         """
-        return self.pointruptures
+        for mag, mag_occ_rate in self.get_annual_occurrence_rates():
+            pr = PointRupture(mag, self.tectonic_region_type, self.location,
+                              self.strike, self.dip, self.rake, mag_occ_rate,
+                              self.temporal_occurrence_model)
+            yield pr
 
     def count_ruptures(self):
         """
-        :returns: the number of underlying point ruptures * P
+        :returns: the number of underlying point ruptures * 2
         """
-        return len(self.pointruptures) * len(self.pointsources)
+        return len(self.get_annual_occurrence_rates()) * 2
 
     def get_bounding_box(self, maxdist):
         """

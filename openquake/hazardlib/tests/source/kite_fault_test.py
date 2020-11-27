@@ -123,7 +123,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
                                        blit=False, interval=1000)
 
         Writer = animation.writers['ffmpeg']
-        writer = Writer(fps=5, metadata=dict(artist='GEM'),
+        writer = Writer(fps=2, metadata=dict(artist='GEM'),
                         bitrate=1800, extra_args=['-vcodec', 'libx264'])
         fname = '/tmp/kite_fault_source_{:s}.mp4'.format(lab)
         anim.save(fname, writer=writer)
@@ -177,7 +177,8 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
             ppp(source.profiles, source.surface)
 
         if MAKE_MOVIES:
-            self._ruptures_animation('test01', source.surface, self.ruptures,
+            ruptures = [r for r in source.iter_ruptures()]
+            self._ruptures_animation('test01', source.surface, ruptures,
                                      source.profiles)
 
     def test02(self):
@@ -198,5 +199,6 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         self.assertEqual(source.count_ruptures(), 28, msg)
 
         if MAKE_MOVIES:
-            self._ruptures_animation('test02', source.surface, self.ruptures,
+            ruptures = [r for r in source.iter_ruptures()]
+            self._ruptures_animation('test02', source.surface, ruptures,
                                      source.profiles)
