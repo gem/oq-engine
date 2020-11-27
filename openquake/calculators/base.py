@@ -632,6 +632,7 @@ class HazardCalculator(BaseCalculator):
             self.sitecol, self.assetcol, discarded = (
                 readinput.get_sitecol_assetcol(
                     oq, haz_sitecol, self.crmodel.loss_types))
+            self.datastore['sitecol'] = self.sitecol
             if len(discarded):
                 self.datastore['discarded'] = discarded
                 if 'scenario' in oq.calculation_mode:
@@ -641,7 +642,6 @@ class HazardCalculator(BaseCalculator):
                                  'to show them and `oq plot_assets` to plot '
                                  'them' % len(discarded))
                 elif not oq.discard_assets:  # raise an error
-                    self.datastore['sitecol'] = self.sitecol
                     self.datastore['assetcol'] = self.assetcol
                     raise RuntimeError(
                         '%d assets were discarded; use `oq show discarded` to'
