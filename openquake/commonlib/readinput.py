@@ -788,8 +788,11 @@ def get_composite_source_model(oqparam, h5=None):
             with open(fname, 'rb') as f:
                 csm = pickle.load(f)
                 csm.full_lt = full_lt
-                save_source_info(csm, h5)
-                return csm
+            if h5:
+                # avoid errors with --reuse_hazard
+                h5['et_ids'] = csm.get_et_ids()
+                hdf5.create(h5, 'source_info', source_info_dt)
+            return csm
 
     # else read and process the composite source model
     csm = get_csm(oqparam, full_lt,  h5)
