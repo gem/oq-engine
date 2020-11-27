@@ -814,7 +814,8 @@ def get_composite_source_model(oqparam, h5=None):
     sources_by_grp = groupby(
         csm.get_sources(atomic=False), operator.attrgetter('grp_id'))
     param = dict(ps_grid_spacing=oqparam.ps_grid_spacing,
-                 split_sources=oqparam.split_sources)
+                 split_sources=False if oqparam.is_event_based()
+                 else oqparam.split_sources)
     res = parallel.Starmap(
         preclassical,
         ((srcs, srcfilter, param) for srcs in sources_by_grp.values()), h5=h5,
