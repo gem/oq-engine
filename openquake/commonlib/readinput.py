@@ -851,6 +851,7 @@ def get_composite_source_model(oqparam, h5=None):
     param = dict(ps_grid_spacing=oqparam.ps_grid_spacing,
                  split_sources=False if oqparam.is_event_based()
                  else oqparam.split_sources)
+
     res = parallel.Starmap(
         weight_sources,
         ((srcs, srcfilter, param) for srcs in sources_by_grp.values()), h5=h5,
@@ -862,13 +863,11 @@ def get_composite_source_model(oqparam, h5=None):
             recs = [tuple(row) for row in csm.source_info.values()]
             hdf5.extend(h5['source_info'], numpy.array(recs, source_info_dt))
 
-    src_groups = {grp_id: SourceGroup(sg.trt)
-                  for grp_id, sg in enumerate(csm.src_groups)}
-    for (grp_id, msr), sources in sources_by_grp.items():
-        src_groups[grp_id].sources.extend(sources)
-    for grp_id, sg in enumerate(csm.src_groups):
-        if grp_id in src_groups:
-            csm.src_groups[grp_id] = src_groups[grp_id]
+    for grp_id, srcs in res.items():
+        if isinstance(grp_id, int):
+            newsg = SourceGroup(srcs[0].tectonic_region_type)
+            newsg.sources = srcs
+            csm.src_groups[grp_id] = newsg
 
     if res and res['before'] != res['after']:
         logging.info('Reduced the number of sources from {:_d} -> {:_d}'.

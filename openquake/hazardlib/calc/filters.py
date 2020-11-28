@@ -217,9 +217,9 @@ def split_source(src):
     """
     from openquake.hazardlib.source import splittable  # avoid circular import
     if not splittable(src):
+        if not src.num_ruptures:  # not set yet
+            src.num_ruptures = src.count_ruptures()
         return [src]
-    if not src.num_ruptures:  # not set yet
-        src.num_ruptures = src.count_ruptures()
     mag_a, mag_b = src.get_min_max_mag()
     min_mag = src.min_mag
     if mag_b < min_mag:  # discard the source completely
@@ -231,9 +231,6 @@ def split_source(src):
             mag_a, mag_b = s.get_min_max_mag()
             if mag_b < min_mag:
                 continue
-            s.num_ruptures = s.count_ruptures()
-            if s.num_ruptures:
-                splits.append(s)
     else:
         splits = list(src)
     has_samples = hasattr(src, 'samples')
@@ -259,6 +256,10 @@ def split_source(src):
             s.samples = src.samples
         if has_scaling_rate:
             s.scaling_rate = src.scaling_rate
+    for split in splits:
+        if not split.num_ruptures:
+            split.num_ruptures = split.count_ruptures()
+            print(split.num_ruptures)
     return splits
 
 

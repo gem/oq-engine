@@ -72,7 +72,13 @@ def _get_rupture_dimensions(src, mag, rake, dip):
 
 
 def msr_name(src):
-    return src.magnitude_scaling_relationship.__class__.__name__
+    """
+    :returns: the name of MSR class or "Undefined" if not applicable
+    """
+    try:
+        return src.magnitude_scaling_relationship.__class__.__name__
+    except AttributeError:   # no MSR for nonparametric sources
+        return 'Undefined'
 
 
 def calc_average(pointsources):
