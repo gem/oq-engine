@@ -2,8 +2,7 @@
   * Fixed `oq recompute_losses` to expose the outputs to the database
   * Fixed `oq engine --run --params` that was not working for
     the `pointsource_distance`
-  * Fixed the strike, dip and rake parameters in PointRuptures when using
-    the `pointsource_distance` approximation
+  * Changed the meaning of the `pointsource_distance` approximation
 
   [Marco Pagani, Michele Simionato, Thomas Chartier]
   * Added experimental version of KiteSource and KiteSurface

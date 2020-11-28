@@ -66,7 +66,7 @@ class NodalPlane(object):
         Check if ``strike`` is in range ``[0, 360)``
         and raise ``ValueError`` otherwise.
         """
-        if not 0 <= strike < 360.000001:  # some tolerance for numeric errors
+        if not 0 <= strike < 360:
             raise ValueError('strike %g is out of range [0, 360)' % strike)
 
     @classmethod
