@@ -810,7 +810,7 @@ def _check_csm(csm, oqparam, h5):
     return srcfilter
 
 
-def _massage_csm(csm, srcfilter, oqparam, h5):
+def _weight_sources(csm, srcfilter, oqparam, h5):
 
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
@@ -860,7 +860,7 @@ def get_composite_source_model(oqparam, h5=None):
     if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
         os.makedirs(oqparam.cachedir)
     if oqparam.cachedir and not oqparam.is_ucerf():
-        # for UCERF pickling the csm makes no sense
+        # for UCERF pickling the csm is slower
         checksum = get_checksum32(oqparam, h5)
         fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
         if os.path.exists(fname):
@@ -878,11 +878,9 @@ def get_composite_source_model(oqparam, h5=None):
     csm = get_csm(oqparam, full_lt,  h5)
     save_source_info(csm, h5)
     srcfilter = _check_csm(csm, oqparam, h5)
-    classical = not oqparam.is_event_based()
-    if classical:
-        _massage_csm(csm, srcfilter, oqparam, h5)
-        # sanity check
-        for sg in csm.src_groups:
+    if not oqparam.is_event_based():
+        _weight_sources(csm, srcfilter, oqparam, h5)
+        for sg in csm.src_groups:  # sanity check
             for src in sg:
                 assert src.num_ruptures
                 assert src.nsites
