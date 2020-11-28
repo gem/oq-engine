@@ -584,7 +584,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numrups, 499)  # effective ruptures
+        self.assertEqual(self.calc.numrups, 623)  # effective ruptures
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
@@ -622,8 +622,9 @@ hazard_uhs-std.csv
         self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
         dst = get_dists(self.calc.datastore)
         # approx distances from site 0 and site 1 respectively
-        self.assertEqual(dst[0], [56, 56, 56, 53, 52, 51, 48, 44, 38, 33])
-        self.assertEqual(dst[1], [108, 107, 106, 103, 99, 92, 82])
+        self.assertEqual(dst[0], [54, 54, 53, 53, 52, 51, 48, 44, 38, 33])
+        self.assertEqual(dst[1], [110, 109, 109, 108, 107, 106, 103, 99,
+                                  92, 82])
         # This test shows in detail what happens to the distances in presence
         # of a magnitude-dependent pointsource_distance.
         # The exact distances for the first site are 54, 54, 53, ... 38, 33 km;
