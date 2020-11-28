@@ -27,7 +27,6 @@ import pickle
 import shutil
 import zipfile
 import logging
-import operator
 import tempfile
 import functools
 import configparser
@@ -721,6 +720,7 @@ def weight_sources(srcs, srcfilter, params, monitor):
     # nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
     sources = []
+    grp_id = srcs[0].grp_id
     for src in srcs:
         t0 = time.time()
         sources.extend(srcfilter.split_source(src, params['split_sources']))
@@ -728,10 +728,10 @@ def weight_sources(srcs, srcfilter, params, monitor):
         calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt, 0])
     for arr in calc_times.values():
         arr[3] = monitor.task_no
-    dic = grid_point_sources(sources, params['ps_grid_spacing'])
+    dic = grid_point_sources(sources, grp_id, params['ps_grid_spacing'])
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
-    dic['after'] = len(dic[sources[0].grp_id])
+    dic['after'] = len(dic[grp_id])
     return dic
 
 
@@ -864,7 +864,8 @@ def get_composite_source_model(oqparam, h5=None):
             hdf5.extend(h5['source_info'], numpy.array(recs, source_info_dt))
 
     for grp_id, srcs in res.items():
-        if isinstance(grp_id, int):
+        # srcs can be empty if the minimum_magnitude filter is on
+        if srcs and isinstance(grp_id, int):
             newsg = SourceGroup(srcs[0].tectonic_region_type)
             newsg.sources = srcs
             csm.src_groups[grp_id] = newsg

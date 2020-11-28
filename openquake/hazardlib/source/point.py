@@ -462,16 +462,17 @@ def _coords(psources):
     return arr
 
 
-def grid_point_sources(sources, ps_grid_spacing):
+def grid_point_sources(sources, grp_id, ps_grid_spacing):
     """
     :param sources:
         a list of sources with the same grp_id (point sources and not)
+    :param grp_id:
+        source group ID (integer)
     :param ps_grid_spacing:
         value of the point source grid spacing in km; if None, do nothing
     :returns:
         a dict grp_id -> list of non-point sources and collapsed point sources
     """
-    grp_id = sources[0].grp_id
     for src in sources[1:]:
         assert src.grp_id == grp_id, (src.grp_id, grp_id)
     if ps_grid_spacing is None:
