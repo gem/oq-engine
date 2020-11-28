@@ -227,9 +227,8 @@ def split_source(src):
         for s in src:
             s.min_mag = min_mag
             mag_a, mag_b = s.get_min_max_mag()
-            if mag_b < min_mag:
-                continue
-            splits.append(s)
+            if mag_b >= min_mag:
+                splits.append(s)
     else:
         splits = list(src)
     has_samples = hasattr(src, 'samples')

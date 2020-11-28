@@ -865,7 +865,7 @@ def get_composite_source_model(oqparam, h5=None):
 
     for grp_id, srcs in res.items():
         # srcs can be empty if the minimum_magnitude filter is on
-        if srcs and isinstance(grp_id, int):
+        if srcs and not isinstance(grp_id, str):
             newsg = SourceGroup(srcs[0].tectonic_region_type)
             newsg.sources = srcs
             csm.src_groups[grp_id] = newsg
