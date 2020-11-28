@@ -180,7 +180,6 @@ class SimpleFaultSource(ParametricSeismicSource):
                                     self.temporal_occurrence_model,
                                     rupture_slip_direction)
 
-
     def get_fault_surface_area(self):
         """
         Computes the area covered by the surface of the fault.
@@ -188,9 +187,10 @@ class SimpleFaultSource(ParametricSeismicSource):
         :returns:
             A float defining the area of the surface of the fault [km^2]
         """
-        sfc = SimpleFaultSurface.from_fault_data(self.fault_trace,
-                self.upper_seismogenic_depth, self.lower_seismogenic_depth,
-                self.dip, 1.0)
+        sfc = SimpleFaultSurface.from_fault_data(
+            self.fault_trace,
+            self.upper_seismogenic_depth, self.lower_seismogenic_depth,
+            self.dip, 1.0)
         return sfc.get_area()
 
     def count_ruptures(self):

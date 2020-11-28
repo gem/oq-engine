@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+import numpy
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.source.point import PointSource, CollapsedPointSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -26,6 +27,8 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.tests.geo.surface import \
     _planar_test_data as planar_surface_test_data
 from openquake.hazardlib.tests import assert_pickleable
+
+aac = numpy.testing.assert_allclose
 
 
 def make_point_source(lon=1.2, lat=3.4, **kwargs):
@@ -433,16 +436,16 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
         ps1 = make_point_source(lon=1.2, lat=3.4)
         ps2 = make_point_source(
             lon=1.3, lat=3.4, hypocenter_distribution=PMF([(.5, 4), (.5, 3)]))
-        self.assertEqual(ps1.get_annual_occurrence_rates(),
-                         [(3.5, 9.9e-06), (4.5, 9.9e-08)])
-        self.assertEqual(ps2.get_annual_occurrence_rates(),
-                         [(3.5, 9.9e-06), (4.5, 9.9e-08)])
+        aac(ps1.get_annual_occurrence_rates(),
+            [(3.5, 9.9e-06), (4.5, 9.9e-08)])
+        aac(ps2.get_annual_occurrence_rates(),
+            [(3.5, 9.9e-06), (4.5, 9.9e-08)])
         cps = CollapsedPointSource([ps1, ps2])
-        self.assertEqual(cps.location.x, 1.25)
-        self.assertEqual(cps.location.y, 3.4)
-        self.assertEqual(cps.location.z, 3.75)
+        aac(cps.location.x, 1.25)
+        aac(cps.location.y, 3.4)
+        aac(cps.location.z, 3.75)
         rates = cps.get_annual_occurrence_rates()
-        self.assertEqual(rates, [(3.5, 1.98e-05), (4.5, 1.98e-07)])
-        self.assertEqual(ps1.count_ruptures(), 2)
-        self.assertEqual(ps2.count_ruptures(), 4)
-        self.assertEqual(cps.count_ruptures(), 4)
+        aac(rates, [(3.5, 1.98e-05), (4.5, 1.98e-07)])
+        aac(ps1.count_ruptures(), 2)
+        aac(ps2.count_ruptures(), 4)
+        aac(cps.count_ruptures(), 4)

@@ -27,7 +27,6 @@ import pickle
 import shutil
 import zipfile
 import logging
-import operator
 import tempfile
 import functools
 import configparser
@@ -46,7 +45,7 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
-from openquake.hazardlib.source import rupture
+from openquake.hazardlib.source import point, rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.source.point import grid_point_sources
@@ -721,6 +720,7 @@ def weight_sources(srcs, srcfilter, params, monitor):
     # nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
     sources = []
+    grp_id = srcs[0].grp_id
     for src in srcs:
         t0 = time.time()
         sources.extend(srcfilter.split_source(src, params['split_sources']))
@@ -728,10 +728,10 @@ def weight_sources(srcs, srcfilter, params, monitor):
         calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt, 0])
     for arr in calc_times.values():
         arr[3] = monitor.task_no
-    dic = grid_point_sources(sources, params['ps_grid_spacing'])
+    dic = grid_point_sources(sources, grp_id, params['ps_grid_spacing'])
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
-    dic['after'] = len(dic[sources[0].grp_id])
+    dic['after'] = len(dic[grp_id])
     return dic
 
 
@@ -846,10 +846,12 @@ def get_composite_source_model(oqparam, h5=None):
 
     # run weight_sources for non-atomic sources
     sources_by_grp = groupby(
-        csm.get_sources(atomic=False), operator.attrgetter('grp_id'))
+        csm.get_sources(atomic=False),
+        lambda src: (src.grp_id, point.msr_name(src)))
     param = dict(ps_grid_spacing=oqparam.ps_grid_spacing,
                  split_sources=False if oqparam.is_event_based()
                  else oqparam.split_sources)
+
     res = parallel.Starmap(
         weight_sources,
         ((srcs, srcfilter, param) for srcs in sources_by_grp.values()), h5=h5,
@@ -861,10 +863,17 @@ def get_composite_source_model(oqparam, h5=None):
             recs = [tuple(row) for row in csm.source_info.values()]
             hdf5.extend(h5['source_info'], numpy.array(recs, source_info_dt))
 
-    for grp_id, sources in sources_by_grp.items():
-        sg = SourceGroup(sources[0].tectonic_region_type)
-        sg.sources = res[grp_id]
-        csm.src_groups[grp_id] = sg
+    for grp_id, srcs in res.items():
+        # srcs can be empty if the minimum_magnitude filter is on
+        if srcs and not isinstance(grp_id, str):
+            newsg = SourceGroup(srcs[0].tectonic_region_type)
+            newsg.sources = srcs
+            csm.src_groups[grp_id] = newsg
+
+    # sanity check
+    for sg in csm.src_groups:
+        for src in sg:
+            assert src.num_ruptures
 
     if res and res['before'] != res['after']:
         logging.info('Reduced the number of sources from {:_d} -> {:_d}'.

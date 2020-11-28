@@ -57,7 +57,7 @@ class NodalPlane(object):
         Check if ``dip`` is in range ``(0, 90]``
         and raise ``ValueError`` otherwise.
         """
-        if not 0 < dip <= 90:
+        if not 0 < dip < 90.000001:  # some tolerance for numeric errors
             raise ValueError('dip %g is out of range (0, 90]' % dip)
 
     @classmethod
