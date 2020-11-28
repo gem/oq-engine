@@ -26,8 +26,7 @@ from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture import (
-    ParametricProbabilisticRupture, PointRupture)
+from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
 
@@ -423,6 +422,23 @@ class CollapsedPointSource(PointSource):
                 mag, self.rake, self.tectonic_region_type,
                 nhc, surface, mag_occ_rate,
                 self.temporal_occurrence_model)
+
+    def _get_max_rupture_projection_radius(self, mag=None):
+        """
+        Find a maximum radius of a circle on Earth surface enveloping a rupture
+        produced by this source.
+
+        :returns:
+            Half of maximum rupture's diagonal surface projection.
+        """
+        if mag is None:
+            mag, _rate = self.get_annual_occurrence_rates()[-1]
+        rup_length, rup_width = _get_rupture_dimensions(
+            self, mag, self.rake, self.dip)
+        rup_width = rup_width * math.cos(math.radians(self.dip))
+        # the projection radius is half of the rupture diagonal
+        self.radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+        return self.radius
 
     def count_ruptures(self):
         """
