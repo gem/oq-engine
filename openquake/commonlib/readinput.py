@@ -758,50 +758,7 @@ def save_source_info(csm, h5):
         h5['et_ids'] = csm.get_et_ids()
 
 
-def get_composite_source_model(oqparam, h5=None):
-    """
-    Parse the XML and build a complete composite source model in memory.
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param h5:
-         an open hdf5.File where to store the source info
-    """
-    # first of all, read the sites and the logic tree
-    sitecol = get_site_collection(oqparam, h5)
-    full_lt = get_full_lt(oqparam)
-    if sitecol is None:
-        fewsites = None
-    elif len(sitecol) <= oqparam.max_sites_disagg:
-        fewsites = sitecol
-    else:  # long sitecol
-        fewsites = sitecol.filter(sitecol.sids % 10 == 0)
-    # performance hack: use 1 site over 10 when weighting the sources!
-    srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
-
-    # then read the composite source model from the cache if possible
-    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
-        os.makedirs(oqparam.cachedir)
-    if oqparam.cachedir and not oqparam.is_ucerf():
-        # for UCERF pickling the csm makes no sense
-        checksum = get_checksum32(oqparam, h5)
-        fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
-        if os.path.exists(fname):
-            logging.info('Reading %s', fname)
-            with open(fname, 'rb') as f:
-                csm = pickle.load(f)
-                csm.full_lt = full_lt
-            if h5:
-                # avoid errors with --reuse_hazard
-                h5['et_ids'] = csm.get_et_ids()
-                hdf5.create(h5, 'source_info', source_info_dt)
-            return csm
-
-    # else read and process the composite source model
-    csm = get_csm(oqparam, full_lt,  h5)
-    logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
-    save_source_info(csm, h5)
-
+def _check_csm(csm, oqparam, h5):
     # checks
     csm.gsim_lt.check_imts(oqparam.imtls)
 
@@ -810,7 +767,18 @@ def get_composite_source_model(oqparam, h5=None):
         raise RuntimeError('All sources were discarded!?')
 
     if os.environ.get('OQ_CHECK_INPUT'):
-        source.check_complex_faults(csm.get_sources())
+        source.check_complex_faults(srcs)
+
+    # build a smart SourceFilter
+    sitecol = get_site_collection(oqparam, h5)
+    if sitecol is None:
+        fewsites = None
+    elif len(sitecol) <= oqparam.max_sites_disagg:
+        fewsites = sitecol
+    else:  # long sitecol
+        fewsites = sitecol.filter(sitecol.sids % 10 == 0)
+    # performance hack: use 1 site over 10 when weighting the sources!
+    srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
 
     if sitecol:  # missing in test_case_1_ruptures
         logging.info('Checking the sources bounding box')
@@ -839,29 +807,34 @@ def get_composite_source_model(oqparam, h5=None):
         if len(sids) == 0:
             raise RuntimeError('All sources were discarded!?')
 
+    return srcfilter
+
+
+def _massage_csm(csm, srcfilter, oqparam, h5):
+
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
         src.num_ruptures = src.count_ruptures()
-        src.nsites = len(sitecol)
+        src.nsites = len(srcfilter.sitecol)
 
     # run weight_sources for non-atomic sources
     sources_by_grp = groupby(
         csm.get_sources(atomic=False),
         lambda src: (src.grp_id, point.msr_name(src)))
     param = dict(ps_grid_spacing=oqparam.ps_grid_spacing,
-                 split_sources=False if oqparam.is_event_based()
-                 else oqparam.split_sources)
+                 split_sources=oqparam.split_sources)
 
     res = parallel.Starmap(
         weight_sources,
         ((srcs, srcfilter, param) for srcs in sources_by_grp.values()), h5=h5,
         distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
 
+    if res and res['before'] != res['after']:
+        logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
+                     format(res['before'], res['after']))
+
     if res and h5:
         csm.update_source_info(res['calc_times'], nsites=True)
-        if oqparam.calculation_mode == 'preclassical':
-            recs = [tuple(row) for row in csm.source_info.values()]
-            hdf5.extend(h5['source_info'], numpy.array(recs, source_info_dt))
 
     for grp_id, srcs in res.items():
         # srcs can be empty if the minimum_magnitude filter is on
@@ -870,16 +843,52 @@ def get_composite_source_model(oqparam, h5=None):
             newsg.sources = srcs
             csm.src_groups[grp_id] = newsg
 
-    # sanity check
-    for sg in csm.src_groups:
-        for src in sg:
-            assert src.num_ruptures
 
-    if res and res['before'] != res['after']:
-        logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
-                     format(res['before'], res['after']))
+def get_composite_source_model(oqparam, h5=None):
+    """
+    Parse the XML and build a complete composite source model in memory.
 
-    if oqparam.cachedir:
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param h5:
+         an open hdf5.File where to store the source info
+    """
+    # first read the logic tree
+    full_lt = get_full_lt(oqparam)
+
+    # then read the composite source model from the cache if possible
+    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
+        os.makedirs(oqparam.cachedir)
+    if oqparam.cachedir and not oqparam.is_ucerf():
+        # for UCERF pickling the csm makes no sense
+        checksum = get_checksum32(oqparam, h5)
+        fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
+        if os.path.exists(fname):
+            logging.info('Reading %s', fname)
+            with open(fname, 'rb') as f:
+                csm = pickle.load(f)
+                csm.full_lt = full_lt
+            if h5:
+                # avoid errors with --reuse_hazard
+                h5['et_ids'] = csm.get_et_ids()
+                hdf5.create(h5, 'source_info', source_info_dt)
+            return csm
+
+    # read and process the composite source model from the input files
+    csm = get_csm(oqparam, full_lt,  h5)
+    save_source_info(csm, h5)
+    srcfilter = _check_csm(csm, oqparam, h5)
+    classical = not oqparam.is_event_based()
+    if classical:
+        _massage_csm(csm, srcfilter, oqparam, h5)
+        # sanity check
+        for sg in csm.src_groups:
+            for src in sg:
+                assert src.num_ruptures
+                assert src.nsites
+
+    # pickle the csm
+    if oqparam.cachedir and not oqparam.is_ucerf():
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
             pickle.dump(csm, f)

@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
-import time
 import copy
 import psutil
 import pprint
@@ -36,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, util, logs
+from openquake.commonlib import calc, util, logs, readinput
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -295,6 +294,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
         # exit early if we want to perform only a preclassical
         if oq.calculation_mode == 'preclassical':
+            recs = [tuple(row) for row in self.csm.source_info.values()]
+            self.datastore['source_info'] = numpy.array(
+                recs, readinput.source_info_dt)
             self.datastore['full_lt'] = self.csm.full_lt
             self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
