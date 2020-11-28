@@ -870,6 +870,11 @@ def get_composite_source_model(oqparam, h5=None):
             newsg.sources = srcs
             csm.src_groups[grp_id] = newsg
 
+    # sanity check
+    for sg in csm.src_groups:
+        for src in sg:
+            assert src.num_ruptures
+
     if res and res['before'] != res['after']:
         logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
                      format(res['before'], res['after']))
