@@ -23,17 +23,35 @@ Module :mod:`openquake.hazardlib.gsim.sgobba_2020` implements
 import os
 import numpy as np
 import pandas as pd
+from scipy.spatial import cKDTree
 from openquake.hazardlib.geo import Point, Polygon
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 
+# From http://www.csgnetwork.com/degreelenllavcalc.html
+LEN_1_DEG_LAT_AT_43pt5 = 111.10245
+LEN_1_DEG_LON_AT_43pt5 = 80.87665
+
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'sgobba_2020')
 
 
 class SgobbaEtAl2020(GMPE):
     """
+    Implements the GMM proposed by Sgobba et al. (2020).
+
+    :param event_id:
+        A string identifying an event amongst the ones comprised in the
+        list available in the file `event.csv`
+    :param directionality:
+        A boolean
+    :param cluster:
+        If set to 'None' no cluster correction applied. If 0 the OQ Engine
+        finds the corresponding cluster using the rupture epicentral
+        location.  Otherwise, if an integer ID is provided, that
+        corresponds to the cluster id (available cluster indexes are 1, 4
+        and 5)
     """
 
     #: Supported tectonic region type is 'active shallow crust'
@@ -67,17 +85,6 @@ class SgobbaEtAl2020(GMPE):
 
     def __init__(self, event_id=None, directionality=False, cluster=None,
                  **kwargs):
-        """
-
-        :param event_id:
-        :param directionality:
-        :param cluster:
-            If set to 'None' no cluster correction applied. If 0 the OQ Engine
-            finds the corresponding cluster using the rupture epicentral
-            location.  Otherwise, if an integer ID is provided, that
-            corresponds to the cluster id (available cluster indexes are 1, 4
-            and 5)
-        """
         super().__init__(event_id=event_id,
                          directionality=directionality,
                          cluster=cluster,
@@ -87,6 +94,8 @@ class SgobbaEtAl2020(GMPE):
         self.cluster = cluster
 
         # Reading between-event std
+        self.be = 0.0
+        self.be_std = 0.0
         if event_id is not None:
             fname = os.path.join(DATA_FOLDER, 'event.csv')
             df = pd.read_csv(fname, sep=';', index_col="id",
@@ -101,8 +110,15 @@ class SgobbaEtAl2020(GMPE):
 
         # Get site indexes
         if self.cluster is not None or self.event_id is not None:
-            midpnt = rup.surface.get_middle_point()
-            print(midpnt)
+
+            # Load the coordinate of the grid
+            fname = os.path.join(DATA_FOLDER, 'grid.csv')
+            coo = np.fliplr(np.loadtxt(fname, delimiter=";"))
+
+            # Create a spatial index
+            kdt = cKDTree(coo)
+            tmp = [[s.location.longitude, s.location.latitude] for s in sites]
+            dsts, self.idxs = kdt.query(np.array(tmp))
 
         # Ergodic coeffs
         C = self.COEFFS[imt]
@@ -110,12 +126,35 @@ class SgobbaEtAl2020(GMPE):
         # Get mean
         mean = (self._get_magnitude_term(C, rup.mag) +
                 self._get_distance_term(C, rup.mag, dists) +
-                self._get_cluster_correction(sites.vs30.shape, rup))
+                self._get_site_correction(sites.vs30.shape) +
+                self._get_cluster_correction(sites.vs30.shape, rup) +
+                self.be)
+
+        # To natural logarithm 
+        mean = np.log(10.0**mean)
 
         # Get stds
         stds = []
 
         return mean, stds
+
+    def _get_site_correction(self, shape):
+        """
+        Get cluster correction
+        """
+        correction = np.zeros_like(shape)
+
+        # Cluster coefficients
+        fname = os.path.join(DATA_FOLDER, "S_model.csv")
+        data = np.loadtxt(fname, delimiter=",")
+
+        # Compute the coefficients
+        correction = np.zeros(shape)
+        for idx in np.unique(self.idxs):
+            tmp = data[int(idx)]
+            correction[self.idxs == idx] = np.interp(0, self.PERIODS,
+                                                     tmp[0:6])
+        return correction
 
     def _get_cluster_correction(self, shape, rup):
         """
@@ -125,29 +164,36 @@ class SgobbaEtAl2020(GMPE):
         if self.cluster is None:
             return correction
         elif self.cluster == 0:
+            # TODO complete with udpated polygons
             midp = rup.surface.get_middle_point()
             cluid = self._get_cluster_region(midp)
-
             for key in self.REGIONS:
                 tmp = np.reshape(np.array(self.REGIONS[key]), (-1, 2))
-                print(tmp)
-
                 import matplotlib.pyplot as plt
                 plt.plot(tmp[:, 0], tmp[:, 1])
                 plt.title(key)
                 plt.show()
-
-                #poly = Polygon([Point(p[0], p[1]) for p in tmp])
-
+                # poly = Polygon([Point(p[0], p[1]) for p in tmp])
         else:
-            pass
+
+            # Cluster coefficients
+            fname = 'P_model_cluster{:d}.csv'.format(self.cluster)
+            fname = os.path.join(DATA_FOLDER, fname)
+            data = np.loadtxt(fname, delimiter=",")
+
+            # Compute the coefficients
+            correction = np.zeros(shape)
+            for idx in np.unique(self.idxs):
+                tmp = data[int(idx)]
+                correction[self.idxs == idx] = np.interp(0, self.PERIODS,
+                                                         tmp[0:6])
+            print('correction', correction)
         return correction
 
     def _get_magnitude_term(self, C, mag):
         """
         Eq.2 - page 3
         """
-
         if mag <= self.consts['Mh']:
             return C['b1']*(mag-self.consts['Mh'])
         else:
@@ -163,22 +209,11 @@ class SgobbaEtAl2020(GMPE):
         term3 = C['c3']*(tmp-self.consts['Rref'])
         return term1 * term2 + term3
 
-    def _get_adjustments(selfs, sites):
-        """
-        """
-        adj = np.zeros_like(sites.vs30)
-        sig = np.zeros_like(sites.vs30)
-
-        adj = (self._get_delta_S2S_adj() +
-               self._get_delta_L2L_adj() +
-               self._get_delta_P2P_adj())
-
-
     def _get_cluster_region(self, hypo):
-
         for key in self.REGIONS:
             pass
 
+    PERIODS = np.array([0, 0.1, 0.2, 0.5, 1.0, 2.0])
 
     COEFFS = CoeffsTable(sa_damping=5., table="""\
      IMT       a      b1      b2      c1       c2         c3    mref    taue  phis2s  phis2sref  taul2l  phip2p    sig0   sig0d
