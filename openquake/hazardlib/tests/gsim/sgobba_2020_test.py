@@ -63,7 +63,7 @@ class Sgobba2020Test(unittest.TestCase):
         mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
 
         expected = df.PGA.to_numpy()
-        computed = np.exp(mean)
+        computed    = np.exp(mean)
         np.testing.assert_allclose(computed, expected)
 
         #fmt = 'Between event variability for {:s} is wrong'
