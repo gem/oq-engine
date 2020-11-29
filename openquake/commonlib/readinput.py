@@ -1251,14 +1251,14 @@ def get_checksum32(oqparam, h5=None):
     """
     checksum = _checksum(get_input_files(oqparam, hazard=True))
     hazard_params = []
-    for key, val in vars(oqparam).items():
+    for key, val in sorted(vars(oqparam).items()):
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
                    'width_of_mfd_bin', 'area_source_discretization',
                    'random_seed', 'number_of_logic_tree_samples',
                    'minimum_magnitude'):
             hazard_params.append('%s = %s' % (key, val))
-        data = '\n'.join(hazard_params).encode('utf8')
-        checksum = zlib.adler32(data, checksum)
+    data = '\n'.join(hazard_params).encode('utf8')
+    checksum = zlib.adler32(data, checksum)
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
