@@ -14,9 +14,14 @@ provisioner:
   name: ansible
   lint:
     ansible-lint
+scenario:
+  test_sequence:
+    - cleanup 
+    - destroy
+    - create
+    - converge
+    - verify
+    - cleanup
+    - destroy
 verifier:
   name: ansible
-    #lint: |
-    #set -e
-    #yamllint .
-    #ansible-lint
