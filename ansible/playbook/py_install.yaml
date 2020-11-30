@@ -38,7 +38,7 @@
       mode: '0644'
 
   - name: Run install script from github repo 
-    shell: python3.8 /tmp/install.py 
+    shell: python3.8 /tmp/install.py user
     become_user: openquake
     changed_when: false
     register: oq_install
