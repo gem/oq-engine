@@ -189,20 +189,6 @@ class MagDepDistance(dict):
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
-    def get_enlarged_box(self, src):
-        """
-        Get the enlarged bounding box of a source.
-
-        :param src: a source object
-        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
-        """
-        maxdist = self(src.tectonic_region_type)
-        try:
-            bbox = get_bounding_box(src, maxdist)
-        except Exception as exc:
-            raise exc.__class__('source %s: %s' % (src.source_id, exc))
-        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
-
     def get_dist_bins(self, trt, nbins=51):
         """
         :returns: an array of distance bins, from 10m to maxdist
@@ -301,13 +287,28 @@ class SourceFilter(object):
         sc.complete = self.sitecol.complete
         return self.__class__(sc, self.integration_distance)
 
+    def get_enlarged_box(self, src, maxdist=None):
+        """
+        Get the enlarged bounding box of a source.
+
+        :param src: a source object
+        :param maxdist: a scalar maximum distance (or None)
+        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
+        """
+        if maxdist is None:
+            maxdist = self.integration_distance(src.tectonic_region_type)
+        try:
+            bbox = get_bounding_box(src, maxdist)
+        except Exception as exc:
+            raise exc.__class__('source %s: %s' % (src.source_id, exc))
+        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
+
     def get_rectangle(self, src):
         """
         :param src: a source object
         :returns: ((min_lon, min_lat), width, height), useful for plotting
         """
-        min_lon, min_lat, max_lon, max_lat = (
-            self.integration_distance.get_enlarged_box(src))
+        min_lon, min_lat, max_lon, max_lat = self.get_enlarged_box(src)
         return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
 
     def get_close_sites(self, source):
@@ -330,7 +331,7 @@ class SourceFilter(object):
                     yield s, sites
 
     # used in source and rupture prefiltering: it should not discard too much
-    def close_sids(self, src_or_rec, trt=None):
+    def close_sids(self, src_or_rec, trt=None, maxdist=None):
         """
         :param src_or_rec: a source or a rupture record
         :param trt: passed only if src_or_rec is a rupture record
@@ -358,7 +359,7 @@ class SourceFilter(object):
         else:  # source
             trt = src_or_rec.tectonic_region_type
             try:
-                bbox = self.integration_distance.get_enlarged_box(src_or_rec)
+                bbox = self.get_enlarged_box(src_or_rec, maxdist)
             except BBoxError:  # do not filter
                 return self.sitecol.sids
             dlon, dlat = (bbox[2] - bbox[0]) / 2., (bbox[3] - bbox[1]) / 2.
@@ -370,17 +371,10 @@ class SourceFilter(object):
         sids.sort()
         return sids
 
-    def split_source(self, src, ok=True):
-        """
-        :returns: a list of subsources with the parameter .nsites correctly set
-        """
-        split = split_source(src) if ok else [src]
-        for s in split:
-            s.nsites = len(self.close_sids(s)) or .01
-            s.weight
-        if len(split) > 1:  # also set .nsites on the original source
-            src.nsites = len(self.close_sids(src)) or .01
-        return split
+    def count_close_far(self, location, distance1, distance2):
+        close1, far1 = self.sitecol.split(location, distance1)
+        close2, far2 = self.sitecol.split(location, distance2)
+        return len(close1), len(close2) - len(close1)
 
     def filter(self, sources):
         """

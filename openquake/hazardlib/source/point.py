@@ -410,6 +410,12 @@ class CollapsedPointSource(PointSource):
             acc += dict(psource.get_annual_occurrence_rates())
         return sorted(acc.items())
 
+    def count_nphc(self):
+        """
+        :returns: always 1
+        """
+        return 1
+
     def iter_ruptures(self, **kwargs):
         """
         :returns: an iterator over the underlying ruptures
