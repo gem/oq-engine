@@ -1,4 +1,3 @@
----
 name: playbook_ansible
 'on':
   schedule:
