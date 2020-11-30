@@ -6,7 +6,7 @@ name: macos_pyapp
     branches: [ actions ]
 
 jobs:
-  python3.7:
+  python3-7:
     name: Install User mode on Python 3.7 
     runs-on: macos-latest
 
@@ -20,7 +20,7 @@ jobs:
       - name: Run Installation scripts in user mode
         run: python3.7 install.py user
 
-  python3.8:
+  python3-8:
     name: Install User mode on Python 3.8 
     runs-on: macos-latest
 
