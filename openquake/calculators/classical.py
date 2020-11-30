@@ -73,34 +73,14 @@ def classical(srcs, rlzs_by_gsim, params, monitor):
     return hazclassical(srcs, srcfilter, rlzs_by_gsim, params, monitor)
 
 
-def classical_split_filter(sources, rlzs_by_gsim, params, monitor):
+def start_classical(sources, rlzs_by_gsim, params, monitor):
     """
     Compute the PoEs from filtered sources.
     """
-    minw = params['min_weight']
-    maxw = params['max_weight'] / 2
-    blocks = list(block_splitter(sources, maxw, get_weight))
-    if not blocks:
-        yield {'pmap': {}, 'extra': {}}
-        return
-    heavy = []
-    light = list(blocks[-1])
+    blocks = list(block_splitter(sources, params['max_weight']/2, get_weight))
     for block in blocks[:-1]:
-        if block.weight < minw:  # extend light sources
-            light.extend(block)
-        else:  # heavy block, turn it into a subtask
-            heavy.append(int(block.weight))
-            yield classical, block, rlzs_by_gsim, params
-    if heavy:
-        msg = 'produced %d subtask with weights %s' % (len(heavy), heavy)
-        try:
-            logs.dbcmd(
-                'log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                'classical_split_filter#%d' % monitor.task_no, msg)
-        except Exception:
-            # a foreign key error in case of `oq run` is expected
-            print(msg)
-    yield classical(light, rlzs_by_gsim, params, monitor)
+        yield classical, block, rlzs_by_gsim, params
+    yield classical(blocks[-1], rlzs_by_gsim, params, monitor)
 
 
 def store_ctxs(dstore, rupdata, grp_id):
@@ -127,7 +107,7 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_task = classical_split_filter
+    core_task = start_classical
     accept_precalc = ['classical']
 
     def agg_dicts(self, acc, dic):
@@ -417,7 +397,7 @@ class ClassicalCalculator(base.HazardCalculator):
             f1, f2 = classical, classical
             max_weight = max(tot_weight / C, oq.min_weight) / 5
         else:
-            f1, f2 = classical, classical_split_filter
+            f1, f2 = classical, start_classical
             max_weight = max(tot_weight / C, oq.min_weight)
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
