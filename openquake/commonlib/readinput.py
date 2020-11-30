@@ -41,14 +41,14 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter, split_source
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
 from openquake.hazardlib.source import point, rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.source.point import grid_point_sources
+from openquake.hazardlib.source.point import PointSource, grid_point_sources
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels
@@ -57,8 +57,6 @@ from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
 from openquake.commonlib import logictree
 
-# the following is quite arbitrary, it gives output weights that I like (MS)
-NORMALIZATION_FACTOR = 1E-2
 F32 = numpy.float32
 F64 = numpy.float64
 U8 = numpy.uint8
@@ -721,14 +719,29 @@ def weight_sources(srcs, srcfilter, params, monitor):
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
     sources = []
     grp_id = srcs[0].grp_id
+    psd = params['pointsource_distance'] or (lambda src: None)
     for src in srcs:
         t0 = time.time()
-        sources.extend(srcfilter.split_source(src, params['split_sources']))
+        trt = src.tectonic_region_type
+        md = params['maximum_distance'](trt)
+        pd = psd(trt)
+        splits = split_source(src) if params['split_sources'] else [src]
+        sources.extend(splits)
+        nrups = src.count_ruptures()
         dt = time.time() - t0
-        calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt, 0])
+        calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
     for arr in calc_times.values():
         arr[3] = monitor.task_no
     dic = grid_point_sources(sources, grp_id, params['ps_grid_spacing'])
+    for src in dic[grp_id]:
+        src.nsites = len(srcfilter.close_sids(src)) or .01
+        src.num_ruptures = src.count_ruptures()
+        if pd and isinstance(src, PointSource):
+            nphc = src.count_nphc()
+            if nphc > 1:
+                close, far = srcfilter.count_close_far(src.location, pd, md)
+                factor = (nphc * close + far) / (close + far)
+                src.num_ruptures /= factor
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
@@ -773,11 +786,11 @@ def _check_csm(csm, oqparam, h5):
     sitecol = get_site_collection(oqparam, h5)
     if sitecol is None:
         fewsites = None
-    elif len(sitecol) <= oqparam.max_sites_disagg:
+    elif len(sitecol) <= 50:
         fewsites = sitecol
     else:  # long sitecol
-        fewsites = sitecol.filter(sitecol.sids % 10 == 0)
-    # performance hack: use 1 site over 10 when weighting the sources!
+        fewsites = sitecol.filter(sitecol.sids % 50 == 0)
+    # performance hack: use 1 site over 50 when weighting the sources!
     srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
 
     if sitecol:  # missing in test_case_1_ruptures
@@ -786,7 +799,7 @@ def _check_csm(csm, oqparam, h5):
         lats = []
         for src in srcs:
             try:
-                box = srcfilter.integration_distance.get_enlarged_box(src)
+                box = srcfilter.get_enlarged_box(src)
             except BBoxError as exc:
                 logging.error(exc)
                 continue
@@ -821,7 +834,9 @@ def _weight_sources(csm, srcfilter, oqparam, h5):
     sources_by_grp = groupby(
         csm.get_sources(atomic=False),
         lambda src: (src.grp_id, point.msr_name(src)))
-    param = dict(ps_grid_spacing=oqparam.ps_grid_spacing,
+    param = dict(maximum_distance=oqparam.maximum_distance,
+                 pointsource_distance=oqparam.pointsource_distance,
+                 ps_grid_spacing=oqparam.ps_grid_spacing,
                  split_sources=oqparam.split_sources)
 
     res = parallel.Starmap(

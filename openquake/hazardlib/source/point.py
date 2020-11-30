@@ -89,7 +89,7 @@ def calc_average(pointsources):
     """
     acc = dict(lon=[], lat=[], dep=[], strike=[], dip=[], rake=[],
                upper_seismogenic_depth=[], lower_seismogenic_depth=[],
-               rupture_aspect_ratio=[])
+               rupture_aspect_ratio=[], nphc=[])
     rates = []
     trt = pointsources[0].tectonic_region_type
     msr = msr_name(pointsources[0])
@@ -112,6 +112,7 @@ def calc_average(pointsources):
         acc['upper_seismogenic_depth'].append(src.upper_seismogenic_depth)
         acc['lower_seismogenic_depth'].append(src.lower_seismogenic_depth)
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
+        acc['nphc'].append(src.count_nphc())
     return {key: numpy.average(acc[key], weights=rates) for key in acc}
 
 
@@ -410,6 +411,12 @@ class CollapsedPointSource(PointSource):
             acc += dict(psource.get_annual_occurrence_rates())
         return sorted(acc.items())
 
+    def count_nphc(self):
+        """
+        :returns: the average number of nodal planes and hypocenters
+        """
+        return self.nphc
+
     def iter_ruptures(self, **kwargs):
         """
         :returns: an iterator over the underlying ruptures
@@ -487,11 +494,9 @@ def grid_point_sources(sources, grp_id, ps_grid_spacing):
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
     for idxs in grid.values():
         cps = CollapsedPointSource(ps[idxs])
-        cps.num_ruptures = cps.count_ruptures()
         cps.id = ps[0].id
         cps.grp_id = ps[0].grp_id
         cps.et_id = ps[0].et_id
-        cps.nsites = sum(p.nsites for p in ps)
         out.append(cps)
     return {grp_id: out}
 

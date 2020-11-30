@@ -21,7 +21,6 @@ import psutil
 import pprint
 import logging
 import operator
-from datetime import datetime
 import numpy
 try:
     from PIL import Image
@@ -303,7 +302,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.numrups = sum(arr[0] for arr in self.calc_times.values())
             numsites = sum(arr[1] for arr in self.calc_times.values())
             logging.info('Effective number of ruptures: {:_d}/{:_d}'.format(
-                int(self.numrups), self.totrups))
+                int(self.numrups), int(self.totrups)))
             logging.info('Effective number of sites per rupture: %d',
                          numsites / self.numrups)
         if psd:

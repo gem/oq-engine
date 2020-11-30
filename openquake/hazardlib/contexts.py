@@ -666,7 +666,7 @@ class PmapMaker(object):
         if loc and self.pointsource_distance == 0:
             # all finite size effects are ignored
             yield from rups(src.point_ruptures(), sites)
-        elif loc and self.pointsource_distance:
+        elif loc and self.pointsource_distance and src.count_nphc() > 1:
             # finite site effects are ignored only for sites over the
             # pointsource_distance from the rupture (if any)
             for pr in src.point_ruptures():
