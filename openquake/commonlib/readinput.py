@@ -48,7 +48,7 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source import point, rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.source.point import grid_point_sources
+from openquake.hazardlib.source.point import PointSource, grid_point_sources
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels
@@ -57,8 +57,6 @@ from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
 from openquake.commonlib import logictree
 
-# the following is quite arbitrary, it gives output weights that I like (MS)
-NORMALIZATION_FACTOR = 1E-2
 F32 = numpy.float32
 F64 = numpy.float64
 U8 = numpy.uint8
@@ -731,7 +729,7 @@ def weight_sources(srcs, srcfilter, params, monitor):
         for split in splits:
             split.nsites = len(srcfilter.close_sids(split)) or .01
             split.num_ruptures = split.count_ruptures()
-            if pd and hasattr(split, 'nodal_plane_distribution'):
+            if pd and isinstance(split, PointSource):
                 nphc = split.count_nphc()
                 if nphc > 1:
                     close, far = srcfilter.count_close_far(

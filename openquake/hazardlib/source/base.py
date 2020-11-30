@@ -56,12 +56,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         nsites_factor = min(self.nsites, 1)
-        if hasattr(self, 'nodal_plane_distribution'):
-            rescale = len(self.nodal_plane_distribution.data) * len(
-                self.hypocenter_distribution.data)
-        else:
-            rescale = 1
-        return self.num_ruptures * self.ngsims * nsites_factor / rescale
+        return self.num_ruptures * self.ngsims * nsites_factor
 
     @property
     def et_ids(self):

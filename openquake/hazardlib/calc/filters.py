@@ -372,9 +372,12 @@ class SourceFilter(object):
         return sids
 
     def count_close_far(self, location, distance1, distance2):
+        if distance1 == 0:
+            close2, far2 = self.sitecol.split(location, distance2)
+            return 0, len(close2 or [0])
         close1, far1 = self.sitecol.split(location, distance1)
         close2, far2 = self.sitecol.split(location, distance2)
-        return len(close1), len(close2) - len(close1)
+        return len(close1 or [0]), len(close2 or [0]) - len(close1 or [0])
 
     def filter(self, sources):
         """
