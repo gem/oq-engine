@@ -1,0 +1,26 @@
+---
+name: ansible
+'on':
+  schedule:
+    - cron: "0 2 * * *"
+  push:
+    branches: [ actions ]
+
+jobs:
+
+  python_app:
+    name: python_app
+    runs-on: macos-latest
+    env:
+
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+
+      - name: Run Installation scripts in user mode
+        run: python3.7 install.py
