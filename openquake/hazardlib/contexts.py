@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import abc
 import copy
 import time
@@ -25,6 +26,7 @@ import itertools
 import functools
 import collections
 import numpy
+import pandas
 from scipy.interpolate import interp1d
 
 from openquake.baselib import hdf5, parallel
@@ -40,6 +42,36 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
     .split())
+
+
+class Timer(object):
+    """
+    Timer used to save the time needed to process each source and to
+    postprocess it with ``Timer('timer.csv').read_df()``. To use it, run
+    the calculation on a single machine with
+
+    OQ_TIMER=timer.csv oq run job.ini
+    """
+    fields = ['source_id', 'nrups', 'nsites', 'weight', 'dt', 'task_no']
+
+    def __init__(self, fname):
+        self.fname = fname
+
+    def save(self, src, dt, task_no):
+        # save the source info
+        if self.fname:
+            row = [src.source_id, src.num_ruptures, src.nsites, src.weight,
+                   dt, task_no]
+            open(self.fname, 'a').write(','.join(map(str, row)) + '\n')
+
+    def read_df(self):
+        # method used to postprocess the information
+        df = pandas.read_csv(self.fname, names=self.fields, index_col=0)
+        return df.sort_values('dt')
+
+
+# object used to measure the time needed to process each source
+timer = Timer(os.environ.get('OQ_TIMER'))
 
 
 def get_distances(rupture, sites, param):
@@ -157,6 +189,7 @@ class ContextMaker(object):
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.effect = param.get('effect')
+        self.task_no = getattr(monitor, 'task_no', 0)
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -571,14 +604,16 @@ class PmapMaker(object):
             self.numsites = 0
             rups = self._gen_rups(src, sites)
             self._update_pmap(self._gen_ctxs(rups, sites, src.id))
+            dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
-                [self.numrups, self.numsites, time.time() - t0])
+                [self.numrups, self.numsites, dt])
+            timer.save(src, dt, self.cmaker.task_no)
         return ~self.pmap if self.rup_indep else self.pmap
 
     def _make_src_mutex(self):
         for src, indices in self.srcfilter.filter(self.group):
-            sites = self.srcfilter.sitecol.filtered(indices)
             t0 = time.time()
+            sites = self.srcfilter.sitecol.filtered(indices)
             self.totrups += src.num_ruptures
             self.numrups = 0
             self.numsites = 0
@@ -591,8 +626,10 @@ class PmapMaker(object):
                 p = ~p
             p *= src.mutex_weight
             self.pmap += p
+            dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
-                [self.numrups, self.numsites, time.time() - t0])
+                [self.numrups, self.numsites, dt])
+            timer.save(src, dt, self.cmaker.task_no)
         return self.pmap
 
     def dictarray(self, ctxs):
