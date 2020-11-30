@@ -1,8 +1,8 @@
 ---
-name: ansible
+name: macos_pyapp
 'on':
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 5 * * *"
   push:
     branches: [ actions ]
 
@@ -17,7 +17,7 @@ jobs:
       - name: Check out the codebase.
         uses: actions/checkout@v2
 
-      - name: Set up Python 3.7
+      - name: Set up Python 3 as default version on MacOS
         uses: actions/setup-python@v2
         with:
           python-version: '3.7'
