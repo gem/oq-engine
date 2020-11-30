@@ -1,5 +1,5 @@
 ---
-name: ansible
+name: playbook_ansible
 'on':
   schedule:
     - cron: "0 2 * * *"
