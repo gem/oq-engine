@@ -8,7 +8,9 @@ name: macos_pyapp
 
 jobs:
   python3.7:
+    name: Install User mode on Python 3.7 
     runs-on: macos-latest
+
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -18,9 +20,11 @@ jobs:
           python-version: 3.7
       - name: Run Installation scripts in user mode
         run: python3.7 install.py user
-#
+
   python3.8:
+    name: Install User mode on Python 3.8 
     runs-on: macos-latest
+
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
