@@ -45,7 +45,7 @@ KNOWN_DISTANCES = frozenset(
 
 
 class _Timer(object):
-    fields = ['source_id', 'nrups', 'nsites', 'dt', 'task_no']
+    fields = ['source_id', 'nrups', 'nsites', 'weight', 'dt', 'task_no']
 
     def __init__(self, fname):
         self.fname = fname
@@ -53,7 +53,8 @@ class _Timer(object):
     def save(self, src, dt, task_no):
         # save the source info
         if self.fname:
-            row = [src.source_id, src.num_ruptures, src.nsites, dt, task_no]
+            row = [src.source_id, src.num_ruptures, src.nsites, src.weight,
+                   dt, task_no]
             open(self.fname, 'a').write(','.join(map(str, row)) + '\n')
 
     def read(self, fname=None):
