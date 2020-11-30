@@ -318,9 +318,9 @@ class PolygonPlotter():
 
 def make_figure_sources(extractors, what):
     """
-    $ oq plot sources?limit=100
-    $ oq plot sources?source_id=1&source_id=2
-    $ oq plot sources?code=A&code=N
+    $ oq plot 'sources?limit=100'
+    $ oq plot 'sources?source_id=1&source_id=2'
+    $ oq plot 'sources?code=A&code=N'
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -368,7 +368,7 @@ def make_figure_sources(extractors, what):
 
 def make_figure_rupture_info(extractors, what):
     """
-    $ oq plot rupture_info?min_mag=6
+    $ oq plot 'rupture_info?min_mag=6'
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -587,7 +587,8 @@ def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
         plt.show()
         return
     if what == 'examples':
-        help_msg = ['Examples of possible plots:']
+        wnd = '(NOTE! Windows users must use double quotes)'
+        help_msg = ['Examples of possible plots %s:' % wnd]
         for k, v in globals().items():
             if k.startswith('make_figure_'):
                 help_msg.append(v.__doc__)
