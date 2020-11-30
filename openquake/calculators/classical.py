@@ -237,7 +237,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Requiring %s for ProbabilityMap of shape %s',
                      humansize(size), poes_shape)
         avail = psutil.virtual_memory().available
-        if avail < 1.5 * size:
+        if avail < 1.25 * size:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
         self.datastore.create_dset('_poes', F64, poes_shape)
