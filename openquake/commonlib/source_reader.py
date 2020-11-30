@@ -335,6 +335,7 @@ class CompositeSourceModel:
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
+        print(calc_times)
         for src_id, arr in calc_times.items():
             row = self.source_info[src_id]
             row[CALC_TIME] += arr[2]

@@ -727,8 +727,9 @@ def weight_sources(srcs, srcfilter, params, monitor):
         pd = psd(trt)
         splits = split_source(src) if params['split_sources'] else [src]
         sources.extend(splits)
+        nrups = src.count_ruptures()
         dt = time.time() - t0
-        calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt, 0])
+        calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
     for arr in calc_times.values():
         arr[3] = monitor.task_no
     dic = grid_point_sources(sources, grp_id, params['ps_grid_spacing'])
