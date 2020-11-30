@@ -735,7 +735,6 @@ def weight_sources(srcs, srcfilter, params, monitor):
                     close, far = srcfilter.count_close_far(
                         split.location, pd, md)
                     factor = (nphc * close + far) / (close + far)
-                    print(split, split.num_ruptures, factor)
                     split.num_ruptures /= factor
             sources.append(split)
         dt = time.time() - t0
