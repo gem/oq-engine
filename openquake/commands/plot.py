@@ -303,11 +303,11 @@ class PolygonPlotter():
         except ValueError:  # LINESTRING, not POLYGON
             pass
 
-    def set_lim(self, xs=None, ys=None):
-        if xs:
+    def set_lim(self, xs=(), ys=()):
+        if len(xs):
             self.minxs.append(min(xs))
             self.maxxs.append(max(xs))
-        if ys:
+        if len(ys):
             self.minys.append(min(ys))
             self.maxys.append(max(ys))
         if self.minxs and self.maxxs:
@@ -353,15 +353,15 @@ def make_figure_sources(extractors, what):
         tot += 1
     lons = [p.x for p in psources]
     lats = [p.y for p in psources]
-    if lons and cross_idl(*lons):
+    ss_lons = lons + list(sitecol['lon'])  # sites + sources longitudes
+    ss_lats = lats + list(sitecol['lat'])  # sites + sources latitudes
+    if len(ss_lons) > 1 and cross_idl(*ss_lons):
+        ss_lons = [lon % 360 for lon in ss_lons]
         lons = [lon % 360 for lon in lons]
         sitecol['lon'] = sitecol['lon'] % 360
-    ax.plot(sitecol['lon'], sitecol['lat'], '+')
-    ax.plot(lons, lats, '.')
-    if lons:
-        pp.set_lim(lons, lats)
-    else:
-        pp.set_lim(sitecol['lon'], sitecol['lat'])
+    ax.plot(sitecol['lon'], sitecol['lat'], '.')
+    ax.plot(lons, lats, 'o')
+    pp.set_lim(ss_lons, ss_lats)
     ax.set_title('%d/%d sources' % (n, tot))
     return plt
 

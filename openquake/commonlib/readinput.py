@@ -19,6 +19,7 @@ import os
 import re
 import ast
 import csv
+import time
 import copy
 import json
 import zlib
@@ -36,16 +37,20 @@ import requests
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates)
+    AccumDict, random_filter, countby, groupby, group_array, get_duplicates)
 from openquake.baselib.python3compat import zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
-from openquake.hazardlib.source import rupture
+from openquake.hazardlib.source import point, rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.source.point import grid_point_sources
+from openquake.hazardlib.sourceconverter import SourceGroup
+from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
@@ -495,6 +500,8 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    if h5 and 'sitecol' in h5:
+        return h5['sitecol']
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
@@ -519,6 +526,8 @@ def get_site_collection(oqparam, h5=None):
         # will run a computation with 10 times less sites
         sitecol.array = numpy.array(random_filter(sitecol.array, float(ss)))
         sitecol.make_complete()
+    if h5:
+        h5['sitecol'] = sitecol
     return sitecol
 
 
@@ -704,25 +713,135 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def _get_cachedir(oq, full_lt, h5=None):
-    # read the composite source model from the cache
-    if not os.path.exists(oq.cachedir):
-        os.makedirs(oq.cachedir)
-    checksum = get_checksum32(oq, h5)
-    fname = os.path.join(oq.cachedir, 'csm_%s.pik' % checksum)
-    if os.path.exists(fname):
-        logging.info('Reading %s', fname)
-        with open(fname, 'rb') as f:
-            csm = pickle.load(f)
-            csm.full_lt = full_lt
-            return csm
-    csm = get_csm(oq, full_lt, h5)
-    if not csm.src_groups:  # everything was filtered away
-        return csm
-    logging.info('Saving %s', fname)
-    with open(fname, 'wb') as f:
-        pickle.dump(csm, f)
-    return csm
+def weight_sources(srcs, srcfilter, params, monitor):
+    """
+    Weight the sources. Also split them if split_sources is true.
+    """
+    # nrups, nsites, time, task_no
+    calc_times = AccumDict(accum=numpy.zeros(4, F32))
+    sources = []
+    grp_id = srcs[0].grp_id
+    for src in srcs:
+        t0 = time.time()
+        sources.extend(srcfilter.split_source(src, params['split_sources']))
+        dt = time.time() - t0
+        calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt, 0])
+    for arr in calc_times.values():
+        arr[3] = monitor.task_no
+    dic = grid_point_sources(sources, grp_id, params['ps_grid_spacing'])
+    dic['calc_times'] = calc_times
+    dic['before'] = len(sources)
+    dic['after'] = len(dic[grp_id])
+    return dic
+
+
+def save_source_info(csm, h5):
+    data = {}  # src_id -> row
+    wkts = []
+    lens = []
+    for sg in csm.src_groups:
+        for src in sg:
+            lens.append(len(src.et_ids))
+            row = [src.source_id, src.grp_id, src.code,
+                   0, 0, 0, csm.full_lt.trti[src.tectonic_region_type], 0]
+            wkts.append(src._wkt)
+            data[src.id] = row
+    logging.info('There are %d groups and %d sources with len(et_ids)=%.2f',
+                 len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
+                 numpy.mean(lens))
+    csm.source_info = data  # src_id -> row
+    if h5:
+        attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
+        # avoid hdf5 damned bug by creating source_info in advance
+        hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
+        h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
+        h5['et_ids'] = csm.get_et_ids()
+
+
+def _check_csm(csm, oqparam, h5):
+    # checks
+    csm.gsim_lt.check_imts(oqparam.imtls)
+
+    srcs = csm.get_sources()
+    if not srcs:
+        raise RuntimeError('All sources were discarded!?')
+
+    if os.environ.get('OQ_CHECK_INPUT'):
+        source.check_complex_faults(srcs)
+
+    # build a smart SourceFilter
+    sitecol = get_site_collection(oqparam, h5)
+    if sitecol is None:
+        fewsites = None
+    elif len(sitecol) <= oqparam.max_sites_disagg:
+        fewsites = sitecol
+    else:  # long sitecol
+        fewsites = sitecol.filter(sitecol.sids % 10 == 0)
+    # performance hack: use 1 site over 10 when weighting the sources!
+    srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
+
+    if sitecol:  # missing in test_case_1_ruptures
+        logging.info('Checking the sources bounding box')
+        lons = []
+        lats = []
+        for src in srcs:
+            try:
+                box = srcfilter.integration_distance.get_enlarged_box(src)
+            except BBoxError as exc:
+                logging.error(exc)
+                continue
+            lons.append(box[0])
+            lats.append(box[1])
+            lons.append(box[2])
+            lats.append(box[3])
+        if cross_idl(*(list(sitecol.lons) + lons)):
+            lons = numpy.array(lons) % 360
+        else:
+            lons = numpy.array(lons)
+        bbox = (lons.min(), min(lats), lons.max(), max(lats))
+        if bbox[2] - bbox[0] > 180:
+            raise BBoxError(
+                'The bounding box of the sources is larger than half '
+                'the globe: %d degrees' % (bbox[2] - bbox[0]))
+        sids = sitecol.within_bbox(bbox)
+        if len(sids) == 0:
+            raise RuntimeError('All sources were discarded!?')
+
+    return srcfilter
+
+
+def _weight_sources(csm, srcfilter, oqparam, h5):
+
+    # do nothing for atomic sources except counting the ruptures
+    for src in csm.get_sources(atomic=True):
+        src.num_ruptures = src.count_ruptures()
+        src.nsites = len(srcfilter.sitecol)
+
+    # run weight_sources for non-atomic sources
+    sources_by_grp = groupby(
+        csm.get_sources(atomic=False),
+        lambda src: (src.grp_id, point.msr_name(src)))
+    param = dict(ps_grid_spacing=oqparam.ps_grid_spacing,
+                 split_sources=oqparam.split_sources)
+
+    res = parallel.Starmap(
+        weight_sources,
+        ((srcs, srcfilter, param) for srcs in sources_by_grp.values()), h5=h5,
+        distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
+
+    if res and res['before'] != res['after']:
+        logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
+                     format(res['before'], res['after']))
+
+    if res and h5:
+        csm.update_source_info(res['calc_times'], nsites=True)
+
+    for grp_id, srcs in res.items():
+        # srcs can be empty if the minimum_magnitude filter is on
+        if srcs and not isinstance(grp_id, str):
+            newsg = SourceGroup(srcs[0].tectonic_region_type)
+            newsg.sources = srcs
+            csm.src_groups[grp_id] = newsg
 
 
 def get_composite_source_model(oqparam, h5=None):
@@ -734,41 +853,44 @@ def get_composite_source_model(oqparam, h5=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
-    logging.info('Reading the CompositeSourceModel')
+    # first read the logic tree
     full_lt = get_full_lt(oqparam)
+
+    # then read the composite source model from the cache if possible
+    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
+        os.makedirs(oqparam.cachedir)
     if oqparam.cachedir and not oqparam.is_ucerf():
-        csm = _get_cachedir(oqparam, full_lt, h5)
-    else:
-        csm = get_csm(oqparam, full_lt,  h5)
-    et_ids = csm.get_et_ids()
-    logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
-    data = {}  # src_id -> row
-    mags_by_trt = csm.get_mags_by_trt()
-    wkts = []
-    lens = []
-    for sg in csm.src_groups:
-        for src in sg:
-            lens.append(len(src.et_ids))
-            row = [src.source_id, src.grp_id, src.code,
-                   0, 0, 0, full_lt.trti[src.tectonic_region_type], 0]
-            wkts.append(src._wkt)
-            data[src.id] = row
-    logging.info('There are %d groups and %d sources with len(et_ids)=%.2f',
-                 len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
-                 numpy.mean(lens))
-    if h5:
-        attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
-        # avoid hdf5 damned bug by creating source_info in advance
-        hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
-        h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        h5['et_ids'] = et_ids
-        for trt in mags_by_trt:
-            h5['source_mags/' + trt] = numpy.array(mags_by_trt[trt])
-        oqparam.maximum_distance.interp(mags_by_trt)
-    csm.gsim_lt.check_imts(oqparam.imtls)
-    csm.source_info = data  # src_id -> row
-    if os.environ.get('OQ_CHECK_INPUT'):
-        source.check_complex_faults(csm.get_sources())
+        # for UCERF pickling the csm is slower
+        checksum = get_checksum32(oqparam, h5)
+        fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
+        if os.path.exists(fname):
+            logging.info('Reading %s', fname)
+            with open(fname, 'rb') as f:
+                csm = pickle.load(f)
+                csm.full_lt = full_lt
+            if h5:
+                # avoid errors with --reuse_hazard
+                h5['et_ids'] = csm.get_et_ids()
+                hdf5.create(h5, 'source_info', source_info_dt)
+            return csm
+
+    # read and process the composite source model from the input files
+    csm = get_csm(oqparam, full_lt,  h5)
+    save_source_info(csm, h5)
+    srcfilter = _check_csm(csm, oqparam, h5)
+    if not oqparam.is_event_based():
+        _weight_sources(csm, srcfilter, oqparam, h5)
+        for sg in csm.src_groups:  # sanity check
+            for src in sg:
+                assert src.num_ruptures
+                assert src.nsites
+
+    # pickle the csm
+    if oqparam.cachedir and not oqparam.is_ucerf():
+        logging.info('Saving %s', fname)
+        with open(fname, 'wb') as f:
+            pickle.dump(csm, f)
+
     return csm
 
 
@@ -1129,14 +1251,14 @@ def get_checksum32(oqparam, h5=None):
     """
     checksum = _checksum(get_input_files(oqparam, hazard=True))
     hazard_params = []
-    for key, val in vars(oqparam).items():
+    for key, val in sorted(vars(oqparam).items()):
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
                    'width_of_mfd_bin', 'area_source_discretization',
                    'random_seed', 'number_of_logic_tree_samples',
                    'minimum_magnitude'):
             hazard_params.append('%s = %s' % (key, val))
-        data = '\n'.join(hazard_params).encode('utf8')
-        checksum = zlib.adler32(data, checksum)
+    data = '\n'.join(hazard_params).encode('utf8')
+    checksum = zlib.adler32(data, checksum)
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum

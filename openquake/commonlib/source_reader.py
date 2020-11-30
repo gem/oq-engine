@@ -30,6 +30,8 @@ from openquake.hazardlib.lt import apply_uncertainties
 TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
 
+CALC_TIME, NUM_SITES, EFF_RUPTURES, TASK_NO = 3, 4, 5, 7
+
 
 def et_ids(src):
     return tuple(src.et_ids)
@@ -83,8 +85,6 @@ def get_csm(oq, full_lt, h5=None):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
-            sg.mags = numpy.unique(numpy.round(src.mags, 2))
-            del src.__dict__['mags']  # remove cache
             src.checksum = src.et_id = src.id = et_id
             src.samples = sm_rlz.samples
             logging.info('Reading sections and rupture planes for %s', src)
@@ -304,11 +304,10 @@ class CompositeSourceModel:
         """
         mags = general.AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
-            if hasattr(sg, 'mags'):  # UCERF
-                mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
             for src in sg:
                 if hasattr(src, 'mags'):  # UCERF
-                    continue  # already accounted for in sg.mags
+                    srcmags = ['%.2f' % mag for mag in numpy.unique(
+                        numpy.round(src.mags, 2))]
                 elif hasattr(src, 'data'):  # nonparametric
                     srcmags = ['%.2f' % item[0].mag for item in src.data]
                 else:
@@ -331,6 +330,19 @@ class CompositeSourceModel:
         if not data:
             return numpy.array([1, 1])
         return numpy.array(data).mean(axis=0)
+
+    def update_source_info(self, calc_times, nsites=False):
+        """
+        Update (eff_ruptures, num_sites, calc_time) inside the source_info
+        """
+        for src_id, arr in calc_times.items():
+            row = self.source_info[src_id]
+            row[CALC_TIME] += arr[2]
+            if len(arr) == 4:  # after preclassical
+                row[TASK_NO] = arr[3]
+            if nsites:
+                row[EFF_RUPTURES] += arr[0]
+                row[NUM_SITES] += arr[1]
 
     def __repr__(self):
         """

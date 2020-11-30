@@ -18,7 +18,6 @@
 
 import ast
 import sys
-import logging
 import operator
 from contextlib import contextmanager
 import numpy
@@ -27,7 +26,7 @@ from scipy.spatial import cKDTree
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box, cross_idl,
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
 U32 = numpy.uint32
@@ -219,8 +218,6 @@ def split_source(src):
     from openquake.hazardlib.source import splittable  # avoid circular import
     if not splittable(src):
         return [src]
-    if not src.num_ruptures:  # not set yet
-        src.num_ruptures = src.count_ruptures()
     mag_a, mag_b = src.get_min_max_mag()
     min_mag = src.min_mag
     if mag_b < min_mag:  # discard the source completely
@@ -230,10 +227,7 @@ def split_source(src):
         for s in src:
             s.min_mag = min_mag
             mag_a, mag_b = s.get_min_max_mag()
-            if mag_b < min_mag:
-                continue
-            s.num_ruptures = s.count_ruptures()
-            if s.num_ruptures:
+            if mag_b >= min_mag:
                 splits.append(s)
     else:
         splits = list(src)
@@ -260,6 +254,9 @@ def split_source(src):
             s.samples = src.samples
         if has_scaling_rate:
             s.scaling_rate = src.scaling_rate
+    for split in splits:
+        if not split.num_ruptures:
+            split.num_ruptures = split.count_ruptures()
     return splits
 
 
@@ -399,36 +396,6 @@ class SourceFilter(object):
             if len(sids):
                 src.nsites = len(sids)
                 yield src, sids
-
-    def within_bbox(self, srcs):
-        """
-        :param srcs: a list of source objects
-        :returns: the site IDs within the enlarged bounding box of the sources
-        """
-        if self.sitecol is None:  # for test_case_1_ruptures
-            return [0]
-        lons = []
-        lats = []
-        for src in srcs:
-            try:
-                box = self.integration_distance.get_enlarged_box(src)
-            except BBoxError as exc:
-                logging.error(exc)
-                continue
-            lons.append(box[0])
-            lats.append(box[1])
-            lons.append(box[2])
-            lats.append(box[3])
-        if cross_idl(*(list(self.sitecol.lons) + lons)):
-            lons = numpy.array(lons) % 360
-        else:
-            lons = numpy.array(lons)
-        bbox = (lons.min(), min(lats), lons.max(), max(lats))
-        if bbox[2] - bbox[0] > 180:
-            raise BBoxError(
-                'The bounding box of the sources is larger than half '
-                'the globe: %d degrees' % (bbox[2] - bbox[0]))
-        return self.sitecol.within_bbox(bbox)
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:

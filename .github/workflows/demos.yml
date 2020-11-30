@@ -1,14 +1,16 @@
 ---
 name: docs & demos
 on:
-  pull_request:
+  push:
     branches: [ master ]
 jobs:
   docs:
     name: DOCS
+    if: "!contains(github.event.head_commit.message, 'skip CI')"
     runs-on: ubuntu-18.04
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -39,9 +41,15 @@ jobs:
 
   demos:
     name: DEMOS
+    if: "!contains(github.event.head_commit.message, 'skip CI')"
     runs-on: ubuntu-18.04
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+      GITHUB_REF:  ${{ github.ref }}
+      GITHUB_HD_REF:  ${{ github.head_ref }}
+      GITHUB_BS_REF:  ${{ github.base_ref }}
+        #more $GITHUB_EVENT_PATH
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -56,21 +64,30 @@ jobs:
           pip install fiona
       - name: Install oq engine 
         run: pip install -e . 
-      - name: Run demos and upload to http://artifacts.openquake.org/travis/
+      - name: Run demos and upload to ci.openquake.org
         shell: bash
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
         run: |
-          BRANCH=`echo ${{ github.ref }}  | cut -f 2 -d \/`
           zip -q -r /tmp/demos.zip demos/
           OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
           oq dump /tmp/oqdata.zip
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos
+          echo " Check if this is a pull request or not"
+          if [ -z "$GITHUB_HD_REF" ]
+             then
+              echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
+              GITHUB_BR=`echo ${{ github.event.repository.default_branch }}`
+             else
+              echo " Is a pull request, use branch: $GITHUB_HD_BR"
+              GITHUB_BR=`echo ${{ github.head_ref }}`
+          fi
+          echo "BRANCH set to $GITHUB_BR"
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
           eval $(ssh-agent -s) && ssh-add ./.deploy_rsa 
-          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${BRANCH}.zip"
-          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${BRANCH}.zip
-          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip"
-          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${BRANCH}.zip
+          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip"
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/demos.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/demos-${GITHUB_BR}.zip
+          echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip"
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null /tmp/oqdata.zip docs@ci.openquake.org:/var/www/artifacts.openquake.org/travis/oqdata-${GITHUB_BR}.zip

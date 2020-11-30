@@ -424,7 +424,7 @@ hazard_uhs-std.csv
         self.assert_curves_ok(['hazard_curve.csv'],
                               case_23.__file__, delta=1e-5)
         checksum = self.calc.datastore['/'].attrs['checksum32']
-        self.assertEqual(checksum, 3309200309)
+        self.assertEqual(checksum, 141487350)
 
     def test_case_24(self):  # UHS
         # this is a case with rjb and an hypocenter distribution
@@ -584,7 +584,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numrups, 499)  # effective ruptures
+        self.assertEqual(self.calc.numrups, 623)  # effective ruptures
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
@@ -611,34 +611,71 @@ hazard_uhs-std.csv
                               case_47.__file__, delta=1E05)
 
     def test_case_48(self):
-        # pointsource_distance effects on a simple point source
+        # pointsource_distance effects on a simple point source.
+        # This is case with 10 magnitudes and 2 hypodepths.
+        # The maximum_distance is 110 km and the second site
+        # was chosen very carefully, so that after the approximation
+        # 3 ruptures get distances around 111 km and are discarded
+        # (even if their true distances are around 109 km!)
         self.run_calc(case_48.__file__, 'job.ini')
+        # 20 exact rrup distances for site 0 and site 1 respectively
+        exact = numpy.array([[54.1249, 109.704],
+                             [54.2632, 109.753],
+                             [53.7378, 109.321],
+                             [53.8517, 109.357],
+                             [53.2577, 108.842],
+                             [53.3404, 108.863],
+                             [52.6774, 108.255],
+                             [52.7076, 108.245],
+                             [51.9595, 107.525],
+                             [51.9044, 107.461],
+                             [50.5455, 106.076],
+                             [50.4445, 105.979],
+                             [47.7896, 103.201],
+                             [47.6827, 103.101],
+                             [43.7002, 98.7525],
+                             [43.5834, 98.6488],
+                             [38.1556, 92.0187],
+                             [38.0217, 91.9073],
+                             [32.9537, 82.3458],
+                             [32.7986, 82.2214]])
         dst = get_dists(self.calc.datastore)
-        self.assertEqual(  # exact distances from site 0
-            dst[0], [54, 54, 53, 53, 52, 51, 48, 44, 38, 33])
-        self.assertEqual(  # exact distances from site 1
-            dst[1], [110, 109, 109, 108, 107, 106, 103, 99, 92, 82])
+        aac(dst[0], exact[:, 0], atol=.5)  # site 0
+        aac(dst[1], exact[:, 1], atol=.5)  # site 1
 
         self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
-        dst = get_dists(self.calc.datastore)
+        psdist = self.calc.oqparam.pointsource_distance
+        psd = psdist.ddic['active shallow crust']
+        dist_by_mag = {mag: int(psd[mag]) for mag in psd}
+        self.assertEqual(list(dist_by_mag.values()),
+                         [42, 47, 52, 58, 65, 72, 80, 89, 99, 110])
+
+        # 17 approx rrup distances for site 0 and site 1 respectively
+        approx = numpy.array([[54.1525, 109.711],
+                              [53.7572, 109.324],
+                              [53.2665, 108.84],
+                              [52.6774, 108.255],
+                              [52.7076, 108.245],
+                              [51.9595, 107.525],
+                              [51.9044, 107.461],
+                              [50.5455, 106.076],
+                              [50.4445, 105.979],
+                              [47.7896, 103.201],
+                              [47.6827, 103.101],
+                              [43.7002, 98.7525],
+                              [43.5834, 98.6488],
+                              [38.1556, 92.0187],
+                              [38.0217, 91.9073],
+                              [32.9537, 82.3458],
+                              [32.7986, 82.2214]])
+
         # approx distances from site 0 and site 1 respectively
-        self.assertEqual(dst[0], [56, 56, 56, 53, 52, 51, 48, 44, 38, 33])
-        self.assertEqual(dst[1], [108, 107, 106, 103, 99, 92, 82])
+        dst = get_dists(self.calc.datastore)
+        aac(dst[0], approx[:, 0], atol=.5)  # site 0
+        aac(dst[1], approx[:, 1], atol=.5)  # site 1
+
         # This test shows in detail what happens to the distances in presence
         # of a magnitude-dependent pointsource_distance.
-        # The exact distances for the first site are 54, 54, 53, ... 38, 33 km;
-        # they decrease with the magnitude, since big magnitude -> big size ->
-        # smaller distance from the site.
-        # When the pointsource_distance is on, the approximated distances are
-        # 56, 56, 56, ..., 38, 33 km: the difference is in the first
-        # three values, corresponding to the small magnitudes.
-        # For small magnitudes the planar ruptures are replaced by points
-        # and thus the distances become larger and possibly over the maxdist.
-        # The maximum_distance here is 110 km and the second site
-        # was chosen very carefully, so that the exact distance for the highest
-        # magnitude is 109 km (within) while the approx distance is 111 km
-        # (outside), therefore the first three distances are missing in dst[1]
-
     def test_case_49(self):
         # serious test of amplification + uhs
         self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.21).csv',

@@ -136,6 +136,9 @@ WantedBy=multi-user.target
 '''
 
 PYVER = sys.version_info[:2]
+PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
+            'darwin': ('macos',),
+            'win32': ('win64',)}
 
 
 def before_checks(inst, remove, usage):
@@ -212,11 +215,14 @@ def install(inst):
     # upgrade pip
     subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', 'pip', 'wheel',
                            '--upgrade'])
+
+    # install the requirements
+    req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \
+        'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
+    subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', '-r', req])
+
     # install the engine
     if inst is devel:
-        req = 'requirements-py%d%d-linux64.txt' % PYVER
-        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
-                               '-r', req])
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
                                '-e', '.'])
     else:
@@ -226,8 +232,9 @@ def install(inst):
     # create openquake.cfg
     if inst is server:
         if os.path.exists(inst.OQ_CFG):
-            print('There is an old file %s, I not touching it, but consider '
-                  'updating it with\n%s' % (inst.OQ_CFG, inst.CONFIG))
+            print('There is an old file %s; it will not be overwritten, '
+                  'but consider updating it with\n%s' %
+                  (inst.OQ_CFG, inst.CONFIG))
         else:
             with open(inst.OQ_CFG, 'w') as cfg:
                 cfg.write(inst.CONFIG)
