@@ -383,12 +383,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         C = oq.concurrent_tasks or 1
-        if oq.disagg_by_src or oq.is_ucerf():
-            f1, f2 = classical, classical
-            max_weight = max(tot_weight / C, oq.min_weight) / 5
-        else:
-            f1, f2 = classical, classical
-            max_weight = max(tot_weight / C, oq.min_weight)
+        max_weight = max(tot_weight / (2.5 * C), oq.min_weight)
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
@@ -397,18 +392,18 @@ class ClassicalCalculator(base.HazardCalculator):
             if sg.atomic:
                 # do not split atomic groups
                 nb += 1
-                smap.submit((sg, rlzs_by_gsim, self.params), f1)
+                smap.submit((sg, rlzs_by_gsim, self.params), classical)
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src
-                        else block_splitter(sg, max_weight / 2,
-                                            get_weight, sort=True))
+                        else block_splitter(
+                                sg, max_weight, get_weight, sort=True))
                 blocks = list(blks)
                 nb += len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
-                    smap.submit((block, rlzs_by_gsim, self.params), f2)
+                    smap.submit((block, rlzs_by_gsim, self.params), classical)
 
             w = sum(src.weight for src in sg)
             it = sorted(oq.maximum_distance.ddic[sg.trt].items())
