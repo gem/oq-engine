@@ -56,14 +56,12 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         nsites_factor = min(self.nsites, 1)
-        if hasattr(self, 'nodal_plane_distribution'):  # point source
-            corr_factor = 1 / len(self.nodal_plane_distribution.data) / len(
+        if hasattr(self, 'nodal_plane_distribution'):
+            rescale = len(self.nodal_plane_distribution.data) * len(
                 self.hypocenter_distribution.data)
-        elif hasattr(self, 'location'):  # collapsed point source
-            corr_factor = 1
         else:
-            corr_factor = 20
-        return self.num_ruptures * self.ngsims * nsites_factor * corr_factor
+            rescale = 1
+        return self.num_ruptures * self.ngsims * nsites_factor / rescale
 
     @property
     def et_ids(self):
