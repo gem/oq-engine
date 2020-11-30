@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, util, logs, readinput
+from openquake.commonlib import calc, util, readinput
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -73,16 +73,6 @@ def classical(srcs, rlzs_by_gsim, params, monitor):
     return hazclassical(srcs, srcfilter, rlzs_by_gsim, params, monitor)
 
 
-def start_classical(sources, rlzs_by_gsim, params, monitor):
-    """
-    Compute the PoEs from filtered sources.
-    """
-    blocks = list(block_splitter(sources, params['max_weight']/2, get_weight))
-    for block in blocks[:-1]:
-        yield classical, block, rlzs_by_gsim, params
-    yield classical(blocks[-1], rlzs_by_gsim, params, monitor)
-
-
 def store_ctxs(dstore, rupdata, grp_id):
     """
     Store contexts with the same magnitude in the datastore
@@ -107,7 +97,7 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_task = start_classical
+    core_task = classical
     accept_precalc = ['classical']
 
     def agg_dicts(self, acc, dic):
@@ -397,7 +387,7 @@ class ClassicalCalculator(base.HazardCalculator):
             f1, f2 = classical, classical
             max_weight = max(tot_weight / C, oq.min_weight) / 5
         else:
-            f1, f2 = classical, start_classical
+            f1, f2 = classical, classical
             max_weight = max(tot_weight / C, oq.min_weight)
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
@@ -411,7 +401,7 @@ class ClassicalCalculator(base.HazardCalculator):
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src
-                        else block_splitter(sg, 2 * max_weight,
+                        else block_splitter(sg, max_weight / 2,
                                             get_weight, sort=True))
                 blocks = list(blks)
                 nb += len(blocks)
