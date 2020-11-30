@@ -726,22 +726,21 @@ def weight_sources(srcs, srcfilter, params, monitor):
         md = params['maximum_distance'](trt)
         pd = psd(trt)
         splits = split_source(src) if params['split_sources'] else [src]
-        for split in splits:
-            split.nsites = len(srcfilter.close_sids(split)) or .01
-            split.num_ruptures = split.count_ruptures()
-            if pd and isinstance(split, PointSource):
-                nphc = split.count_nphc()
-                if nphc > 1:
-                    close, far = srcfilter.count_close_far(
-                        split.location, pd, md)
-                    factor = (nphc * close + far) / (close + far)
-                    split.num_ruptures /= factor
-            sources.append(split)
+        sources.extend(splits)
         dt = time.time() - t0
         calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt, 0])
     for arr in calc_times.values():
         arr[3] = monitor.task_no
     dic = grid_point_sources(sources, grp_id, params['ps_grid_spacing'])
+    for src in dic[grp_id]:
+        src.nsites = len(srcfilter.close_sids(src)) or .01
+        src.num_ruptures = src.count_ruptures()
+        if pd and isinstance(src, PointSource):
+            nphc = src.count_nphc()
+            if nphc > 1:
+                close, far = srcfilter.count_close_far(src.location, pd, md)
+                factor = (nphc * close + far) / (close + far)
+                src.num_ruptures /= factor
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
