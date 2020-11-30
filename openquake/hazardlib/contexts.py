@@ -44,7 +44,14 @@ KNOWN_DISTANCES = frozenset(
     .split())
 
 
-class _Timer(object):
+class Timer(object):
+    """
+    Timer used to save the time needed to process each source and to
+    postprocess it with ``Timer('timer.csv').read_df()``. To use it, run
+    the calculation on a single machine with
+
+    OQ_TIMER=timer.csv oq run job.ini
+    """
     fields = ['source_id', 'nrups', 'nsites', 'weight', 'dt', 'task_no']
 
     def __init__(self, fname):
@@ -57,14 +64,14 @@ class _Timer(object):
                    dt, task_no]
             open(self.fname, 'a').write(','.join(map(str, row)) + '\n')
 
-    def read(self, fname=None):
-        # postprocess the information
-        return pandas.read_csv(fname or self.fname, names=self.fields,
-                               index_col=0)
+    def read_df(self):
+        # method used to postprocess the information
+        df = pandas.read_csv(self.fname, names=self.fields, index_col=0)
+        return df.sort_values('dt')
 
 
 # object used to measure the time needed to process each source
-timer = _Timer(os.environ.get('OQ_TIMER'))
+timer = Timer(os.environ.get('OQ_TIMER'))
 
 
 def get_distances(rupture, sites, param):
