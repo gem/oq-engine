@@ -8,7 +8,7 @@ name: macos_pyapp
 jobs:
 
   python3-7_devel:
-    name: "Install develop mode on Python 3.7 using branch: ${{ github.head_ref }} "
+    name: Install develop mode on Python 3.7 using current branch
     runs-on: macos-latest
 
     steps:
@@ -24,14 +24,13 @@ jobs:
         run: pip install pytest
       - name: Install requirements files
         run: pip install -r ./requirements-py37-macos.txt 
-      - name: Run Installation of oq-engine in devel mode
-        run: pip install -e .
+      - name: Run Installation of oq-engine in devel mode with osgeo
+        run: pip install -e .[osgeo]
       - name: Run pytest to check GDAL
         run: pytest -vsx openquake/commands/tests/commands_test.py -k nrml
 
-
   python3-8_devel:
-    name: "Install develop mode on Python 3.8 using branch: ${{ github.head_ref }} "
+    name: Install develop mode on Python 3.8 using current branch
     runs-on: macos-latest
 
     steps:
@@ -47,13 +46,13 @@ jobs:
         run: pip install pytest
       - name: Install requirements files
         run: pip install -r ./requirements-py38-macos.txt 
-      - name: Run Installation of oq-engine in devel mode
-        run: pip install -e .
+      - name: Run Installation of oq-engine in devel mode with osgeo
+        run: pip install -e .[osgeo]
       - name: Run pytest to check GDAL
         run: pytest -vsx openquake/commands/tests/commands_test.py -k nrml
 
   python3-7_user:
-    name: Install user mode on Python 3.7 
+    name: Install user mode on Python 3.7 on master
     runs-on: macos-latest
 
     steps:
@@ -68,7 +67,7 @@ jobs:
 
 
   python3-8_user:
-    name: Install User mode on Python 3.8 
+    name: Install User mode on Python 3.8 on master
     runs-on: macos-latest
 
     steps:
