@@ -409,7 +409,7 @@ class SiteCollection(object):
         close = self.get_cdist(location) < distance
         return self.filter(close), self.filter(~close)
 
-    def count_sites(self, location, distance):
+    def count_close(self, location, distance):
         """
         :returns: the number of sites within the distance from the location
         """
