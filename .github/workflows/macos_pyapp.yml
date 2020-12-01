@@ -17,6 +17,8 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.7
+      - name: Install pytest to use with oqengine
+        run: pip install pytest
       - name: Run Installation scripts in user mode
         run: python3.7 install.py user
 
