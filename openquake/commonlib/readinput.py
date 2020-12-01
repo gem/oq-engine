@@ -748,7 +748,7 @@ def weight_sources(srcs, srcfilter, params, monitor):
             if nphc > 1:
                 src.num_ruptures *= get_factor(
                     nphc, src.location,
-                    srcfilter.sitecol, pd, md + pd)
+                    srcfilter.sitecol, pd * 1.5, md + pd)
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
