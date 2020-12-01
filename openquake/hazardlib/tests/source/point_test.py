@@ -448,4 +448,4 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
         aac(rates, [(3.5, 1.98e-05), (4.5, 1.98e-07)])
         aac(ps1.count_ruptures(), 2)
         aac(ps2.count_ruptures(), 4)
-        aac(cps.count_ruptures(), 4)
+        aac(cps.count_ruptures(), 6)
