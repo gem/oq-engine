@@ -1,9 +1,7 @@
 name: macos_pyapp
 'on':
   schedule:
-    - cron: "0 5 * * *"
-  push:
-    branches: [ actions ]
+    - cron: "0 23 * * *"
 
 jobs:
 
@@ -14,8 +12,6 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
-        with:
-          ref: ${{ github.head_ref }}
       - name: Set up Python 3.7 as default version on MacOS
         uses: actions/setup-python@v2
         with:
@@ -36,8 +32,6 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
-        with:
-          ref: ${{ github.head_ref }}
       - name: Set up Python 3.8 as default version on MacOS
         uses: actions/setup-python@v2
         with:
