@@ -739,7 +739,9 @@ def weight_sources(srcs, srcfilter, params, monitor):
     for src in dic[grp_id]:
         is_ps = isinstance(src, PointSource)
         if is_ps:
-            src.nsites = srcfilter.sitecol.count_close(src.location, md + pd) or EPS
+            radius = src._get_max_rupture_projection_radius()
+            src.nsites = srcfilter.sitecol.count_close(
+                src.location, md + radius) or EPS
         else:
             src.nsites = len(srcfilter.close_sids(src)) or EPS
         src.num_ruptures = src.count_ruptures()
@@ -747,8 +749,8 @@ def weight_sources(srcs, srcfilter, params, monitor):
             nphc = src.count_nphc()
             if nphc > 1:
                 src.num_ruptures *= get_factor(
-                    nphc, src.location,
-                    srcfilter.sitecol, pd * 1.5, md + pd)
+                    nphc, src.location, srcfilter.sitecol,
+                    pd + radius, md + radius)
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
