@@ -440,7 +440,7 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
             [(3.5, 9.9e-06), (4.5, 9.9e-08)])
         aac(ps2.get_annual_occurrence_rates(),
             [(3.5, 9.9e-06), (4.5, 9.9e-08)])
-        cps = CollapsedPointSource([ps1, ps2])
+        cps = CollapsedPointSource('1', [ps1, ps2])
         aac(cps.location.x, 1.25)
         aac(cps.location.y, 3.4)
         aac(cps.location.z, 3.75)
@@ -448,4 +448,4 @@ class CollapsedPointSourceTestCase(unittest.TestCase):
         aac(rates, [(3.5, 1.98e-05), (4.5, 1.98e-07)])
         aac(ps1.count_ruptures(), 2)
         aac(ps2.count_ruptures(), 4)
-        aac(cps.count_ruptures(), 4)
+        aac(cps.count_ruptures(), 6)

@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
-import itertools
 from unittest.mock import Mock
 import numpy
 from openquake.baselib.general import AccumDict, groupby_grid
@@ -89,7 +88,7 @@ def calc_average(pointsources):
     """
     acc = dict(lon=[], lat=[], dep=[], strike=[], dip=[], rake=[],
                upper_seismogenic_depth=[], lower_seismogenic_depth=[],
-               rupture_aspect_ratio=[], nphc=[])
+               rupture_aspect_ratio=[])
     rates = []
     trt = pointsources[0].tectonic_region_type
     msr = msr_name(pointsources[0])
@@ -112,7 +111,6 @@ def calc_average(pointsources):
         acc['upper_seismogenic_depth'].append(src.upper_seismogenic_depth)
         acc['lower_seismogenic_depth'].append(src.lower_seismogenic_depth)
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
-        acc['nphc'].append(src.count_nphc())
     return {key: numpy.average(acc[key], weights=rates) for key in acc}
 
 
@@ -389,11 +387,10 @@ class CollapsedPointSource(PointSource):
     """
     code = b'p'
     MODIFICATIONS = set()
-    counter = itertools.count(1)
 
-    def __init__(self, pointsources):
+    def __init__(self, source_id, pointsources):
+        self.source_id = source_id
         self.pointsources = pointsources
-        self.source_id = 'cps-%d' % next(self.counter)
         self.tectonic_region_type = pointsources[0].tectonic_region_type
         self.magnitude_scaling_relationship = (
             pointsources[0].magnitude_scaling_relationship)
@@ -413,9 +410,9 @@ class CollapsedPointSource(PointSource):
 
     def count_nphc(self):
         """
-        :returns: the average number of nodal planes and hypocenters
+        :returns: the total number of nodal planes and hypocenters
         """
-        return self.nphc
+        return sum(src.count_nphc() for src in self.pointsources)
 
     def iter_ruptures(self, **kwargs):
         """
@@ -455,9 +452,9 @@ class CollapsedPointSource(PointSource):
 
     def count_ruptures(self):
         """
-        :returns: the number of underlying point ruptures * 2
+        :returns: the total number of underlying ruptures
         """
-        return len(self.get_annual_occurrence_rates()) * 2
+        return sum(src.count_ruptures() for src in self.pointsources)
 
 
 def _coords(psources):
@@ -492,8 +489,8 @@ def grid_point_sources(sources, grp_id, ps_grid_spacing):
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
-    for idxs in grid.values():
-        cps = CollapsedPointSource(ps[idxs])
+    for i, idxs in enumerate(grid.values()):
+        cps = CollapsedPointSource('cps-%d-%d' % (grp_id, i), ps[idxs])
         cps.id = ps[0].id
         cps.grp_id = ps[0].grp_id
         cps.et_id = ps[0].et_id
