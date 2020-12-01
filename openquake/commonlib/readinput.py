@@ -48,7 +48,8 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source import point, rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.source.point import PointSource, grid_point_sources
+from openquake.hazardlib.source.point import (
+    PointSource, grid_point_sources)
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels
@@ -63,6 +64,7 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
+EPS = .01
 Site = collections.namedtuple('Site', 'sid lon lat')
 gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
 smlt_cache = {}  # fname, seed, samples, meth -> SourceModelLogicTree instance
@@ -719,12 +721,13 @@ def weight_sources(srcs, srcfilter, params, monitor):
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
     sources = []
     grp_id = srcs[0].grp_id
-    psd = params['pointsource_distance'] or (lambda src: None)
+    trt = srcs[0].tectonic_region_type
+    md = params['maximum_distance'](trt)
+    pd = (params['pointsource_distance'](trt)
+          if params['pointsource_distance'] else 0)
     for src in srcs:
         t0 = time.time()
         trt = src.tectonic_region_type
-        md = params['maximum_distance'](trt)
-        pd = psd(trt)
         splits = split_source(src) if params['split_sources'] else [src]
         sources.extend(splits)
         nrups = src.count_ruptures()
@@ -734,18 +737,38 @@ def weight_sources(srcs, srcfilter, params, monitor):
         arr[3] = monitor.task_no
     dic = grid_point_sources(sources, grp_id, params['ps_grid_spacing'])
     for src in dic[grp_id]:
-        src.nsites = len(srcfilter.close_sids(src)) or .01
+        is_ps = isinstance(src, PointSource)
+        if is_ps:
+            src.nsites = srcfilter.sitecol.count_close(src.location, md + pd) or EPS
+        else:
+            src.nsites = len(srcfilter.close_sids(src)) or EPS
         src.num_ruptures = src.count_ruptures()
-        if pd and isinstance(src, PointSource):
+        if pd and is_ps:
             nphc = src.count_nphc()
             if nphc > 1:
-                close, far = srcfilter.count_close_far(src.location, pd, md)
-                factor = (nphc * close + far) / (close + far)
-                src.num_ruptures /= factor
+                src.num_ruptures *= get_factor(
+                    nphc, src.location,
+                    srcfilter.sitecol, pd * 1.5, md + pd)
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
     return dic
+
+
+def get_factor(n, location, sitecol, psdist, maxdist):
+    """
+    :param n: an integer > 1 related to the number of ruptures in a source
+    :param location: the location of a source
+    :param sitecol: the SiteCollection
+    :param psdist: point source distance
+    :param maxdist: the maximum distance
+    :returns:
+        reduction factor in the range 1/n (if all sites are far away) to 1
+        (if all sites are close to the location)
+    """
+    close, far = sitecol.count_close_far(location, psdist, maxdist)
+    factor = (close + (far + EPS) / n) / (close + far + EPS)
+    return factor
 
 
 def save_source_info(csm, h5):
@@ -786,11 +809,11 @@ def _check_csm(csm, oqparam, h5):
     sitecol = get_site_collection(oqparam, h5)
     if sitecol is None:
         fewsites = None
-    elif len(sitecol) <= 50:
+    elif len(sitecol) <= 10:
         fewsites = sitecol
     else:  # long sitecol
-        fewsites = sitecol.filter(sitecol.sids % 50 == 0)
-    # performance hack: use 1 site over 50 when weighting the sources!
+        fewsites = sitecol.filter(sitecol.sids % 10 == 0)
+    # performance hack: use 1 site over 10 when weighting the sources!
     srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
 
     if sitecol:  # missing in test_case_1_ruptures

@@ -406,8 +406,26 @@ class SiteCollection(object):
         """
         if distance is None:  # all close
             return self, None
-        close = location.distance_to_mesh(self) < distance
+        close = self.get_cdist(location) < distance
         return self.filter(close), self.filter(~close)
+
+    def count_close(self, location, distance):
+        """
+        :returns: the number of sites within the distance from the location
+        """
+        return (self.get_cdist(location) < distance).sum()
+
+    def count_close_far(self, location, distance1, distance2):
+        """
+        :returns: (#sites < distance1, distance1 < #sites < distance2)
+        """
+        assert distance1 < distance2, (distance1, distance2)
+        cdist = self.get_cdist(location)
+        if distance1 == 0:
+            return 0, (cdist < distance2).sum()
+        close1 = (cdist < distance1).sum()
+        close2 = (cdist < distance2).sum()
+        return close1, close2 - close1
 
     def __iter__(self):
         """
