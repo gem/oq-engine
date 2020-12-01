@@ -455,9 +455,9 @@ class CollapsedPointSource(PointSource):
 
     def count_ruptures(self):
         """
-        :returns: the number of underlying point ruptures * 2
+        :returns: the total number of underlying ruptures
         """
-        return len(self.get_annual_occurrence_rates()) * 2
+        return sum(src.count_ruptures() for src in self.pointsources)
 
 
 def _coords(psources):

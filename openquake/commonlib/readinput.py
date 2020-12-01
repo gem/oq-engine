@@ -48,7 +48,8 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source import point, rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.source.point import PointSource, grid_point_sources
+from openquake.hazardlib.source.point import (
+    PointSource, CollapsedPointSource,grid_point_sources)
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels
@@ -744,15 +745,34 @@ def weight_sources(srcs, srcfilter, params, monitor):
         src.num_ruptures = src.count_ruptures()
         if pd and is_ps:
             nphc = src.count_nphc()
-            if nphc > 1:
-                close, far = srcfilter.sitecol.count_close_far(
-                    src.location, pd, md)
-                factor = (close + (far + EPS) / nphc) / (close + far + EPS)
-                src.num_ruptures *= factor
+            if isinstance(src, CollapsedPointSource):
+                src.num_ruptures *= get_factor(
+                    sum(src.count_nphc() for src in src.pointsources),
+                    src.location, srcfilter.sitecol, pd, md)
+            elif nphc > 1:
+                src.num_ruptures *= get_factor(
+                    nphc, src.location,
+                    srcfilter.sitecol, pd, md)
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
     return dic
+
+
+def get_factor(n, location, sitecol, psdist, maxdist):
+    """
+    :param n: an integer > 1 related to the number of ruptures in a source
+    :param location: the location of a source
+    :param sitecol: the SiteCollection
+    :param psdist: point source distance
+    :param maxdist: the maximum distance
+    :returns:
+        reduction factor in the range 1/n (if all sites are far away) to 1
+        (if all sites are close to the location)
+    """
+    close, far = sitecol.count_close_far(location, psdist, maxdist)
+    factor = (close + (far + EPS) / n) / (close + far + EPS)
+    return factor
 
 
 def save_source_info(csm, h5):
