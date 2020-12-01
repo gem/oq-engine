@@ -15,20 +15,29 @@
 FROM python:3.8-slim AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
-RUN useradd -m -u 1000 -s /bin/bash openquake
 RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev
-USER openquake
-ENV HOME /home/openquake
-WORKDIR /home/openquake
 ARG oq_branch=master
+# Setup the virtualenv
+RUN python -m venv /opt/openquake
+ENV PATH="/opt/openquake/bin:$PATH"
+WORKDIR /opt
 #clone repository and install engine
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
     pip --disable-pip-version-check install -e .[cluster,osgeo] -r requirements-py38-linux64.txt --no-warn-script-location
 #
-ENV PATH="/home/openquake/.local/bin:$PATH"
+FROM python:3.8-slim AS build-image
+COPY --from=compile-image /opt/ /opt/
+ENV PATH="/opt/openquake/bin:$PATH"
+ENV LANG en_US.UTF-8
+RUN apt-get update &&  apt-get install -y --no-install-recommends git && useradd -m -u 1000 -s /bin/bash openquake 
+USER openquake
+ENV HOME /home/openquake
+WORKDIR ${HOME}
 #
 ADD scripts/oq-start.sh ${HOME}
 RUN mkdir oqdata 
+# if want to copy engine src to home
+#ADD oq-engine-master ${HOME}
 EXPOSE 8800:8800
 STOPSIGNAL SIGINT
 ENTRYPOINT ["/bin/bash", "-c"]
