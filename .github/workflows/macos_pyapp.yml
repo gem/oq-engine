@@ -21,10 +21,12 @@ jobs:
           python-version: 3.7
       - name: Install pytest to use with oqengine
         run: pip install pytest
-      - name: Run Installation scripts in user mode
+      - name: Install requirements files
         run: pip install -r ./requirements-py37-macos.txt 
-      - name: Run Installation scripts in user mode
+      - name: Run Installation of oq-engine
         run: pip install .
+      - name: Run pytest to check GDAL
+        run: pytest -vsx openquake/commands/tests/commands_test.py -k nrml
 
   python3-8:
     name: Install User mode on Python 3.8 
