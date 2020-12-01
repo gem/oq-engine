@@ -1,0 +1,45 @@
+---
+#
+- import_playbook: check_py_ver.yaml
+
+- hosts: all
+  #
+  serial: 1
+  order: sorted
+  become: yes
+  vars:
+    venv_dir: /opt/openquake
+    venv_bin: "{{ venv_dir }}/bin"
+
+  pre_tasks:
+  - name: ping hosts
+    ping:
+
+  - name: check OS
+    debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_python_version}}
+
+  - name: Ensure user openquake exist and generate ssh key
+    user:
+      name: openquake
+      home: /home/openquake
+      shell: /bin/bash
+      state: present
+      generate_ssh_key: yes
+      ssh_key_bits: 2048
+      ssh_key_file: .ssh/id_rsa
+
+  tasks:
+
+
+  - name: Download installation scripts
+    get_url:
+      url: https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+      dest: /tmp/install.py
+      mode: '0644'
+
+  - name: Run install script from github repo 
+    shell: python3.8 /tmp/install.py server
+      #become_user: openquake
+    changed_when: false
+    register: oq_install
+    

@@ -3,6 +3,8 @@ name: zmq
 'on':
   schedule:
     - cron: "0 3 * * *"
+  push:
+    branches: [ actions ]
 
 jobs:
   docker:
@@ -22,6 +24,9 @@ jobs:
           docker-compose up -d
           sleep 30
           docker-compose ps
+      - name: Display version of engine
+        run: |
+          docker exec engine-master /bin/bash -c "oq --version"
       - name: Run a calculation on cluster and retrieve with curl
         run: |
           docker exec -u 0 engine-master /bin/bash -c "chown -R 1000:1000 oq-engine"
