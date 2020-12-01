@@ -383,7 +383,6 @@ class SourceFilter(object):
         for src in sources:
             sids = self.close_sids(src)
             if len(sids):
-                src.nsites = len(sids)
                 yield src, sids
 
     def __getitem__(self, slc):
