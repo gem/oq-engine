@@ -28,6 +28,7 @@ https://wheelhouse.openquake.org/v3/macos/py/requests-2.22.0-py2.py3-none-any.wh
 https://wheelhouse.openquake.org/v3/macos/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py37/PyYAML-5.1.2-cp37-cp37m-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py/toml-0.10.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py37/GDAL-3.1.2-cp37-cp37m-macosx_10_9_x86_64.whl
 
 ### setproctitle ###
 # comment the following lines to skip installation
