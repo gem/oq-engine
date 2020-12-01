@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
-import itertools
 from unittest.mock import Mock
 import numpy
 from openquake.baselib.general import AccumDict, groupby_grid
@@ -89,7 +88,7 @@ def calc_average(pointsources):
     """
     acc = dict(lon=[], lat=[], dep=[], strike=[], dip=[], rake=[],
                upper_seismogenic_depth=[], lower_seismogenic_depth=[],
-               rupture_aspect_ratio=[], nphc=[])
+               rupture_aspect_ratio=[])
     rates = []
     trt = pointsources[0].tectonic_region_type
     msr = msr_name(pointsources[0])
@@ -112,7 +111,6 @@ def calc_average(pointsources):
         acc['upper_seismogenic_depth'].append(src.upper_seismogenic_depth)
         acc['lower_seismogenic_depth'].append(src.lower_seismogenic_depth)
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
-        acc['nphc'].append(src.count_nphc())
     return {key: numpy.average(acc[key], weights=rates) for key in acc}
 
 
@@ -412,9 +410,9 @@ class CollapsedPointSource(PointSource):
 
     def count_nphc(self):
         """
-        :returns: the average number of nodal planes and hypocenters
+        :returns: the total number of nodal planes and hypocenters
         """
-        return self.nphc
+        return sum(src.count_nphc() for src in self.pointsources)
 
     def iter_ruptures(self, **kwargs):
         """
