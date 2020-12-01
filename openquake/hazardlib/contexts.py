@@ -52,22 +52,24 @@ class Timer(object):
 
     OQ_TIMER=timer.csv oq run job.ini
     """
-    fields = ['source_id', 'code', 'nrups', 'nsites', 'weight', 'dt',
-              'task_no']
+    fields = ['source_id', 'code', 'effrups', 'nsites', 'weight',
+              'numrups', 'numsites', 'dt', 'task_no']
 
     def __init__(self, fname):
         self.fname = fname
 
-    def save(self, src, dt, task_no):
+    def save(self, src, numrups, numsites, dt, task_no):
         # save the source info
         if self.fname:
             row = [src.source_id, src.code.decode('ascii'),
-                   src.num_ruptures, src.nsites, src.weight, dt, task_no]
+                   src.num_ruptures, src.nsites, src.weight,
+                   numrups, numsites, dt, task_no]
             open(self.fname, 'a').write(','.join(map(str, row)) + '\n')
 
     def read_df(self):
         # method used to postprocess the information
         df = pandas.read_csv(self.fname, names=self.fields, index_col=0)
+        df['speed'] = df['weight'] / df['dt']
         return df.sort_values('dt')
 
 
@@ -608,7 +610,8 @@ class PmapMaker(object):
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
                 [self.numrups, self.numsites, dt])
-            timer.save(src, dt, self.cmaker.task_no)
+            timer.save(src, self.numrups, self.numsites, dt,
+                       self.cmaker.task_no)
         return ~self.pmap if self.rup_indep else self.pmap
 
     def _make_src_mutex(self):
@@ -630,7 +633,8 @@ class PmapMaker(object):
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
                 [self.numrups, self.numsites, dt])
-            timer.save(src, dt, self.cmaker.task_no)
+            timer.save(src, self.numrups, self.numsites, dt,
+                       self.cmaker.task_no)
         return self.pmap
 
     def dictarray(self, ctxs):
