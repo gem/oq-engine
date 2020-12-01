@@ -8,7 +8,7 @@ name: macos_pyapp
 jobs:
 
   python3-7_devel:
-    name: Install develop mode on Python 3.7 using branch: ${{ github.head_ref }} 
+    name: "Install develop mode on Python 3.7 using branch: ${{ github.head_ref }} "
     runs-on: macos-latest
 
     steps:
@@ -31,7 +31,7 @@ jobs:
 
 
   python3-8_devel:
-    name: Install develop mode on Python 3.8 using branch: ${{ github.head_ref }} 
+    name: "Install develop mode on Python 3.8 using branch: ${{ github.head_ref }} "
     runs-on: macos-latest
 
     steps:
