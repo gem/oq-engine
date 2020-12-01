@@ -387,7 +387,7 @@ class CollapsedPointSource(PointSource):
     tectonic region type, magnitude_scaling_relationship and
     temporal_occurrence_model.
     """
-    code = b'P'
+    code = b'p'
     MODIFICATIONS = set()
     counter = itertools.count(1)
 
