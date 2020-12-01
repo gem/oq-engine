@@ -49,7 +49,7 @@ from openquake.hazardlib.source import point, rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.source.point import (
-    PointSource, CollapsedPointSource,grid_point_sources)
+    PointSource, grid_point_sources)
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels
@@ -724,7 +724,7 @@ def weight_sources(srcs, srcfilter, params, monitor):
     trt = srcs[0].tectonic_region_type
     md = params['maximum_distance'](trt)
     pd = (params['pointsource_distance'](trt)
-          if params['pointsource_distance'] else None)
+          if params['pointsource_distance'] else 0)
     for src in srcs:
         t0 = time.time()
         trt = src.tectonic_region_type
@@ -739,20 +739,16 @@ def weight_sources(srcs, srcfilter, params, monitor):
     for src in dic[grp_id]:
         is_ps = isinstance(src, PointSource)
         if is_ps:
-            src.nsites = srcfilter.sitecol.count_close(src.location, md) or EPS
+            src.nsites = srcfilter.sitecol.count_close(src.location, md + pd) or EPS
         else:
             src.nsites = len(srcfilter.close_sids(src)) or EPS
         src.num_ruptures = src.count_ruptures()
         if pd and is_ps:
             nphc = src.count_nphc()
-            if isinstance(src, CollapsedPointSource):
-                src.num_ruptures *= get_factor(
-                    sum(src.count_nphc() for src in src.pointsources),
-                    src.location, srcfilter.sitecol, pd, md)
-            elif nphc > 1:
+            if nphc > 1:
                 src.num_ruptures *= get_factor(
                     nphc, src.location,
-                    srcfilter.sitecol, pd, md)
+                    srcfilter.sitecol, pd, md + pd)
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
@@ -813,11 +809,11 @@ def _check_csm(csm, oqparam, h5):
     sitecol = get_site_collection(oqparam, h5)
     if sitecol is None:
         fewsites = None
-    elif len(sitecol) <= 50:
+    elif len(sitecol) <= 10:
         fewsites = sitecol
     else:  # long sitecol
-        fewsites = sitecol.filter(sitecol.sids % 50 == 0)
-    # performance hack: use 1 site over 50 when weighting the sources!
+        fewsites = sitecol.filter(sitecol.sids % 10 == 0)
+    # performance hack: use 1 site over 10 when weighting the sources!
     srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
 
     if sitecol:  # missing in test_case_1_ruptures
