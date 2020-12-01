@@ -23,8 +23,8 @@ jobs:
         run: pip install pytest
       - name: Install requirements files
         run: pip install -r ./requirements-py37-macos.txt 
-      - name: Run Installation of oq-engine
-        run: pip install .
+      - name: Run Installation of oq-engine in devel mode
+        run: pip install -e .
       - name: Run pytest to check GDAL
         run: pytest -vsx openquake/commands/tests/commands_test.py -k nrml
 
