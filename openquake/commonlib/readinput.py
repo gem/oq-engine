@@ -739,7 +739,8 @@ def weight_sources(srcs, srcfilter, params, monitor):
         if pd and isinstance(src, PointSource):
             nphc = src.count_nphc()
             if nphc > 1:
-                close, far = srcfilter.count_close_far(src.location, pd, md)
+                close, far = srcfilter.sitecol.count_close_far(
+                    src.location, pd, md)
                 factor = (nphc * close + far) / (close + far)
                 src.num_ruptures /= factor
     dic['calc_times'] = calc_times
