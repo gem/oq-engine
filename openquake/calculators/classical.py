@@ -48,7 +48,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-EPS = .01
+EPS = .01  # used for src.nsites outside the maximum_distance
+BUFFER = 1.5  # enlarge a bit the pointsource_distance sphere to fix the weight
 get_weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('et_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
@@ -68,30 +69,14 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def get_factor(n, location, sitecol, psdist, maxdist):
-    """
-    :param n: an integer > 1 related to the number of ruptures in a source
-    :param location: the location of a source
-    :param sitecol: the SiteCollection
-    :param psdist: point source distance
-    :param maxdist: the maximum distance
-    :returns:
-        reduction factor in the range 1/n (if all sites are far away) to 1
-        (if all sites are close to the location)
-    """
-    close, far = sitecol.count_close_far(location, psdist, maxdist)
-    factor = (close + (far + EPS) / n) / (close + far + EPS)
-    return factor
-
-
-def _weight_sources(csm, oqparam, h5):
+def run_preclassical(csm, oqparam, h5):
 
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
         src.num_ruptures = src.count_ruptures()
         src.nsites = len(csm.srcfilter.sitecol)
 
-    # run weight_sources for non-atomic sources
+    # run preclassical for non-atomic sources
     sources_by_grp = groupby(
         csm.get_sources(atomic=False),
         lambda src: (src.grp_id, msr_name(src)))
@@ -101,7 +86,7 @@ def _weight_sources(csm, oqparam, h5):
                  split_sources=oqparam.split_sources)
 
     res = parallel.Starmap(
-        weight_sources,
+        preclassical,
         ((srcs, csm.srcfilter, param) for srcs in sources_by_grp.values()),
         h5=h5, distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
 
@@ -147,9 +132,12 @@ def store_ctxs(dstore, rupdata, grp_id):
 
 #  ########################### task functions ############################ #
 
-def weight_sources(srcs, srcfilter, params, monitor):
+def preclassical(srcs, srcfilter, params, monitor):
     """
-    Weight the sources. Also split them if split_sources is true.
+    Weight the sources. Also split them if split_sources is true. If
+    ps_grid_spacing is set, grid the point sources before weighting them.
+
+    NB: srcfilter can be on a reduced site collection for performance reasons
     """
     # nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
@@ -159,31 +147,40 @@ def weight_sources(srcs, srcfilter, params, monitor):
     md = params['maximum_distance'](trt)
     pd = (params['pointsource_distance'](trt)
           if params['pointsource_distance'] else 0)
-    for src in srcs:
-        t0 = time.time()
-        trt = src.tectonic_region_type
-        splits = split_source(src) if params['split_sources'] else [src]
-        sources.extend(splits)
-        nrups = src.count_ruptures()
-        dt = time.time() - t0
-        calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
-    for arr in calc_times.values():
-        arr[3] = monitor.task_no
+    with monitor('splitting sources'):
+        # this can be slow
+        for src in srcs:
+            t0 = time.time()
+            src.nsites = len(srcfilter.close_sids(src))
+            # NB: it is crucial to split only the close sources, for
+            # performance reasons (think of Ecuador in SAM)
+            splits = split_source(src) if (
+                params['split_sources'] and src.nsites) else [src]
+            sources.extend(splits)
+            nrups = src.count_ruptures() if src.nsites else 0
+            dt = time.time() - t0
+            calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
+        for arr in calc_times.values():
+            arr[3] = monitor.task_no
     dic = grid_point_sources(sources, params['ps_grid_spacing'], monitor)
-    for src in dic[grp_id]:
-        is_ps = isinstance(src, PointSource)
-        if is_ps:
-            src.nsites = srcfilter.sitecol.count_close(
-                src.location, md + pd) or EPS
-        else:
-            src.nsites = len(srcfilter.close_sids(src)) or EPS
-        src.num_ruptures = src.count_ruptures()
-        if pd and is_ps:
-            nphc = src.count_nphc()
-            if nphc > 1:
-                src.num_ruptures *= get_factor(
-                    nphc, src.location,
-                    srcfilter.sitecol, pd * 1.5, md + pd)
+    with monitor('weighting sources'):
+        # this is normally fast
+        for src in dic[grp_id]:
+            if not src.nsites:  # filtered out
+                src.nsites = EPS
+            is_ps = isinstance(src, PointSource)
+            if is_ps:
+                # NB: using cKDTree would not help, performance-wise
+                cdist = srcfilter.sitecol.get_cdist(src.location)
+                src.nsites = (cdist <= md + pd).sum() or EPS
+            src.num_ruptures = src.count_ruptures()
+            if pd and is_ps:
+                nphc = src.count_nphc()
+                if nphc > 1:
+                    close = (cdist <= pd * BUFFER).sum()
+                    far = src.nsites - close
+                    factor = (close + (far + EPS) / nphc) / (close + far + EPS)
+                    src.num_ruptures *= factor
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
@@ -367,7 +364,7 @@ class ClassicalCalculator(base.HazardCalculator):
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
             oq.max_sites_per_tile, oq.max_sites_disagg)
         psd = self.set_psd()  # must go before to set the pointsource_distance
-        _weight_sources(self.csm, oq, self.datastore)
+        run_preclassical(self.csm, oq, self.datastore)
 
         # exit early if we want to perform only a preclassical
         if oq.calculation_mode == 'preclassical':

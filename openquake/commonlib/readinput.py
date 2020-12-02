@@ -750,6 +750,7 @@ def _check_csm(csm, oqparam, h5):
     elif len(sitecol) > 10_000:
         # performance hack: use 1 site over 10 when weighting the sources
         fewsites = sitecol.filter(sitecol.sids % 10 == 0)
+        logging.info('Filtering with %s', fewsites)
     else:  # short enough sitecol
         fewsites = sitecol
     srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
@@ -812,6 +813,7 @@ def get_composite_source_model(oqparam, h5=None):
                 # avoid errors with --reuse_hazard
                 h5['et_ids'] = csm.get_et_ids()
                 hdf5.create(h5, 'source_info', source_info_dt)
+            _check_csm(csm, oqparam, h5)
             return csm
 
     # read and process the composite source model from the input files

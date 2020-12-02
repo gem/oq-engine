@@ -415,18 +415,6 @@ class SiteCollection(object):
         """
         return (self.get_cdist(location) < distance).sum()
 
-    def count_close_far(self, location, distance1, distance2):
-        """
-        :returns: (#sites < distance1, distance1 < #sites < distance2)
-        """
-        assert distance1 < distance2, (distance1, distance2)
-        cdist = self.get_cdist(location)
-        if distance1 == 0:
-            return 0, (cdist < distance2).sum()
-        close1 = (cdist < distance1).sum()
-        close2 = (cdist < distance2).sum()
-        return close1, close2 - close1
-
     def __iter__(self):
         """
         Iterate through all :class:`sites <Site>` in the collection, yielding
