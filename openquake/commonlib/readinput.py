@@ -37,20 +37,17 @@ import requests
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, random_filter, countby, groupby, group_array, get_duplicates)
+    random_filter, countby, group_array, get_duplicates)
 from openquake.baselib.python3compat import zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.filters import SourceFilter, split_source
+from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
-from openquake.hazardlib.source import point, rupture
+from openquake.hazardlib.source import rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.source.point import (
-    PointSource, grid_point_sources)
-from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_functions
@@ -64,7 +61,6 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
-EPS = .01
 Site = collections.namedtuple('Site', 'sid lon lat')
 gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
 smlt_cache = {}  # fname, seed, samples, meth -> SourceModelLogicTree instance
@@ -713,65 +709,6 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def weight_sources(srcs, srcfilter, params, monitor):
-    """
-    Weight the sources. Also split them if split_sources is true.
-    """
-    # nrups, nsites, time, task_no
-    calc_times = AccumDict(accum=numpy.zeros(4, F32))
-    sources = []
-    grp_id = srcs[0].grp_id
-    trt = srcs[0].tectonic_region_type
-    md = params['maximum_distance'](trt)
-    pd = (params['pointsource_distance'](trt)
-          if params['pointsource_distance'] else 0)
-    for src in srcs:
-        t0 = time.time()
-        trt = src.tectonic_region_type
-        splits = split_source(src) if params['split_sources'] else [src]
-        sources.extend(splits)
-        nrups = src.count_ruptures()
-        dt = time.time() - t0
-        calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
-    for arr in calc_times.values():
-        arr[3] = monitor.task_no
-    dic = grid_point_sources(sources, params['ps_grid_spacing'], monitor)
-    for src in dic[grp_id]:
-        is_ps = isinstance(src, PointSource)
-        if is_ps:
-            src.nsites = srcfilter.sitecol.count_close(
-                src.location, md + pd) or EPS
-        else:
-            src.nsites = len(srcfilter.close_sids(src)) or EPS
-        src.num_ruptures = src.count_ruptures()
-        if pd and is_ps:
-            nphc = src.count_nphc()
-            if nphc > 1:
-                src.num_ruptures *= get_factor(
-                    nphc, src.location,
-                    srcfilter.sitecol, pd * 1.5, md + pd)
-    dic['calc_times'] = calc_times
-    dic['before'] = len(sources)
-    dic['after'] = len(dic[grp_id])
-    return dic
-
-
-def get_factor(n, location, sitecol, psdist, maxdist):
-    """
-    :param n: an integer > 1 related to the number of ruptures in a source
-    :param location: the location of a source
-    :param sitecol: the SiteCollection
-    :param psdist: point source distance
-    :param maxdist: the maximum distance
-    :returns:
-        reduction factor in the range 1/n (if all sites are far away) to 1
-        (if all sites are close to the location)
-    """
-    close, far = sitecol.count_close_far(location, psdist, maxdist)
-    factor = (close + (far + EPS) / n) / (close + far + EPS)
-    return factor
-
-
 def save_source_info(csm, h5):
     data = {}  # src_id -> row
     wkts = []
@@ -844,43 +781,7 @@ def _check_csm(csm, oqparam, h5):
         if len(sids) == 0:
             raise RuntimeError('All sources were discarded!?')
 
-    return srcfilter
-
-
-def _weight_sources(csm, srcfilter, oqparam, h5):
-
-    # do nothing for atomic sources except counting the ruptures
-    for src in csm.get_sources(atomic=True):
-        src.num_ruptures = src.count_ruptures()
-        src.nsites = len(srcfilter.sitecol)
-
-    # run weight_sources for non-atomic sources
-    sources_by_grp = groupby(
-        csm.get_sources(atomic=False),
-        lambda src: (src.grp_id, point.msr_name(src)))
-    param = dict(maximum_distance=oqparam.maximum_distance,
-                 pointsource_distance=oqparam.pointsource_distance,
-                 ps_grid_spacing=oqparam.ps_grid_spacing,
-                 split_sources=oqparam.split_sources)
-
-    res = parallel.Starmap(
-        weight_sources,
-        ((srcs, srcfilter, param) for srcs in sources_by_grp.values()), h5=h5,
-        distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
-
-    if res and res['before'] != res['after']:
-        logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
-                     format(res['before'], res['after']))
-
-    if res and h5:
-        csm.update_source_info(res['calc_times'], nsites=True)
-
-    for grp_id, srcs in res.items():
-        # srcs can be empty if the minimum_magnitude filter is on
-        if srcs and not isinstance(grp_id, str):
-            newsg = SourceGroup(srcs[0].tectonic_region_type)
-            newsg.sources = srcs
-            csm.src_groups[grp_id] = newsg
+    csm.srcfilter = srcfilter
 
 
 def get_composite_source_model(oqparam, h5=None):
@@ -916,20 +817,12 @@ def get_composite_source_model(oqparam, h5=None):
     # read and process the composite source model from the input files
     csm = get_csm(oqparam, full_lt,  h5)
     save_source_info(csm, h5)
-    srcfilter = _check_csm(csm, oqparam, h5)
-    if not oqparam.is_event_based():
-        _weight_sources(csm, srcfilter, oqparam, h5)
-        for sg in csm.src_groups:  # sanity check
-            for src in sg:
-                assert src.num_ruptures
-                assert src.nsites
-
-    # pickle the csm
     if oqparam.cachedir and not oqparam.is_ucerf():
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
             pickle.dump(csm, f)
 
+    _check_csm(csm, oqparam, h5)
     return csm
 
 
