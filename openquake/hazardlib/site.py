@@ -400,15 +400,6 @@ class SiteCollection(object):
             tiles.append(sc)
         return tiles
 
-    def split(self, location, distance):
-        """
-        :returns: (close_sites, far_sites)
-        """
-        if distance is None:  # all close
-            return self, None
-        close = self.get_cdist(location) < distance
-        return self.filter(close), self.filter(~close)
-
     def count_close(self, location, distance):
         """
         :returns: the number of sites within the distance from the location

@@ -223,9 +223,9 @@ class PointSource(ParametricSeismicSource):
                         surface, occurrence_rate,
                         self.temporal_occurrence_model)
 
-    def point_ruptures(self):
+    def avg_ruptures(self):
         """
-        Generate one point rupture for each magnitude
+        Generate one rupture for each magnitude
         """
         avg = calc_average([self])
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
@@ -422,7 +422,7 @@ class CollapsedPointSource(PointSource):
         for src in self.pointsources:
             yield from src.iter_ruptures(**kwargs)
 
-    def point_ruptures(self):
+    def avg_ruptures(self):
         """
         :yields: the underlying point ruptures
         """
