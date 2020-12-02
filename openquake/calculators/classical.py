@@ -68,22 +68,6 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def get_factor(n, location, cls):
-    """
-    :param n: an integer > 1 related to the number of ruptures in a source
-    :param location: the location of a source
-    :param sitecol: the SiteCollection
-    :param psdist: point source distance
-    :param maxdist: the maximum distance
-    :returns:
-        reduction factor in the range 1/n (if all sites are far away) to 1
-        (if all sites are close to the location)
-    """
-    close, far = sitecol.count_close_far(location, psdist, maxdist)
-    factor = (close + (far + EPS) / n) / (close + far + EPS)
-    return factor
-
-
 def _weight_sources(csm, oqparam, h5):
 
     # do nothing for atomic sources except counting the ruptures
@@ -173,14 +157,16 @@ def weight_sources(srcs, srcfilter, params, monitor):
     for src in dic[grp_id]:
         is_ps = isinstance(src, PointSource)
         if is_ps:
-            src.nsites = srcfilter.count_close(src.location, md + pd) or EPS
+            # using the cKDTree would not hek
+            cdist = srcfilter.sitecol.get_cdist(src.location)
+            src.nsites = (cdist <= md + pd).sum() or EPS
         else:
             src.nsites = len(srcfilter.close_sids(src)) or EPS
         src.num_ruptures = src.count_ruptures()
         if pd and is_ps:
             nphc = src.count_nphc()
             if nphc > 1:
-                close = srcfilter.count_close(src.location, pd)
+                close = (cdist <= pd).sum()
                 far = src.nsites - close
                 factor = (close + (far + EPS) / nphc) / (close + far + EPS)
                 src.num_ruptures *= factor
