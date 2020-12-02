@@ -49,7 +49,10 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 EPS = .01  # used for src.nsites outside the maximum_distance
-BUFFER = 1.5  # enlarge a bit the pointsource_distance sphere to fix the weight
+BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight
+# with BUFFER = 1 we would have lots of apparently light sources
+# collected together in an extra-slow task, as it happens in SHARE
+# with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('et_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
