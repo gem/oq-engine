@@ -133,7 +133,10 @@ def store_ctxs(dstore, rupdata, grp_id):
 
 def weight_sources(srcs, srcfilter, params, monitor):
     """
-    Weight the sources. Also split them if split_sources is true.
+    Weight the sources. Also split them if split_sources is true. If
+    ps_grid_spacing is set, grid the point sources before weighting them.
+
+    NB: srcfilter can be on a reduced site collection for performance reasons
     """
     # nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
@@ -145,7 +148,6 @@ def weight_sources(srcs, srcfilter, params, monitor):
           if params['pointsource_distance'] else 0)
     for src in srcs:
         t0 = time.time()
-        trt = src.tectonic_region_type
         splits = split_source(src) if params['split_sources'] else [src]
         sources.extend(splits)
         nrups = src.count_ruptures()
@@ -157,7 +159,7 @@ def weight_sources(srcs, srcfilter, params, monitor):
     for src in dic[grp_id]:
         is_ps = isinstance(src, PointSource)
         if is_ps:
-            # using the cKDTree would not hek
+            # NB: using cKDTree would not help, performance-wise
             cdist = srcfilter.sitecol.get_cdist(src.location)
             src.nsites = (cdist <= md + pd).sum() or EPS
         else:
