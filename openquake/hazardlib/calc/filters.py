@@ -365,7 +365,14 @@ class SourceFilter(object):
                 (bbox[2] + bbox[0]) / 2., (bbox[3] + bbox[1]) / 2, 0)
             dist = numpy.sqrt(dlon**2 + dlat**2) / KM_TO_DEGREES
 
-        sids = U32(self._close_sids(lon, lat, dep, dist, eps=.001))
+        sids = self._close_sids(lon, lat, dep, dist)
+        return sids
+
+    def _close_sids(self, lon, lat, dep, dist):
+        if not hasattr(self, 'kdt'):
+            self.kdt = cKDTree(self.sitecol.xyz)
+        xyz = spherical_to_cartesian(lon, lat, dep)
+        sids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
         sids.sort()
         return sids
 
