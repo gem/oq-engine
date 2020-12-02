@@ -366,7 +366,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
             oq.max_sites_per_tile, oq.max_sites_disagg)
-        psd = self.set_psd()
+        psd = self.set_psd()  # must go before to set the pointsource_distance
+        _weight_sources(self.csm, oq, self.datastore)
 
         # exit early if we want to perform only a preclassical
         if oq.calculation_mode == 'preclassical':
@@ -377,7 +378,6 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
 
-        _weight_sources(self.csm, oq, self.datastore)
         smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.src_filter())
         self.submit_tasks(smap)
