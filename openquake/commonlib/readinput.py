@@ -747,7 +747,8 @@ def _check_csm(csm, oqparam, h5):
     sitecol = get_site_collection(oqparam, h5)
     if sitecol is None:
         fewsites = None
-    elif len(sitecol) > 10_000:
+    elif (oqparam.ps_grid_spacing and len(sitecol) > 10_000) or (
+            not oqparam.ps_grid_spacing and len(sitecol) > 1000):
         # performance hack: use 1 site over 10 when weighting the sources
         fewsites = sitecol.filter(sitecol.sids % 10 == 0)
     else:  # short enough sitecol
