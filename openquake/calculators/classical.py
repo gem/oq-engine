@@ -163,6 +163,8 @@ def weight_sources(srcs, srcfilter, params, monitor):
     with monitor('weighting sources'):
         # this is normally fast
         for src in dic[grp_id]:
+            if not src.nsites:  # filtered out
+                src.nsites = EPS
             is_ps = isinstance(src, PointSource)
             if is_ps:
                 # NB: using cKDTree would not help, performance-wise
