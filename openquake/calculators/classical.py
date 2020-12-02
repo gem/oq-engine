@@ -68,7 +68,7 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def get_factor(n, location, sitecol, psdist, maxdist):
+def get_factor(n, location, cls):
     """
     :param n: an integer > 1 related to the number of ruptures in a source
     :param location: the location of a source
@@ -173,17 +173,17 @@ def weight_sources(srcs, srcfilter, params, monitor):
     for src in dic[grp_id]:
         is_ps = isinstance(src, PointSource)
         if is_ps:
-            src.nsites = srcfilter.sitecol.count_close(
-                src.location, md + pd) or EPS
+            src.nsites = srcfilter.count_close(src.location, md + pd) or EPS
         else:
             src.nsites = len(srcfilter.close_sids(src)) or EPS
         src.num_ruptures = src.count_ruptures()
         if pd and is_ps:
             nphc = src.count_nphc()
             if nphc > 1:
-                src.num_ruptures *= get_factor(
-                    nphc, src.location,
-                    srcfilter.sitecol, pd * 1.5, md + pd)
+                close = srcfilter.count_close(src.location, pd)
+                far = src.nsites - close
+                factor = (close + (far + EPS) / nphc) / (close + far + EPS)
+                src.num_ruptures *= factor
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])

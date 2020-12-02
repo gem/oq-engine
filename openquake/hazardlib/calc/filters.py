@@ -371,6 +371,15 @@ class SourceFilter(object):
         sids.sort()
         return sids
 
+    def count_close(self, loc, dist):
+        """
+        :returns: the number of sites within `dist` from `loc` (approx)
+        """
+        if not hasattr(self, 'kdt'):
+            self.kdt = cKDTree(self.sitecol.xyz)
+        xyz = spherical_to_cartesian(loc.x, loc.y, loc.z)
+        return len(self.kdt.query_ball_point(xyz, dist, eps=.001))
+
     def filter(self, sources):
         """
         :param sources: a sequence of sources
