@@ -146,32 +146,34 @@ def weight_sources(srcs, srcfilter, params, monitor):
     md = params['maximum_distance'](trt)
     pd = (params['pointsource_distance'](trt)
           if params['pointsource_distance'] else 0)
-    for src in srcs:
-        t0 = time.time()
-        splits = split_source(src) if params['split_sources'] else [src]
-        sources.extend(splits)
-        nrups = src.count_ruptures()
-        dt = time.time() - t0
-        calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
-    for arr in calc_times.values():
-        arr[3] = monitor.task_no
+    with monitor('splitting sources'):
+        for src in srcs:
+            t0 = time.time()
+            splits = split_source(src) if params['split_sources'] else [src]
+            sources.extend(splits)
+            nrups = src.count_ruptures()
+            dt = time.time() - t0
+            calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
+        for arr in calc_times.values():
+            arr[3] = monitor.task_no
     dic = grid_point_sources(sources, params['ps_grid_spacing'], monitor)
-    for src in dic[grp_id]:
-        is_ps = isinstance(src, PointSource)
-        if is_ps:
-            # NB: using cKDTree would not help, performance-wise
-            cdist = srcfilter.sitecol.get_cdist(src.location)
-            src.nsites = (cdist <= md + pd).sum() or EPS
-        else:
-            src.nsites = len(srcfilter.close_sids(src)) or EPS
-        src.num_ruptures = src.count_ruptures()
-        if pd and is_ps:
-            nphc = src.count_nphc()
-            if nphc > 1:
-                close = (cdist <= pd).sum()
-                far = src.nsites - close
-                factor = (close + (far + EPS) / nphc) / (close + far + EPS)
-                src.num_ruptures *= factor
+    with monitor('weighting sources'):
+        for src in dic[grp_id]:
+            is_ps = isinstance(src, PointSource)
+            if is_ps:
+                # NB: using cKDTree would not help, performance-wise
+                cdist = srcfilter.sitecol.get_cdist(src.location)
+                src.nsites = (cdist <= md + pd).sum() or EPS
+            else:
+                src.nsites = len(srcfilter.close_sids(src)) or EPS
+            src.num_ruptures = src.count_ruptures()
+            if pd and is_ps:
+                nphc = src.count_nphc()
+                if nphc > 1:
+                    close = (cdist <= pd).sum()
+                    far = src.nsites - close
+                    factor = (close + (far + EPS) / nphc) / (close + far + EPS)
+                    src.num_ruptures *= factor
     dic['calc_times'] = calc_times
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
