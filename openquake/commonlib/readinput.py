@@ -754,6 +754,7 @@ def _check_csm(csm, oqparam, h5):
     elif not oqparam.ps_grid_spacing and len(sitecol) > 100:
         n = int(numpy.ceil(len(sitecol) / 100))  # >= 2
         fewsites = sitecol.filter(sitecol.sids % n == 0)
+        logging.info('Filtering with %s', fewsites)
     else:  # short enough sitecol
         fewsites = sitecol
     srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
