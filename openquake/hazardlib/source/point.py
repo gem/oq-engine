@@ -20,6 +20,7 @@ import math
 from unittest.mock import Mock
 import numpy
 from openquake.baselib.general import AccumDict, groupby_grid
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -466,17 +467,16 @@ def _coords(psources):
     return arr
 
 
-def grid_point_sources(sources, grp_id, ps_grid_spacing):
+def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     """
     :param sources:
         a list of sources with the same grp_id (point sources and not)
-    :param grp_id:
-        source group ID (integer)
     :param ps_grid_spacing:
         value of the point source grid spacing in km; if None, do nothing
     :returns:
         a dict grp_id -> list of non-point sources and collapsed point sources
     """
+    grp_id = sources[0].grp_id
     for src in sources[1:]:
         assert src.grp_id == grp_id, (src.grp_id, grp_id)
     if ps_grid_spacing is None:
@@ -489,8 +489,9 @@ def grid_point_sources(sources, grp_id, ps_grid_spacing):
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
+    task_no = getattr(monitor, 'task_no', 0)
     for i, idxs in enumerate(grid.values()):
-        cps = CollapsedPointSource('cps-%d-%d' % (grp_id, i), ps[idxs])
+        cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
         cps.id = ps[0].id
         cps.grp_id = ps[0].grp_id
         cps.et_id = ps[0].et_id

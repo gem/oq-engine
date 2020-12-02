@@ -735,11 +735,12 @@ def weight_sources(srcs, srcfilter, params, monitor):
         calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
     for arr in calc_times.values():
         arr[3] = monitor.task_no
-    dic = grid_point_sources(sources, grp_id, params['ps_grid_spacing'])
+    dic = grid_point_sources(sources, params['ps_grid_spacing'], monitor)
     for src in dic[grp_id]:
         is_ps = isinstance(src, PointSource)
         if is_ps:
-            src.nsites = srcfilter.sitecol.count_close(src.location, md + pd) or EPS
+            src.nsites = srcfilter.sitecol.count_close(
+                src.location, md + pd) or EPS
         else:
             src.nsites = len(srcfilter.close_sids(src)) or EPS
         src.num_ruptures = src.count_ruptures()
