@@ -147,25 +147,27 @@ def weight_sources(srcs, srcfilter, params, monitor):
     pd = (params['pointsource_distance'](trt)
           if params['pointsource_distance'] else 0)
     with monitor('splitting sources'):
+        # this can be slow
         for src in srcs:
             t0 = time.time()
-            splits = split_source(src) if params['split_sources'] else [src]
+            src.nsites = len(srcfilter.close_sids(src))
+            splits = split_source(src) if (  # split only close sources
+                params['split_sources'] and src.nsites) else [src]
             sources.extend(splits)
-            nrups = src.count_ruptures()
+            nrups = src.count_ruptures() if src.nsites else 0
             dt = time.time() - t0
             calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
         for arr in calc_times.values():
             arr[3] = monitor.task_no
     dic = grid_point_sources(sources, params['ps_grid_spacing'], monitor)
     with monitor('weighting sources'):
+        # this is normally fast
         for src in dic[grp_id]:
             is_ps = isinstance(src, PointSource)
             if is_ps:
                 # NB: using cKDTree would not help, performance-wise
                 cdist = srcfilter.sitecol.get_cdist(src.location)
                 src.nsites = (cdist <= md + pd).sum() or EPS
-            else:
-                src.nsites = len(srcfilter.close_sids(src)) or EPS
             src.num_ruptures = src.count_ruptures()
             if pd and is_ps:
                 nphc = src.count_nphc()
