@@ -68,14 +68,14 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-def _weight_sources(csm, oqparam, h5):
+def run_preclassical(csm, oqparam, h5):
 
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
         src.num_ruptures = src.count_ruptures()
         src.nsites = len(csm.srcfilter.sitecol)
 
-    # run weight_sources for non-atomic sources
+    # run preclassical for non-atomic sources
     sources_by_grp = groupby(
         csm.get_sources(atomic=False),
         lambda src: (src.grp_id, msr_name(src)))
@@ -85,7 +85,7 @@ def _weight_sources(csm, oqparam, h5):
                  split_sources=oqparam.split_sources)
 
     res = parallel.Starmap(
-        weight_sources,
+        preclassical,
         ((srcs, csm.srcfilter, param) for srcs in sources_by_grp.values()),
         h5=h5, distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
 
@@ -131,7 +131,7 @@ def store_ctxs(dstore, rupdata, grp_id):
 
 #  ########################### task functions ############################ #
 
-def weight_sources(srcs, srcfilter, params, monitor):
+def preclassical(srcs, srcfilter, params, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
@@ -151,7 +151,9 @@ def weight_sources(srcs, srcfilter, params, monitor):
         for src in srcs:
             t0 = time.time()
             src.nsites = len(srcfilter.close_sids(src))
-            splits = split_source(src) if (  # split only close sources
+            # NB: it is crucial to split only the close sources, for
+            # performance reasons (think of Ecuador in SAM)
+            splits = split_source(src) if (
                 params['split_sources'] and src.nsites) else [src]
             sources.extend(splits)
             nrups = src.count_ruptures() if src.nsites else 0
@@ -361,7 +363,7 @@ class ClassicalCalculator(base.HazardCalculator):
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
             oq.max_sites_per_tile, oq.max_sites_disagg)
         psd = self.set_psd()  # must go before to set the pointsource_distance
-        _weight_sources(self.csm, oq, self.datastore)
+        run_preclassical(self.csm, oq, self.datastore)
 
         # exit early if we want to perform only a preclassical
         if oq.calculation_mode == 'preclassical':
