@@ -6,7 +6,7 @@ name: macos_pyapp
 jobs:
 
   python3-7_devel_catalina:
-    name: Catalina: Install develop mode on Python 3.7 using current branch
+    name: Catalina Install develop mode on Python 3.7 using current branch
     runs-on: macos-latest
 
     steps:
@@ -26,7 +26,7 @@ jobs:
         run: pytest -vsx openquake/commands/tests/commands_test.py -k nrml
 
   python3-8_devel_catalina:
-    name: Catalina: Install develop mode on Python 3.8 using current branch
+    name: Catalina Install develop mode on Python 3.8 using current branch
     runs-on: macos-latest
 
     steps:
@@ -46,7 +46,7 @@ jobs:
         run: pytest -vsx openquake/commands/tests/commands_test.py -k nrml
 
   python3-8_devel_bigsur:
-    name: BigSur: Install develop mode on Python 3.8 using current branch
+    name: BigSur Install develop mode on Python 3.8 using current branch
     runs-on: macos-11.0
 
     steps:
@@ -64,8 +64,9 @@ jobs:
         run: pip install -e .[osgeo]
       - name: Run pytest to check GDAL
         run: pytest -vsx openquake/commands/tests/commands_test.py -k nrml
+
   python3-7_user_catalina:
-    name: Catalina: Install user mode on Python 3.7 on master
+    name: Catalina Install user mode on Python 3.7 on master
     runs-on: macos-latest
 
     steps:
@@ -80,7 +81,7 @@ jobs:
 
 
   python3-8_user_catalina:
-    name: Catalina: Install User mode on Python 3.8 on master 
+    name: Catalina Install User mode on Python 3.8 on master 
     runs-on: macos-latest
 
     steps:
@@ -94,7 +95,7 @@ jobs:
         run: python3.8 install.py user
 
   python3-8_user_bigsur:
-    name: BigSur: Install User mode on Python 3.8 on master
+    name: BigSur Install User mode on Python 3.8 on master
     runs-on: macos-11.0
 
     steps:
