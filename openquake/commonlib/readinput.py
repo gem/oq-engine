@@ -810,11 +810,11 @@ def _check_csm(csm, oqparam, h5):
     sitecol = get_site_collection(oqparam, h5)
     if sitecol is None:
         fewsites = None
-    elif len(sitecol) <= 10:
-        fewsites = sitecol
-    else:  # long sitecol
+    elif len(sitecol) > 10_000:
+        # performance hack: use 1 site over 10 when weighting the sources
         fewsites = sitecol.filter(sitecol.sids % 10 == 0)
-    # performance hack: use 1 site over 10 when weighting the sources!
+    else:  # short enough sitecol
+        fewsites = sitecol
     srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
 
     if sitecol:  # missing in test_case_1_ruptures
