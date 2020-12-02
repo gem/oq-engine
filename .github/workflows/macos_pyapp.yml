@@ -2,13 +2,15 @@ name: macos_pyapp
 'on':
   schedule:
     - cron: "0 23 * * *"
+  push:
+    branches:
+      - actions
 
 jobs:
 
   python3-7_devel_catalina:
     name: Catalina Install develop mode on Python 3.7 using current branch
     runs-on: macos-latest
-
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -28,7 +30,6 @@ jobs:
   python3-8_devel_catalina:
     name: Catalina Install develop mode on Python 3.8 using current branch
     runs-on: macos-latest
-
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -48,7 +49,6 @@ jobs:
   python3-8_devel_bigsur:
     name: BigSur Install develop mode on Python 3.8 using current branch
     runs-on: macos-11.0
-
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -68,7 +68,6 @@ jobs:
   python3-7_user_catalina:
     name: Catalina Install user mode on Python 3.7 on master
     runs-on: macos-latest
-
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -83,7 +82,6 @@ jobs:
   python3-8_user_catalina:
     name: Catalina Install User mode on Python 3.8 on master 
     runs-on: macos-latest
-
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -97,7 +95,6 @@ jobs:
   python3-8_user_bigsur:
     name: BigSur Install User mode on Python 3.8 on master
     runs-on: macos-11.0
-
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
