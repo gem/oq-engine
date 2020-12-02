@@ -181,7 +181,6 @@ class ContextMaker(object):
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.split_sources = param.get('split_sources', True)
         self.collapse_level = param.get('collapse_level', False)
-        self.point_rupture_bins = param.get('point_rupture_bins', 20)
         self.trt = trt
         self.gsims = gsims
         self.single_site_opt = numpy.array(
@@ -670,26 +669,28 @@ class PmapMaker(object):
         loc = getattr(src, 'location', None)
         if loc and self.pointsource_distance == 0:
             # all finite size effects are ignored
-            yield from rups(src.point_ruptures(), sites)
+            yield from rups(src.avg_ruptures(), sites)
         elif loc and self.pointsource_distance and src.count_nphc() > 1:
-            # finite site effects are ignored only for sites over the
+            # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for pr in src.point_ruptures():
-                pdist = self.pointsource_distance['%.2f' % pr.mag]
-                close, far = sites.split(pr.hypocenter, pdist)
+            cdist = sites.get_cdist(src.location)
+            for ar in src.avg_ruptures():
+                pdist = self.pointsource_distance['%.2f' % ar.mag]
+                close = sites.filter(cdist <= pdist)
+                far = sites.filter(cdist > pdist)
                 if self.fewsites:
                     if close is None:  # all is far, common for small mag
-                        yield from rups([pr], sites)
+                        yield from rups([ar], sites)
                     else:  # something is close
-                        yield from rups(self._ruptures(src, pr.mag), sites)
+                        yield from rups(self._ruptures(src, ar.mag), sites)
                 else:  # many sites
                     if close is None:  # all is far
-                        yield from rups([pr], far)
+                        yield from rups([ar], far)
                     elif far is None:  # all is close
-                        yield from rups(self._ruptures(src, pr.mag), close)
+                        yield from rups(self._ruptures(src, ar.mag), close)
                     else:  # some sites are far, some are close
-                        yield from rups([pr], far)
-                        yield from rups(self._ruptures(src, pr.mag), close)
+                        yield from rups([ar], far)
+                        yield from rups(self._ruptures(src, ar.mag), close)
         else:  # just add the ruptures
             yield from rups(self._ruptures(src), sites)
 

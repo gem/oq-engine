@@ -374,9 +374,9 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
             self.assertEqual(bl, surface.bottom_left)
             self.assertEqual(br, surface.bottom_right)
 
-        # check point_ruptures
-        point_ruptures = list(point_source.point_ruptures())
-        self.assertEqual([pr.hypocenter.depth for pr in point_ruptures],
+        # check avg_ruptures
+        avg_ruptures = list(point_source.avg_ruptures())
+        self.assertEqual([pr.hypocenter.depth for pr in avg_ruptures],
                          [9.2, 9.2])  # weighted mean between 9 and 10
 
     def test_high_magnitude(self):
