@@ -48,7 +48,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-EPS = .01
+EPS = .01  # used for src.nsites outside the maximum_distance
+BUFFER = 1.5  # enlarge a bit the pointsource_distance sphere to fix the weight
 get_weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('et_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
@@ -176,7 +177,7 @@ def preclassical(srcs, srcfilter, params, monitor):
             if pd and is_ps:
                 nphc = src.count_nphc()
                 if nphc > 1:
-                    close = (cdist <= pd).sum()
+                    close = (cdist <= pd * BUFFER).sum()
                     far = src.nsites - close
                     factor = (close + (far + EPS) / nphc) / (close + far + EPS)
                     src.num_ruptures *= factor

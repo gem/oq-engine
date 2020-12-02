@@ -343,8 +343,6 @@ class SourceFilter(object):
             return []
         elif not self.integration_distance:  # do not filter
             return self.sitecol.sids
-        if not hasattr(self, 'kdt'):
-            self.kdt = cKDTree(self.sitecol.xyz)
         if trt:  # rupture, called by GmfGetter.gen_computers
             dlon = get_longitudinal_extent(
                 src_or_rec['minlon'], src_or_rec['maxlon']) / 2.
@@ -366,19 +364,10 @@ class SourceFilter(object):
             lon, lat, dep = (
                 (bbox[2] + bbox[0]) / 2., (bbox[3] + bbox[1]) / 2, 0)
             dist = numpy.sqrt(dlon**2 + dlat**2) / KM_TO_DEGREES
-        xyz = spherical_to_cartesian(lon, lat, dep)
-        sids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
+
+        sids = U32(self._close_sids(lon, lat, dep, dist, eps=.001))
         sids.sort()
         return sids
-
-    def count_close(self, loc, dist):
-        """
-        :returns: the number of sites within `dist` from `loc` (approx)
-        """
-        if not hasattr(self, 'kdt'):
-            self.kdt = cKDTree(self.sitecol.xyz)
-        xyz = spherical_to_cartesian(loc.x, loc.y, loc.z)
-        return len(self.kdt.query_ball_point(xyz, dist, eps=.001))
 
     def filter(self, sources):
         """
