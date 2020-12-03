@@ -73,6 +73,12 @@ def get_extreme_poe(array, imtls):
 
 
 def run_preclassical(csm, oqparam, h5):
+    """
+    :param csm: a CompositeSourceModel with attribute .srcfilter
+    :param oqparam: the parameters in job.ini file
+    :param h5: a DataStore instance
+    """
+    logging.info('Filtering with %s', csm.srcfilter.sitecol)
 
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):

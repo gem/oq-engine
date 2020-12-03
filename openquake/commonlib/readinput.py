@@ -750,7 +750,6 @@ def _check_csm(csm, oqparam, h5):
     elif len(sitecol) > 10_000:
         # performance hack: use 1 site over 10 when weighting the sources
         fewsites = sitecol.filter(sitecol.sids % 10 == 0)
-        logging.info('Filtering with %s', fewsites)
     else:  # short enough sitecol
         fewsites = sitecol
     srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
