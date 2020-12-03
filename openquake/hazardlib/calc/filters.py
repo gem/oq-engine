@@ -354,19 +354,14 @@ class SourceFilter(object):
             # the test most sensitive to the buffer effect is in oq-risk-tests,
             # case_ucerf/job_eb.ini; without buffer, sites can be discarded
             # even if within the maximum_distance
+            return self._close_sids(lon, lat, dep, dist)
         else:  # source
             trt = src_or_rec.tectonic_region_type
             try:
                 bbox = self.get_enlarged_box(src_or_rec, maxdist)
             except BBoxError:  # do not filter
                 return self.sitecol.sids
-            dlon, dlat = (bbox[2] - bbox[0]) / 2., (bbox[3] - bbox[1]) / 2.
-            lon, lat, dep = (
-                (bbox[2] + bbox[0]) / 2., (bbox[3] + bbox[1]) / 2, 0)
-            dist = numpy.sqrt(dlon**2 + dlat**2) / KM_TO_DEGREES
-
-        sids = self._close_sids(lon, lat, dep, dist)
-        return sids
+            return self.sitecol.within_bbox(bbox)
 
     def _close_sids(self, lon, lat, dep, dist):
         if not hasattr(self, 'kdt'):

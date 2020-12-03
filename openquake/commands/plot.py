@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import gzip
+import json
 import logging
 import shapely
 import numpy
@@ -363,6 +364,33 @@ def make_figure_sources(extractors, what):
     ax.plot(lons, lats, 'o')
     pp.set_lim(ss_lons, ss_lats)
     ax.set_title('%d/%d sources' % (n, tot))
+    return plt
+
+
+def make_figure_gridded_sources(extractors, what):
+    """
+    $ oq plot "gridded_sources?task_no=0"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    [ex] = extractors
+    dic = json.loads(ex.get(what).json)  # id -> lonlats
+    fig, ax = plt.subplots()
+    ax.grid(True)
+    sitecol = ex.get('sitecol')
+    tot = 0
+    for lonlats in dic.values():
+        if len(lonlats) == 2:  # not collapsed
+            tot += 1
+        else:  # collapsed
+            tot += len(lonlats) / 2 - 1
+        ax.plot([lonlats[0]], [lonlats[1]], '*')
+        lons = lonlats[2::2]
+        lats = lonlats[3::2]
+        ax.scatter(lons, lats)
+    ax.plot(sitecol['lon'], sitecol['lat'], '.')
+    ax.set_title('Reduced %d->%d sources' % (tot, len(dic)))
+    # TODO: fix plot around the IDL
     return plt
 
 

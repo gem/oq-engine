@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a command `oq plot gridded_sources?`
   * Fixed `oq recompute_losses` to expose the outputs to the database
   * Fixed `oq engine --run --params` that was not working for
     the `pointsource_distance`

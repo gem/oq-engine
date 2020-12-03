@@ -435,10 +435,11 @@ hazard_uhs-std.csv
             'hazard_curve-SA(0.5).csv', 'hazard_curve-SA(1.0).csv',
             'hazard_curve-SA(2.0).csv', 'hazard_uhs.csv'],
                               case_24.__file__, delta=1E-5)
+        total = sum(src.num_ruptures for src in self.calc.csm.get_sources())
+        self.assertEqual(total, 780)  # 260 x 3
         # test that the number of ruptures is at max 1/3 of the the total
         # due to the collapsing of the hypocenters (rjb is depth-independent)
         self.assertEqual(len(self.calc.datastore['rup/mag']), 174)
-        self.assertEqual(self.calc.totrups, 780)
 
     def test_case_25(self):  # negative depths
         self.assert_curves_ok(['hazard_curve-smltp_b1-gsimltp_b1.csv'],
@@ -584,7 +585,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numrups, 616)  # effective ruptures
+        self.assertEqual(self.calc.numctxs, 616)  # number of contexts
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
