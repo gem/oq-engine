@@ -397,9 +397,9 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
 
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(classical, self.get_args(),
+                                h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.src_filter())
-        self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
@@ -489,11 +489,12 @@ class ClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def submit_tasks(self, smap):
+    def get_args(self):
         """
-        Submit tasks to the passed Starmap
+        :returns: the outputs to pass to the Starmap, ordered by weight
         """
         oq = self.oqparam
+        allargs = []
         src_groups = self.csm.src_groups
         tot_weight = 0
         et_ids = self.datastore['et_ids'][:]
@@ -518,10 +519,9 @@ class ClassicalCalculator(base.HazardCalculator):
             if sg.atomic:
                 # do not split atomic groups
                 nb += 1
-                smap.submit((sg, rlzs_by_gsim, self.params), classical)
+                allargs.append((sg, rlzs_by_gsim, self.params))
             else:  # regroup the sources in blocks
-                blks = (groupby(sg, get_source_id).values()
-                        if oq.disagg_by_src
+                blks = (groupby(sg, get_source_id).values() if oq.disagg_by_src
                         else block_splitter(
                                 sg, max_weight, get_weight, sort=True))
                 blocks = list(blks)
@@ -529,14 +529,16 @@ class ClassicalCalculator(base.HazardCalculator):
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
-                    smap.submit((block, rlzs_by_gsim, self.params), classical)
+                    allargs.append((block, rlzs_by_gsim, self.params))
 
             w = sum(src.weight for src in sg)
             it = sorted(oq.maximum_distance.ddic[sg.trt].items())
             md = '%s->%d ... %s->%d' % (it[0] + it[-1])
             logging.info('max_dist={}, gsims={}, weight={:_d}, blocks={}'.
                          format(md, len(rlzs_by_gsim), int(w), nb))
-        return rlzs_by_gsim_list
+        allargs.sort(key=lambda args: sum(src.weight for src in args[0]),
+                     reverse=True)
+        return allargs
 
     def save_hazard(self, acc, pmap_by_kind):
         """
