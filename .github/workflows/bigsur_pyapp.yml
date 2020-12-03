@@ -25,9 +25,7 @@ jobs:
       - name: Run Installation of oq-engine in devel mode with osgeo
         run: pip install -e .[osgeo]
       - name: Run pytest to check GDAL
-        run: |
-          pip install shapely==1.7.1
-          pytest -vsx openquake/commands/tests/commands_test.py -k nrml
+        run: pytest -vsx openquake/commands/tests/commands_test.py -k nrml
 
 
   python3-8_user_bigsur:
