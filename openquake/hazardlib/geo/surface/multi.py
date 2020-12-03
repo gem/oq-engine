@@ -163,9 +163,22 @@ class MultiSurface(BaseSurface):
         """
         edges = []
         for surface in self.surfaces:
-            if isinstance(surface, (GriddedSurface,
-                                    geo.surface.kite_fault.KiteSurface)):
+            if isinstance(surface, GriddedSurface):
                 return edges.append(surface.mesh)
+            elif isinstance(surface, geo.surface.kite_fault.KiteSurface):
+                edge = []
+                mesh = surface.mesh
+                lons = mesh.lons
+                # We extract the top edge of the rupture from the
+                # corresponding 2D mesh.
+                # The calculation of indexes below is needed because we want
+                # on each 'profile' of the mesh the uppermost node that is
+                # finite (i.e. on the real grid)
+                for icol, irow in zip(range(lons.shape[0]),
+                                      numpy.isfinite(lons).argmax(axis=0)):
+                    edge.append([mesh.lons[irow, icol], mesh.lats[irow, icol],
+                                 mesh.depths[irow, icol]])
+                edges.append(numpy.array(edge))
             elif isinstance(surface, PlanarSurface):
                 # Top edge determined from two end points
                 edge = []
