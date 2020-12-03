@@ -26,7 +26,7 @@ jobs:
         run: pip install -e .[osgeo]
       - name: Run pytest to check GDAL
         run: |
-          unset DYLD_FALLBACK_LIBRARY_PATH
+          pip install shapely==1.7.1
           pytest -vsx openquake/commands/tests/commands_test.py -k nrml
 
 
