@@ -3,7 +3,9 @@ name: docker
 'on':
   schedule:
     - cron: "0 2 * * *"
-
+  push:
+    branches:
+      - actions
 
 jobs:
   docker:
