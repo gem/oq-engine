@@ -89,21 +89,6 @@ class AtkinsonBoore2006(BooreAtkinson2008):
     #: See paragraph 'Methodology and Model Parameters', p. 2182
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_std1(self, ctx, imts):
-        """
-        :param ctx: a multi-RuptureContext of size U
-        :param imts: a list of M intensity measure types
-        :returns: means and total stddevs as an array of shape (2, U, M)
-        """
-        U = ctx.size()
-        res = np.zeros((2, U, len(imts)))
-        for m, imt in enumerate(imts):
-            mean = self._get_mean(ctx.vs30, ctx.mag, ctx.rrup, imt, 0)
-            [stddev] = self._get_stddevs(None, [const.StdDev.TOTAL], U)
-            res[0, :, m] = mean
-            res[1, :, m] = stddev
-        return res
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
