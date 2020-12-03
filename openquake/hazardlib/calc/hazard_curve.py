@@ -110,8 +110,8 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     param['maximum_distance'] = src_filter.integration_distance
     [trt] = trts  # there must be a single tectonic region type
     cmaker = ContextMaker(trt, gsims, param, monitor)
-    pmap, rup_data, calc_times, extra = PmapMaker(
-        cmaker, src_filter, group).make()
+    pmap, rup_data, calc_times = PmapMaker(cmaker, src_filter, group).make()
+    extra = {}
     extra['task_no'] = getattr(monitor, 'task_no', 0)
     extra['trt'] = trt
     extra['source_id'] = src.source_id
@@ -217,8 +217,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam):
     trt = src.tectonic_region_type
     cmaker = ContextMaker(trt, gsims, vars(oqparam))
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap, rup_data, calc_times, extra = PmapMaker(
-        cmaker, srcfilter, [src]).make()
+    pmap, rup_data, calc_times = PmapMaker(cmaker, srcfilter, [src]).make()
     if not pmap:  # filtered away
         zero = numpy.zeros((len(oqparam.imtls.array), len(gsims)))
         return ProbabilityCurve(zero)

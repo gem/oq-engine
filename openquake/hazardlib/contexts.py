@@ -53,17 +53,17 @@ class Timer(object):
     OQ_TIMER=timer.csv oq run job.ini
     """
     fields = ['source_id', 'code', 'effrups', 'nsites', 'weight',
-              'numrups', 'numsites', 'dt', 'task_no']
+              'numctxs', 'numsites', 'dt', 'task_no']
 
     def __init__(self, fname):
         self.fname = fname
 
-    def save(self, src, numrups, numsites, dt, task_no):
+    def save(self, src, numctxs, numsites, dt, task_no):
         # save the source info
         if self.fname:
             row = [src.source_id, src.code.decode('ascii'),
                    src.num_ruptures, src.nsites, src.weight,
-                   numrups, numsites, dt, task_no]
+                   numctxs, numsites, dt, task_no]
             open(self.fname, 'a').write(','.join(map(str, row)) + '\n')
 
     def read_df(self):
@@ -586,7 +586,7 @@ class PmapMaker(object):
             ctxs = self.cmaker.collapse_the_ctxs(list(ctxs))
         for ctx in ctxs:
             self.numsites += len(ctx.sids)
-            self.numrups += 1
+            self.numctxs += 1
             if self.fewsites:  # keep the contexts in memory
                 self.rupdata.append(ctx)
             yield ctx
@@ -602,14 +602,14 @@ class PmapMaker(object):
                          for src, idx in self.srcfilter.filter(self.group))
         for src, sites in src_sites:
             t0 = time.time()
-            self.numrups = 0
+            self.numctxs = 0
             self.numsites = 0
             rups = self._gen_rups(src, sites)
             self._update_pmap(self._gen_ctxs(rups, sites, src.id))
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
-                [self.numrups, self.numsites, dt])
-            timer.save(src, self.numrups, self.numsites, dt,
+                [self.numctxs, self.numsites, dt])
+            timer.save(src, self.numctxs, self.numsites, dt,
                        self.cmaker.task_no)
         return ~self.pmap if self.rup_indep else self.pmap
 
@@ -617,8 +617,7 @@ class PmapMaker(object):
         for src, indices in self.srcfilter.filter(self.group):
             t0 = time.time()
             sites = self.srcfilter.sitecol.filtered(indices)
-            self.totrups += src.num_ruptures
-            self.numrups = 0
+            self.numctxs = 0
             self.numsites = 0
             rups = self._ruptures(src)
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
@@ -631,8 +630,8 @@ class PmapMaker(object):
             self.pmap += p
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
-                [self.numrups, self.numsites, dt])
-            timer.save(src, self.numrups, self.numsites, dt,
+                [self.numctxs, self.numsites, dt])
+            timer.save(src, self.numctxs, self.numsites, dt,
                        self.cmaker.task_no)
         return self.pmap
 
@@ -651,13 +650,12 @@ class PmapMaker(object):
         self.pmap = ProbabilityMap(L, G)
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
-        self.totrups = 0
         if self.src_mutex:
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
         rupdata = self.dictarray(self.rupdata)
-        return (pmap, rupdata, self.calc_times, dict(totrups=self.totrups))
+        return pmap, rupdata, self.calc_times
 
     def _gen_rups(self, src, sites):
         # yield ruptures, each one with a .sites attribute
@@ -665,7 +663,6 @@ class PmapMaker(object):
             for rup in rupiter:
                 rup.sites = sites
                 yield rup
-        self.totrups += src.num_ruptures
         loc = getattr(src, 'location', None)
         if loc and self.pointsource_distance == 0:
             # all finite size effects are ignored
