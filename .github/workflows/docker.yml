@@ -4,7 +4,6 @@ name: docker
   schedule:
     - cron: "0 2 * * *"
 
-
 jobs:
   docker:
     name: build and up compose 

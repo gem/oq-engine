@@ -5,10 +5,9 @@ name: macos_pyapp
 
 jobs:
 
-  python3-7_devel:
-    name: Install develop mode on Python 3.7 using current branch
+  python3-7_devel_catalina:
+    name: Catalina Install develop mode on Python 3.7 using current branch
     runs-on: macos-latest
-
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -25,10 +24,9 @@ jobs:
       - name: Run pytest to check GDAL
         run: pytest -vsx openquake/commands/tests/commands_test.py -k nrml
 
-  python3-8_devel:
-    name: Install develop mode on Python 3.8 using current branch
+  python3-8_devel_catalina:
+    name: Catalina Install develop mode on Python 3.8 using current branch
     runs-on: macos-latest
-
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -45,10 +43,9 @@ jobs:
       - name: Run pytest to check GDAL
         run: pytest -vsx openquake/commands/tests/commands_test.py -k nrml
 
-  python3-7_user:
-    name: Install user mode on Python 3.7 on master
+  python3-7_user_catalina:
+    name: Catalina Install user mode on Python 3.7 on master
     runs-on: macos-latest
-
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -60,10 +57,9 @@ jobs:
         run: python3.7 install.py user
 
 
-  python3-8_user:
-    name: Install User mode on Python 3.8 on master
+  python3-8_user_catalina:
+    name: Catalina Install User mode on Python 3.8 on master 
     runs-on: macos-latest
-
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
