@@ -256,7 +256,6 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[extra['source_id'].split(':')[0]] = pmap
         self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
-            self.totrups += extra['totrups']
             if pmap and grp_id in acc:
                 acc[grp_id] |= pmap
             else:
@@ -304,7 +303,6 @@ class ClassicalCalculator(base.HazardCalculator):
             dset = self.datastore.getitem('rup')
             dset.attrs['__pdcolumns__'] = ' '.join(params)
         self.by_task = {}  # task_no => src_ids
-        self.totrups = 0  # total number of ruptures before collapsing
         self.maxradius = 0
         self.Ns = len(self.csm.source_info)
         if self.oqparam.disagg_by_src:
@@ -422,12 +420,12 @@ class ClassicalCalculator(base.HazardCalculator):
                     si[task_no] = ' '.join(source_ids[s] for s in srcids)
                 self.by_task.clear()
         if self.calc_times:  # can be empty in case of errors
-            self.numrups = sum(arr[0] for arr in self.calc_times.values())
+            self.numctxs = sum(arr[0] for arr in self.calc_times.values())
             numsites = sum(arr[1] for arr in self.calc_times.values())
-            logging.info('Effective number of ruptures: {:_d}/{:_d}'.format(
-                int(self.numrups), int(self.totrups)))
-            logging.info('Effective number of sites per rupture: %d',
-                         numsites / self.numrups)
+            logging.info('Total number of contexts: {:_d}'.
+                         format(int(self.numctxs)))
+            logging.info('Average number of sites per context: %d',
+                         numsites / self.numctxs)
         if psd:
             psdist = max(max(psd.ddic[trt].values()) for trt in psd.ddic)
             if psdist and self.maxradius >= psdist / 2:
