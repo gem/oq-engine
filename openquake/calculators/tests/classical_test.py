@@ -585,7 +585,7 @@ hazard_uhs-std.csv
         # this is a test for pointsource_distance
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_map-mean-PGA.csv"], case_43.__file__)
-        self.assertEqual(self.calc.numctxs, 257)  # number of contexts
+        self.assertEqual(self.calc.numctxs, 616)  # number of contexts
 
     def test_case_44(self):
         # this is a test for shift_hypo. We computed independently the results
