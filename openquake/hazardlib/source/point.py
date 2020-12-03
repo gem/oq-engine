@@ -491,11 +491,14 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
     task_no = getattr(monitor, 'task_no', 0)
     for i, idxs in enumerate(grid.values()):
-        cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
-        cps.id = ps[0].id
-        cps.grp_id = ps[0].grp_id
-        cps.et_id = ps[0].et_id
-        out.append(cps)
+        if len(idxs) > 1:
+            cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
+            cps.id = ps[0].id
+            cps.grp_id = ps[0].grp_id
+            cps.et_id = ps[0].et_id
+            out.append(cps)
+        else:  # there is a single source
+            out.append(ps[idxs[0]])
     return {grp_id: out}
 
 
