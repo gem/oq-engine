@@ -200,7 +200,8 @@ def preclassical(srcs, srcfilter, params, monitor):
     dic['before'] = len(sources)
     dic['after'] = len(dic[grp_id])
     if params['ps_grid_spacing']:
-        dic['ps_grid/%02d' % monitor.task_no] = dic[grp_id]
+        dic['ps_grid/%02d' % monitor.task_no] = [
+            src for src in dic[grp_id] if src.nsites > EPS]
     return dic
 
 
