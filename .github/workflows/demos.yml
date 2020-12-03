@@ -24,7 +24,7 @@ jobs:
           pip install -r ./requirements-py38-linux64.txt
           pip install -e .
       - name: Run Hazard test
-        run: pytest -x openquake/hazardlib -k gsim --disable-warnings --color=yes --durations=10
+        run: pytest -x htests --disable-warnings --color=yes --durations=10
       - name: Make docs and rsync to ci.openquake.org
         shell: bash
         env:
