@@ -586,7 +586,7 @@ def extract_gridded_sources(dstore, what):
     task_no = int(qdict.get('task_no', ['0'])[0])
     dic = {}
     for i, lonlats in enumerate(dstore['ps_grid/%02d' % task_no][()]):
-        dic[i] = lonlats
+        dic[i] = numpy.round(F64(lonlats), 3)
     return ArrayWrapper((), {'json': dumps(dic)})
 
 
