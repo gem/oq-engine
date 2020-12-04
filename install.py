@@ -278,7 +278,7 @@ def install(inst):
         os.remove(tmp)
         path = os.path.join(inst.VENV, 'demos', 'hazard',
                             'AreaSourceClassicalPSHA', 'job.ini')
-        msg = ('You can run a test calculation with the command '
+        msg = ('You can run a test calculation with the command\n'
                f'{oqreal} engine --run {path}')
     print('The engine was installed successfully.\n' + msg)
 
