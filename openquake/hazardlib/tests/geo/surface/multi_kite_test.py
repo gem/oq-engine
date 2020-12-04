@@ -29,22 +29,23 @@ class MultiSurfaceTestCase(unittest.TestCase):
     def setUp(self):
 
         # First surface
-        prf1 = Line([Point(0, 0, 0), Point(0, 0.001, 20.)])
-        prf2 = Line([Point(0.3, 0, 0), Point(0.3, 0.001, 20.)])
-        sfcA = KiteSurface.from_profiles([prf1, prf2], 10., 10.)
+        prf1 = Line([Point(0, 0, 0), Point(0, -0.001, 20.)])
+        prf2 = Line([Point(0.15, 0, 0), Point(0.15, -0.001, 20.)])
+        prf3 = Line([Point(0.3, 0, 0), Point(0.3, -0.001, 20.)])
+        sfcA = KiteSurface.from_profiles([prf1, prf2, prf3], 5., 5.)
 
         # Second surface
         prf3 = Line([Point(0.32, 0, 0), Point(0.32, 0.001, 20.)])
         prf4 = Line([Point(0.45, 0.15, 0), Point(0.45, 0.1501, 20.)])
         sfcB = KiteSurface.from_profiles([prf3, prf4], 5., 5.)
+
         self.msrf = MultiSurface([sfcA, sfcB])
 
-        coo = np.array([[-0.1, 0.0], [0.1, -0.05], [0.4, 0.1]])
+        coo = np.array([[-0.1, 0.0], [0.0, 0.1]])
         self.mesh = Mesh(coo[:, 0], coo[:, 1])
 
-    def test_rjb(self):
-        rjb = self.msrf.get_joyner_boore_distance(self.mesh)
-
     def test_rx(self):
-        rx = self.msrf.get_ry0_distance(self.mesh)
-        print(rx)
+        # Test Rx
+        expected = np.array([-3.829952, -13.55452])
+        computed = self.msrf.get_rx_distance(self.mesh)
+        np.testing.assert_allclose(computed, expected)
