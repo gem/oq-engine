@@ -32,10 +32,9 @@ from openquake.baselib import (
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile, site
-
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
@@ -831,6 +830,9 @@ class HazardCalculator(BaseCalculator):
         for sp in sec_perils:
             sp.prepare(self.sitecol)  # add columns as needed
 
+        mal = {lt: getdefault(oq.minimum_asset_loss, lt)
+               for lt in oq.loss_names}
+        logging.info('minimum_asset_loss=%s', mal)
         self.param = dict(individual_curves=oq.individual_curves,
                           ps_grid_spacing=oq.ps_grid_spacing,
                           collapse_level=oq.collapse_level,
@@ -838,7 +840,8 @@ class HazardCalculator(BaseCalculator):
                           avg_losses=oq.avg_losses,
                           amplifier=self.amplifier,
                           sec_perils=sec_perils,
-                          ses_seed=oq.ses_seed)
+                          ses_seed=oq.ses_seed,
+                          minimum_asset_loss=mal)
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):

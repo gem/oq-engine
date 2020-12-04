@@ -23,7 +23,6 @@ import numpy
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.baselib.python3compat import zip
-from openquake.hazardlib.calc.filters import getdefault
 from openquake.risklib.scientific import LossesByAsset
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
@@ -193,15 +192,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.A = A = len(self.assetcol)
         self.L = L = len(lba.loss_names)
         self.check_number_loss_curves()
-        mal = {lt: getdefault(oq.minimum_asset_loss, lt)
-               for lt in oq.loss_names}
-        logging.info('minimum_asset_loss=%s', mal)
+        mal = self.param['minimum_asset_loss']
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
-                any(val == 0 for val in mal.values()) and not
-                sum(oq.minimum_asset_loss.values())):
-            logging.warning('The calculation is really big; you should set '
+                any(val == 0 for val in mal.values())):
+            logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
-        self.param['minimum_asset_loss'] = mal
 
         elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
         for idxs, attrs in gen_indices(self.assetcol.tagcol, oq.aggregate_by):
