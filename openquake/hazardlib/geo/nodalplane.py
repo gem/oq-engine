@@ -75,5 +75,6 @@ class NodalPlane(object):
         Check if ``rake`` is in range ``(-180, 180]``
         and raise ``ValueError`` otherwise.
         """
-        if not (rake == 'undefined' or -180 < rake <= 180):
+        if not (rake == 'undefined' or -180 < rake < 180.000001):
+            # some tolerance for numeric errors
             raise ValueError('rake %g is out of range (-180, 180]' % rake)
