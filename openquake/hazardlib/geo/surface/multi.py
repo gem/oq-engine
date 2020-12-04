@@ -122,9 +122,12 @@ class MultiSurface(BaseSurface):
         :returns: mesh corresponding to the whole multi surface
         """
         meshes = [surface.mesh for surface in self.surfaces]
-        lons = numpy.column_stack([m.lons for m in meshes])
-        lats = numpy.column_stack([m.lats for m in meshes])
-        depths = numpy.column_stack([m.depths for m in meshes])
+        lons, lats, depths = numpy.array([]), numpy.array([]), numpy.array([])
+        for m in meshes:
+            for lon,lat,d in zip(m.lons,m.lats,m.depths):
+                lons = numpy.append(lons,[lon])
+                lats = numpy.append(lats,[lat])
+                depths = numpy.append(depths,[d])
         return Mesh(lons, lats, depths)
 
     def __init__(self, surfaces, tol=0.1):
