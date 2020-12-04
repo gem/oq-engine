@@ -265,16 +265,22 @@ def install(inst):
             subprocess.check_call(['systemctl', 'start', service_name])
 
     # download and unzip the demos
-    th, tmp = tempfile.mkstemp(suffix='.zip')
-    with urlopen(DEMOS) as f, os.fdopen(th, 'wb') as t:
-        t.write(f.read())
-    zipfile.ZipFile(tmp).extractall(inst.VENV)
-    os.remove(tmp)
-    path = os.path.join(inst.VENV, 'demos', 'hazard',
-                        'AreaSourceClassicalPSHA', 'job.ini')
-    print('The engine was installed successfully.')
-    print('You can run a test calculation with the command')
-    print(f'{oqreal} engine --run {path}')
+    try:
+        with urlopen(DEMOS) as f:
+            data = f.read()
+    except OSError:
+        msg = 'However, we could not download the demos from %s' % DEMOS
+    else:
+        th, tmp = tempfile.mkstemp(suffix='.zip')
+        with os.fdopen(th, 'wb') as t:
+            t.write(data)
+        zipfile.ZipFile(tmp).extractall(inst.VENV)
+        os.remove(tmp)
+        path = os.path.join(inst.VENV, 'demos', 'hazard',
+                            'AreaSourceClassicalPSHA', 'job.ini')
+        msg = ('You can run a test calculation with the command '
+               f'{oqreal} engine --run {path}')
+    print('The engine was installed successfully.\n' + msg)
 
 
 def remove(inst):
