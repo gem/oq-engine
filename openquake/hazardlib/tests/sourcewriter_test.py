@@ -30,7 +30,8 @@ NONPARAM = os.path.join(os.path.dirname(__file__),
                         'source_model/nonparametric-source.xml')
 MIXED = os.path.join(os.path.dirname(__file__),
                      'source_model/mixed.xml')
-
+SLIP_RATE = os.path.join(os.path.dirname(__file__),
+                         'source_model/complex-fault-source.xml')
 ALT_MFDS = os.path.join(os.path.dirname(__file__),
                         'source_model/alternative-mfds_4test.xml')
 
@@ -48,7 +49,7 @@ GRIDDED = os.path.join(os.path.dirname(__file__),
 
 TOML = os.path.join(os.path.dirname(__file__), 'expected_sources.toml')
 
-conv = SourceConverter(50., 1., 10, 0.1, 10.)
+conv = SourceConverter(50., 1., 20, 0.1, 10.)
 
 
 class SourceWriterTestCase(unittest.TestCase):
@@ -87,6 +88,9 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def test_mutex(self):
         self.check_round_trip(MUTEX)
+
+    def test_slip_rate(self):
+        self.check_round_trip(SLIP_RATE)
 
     def test_multipoint(self):
         smodel = self.check_round_trip(MULTIPOINT)

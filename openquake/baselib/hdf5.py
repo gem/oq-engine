@@ -539,6 +539,8 @@ class ArrayWrapper(object):
          ('RC', 'IND', 5000.0),
          ('WOOD', 'RES', 500.0)]
         """
+        if hasattr(self, 'json'):
+            vars(self).update(json.loads(self.json))
         shape = self.shape
         tup = len(self._extra) > 1
         if tup:
@@ -715,15 +717,6 @@ def _fix_array(arr, key):
             else:
                 dtlist.append((n, arr.dtype[n]))
         arr.dtype = dtlist
-    return arr
-    if arr.ndim == 1:
-        return numpy.array([s.encode('utf8') for s in arr])
-    elif arr.ndim == 2:
-        return numpy.array([[col.encode('utf8') for col in row]
-                            for row in arr])
-    else:
-        raise NotImplementedError('The array for %s has shape %s' %
-                                  (key, arr.shape))
     return arr
 
 

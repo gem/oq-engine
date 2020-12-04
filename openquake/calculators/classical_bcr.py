@@ -41,7 +41,7 @@ def classical_bcr(riskinputs, param, monitor):
     """
     R = riskinputs[0].hazard_getter.num_rlzs
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
-    crmodel = monitor.read_pik('crmodel')
+    crmodel = monitor.read('crmodel')
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor):
             for asset, (eal_orig, eal_retro, bcr) in zip(

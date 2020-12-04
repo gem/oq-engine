@@ -1,10 +1,10 @@
-#,,,,,"generated_by='OpenQuake engine 3.9.0-gitc9a4f7bc4f', start_date='2020-03-05T07:08:51', checksum=687330760, kind='tot_curves-rlzs', risk_investigation_time=1.0"
+#,,,,,"generated_by='OpenQuake engine 3.11.0-git49bc44ebb8', start_date='2020-10-29T08:37:00', checksum=2114657732, kind='tot_curves-rlzs', risk_investigation_time=1.0"
 return_period,rlz,loss_type,loss_value,loss_ratio,annual_frequency_of_exceedence
-50,0,occupants,8.84704E-03,3.19773E-04,2.00000E-02
-100,0,occupants,1.24327E-02,4.49374E-04,1.00000E-02
-200,0,occupants,1.66491E-02,6.01776E-04,5.00000E-03
-500,0,occupants,2.49648E-02,9.02343E-04,2.00000E-03
-1000,0,occupants,3.02320E-02,1.09272E-03,1.00000E-03
-2000,0,occupants,4.34944E-02,1.57209E-03,5.00000E-04
-5000,0,occupants,6.15274E-02,2.22388E-03,2.00000E-04
-10000,0,occupants,6.97765E-02,2.52204E-03,1.00000E-04
+50,0,occupants,8.54623E-03,3.08900E-04,2.00000E-02
+100,0,occupants,1.17520E-02,4.24770E-04,1.00000E-02
+200,0,occupants,1.67220E-02,6.04410E-04,5.00000E-03
+500,0,occupants,2.89178E-02,1.04522E-03,2.00000E-03
+1000,0,occupants,4.02678E-02,1.45546E-03,1.00000E-03
+2000,0,occupants,4.59985E-02,1.66260E-03,5.00000E-04
+5000,0,occupants,5.24853E-02,1.89706E-03,2.00000E-04
+10000,0,occupants,5.75070E-02,2.07857E-03,1.00000E-04

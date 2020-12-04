@@ -20,6 +20,7 @@ import os
 import numpy
 
 from openquake.baselib.hdf5 import read_csv
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
@@ -39,9 +40,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         out = self.run_calc(test_dir, job_ini, exports=exports,
                             collapse_threshold='0')
         try:
-            got = out['avg_%s-rlzs' % kind, exports]
+            got = out['%s-rlzs' % kind, exports]
         except KeyError:
-            got = out['avg_%s-stats' % kind, exports]
+            got = out['%s-stats' % kind, exports]
         expected_dir = os.path.join(test_dir, 'expected')
         expected = sorted(f for f in os.listdir(expected_dir)
                           if f.endswith(exports) and 'by_taxon' not in f)
@@ -78,10 +79,10 @@ RM       4_000
         test_dir = os.path.dirname(case_1c.__file__)
         self.run_calc(test_dir, 'job.ini', exports='csv')
 
-        # check avg_damages-rlzs
-        [fname] = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
+        # check damages-rlzs
+        [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-        df = self.calc.datastore.read_df('avg_damages-rlzs', 'asset_id')
+        df = self.calc.datastore.read_df('damages-rlzs', 'asset_id')
         self.assertEqual(list(df.columns),
                          ['rlz', 'loss_type', 'dmg_state', 'value'])
 
@@ -122,6 +123,9 @@ RM       4_000
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=5E-6)
 
+        fname = gettemp(view('portfolio_damage_error', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_damage.rst', fname)
+
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(os.path.dirname(case_4b.__file__), 'job_err.ini')
@@ -155,8 +159,13 @@ RM       4_000
         self.assert_ok(case_7, 'job_h.ini,job_r.ini', exports='csv')
 
         # just run the npz export
-        [npz] = export(('avg_damages-rlzs', 'npz'), self.calc.datastore)
-        self.assertEqual(strip_calc_id(npz), 'avg_damages-rlzs.npz')
+        [npz] = export(('damages-rlzs', 'npz'), self.calc.datastore)
+        self.assertEqual(strip_calc_id(npz), 'damages-rlzs.npz')
+
+        # check dd_data is readable by pandas
+        df = self.calc.datastore.read_df('dd_data', ['aid', 'eid', 'lid'])
+        self.assertEqual(len(df), 221)
+        self.assertEqual(len(df[df.ds1 > 0]), 76)  # only 76/300 are nonzero
 
     def test_case_8(self):
         # case with a shakemap
@@ -176,11 +185,19 @@ RM       4_000
         nodamage = df[df['rlz_id'] == 0]['structural~no_damage'].sum()
         self.assertEqual(nodamage, 1086437.0)
 
-        [fname] = export(('avg_damages-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_damages.csv', fname)
+        [fname] = export(('damages-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/damages.csv', fname)
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_asset.csv', fname)
+
+        # check dd_data
+        df = self.calc.datastore.read_df('dd_data', 'eid')
+        dmg = df.loc[1937]  # damage caused by the event 1937
+        # self.assertEqual(dmg.slight.sum(), 53)  # breaks in github
+        # self.assertEqual(dmg.moderate.sum(), 63)
+        # self.assertEqual(dmg.extensive.sum(), 30)
+        # self.assertEqual(dmg.complete.sum(), 30)
 
     def test_case_10(self):
         # error case: there a no RiskInputs

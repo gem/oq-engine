@@ -66,6 +66,7 @@ class FromFile(object):
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
+    DEFINED_FOR_REFERENCE_VELOCITY = None
     kwargs = {}
 
     def init(self):
@@ -310,6 +311,7 @@ MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
 ASSET_ID_LENGTH = 50  # length that makes Murray happy
 
 simple_id = SimpleId(MAX_ID_LENGTH)
+branch_id = SimpleId(MAX_ID_LENGTH, r'^[\w\:\#_\-\.]+$')
 asset_id = SimpleId(ASSET_ID_LENGTH)
 source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\-_]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
@@ -522,6 +524,8 @@ def coordinates(value):
     ...
     ValueError: Found overlapping site #2,  0 0 -1
     """
+    if isinstance(value, list):  # assume list of lists/tuples
+        return [point(' '.join(map(str, v))) for v in value]
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
     points = []
@@ -551,7 +555,7 @@ def positiveint(value):
     :param value: input string
     :returns: positive integer
     """
-    val = value.lower()
+    val = str(value).lower()
     if val == 'true':
         return 1
     elif val == 'false':
@@ -620,7 +624,7 @@ def boolean(value):
         ...
     ValueError: Not a boolean: t
     """
-    value = value.strip().lower()
+    value = str(value).strip().lower()
     try:
         return _BOOL_DICT[value]
     except KeyError:

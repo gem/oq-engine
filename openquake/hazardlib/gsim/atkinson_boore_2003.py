@@ -61,10 +61,7 @@ class AtkinsonBoore2003SInter(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see table 1, page 1715
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the random horizontal
     #: component:
@@ -74,11 +71,12 @@ class AtkinsonBoore2003SInter(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see table 1, page 1715
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+        const.StdDev.INTRA_EVENT}
+
+    DEFINED_FOR_REFERENCE_VELOCITY = 600
 
     #: Required site parameters is Vs30, used to distinguish between NEHRP
     #: soil classes, see paragraph 'Functional Form', page 1706

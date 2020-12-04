@@ -91,6 +91,5 @@ class GenerateOneRuptureTestCase(unittest.TestCase):
         groups = nrml.to_python(source_model, SourceConverter(
             investigation_time=50., rupture_mesh_spacing=2.))
         src = groups[0].sources[0]
-        src.seed = 0
-        rup = src.get_one_rupture()
-        self.assertEqual(rup.mag, 5.2)
+        rup = src.get_one_rupture(ses_seed=0)
+        self.assertEqual(rup.mag, 5.3)

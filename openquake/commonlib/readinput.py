@@ -66,17 +66,13 @@ smlt_cache = {}  # fname, seed, samples, meth -> SourceModelLogicTree instance
 
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
-    ('gidx', numpy.uint16),            # 1
+    ('grp_id', numpy.uint16),            # 1
     ('code', (numpy.string_, 1)),      # 2
-    ('multiplicity', numpy.uint32),    # 3
-    ('calc_time', numpy.float32),      # 4
-    ('num_sites', numpy.uint32),       # 5
-    ('eff_ruptures', numpy.uint32),    # 6
-    ('checksum', numpy.uint32),        # 7
-    ('serial', numpy.uint32),          # 8
-    ('trti', numpy.uint8),             # 9
+    ('calc_time', numpy.float32),      # 3
+    ('num_sites', numpy.uint32),       # 4
+    ('eff_ruptures', numpy.uint32),    # 5
+    ('trti', numpy.uint8),             # 6
 ])
-MULTIPLICITY, SERIAL = 3, 8
 
 
 class DuplicatedPoint(Exception):
@@ -251,24 +247,6 @@ def get_params(job_ini, **kw):
     return params
 
 
-def get_oq(text):
-    """
-    Returns an OqParam instance from a configuration string. For instance:
-
-    >>> get_oq('maximum_distance=200')
-    <OqParam calculation_mode='classical', collapse_level=0, inputs={'job_ini': '<in-memory>'}, maximum_distance={'default': [(1.0, 200), (10.0, 200)]}, risk_investigation_time=None>
-    """
-    # UGLY: this is here to avoid circular imports
-    from openquake.calculators import base
-    OqParam.calculation_mode.validator.choices = tuple(base.calculators)
-    cp = configparser.ConfigParser()
-    cp.read_string('[general]\ncalculation_mode=classical\n' + text)
-    dic = dict(cp['general'])
-    dic['inputs'] = dict(job_ini='<in-memory>')
-    oq = OqParam(**dic)
-    return oq
-
-
 def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
                 **kw):
     """
@@ -299,16 +277,35 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1,
 
     OqParam.calculation_mode.validator.choices = tuple(
         calculators or base.calculators)
-    if isinstance(job_ini, dict):
-        job_ini['validated'] = True
-    else:
+    if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini))
     if hc_id:
         job_ini.update(hazard_calculation_id=str(hc_id))
     job_ini.update(kw)
+    re = os.environ.get('OQ_REDUCE')  # debugging facility
+    if re:
+        # reduce the imtls to the first imt
+        # reduce the logic tree to one random realization
+        # reduce the sites by a factor of `re`
+        # reduce the ses by a factor of `re`
+        # set save_disk_space = true
+        os.environ['OQ_SAMPLE_SITES'] = str(1 / float(re))
+        job_ini['number_of_logic_tree_samples'] = 1
+        ses = job_ini.get('ses_per_logic_tree_path')
+        if ses:
+            ses = str(int(numpy.ceil(int(ses) / float(re))))
+            job_ini['ses_per_logic_tree_path'] = ses
+        imtls = job_ini.get('intensity_measure_types_and_levels')
+        if imtls:
+            imtls = valid.intensity_measure_types_and_levels(imtls)
+            imt = next(iter(imtls))
+            job_ini['intensity_measure_types_and_levels'] = repr(
+                {imt: imtls[imt]})
+        job_ini['save_disk_space'] = True
     oqparam = OqParam(**job_ini)
-    if validate and 'validated' not in job_ini:
+    if validate and '_job_id' not in job_ini:
+        oqparam.check_source_model()
         oqparam.validate()
     return oqparam
 
@@ -407,7 +404,7 @@ def get_mesh(oqparam, h5=None):
                               'nor a site model, nor an exposure in %s' %
                               oqparam.inputs['job_ini'])
         try:
-            logging.info('Inferring the hazard grid from the exposure')
+            logging.info('Inferring the hazard grid')
             mesh = poly.dilate(oqparam.region_grid_spacing).discretize(
                 oqparam.region_grid_spacing)
             return geo.Mesh.from_coords(zip(mesh.lons, mesh.lats))
@@ -642,7 +639,7 @@ def get_rupture(oqparam):
     else:
         raise ValueError('Unrecognized ruptures model %s' % rup_model)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    rup.rup_id = oqparam.random_seed
+    rup.rup_id = oqparam.ses_seed
     return rup
 
 
@@ -721,10 +718,8 @@ def _get_cachedir(oq, full_lt, h5=None):
             csm.full_lt = full_lt
             return csm
     csm = get_csm(oq, full_lt, h5)
-    logging.info('Weighting the sources')
-    for sg in csm.src_groups:
-        for src in sg:
-            src.weight  # cache .num_ruptures
+    if not csm.src_groups:  # everything was filtered away
+        return csm
     logging.info('Saving %s', fname)
     with open(fname, 'wb') as f:
         pickle.dump(csm, f)
@@ -740,34 +735,29 @@ def get_composite_source_model(oqparam, h5=None):
     :param h5:
          an open hdf5.File where to store the source info
     """
+    logging.info('Reading the CompositeSourceModel')
     full_lt = get_full_lt(oqparam)
     if oqparam.cachedir and not oqparam.is_ucerf():
         csm = _get_cachedir(oqparam, full_lt, h5)
     else:
-        csm = get_csm(oqparam, full_lt, h5)
-    grp_ids = csm.get_grp_ids()
-    gidx = {tuple(arr): i for i, arr in enumerate(grp_ids)}
-    if oqparam.is_event_based():
-        csm.init_serials(oqparam.ses_seed)
+        csm = get_csm(oqparam, full_lt,  h5)
+    et_ids = csm.get_et_ids()
+    logging.info('%d effective smlt realization(s)', len(full_lt.sm_rlzs))
+    grp_id = {tuple(arr): i for i, arr in enumerate(et_ids)}
     data = {}  # src_id -> row
     mags = AccumDict(accum=set())  # trt -> mags
     wkts = []
-    ns = -1
+    lens = []
     for sg in csm.src_groups:
         if hasattr(sg, 'mags'):  # UCERF
             mags[sg.trt].update('%.2f' % mag for mag in sg.mags)
         for src in sg:
-            if src.source_id in data:
-                multiplicity = data[src.source_id][MULTIPLICITY] + 1
-            else:
-                multiplicity = 1
-                ns += 1
-            src.gidx = gidx[tuple(src.grp_ids)]
-            row = [src.source_id, src.gidx, src.code,
-                   multiplicity, 0, 0, 0, src.checksum, src.serial or ns,
-                   full_lt.trti[src.tectonic_region_type]]
+            lens.append(len(src.et_ids))
+            src.grp_id = grp_id[tuple(src.et_ids)]
+            row = [src.source_id, src.grp_id, src.code,
+                   0, 0, 0, full_lt.trti[src.tectonic_region_type]]
             wkts.append(src._wkt)  # this is a bit slow but okay
-            data[src.source_id] = row
+            data[src.id] = row
             if hasattr(src, 'mags'):  # UCERF
                 continue  # already accounted for in sg.mags
             elif hasattr(src, 'data'):  # nonparametric
@@ -776,13 +766,15 @@ def get_composite_source_model(oqparam, h5=None):
                 srcmags = ['%.2f' % item[0] for item in
                            src.get_annual_occurrence_rates()]
             mags[sg.trt].update(srcmags)
-    logging.info('There are %d sources', ns + 1)
+    logging.info('There are %d groups and %d sources with len(et_ids)=%.2f',
+                 len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
+                 numpy.mean(lens))
     if h5:
         attrs = dict(atomic=any(grp.atomic for grp in csm.src_groups))
         # avoid hdf5 damned bug by creating source_info in advance
         hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        h5['grp_ids'] = grp_ids
+        h5['et_ids'] = et_ids
         mags_by_trt = {}
         for trt in mags:
             mags_by_trt[trt] = arr = numpy.array(sorted(mags[trt]))
@@ -985,7 +977,15 @@ tag2code = {'ar': b'A',
             'no': b'N'}
 
 
+# tested in commands_test
 def reduce_sm(paths, source_ids):
+    """
+    :param paths: list of source_model.xml files
+    :param source_ids: dictionary src_id -> array[src_id, code]
+    :returns: dictionary with keys good, total, model, path, xmlns
+
+    NB: duplicate sources are not removed from the XML
+    """
     if isinstance(source_ids, dict):  # in oq reduce_sm
         def ok(src_node):
             code = tag2code[re.search(r'\}(\w\w)', src_node.tag).group(1)]

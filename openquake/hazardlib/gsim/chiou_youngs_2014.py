@@ -106,7 +106,7 @@ class ChiouYoungs2014(GMPE):
         eta = epsilon = 0.
 
         # deep soil correction
-        no_correction = sites.z1pt0 <= 0
+        no_correction = getattr(sites, 'z1pt0', 0) <= 0
         deep_s = C['phi5'] * (1.0 - np.exp(-1. * centered_z1pt0 / C['phi6']))
         deep_s[no_correction] = 0
 

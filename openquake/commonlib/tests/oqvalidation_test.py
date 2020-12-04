@@ -191,16 +191,6 @@ class OqParamTestCase(unittest.TestCase):
         self.assertIn('The `export_dir` parameter must refer to a '
                       'directory', str(ctx.exception))
 
-    def test_missing_export_dir(self):
-        oq = OqParam(
-            calculation_mode='event_based', inputs=GST,
-            sites='0.1 0.2',
-            intensity_measure_types='PGA',
-            reference_vs30_value='200',
-            maximum_distance='400')
-        oq.validate()
-        self.assertEqual(oq.export_dir, os.getcwd())
-
     def test_invalid_imt(self):
         with self.assertRaises(ValueError) as ctx:
             OqParam(

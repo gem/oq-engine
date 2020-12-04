@@ -75,7 +75,7 @@ def scenario_risk(riskinputs, param, monitor):
         R the number of realizations  and statistics is an array of shape
         (n, R, 4), with n the number of assets in the current riskinput object
     """
-    crmodel = monitor.read_pik('crmodel')
+    crmodel = monitor.read('crmodel')
     E = param['E']
     L = len(crmodel.loss_types)
     result = dict(agg=numpy.zeros((E, L), F32), avg=[])

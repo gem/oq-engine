@@ -16,12 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-import pandas
 from numpy.testing import assert_almost_equal as aae
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
-    case_9, case_10, case_11, case_12, case_13)
+    case_9, case_10, case_11, case_12, case_13, case_14)
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
@@ -141,3 +140,8 @@ class ScenarioTestCase(CalculatorTestCase):
         # multi-rupture scenario
         self.run_calc(case_13.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 50)
+
+    def test_case_14(self):
+        # new Swiss GMPEs
+        self.run_calc(case_14.__file__, 'job.ini')
+        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 1000)

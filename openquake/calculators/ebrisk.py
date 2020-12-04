@@ -56,7 +56,7 @@ def calc_risk(gmfs, param, monitor):
     with monitor('getting assets'):
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
     with monitor('getting crmodel'):
-        crmodel = monitor.read_pik('crmodel')
+        crmodel = monitor.read('crmodel')
         weights = dstore['weights'][()]
     L = len(param['lba'].loss_names)
     elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
@@ -116,7 +116,7 @@ def start_ebrisk(rgetter, param, monitor):
     """
     Launcher for ebrisk tasks
     """
-    srcfilter = monitor.read_pik('srcfilter')
+    srcfilter = monitor.read('srcfilter')
     rgetters = list(rgetter.split(srcfilter, param['maxweight']))
     for rg in rgetters[:-1]:
         msg = 'produced subtask'
@@ -141,7 +141,7 @@ def ebrisk(rupgetter, param, monitor):
     mon_haz = monitor('getting hazard', measuremem=True)
     gmfs = []
     gmf_info = []
-    srcfilter = monitor.read_pik('srcfilter')
+    srcfilter = monitor.read('srcfilter')
     gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'],
                            param['amplifier'])
     nbytes = 0
@@ -247,8 +247,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.swmr_on()
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
-        smap.monitor.save_pik('srcfilter', srcfilter)
-        smap.monitor.save_pik('crmodel', self.crmodel)
+        smap.monitor.save('srcfilter', srcfilter)
+        smap.monitor.save('crmodel', self.crmodel)
         for rg in getters.gen_rupture_getters(
                 self.datastore, oq.concurrent_tasks):
             smap.submit((rg, self.param))

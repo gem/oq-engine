@@ -322,12 +322,8 @@ def modal_damage_array(data, damage_dt):
     return arr
 
 
-# damages and avg_damages require different DISPLAY_NAMEs, so they are
-# kept separated even if the exporter is the same; see Anirudh's comment
-# in https://github.com/gem/oq-engine/pull/5851
-@export.add(('avg_damages-rlzs', 'csv'), ('avg_damages-stats', 'csv'),
-            ('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
-def export_avg_damages_csv(ekey, dstore):
+@export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
+def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
     dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
@@ -344,11 +340,11 @@ def export_avg_damages_csv(ekey, dstore):
         tags = ['%03d' % r for r in range(len(rlzs))]
     for i, tag in enumerate(tags):
         if oq.modal_damage_state:
-            avg_damages = modal_damage_array(data[:, i], dmg_dt)
+            damages = modal_damage_array(data[:, i], dmg_dt)
         else:
-            avg_damages = build_damage_array(data[:, i], dmg_dt)
+            damages = build_damage_array(data[:, i], dmg_dt)
         fname = dstore.build_fname(ekey[0].split('-')[0], tag, ekey[1])
-        writer.save(compose_arrays(assets, avg_damages), fname,
+        writer.save(compose_arrays(assets, damages), fname,
                     comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 

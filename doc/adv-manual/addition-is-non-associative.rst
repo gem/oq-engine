@@ -12,7 +12,7 @@ is not identical to
 >>> .1 + (.2 + .3)                                                         
 0.6
 
-As a consequence, other floating-point operations, such as multiplication
+Other floating-point operations, such as multiplication,
 are also non-associative. The order in which operations are performed plays 
 a role in the results of a calculation.
 

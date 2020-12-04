@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-import copy
 import numpy
 import pandas as pd
 
@@ -80,7 +79,7 @@ class AmplFunction():
         df = pd.DataFrame(out, columns=dtypes).astype(dtypes)
         return AmplFunction(df, soil)  # requires reset_index
 
-    def get_mean_std(self, site, imt, iml, mag, dst):
+    def get_mean_std(self, site, imt, iml, mags, dsts):
         """
         :param site:
             A string specifying the site
@@ -90,29 +89,35 @@ class AmplFunction():
         :param iml:
             A float with the shaking level on rock for which we need the
             amplification factor
-        :param mag:
-            A float with the magnitude of the rupture
+        :param mags:
+            An array of rupture magnitudes
         :param dst:
-            A float defining the rupture-site distance
+            An array of rupture-site distances
         :returns:
             A tuple with the median amplification factor and the std of the
             logarithm
         """
-        df = copy.copy(self.df)
+        df = self.df
         df = df[(df['ampcode'] == site) & (df['imt'] == imt)]
-
-        # Filtering magnitude
-        idx = numpy.argmin((self.mags - mag) > 0)
-        df = df[df['from_mag'] == self.mags[idx]]
-
-        # Filtering distance
         tmp_dsts = numpy.array(sorted(df['from_rrup']))
-        idx = numpy.argmin((tmp_dsts - dst) > 0)
-        df = df[df['from_rrup'] == tmp_dsts[idx]]
 
-        # Interpolating
-        median = numpy.interp(iml, df['level'], df['median'])
-        std = numpy.interp(iml, df['level'], df['std'])
+        median = numpy.zeros(len(mags))
+        std = numpy.zeros(len(mags))
+
+        # TODO: figure out a way to vectorize this
+        for i, (mag, dst) in enumerate(zip(mags, dsts)):
+
+            # Filtering magnitude
+            idx = numpy.argmin((self.mags - mag) > 0)
+            d = df[df['from_mag'] == self.mags[idx]]
+
+            # Filtering distance
+            idx = numpy.argmin((tmp_dsts - dst) > 0)
+            d = d[d['from_rrup'] == tmp_dsts[idx]]
+
+            # Interpolating
+            median[i] = numpy.interp(iml, d['level'], d['median'])
+            std[i] = numpy.interp(iml, d['level'], d['std'])
 
         return median, std
 
@@ -242,11 +247,18 @@ class Amplifier(object):
                 self.ialphas[code, imt], self.isigmas[code, imt] = (
                     self._interp(code, imt, self.midlevels, df))
 
-    def check(self, vs30, vs30_tolerance):
+    def check(self, vs30, vs30_tolerance, gsims_by_trt):
         """
         Raise a ValueError if some vs30 is different from vs30_ref
         within the tolerance. Called by the engine.
         """
+        for gsims in gsims_by_trt.values():
+            for gsim in gsims:
+                gsim_ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
+                if gsim_ref and self.vs30_ref > gsim_ref:
+                    raise ValueError(
+                        '%s.DEFINED_FOR_REFERENCE_VELOCITY=%s < %s'
+                        % (gsim.__class__.__name__, gsim_ref, self.vs30_ref))
         if (numpy.abs(vs30 - self.vs30_ref) > vs30_tolerance).any():
             raise ValueError('Some vs30 in the site collection is different '
                              'from vs30_ref=%d over the tolerance of %d' %

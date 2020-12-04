@@ -19,9 +19,8 @@
 import numpy
 import unittest
 
-from openquake.baselib import InvalidFile
 from openquake.baselib.hdf5 import read_csv
-from openquake.baselib.general import gettemp, DictArray
+from openquake.baselib.general import gettemp
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import AmplFunction
 
@@ -96,10 +95,10 @@ class AmplificationFunctionTestCase(unittest.TestCase):
     def test_get_median_std(self):
         """ Calculation of median amplification + std """
         site = b'A'
-        mag = 4.5
+        mags = [4.5]
         imt = 'PGA'
         imls = 0.12
-        rrups = 10.
-        med, std = self.af.get_mean_std(site, imt, imls, mag, rrups)
+        rrups = [10.]
+        med, std = self.af.get_mean_std(site, imt, imls, mags, rrups)
         self.assertEqual(med, 1.305, 'wrong median af')
         self.assertEqual(std, 0.3, 'wrong std af')

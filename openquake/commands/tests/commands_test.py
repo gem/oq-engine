@@ -139,7 +139,7 @@ class InfoTestCase(unittest.TestCase):
         with Print.patch() as p:
             info('sources')
         lines = str(p).split()
-        self.assertGreaterEqual(len(lines), 10)
+        self.assertGreaterEqual(len(lines), 9)
 
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
@@ -263,8 +263,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
-        self.assertIn('source_id code multiplicity '
-                      'calc_time num_sites', str(p))
+        self.assertIn('source_id code calc_time num_sites', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
@@ -485,6 +484,15 @@ class EngineRunJobTestCase(unittest.TestCase):
         self.assertEqual(r1.hazard_calculation_id, r1.id)
         self.assertEqual(r2.hazard_calculation_id, r1.id)
 
+    def test_sensitivity(self):
+        job_ini = gettemp('''[general]
+description = sensitivity test
+calculation_mode = scenario
+sites = 0 0
+sensitivity_analysis = {
+  'maximum_distance': [100, 200]}''')
+        run_jobs([job_ini])
+
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
         # event based risk with post processing
@@ -554,6 +562,10 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         sc = prepare_site_model([], [vs30_csv], [vs30_csv],
                                 True, True, False, 0, 5, output)
 
+        # test sites_csv == vs30_csv and grid spacing
+        sc = prepare_site_model([], [vs30_csv], [vs30_csv],
+                                True, True, False, 10, 5, output)
+
 
 class ReduceSourceModelTestCase(unittest.TestCase):
 
@@ -569,7 +581,7 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         calc_id = calc.datastore.calc_id
         with mock.patch('logging.info') as info:
             reduce_sm(calc_id)
-        self.assertIn('there are duplicated source IDs', info.call_args[0][0])
+        self.assertIn('Removed %d/%d sources', info.call_args[0][0])
         shutil.rmtree(temp_dir)
 
 

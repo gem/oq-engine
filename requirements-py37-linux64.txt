@@ -7,7 +7,7 @@
 
 https://wheelhouse.openquake.org/v3/linux/py/pytz-2019.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/setuptools-41.0.1-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/linux/py37/h5py-2.9.0-cp37-cp37m-manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py37/h5py-2.10.0-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/numpy-1.16.5-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/scipy-1.3.1-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/pandas-0.25.3-cp37-cp37m-manylinux1_x86_64.whl

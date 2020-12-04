@@ -99,16 +99,16 @@ class GmfComputer(object):
     # a matrix of size (I, N, E) is returned, where I is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
-    def __init__(self, rupture, sitecol, imts, cmaker,
+    def __init__(self, rupture, sitecol, cmaker,
                  truncation_level=None, correlation_model=None,
                  amplifier=None, sec_perils=()):
         if len(sitecol) == 0:
             raise ValueError('No sites')
-        elif len(imts) == 0:
+        elif len(cmaker.imtls) == 0:
             raise ValueError('No IMTs')
         elif len(cmaker.gsims) == 0:
             raise ValueError('No GSIMs')
-        self.imts = [from_string(imt) for imt in imts]
+        self.imts = [from_string(imt) for imt in cmaker.imtls]
         self.gsims = sorted(cmaker.gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
@@ -136,7 +136,6 @@ class GmfComputer(object):
             self.distribution = scipy.stats.truncnorm(
                 - truncation_level, truncation_level)
 
-
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
         :returns: [(sid, eid, gmv), ...], dt
@@ -149,6 +148,8 @@ class GmfComputer(object):
         No = sum(len(sp.outputs) for sp in self.sec_perils)
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
+            if num_events == 0:  # it may happen
+                continue
             # NB: the trick for performance is to keep the call to
             # compute.compute outside of the loop over the realizations
             # it is better to have few calls producing big arrays
@@ -169,19 +170,18 @@ class GmfComputer(object):
                         tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         sig_eps.append(tup)
-                    sp_out = numpy.zeros((No,) + gmfa.shape)  # No, N, M
-                    for m, imt in enumerate(self.imts):
-                        o = 0
-                        for sp in self.sec_perils:
-                            o1 = o + len(sp.outputs)
-                            sp_out[o:o1, :, m] = sp.compute(
-                                mag, imt, gmfa[:, m], self.sctx)
-                            o = o1
+                    sp_out = numpy.zeros((No, len(gmfa)))  # No, N
+                    o = 0
+                    for sp in self.sec_perils:
+                        o1 = o + len(sp.outputs)
+                        sp_out[o:o1] = sp.compute(
+                            mag, zip(self.imts, gmfa.T), self.sctx)
+                        o = o1
                     for i, gmv in enumerate(gmfa):
                         if gmv.sum():
                             if No:
                                 data.append((sids[i], eid, rlz, gmv) +
-                                            tuple(sp_out[:, i, :]))
+                                            tuple(sp_out[:, i]))
                             else:
                                 data.append((sids[i], eid, rlz, gmv))
                         # gmv can be zero due to the minimum_intensity, coming
@@ -189,7 +189,7 @@ class GmfComputer(object):
                 n += len(eids)
         dt = F32, (len(min_iml),)
         dtlist = [('sid', U32), ('eid', U32), ('rlz', U32), ('gmv', dt)] + [
-            (out, dt) for sp in self.sec_perils for out in sp.outputs]
+            (out, F32) for sp in self.sec_perils for out in sp.outputs]
         d = numpy.array(data, dtlist)
         return d, time.time() - t0
 
@@ -338,9 +338,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
-    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim])
+    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim],
+                          dict(imtls={str(imt): [1] for imt in imts}))
     rupture.rup_id = seed
-    gc = GmfComputer(rupture, sites, [str(imt) for imt in imts],
-                     cmaker, truncation_level, correlation_model)
+    gc = GmfComputer(rupture, sites, cmaker, truncation_level,
+                     correlation_model)
     res, _sig, _eps = gc.compute(gsim, realizations)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}

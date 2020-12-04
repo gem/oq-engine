@@ -83,7 +83,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # make sure the tot_curves-stats has the right attrs
         self.check_attr('return_periods', [30, 60, 120, 240, 480, 960])
-        self.check_attr('units', [b'EUR', b'EUR'])
+        self.check_attr('units', ['EUR', 'EUR'])
 
         # test portfolio loss
         tmp = gettemp(view('portfolio_loss', self.calc.datastore))
@@ -96,7 +96,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # test event_based_damage
         self.run_calc(case_1.__file__, 'job_damage.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
-        fnames = export(('avg_damages-rlzs', 'csv'), self.calc.datastore)
+        fnames = export(('damages-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
         fnames = export(('dmg_by_event', 'csv'), self.calc.datastore)
@@ -112,7 +112,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        numpy.testing.assert_allclose(aw.array, [632.50055])
+        numpy.testing.assert_allclose(aw.array, [662.6701])
 
         fnames = export(('tot_curves-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -207,7 +207,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_2_sampling(self):
         self.run_calc(case_2.__file__, 'job_sampling.ini')
-        self.assertEqual(len(self.calc.datastore['events']), 20)
+        self.assertEqual(len(self.calc.datastore['events']), 26)
         # TODO: improve this test
 
     def test_case_2_correlation(self):
@@ -315,7 +315,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # tot_losses-rlzs has shape (L=5, R=9)
         # tot_losses-stats has shape (L=5, S=4)
         fname = export(('tot_losses-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-4)
 
         fname = export(('tot_curves-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
@@ -331,7 +331,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
                       'tag=taxonomy&tag=occupancy&kind=quantile-0.5')
-        self.assertEqual(len(arr.to_table()), 4)
+        self.assertEqual(len(arr.to_table()), 5)
 
         # aggregate by all loss types
         fnames = export(
@@ -414,7 +414,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_4b(self):
         # case with site collection extracted from site_model.xml
         self.run_calc(case_4a.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['events']), 8)
+        self.assertEqual(len(self.calc.datastore['events']), 4)
 
     def test_case_6c(self):
         # case with asset_correlation=1
@@ -429,15 +429,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
 
     def test_asset_loss_table(self):
-        # this is a case with L=1, R=1, T1=2, P=3
+        # this is a case with L=1, R=1, T1=2, P=6
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv',
                             minimum_asset_loss='100')
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
 
-        curves = self.calc.datastore.read_df('agg_curves-rlzs',
-                                             ['NAME_1', 'return_periods'])
-        self.assertEqual(len(curves), 6)  # 2 names x 3 periods
+        curves = self.calc.datastore.read_df('agg_curves-rlzs', 'NAME_1')
+        self.assertEqual(len(curves), 12)  # 2 names x 6 periods
 
         # regenerate loss curves and maps
         out = self.run_calc(

@@ -141,14 +141,14 @@ suppose that we want to compute the probability of exceeding a Peak
 Ground Accelation (PGA) of 0.1g by using the ToroEtAl2002SHARE GMPE:
 
 >>> from openquake.commonlib import readinput
->>> oq = readinput.get_oq('''
-... sites = 15.0 45.2
-... reference_vs30_type = measured
-... reference_vs30_value = 600.0
-... intensity_measure_types_and_levels = {'PGA': [0.1]}
-... gsim = ToroEtAl2002SHARE
-... maximum_distance = 200.0
-... ''')
+>>> oq = readinput.get_oqparam(dict(
+... calculation_mode='scenario',
+... sites='15.0 45.2',
+... reference_vs30_type='measured',
+... reference_vs30_value='600.0',
+... intensity_measure_types_and_levels="{'PGA': [0.1]}",
+... gsim='ToroEtAl2002SHARE',
+... maximum_distance='200.0'))
 
 Then we need to specify the source:
 
@@ -204,5 +204,4 @@ Then the hazard curve can be computed as follows:
 >>> gsim_lt = readinput.get_gsim_lt(oq)
 >>> calc_hazard_curve(sitecol, src, gsim_lt.values, oq)
 <ProbabilityCurve
-[[0.00507997]]>
-
+[[0.00508693]]>
