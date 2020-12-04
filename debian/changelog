@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Implemented `minimum_asset_loss` in scenario_risk for consistency
+    with the `ebrisk` calculator
   * Added a command `oq plot gridded_sources?`
   * Fixed `oq recompute_losses` to expose the outputs to the database
   * Fixed `oq engine --run --params` that was not working for
