@@ -1,8 +1,7 @@
----
-name: ansible
+name: playbook_ansible
 'on':
   schedule:
-    - cron: "0 4 * * *"
+    - cron: "0 2 * * *"
 
 jobs:
 
@@ -17,7 +16,7 @@ jobs:
           - ubuntu1804
           - ubuntu2004
     env:
-      working-directory: ./ansible/oqengine
+      working-directory: ./ansible/playbook
 
     steps:
       - name: Check out the codebase.

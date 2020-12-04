@@ -37,7 +37,7 @@ import requests
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, random_filter, countby, groupby, group_array, get_duplicates)
+    random_filter, countby, group_array, get_duplicates)
 from openquake.baselib.python3compat import zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -45,11 +45,9 @@ from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
-from openquake.hazardlib.source import point, rupture
+from openquake.hazardlib.source import rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.source.point import grid_point_sources
-from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels
 from openquake.risklib.riskmodels import get_risk_functions
@@ -57,8 +55,6 @@ from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
 from openquake.commonlib import logictree
 
-# the following is quite arbitrary, it gives output weights that I like (MS)
-NORMALIZATION_FACTOR = 1E-2
 F32 = numpy.float32
 F64 = numpy.float64
 U8 = numpy.uint8
@@ -713,28 +709,6 @@ def get_full_lt(oqparam):
     return full_lt
 
 
-def weight_sources(srcs, srcfilter, params, monitor):
-    """
-    Weight the sources. Also split them if split_sources is true.
-    """
-    # nrups, nsites, time, task_no
-    calc_times = AccumDict(accum=numpy.zeros(4, F32))
-    sources = []
-    grp_id = srcs[0].grp_id
-    for src in srcs:
-        t0 = time.time()
-        sources.extend(srcfilter.split_source(src, params['split_sources']))
-        dt = time.time() - t0
-        calc_times[src.id] += F32([src.num_ruptures, src.nsites, dt, 0])
-    for arr in calc_times.values():
-        arr[3] = monitor.task_no
-    dic = grid_point_sources(sources, grp_id, params['ps_grid_spacing'])
-    dic['calc_times'] = calc_times
-    dic['before'] = len(sources)
-    dic['after'] = len(dic[grp_id])
-    return dic
-
-
 def save_source_info(csm, h5):
     data = {}  # src_id -> row
     wkts = []
@@ -773,11 +747,11 @@ def _check_csm(csm, oqparam, h5):
     sitecol = get_site_collection(oqparam, h5)
     if sitecol is None:
         fewsites = None
-    elif len(sitecol) <= oqparam.max_sites_disagg:
-        fewsites = sitecol
-    else:  # long sitecol
+    elif len(sitecol) > 10_000:
+        # performance hack: use 1 site over 10 when weighting the sources
         fewsites = sitecol.filter(sitecol.sids % 10 == 0)
-    # performance hack: use 1 site over 10 when weighting the sources!
+    else:  # short enough sitecol
+        fewsites = sitecol
     srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
 
     if sitecol:  # missing in test_case_1_ruptures
@@ -786,7 +760,7 @@ def _check_csm(csm, oqparam, h5):
         lats = []
         for src in srcs:
             try:
-                box = srcfilter.integration_distance.get_enlarged_box(src)
+                box = srcfilter.get_enlarged_box(src)
             except BBoxError as exc:
                 logging.error(exc)
                 continue
@@ -807,41 +781,7 @@ def _check_csm(csm, oqparam, h5):
         if len(sids) == 0:
             raise RuntimeError('All sources were discarded!?')
 
-    return srcfilter
-
-
-def _weight_sources(csm, srcfilter, oqparam, h5):
-
-    # do nothing for atomic sources except counting the ruptures
-    for src in csm.get_sources(atomic=True):
-        src.num_ruptures = src.count_ruptures()
-        src.nsites = len(srcfilter.sitecol)
-
-    # run weight_sources for non-atomic sources
-    sources_by_grp = groupby(
-        csm.get_sources(atomic=False),
-        lambda src: (src.grp_id, point.msr_name(src)))
-    param = dict(ps_grid_spacing=oqparam.ps_grid_spacing,
-                 split_sources=oqparam.split_sources)
-
-    res = parallel.Starmap(
-        weight_sources,
-        ((srcs, srcfilter, param) for srcs in sources_by_grp.values()), h5=h5,
-        distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
-
-    if res and res['before'] != res['after']:
-        logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
-                     format(res['before'], res['after']))
-
-    if res and h5:
-        csm.update_source_info(res['calc_times'], nsites=True)
-
-    for grp_id, srcs in res.items():
-        # srcs can be empty if the minimum_magnitude filter is on
-        if srcs and not isinstance(grp_id, str):
-            newsg = SourceGroup(srcs[0].tectonic_region_type)
-            newsg.sources = srcs
-            csm.src_groups[grp_id] = newsg
+    csm.srcfilter = srcfilter
 
 
 def get_composite_source_model(oqparam, h5=None):
@@ -872,25 +812,18 @@ def get_composite_source_model(oqparam, h5=None):
                 # avoid errors with --reuse_hazard
                 h5['et_ids'] = csm.get_et_ids()
                 hdf5.create(h5, 'source_info', source_info_dt)
+            _check_csm(csm, oqparam, h5)
             return csm
 
     # read and process the composite source model from the input files
     csm = get_csm(oqparam, full_lt,  h5)
     save_source_info(csm, h5)
-    srcfilter = _check_csm(csm, oqparam, h5)
-    if not oqparam.is_event_based():
-        _weight_sources(csm, srcfilter, oqparam, h5)
-        for sg in csm.src_groups:  # sanity check
-            for src in sg:
-                assert src.num_ruptures
-                assert src.nsites
-
-    # pickle the csm
     if oqparam.cachedir and not oqparam.is_ucerf():
         logging.info('Saving %s', fname)
         with open(fname, 'wb') as f:
             pickle.dump(csm, f)
 
+    _check_csm(csm, oqparam, h5)
     return csm
 
 

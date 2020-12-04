@@ -297,7 +297,7 @@ class UCERFSource(BaseSeismicSource):
                 if rup:
                     yield rup
 
-    # called upfront, before classical_split_filter
+    # called upfront, before start_classical
     def __iter__(self):
         if self.stop - self.start <= self.ruptures_per_block:  # already split
             yield self

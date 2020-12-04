@@ -16,12 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
+import time
 import copy
 import psutil
 import pprint
 import logging
 import operator
-from datetime import datetime
 import numpy
 try:
     from PIL import Image
@@ -32,10 +32,14 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
     get_nbytes_msg)
+from openquake.hazardlib.source.point import (
+    PointSource, grid_point_sources, msr_name)
+from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.contexts import ContextMaker, get_effect
+from openquake.hazardlib.calc.filters import split_source
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, util, logs, readinput
+from openquake.commonlib import calc, util, readinput
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -44,6 +48,11 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
+EPS = .01  # used for src.nsites outside the maximum_distance
+BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight
+# with BUFFER = 1 we would have lots of apparently light sources
+# collected together in an extra-slow task, as it happens in SHARE
+# with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
 grp_extreme_dt = numpy.dtype([('et_id', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
@@ -63,44 +72,64 @@ def get_extreme_poe(array, imtls):
     return max(array[imtls(imt).stop - 1].max() for imt in imtls)
 
 
-#  ########################### task functions ############################ #
+def run_preclassical(csm, oqparam, h5):
+    """
+    :param csm: a CompositeSourceModel with attribute .srcfilter
+    :param oqparam: the parameters in job.ini file
+    :param h5: a DataStore instance
+    """
+    logging.info('Filtering with %s', csm.srcfilter.sitecol)
 
-def classical(srcs, rlzs_by_gsim, params, monitor):
-    """
-    Read the SourceFilter and call the classical calculator in hazardlib
-    """
-    srcfilter = monitor.read('srcfilter')
-    return hazclassical(srcs, srcfilter, rlzs_by_gsim, params, monitor)
+    # do nothing for atomic sources except counting the ruptures
+    for src in csm.get_sources(atomic=True):
+        src.num_ruptures = src.count_ruptures()
+        src.nsites = len(csm.srcfilter.sitecol)
 
+    # run preclassical for non-atomic sources
+    sources_by_grp = groupby(
+        csm.get_sources(atomic=False),
+        lambda src: (src.grp_id, msr_name(src)))
+    param = dict(maximum_distance=oqparam.maximum_distance,
+                 pointsource_distance=oqparam.pointsource_distance,
+                 ps_grid_spacing=oqparam.ps_grid_spacing,
+                 split_sources=oqparam.split_sources)
 
-def classical_split_filter(sources, rlzs_by_gsim, params, monitor):
-    """
-    Compute the PoEs from filtered sources.
-    """
-    minw = params['min_weight']
-    maxw = params['max_weight'] / 2
-    blocks = list(block_splitter(sources, maxw, get_weight))
-    if not blocks:
-        yield {'pmap': {}, 'extra': {}}
-        return
-    heavy = []
-    light = list(blocks[-1])
-    for block in blocks[:-1]:
-        if block.weight < minw:  # extend light sources
-            light.extend(block)
-        else:  # heavy block, turn it into a subtask
-            heavy.append(int(block.weight))
-            yield classical, block, rlzs_by_gsim, params
-    if heavy:
-        msg = 'produced %d subtask with weights %s' % (len(heavy), heavy)
-        try:
-            logs.dbcmd(
-                'log', monitor.calc_id, datetime.utcnow(), 'DEBUG',
-                'classical_split_filter#%d' % monitor.task_no, msg)
-        except Exception:
-            # a foreign key error in case of `oq run` is expected
-            print(msg)
-    yield classical(light, rlzs_by_gsim, params, monitor)
+    res = parallel.Starmap(
+        preclassical,
+        ((srcs, csm.srcfilter, param) for srcs in sources_by_grp.values()),
+        h5=h5, distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
+
+    if res and res['before'] != res['after']:
+        logging.info('Reduced the number of sources from {:_d} -> {:_d}'.
+                     format(res['before'], res['after']))
+
+    if res and h5:
+        csm.update_source_info(res['calc_times'], nsites=True)
+
+    for grp_id, srcs in res.items():
+        # srcs can be empty if the minimum_magnitude filter is on
+        if srcs and not isinstance(grp_id, str):
+            newsg = SourceGroup(srcs[0].tectonic_region_type)
+            newsg.sources = srcs
+            csm.src_groups[grp_id] = newsg
+
+    # sanity check
+    for sg in csm.src_groups:
+        for src in sg:
+            assert src.num_ruptures
+            assert src.nsites
+
+    # store ps_grid data, if any
+    for key, sources in res.items():
+        if isinstance(key, str) and key.startswith('ps_grid/'):
+            arrays = []
+            for ps in sources:
+                if hasattr(ps, 'location'):
+                    lonlats = [ps.location.x, ps.location.y]
+                    for src in getattr(ps, 'pointsources', []):
+                        lonlats.extend([src.location.x, src.location.y])
+                    arrays.append(F32(lonlats))
+            h5[key] = arrays
 
 
 def store_ctxs(dstore, rupdata, grp_id):
@@ -122,12 +151,80 @@ def store_ctxs(dstore, rupdata, grp_id):
             hdf5.extend(dstore[n], rupdata.get(par, nans))
 
 
+#  ########################### task functions ############################ #
+
+def preclassical(srcs, srcfilter, params, monitor):
+    """
+    Weight the sources. Also split them if split_sources is true. If
+    ps_grid_spacing is set, grid the point sources before weighting them.
+
+    NB: srcfilter can be on a reduced site collection for performance reasons
+    """
+    # nrups, nsites, time, task_no
+    calc_times = AccumDict(accum=numpy.zeros(4, F32))
+    sources = []
+    grp_id = srcs[0].grp_id
+    trt = srcs[0].tectonic_region_type
+    md = params['maximum_distance'](trt)
+    pd = (params['pointsource_distance'](trt)
+          if params['pointsource_distance'] else 0)
+    with monitor('splitting sources'):
+        # this can be slow
+        for src in srcs:
+            t0 = time.time()
+            src.nsites = len(srcfilter.close_sids(src))
+            # NB: it is crucial to split only the close sources, for
+            # performance reasons (think of Ecuador in SAM)
+            splits = split_source(src) if (
+                params['split_sources'] and src.nsites) else [src]
+            sources.extend(splits)
+            nrups = src.count_ruptures() if src.nsites else 0
+            dt = time.time() - t0
+            calc_times[src.id] += F32([nrups, src.nsites, dt, 0])
+        for arr in calc_times.values():
+            arr[3] = monitor.task_no
+    dic = grid_point_sources(sources, params['ps_grid_spacing'], monitor)
+    with monitor('weighting sources'):
+        # this is normally fast
+        for src in dic[grp_id]:
+            if not src.nsites:  # filtered out
+                src.nsites = EPS
+            is_ps = isinstance(src, PointSource)
+            if is_ps:
+                # NB: using cKDTree would not help, performance-wise
+                cdist = srcfilter.sitecol.get_cdist(src.location)
+                src.nsites = (cdist <= md + pd).sum() or EPS
+            src.num_ruptures = src.count_ruptures()
+            if pd and is_ps:
+                nphc = src.count_nphc()
+                if nphc > 1:
+                    close = (cdist <= pd * BUFFER).sum()
+                    far = src.nsites - close
+                    factor = (close + (far + EPS) / nphc) / (close + far + EPS)
+                    src.num_ruptures *= factor
+    dic['calc_times'] = calc_times
+    dic['before'] = len(sources)
+    dic['after'] = len(dic[grp_id])
+    if params['ps_grid_spacing']:
+        dic['ps_grid/%02d' % monitor.task_no] = [
+            src for src in dic[grp_id] if src.nsites > EPS]
+    return dic
+
+
+def classical(srcs, rlzs_by_gsim, params, monitor):
+    """
+    Read the SourceFilter and call the classical calculator in hazardlib
+    """
+    srcfilter = monitor.read('srcfilter')
+    return hazclassical(srcs, srcfilter, rlzs_by_gsim, params, monitor)
+
+
 @base.calculators.add('classical', 'preclassical', 'ucerf_classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
     """
-    core_task = classical_split_filter
+    core_task = classical
     accept_precalc = ['classical']
 
     def agg_dicts(self, acc, dic):
@@ -165,7 +262,6 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[extra['source_id'].split(':')[0]] = pmap
         self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
-            self.totrups += extra['totrups']
             if pmap and grp_id in acc:
                 acc[grp_id] |= pmap
             else:
@@ -213,7 +309,6 @@ class ClassicalCalculator(base.HazardCalculator):
             dset = self.datastore.getitem('rup')
             dset.attrs['__pdcolumns__'] = ' '.join(params)
         self.by_task = {}  # task_no => src_ids
-        self.totrups = 0  # total number of ruptures before collapsing
         self.maxradius = 0
         self.Ns = len(self.csm.source_info)
         if self.oqparam.disagg_by_src:
@@ -268,7 +363,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Requiring %s for ProbabilityMap of shape %s',
                      humansize(size), poes_shape)
         avail = psutil.virtual_memory().available
-        if avail < 1.5 * size:
+        if avail < 1.25 * size:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
         self.datastore.create_dset('_poes', F64, poes_shape)
@@ -290,7 +385,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
             oq.max_sites_per_tile, oq.max_sites_disagg)
-        psd = self.set_psd()
+        psd = self.set_psd()  # must go before to set the pointsource_distance
+        run_preclassical(self.csm, oq, self.datastore)
 
         # exit early if we want to perform only a preclassical
         if oq.calculation_mode == 'preclassical':
@@ -301,9 +397,9 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
 
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
+        smap = parallel.Starmap(classical, self.get_args(),
+                                h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.src_filter())
-        self.submit_tasks(smap)
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
@@ -330,12 +426,12 @@ class ClassicalCalculator(base.HazardCalculator):
                     si[task_no] = ' '.join(source_ids[s] for s in srcids)
                 self.by_task.clear()
         if self.calc_times:  # can be empty in case of errors
-            self.numrups = sum(arr[0] for arr in self.calc_times.values())
+            self.numctxs = sum(arr[0] for arr in self.calc_times.values())
             numsites = sum(arr[1] for arr in self.calc_times.values())
-            logging.info('Effective number of ruptures: {:_d}/{:_d}'.format(
-                int(self.numrups), self.totrups))
-            logging.info('Effective number of sites per rupture: %d',
-                         numsites / self.numrups)
+            logging.info('Total number of contexts: {:_d}'.
+                         format(int(self.numctxs)))
+            logging.info('Average number of sites per context: %d',
+                         numsites / self.numctxs)
         if psd:
             psdist = max(max(psd.ddic[trt].values()) for trt in psd.ddic)
             if psdist and self.maxradius >= psdist / 2:
@@ -393,11 +489,12 @@ class ClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def submit_tasks(self, smap):
+    def get_args(self):
         """
-        Submit tasks to the passed Starmap
+        :returns: the outputs to pass to the Starmap, ordered by weight
         """
         oq = self.oqparam
+        allargs = []
         src_groups = self.csm.src_groups
         tot_weight = 0
         et_ids = self.datastore['et_ids'][:]
@@ -413,12 +510,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
         C = oq.concurrent_tasks or 1
-        if oq.disagg_by_src or oq.is_ucerf():
-            f1, f2 = classical, classical
-            max_weight = max(tot_weight / C, oq.min_weight) / 5
-        else:
-            f1, f2 = classical, classical_split_filter
-            max_weight = max(tot_weight / C, oq.min_weight)
+        max_weight = max(tot_weight / (2.5 * C), oq.min_weight)
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
@@ -427,25 +519,26 @@ class ClassicalCalculator(base.HazardCalculator):
             if sg.atomic:
                 # do not split atomic groups
                 nb += 1
-                smap.submit((sg, rlzs_by_gsim, self.params), f1)
+                allargs.append((sg, rlzs_by_gsim, self.params))
             else:  # regroup the sources in blocks
-                blks = (groupby(sg, get_source_id).values()
-                        if oq.disagg_by_src
-                        else block_splitter(sg, 2 * max_weight,
-                                            get_weight, sort=True))
+                blks = (groupby(sg, get_source_id).values() if oq.disagg_by_src
+                        else block_splitter(
+                                sg, max_weight, get_weight, sort=True))
                 blocks = list(blks)
                 nb += len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
-                    smap.submit((block, rlzs_by_gsim, self.params), f2)
+                    allargs.append((block, rlzs_by_gsim, self.params))
 
             w = sum(src.weight for src in sg)
             it = sorted(oq.maximum_distance.ddic[sg.trt].items())
             md = '%s->%d ... %s->%d' % (it[0] + it[-1])
             logging.info('max_dist={}, gsims={}, weight={:_d}, blocks={}'.
                          format(md, len(rlzs_by_gsim), int(w), nb))
-        return rlzs_by_gsim_list
+        allargs.sort(key=lambda args: sum(src.weight for src in args[0]),
+                     reverse=True)
+        return allargs
 
     def save_hazard(self, acc, pmap_by_kind):
         """

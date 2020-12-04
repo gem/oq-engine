@@ -55,13 +55,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        nsites_factor = min(self.nsites, 1)
-        if hasattr(self, 'nodal_plane_distribution'):
-            rescale = len(self.nodal_plane_distribution.data) * len(
-                self.hypocenter_distribution.data)
-        else:
-            rescale = 1
-        return self.num_ruptures * self.ngsims * nsites_factor / rescale
+        return self.num_ruptures * self.ngsims * (
+            .1 if self.nsites == .01 else 1)
 
     @property
     def et_ids(self):
@@ -235,6 +230,13 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                              (modification, type(self).__name__))
         meth = getattr(self, 'modify_%s' % modification)
         meth(**parameters)
+
+    def to_xml(self):
+        """
+        Convert the source into an XML string, very useful for debugging
+        """
+        from openquake.hazardlib import nrml, sourcewriter
+        return nrml.to_string(sourcewriter.obj_to_node(self))
 
 
 class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):

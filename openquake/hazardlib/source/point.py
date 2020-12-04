@@ -17,10 +17,10 @@
 Module :mod:`openquake.hazardlib.source.point` defines :class:`PointSource`.
 """
 import math
-import itertools
 from unittest.mock import Mock
 import numpy
 from openquake.baselib.general import AccumDict, groupby_grid
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.scalerel import PointMSR
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
@@ -223,9 +223,9 @@ class PointSource(ParametricSeismicSource):
                         surface, occurrence_rate,
                         self.temporal_occurrence_model)
 
-    def point_ruptures(self):
+    def avg_ruptures(self):
         """
-        Generate one point rupture for each magnitude
+        Generate one rupture for each magnitude
         """
         avg = calc_average([self])
         hc = Point(avg['lon'], avg['lat'], avg['dep'])
@@ -386,13 +386,12 @@ class CollapsedPointSource(PointSource):
     tectonic region type, magnitude_scaling_relationship and
     temporal_occurrence_model.
     """
-    code = b'P'
+    code = b'p'
     MODIFICATIONS = set()
-    counter = itertools.count(1)
 
-    def __init__(self, pointsources):
+    def __init__(self, source_id, pointsources):
+        self.source_id = source_id
         self.pointsources = pointsources
-        self.source_id = 'cps-%d' % next(self.counter)
         self.tectonic_region_type = pointsources[0].tectonic_region_type
         self.magnitude_scaling_relationship = (
             pointsources[0].magnitude_scaling_relationship)
@@ -410,6 +409,12 @@ class CollapsedPointSource(PointSource):
             acc += dict(psource.get_annual_occurrence_rates())
         return sorted(acc.items())
 
+    def count_nphc(self):
+        """
+        :returns: the total number of nodal planes and hypocenters
+        """
+        return sum(src.count_nphc() for src in self.pointsources)
+
     def iter_ruptures(self, **kwargs):
         """
         :returns: an iterator over the underlying ruptures
@@ -417,7 +422,7 @@ class CollapsedPointSource(PointSource):
         for src in self.pointsources:
             yield from src.iter_ruptures(**kwargs)
 
-    def point_ruptures(self):
+    def avg_ruptures(self):
         """
         :yields: the underlying point ruptures
         """
@@ -448,9 +453,9 @@ class CollapsedPointSource(PointSource):
 
     def count_ruptures(self):
         """
-        :returns: the number of underlying point ruptures * 2
+        :returns: the total number of underlying ruptures
         """
-        return len(self.get_annual_occurrence_rates()) * 2
+        return sum(src.count_ruptures() for src in self.pointsources)
 
 
 def _coords(psources):
@@ -462,17 +467,16 @@ def _coords(psources):
     return arr
 
 
-def grid_point_sources(sources, grp_id, ps_grid_spacing):
+def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     """
     :param sources:
         a list of sources with the same grp_id (point sources and not)
-    :param grp_id:
-        source group ID (integer)
     :param ps_grid_spacing:
         value of the point source grid spacing in km; if None, do nothing
     :returns:
         a dict grp_id -> list of non-point sources and collapsed point sources
     """
+    grp_id = sources[0].grp_id
     for src in sources[1:]:
         assert src.grp_id == grp_id, (src.grp_id, grp_id)
     if ps_grid_spacing is None:
@@ -485,14 +489,16 @@ def grid_point_sources(sources, grp_id, ps_grid_spacing):
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
-    for idxs in grid.values():
-        cps = CollapsedPointSource(ps[idxs])
-        cps.num_ruptures = cps.count_ruptures()
-        cps.id = ps[0].id
-        cps.grp_id = ps[0].grp_id
-        cps.et_id = ps[0].et_id
-        cps.nsites = sum(p.nsites for p in ps)
-        out.append(cps)
+    task_no = getattr(monitor, 'task_no', 0)
+    for i, idxs in enumerate(grid.values()):
+        if len(idxs) > 1:
+            cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
+            cps.id = ps[0].id
+            cps.grp_id = ps[0].grp_id
+            cps.et_id = ps[0].et_id
+            out.append(cps)
+        else:  # there is a single source
+            out.append(ps[idxs[0]])
     return {grp_id: out}
 
 

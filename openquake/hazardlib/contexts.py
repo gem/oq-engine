@@ -52,21 +52,24 @@ class Timer(object):
 
     OQ_TIMER=timer.csv oq run job.ini
     """
-    fields = ['source_id', 'nrups', 'nsites', 'weight', 'dt', 'task_no']
+    fields = ['source_id', 'code', 'effrups', 'nsites', 'weight',
+              'numctxs', 'numsites', 'dt', 'task_no']
 
     def __init__(self, fname):
         self.fname = fname
 
-    def save(self, src, dt, task_no):
+    def save(self, src, numctxs, numsites, dt, task_no):
         # save the source info
         if self.fname:
-            row = [src.source_id, src.num_ruptures, src.nsites, src.weight,
-                   dt, task_no]
+            row = [src.source_id, src.code.decode('ascii'),
+                   src.num_ruptures, src.nsites, src.weight,
+                   numctxs, numsites, dt, task_no]
             open(self.fname, 'a').write(','.join(map(str, row)) + '\n')
 
     def read_df(self):
         # method used to postprocess the information
         df = pandas.read_csv(self.fname, names=self.fields, index_col=0)
+        df['speed'] = df['weight'] / df['dt']
         return df.sort_values('dt')
 
 
@@ -178,7 +181,6 @@ class ContextMaker(object):
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.split_sources = param.get('split_sources', True)
         self.collapse_level = param.get('collapse_level', False)
-        self.point_rupture_bins = param.get('point_rupture_bins', 20)
         self.trt = trt
         self.gsims = gsims
         self.single_site_opt = numpy.array(
@@ -584,7 +586,7 @@ class PmapMaker(object):
             ctxs = self.cmaker.collapse_the_ctxs(list(ctxs))
         for ctx in ctxs:
             self.numsites += len(ctx.sids)
-            self.numrups += 1
+            self.numctxs += 1
             if self.fewsites:  # keep the contexts in memory
                 self.rupdata.append(ctx)
             yield ctx
@@ -600,22 +602,22 @@ class PmapMaker(object):
                          for src, idx in self.srcfilter.filter(self.group))
         for src, sites in src_sites:
             t0 = time.time()
-            self.numrups = 0
+            self.numctxs = 0
             self.numsites = 0
             rups = self._gen_rups(src, sites)
             self._update_pmap(self._gen_ctxs(rups, sites, src.id))
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
-                [self.numrups, self.numsites, dt])
-            timer.save(src, dt, self.cmaker.task_no)
+                [self.numctxs, self.numsites, dt])
+            timer.save(src, self.numctxs, self.numsites, dt,
+                       self.cmaker.task_no)
         return ~self.pmap if self.rup_indep else self.pmap
 
     def _make_src_mutex(self):
         for src, indices in self.srcfilter.filter(self.group):
             t0 = time.time()
             sites = self.srcfilter.sitecol.filtered(indices)
-            self.totrups += src.num_ruptures
-            self.numrups = 0
+            self.numctxs = 0
             self.numsites = 0
             rups = self._ruptures(src)
             L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
@@ -628,8 +630,9 @@ class PmapMaker(object):
             self.pmap += p
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
-                [self.numrups, self.numsites, dt])
-            timer.save(src, dt, self.cmaker.task_no)
+                [self.numctxs, self.numsites, dt])
+            timer.save(src, self.numctxs, self.numsites, dt,
+                       self.cmaker.task_no)
         return self.pmap
 
     def dictarray(self, ctxs):
@@ -647,13 +650,12 @@ class PmapMaker(object):
         self.pmap = ProbabilityMap(L, G)
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
-        self.totrups = 0
         if self.src_mutex:
             pmap = self._make_src_mutex()
         else:
             pmap = self._make_src_indep()
         rupdata = self.dictarray(self.rupdata)
-        return (pmap, rupdata, self.calc_times, dict(totrups=self.totrups))
+        return pmap, rupdata, self.calc_times
 
     def _gen_rups(self, src, sites):
         # yield ruptures, each one with a .sites attribute
@@ -661,30 +663,31 @@ class PmapMaker(object):
             for rup in rupiter:
                 rup.sites = sites
                 yield rup
-        self.totrups += src.num_ruptures
         loc = getattr(src, 'location', None)
         if loc and self.pointsource_distance == 0:
             # all finite size effects are ignored
-            yield from rups(src.point_ruptures(), sites)
-        elif loc and self.pointsource_distance:
-            # finite site effects are ignored only for sites over the
+            yield from rups(src.avg_ruptures(), sites)
+        elif loc and self.pointsource_distance and src.count_nphc() > 1:
+            # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
-            for pr in src.point_ruptures():
-                pdist = self.pointsource_distance['%.2f' % pr.mag]
-                close, far = sites.split(pr.hypocenter, pdist)
+            cdist = sites.get_cdist(src.location)
+            for ar in src.avg_ruptures():
+                pdist = self.pointsource_distance['%.2f' % ar.mag]
+                close = sites.filter(cdist <= pdist)
+                far = sites.filter(cdist > pdist)
                 if self.fewsites:
                     if close is None:  # all is far, common for small mag
-                        yield from rups([pr], sites)
+                        yield from rups([ar], sites)
                     else:  # something is close
-                        yield from rups(self._ruptures(src, pr.mag), sites)
+                        yield from rups(self._ruptures(src, ar.mag), sites)
                 else:  # many sites
                     if close is None:  # all is far
-                        yield from rups([pr], far)
+                        yield from rups([ar], far)
                     elif far is None:  # all is close
-                        yield from rups(self._ruptures(src, pr.mag), close)
+                        yield from rups(self._ruptures(src, ar.mag), close)
                     else:  # some sites are far, some are close
-                        yield from rups([pr], far)
-                        yield from rups(self._ruptures(src, pr.mag), close)
+                        yield from rups([ar], far)
+                        yield from rups(self._ruptures(src, ar.mag), close)
         else:  # just add the ruptures
             yield from rups(self._ruptures(src), sites)
 

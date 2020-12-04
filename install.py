@@ -60,6 +60,8 @@ import pwd
 import shutil
 import socket
 import getpass
+import zipfile
+import tempfile
 import argparse
 import subprocess
 from urllib.request import urlopen
@@ -75,7 +77,7 @@ class server:
     Parameters for a server installation (with root permissions)
     """
     VENV = '/opt/openquake'
-    OQ_CFG = os.path.join(VENV, 'openquake.cfg')
+    CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
     OQDATA = '/var/lib/openquake/oqdata'
@@ -94,7 +96,7 @@ class user:
     Parameters for a user installation
     """
     VENV = os.path.expanduser('~/openquake')
-    OQ_CFG = os.path.join(VENV, 'openquake.cfg')
+    CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = os.path.join(VENV, '/bin/oq')
     OQDATA = os.path.expanduser('~/oqdata')
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
@@ -139,6 +141,7 @@ PYVER = sys.version_info[:2]
 PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'darwin': ('macos',),
             'win32': ('win64',)}
+DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 
 
 def before_checks(inst, remove, usage):
@@ -231,14 +234,14 @@ def install(inst):
 
     # create openquake.cfg
     if inst is server:
-        if os.path.exists(inst.OQ_CFG):
+        if os.path.exists(inst.CFG):
             print('There is an old file %s; it will not be overwritten, '
                   'but consider updating it with\n%s' %
-                  (inst.OQ_CFG, inst.CONFIG))
+                  (inst.CFG, inst.CONFIG))
         else:
-            with open(inst.OQ_CFG, 'w') as cfg:
+            with open(inst.CFG, 'w') as cfg:
                 cfg.write(inst.CONFIG)
-            print('Created %s' % inst.OQ_CFG)
+            print('Created %s' % inst.CFG)
 
     # create symlink to oq
     oqreal = '%s/bin/oq' % inst.VENV
@@ -261,14 +264,23 @@ def install(inst):
             subprocess.check_call(['systemctl', 'enable', service_name])
             subprocess.check_call(['systemctl', 'start', service_name])
 
-    # download a test calculation
-    path = os.path.join(os.path.dirname(inst.OQDATA), 'classical.zip')
-    with urlopen('https://github.com/gem/oq-engine/blob/master/openquake/'
-                 'server/tests/data/classical.zip?raw=true') as f:
-        open(path, 'wb').write(f.read())
-    print('The engine was installed successfully.')
-    print('You can run a test calculation with the command')
-    print(f'{oqreal} engine --run {path}')
+    # download and unzip the demos
+    try:
+        with urlopen(DEMOS) as f:
+            data = f.read()
+    except OSError:
+        msg = 'However, we could not download the demos from %s' % DEMOS
+    else:
+        th, tmp = tempfile.mkstemp(suffix='.zip')
+        with os.fdopen(th, 'wb') as t:
+            t.write(data)
+        zipfile.ZipFile(tmp).extractall(inst.VENV)
+        os.remove(tmp)
+        path = os.path.join(inst.VENV, 'demos', 'hazard',
+                            'AreaSourceClassicalPSHA', 'job.ini')
+        msg = ('You can run a test calculation with the command\n'
+               f'{oqreal} engine --run {path}')
+    print('The engine was installed successfully.\n' + msg)
 
 
 def remove(inst):
