@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import functools
 import logging
 import numpy
 
@@ -82,17 +81,20 @@ def scenario_risk(riskinputs, param, monitor):
             num_events = param['num_events'][r]
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
+                mal = param['minimum_asset_loss'][loss_type]
                 if numpy.product(losses.shape) == 0:  # happens for all NaNs
                     continue
                 avg = numpy.zeros(len(ri.assets), F32)
                 for a, asset in enumerate(ri.assets):
+                    ok = losses[a] >= mal  # shape E'
+                    okeids = out.eids[ok]
+                    oklosses = losses[a, ok]
                     aid = asset['ordinal']
-                    avg[a] = losses[a].sum() / num_events
+                    avg[a] = losses[a, ok].sum() / num_events
                     result['avg'].append((l, r, asset['ordinal'], avg[a]))
-                    for loss, eid in zip(losses[a], out.eids):
+                    for loss, eid in zip(oklosses, okeids):
                         acc[aid, eid][l] = loss
-                agglosses = losses.sum(axis=0)  # shape num_gmfs
-                result['agg'][out.eids, l] += agglosses
+                    result['agg'][okeids, l] += oklosses
 
     ael = [(aid, eid, loss) for (aid, eid), loss in sorted(acc.items())]
     result['ael'] = numpy.array(ael, param['ael_dt'])
