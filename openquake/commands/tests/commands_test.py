@@ -485,6 +485,11 @@ class EngineRunJobTestCase(unittest.TestCase):
         self.assertEqual(r1.hazard_calculation_id, r1.id)
         self.assertEqual(r2.hazard_calculation_id, r1.id)
 
+    def test_OQ_REDUCE(self):
+        with mock.patch.dict(os.environ, OQ_REDUCE='10'):
+            job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
+            run_jobs([job_ini])
+
     def test_sensitivity(self):
         job_ini = gettemp('''[general]
 description = sensitivity test

@@ -258,30 +258,8 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
-        if '_job_id' in names_vals:
-            # assume most attributes already validated
-            vars(self).update(names_vals)
-            if 'hazard_calculation_id' in names_vals:
-                self.hazard_calculation_id = int(
-                    names_vals['hazard_calculation_id'])
-            if 'maximum_distance' in names_vals:
-                self.maximum_distance = valid.MagDepDistance.new(
-                            str(names_vals['maximum_distance']))
-            if 'pointsource_distance' in names_vals:
-                self.pointsource_distance = valid.MagDepDistance.new(
-                    str(names_vals['pointsource_distance']))
-            if 'region_constraint' in names_vals:
-                self.region = valid.wkt_polygon(
-                    names_vals['region_constraint'])
-            if 'minimum_magnitude' in names_vals:
-                self.minimum_magnitude = valid.floatdict(
-                    str(names_vals['minimum_magnitude']))
-            if 'minimum_intensity' in names_vals:
-                self.minimum_intensity = valid.floatdict(
-                    str(names_vals['minimum_intensity']))
-            if 'sites' in names_vals:
-                self.sites = valid.coordinates(names_vals['sites'])
-            return
+        if '_job_id' in names_vals:  # called from engine
+            del names_vals['_job_id']
 
         # support legacy names
         for name in list(names_vals):

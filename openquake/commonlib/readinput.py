@@ -19,7 +19,6 @@ import os
 import re
 import ast
 import csv
-import time
 import copy
 import json
 import zlib
@@ -207,6 +206,8 @@ def _update(params, items, base_path):
         params['pointsource_distance'] = '0'
 
 
+# NB: this function must NOT log, since it is called when the logging
+# is not configured yet
 def get_params(job_ini, **kw):
     """
     Parse a .ini file or a .zip archive
@@ -289,7 +290,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
         # reduce the ses by a factor of `re`
         # set save_disk_space = true
         os.environ['OQ_SAMPLE_SITES'] = str(1 / float(re))
-        job_ini['number_of_logic_tree_samples'] = 1
+        job_ini['number_of_logic_tree_samples'] = '1'
         ses = job_ini.get('ses_per_logic_tree_path')
         if ses:
             ses = str(int(numpy.ceil(int(ses) / float(re))))
@@ -300,7 +301,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
             imt = next(iter(imtls))
             job_ini['intensity_measure_types_and_levels'] = repr(
                 {imt: imtls[imt]})
-        job_ini['save_disk_space'] = True
+        job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
     if validate and '_job_id' not in job_ini:
         oqparam.check_source_model()
