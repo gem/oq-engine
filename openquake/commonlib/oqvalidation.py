@@ -319,6 +319,11 @@ class OqParam(valid.ParamSet):
                     i2 = calc.filters.getdefault(self.maximum_intensity, imt)
                     self.hazard_imtls[imt] = list(valid.logscale(i1, i2, 20))
             delattr(self, 'intensity_measure_types')
+        if ('ps_grid_spacing' in names_vals and
+                'pointsource_distance' not in names_vals):
+            self.pointsource_distance = valid.MagDepDistance.new(
+                    names_vals['ps_grid_spacing'])
+
         self._risk_files = get_risk_files(self.inputs)
 
         if self.hazard_precomputed() and self.job_type == 'risk':
