@@ -744,12 +744,7 @@ def _check_csm(csm, oqparam, h5):
 
     # build a smart SourceFilter
     sitecol = get_site_collection(oqparam, h5)
-    if sitecol is None:
-        fewsites = None
-    else:
-        # performance hack: use at most 5000 sites when weighting the sources
-        fewsites = sitecol.reduce(5000)
-    srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
+    srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
 
     if sitecol:  # missing in test_case_1_ruptures
         logging.info('Checking the sources bounding box')
@@ -778,7 +773,7 @@ def _check_csm(csm, oqparam, h5):
         if len(sids) == 0:
             raise RuntimeError('All sources were discarded!?')
 
-    csm.srcfilter = srcfilter
+    csm.sitecol = sitecol
 
 
 def get_composite_source_model(oqparam, h5=None):

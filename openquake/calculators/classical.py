@@ -36,7 +36,7 @@ from openquake.hazardlib.source.point import (
     PointSource, grid_point_sources, msr_name)
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.contexts import ContextMaker, get_effect
-from openquake.hazardlib.calc.filters import split_source
+from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, readinput
@@ -78,12 +78,12 @@ def run_preclassical(csm, oqparam, h5):
     :param oqparam: the parameters in job.ini file
     :param h5: a DataStore instance
     """
-    logging.info('Filtering with %s', csm.srcfilter.sitecol)
+    logging.info('Filtering with %s', csm.sitecol)
 
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
         src.num_ruptures = src.count_ruptures()
-        src.nsites = len(csm.srcfilter.sitecol)
+        src.nsites = len(csm.sitecol)
 
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
@@ -93,10 +93,12 @@ def run_preclassical(csm, oqparam, h5):
                  pointsource_distance=oqparam.pointsource_distance,
                  ps_grid_spacing=oqparam.ps_grid_spacing,
                  split_sources=oqparam.split_sources)
-
+    srcfilter = SourceFilter(
+        csm.sitecol.reduce(10000) if csm.sitecol else None,
+        oqparam.maximum_distance)
     res = parallel.Starmap(
         preclassical,
-        ((srcs, csm.srcfilter, param) for srcs in sources_by_grp.values()),
+        ((srcs, srcfilter, param) for srcs in sources_by_grp.values()),
         h5=h5, distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
 
     if res and res['before'] != res['after']:
