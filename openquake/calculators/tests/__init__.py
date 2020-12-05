@@ -115,8 +115,7 @@ class CalculatorTestCase(unittest.TestCase):
         """
         self.testdir = os.path.dirname(testfile) if os.path.isfile(testfile) \
             else testfile
-        params = readinput.get_params(
-            os.path.join(self.testdir, job_ini), **kw)
+        params = readinput.get_params(os.path.join(self.testdir, job_ini), kw)
 
         oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
             base.calculators)

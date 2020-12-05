@@ -353,8 +353,7 @@ def create_jobs(job_inis, loglvl, kw):
         else:
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
-            dic = readinput.get_params(job_ini)
-            dic.update(kw)
+            dic = readinput.get_params(job_ini, kw)
         if 'sensitivity_analysis' in dic:
             analysis = valid.dictionary(dic['sensitivity_analysis'])
             for values in itertools.product(*analysis.values()):
@@ -397,18 +396,20 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     multi = kw.pop('multi', None)
     loglvl = getattr(logging, log_level.upper())
     jobs = create_jobs(job_inis, loglvl, kw)  # inizialize the logs
-    hc_id = kw.pop('hazard_calculation_id', None)
+    if 'hazard_calculation_id' in kw:
+        hc_id = int(kw['hazard_calculation_id'])
+    else:
+        hc_id = None
     for job in jobs:
         job_id = job['_job_id']
         with logs.handle(job_id, log_level, log_file):
-            oqparam = readinput.get_oqparam(job, hc_id=hc_id)
-            vars(oqparam).update(kw)  # kw already checked
+            oqparam = readinput.get_oqparam(job)
         logs.dbcmd('update_job', job_id,
                    dict(calculation_mode=oqparam.calculation_mode,
                         description=oqparam.description,
                         user_name=username,
                         hazard_calculation_id=hc_id))
-        if (not jobparams and not multi and hc_id is None
+        if (not jobparams and not multi and 'hazard_calculation_id' not in kw
                 and 'sensitivity_analysis' not in job):
             hc_id = job_id
         jobparams.append((job_id, oqparam))
