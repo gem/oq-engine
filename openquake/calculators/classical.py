@@ -262,10 +262,8 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[extra['source_id'].split(':')[0]] = pmap
         self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
-            if pmap and grp_id in acc:
+            if pmap:
                 acc[grp_id] |= pmap
-            else:
-                acc[grp_id] = copy.copy(pmap)
             # store rup_data if there are few sites
             if self.few_sites:
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
@@ -274,9 +272,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def acc0(self):
         """
-        Initial accumulator, a dict et_id -> ProbabilityMap(L, G)
+        Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
-        zd = AccumDict()
+        zd = AccumDict()  # populated in get_args
         params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
                   'nsites', 'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
@@ -351,6 +349,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             full_lt = self.csm.full_lt
             et_ids = self.csm.get_et_ids()
+        self.grp_ids = numpy.arange(len(et_ids))
         rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(et_ids)
         rlzs_by_g = []
         for rlzs_by_gsim in rlzs_by_gsim_list:
@@ -397,10 +396,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
 
-        smap = parallel.Starmap(classical, self.get_args(),
+        acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
+        smap = parallel.Starmap(classical, self.get_args(acc0),
                                 h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.src_filter())
-        acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
@@ -489,17 +488,22 @@ class ClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def get_args(self):
+    def get_args(self, acc0):
         """
         :returns: the outputs to pass to the Starmap, ordered by weight
         """
         oq = self.oqparam
+        L = len(oq.imtls.array)
+        sids = self.sitecol.complete.sids
         allargs = []
         src_groups = self.csm.src_groups
         tot_weight = 0
         et_ids = self.datastore['et_ids'][:]
         rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(et_ids)
+        grp_id = 0
         for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
+            acc0[grp_id] = ProbabilityMap.build(L, len(rlzs_by_gsim), sids)
+            grp_id += 1
             for src in sg:
                 src.ngsims = len(rlzs_by_gsim)
                 tot_weight += src.weight
@@ -593,14 +597,13 @@ class ClassicalCalculator(base.HazardCalculator):
                     rlzs_by_gsim = rlzs_by_gsim_list[pmap.grp_id]
                     self.datastore['disagg_by_src'][..., srcid[key]] = (
                         pgetter.get_hcurves(pmap, rlzs_by_gsim))
-                elif pmap:  # pmap can be missing if the group is filtered away
+                else:
                     # key is the group ID
                     trt = self.full_lt.trt_by_et[et_ids[key][0]]
                     # avoid saving PoEs == 1
                     base.fix_ones(pmap)
-                    sids = sorted(pmap)
-                    arr = numpy.array([pmap[sid].array for sid in sids])
-                    self.datastore['_poes'][sids, :, slice_by_g[key]] = arr
+                    arr = numpy.array([pmap[sid].array for sid in pmap])
+                    self.datastore['_poes'][:, :, slice_by_g[key]] = arr
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
