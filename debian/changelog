@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Bug fixed: the log was disappearing in presence of an unrecognized
+    variable in the job.ini
   * Implemented `minimum_asset_loss` in scenario_risk for consistency
     with the `ebrisk` calculator
   * Added a command `oq plot gridded_sources?`
