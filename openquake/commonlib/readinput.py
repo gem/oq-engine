@@ -250,7 +250,7 @@ def get_params(job_ini, kw):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, kw=(), validate=1):
+def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
