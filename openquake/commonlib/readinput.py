@@ -208,7 +208,7 @@ def _update(params, items, base_path):
 
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
-def get_params(job_ini, kw):
+def get_params(job_ini, kw={}):
     """
     Parse a .ini file or a .zip archive
 
@@ -746,11 +746,9 @@ def _check_csm(csm, oqparam, h5):
     sitecol = get_site_collection(oqparam, h5)
     if sitecol is None:
         fewsites = None
-    elif len(sitecol) > 10_000:
-        # performance hack: use 1 site over 10 when weighting the sources
-        fewsites = sitecol.filter(sitecol.sids % 10 == 0)
-    else:  # short enough sitecol
-        fewsites = sitecol
+    else:
+        # performance hack: use at most 5000 sites when weighting the sources
+        fewsites = sitecol.reduce(5000)
     srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
 
     if sitecol:  # missing in test_case_1_ruptures

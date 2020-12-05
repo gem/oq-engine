@@ -288,6 +288,17 @@ class SiteCollection(object):
         new.complete = self.complete
         return new
 
+    def reduce(self, nsites):
+        """
+        :returns: a filtered SiteCollection with around nsites (if nsites<=N)
+        """
+        N = len(self.complete)
+        n = N // nsites + 1
+        if n == 1:
+            return self
+        sids, = numpy.where(self.complete.sids % n == 0)
+        return self.filtered(sids)
+
     def add_col(self, colname, dtype, values=None):
         """
         Add a column to the underlying array
