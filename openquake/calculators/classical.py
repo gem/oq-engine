@@ -666,6 +666,11 @@ class ClassicalCalculator(base.HazardCalculator):
         parallel.Starmap(
             build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
+        task_info = self.datastore.read_df('task_info', 'taskname')
+        dur = task_info.loc[b'classical'].duration
+        slow_tasks = len(dur[dur > 3 * dur.mean()])
+        if slow_tasks:
+            logging.info('There were %d slow tasks', slow_tasks)
         if 'hmaps-stats' in self.datastore:
             hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
             maxhaz = hmaps.max(axis=(0, 1, 3))
