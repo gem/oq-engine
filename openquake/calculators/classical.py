@@ -78,7 +78,7 @@ def run_preclassical(csm, oqparam, h5):
     :param oqparam: the parameters in job.ini file
     :param h5: a DataStore instance
     """
-    logging.info('Filtering with %s', csm.sitecol)
+    logging.info('Sending %s', csm.sitecol)
 
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
