@@ -238,11 +238,11 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
 
     def test_reduce(self):
         col = SiteCollection(self.SITES)
-        print(col.reduce(1))
-        print(col.reduce(2))
-        print(col.reduce(3))
+        self.assertEqual(len(col.reduce(1)), 1)
+        self.assertEqual(len(col.reduce(2)), 2)
+        self.assertEqual(len(col.reduce(3)), 2)
 
-        
+
 class WithinBBoxTestCase(unittest.TestCase):
     # to understand this test case it is ESSENTIAL to plot sites and
     # bounding boxes; the code in plot_sites.py can get you started
