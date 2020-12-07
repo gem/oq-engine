@@ -122,10 +122,15 @@ class MultiSurface(BaseSurface):
         :returns: mesh corresponding to the whole multi surface
         """
         meshes = [surface.mesh for surface in self.surfaces]
-        lons = numpy.concatenate([m.lons for m in meshes])
-        lats = numpy.concatenate([m.lats for m in meshes])
-        depths = numpy.concatenate([m.depths for m in meshes])
-        return Mesh(lons, lats, depths)
+        lons = []
+        lats = []
+        deps = []
+        for m in meshes:
+            for lo, la, de in zip(m.lons, m.lats, m.depths):
+                lons.append(lo)
+                lats.append(la)
+                deps.append(de)
+        return Mesh(numpy.array(lons), numpy.array(lats), numpy.array(deps))
 
     def __init__(self, surfaces, tol=0.1):
         """
@@ -163,9 +168,22 @@ class MultiSurface(BaseSurface):
         """
         edges = []
         for surface in self.surfaces:
-            if isinstance(surface, (GriddedSurface,
-                                    geo.surface.kite_fault.KiteSurface)):
+            if isinstance(surface, GriddedSurface):
                 return edges.append(surface.mesh)
+            elif isinstance(surface, geo.surface.kite_fault.KiteSurface):
+                edge = []
+                mesh = surface.mesh
+                lons = mesh.lons
+                # We extract the top edge of the rupture from the
+                # corresponding 2D mesh.
+                # The calculation of indexes below is needed because we want
+                # on each 'profile' of the mesh the uppermost node that is
+                # finite (i.e. on the real grid)
+                for icol, irow in zip(range(lons.shape[0]),
+                                      numpy.isfinite(lons).argmax(axis=0)):
+                    edge.append([mesh.lons[irow, icol], mesh.lats[irow, icol],
+                                 mesh.depths[irow, icol]])
+                edges.append(numpy.array(edge))
             elif isinstance(surface, PlanarSurface):
                 # Top edge determined from two end points
                 edge = []
