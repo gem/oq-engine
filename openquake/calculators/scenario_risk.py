@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import functools
 import logging
 import numpy
 
@@ -38,10 +37,6 @@ def value(asset, loss_type):
     if loss_type == 'occupants':
         return asset['occupants_None']
     return asset['value-' + loss_type]
-
-
-def _event_slice(num_gmfs, r):
-    return slice(r * num_gmfs, (r + 1) * num_gmfs)
 
 
 def ael_dt(loss_names, rlz=False):
@@ -83,19 +78,23 @@ def scenario_risk(riskinputs, param, monitor):
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
             r = out.rlzi
+            num_events = param['num_events'][r]
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
+                mal = param['minimum_asset_loss'][loss_type]
                 if numpy.product(losses.shape) == 0:  # happens for all NaNs
                     continue
                 avg = numpy.zeros(len(ri.assets), F32)
                 for a, asset in enumerate(ri.assets):
+                    ok = losses[a] >= mal  # shape E'
+                    okeids = out.eids[ok]
+                    oklosses = losses[a, ok]
                     aid = asset['ordinal']
-                    avg[a] = losses[a].mean()
+                    avg[a] = losses[a, ok].sum() / num_events
                     result['avg'].append((l, r, asset['ordinal'], avg[a]))
-                    for loss, eid in zip(losses[a], out.eids):
+                    for loss, eid in zip(oklosses, okeids):
                         acc[aid, eid][l] = loss
-                agglosses = losses.sum(axis=0)  # shape num_gmfs
-                result['agg'][out.eids, l] += agglosses
+                    result['agg'][okeids, l] += oklosses
 
     ael = [(aid, eid, loss) for (aid, eid), loss in sorted(acc.items())]
     result['ael'] = numpy.array(ael, param['ael_dt'])
@@ -120,8 +119,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         super().pre_execute()
         self.assetcol = self.datastore['assetcol']
-        self.event_slice = functools.partial(
-            _event_slice, oq.number_of_ground_motion_fields)
         E = oq.number_of_ground_motion_fields * self.R
         self.riskinputs = self.build_riskinputs('gmf')
         self.param['tempname'] = riskinput.cache_epsilons(
@@ -133,6 +130,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         except KeyError:
             self.param['weights'] = [1 / self.R for _ in range(self.R)]
         self.param['ael_dt'] = dt = ael_dt(oq.loss_names)
+        self.rlzs = self.datastore['events']['rlz_id']
+        self.param['num_events'] = numpy.bincount(self.rlzs)  # events by rlz
         A = len(self.assetcol)
         self.datastore.create_dset('loss_data/data', dt)
         self.datastore.create_dset('loss_data/indices', U32, (A, 2))
@@ -166,14 +165,15 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             E, L = res.shape
             agglosses = numpy.zeros((R, L), stat_dt)
             for r in range(R):
-                mean, std = scientific.mean_std(res[self.event_slice(r)])
+                mean, std = scientific.mean_std(res[self.rlzs == r])
                 agglosses[r]['mean'] = F32(mean)
                 agglosses[r]['stddev'] = F32(std)
 
-            # losses by asset
+            # avg losses
             losses_by_asset = numpy.zeros((A, R, L), F32)
             for (l, r, aid, avg) in result['avg']:
                 losses_by_asset[aid, r, l] = avg
+
             self.datastore['avg_losses-rlzs'] = losses_by_asset
             set_rlzs_stats(self.datastore, 'avg_losses',
                            asset_id=self.assetcol['id'],
@@ -184,8 +184,13 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             lbe = numpy.zeros(E, dtlist)
             lbe['event_id'] = range(E)
             lbe['loss'] = res
-            self.datastore['losses_by_event'] = lbe
+            self.datastore['event_loss_table/,'] = lbe
             loss_types = self.oqparam.loss_dt().names
-            self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
+            self.datastore.set_attrs(
+                'event_loss_table/,', loss_types=loss_types)
+
+            # sanity check
+            numpy.testing.assert_allclose(
+                losses_by_asset.sum(axis=0), agglosses['mean'], rtol=1E-4)
         logging.info('Mean portfolio loss\n' +
                      views.view('portfolio_loss', self.datastore))

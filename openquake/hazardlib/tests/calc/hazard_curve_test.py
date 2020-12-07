@@ -18,7 +18,7 @@ import numpy
 
 import openquake.hazardlib
 from openquake.baselib.parallel import Starmap, sequential_apply
-from openquake.hazardlib import const
+from openquake.hazardlib import const, nrml, valid
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
@@ -31,8 +31,9 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, ArbitraryMFD
 from openquake.hazardlib.source import PointSource, SimpleFaultSource
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.akkar_bommer_2010 import AkkarBommer2010
-from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014PEER
+from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
@@ -127,11 +128,6 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         self.assertEqual(result.shape, (4, 3))  # 4 sites, 3 levels
         numpy.testing.assert_allclose(result[0], 0)  # no contrib to site 1
         numpy.testing.assert_allclose(result[1], 0)  # no contrib to site 2
-
-        # test that depths are kept after filtering (sites 3 and 4 remain)
-        s_filter = SourceFilter(sitecol, MagDepDistance.new('100'))
-        numpy.testing.assert_array_equal(
-            s_filter.get_close_sites(sources[0]).depths, ([1, -1]))
 
 
 # this example originally came from the Hazard Modeler Toolkit
@@ -231,3 +227,51 @@ class MixtureModelGMPETestCase(unittest.TestCase):
         perc_diff = 100.0 * ((hcm_lnpga / expected) - 1.0)
         numpy.testing.assert_allclose(perc_diff, numpy.zeros(len(perc_diff)),
                                       atol=0.04)
+
+
+# an area source with 52 point sources
+asource = nrml.get('''\
+<areaSource
+  id="1"
+  name="Area Source"
+  tectonicRegion="Stable Continental Crust">
+  <areaGeometry>
+      <gml:Polygon>
+          <gml:exterior>
+              <gml:LinearRing>
+                  <gml:posList>
+                    -.5 -.5 -.3 -.1 .1 .2 .3 -.8
+                  </gml:posList>
+              </gml:LinearRing>
+          </gml:exterior>
+      </gml:Polygon>
+      <upperSeismoDepth>0</upperSeismoDepth>
+      <lowerSeismoDepth>10 </lowerSeismoDepth>
+  </areaGeometry>
+  <magScaleRel>WC1994</magScaleRel>
+  <ruptAspectRatio>1</ruptAspectRatio>
+  <truncGutenbergRichterMFD aValue="4.5" bValue="1" maxMag="7" minMag="5"/>
+  <nodalPlaneDist>
+    <nodalPlane dip="90" probability="1" rake="0" strike="0"/>
+  </nodalPlaneDist>
+  <hypoDepthDist>
+     <hypoDepth depth="5" probability="1"/>
+  </hypoDepthDist>
+</areaSource>''')
+
+
+class SingleSiteOptTestCase(unittest.TestCase):
+    """
+    Test the single site optimization for BooreAtkinson2008
+    """
+    def test(self):
+        site = Site(Point(0, 0), vs30=760., z1pt0=48.0, z2pt5=0.607,
+                    vs30measured=True)
+        sitecol = SiteCollection([site])
+        imtls = {"PGA": valid.logscale(.1, 1, 10)}
+        gsim = BooreAtkinson2008()
+        [hcurve] = calc_hazard_curves([asource], sitecol, imtls,
+                                      {"Stable Continental Crust": gsim})
+        exp = [0.879914, 0.747273, 0.566655, 0.376226, 0.217617,
+               0.110198, 0.049159, 0.019335, 0.006663, 0.001989]
+        numpy.testing.assert_allclose(hcurve['PGA'], exp, atol=1E-5)

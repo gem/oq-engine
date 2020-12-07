@@ -1,17 +1,13 @@
 ---
 name: docker
 'on':
-  push:
-    branches:
-      - multistagedocker
   schedule:
     - cron: "0 2 * * *"
-
 
 jobs:
   docker:
     name: build and up compose 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     steps:
   # This Checkout is necessary when using a context in docker/build-push-action

@@ -139,7 +139,7 @@ class InfoTestCase(unittest.TestCase):
         with Print.patch() as p:
             info('sources')
         lines = str(p).split()
-        self.assertGreaterEqual(len(lines), 10)
+        self.assertGreaterEqual(len(lines), 9)
 
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
@@ -246,7 +246,8 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
-            calc = run._run([job_ini], 0, 'nojob', False, 'info', None, '', {})
+            calc = run._run([job_ini], 0, 'nojob', False,
+                            False, 'info', '', {})
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
@@ -484,6 +485,11 @@ class EngineRunJobTestCase(unittest.TestCase):
         self.assertEqual(r1.hazard_calculation_id, r1.id)
         self.assertEqual(r2.hazard_calculation_id, r1.id)
 
+    def test_OQ_REDUCE(self):
+        with mock.patch.dict(os.environ, OQ_REDUCE='10'):
+            job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
+            run_jobs([job_ini])
+
     def test_sensitivity(self):
         job_ini = gettemp('''[general]
 description = sensitivity test
@@ -577,7 +583,8 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         shutil.copytree(calc_dir, os.path.join(temp_dir, 'data'))
         job_ini = os.path.join(temp_dir, 'data', 'job.ini')
         with Print.patch():
-            calc = run._run([job_ini], 0, 'nojob', False, 'info', None, '', {})
+            calc = run._run([job_ini], 0, 'nojob', False, False,
+                            'info', '', {})
         calc_id = calc.datastore.calc_id
         with mock.patch('logging.info') as info:
             reduce_sm(calc_id)

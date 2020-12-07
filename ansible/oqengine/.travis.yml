@@ -1,0 +1,12 @@
+---
+language: python
+services: docker
+
+env:
+  global:
+    - ROLE_NAME: oqengine
+  matrix:
+    - MOLECULE_DISTRO: centos8
+    - MOLECULE_DISTRO: centos7
+    - MOLECULE_DISTRO: ubuntu1804
+    - MOLECULE_DISTRO: ubuntu2004

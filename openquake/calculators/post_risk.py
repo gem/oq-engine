@@ -114,7 +114,7 @@ def get_src_loss_table(dstore, L):
     :returns:
         (source_ids, array of losses of shape (Ns, L))
     """
-    lbe = dstore['losses_by_event'][:]
+    lbe = dstore['event_loss_table/,'][()]
     evs = dstore['events'][()]
     rlz_ids = evs['rlz_id'][lbe['event_id']]
     rup_ids = evs['rup_id'][lbe['event_id']]
@@ -211,7 +211,7 @@ class PostRiskCalculator(base.RiskCalculator):
                     ] = dic['agg_losses']
                     ds['app_curves-rlzs'][:, r] += dic['agg_curves']  # PL
 
-        lbe = ds['losses_by_event'][()]
+        lbe = ds['event_loss_table/,'][()]
         rlz_ids = ds['events']['rlz_id'][lbe['event_id']]
         dic = dict(enumerate(lbe['loss'].T))  # lti -> losses
         df = pandas.DataFrame(dic, rlz_ids)

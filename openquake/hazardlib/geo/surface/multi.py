@@ -27,6 +27,7 @@ from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.geo.surface.base import BaseSurface, downsample_trace
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
+from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import (
     PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
@@ -110,7 +111,10 @@ class MultiSurface(BaseSurface):
         :returns:
             a list of surface nodes from the underlying single node surfaces
         """
-        return [surf.surface_nodes[0] for surf in self.surfaces]
+        if type(self.surfaces[0]).__name__ == 'PlanarSurface':
+            return [surf.surface_nodes[0] for surf in self.surfaces]
+        else:
+            return [surf.surface_nodes for surf in self.surfaces]
 
     @property
     def mesh(self):
@@ -118,10 +122,15 @@ class MultiSurface(BaseSurface):
         :returns: mesh corresponding to the whole multi surface
         """
         meshes = [surface.mesh for surface in self.surfaces]
-        lons = numpy.concatenate([m.lons for m in meshes])
-        lats = numpy.concatenate([m.lats for m in meshes])
-        depths = numpy.concatenate([m.depths for m in meshes])
-        return Mesh(lons, lats, depths)
+        lons = []
+        lats = []
+        deps = []
+        for m in meshes:
+            for lo, la, de in zip(m.lons, m.lats, m.depths):
+                lons.append(lo)
+                lats.append(la)
+                deps.append(de)
+        return Mesh(numpy.array(lons), numpy.array(lats), numpy.array(deps))
 
     def __init__(self, surfaces, tol=0.1):
         """
@@ -161,6 +170,20 @@ class MultiSurface(BaseSurface):
         for surface in self.surfaces:
             if isinstance(surface, GriddedSurface):
                 return edges.append(surface.mesh)
+            elif isinstance(surface, geo.surface.kite_fault.KiteSurface):
+                edge = []
+                mesh = surface.mesh
+                lons = mesh.lons
+                # We extract the top edge of the rupture from the
+                # corresponding 2D mesh.
+                # The calculation of indexes below is needed because we want
+                # on each 'profile' of the mesh the uppermost node that is
+                # finite (i.e. on the real grid)
+                for icol, irow in zip(range(lons.shape[0]),
+                                      numpy.isfinite(lons).argmax(axis=0)):
+                    edge.append([mesh.lons[irow, icol], mesh.lats[irow, icol],
+                                 mesh.depths[irow, icol]])
+                edges.append(numpy.array(edge))
             elif isinstance(surface, PlanarSurface):
                 # Top edge determined from two end points
                 edge = []

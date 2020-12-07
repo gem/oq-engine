@@ -41,6 +41,7 @@ from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, __version__, zeromq as z)
+from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
 from openquake.calculators import base, export
@@ -334,9 +335,9 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
 
 
 def _init_logs(dic, lvl):
-    if '_job_id' in dic:
+    if '_job_id' in dic:  # reuse job_id
         logs.init(dic['_job_id'], lvl)
-    else:
+    else:  # create a new job_id
         dic['_job_id'] = logs.init('job', lvl)
 
 
@@ -346,25 +347,23 @@ def create_jobs(job_inis, loglvl, kw):
     the logging.
     """
     dicts = []
-    # setting the handlers before any call to `readinput.get_oqparam`
-    # to avoid using the default logger which is in WARN level
-    fmt = '[%(asctime)s %(levelname)s] %(message)s'
-    for handler in logging.root.handlers:
-        f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
-        handler.setFormatter(f)
     for i, job_ini in enumerate(job_inis):
-        dic = job_ini if isinstance(job_ini, dict) else vars(
-            readinput.get_oqparam(job_ini, validate=0, **kw))
+        if isinstance(job_ini, dict):
+            dic = job_ini
+        else:
+            # NB: `get_params` must NOT log, since the logging is not
+            # configured yet, otherwise the log will disappear :-(
+            dic = readinput.get_params(job_ini, kw)
         if 'sensitivity_analysis' in dic:
-            for values in itertools.product(
-                    *dic['sensitivity_analysis'].values()):
+            analysis = valid.dictionary(dic['sensitivity_analysis'])
+            for values in itertools.product(*analysis.values()):
                 new = dic.copy()
                 _init_logs(new, loglvl)
                 if '_job_id' in dic:
                     del dic['_job_id']
-                pars = dict(zip(dic['sensitivity_analysis'], values))
+                pars = dict(zip(analysis, values))
                 for param, value in pars.items():
-                    new[param] = value
+                    new[param] = str(value)
                 new['description'] = '%s %s' % (new['description'], pars)
                 logging.info('Job with %s', pars)
                 dicts.append(new)
@@ -396,18 +395,21 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     jobparams = []
     multi = kw.pop('multi', None)
     loglvl = getattr(logging, log_level.upper())
-    jobs = create_jobs(job_inis, loglvl, kw)
-    hc_id = kw.pop('hazard_calculation_id', None)
+    jobs = create_jobs(job_inis, loglvl, kw)  # inizialize the logs
+    if 'hazard_calculation_id' in kw:
+        hc_id = int(kw['hazard_calculation_id'])
+    else:
+        hc_id = None
     for job in jobs:
         job_id = job['_job_id']
         with logs.handle(job_id, log_level, log_file):
-            oqparam = readinput.get_oqparam(job, hc_id=hc_id, **kw)
+            oqparam = readinput.get_oqparam(job)
         logs.dbcmd('update_job', job_id,
                    dict(calculation_mode=oqparam.calculation_mode,
                         description=oqparam.description,
                         user_name=username,
                         hazard_calculation_id=hc_id))
-        if (not jobparams and not multi and hc_id is None
+        if (not jobparams and not multi and 'hazard_calculation_id' not in kw
                 and 'sensitivity_analysis' not in job):
             hc_id = job_id
         jobparams.append((job_id, oqparam))

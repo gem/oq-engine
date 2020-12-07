@@ -89,6 +89,7 @@ def compare_rups(calc_1, calc_2):
     for col in cols:
         a1 = df1[col].to_numpy()
         a2 = df2[col].to_numpy()
+        assert len(a1) == len(a2), (len(a1), len(a2))
         _print_diff(a1, a2, df1.index, df2.index, col)
 
 
@@ -160,7 +161,7 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
         print(views.rst_table(rows['all'], header))
         if len(calc_ids) == 2 and what == 'hmaps':
             ms = numpy.mean((array_imt[0] - array_imt[1])**2, axis=0)  # P
-            rows = [(str(poe), m) for poe, m in zip(poes, ms)]
+            rows = [(str(poe), m) for poe, m in zip(poes, numpy.sqrt(ms))]
             print(views.rst_table(rows, ['poe', 'rms-diff']))
 
 

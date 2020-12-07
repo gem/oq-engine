@@ -81,7 +81,6 @@ class BooreEtAl1997GeometricMean(GMPE):
                 self._compute_magnitude_scaling(rup.mag, C) +
                 self._compute_distance_scaling(dists.rjb, C) +
                 self._compute_site_term(sites.vs30, C))
-
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
         return mean, stddevs

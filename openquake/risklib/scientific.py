@@ -1470,7 +1470,6 @@ class LossesByAsset(object):
     :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
     """
     alt = None  # set by the ebrisk calculator
-    losses_by_E = None  # set by the ebrisk calculator
 
     @cached_property
     def losses_by_A(self):
@@ -1506,9 +1505,9 @@ class LossesByAsset(object):
                         losses[a], ded * avalues[a], lim * avalues[a])
                 yield self.lni[lt + '_ins'], ins_losses
 
-    def aggregate(self, out, eids, minimum_loss, tagidxs, ws):
+    def aggregate(self, out, eids, minimum_loss, aggkey, tagidxs, ws):
         """
-        Populate .losses_by_A, .losses_by_E and .alt
+        Populate .losses_by_A and .alt
         """
         numlosses = numpy.zeros(2, int)
         for lni, losses in self.gen_losses(out):
@@ -1516,7 +1515,7 @@ class LossesByAsset(object):
                 aids = out.assets['ordinal']
                 self.losses_by_A[aids, lni] += losses @ ws
             for eid, loss in zip(eids, losses.sum(axis=0)):
-                self.losses_by_E[eid][lni] += loss
+                self.alt[eid][0, lni] += loss
             if tagidxs is not None:
                 # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):
@@ -1524,10 +1523,10 @@ class LossesByAsset(object):
                     ok = ls > minimum_loss[lni]
                     if not ok.sum():
                         continue
-                    idx = ','.join(map(str, tagidxs[a])) + ','
+                    idx = aggkey[tuple(tagidxs[a])]
                     kept = 0
                     for loss, eid in zip(ls[ok], out.eids[ok]):
-                        self.alt[idx][eid][lni] += loss
+                        self.alt[eid][idx, lni] += loss
                         kept += 1
                     numlosses += numpy.array([kept, len(losses[a])])
         return numlosses
