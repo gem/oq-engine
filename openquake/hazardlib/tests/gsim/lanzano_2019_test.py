@@ -17,12 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 #
-# Test tables from data provided directly by the authors.
+#
+#
+# Test tables elaboratated from data provided directly from the authors.
 #
 
-from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.gsim.lanzano_2019 import LanzanoEtAl2019_RJB_OMO
 from openquake.hazardlib.gsim.lanzano_2019 import LanzanoEtAl2019_RUP_OMO
+from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
 class LanzanoEtAl2019_RJB_OMO_TestCase(BaseGSIMTestCase):
@@ -35,14 +37,16 @@ class LanzanoEtAl2019_RJB_OMO_TestCase(BaseGSIMTestCase):
     STD_FILE = "LAN2019/ITA18_RJB_STD_TOTAL.csv"
 
     def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE,
+                   max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check(self.STD_FILE, max_discrep_percentage=0.1)
+        self.check(self.STD_FILE,
+                   max_discrep_percentage=0.1)
 
 
 class LanzanoEtAl2019_RUP_OMO_TestCase(BaseGSIMTestCase):
-
+    
     GSIM_CLASS = LanzanoEtAl2019_RUP_OMO
 
     # Tables provided by original authors
@@ -50,7 +54,11 @@ class LanzanoEtAl2019_RUP_OMO_TestCase(BaseGSIMTestCase):
     STD_FILE = "LAN2019/ITA18_Rrup_STD_TOTAL.csv"
 
     def test_mean(self):
-        self.check(self.MEAN_FILE, max_discrep_percentage=0.1)
+        self.check(self.MEAN_FILE,
+                   max_discrep_percentage=0.1)
 
     def test_std_total(self):
-        self.check(self.STD_FILE, max_discrep_percentage=0.1)
+        self.check(self.STD_FILE,
+                   max_discrep_percentage=0.1)
+
+
