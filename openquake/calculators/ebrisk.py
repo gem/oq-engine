@@ -58,12 +58,12 @@ def calc_risk(gmfs, param, monitor):
         crmodel = monitor.read('crmodel')
         weights = dstore['weights'][()]
     L = len(param['lba'].loss_names)
+    K = len(param['aggkey'])
+    aggkey = param['aggkey']
     elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
-    # aggkey -> eid -> loss
     acc = dict(events_per_sid=0, numlosses=numpy.zeros(2, int))  # (kept, tot)
     lba = param['lba']
-    lba.alt = general.AccumDict(  # idx -> eid -> loss
-        accum=general.AccumDict(accum=numpy.zeros(L, F32)))
+    lba.alt = general.AccumDict(accum=numpy.zeros((K, L), F32))  # eid->loss
     tempname = param['tempname']
     aggby = param['aggregate_by']
 
@@ -92,12 +92,14 @@ def calc_risk(gmfs, param, monitor):
         with mon_agg:
             tagidxs = assets[aggby] if aggby else None
             acc['numlosses'] += lba.aggregate(
-                out, haz['eid'], minimum_loss, tagidxs, ws)
+                out, haz['eid'], minimum_loss, aggkey, tagidxs, ws)
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
-    acc['alt'] = {idx: numpy.fromiter(  # already sorted by aid, ultra-fast
-        ((eid, loss) for eid, loss in lba.alt[idx].items()), elt_dt)
-                  for idx in lba.alt}
+    acc['alt'] = alt = {}
+    for key, k in aggkey.items():
+        s = ','.join(map(str, key)) + ','
+        alt[s] = numpy.array([(eid, arr[k]) for eid, arr in lba.alt.items()],
+                             elt_dt)
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A * param['ses_ratio']
         # without resetting the cache the sequential avg_losses would be wrong!
@@ -271,8 +273,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             return
         self.oqparam.ground_motion_fields = False  # hack
         with self.monitor('saving losses_by_event and event_loss_table'):
-            for idx, arr in dic['alt'].items():
-                hdf5.extend(self.datastore['event_loss_table/' + idx], arr)
+            for key, arr in dic['alt'].items():
+                hdf5.extend(self.datastore['event_loss_table/' + key], arr)
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
