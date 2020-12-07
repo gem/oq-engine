@@ -98,8 +98,8 @@ def calc_risk(gmfs, param, monitor):
     acc['alt'] = alt = {}
     for key, k in aggkey.items():
         s = ','.join(map(str, key)) + ','
-        alt[s] = numpy.array([(eid, arr[k]) for eid, arr in lba.alt.items()],
-                             elt_dt)
+        alt[s] = numpy.array([(eid, arr[k]) for eid, arr in lba.alt.items()
+                              if arr.sum()], elt_dt)
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A * param['ses_ratio']
         # without resetting the cache the sequential avg_losses would be wrong!
