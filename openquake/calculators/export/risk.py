@@ -232,7 +232,7 @@ def export_losses_by_event(ekey, dstore):
     if oq.investigation_time:  # not scenario
         columns['rup_id'] = lambda rec: events[rec.event_id]['rup_id']
         columns['year'] = lambda rec: events[rec.event_id]['year']
-    lbe = dstore['losses_by_event'][()]
+    lbe = dstore['event_loss_table/,'][()]
     lbe.sort(order='event_id')
     dic = dict(shape_descr=['event_id'])
     dic['event_id'] = list(lbe['event_id'])

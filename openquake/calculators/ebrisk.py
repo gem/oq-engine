@@ -64,8 +64,6 @@ def calc_risk(gmfs, param, monitor):
     lba = param['lba']
     lba.alt = general.AccumDict(  # idx -> eid -> loss
         accum=general.AccumDict(accum=numpy.zeros(L, F32)))
-    lba.losses_by_E = general.AccumDict(  # eid -> loss
-        accum=numpy.zeros(L, F32))
     tempname = param['tempname']
     aggby = param['aggregate_by']
 
@@ -97,10 +95,6 @@ def calc_risk(gmfs, param, monitor):
                 out, haz['eid'], minimum_loss, tagidxs, ws)
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
-    acc['elt'] = numpy.fromiter(  # this is ultra-fast
-        ((eid, losses)
-         for eid, losses in lba.losses_by_E.items() if losses.sum()),
-        elt_dt)
     acc['alt'] = {idx: numpy.fromiter(  # already sorted by aid, ultra-fast
         ((eid, loss) for eid, loss in lba.alt[idx].items()), elt_dt)
                   for idx in lba.alt}
@@ -160,12 +154,16 @@ def ebrisk(rupgetter, param, monitor):
     return res
 
 
-def gen_indices(tagcol, aggby):
+def get_pairs(tagcol, aggby):
+    pairs = [((), {})]
+    if not aggby:
+        return pairs
     alltags = [getattr(tagcol, tagname) for tagname in aggby]
     ranges = [range(1, len(tags)) for tags in alltags]
     for idxs in itertools.product(*ranges):
         d = {name: tags[idx] for idx, name, tags in zip(idxs, aggby, alltags)}
-        yield idxs, d
+        pairs.append((idxs, d))
+    return pairs
 
 
 @base.calculators.add('ebrisk')
@@ -199,7 +197,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
 
         elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
-        for idxs, attrs in gen_indices(self.assetcol.tagcol, oq.aggregate_by):
+        for idxs, attrs in get_pairs(self.assetcol.tagcol, oq.aggregate_by):
             idx = ','.join(map(str, idxs)) + ','
             self.datastore.create_dset('event_loss_table/' + idx, elt_dt,
                                        attrs=attrs)
@@ -209,7 +207,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The event loss table is too big to be transfer'
                                'red with %d tasks' % oq.concurrent_tasks)
-        self.datastore.create_dset('losses_by_event', elt_dt)
         self.datastore.create_dset('gmf_info', gmf_info_dt)
 
     def check_number_loss_curves(self):
@@ -267,7 +264,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             return
         self.oqparam.ground_motion_fields = False  # hack
         with self.monitor('saving losses_by_event and event_loss_table'):
-            hdf5.extend(self.datastore['losses_by_event'], dic['elt'])
             for idx, arr in dic['alt'].items():
                 hdf5.extend(self.datastore['event_loss_table/' + idx], arr)
         if self.oqparam.avg_losses:

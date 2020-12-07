@@ -1461,7 +1461,6 @@ class LossesByAsset(object):
     :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
     """
     alt = None  # set by the ebrisk calculator
-    losses_by_E = None  # set by the ebrisk calculator
 
     @cached_property
     def losses_by_A(self):
@@ -1499,7 +1498,7 @@ class LossesByAsset(object):
 
     def aggregate(self, out, eids, minimum_loss, tagidxs, ws):
         """
-        Populate .losses_by_A, .losses_by_E and .alt
+        Populate .losses_by_A and .alt
         """
         numlosses = numpy.zeros(2, int)
         for lni, losses in self.gen_losses(out):
@@ -1507,7 +1506,7 @@ class LossesByAsset(object):
                 aids = out.assets['ordinal']
                 self.losses_by_A[aids, lni] += losses @ ws
             for eid, loss in zip(eids, losses.sum(axis=0)):
-                self.losses_by_E[eid][lni] += loss
+                self.alt[','][eid][lni] += loss
             if tagidxs is not None:
                 # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):
