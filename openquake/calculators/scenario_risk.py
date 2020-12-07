@@ -184,9 +184,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             lbe = numpy.zeros(E, dtlist)
             lbe['event_id'] = range(E)
             lbe['loss'] = res
-            self.datastore['losses_by_event'] = lbe
+            self.datastore['event_loss_table/,'] = lbe
             loss_types = self.oqparam.loss_dt().names
-            self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
+            self.datastore.set_attrs(
+                'event_loss_table/,', loss_types=loss_types)
 
             # sanity check
             numpy.testing.assert_allclose(
