@@ -388,7 +388,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         rupids = set(read_csv(fname, {None: '<S50'})['rup_id'])
         self.assertTrue(rup_ids <= rupids, 'There are non-existing rupture IDs'
-                        ' in losses_by_event!')
+                        ' in the event loss table!')
 
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
