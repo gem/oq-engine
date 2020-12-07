@@ -169,7 +169,7 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
 run.arg('job_ini', 'calculation configuration file '
         '(or files, space-separated)', nargs='+')
 run.opt('slowest', 'profile and show the slowest operations', type=int)
-run.opt('hc', 'previous calculation ID', type=valid.hazard_id)
+run.opt('hc', 'previous calculation ID', type=int)
 run.opt('param', 'override parameter with the syntax NAME=VALUE,...')
 run.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
         type=int)
