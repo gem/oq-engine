@@ -154,16 +154,20 @@ def ebrisk(rupgetter, param, monitor):
     return res
 
 
-def get_pairs(tagcol, aggby):
-    pairs = [((), {})]
+def get_aggkey_attrs(tagcol, aggby):
+    aggkey = {(): 0}
+    attrs = [{}]
     if not aggby:
-        return pairs
+        return aggkey, attrs
     alltags = [getattr(tagcol, tagname) for tagname in aggby]
     ranges = [range(1, len(tags)) for tags in alltags]
+    i = 1
     for idxs in itertools.product(*ranges):
         d = {name: tags[idx] for idx, name, tags in zip(idxs, aggby, alltags)}
-        pairs.append((idxs, d))
-    return pairs
+        aggkey[idxs] = i
+        attrs.append(d)
+        i += 1
+    return aggkey, attrs
 
 
 @base.calculators.add('ebrisk')
@@ -197,10 +201,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
 
         elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
-        for idxs, attrs in get_pairs(self.assetcol.tagcol, oq.aggregate_by):
+        self.aggkey, attrs = get_aggkey_attrs(
+            self.assetcol.tagcol, oq.aggregate_by)
+        for idxs, attr in zip(self.aggkey, attrs):
             idx = ','.join(map(str, idxs)) + ','
             self.datastore.create_dset('event_loss_table/' + idx, elt_dt,
-                                       attrs=attrs)
+                                       attrs=attr)
+        self.param['aggkey'] = self.aggkey
         self.param.pop('oqparam', None)  # unneeded
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
         elt_nbytes = 4 * self.E * L
