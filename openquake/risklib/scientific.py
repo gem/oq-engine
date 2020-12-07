@@ -1496,7 +1496,7 @@ class LossesByAsset(object):
                         losses[a], ded * avalues[a], lim * avalues[a])
                 yield self.lni[lt + '_ins'], ins_losses
 
-    def aggregate(self, out, eids, minimum_loss, tagidxs, ws):
+    def aggregate(self, out, eids, minimum_loss, aggkey, tagidxs, ws):
         """
         Populate .losses_by_A and .alt
         """
@@ -1506,7 +1506,7 @@ class LossesByAsset(object):
                 aids = out.assets['ordinal']
                 self.losses_by_A[aids, lni] += losses @ ws
             for eid, loss in zip(eids, losses.sum(axis=0)):
-                self.alt[','][eid][lni] += loss
+                self.alt[eid][0, lni] += loss
             if tagidxs is not None:
                 # this is the slow part, depending on minimum_loss
                 for a, asset in enumerate(out.assets):
@@ -1514,10 +1514,10 @@ class LossesByAsset(object):
                     ok = ls > minimum_loss[lni]
                     if not ok.sum():
                         continue
-                    idx = ','.join(map(str, tagidxs[a])) + ','
+                    idx = aggkey[tuple(tagidxs[a])]
                     kept = 0
                     for loss, eid in zip(ls[ok], out.eids[ok]):
-                        self.alt[idx][eid][lni] += loss
+                        self.alt[eid][idx, lni] += loss
                         kept += 1
                     numlosses += numpy.array([kept, len(losses[a])])
         return numlosses
