@@ -1476,6 +1476,19 @@ class LossesByAsset(object):
         self.loss_names = loss_names
         self.lni = {ln: i for i, ln in enumerate(loss_names)}
 
+    def _agg(self, a, ln, out, idx, ws):
+        ls = out[ln][a]
+        if ls.sum():
+            lni = self.lni[ln]
+            if ws is not None:  # compute avg_losses, really fast
+                aid = out.assets[a]['ordinal']
+                self.losses_by_A[aid, lni] += ls @ ws
+            for loss, eid in zip(ls, out.eids):
+                if loss:
+                    self.alt[eid][0, lni] += loss
+                    if idx:
+                        self.alt[eid][idx, lni] += loss
+
     def aggregate(self, out, minimum_loss, tagidxs, ws):
         """
         Populate .losses_by_A and .alt
@@ -1488,6 +1501,7 @@ class LossesByAsset(object):
                 setattr(out, lt + '_ins',
                         numpy.zeros((len(out.assets), len(eids))))
             for a, asset in enumerate(out.assets):
+                idx = tagidxs[a]
                 avalue = avalues[a]
                 ls = out[lt][a]
                 ls *= avalue
@@ -1497,19 +1511,8 @@ class LossesByAsset(object):
                     ded, lim = self.policy_dict[lt][asset[self.policy_name]]
                     out[lt + '_ins'][a] = insured_losses(
                         ls, ded * avalue, lim * avalue)
-        for a, idx in enumerate(tagidxs):
-            aid = out.assets[a]['ordinal']
-            for lni, ln in enumerate(self.loss_names):
-                ls = out[ln][a]
-                if not ls.sum():
-                    continue
-                if ws is not None:  # compute avg_losses, really fast
-                    self.losses_by_A[aid, lni] += ls @ ws
-                for loss, eid in zip(ls, eids):
-                    if loss:
-                        self.alt[eid][0, lni] += loss
-                        if idx:
-                            self.alt[eid][idx, lni] += loss
+                    self._agg(a, lt + '_ins', out, idx, ws)
+                self._agg(a, lt, out, idx, ws)
 
 
 # ####################### Consequences ##################################### #
