@@ -1475,26 +1475,17 @@ class LossesByAsset(object):
         self.sec_losses = sec_losses
         for sec_loss in sec_losses:
             self.loss_names.extend(sec_loss.outputs)
-        self.lni = {ln: i for i, ln in enumerate(self.loss_names)}
-
-    def _agg(self, asset, ln, losses, eids, idx, ws):
-        if losses.sum():
-            lni = self.lni[ln]
-            if ws is not None:  # compute avg_losses, really fast
-                self.losses_by_A[asset['ordinal'], lni] += losses @ ws
-            for loss, eid in zip(losses, eids):
-                if loss:
-                    self.alt[eid][0, lni] += loss
-                    if idx:
-                        self.alt[eid][idx, lni] += loss
 
     def aggregate(self, out, minimum_loss, aggby, ws):
         """
         Populate .losses_by_A and .alt
         """
         eids = out.eids
+        assets = out.assets
+        for sec_loss in self.sec_losses:
+            for k in sec_loss.outputs:
+                setattr(out, k, numpy.zeros((len(assets), len(eids))))
         for a, asset in enumerate(out.assets):
-            idx = self.aggkey[tuple(asset[aggby])] if aggby else 0
             for lti, lt in enumerate(out.loss_types):
                 avalue = (asset['occupants_None'] if lt == 'occupants'
                           else asset['value-' + lt])
@@ -1502,11 +1493,21 @@ class LossesByAsset(object):
                 ls *= avalue
                 if minimum_loss[lt]:
                     ls[ls < minimum_loss[lt]] = 0
-                self._agg(asset, lt, ls, eids, idx, ws)
                 for sec_loss in self.sec_losses:
                     for k, o in sec_loss.compute(asset, lt, ls).items():
-                        self._agg(asset, k, o, eids, idx, ws)
-
+                        out[k][a] = o
+        # vectorize on the assets too, this can double the performance
+        for lni, ln in enumerate(self.loss_names):
+            if ws is not None:
+                self.losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
+            for eid, loss in zip(eids, out[ln].T):
+                self.alt[eid][0, lni] += loss.sum()
+            if aggby:  # slow part
+                for asset, losses in zip(assets, out[ln]):
+                    idx = self.aggkey[tuple(asset[aggby])]
+                    for eid, loss in zip(eids, losses):
+                        if loss:
+                            self.alt[eid][idx, lni] += loss
 
 # must have attribute .outputs and method .compute(asset, losses, loss_type)
 # returning a dictionary sec_key -> sec_losses
