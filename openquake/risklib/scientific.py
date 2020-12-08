@@ -1469,12 +1469,13 @@ class LossesByAsset(object):
         """
         return numpy.zeros((self.A, len(self.loss_names)), F32)
 
-    def __init__(self, assetcol, loss_names, policy_name='', policy_dict={}):
+    def __init__(self, assetcol, loss_types, sec_losses=()):
         self.A = len(assetcol)
-        self.policy_name = policy_name
-        self.policy_dict = policy_dict
-        self.loss_names = loss_names
-        self.lni = {ln: i for i, ln in enumerate(loss_names)}
+        self.loss_names = list(loss_types)
+        self.sec_losses = sec_losses
+        for sec_loss in sec_losses:
+            self.loss_names.extend(sec_loss.outputs)
+        self.lni = {ln: i for i, ln in enumerate(self.loss_names)}
 
     def _agg(self, a, ln, out, idx, ws):
         ls = out[ln][a]
@@ -1494,25 +1495,44 @@ class LossesByAsset(object):
         Populate .losses_by_A and .alt
         """
         eids = out.eids
+        for sec_loss in self.sec_losses:
+            for k in sec_loss.outputs:
+                setattr(out, k, numpy.zeros((len(out.assets), len(eids))))
         for lti, lt in enumerate(out.loss_types):
-            avalues = (out.assets['occupants_None'] if lt == 'occupants'
-                       else out.assets['value-' + lt])
-            if lt in self.policy_dict:
-                setattr(out, lt + '_ins',
-                        numpy.zeros((len(out.assets), len(eids))))
             for a, asset in enumerate(out.assets):
                 idx = tagidxs[a]
-                avalue = avalues[a]
+                avalue = (asset['occupants_None'] if lt == 'occupants'
+                          else asset['value-' + lt])
                 ls = out[lt][a]
                 ls *= avalue
-                if minimum_loss[lti]:
-                    ls[ls < minimum_loss[lti]] = 0
-                if lt in self.policy_dict:
-                    ded, lim = self.policy_dict[lt][asset[self.policy_name]]
-                    out[lt + '_ins'][a] = insured_losses(
-                        ls, ded * avalue, lim * avalue)
-                    self._agg(a, lt + '_ins', out, idx, ws)
+                if minimum_loss[lt]:
+                    ls[ls < minimum_loss[lt]] = 0
                 self._agg(a, lt, out, idx, ws)
+                for sec_loss in self.sec_losses:
+                    for k, o in sec_loss.compute(asset, ls, lt).items():
+                        out[k][a] = o
+                        self._agg(a, k, out, idx, ws)
+
+
+# must have attribute .outputs and method .compute(asset, losses, loss_type)
+# returning a dictionary sec_key -> sec_losses
+class InsuredLosses(object):
+    """
+    A kind of secondary loss
+    """
+    def __init__(self, policy_name, policy_dict):
+        self.policy_name = policy_name
+        self.policy_dict = policy_dict
+        self.outputs = [lt + '_ins' for lt in policy_dict]
+
+    def compute(self, asset, losses, loss_type):
+        if loss_type not in self.policy_dict:  # no output for this loss type
+            return {}
+        avalue = (asset['occupants_None'] if loss_type == 'occupants'
+                  else asset['value-' + loss_type])
+        ded, lim = self.policy_dict[loss_type][asset[self.policy_name]]
+        ins = insured_losses(losses, ded * avalue, lim * avalue)
+        return {loss_type + '_ins': ins}
 
 
 # ####################### Consequences ##################################### #

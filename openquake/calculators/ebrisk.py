@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.baselib.python3compat import zip
-from openquake.risklib.scientific import LossesByAsset
+from openquake.risklib.scientific import LossesByAsset, InsuredLosses
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
 from openquake.commonlib import logs
@@ -66,14 +66,6 @@ def calc_risk(gmfs, param, monitor):
     lba.alt = general.AccumDict(accum=numpy.zeros((K, L), F32))  # eid->loss
     tempname = param['tempname']
     aggby = param['aggregate_by']
-
-    minimum_loss = []
-    for lt, lti in crmodel.lti.items():
-        val = param['minimum_asset_loss'][lt]
-        minimum_loss.append(val)
-        if lt in lba.policy_dict:  # same order as in lba.compute
-            minimum_loss.append(val)
-
     haz_by_sid = general.group_array(gmfs, 'sid')
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
@@ -94,7 +86,7 @@ def calc_risk(gmfs, param, monitor):
                 tagidxs = [aggkey[tuple(key)] for key in out.assets[aggby]]
             else:
                 tagidxs = [0 for _ in out.assets]
-            lba.aggregate(out, minimum_loss, tagidxs, ws)
+            lba.aggregate(out, param['minimum_asset_loss'], tagidxs, ws)
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['alt'] = alt = {}
@@ -188,9 +180,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         oq.ground_motion_fields = False
         super().pre_execute()
-        self.param['lba'] = lba = (
-            LossesByAsset(self.assetcol, oq.loss_names,
-                          self.policy_name, self.policy_dict))
+        sec_losses = []
+        if self.policy_dict:
+            sec_losses.append(
+                InsuredLosses(self.policy_name, self.policy_dict))
+        self.param['lba'] = lba = LossesByAsset(
+            self.assetcol, oq.loss_dt().names, sec_losses)
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         ct = oq.concurrent_tasks or 1
