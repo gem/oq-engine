@@ -1477,41 +1477,35 @@ class LossesByAsset(object):
             self.loss_names.extend(sec_loss.outputs)
         self.lni = {ln: i for i, ln in enumerate(self.loss_names)}
 
-    def _agg(self, a, ln, out, idx, ws):
-        ls = out[ln][a]
-        if ls.sum():
+    def _agg(self, asset, ln, losses, eids, idx, ws):
+        if losses.sum():
             lni = self.lni[ln]
             if ws is not None:  # compute avg_losses, really fast
-                aid = out.assets[a]['ordinal']
-                self.losses_by_A[aid, lni] += ls @ ws
-            for loss, eid in zip(ls, out.eids):
+                self.losses_by_A[asset['ordinal'], lni] += losses @ ws
+            for loss, eid in zip(losses, eids):
                 if loss:
                     self.alt[eid][0, lni] += loss
                     if idx:
                         self.alt[eid][idx, lni] += loss
 
-    def aggregate(self, out, minimum_loss, tagidxs, ws):
+    def aggregate(self, out, minimum_loss, aggby, ws):
         """
         Populate .losses_by_A and .alt
         """
         eids = out.eids
-        for sec_loss in self.sec_losses:
-            for k in sec_loss.outputs:
-                setattr(out, k, numpy.zeros((len(out.assets), len(eids))))
-        for lti, lt in enumerate(out.loss_types):
-            for a, asset in enumerate(out.assets):
-                idx = tagidxs[a]
+        for a, asset in enumerate(out.assets):
+            idx = self.aggkey[tuple(asset[aggby])] if aggby else 0
+            for lti, lt in enumerate(out.loss_types):
                 avalue = (asset['occupants_None'] if lt == 'occupants'
                           else asset['value-' + lt])
                 ls = out[lt][a]
                 ls *= avalue
                 if minimum_loss[lt]:
                     ls[ls < minimum_loss[lt]] = 0
-                self._agg(a, lt, out, idx, ws)
+                self._agg(asset, lt, ls, eids, idx, ws)
                 for sec_loss in self.sec_losses:
-                    for k, o in sec_loss.compute(asset, ls, lt).items():
-                        out[k][a] = o
-                        self._agg(a, k, out, idx, ws)
+                    for k, o in sec_loss.compute(asset, lt, ls).items():
+                        self._agg(asset, k, o, eids, idx, ws)
 
 
 # must have attribute .outputs and method .compute(asset, losses, loss_type)
@@ -1525,7 +1519,7 @@ class InsuredLosses(object):
         self.policy_dict = policy_dict
         self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def compute(self, asset, losses, loss_type):
+    def compute(self, asset, loss_type, losses):
         if loss_type not in self.policy_dict:  # no output for this loss type
             return {}
         avalue = (asset['occupants_None'] if loss_type == 'occupants'

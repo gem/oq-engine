@@ -82,11 +82,7 @@ def calc_risk(gmfs, param, monitor):
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
-            if aggby:
-                tagidxs = [aggkey[tuple(key)] for key in out.assets[aggby]]
-            else:
-                tagidxs = [0 for _ in out.assets]
-            lba.aggregate(out, param['minimum_asset_loss'], tagidxs, ws)
+            lba.aggregate(out, param['minimum_asset_loss'], aggby, ws)
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['alt'] = alt = {}
@@ -202,6 +198,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
         self.aggkey, attrs = get_aggkey_attrs(
             self.assetcol.tagcol, oq.aggregate_by)
+        lba.aggkey = self.aggkey
         for idxs, attr in zip(self.aggkey, attrs):
             idx = ','.join(map(str, idxs)) + ','
             self.datastore.create_dset('event_loss_table/' + idx, elt_dt,
