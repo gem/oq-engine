@@ -1489,7 +1489,11 @@ class LossesByAsset(object):
                 setattr(out, k, numpy.zeros((len(assets), len(eids))))
 
         # populate outputs
+        idxs = []
         for a, asset in enumerate(out.assets):
+            if aggby:
+                idxs.append(self.aggkey[tuple(asset[aggby])])
+            lt_losses = []
             for lti, lt in enumerate(out.loss_types):
                 avalue = (asset['occupants_None'] if lt == 'occupants'
                           else asset['value-' + lt])
@@ -1497,9 +1501,12 @@ class LossesByAsset(object):
                 ls *= avalue
                 if minimum_loss[lt]:
                     ls[ls < minimum_loss[lt]] = 0
-                for sec_loss in self.sec_losses:
-                    for k, o in sec_loss.compute(asset, lt, ls).items():
-                        out[k][a] = o
+                lt_losses.append((lt, ls))
+
+            # secondary outputs, if any
+            for sec_loss in self.sec_losses:
+                for k, o in sec_loss.compute(asset, lt_losses, eids).items():
+                    out[k][a] = o
 
         # vectorize on the assets, this can double the performance
         for lni, ln in enumerate(self.loss_names):
@@ -1507,33 +1514,41 @@ class LossesByAsset(object):
                 self.losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
             for eid, loss in zip(eids, out[ln].T):
                 self.alt[eid][0, lni] += loss.sum()
-            if aggby:  # slow part
-                for asset, losses in zip(assets, out[ln]):
-                    idx = self.aggkey[tuple(asset[aggby])]
-                    for eid, loss in zip(eids, losses):
-                        if loss:
-                            self.alt[eid][idx, lni] += loss
+            # this is the slow part, if aggregate_by is given
+            for asset, idx, losses in zip(assets, idxs, out[ln]):
+                for eid, loss in zip(eids, losses):
+                    if loss:
+                        self.alt[eid][idx, lni] += loss
 
 
 # must have attribute .outputs and method .compute(asset, losses, loss_type)
 # returning a dictionary sec_key -> sec_losses
 class InsuredLosses(object):
     """
-    A kind of secondary loss
+    There is an insured loss for each loss type in the policy dictionary.
     """
     def __init__(self, policy_name, policy_dict):
         self.policy_name = policy_name
         self.policy_dict = policy_dict
         self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def compute(self, asset, loss_type, losses):
-        if loss_type not in self.policy_dict:  # no output for this loss type
-            return {}
-        avalue = (asset['occupants_None'] if loss_type == 'occupants'
-                  else asset['value-' + loss_type])
-        ded, lim = self.policy_dict[loss_type][asset[self.policy_name]]
-        ins = insured_losses(losses, ded * avalue, lim * avalue)
-        return {loss_type + '_ins': ins}
+    def compute(self, asset, lt_losses, eids):
+        """
+        :param asset: an asset record
+        :param lt_losses: a list of pairs (loss_type, E losses)
+        :param eids: an array of E event IDs
+        :returns: a dictionary loss_type_ins -> E insured losses
+        """
+        res = {}
+        policy_idx = asset[self.policy_name]
+        for lt, losses in lt_losses:
+            if lt in self.policy_dict:
+                avalue = (asset['occupants_None'] if lt == 'occupants'
+                          else asset['value-' + lt])
+                ded, lim = self.policy_dict[lt][policy_idx]
+                res[lt + '_ins'] = insured_losses(
+                    losses, ded * avalue, lim * avalue)
+        return res
 
 
 # ####################### Consequences ##################################### #
