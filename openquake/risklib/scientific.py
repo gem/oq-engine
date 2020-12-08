@@ -1482,9 +1482,13 @@ class LossesByAsset(object):
         """
         eids = out.eids
         assets = out.assets
+
+        # initialize secondary losses outputs, if any
         for sec_loss in self.sec_losses:
             for k in sec_loss.outputs:
                 setattr(out, k, numpy.zeros((len(assets), len(eids))))
+
+        # populate outputs
         for a, asset in enumerate(out.assets):
             for lti, lt in enumerate(out.loss_types):
                 avalue = (asset['occupants_None'] if lt == 'occupants'
@@ -1496,7 +1500,8 @@ class LossesByAsset(object):
                 for sec_loss in self.sec_losses:
                     for k, o in sec_loss.compute(asset, lt, ls).items():
                         out[k][a] = o
-        # vectorize on the assets too, this can double the performance
+
+        # vectorize on the assets, this can double the performance
         for lni, ln in enumerate(self.loss_names):
             if ws is not None:
                 self.losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
@@ -1508,6 +1513,7 @@ class LossesByAsset(object):
                     for eid, loss in zip(eids, losses):
                         if loss:
                             self.alt[eid][idx, lni] += loss
+
 
 # must have attribute .outputs and method .compute(asset, losses, loss_type)
 # returning a dictionary sec_key -> sec_losses

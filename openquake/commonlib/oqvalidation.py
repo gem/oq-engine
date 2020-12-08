@@ -221,7 +221,7 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
-    ebrisk_maxsize = valid.Param(valid.positivefloat, 5E9)  # used in ebrisk
+    ebrisk_maxsize = valid.Param(valid.positivefloat, 1E10)  # used in ebrisk
     # NB: you cannot increase too much min_weight otherwise too few tasks will
     # be generated in cases like Ecuador inside full South America
     min_weight = valid.Param(valid.positiveint, 200)  # used in classical
