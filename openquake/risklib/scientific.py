@@ -1491,7 +1491,8 @@ class LossesByAsset(object):
                 avalue = avalues[a]
                 ls = out[lt][a]
                 ls *= avalue
-                ls[ls < minimum_loss[lti]] = 0
+                if minimum_loss[lti]:
+                    ls[ls < minimum_loss[lti]] = 0
                 if lt in self.policy_dict:
                     ded, lim = self.policy_dict[lt][asset[self.policy_name]]
                     out[lt + '_ins'][a] = insured_losses(
