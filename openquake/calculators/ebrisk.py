@@ -90,11 +90,11 @@ def calc_risk(gmfs, param, monitor):
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
-            for a, asset in enumerate(out.assets):
-                dic = {lt: out[lt][a] for lt in out.loss_types}
-                dic['eid'] = out.eids
-                idx = aggkey[tuple(asset[aggby])] if aggby else 0
-                lba.aggregate(asset, dic, minimum_loss, idx, ws)
+            if aggby:
+                tagidxs = [aggkey[tuple(key)] for key in out.assets[aggby]]
+            else:
+                tagidxs = [0 for _ in out.assets]
+            lba.aggregate(out, minimum_loss, tagidxs, ws)
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['alt'] = alt = {}

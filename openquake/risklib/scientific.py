@@ -1476,31 +1476,39 @@ class LossesByAsset(object):
         self.loss_names = loss_names
         self.lni = {ln: i for i, ln in enumerate(loss_names)}
 
-    def aggregate(self, asset, lossdict, minimum_loss, idx, ws):
+    def aggregate(self, out, minimum_loss, tagidxs, ws):
         """
         Populate .losses_by_A and .alt
         """
-        eids = lossdict.pop('eid')
-        for lt in list(lossdict):
-            avalue = (asset['occupants_None'] if lt == 'occupants'
-                      else asset['value-' + lt])
-            lossdict[lt] *= avalue
+        eids = out.eids
+        for lti, lt in enumerate(out.loss_types):
+            avalues = (out.assets['occupants_None'] if lt == 'occupants'
+                       else out.assets['value-' + lt])
             if lt in self.policy_dict:
-                ded, lim = self.policy_dict[lt][asset[self.policy_name]]
-                lossdict[lt + '_ins'] = insured_losses(
-                    lossdict[lt], ded * avalue, lim * avalue)
-
-        for lni, ln in enumerate(lossdict):
-            losses = lossdict[ln]
-            if ws is not None:  # compute avg_losses, really fast
-                self.losses_by_A[asset['ordinal'], lni] += losses @ ws
-            ok = losses > minimum_loss[lni]
-            if not ok.sum():
-                continue
-            for loss, eid in zip(losses[ok], eids[ok]):
-                self.alt[eid][0, lni] += loss
-                if idx:
-                    self.alt[eid][idx, lni] += loss
+                setattr(out, lt + '_ins',
+                        numpy.zeros((len(out.assets), len(eids))))
+            for a, asset in enumerate(out.assets):
+                avalue = avalues[a]
+                ls = out[lt][a]
+                ls *= avalue
+                ls[ls < minimum_loss[lti]] = 0
+                if lt in self.policy_dict:
+                    ded, lim = self.policy_dict[lt][asset[self.policy_name]]
+                    out[lt + '_ins'][a] = insured_losses(
+                        ls, ded * avalue, lim * avalue)
+        for a, idx in enumerate(tagidxs):
+            aid = out.assets[a]['ordinal']
+            for lni, ln in enumerate(self.loss_names):
+                ls = out[ln][a]
+                if not ls.sum():
+                    continue
+                if ws is not None:  # compute avg_losses, really fast
+                    self.losses_by_A[aid, lni] += ls @ ws
+                for loss, eid in zip(ls, eids):
+                    if loss:
+                        self.alt[eid][0, lni] += loss
+                        if idx:
+                            self.alt[eid][idx, lni] += loss
 
 
 # ####################### Consequences ##################################### #
