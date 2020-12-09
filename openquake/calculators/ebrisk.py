@@ -61,7 +61,7 @@ def calc_risk(gmfs, param, monitor):
     K = len(param['aggkey'])
     aggkey = param['aggkey']
     elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
-    acc = dict(events_per_sid=0, numlosses=numpy.zeros(2, int))  # (kept, tot)
+    acc = dict(events_per_sid=0)
     lba = param['lba']
     lba.alt = general.AccumDict(accum=numpy.zeros((K, L), F32))  # eid->loss
     tempname = param['tempname']
@@ -238,7 +238,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         logging.info(
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = []
-        self.numlosses = 0
         self.datastore.swmr_on()
         self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
         smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
@@ -253,7 +252,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
-        logging.info('Considered {:_d} / {:_d} losses'.format(*self.numlosses))
+        dgrp = self.datastore['event_loss_table']
+        e = int(numpy.mean([len(dset) for dset in dgrp.values()]))
+        logging.info('Nonzero {:_d} / {:_d} events'.format(e, self.E))
         return 1
 
     def agg_dicts(self, dummy, dic):
@@ -273,7 +274,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
         self.events_per_sid.append(dic['events_per_sid'])
-        self.numlosses += dic['numlosses']
 
     def post_execute(self, dummy):
         """
