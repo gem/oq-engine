@@ -30,7 +30,7 @@ import numpy
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
-from openquake.baselib.general import CallableDict, cached_property
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.stats import compute_stats2
 
 F64 = numpy.float64
@@ -1452,33 +1452,26 @@ class LossCurvesMapsBuilder(object):
         return curves
 
 
-class LossesByAsset(object):
+class LossAggregator(object):
     """
-    A class to compute losses by asset.
+    A class to aggregate losses.
 
-    :param assetcol: an AssetCollection instance
-    :param policy_name: the name of the policy field (can be empty)
-    :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
+    :param aggkey: a dictionary tuple -> integer
+    :param loss_type: a list of loss types
+    :param sec_losses: a list of SecondaryLosses (can be empty)
     """
     alt = None  # set by the ebrisk calculator
 
-    @cached_property
-    def losses_by_A(self):
-        """
-        :returns: an array of shape (A, L)
-        """
-        return numpy.zeros((self.A, len(self.loss_names)), F32)
-
-    def __init__(self, assetcol, loss_types, sec_losses=()):
-        self.A = len(assetcol)
+    def __init__(self, aggkey, loss_types, sec_losses=()):
+        self.aggkey = aggkey
         self.loss_names = list(loss_types)
         self.sec_losses = sec_losses
         for sec_loss in sec_losses:
             self.loss_names.extend(sec_loss.outputs)
 
-    def aggregate(self, out, minimum_loss, aggby, ws):
+    def aggregate(self, out, minimum_loss, aggby):
         """
-        Populate .losses_by_A and .alt
+        Populate .alt
         """
         eids = out.eids
         assets = out.assets
@@ -1508,10 +1501,8 @@ class LossesByAsset(object):
                 for k, o in sec_loss.compute(asset, lt_losses, eids).items():
                     out[k][a] = o
 
-        # vectorize on the assets, this can double the performance
+        # aggregation
         for lni, ln in enumerate(self.loss_names):
-            if ws is not None:
-                self.losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
             for eid, loss in zip(eids, out[ln].T):
                 self.alt[eid][0, lni] += loss.sum()
             # this is the slow part, if aggregate_by is given

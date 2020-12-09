@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.baselib.python3compat import zip
-from openquake.risklib.scientific import LossesByAsset, InsuredLosses
+from openquake.risklib.scientific import LossAggregator, InsuredLosses
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
 from openquake.commonlib import logs
@@ -51,22 +51,24 @@ def calc_risk(gmfs, param, monitor):
     """
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
+    mon_avg = monitor('averaging losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
     with monitor('getting crmodel'):
         crmodel = monitor.read('crmodel')
         weights = dstore['weights'][()]
-    L = len(param['lba'].loss_names)
+    L = len(param['agg'].loss_names)
     K = len(param['aggkey'])
     aggkey = param['aggkey']
     elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
     acc = dict(events_per_sid=0)
-    lba = param['lba']
-    lba.alt = general.AccumDict(accum=numpy.zeros((K, L), F32))  # eid->loss
+    agg = param['agg']
+    agg.alt = general.AccumDict(accum=numpy.zeros((K, L), F32))  # eid->loss
     tempname = param['tempname']
     aggby = param['aggregate_by']
     haz_by_sid = general.group_array(gmfs, 'sid')
+    losses_by_A = numpy.zeros((len(assets_df), len(agg.loss_names)), F32)
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
             haz = haz_by_sid[sid]
@@ -75,27 +77,26 @@ def calc_risk(gmfs, param, monitor):
         with mon_risk:
             assets = asset_df.to_records()  # fast
             acc['events_per_sid'] += len(haz)
-            if param['avg_losses']:
-                ws = weights[haz['rlz']]
-            else:
-                ws = None
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
-            lba.aggregate(out, param['minimum_asset_loss'], aggby, ws)
+            agg.aggregate(out, param['minimum_asset_loss'], aggby)
+        if param['avg_losses']:
+            with mon_avg:
+                ws = weights[haz['rlz']]
+                for lni, ln in enumerate(agg.loss_names):
+                    losses_by_A[out.assets['ordinal'], lni] += out[ln] @ ws
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['alt'] = alt = {}
     for key, k in aggkey.items():
         s = ','.join(map(str, key)) + ','
-        alt[s] = numpy.array([(eid, arr[k]) for eid, arr in lba.alt.items()
+        alt[s] = numpy.array([(eid, arr[k]) for eid, arr in agg.alt.items()
                               if arr[k].sum()], elt_dt)
         # in the demo there are 264/1694 nonzero events, i.e. arr[k].sum()
         # is zero most of the time
     if param['avg_losses']:
-        acc['losses_by_A'] = param['lba'].losses_by_A * param['ses_ratio']
-        # without resetting the cache the sequential avg_losses would be wrong!
-        del param['lba'].__dict__['losses_by_A']
+        acc['losses_by_A'] = losses_by_A * param['ses_ratio']
     return acc
 
 
@@ -182,14 +183,16 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.policy_dict:
             sec_losses.append(
                 InsuredLosses(self.policy_name, self.policy_dict))
-        self.param['lba'] = lba = LossesByAsset(
-            self.assetcol, oq.loss_dt().names, sec_losses)
+        self.aggkey, attrs = get_aggkey_attrs(
+            self.assetcol.tagcol, oq.aggregate_by)
+        self.param['agg'] = agg = LossAggregator(
+            self.aggkey, oq.loss_dt().names, sec_losses)
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         ct = oq.concurrent_tasks or 1
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
-        self.L = L = len(lba.loss_names)
+        self.L = L = len(agg.loss_names)
         self.check_number_loss_curves()
         mal = self.param['minimum_asset_loss']
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
@@ -198,9 +201,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
 
         elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
-        self.aggkey, attrs = get_aggkey_attrs(
-            self.assetcol.tagcol, oq.aggregate_by)
-        lba.aggkey = self.aggkey
         for idxs, attr in zip(self.aggkey, attrs):
             idx = ','.join(map(str, idxs)) + ','
             self.datastore.create_dset('event_loss_table/' + idx, elt_dt,
