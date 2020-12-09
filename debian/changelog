@@ -1,5 +1,5 @@
   [Claudia Mascandola]
-  * Added the Lanzano et al. (2019) GMPE (ITA18)
+  * Added the Lanzano et al. (2019) GMPE
   
   [Michele Simionato]
   * Internal: required h5py == 2.10.0
