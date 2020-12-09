@@ -90,6 +90,8 @@ def calc_risk(gmfs, param, monitor):
         s = ','.join(map(str, key)) + ','
         alt[s] = numpy.array([(eid, arr[k]) for eid, arr in lba.alt.items()
                               if arr[k].sum()], elt_dt)
+        # in the demo there are 264/1694 nonzero events, i.e. arr[k].sum()
+        # is zero most of the time
     if param['avg_losses']:
         acc['losses_by_A'] = param['lba'].losses_by_A * param['ses_ratio']
         # without resetting the cache the sequential avg_losses would be wrong!
