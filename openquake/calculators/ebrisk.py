@@ -59,12 +59,10 @@ def calc_risk(gmfs, param, monitor):
         crmodel = monitor.read('crmodel')
         weights = dstore['weights'][()]
     L = len(param['agg'].loss_names)
-    K = len(param['aggkey'])
     aggkey = param['aggkey']
     elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
     acc = dict(events_per_sid=0)
     agg = param['agg']
-    agg.alt = general.AccumDict(accum=numpy.zeros((K, L), F32))  # eid->loss
     tempname = param['tempname']
     aggby = param['aggregate_by']
     haz_by_sid = general.group_array(gmfs, 'sid')
@@ -81,11 +79,12 @@ def calc_risk(gmfs, param, monitor):
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
             agg.aggregate(out, param['minimum_asset_loss'], aggby)
+            # NB: after the aggregation out contains losses, not loss_ratios
         if param['avg_losses']:
             with mon_avg:
                 ws = weights[haz['rlz']]
                 for lni, ln in enumerate(agg.loss_names):
-                    losses_by_A[out.assets['ordinal'], lni] += out[ln] @ ws
+                    losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
     acc['alt'] = alt = {}

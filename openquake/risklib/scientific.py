@@ -30,7 +30,7 @@ import numpy
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
-from openquake.baselib.general import CallableDict
+from openquake.baselib.general import CallableDict, AccumDict
 from openquake.hazardlib.stats import compute_stats2
 
 F64 = numpy.float64
@@ -1468,6 +1468,8 @@ class LossAggregator(object):
         self.sec_losses = sec_losses
         for sec_loss in sec_losses:
             self.loss_names.extend(sec_loss.outputs)
+        KL = len(aggkey), len(self.loss_names)
+        self.alt = AccumDict(accum=numpy.zeros(KL, F32))  # eid->loss
 
     def aggregate(self, out, minimum_loss, aggby):
         """
