@@ -1452,17 +1452,14 @@ class LossCurvesMapsBuilder(object):
         return curves
 
 
-class LossAggregator(object):
+class EventLossTable(AccumDict):
     """
-    A class to aggregate losses.
+    A dictionary of matrices of shape (K, L'), with K the number of aggregation
+    keys and L' the total number of loss types (primary + secondary).
 
     :param aggkey: a dictionary tuple -> integer
     :param loss_types: a list of primary loss types
     :param sec_losses: a list of SecondaryLosses (can be empty)
-
-    Works by populating a dictionary of matrices of shape (K, L') .alt,
-    with K the number of aggregation keys and L' the number of primary
-    loss types plus secondary loss types.
     """
     alt = None  # set by the ebrisk calculator
 
@@ -1473,11 +1470,11 @@ class LossAggregator(object):
         for sec_loss in sec_losses:
             self.loss_names.extend(sec_loss.outputs)
         KL = len(aggkey), len(self.loss_names)
-        self.alt = AccumDict(accum=numpy.zeros(KL, F32))  # eid->loss
+        self.accum = numpy.zeros(KL, F32)
 
     def aggregate(self, out, minimum_loss, aggby):
         """
-        Populate .alt
+        Populate the event loss table
         """
         eids = out.eids
         assets = out.assets
@@ -1510,12 +1507,12 @@ class LossAggregator(object):
         # aggregation
         for lni, ln in enumerate(self.loss_names):
             for eid, loss in zip(eids, out[ln].T):
-                self.alt[eid][0, lni] += loss.sum()
+                self[eid][0, lni] += loss.sum()
             # this is the slow part, if aggregate_by is given
             for asset, idx, losses in zip(assets, idxs, out[ln]):
                 for eid, loss in zip(eids, losses):
                     if loss:
-                        self.alt[eid][idx, lni] += loss
+                        self[eid][idx, lni] += loss
 
 
 # must have attribute .outputs and method .compute(asset, losses, loss_type)
