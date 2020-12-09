@@ -1457,8 +1457,12 @@ class LossAggregator(object):
     A class to aggregate losses.
 
     :param aggkey: a dictionary tuple -> integer
-    :param loss_type: a list of loss types
+    :param loss_types: a list of primary loss types
     :param sec_losses: a list of SecondaryLosses (can be empty)
+
+    Works by populating a dictionary of matrices of shape (K, L') .alt,
+    with K the number of aggregation keys and L' the number of primary
+    loss types plus secondary loss types.
     """
     alt = None  # set by the ebrisk calculator
 
