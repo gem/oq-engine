@@ -57,8 +57,11 @@ disaggregation matrix will be reduced by 100 times.
 ### What is the relation between sources, ruptures, events and realizations?
 
 A single rupture can produce multiple seismic events during the
-investigation time. In the engine a rupture is uniquely identified by
-a rupture ID, a.k.a. `serial`, which is a 32 bit positive integer.
+investigation time. How many depends on the number of stochastic event sets,
+on the rupture occurrence rate and on the `ses_seed` parameters, as
+[explained here](https://docs.openquake.org/oq-engine/advanced/rupture-sampling.html).
+In the engine a rupture is uniquely identified by
+a rupture ID, which is a 32 bit positive integer.
 Starting from engine 3.7, seismic events are uniquely identified by an
 event ID, which is a 32 bit positive integer. The relation
 between event ID and rupture ID is given encoded in the `events` table
