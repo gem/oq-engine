@@ -321,8 +321,8 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         if ('ps_grid_spacing' in names_vals and
                 'pointsource_distance' not in names_vals):
-            self.pointsource_distance = valid.MagDepDistance.new(
-                    names_vals['ps_grid_spacing'])
+            raise InvalidFile('%s: ps_grid_spacing requires setting a '
+                              'pointsource_distance!' % self.inputs['job_ini'])
 
         self._risk_files = get_risk_files(self.inputs)
 
