@@ -49,11 +49,11 @@ the stochastic seed; if we set
 >>> import numpy.random
 >>> numpy.random.seed(42)
 
-then we will have
+then we will have (for investigation_time=1)
 
->>> numpy.random.poisson(rate1 * num_ses)
+>>> numpy.random.poisson(rate1 * num_ses * 1)
 8966
->>> numpy.random.poisson(rate2 * num_ses)
+>>> numpy.random.poisson(rate2 * num_ses * 1)
 921
 
 These are the number of occurrences of each rupture in the effective
