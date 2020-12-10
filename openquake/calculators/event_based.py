@@ -138,6 +138,10 @@ class EventBasedCalculator(base.HazardCalculator):
         mon = self.monitor('saving ruptures')
         self.nruptures = 0
         for dic in smap:
+            # NB: dic should be a dictionary, but when the calculation dies
+            # for an OOM it can become None, thus giving a very confusing error
+            if dic is None:
+                raise MemoryError('You ran out of memory!')
             rup_array = dic['rup_array']
             if len(rup_array) == 0:
                 continue
