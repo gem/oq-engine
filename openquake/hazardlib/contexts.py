@@ -179,7 +179,6 @@ class ContextMaker(object):
         param = param or {}
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
-        self.split_sources = param.get('split_sources', True)
         self.collapse_level = param.get('collapse_level', False)
         self.trt = trt
         self.gsims = gsims
@@ -593,14 +592,9 @@ class PmapMaker(object):
 
     def _make_src_indep(self):
         # sources with the same ID
-        if self.fewsites:
-            src_sites = [(src, self.srcfilter.sitecol) for src in self.group]
-        elif self.split_sources:
-            src_sites = self.srcfilter.split(self.group)
-        else:
-            src_sites = ((src, self.srcfilter.sitecol.filtered(idx))
-                         for src, idx in self.srcfilter.filter(self.group))
-        for src, sites in src_sites:
+        for src, sites in self.srcfilter.split(self.group):
+            if self.fewsites:
+                sites = sites.complete
             t0 = time.time()
             self.numctxs = 0
             self.numsites = 0
