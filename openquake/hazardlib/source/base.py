@@ -101,7 +101,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     def sample_ruptures(self, eff_num_ses, ses_seed):
         """
         :param eff_num_ses: number of stochastic event sets * number of samples
-        :yields: pairs (rupture, num_occurrences[num_samples])
+        :yields: triples (rupture, et_id, num_occurrences)
         """
         seed = self.serial(ses_seed)
         numpy.random.seed(seed)
