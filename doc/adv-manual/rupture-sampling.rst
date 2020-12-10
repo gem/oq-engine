@@ -27,7 +27,7 @@ As an example, we will consider the following point source:
 
 The source here is particularly simple, with only one
 seismogenic depth and one nodal plane. It generates two ruptures,
-because with a `width_of_mfd_bin of 1 there are only two magnitudes in
+because with a ``width_of_mfd_bin`` of 1 there are only two magnitudes in
 the range from 5 to 7:
 
 >>> [(mag1, rate1), (mag2, rate2)] = src.get_annual_occurrence_rates()
@@ -46,14 +46,14 @@ occur around 9000 times and the second rupture (the one with magnitude
 6.5) to occur around 900 times. Clearly the exact numbers will depend on
 the stochastic seed; if we set
 
->>> import numpy.random as r
->>> r.seed(42)
+>>> import numpy.random
+>>> numpy.random.seed(42)
 
 then we will have
 
->>> r.poisson(rate1 * num_ses)
+>>> numpy.random.poisson(rate1 * num_ses)
 8966
->>> r.poisson(rate2 * num_ses)
+>>> numpy.random.poisson(rate2 * num_ses)
 921
 
 These are the number of occurrences of each rupture in the effective
@@ -70,7 +70,7 @@ rupture and ~9% of the events associated to the second rupture.
 Since the details of the seed algorithm changes at each release of
 the engine, if you run an event based calculation with the same
 parameters you will not get exactly the same number of events,
-but something very close. After running the calculation inside
+but something close. After running the calculation inside
 the datastore, in the ``ruptures`` dataset you will find the two
 ruptures, their occurrence rates and their integer number of
 occurrences (``n_occ``). If the effective investigation time is large
@@ -84,7 +84,7 @@ between the expected number of occurrences and ``n_occ``, as well as a
 strong seed dependency.
 
 It is important to notice than in order to determine the effective
-investigation time te engine takes into account also the logic tree
+investigation time the engine takes into account also the logic tree
 and the correct formula to use is:
 
 ``eff_investigation_time = investigation_time * num_ses * logic_tree_size``
