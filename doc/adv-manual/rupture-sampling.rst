@@ -69,16 +69,32 @@ parameters you will not get exactly the same number of events,
 but something very close. After running the calculation inside
 the datastore, in the ``ruptures`` dataset you will find the two
 ruptures, their occurrence rates and their integer number of
-occurrences (``n_occ`). If the effective investigation time is large
+occurrences (``n_occ``). If the effective investigation time is large
 enough the relation
 
-  ``n_occ ~ occurrence_rate * investigation_time * num_ses``
+  ``n_occ ~ occurrence_rate * eff_investigation_time``
 
 will hold. If the effective investigation time is not large enough, or the
 occurrence rate is extremely small, then there will be big differences
 between the expected number of occurrences and ``n_occ``, as well as a
 strong seed dependency.
 
-Users wanting to know the nitty-gritty details should look at the code,
-inside hazardlib/source/base.py, to the method
-``src.sample_ruptures(eff_num_ses, ses_seed)``.
+It is important to notice than in order to determine the effective
+investigation time te engine takes into account also the logic tree
+and the correct formula to use is:
+
+``eff_investigation_time = investigation_time * num_ses * logic_tree_size``
+
+The ``logic_tree_size`` is equal to the parameter
+``number_of_logic_tree_samples`` if it is nonzero; otherwise it is
+equal to the number of paths in the full logic tree.
+
+Just to be concrete, if you run a calculation with the same parameters
+as described before, but with two GMPEs instead of one (and
+``number_of_logic_tree_samples=0``), then the size of the logic tree will be
+2: you should expected to get twice the number of events
+and twice the number of occurrences.
+
+Users wanting to know the nitty-gritty details
+should look at the code, inside hazardlib/source/base.py, to the
+method ``src.sample_ruptures(eff_num_ses, ses_seed)``.
