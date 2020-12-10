@@ -11,11 +11,9 @@ jobs:
     strategy:
       matrix:
         distro:
-          - centos8
           - centos7
           - ubuntu1804
           - ubuntu2004
-          - debian10
     env:
       working-directory: ./ansible/playbook
 
