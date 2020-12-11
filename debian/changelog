@@ -1,6 +1,9 @@
+  [Michele Simionato]
+  * Documented `oq to_nrml`
+
   [Claudia Mascandola]
   * Added the Lanzano et al. (2019) GMPE
-  
+
   [Michele Simionato]
   * Honored `minimum_asset_loss` also in the fully aggregated loss table,
     not only in the partially aggregated loss tables and average losses
