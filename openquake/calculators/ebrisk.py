@@ -184,6 +184,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 InsuredLosses(self.policy_name, self.policy_dict))
         self.aggkey, attrs = get_aggkey_attrs(
             self.assetcol.tagcol, oq.aggregate_by)
+        logging.info('Building %d event loss table(s)', len(self.aggkey))
         self.param['elt'] = elt = EventLossTable(
             self.aggkey, oq.loss_dt().names, sec_losses)
         self.param['ses_ratio'] = oq.ses_ratio
