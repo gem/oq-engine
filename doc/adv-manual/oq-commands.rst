@@ -255,12 +255,12 @@ For instance
 
 ``$ oq nrml_to gpkg source_model.xml -o source_model.gpkg``
 
-will convert the sources in .gpkg format and
+will convert the sources in .gpkg format while
 
 ``$ oq nrml_to csv source_model.xml -o source_model.csv``
 
-will convert the sources in /csv format. Both are fully supported by QGIS.
-The CSV format has the advantage of being visible and editable very simply;
+will convert the sources in .csv format. Both are fully supported by QGIS.
+The CSV format has the advantage of being transparent and easily editable;
 it also can be imported in a geospatial database like Postgres, if needed.
 
 prepare_site_model
