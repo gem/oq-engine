@@ -396,7 +396,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     multi = kw.pop('multi', None)
     loglvl = getattr(logging, log_level.upper())
     jobs = create_jobs(job_inis, loglvl, kw)  # inizialize the logs
-    if 'hazard_calculation_id' in kw:
+    if kw.get('hazard_calculation_id'):
         hc_id = int(kw['hazard_calculation_id'])
     else:
         hc_id = None
@@ -404,11 +404,12 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         job_id = job['_job_id']
         with logs.handle(job_id, log_level, log_file):
             oqparam = readinput.get_oqparam(job)
-        logs.dbcmd('update_job', job_id,
-                   dict(calculation_mode=oqparam.calculation_mode,
-                        description=oqparam.description,
-                        user_name=username,
-                        hazard_calculation_id=hc_id))
+        dic = dict(calculation_mode=oqparam.calculation_mode,
+                   description=oqparam.description,
+                   user_name=username, is_running=1)
+        if hc_id:
+            dic['hazard_calculation_id'] = hc_id
+        logs.dbcmd('update_job', job_id, dic)
         if (not jobparams and not multi and 'hazard_calculation_id' not in kw
                 and 'sensitivity_analysis' not in job):
             hc_id = job_id

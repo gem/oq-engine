@@ -66,7 +66,8 @@ class EngineServerTestCase(unittest.TestCase):
         resp = cls.c.get('/v1/calc/%s' % path, data,
                          HTTP_HOST='127.0.0.1')
         if hasattr(resp, 'content'):
-            assert resp.content, 'No content from /v1/calc/%s' % path
+            assert resp.content, (
+                'No content from http://localhost:8800/v1/calc/%s' % path)
             js = resp.content.decode('utf8')
         else:
             js = bytes(loadnpz(resp.streaming_content)['json'])
@@ -91,15 +92,15 @@ class EngineServerTestCase(unittest.TestCase):
     def wait(cls):
         # wait until all calculations stop
         for i in range(40):  # 20 seconds of timeout
-            time.sleep(0.5)
+            time.sleep(2)
             running_calcs = cls.get('list', is_running='true')
+            print(running_calcs)
             if not running_calcs:
                 return
         # to avoid issues on Jenkins
         raise unittest.SkipTest('Timeout waiting for %s' % running_calcs)
 
     def postzip(self, archive):
-        config.distribution['log_level'] = 'warning'
         with open(os.path.join(self.datadir, archive), 'rb') as a:
             resp = self.post('run', dict(archive=a))
         try:

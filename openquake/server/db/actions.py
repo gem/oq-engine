@@ -98,7 +98,7 @@ def create_job(db, datadir):
         the job ID
     """
     calc_id = get_calc_id(db, datadir) + 1
-    job = dict(id=calc_id, is_running=1, description='just created',
+    job = dict(id=calc_id, is_running=0, description='just created',
                user_name=getpass.getuser(), calculation_mode='to be set',
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     return db('INSERT INTO job (?S) VALUES (?X)',
