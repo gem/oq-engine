@@ -77,23 +77,24 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, reuse_input,
     """
     Run both hazard and risk, one after the other
     """
-    hcalc = base.calculators(readinput.get_oqparam(job_haz), calc_id)
-    hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
-              exports=exports, **params)
+    oq = readinput.get_oqparam(job_haz, kw=params)
+    hcalc = base.calculators(oq, calc_id)
+    hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
     hcalc.datastore.close()
     hc_id = hcalc.datastore.calc_id
     rcalc_id = logs.init(level=getattr(logging, loglevel.upper()))
-    oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
+    params['hazard_calculation_id'] = str(hc_id)
+    oq = readinput.get_oqparam(job_risk, kw=params)
+    rcalc = base.calculators(oq, rcalc_id)
     if reuse_input:  # enable caching
         oq.cachedir = datastore.get_datadir()
-    rcalc = base.calculators(oq, rcalc_id)
-    rcalc.run(pdb=pdb, exports=exports, **params)
+    rcalc.run(pdb=pdb, exports=exports)
     return rcalc
 
 
 # run with processpool unless OQ_DISTRIBUTE is set to something else
 def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
-         hc, exports, params):
+         exports, params):
     global calc_path
     assert len(job_inis) in (1, 2), job_inis
     # set the logs first of all
@@ -104,27 +105,24 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
         if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
             os.environ['OQ_DISTRIBUTE'] = 'processpool'
         if len(job_inis) == 1:  # run hazard or risk
-            if hc:
-                hc_id = hc[0]
-                rlz_ids = hc[1:]
+            if 'hazard_calculation_id' in params:
+                hc_id = int(params['hazard_calculation_id'])
             else:
                 hc_id = None
-                rlz_ids = ()
-            oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
-            vars(oqparam).update(params)  # params already checked
-            if reuse_input:  # enable caching
-                oqparam.cachedir = datastore.get_datadir()
             if hc_id and hc_id < 0:  # interpret negative calculation ids
                 calc_ids = datastore.get_calc_ids()
                 try:
-                    hc_id = calc_ids[hc_id]
+                    params['hazard_calculation_id'] = str(calc_ids[hc_id])
                 except IndexError:
                     raise SystemExit(
                         'There are %d old calculations, cannot '
                         'retrieve the %s' % (len(calc_ids), hc_id))
+            oqparam = readinput.get_oqparam(job_inis[0], kw=params)
             calc = base.calculators(oqparam, calc_id)
+            if reuse_input:  # enable caching
+                oqparam.cachedir = datastore.get_datadir()
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
-                     exports=exports, rlz_ids=rlz_ids)
+                     exports=exports)
         else:  # run hazard + risk
             calc = run2(
                 job_inis[0], job_inis[1], calc_id, concurrent_tasks, pdb,
@@ -146,10 +144,11 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
     """
     dbserver.ensure_on()
     if param:
-        params = oqvalidation.OqParam.check(
-            dict(p.split('=', 1) for p in param.split(',')))
+        params = dict(p.split('=', 1) for p in param.split(','))
     else:
         params = {}
+    if hc:
+        params['hazard_calculation_id'] = str(hc)
     if slowest:
         prof = cProfile.Profile()
         stmt = ('_run(job_ini, concurrent_tasks, calc_id, pdb, reuse_input, '
@@ -162,7 +161,7 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
         return
     try:
         return _run(job_ini, concurrent_tasks, calc_id, pdb,
-                    reuse_input, loglevel, hc, exports, params)
+                    reuse_input, loglevel, exports, params)
     finally:
         parallel.Starmap.shutdown()
 
@@ -170,7 +169,7 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
 run.arg('job_ini', 'calculation configuration file '
         '(or files, space-separated)', nargs='+')
 run.opt('slowest', 'profile and show the slowest operations', type=int)
-run.opt('hc', 'previous calculation ID', type=valid.hazard_id)
+run.opt('hc', 'previous calculation ID', type=int)
 run.opt('param', 'override parameter with the syntax NAME=VALUE,...')
 run.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
         type=int)

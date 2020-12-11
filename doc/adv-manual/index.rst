@@ -20,6 +20,7 @@ Contents:
    risk
    effective-realizations
    sampling
+   rupture-sampling
    event-based-with-large-logic-tree
    site-specific
    extract-api

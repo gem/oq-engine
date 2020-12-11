@@ -30,7 +30,7 @@ import numpy
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
-from openquake.baselib.general import CallableDict, cached_property
+from openquake.baselib.general import CallableDict, AccumDict
 from openquake.hazardlib.stats import compute_stats2
 
 F64 = numpy.float64
@@ -1452,76 +1452,97 @@ class LossCurvesMapsBuilder(object):
         return curves
 
 
-class LossesByAsset(object):
+class EventLossTable(AccumDict):
     """
-    A class to compute losses by asset.
+    A dictionary of matrices of shape (K, L'), with K the number of aggregation
+    keys and L' the total number of loss types (primary + secondary).
 
-    :param assetcol: an AssetCollection instance
-    :param policy_name: the name of the policy field (can be empty)
-    :param policy_dict: dict loss_type -> array(deduct, limit) (can be empty)
+    :param aggkey: a dictionary tuple -> integer
+    :param loss_types: a list of primary loss types
+    :param sec_losses: a list of SecondaryLosses (can be empty)
     """
     alt = None  # set by the ebrisk calculator
-    losses_by_E = None  # set by the ebrisk calculator
 
-    @cached_property
-    def losses_by_A(self):
-        """
-        :returns: an array of shape (A, L)
-        """
-        return numpy.zeros((self.A, len(self.loss_names)), F32)
+    def __init__(self, aggkey, loss_types, sec_losses=()):
+        self.aggkey = aggkey
+        self.loss_names = list(loss_types)
+        self.sec_losses = sec_losses
+        for sec_loss in sec_losses:
+            self.loss_names.extend(sec_loss.outputs)
+        KL = len(aggkey), len(self.loss_names)
+        self.accum = numpy.zeros(KL, F32)
 
-    def __init__(self, assetcol, loss_names, policy_name='', policy_dict={}):
-        self.A = len(assetcol)
+    def aggregate(self, out, minimum_loss, aggby):
+        """
+        Populate the event loss table
+        """
+        eids = out.eids
+        assets = out.assets
+
+        # initialize secondary losses outputs, if any
+        for sec_loss in self.sec_losses:
+            for k in sec_loss.outputs:
+                setattr(out, k, numpy.zeros((len(assets), len(eids))))
+
+        # populate outputs
+        idxs = []
+        for a, asset in enumerate(out.assets):
+            if aggby:
+                idxs.append(self.aggkey[tuple(asset[aggby])])
+            lt_losses = []
+            for lti, lt in enumerate(out.loss_types):
+                avalue = (asset['occupants_None'] if lt == 'occupants'
+                          else asset['value-' + lt])
+                ls = out[lt][a]
+                ls *= avalue
+                if minimum_loss[lt]:
+                    ls[ls < minimum_loss[lt]] = 0
+                lt_losses.append((lt, ls))
+
+            # secondary outputs, if any
+            for sec_loss in self.sec_losses:
+                for k, o in sec_loss.compute(asset, lt_losses, eids).items():
+                    out[k][a] = o
+
+        # aggregation
+        for lni, ln in enumerate(self.loss_names):
+            for eid, loss in zip(eids, out[ln].T):
+                self[eid][0, lni] += loss.sum()
+            # this is the slow part, if aggregate_by is given
+            for asset, idx, losses in zip(assets, idxs, out[ln]):
+                for eid, loss in zip(eids, losses):
+                    if loss:
+                        self[eid][idx, lni] += loss
+
+
+# must have attribute .outputs and method .compute(asset, losses, loss_type)
+# returning a dictionary sec_key -> sec_losses
+class InsuredLosses(object):
+    """
+    There is an insured loss for each loss type in the policy dictionary.
+    """
+    def __init__(self, policy_name, policy_dict):
         self.policy_name = policy_name
         self.policy_dict = policy_dict
-        self.loss_names = loss_names
-        self.lni = {ln: i for i, ln in enumerate(loss_names)}
+        self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def gen_losses(self, out):
+    def compute(self, asset, lt_losses, eids):
         """
-        :yields: pairs (loss_name_index, losses array of shape (A, E))
+        :param asset: an asset record
+        :param lt_losses: a list of pairs (loss_type, E losses)
+        :param eids: an array of E event IDs
+        :returns: a dictionary loss_type_ins -> E insured losses
         """
-        for lt in out.loss_types:
-            lratios = out[lt]  # shape (A, E)
-            losses = numpy.zeros_like(lratios)
-            avalues = (out.assets['occupants_None'] if lt == 'occupants'
-                       else out.assets['value-' + lt])
-            for a, avalue in enumerate(avalues):
-                losses[a] = avalue * lratios[a]
-            yield self.lni[lt], losses  # shape (A, E)
+        res = {}
+        policy_idx = asset[self.policy_name]
+        for lt, losses in lt_losses:
             if lt in self.policy_dict:
-                ins_losses = numpy.zeros_like(lratios)
-                for a, asset in enumerate(out.assets):
-                    ded, lim = self.policy_dict[lt][asset[self.policy_name]]
-                    ins_losses[a] = insured_losses(
-                        losses[a], ded * avalues[a], lim * avalues[a])
-                yield self.lni[lt + '_ins'], ins_losses
-
-    def aggregate(self, out, eids, minimum_loss, tagidxs, ws):
-        """
-        Populate .losses_by_A, .losses_by_E and .alt
-        """
-        numlosses = numpy.zeros(2, int)
-        for lni, losses in self.gen_losses(out):
-            if ws is not None:  # compute avg_losses, really fast
-                aids = out.assets['ordinal']
-                self.losses_by_A[aids, lni] += losses @ ws
-            for eid, loss in zip(eids, losses.sum(axis=0)):
-                self.losses_by_E[eid][lni] += loss
-            if tagidxs is not None:
-                # this is the slow part, depending on minimum_loss
-                for a, asset in enumerate(out.assets):
-                    ls = losses[a]
-                    ok = ls > minimum_loss[lni]
-                    if not ok.sum():
-                        continue
-                    idx = ','.join(map(str, tagidxs[a])) + ','
-                    kept = 0
-                    for loss, eid in zip(ls[ok], out.eids[ok]):
-                        self.alt[idx][eid][lni] += loss
-                        kept += 1
-                    numlosses += numpy.array([kept, len(losses[a])])
-        return numlosses
+                avalue = (asset['occupants_None'] if lt == 'occupants'
+                          else asset['value-' + lt])
+                ded, lim = self.policy_dict[lt][policy_idx]
+                res[lt + '_ins'] = insured_losses(
+                    losses, ded * avalue, lim * avalue)
+        return res
 
 
 # ####################### Consequences ##################################### #

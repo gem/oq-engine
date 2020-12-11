@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
 import time
-import copy
 import psutil
 import pprint
 import logging
@@ -36,7 +35,7 @@ from openquake.hazardlib.source.point import (
     PointSource, grid_point_sources, msr_name)
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.contexts import ContextMaker, get_effect
-from openquake.hazardlib.calc.filters import split_source
+from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.commonlib import calc, util, readinput
@@ -78,12 +77,12 @@ def run_preclassical(csm, oqparam, h5):
     :param oqparam: the parameters in job.ini file
     :param h5: a DataStore instance
     """
-    logging.info('Filtering with %s', csm.srcfilter.sitecol)
+    logging.info('Sending %s', csm.sitecol)
 
     # do nothing for atomic sources except counting the ruptures
     for src in csm.get_sources(atomic=True):
         src.num_ruptures = src.count_ruptures()
-        src.nsites = len(csm.srcfilter.sitecol)
+        src.nsites = len(csm.sitecol)
 
     # run preclassical for non-atomic sources
     sources_by_grp = groupby(
@@ -93,10 +92,12 @@ def run_preclassical(csm, oqparam, h5):
                  pointsource_distance=oqparam.pointsource_distance,
                  ps_grid_spacing=oqparam.ps_grid_spacing,
                  split_sources=oqparam.split_sources)
-
+    srcfilter = SourceFilter(
+        csm.sitecol.reduce(10000) if csm.sitecol else None,
+        oqparam.maximum_distance)
     res = parallel.Starmap(
         preclassical,
-        ((srcs, csm.srcfilter, param) for srcs in sources_by_grp.values()),
+        ((srcs, srcfilter, param) for srcs in sources_by_grp.values()),
         h5=h5, distribute=None if len(sources_by_grp) > 1 else 'no').reduce()
 
     if res and res['before'] != res['after']:
@@ -262,10 +263,8 @@ class ClassicalCalculator(base.HazardCalculator):
             acc[extra['source_id'].split(':')[0]] = pmap
         self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
-            if pmap and grp_id in acc:
+            if pmap:
                 acc[grp_id] |= pmap
-            else:
-                acc[grp_id] = copy.copy(pmap)
             # store rup_data if there are few sites
             if self.few_sites:
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
@@ -274,9 +273,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def acc0(self):
         """
-        Initial accumulator, a dict et_id -> ProbabilityMap(L, G)
+        Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
         """
-        zd = AccumDict()
+        zd = AccumDict()  # populated in get_args
         params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
                   'nsites', 'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
@@ -351,6 +350,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             full_lt = self.csm.full_lt
             et_ids = self.csm.get_et_ids()
+        self.grp_ids = numpy.arange(len(et_ids))
         rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(et_ids)
         rlzs_by_g = []
         for rlzs_by_gsim in rlzs_by_gsim_list:
@@ -397,10 +397,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
 
-        smap = parallel.Starmap(classical, self.get_args(),
+        acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
+        smap = parallel.Starmap(classical, self.get_args(acc0),
                                 h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.src_filter())
-        acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
@@ -489,17 +489,22 @@ class ClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def get_args(self):
+    def get_args(self, acc0):
         """
         :returns: the outputs to pass to the Starmap, ordered by weight
         """
         oq = self.oqparam
+        L = len(oq.imtls.array)
+        sids = self.sitecol.complete.sids
         allargs = []
         src_groups = self.csm.src_groups
         tot_weight = 0
         et_ids = self.datastore['et_ids'][:]
         rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(et_ids)
+        grp_id = 0
         for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
+            acc0[grp_id] = ProbabilityMap.build(L, len(rlzs_by_gsim), sids)
+            grp_id += 1
             for src in sg:
                 src.ngsims = len(rlzs_by_gsim)
                 tot_weight += src.weight
@@ -593,14 +598,13 @@ class ClassicalCalculator(base.HazardCalculator):
                     rlzs_by_gsim = rlzs_by_gsim_list[pmap.grp_id]
                     self.datastore['disagg_by_src'][..., srcid[key]] = (
                         pgetter.get_hcurves(pmap, rlzs_by_gsim))
-                elif pmap:  # pmap can be missing if the group is filtered away
+                else:
                     # key is the group ID
                     trt = self.full_lt.trt_by_et[et_ids[key][0]]
                     # avoid saving PoEs == 1
                     base.fix_ones(pmap)
-                    sids = sorted(pmap)
-                    arr = numpy.array([pmap[sid].array for sid in sids])
-                    self.datastore['_poes'][sids, :, slice_by_g[key]] = arr
+                    arr = numpy.array([pmap[sid].array for sid in pmap])
+                    self.datastore['_poes'][:, :, slice_by_g[key]] = arr
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
@@ -666,6 +670,15 @@ class ClassicalCalculator(base.HazardCalculator):
         parallel.Starmap(
             build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
+        task_info = self.datastore.read_df('task_info', 'taskname')
+        try:
+            dur = task_info.loc[b'classical'].duration
+        except KeyError:  # no data
+            pass
+        else:
+            slow_tasks = len(dur[dur > 3 * dur.mean()])
+            if slow_tasks:
+                logging.info('There were %d slow tasks', slow_tasks)
         if 'hmaps-stats' in self.datastore:
             hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
             maxhaz = hmaps.max(axis=(0, 1, 3))

@@ -86,7 +86,7 @@ def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
 # ######################## rupture calculator ############################ #
 
 rupture_dt = numpy.dtype([
-    ('id', U32), ('serial', U32), ('source_id', '<S16'), ('et_id', U16),
+    ('id', U32), ('seed', U32), ('source_id', '<S16'), ('et_id', U16),
     ('code', U8), ('n_occ', U32), ('mag', F32), ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
@@ -124,7 +124,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         shapes = U32(shapes)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
-        rec['serial'] = rup.rup_id
+        rec['seed'] = rup.rup_id
         n = len(points) // 3
         lons = points[0:n]
         lats = points[n:2*n]

@@ -236,31 +236,6 @@ class Choices(Choice):
 export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz')
 
 
-def hazard_id(value):
-    """
-    >>> hazard_id('')
-    ()
-    >>> hazard_id('-1')
-    (-1,)
-    >>> hazard_id('42')
-    (42,)
-    >>> hazard_id('42,3')
-    (42, 3)
-    >>> hazard_id('42,3,4')
-    (42, 3, 4)
-    >>> hazard_id('42:3')
-    Traceback (most recent call last):
-       ...
-    ValueError: Invalid hazard_id '42:3'
-    """
-    if not value:
-        return ()
-    try:
-        return tuple(map(int, value.split(',')))
-    except Exception:
-        raise ValueError('Invalid hazard_id %r' % value)
-
-
 class Regex(object):
     """
     Compare the value with the given regex

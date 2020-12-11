@@ -1,4 +1,11 @@
+  [Claudia Mascandola]
+  * Added the Lanzano et al. (2019) GMPE
+  
   [Michele Simionato]
+  * Honored `minimum_asset_loss` also in the fully aggregated loss table,
+    not only in the partially aggregated loss tables and average losses
+  * Bug fixed: the log was disappearing in presence of an unrecognized
+    variable in the job.ini
   * Implemented `minimum_asset_loss` in scenario_risk for consistency
     with the `ebrisk` calculator
   * Added a command `oq plot gridded_sources?`

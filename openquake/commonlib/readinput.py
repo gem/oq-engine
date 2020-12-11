@@ -19,7 +19,6 @@ import os
 import re
 import ast
 import csv
-import time
 import copy
 import json
 import zlib
@@ -207,7 +206,9 @@ def _update(params, items, base_path):
         params['pointsource_distance'] = '0'
 
 
-def get_params(job_ini, **kw):
+# NB: this function must NOT log, since it is called when the logging
+# is not configured yet
+def get_params(job_ini, kw={}):
     """
     Parse a .ini file or a .zip archive
 
@@ -249,7 +250,7 @@ def get_params(job_ini, **kw):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
+def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -260,8 +261,8 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
     :param calculators:
         Sequence of calculator names (optional) used to restrict the
         valid choices for `calculation_mode`
-    :param hc_id:
-        Not None only when called from a post calculation
+    :param kw:
+        Dictionary of strings to override the job parameters
     :param validate:
         Flag. By default it is true and the parameters are validated
     :returns:
@@ -278,9 +279,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
         calculators or base.calculators)
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
-        job_ini = get_params(os.path.join(basedir, job_ini))
-    if hc_id:
-        job_ini.update(hazard_calculation_id=str(hc_id))
+        job_ini = get_params(os.path.join(basedir, job_ini), kw)
     re = os.environ.get('OQ_REDUCE')  # debugging facility
     if re:
         # reduce the imtls to the first imt
@@ -289,7 +288,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
         # reduce the ses by a factor of `re`
         # set save_disk_space = true
         os.environ['OQ_SAMPLE_SITES'] = str(1 / float(re))
-        job_ini['number_of_logic_tree_samples'] = 1
+        job_ini['number_of_logic_tree_samples'] = '1'
         ses = job_ini.get('ses_per_logic_tree_path')
         if ses:
             ses = str(int(numpy.ceil(int(ses) / float(re))))
@@ -300,7 +299,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, hc_id=None, validate=1):
             imt = next(iter(imtls))
             job_ini['intensity_measure_types_and_levels'] = repr(
                 {imt: imtls[imt]})
-        job_ini['save_disk_space'] = True
+        job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
     if validate and '_job_id' not in job_ini:
         oqparam.check_source_model()
@@ -601,7 +600,7 @@ def get_ruptures(fname_csv):
         mesh = F32(json.loads(row['mesh']))
         s1, s2 = mesh.shape[1:]
         rec = numpy.zeros(1, rupture_dt)[0]
-        rec['serial'] = row['serial']
+        rec['seed'] = row['seed']
         rec['minlon'] = minlon = mesh[0].min()
         rec['minlat'] = minlat = mesh[1].min()
         rec['maxlon'] = maxlon = mesh[0].max()
@@ -609,7 +608,7 @@ def get_ruptures(fname_csv):
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
         rate = dic.get('occurrence_rate', numpy.nan)
-        tup = (u, row['serial'], 'no-source', trts.index(row['trt']),
+        tup = (u, row['seed'], 'no-source', trts.index(row['trt']),
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, 0, 0)
         rups.append(tup)
@@ -745,14 +744,7 @@ def _check_csm(csm, oqparam, h5):
 
     # build a smart SourceFilter
     sitecol = get_site_collection(oqparam, h5)
-    if sitecol is None:
-        fewsites = None
-    elif len(sitecol) > 10_000:
-        # performance hack: use 1 site over 10 when weighting the sources
-        fewsites = sitecol.filter(sitecol.sids % 10 == 0)
-    else:  # short enough sitecol
-        fewsites = sitecol
-    srcfilter = SourceFilter(fewsites, oqparam.maximum_distance)
+    srcfilter = SourceFilter(sitecol, oqparam.maximum_distance)
 
     if sitecol:  # missing in test_case_1_ruptures
         logging.info('Checking the sources bounding box')
@@ -781,7 +773,7 @@ def _check_csm(csm, oqparam, h5):
         if len(sids) == 0:
             raise RuntimeError('All sources were discarded!?')
 
-    csm.srcfilter = srcfilter
+    csm.sitecol = sitecol
 
 
 def get_composite_source_model(oqparam, h5=None):
@@ -1188,7 +1180,7 @@ def get_checksum32(oqparam, h5=None):
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
                    'width_of_mfd_bin', 'area_source_discretization',
                    'random_seed', 'number_of_logic_tree_samples',
-                   'minimum_magnitude'):
+                   'minimum_magnitude', 'source_id'):
             hazard_params.append('%s = %s' % (key, val))
     data = '\n'.join(hazard_params).encode('utf8')
     checksum = zlib.adler32(data, checksum)

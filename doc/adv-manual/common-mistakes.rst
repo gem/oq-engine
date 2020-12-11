@@ -93,9 +93,9 @@ in the job.ini; you can determine the distance as follows:
 >>> md('TRT', 6.5)
 150.0
 >>> md('TRT', 7.5)
-250
+250.0
 >>> md('TRT', 8.5)
-300
+300.0
 
 Intensity measure types and levels
 ----------------------------------

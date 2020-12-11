@@ -236,6 +236,12 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         # is on the boundary i.e. out, (1, 1) is in
         self.assertEqual(len(reducedcol), 1)
 
+    def test_reduce(self):
+        col = SiteCollection(self.SITES)
+        self.assertEqual(len(col.reduce(1)), 1)
+        self.assertEqual(len(col.reduce(2)), 2)
+        self.assertEqual(len(col.reduce(3)), 2)
+
 
 class WithinBBoxTestCase(unittest.TestCase):
     # to understand this test case it is ESSENTIAL to plot sites and

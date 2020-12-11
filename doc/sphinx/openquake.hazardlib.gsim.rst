@@ -690,6 +690,14 @@ kotha_2020
     :undoc-members:
     :show-inheritance:
 
+lanzano_2019
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 lanzano_luzi_2019
 ----------------------------------------
 
