@@ -432,7 +432,7 @@ def get_eid_rlz(proxies, rlzs_by_gsim):
     """
     eid_rlz = []
     for rup in proxies:
-        ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
+        ebr = EBRupture(mock.Mock(rup_id=rup['seed']), rup['source_id'],
                         rup['et_id'], rup['n_occ'])
         for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
             for eid in eids:
@@ -495,7 +495,7 @@ class RuptureGetter(object):
             dic['occurrence_rate'] = rec['occurrence_rate']
             dic['et_id'] = rec['et_id']
             dic['n_occ'] = rec['n_occ']
-            dic['serial'] = rec['serial']
+            dic['seed'] = rec['seed']
             dic['mag'] = rec['mag']
             dic['srcid'] = rec['source_id']
         return dic
