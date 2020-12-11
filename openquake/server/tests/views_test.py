@@ -99,7 +99,6 @@ class EngineServerTestCase(unittest.TestCase):
         raise unittest.SkipTest('Timeout waiting for %s' % running_calcs)
 
     def postzip(self, archive):
-        config.distribution['log_level'] = 'warning'
         with open(os.path.join(self.datadir, archive), 'rb') as a:
             resp = self.post('run', dict(archive=a))
         try:
