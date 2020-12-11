@@ -185,6 +185,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.aggkey, attrs = get_aggkey_attrs(
             self.assetcol.tagcol, oq.aggregate_by)
         logging.info('Building %d event loss table(s)', len(self.aggkey))
+        if len(self.aggkey) > oq.max_num_loss_curves:
+            logging.warning('Too many aggregations, the performance will be '
+                            'bad on a cluster!')
         self.param['elt'] = elt = EventLossTable(
             self.aggkey, oq.loss_dt().names, sec_losses)
         self.param['ses_ratio'] = oq.ses_ratio
