@@ -133,7 +133,7 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
         rupture = ParametricProbabilisticRupture(**kwargs)
         return rupture
 
-    def test_mearn_nearfault_distance_taper(self):
+    def test_mean_nearfault_distance_taper(self):
         rupture = self.make_rupture()
         site1 = Site(location=Point(27.9, 41), vs30=1200.,
                      vs30measured=True, z1pt0=2.36, z2pt5=2.)
