@@ -45,7 +45,7 @@ TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 pmf_dt = numpy.dtype([('prob', float), ('occ', U32)])
 events_dt = numpy.dtype([('id', U32), ('rup_id', U32), ('rlz_id', U16)])
-rupture_dt = numpy.dtype([('serial', U32),
+rupture_dt = numpy.dtype([('seed', U32),
                           ('mag', F32),
                           ('rake', F32),
                           ('lon', F32),
@@ -70,7 +70,7 @@ def to_csv_array(ruptures):
     arr = numpy.zeros(len(ruptures), rupture_dt)
     for rec, rup in zip(arr, ruptures):
         arrays = surface_to_arrays(rup.surface)  # shape (3, s1, s2)
-        rec['serial'] = rup.rup_id
+        rec['seed'] = rup.rup_id
         rec['mag'] = rup.mag
         rec['rake'] = rup.rake
         rec['lon'] = rup.hypocenter.x
@@ -155,7 +155,7 @@ def _get_rupture(rec, geom=None, trt=None):
 
     # build rupture
     rupture = object.__new__(rupture_cls)
-    rupture.rup_id = rec['serial']
+    rupture.rup_id = rec['seed']
     rupture.surface = surface
     rupture.mag = rec['mag']
     rupture.rake = rec['rake']
@@ -714,7 +714,7 @@ class EBRupture(object):
     @property
     def rup_id(self):
         """
-        Serial number of the rupture
+        Seed of the rupture
         """
         return self.rupture.rup_id
 

@@ -268,12 +268,12 @@ class RuptureImporter(object):
         Import an array of ruptures in the proper format
         """
         logging.info('Reordering the ruptures and storing the events')
-        # order the ruptures by serial
-        rup_array.sort(order='serial')
+        # order the ruptures by seed
+        rup_array.sort(order='seed')
         nr = len(rup_array)
-        serials, counts = numpy.unique(rup_array['serial'], return_counts=True)
-        if len(serials) != nr:
-            dupl = serials[counts > 1]
+        seeds, counts = numpy.unique(rup_array['seed'], return_counts=True)
+        if len(seeds) != nr:
+            dupl = seeds[counts > 1]
             logging.info('The following %d rupture seeds are duplicated: %s',
                          len(dupl), dupl)
         rup_array['geom_id'] = rup_array['id']
