@@ -9,7 +9,7 @@ name: macos_pyapp
 jobs:
 
   python_devel_catalina:
-    name: Catalina Install develop mode on Python 3.7 using current branch
+    name: Catalina Install develop mode on Python 3.7 
     runs-on: macos-latest
     steps:
       - name: Check out the codebase.
@@ -44,7 +44,7 @@ jobs:
             ./bin/run-demos.sh demos
 
   python3-8_devel_bigsur:
-    name: BigSur Install develop mode on Python 3.8 using current branch
+    name: BigSur Install develop mode on Python 3.8 
     runs-on: macos-11.0
     steps:
       - name: Check out the codebase.
