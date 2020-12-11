@@ -3,6 +3,8 @@ name: macos_pyapp
   push:
     branches:
       - macos
+  schedule:
+    - cron: "0 1 * * *"
 
 jobs:
 
