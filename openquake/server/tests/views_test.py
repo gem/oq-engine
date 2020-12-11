@@ -34,7 +34,6 @@ import tempfile
 import string
 import random
 from django.test import Client
-from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
@@ -91,10 +90,9 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def wait(cls):
         # wait until all calculations stop
-        for i in range(40):  # 20 seconds of timeout
-            time.sleep(2)
+        for i in range(30):  # 30 seconds of timeout
+            time.sleep(1)
             running_calcs = cls.get('list', is_running='true')
-            print(running_calcs)
             if not running_calcs:
                 return
         # to avoid issues on Jenkins
