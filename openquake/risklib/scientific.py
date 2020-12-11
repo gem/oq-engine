@@ -1488,7 +1488,8 @@ class EventLossTable(AccumDict):
         idxs = []
         for a, asset in enumerate(out.assets):
             if aggby:
-                idxs.append(self.aggkey[tuple(asset[aggby])])
+                tup = tuple(asset[f] for f in aggby)
+                idxs.append(self.aggkey[tup])
             lt_losses = []
             for lti, lt in enumerate(out.loss_types):
                 avalue = (asset['occupants_None'] if lt == 'occupants'
