@@ -13,11 +13,11 @@ jobs:
       - name: Check out the codebase.
         uses: actions/checkout@v2
       - name: Install pytest to use with oqengine
-        run: pip install pytest
+        run: pip3 install pytest
       - name: Install requirements files
-        run: pip install -r ./requirements-py37-macos.txt 
+        run: pip3 install -r ./requirements-py37-macos.txt 
       - name: Run Installation of oq-engine in devel mode with osgeo
-        run: pip install -e .[osgeo]
+        run: pip3 install -e .[osgeo]
       - name: Run dev tests
         run: |
             oq dbserver start &
@@ -42,11 +42,11 @@ jobs:
       - name: Check out the codebase.
         uses: actions/checkout@v2
       - name: Install pytest to use with oqengine
-        run: pip install pytest
+        run: pip3 install pytest
       - name: Install requirements files
-        run: pip install -r ./requirements-py38-macos.txt 
+        run: pip3 install -r ./requirements-py38-macos.txt 
       - name: Run Installation of oq-engine in devel mode with osgeo
-        run: pip install -e .[osgeo]
+        run: pip3 install -e .[osgeo]
       - name: Run dev tests
         run: |
             oq dbserver start &
