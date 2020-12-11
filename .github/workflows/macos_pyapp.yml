@@ -12,6 +12,10 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
       - name: check python3 version
         run: python3 --version
       - name: Install pytest to use with oqengine
@@ -43,6 +47,10 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
       - name: check python3 version
         run: python3 --version
       - name: Install pytest to use with oqengine
