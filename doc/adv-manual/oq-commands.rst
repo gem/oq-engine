@@ -12,19 +12,19 @@ to use them.
 
 You can see the full list of commands by running `oq help`::
 
-  $ oq help
-  usage: oq [--version]
-  {upgrade_nrml,checksum,run_server,webui,export,compare,plot_memory,to_shapefile,restore,show_attrs,dbserver,plot,shell,prepare_site_model,importcalc,show,reduce_sm,plot_pyro,reduce,extract,plot_losses,dump,purge,celery,abort,engine,reset,info,plot_ac,plot_sites,workers,tidy,to_hdf5,db,download_shakemap,run,from_shapefile,zip,plot_assets,check_input,help}
-           ...
-
-  positional arguments:
-  {upgrade_nrml,checksum,run_server,webui,export,compare,plot_memory,to_shapefile,restore,show_attrs,dbserver,plot,shell,prepare_site_model,importcalc,show,reduce_sm,plot_pyro,reduce,extract,plot_losses,dump,purge,celery,abort,engine,reset,info,plot_ac,plot_sites,workers,tidy,to_hdf5,db,download_shakemap,run,from_shapefile,zip,plot_assets,check_input,help}
-                        available subcommands; use oq help <subcmd>
-
-  optional arguments:
-  --version, -v         show program's version number and exit
-
-This is the output that you get at the present time (engine 3.6); depending
+   $ oq help
+   usage: oq [--version]
+             {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,recompute_losses,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot,help}
+             ...
+   
+   positional arguments:
+     {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,recompute_losses,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot,help}
+                           available subcommands; use oq help <subcmd>
+   
+   optional arguments:
+     --version, -v         show program's version number and exit
+   
+This is the output that you get at the present time (engine 3.11); depending
 on your version of the engine you may get a different output. As you see, there
 are several commands, like `purge`, `show_attrs`, `export`, `restore`, ...
 You can get information about each command with `oq help <command>`;
@@ -216,7 +216,7 @@ The engine provides several plotting commands. They are all
 experimental and subject to change. They will always be. The official
 way to plot the engine results is by using the QGIS plugin. Still,
 the `oq` plotting commands are useful for debugging purposes. Here I will
-describe only the `plot_assets` command, which allows to plot the
+describe the `plot_assets` command, which allows to plot the
 exposure used in a calculation together with the hazard sites::
 
   $ oq help plot_assets
@@ -232,6 +232,36 @@ exposure used in a calculation together with the hazard sites::
 
 This is particularly interesting when the hazard sites do not coincide
 with the asset locations, which is normal when gridding the exposure.
+
+Very often, it is interesting to plot the sources. While there is a
+primitive functionality for that in `oq plot`, we recommend to convert
+the sources into .gpkg format and use QGIS to plot them::
+
+  $ oq help nrml_to
+  usage: oq nrml_to [-h] [-o .] [-c] {csv,gpkg} fnames [fnames ...]
+  
+  Convert source models into CSV files or a geopackage.
+  
+  positional arguments:
+    {csv,gpkg}        csv or gpkg
+    fnames            source model files in XML
+  
+  optional arguments:
+    -h, --help        show this help message and exit
+    -o ., --outdir .  output directory
+    -c, --chatty      display sources in progress
+
+For instance
+
+``$ oq nrml_to gpkg source_model.xml -o source_model.gpkg``
+
+will convert the sources in .gpkg format and
+
+``$ oq nrml_to csv source_model.xml -o source_model.csv``
+
+will convert the sources in /csv format. Both are fully supported by QGIS.
+The CSV format has the advantage of being visible and editable very simply;
+it also can be imported in a geospatial database like Postgres, if needed.
 
 prepare_site_model
 ------------------
