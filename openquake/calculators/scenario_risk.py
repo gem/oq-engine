@@ -33,12 +33,6 @@ F64 = numpy.float64  # higher precision to avoid task order dependency
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
-def value(asset, loss_type):
-    if loss_type == 'occupants':
-        return asset['occupants_None']
-    return asset['value-' + loss_type]
-
-
 def ael_dt(loss_names, rlz=False):
     """
     :returns: (asset_id, event_id, loss) or (asset_id, event_id, loss)

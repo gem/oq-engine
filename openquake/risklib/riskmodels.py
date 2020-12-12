@@ -184,7 +184,7 @@ def get_values(loss_type, assets, time_event=None):
         a numpy array with the values for the given assets, depending on the
         loss_type.
     """
-    if loss_type == 'occupants':
+    if loss_type == 'occupants' and time_event:
         return assets['occupants_%s' % time_event]
     else:
         return assets['value-' + loss_type]

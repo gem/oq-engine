@@ -1492,8 +1492,7 @@ class EventLossTable(AccumDict):
         for a, asset in enumerate(out.assets):
             lt_losses = []
             for lti, lt in enumerate(out.loss_types):
-                avalue = (asset['occupants_None'] if lt == 'occupants'
-                          else asset['value-' + lt])
+                avalue = asset['value-' + lt]
                 ls = out[lt][a]
                 ls *= avalue
                 if minimum_loss[lt]:
@@ -1538,8 +1537,7 @@ class InsuredLosses(object):
         policy_idx = asset[self.policy_name]
         for lt, losses in lt_losses:
             if lt in self.policy_dict:
-                avalue = (asset['occupants_None'] if lt == 'occupants'
-                          else asset['value-' + lt])
+                avalue = asset['value-' + lt]
                 ded, lim = self.policy_dict[lt][policy_idx]
                 res[lt + '_ins'] = insured_losses(
                     losses, ded * avalue, lim * avalue)

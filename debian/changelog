@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: made the loss type `occupants` a bit less special
   * Documented `oq to_nrml`
 
   [Claudia Mascandola]
