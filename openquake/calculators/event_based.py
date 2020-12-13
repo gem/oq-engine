@@ -185,7 +185,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 hdf5.extend(self.datastore['gmf_data/eid'], data['eid'])
                 for m in range(M):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
-                                data['gmv'][:, m])
+                                data[f'gmv_{m}'])
                 for sec_out in sec_outputs:
                     hdf5.extend(self.datastore[f'gmf_data/{sec_out}'],
                                 data[sec_out])
@@ -211,7 +211,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.crmodel.min_iml
         min_iml = oq.min_iml
-        if oq.ground_motion_fields and min_iml.sum() == 0:
+        if oq.ground_motion_fields and sum(min_iml.values()) == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
         else:

@@ -151,11 +151,11 @@ class GmfComputer(object):
             if num_events == 0:  # it may happen
                 continue
             # NB: the trick for performance is to keep the call to
-            # compute.compute outside of the loop over the realizations
+            # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
             array, sig, eps = self.compute(gs, num_events)
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
-            for i, miniml in enumerate(min_iml):  # gmv < minimum
+            for i, miniml in enumerate(min_iml.values()):  # gmv < minimum
                 arr = array[:, i, :]
                 arr[arr < miniml] = 0
             n = 0
@@ -180,15 +180,16 @@ class GmfComputer(object):
                     for i, gmv in enumerate(gmfa):
                         if gmv.sum():
                             if No:
-                                data.append((sids[i], eid, rlz, gmv) +
+                                import pdb; pdb.set_trace()
+                                data.append((sids[i], eid, rlz) + tuple(gmv) +
                                             tuple(sp_out[:, i]))
                             else:
-                                data.append((sids[i], eid, rlz, gmv))
+                                data.append((sids[i], eid, rlz) + tuple(gmv))
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += len(eids)
-        dt = F32, (len(min_iml),)
-        dtlist = [('sid', U32), ('eid', U32), ('rlz', U32), ('gmv', dt)] + [
+        imtlist = [('gmv_%d' % i, F32) for i in range(len(min_iml))]
+        dtlist = [('sid', U32), ('eid', U32), ('rlz', U32)] + imtlist + [
             (out, F32) for sp in self.sec_perils for out in sp.outputs]
         d = numpy.array(data, dtlist)
         return d, time.time() - t0

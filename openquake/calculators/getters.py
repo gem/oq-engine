@@ -361,8 +361,7 @@ class GmfGetter(object):
                 for rlzi, array in dic.items():
                     with hc_mon:
                         poes = gmvs_to_poes(
-                            array['gmv'].T, oq.imtls,
-                            oq.ses_per_logic_tree_path)
+                            array, oq.imtls, oq.ses_per_logic_tree_path)
                         for m, imt in enumerate(oq.imtls):
                             hcurves[rsi2str(rlzi, sid, imt)] = poes[m]
         if not oq.ground_motion_fields:

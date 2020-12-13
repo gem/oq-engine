@@ -73,9 +73,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
             # seed is set correctly; very tricky indeed! (MS)
             haz.sort_values('eid', inplace=True)
             eids = haz.eid.to_numpy()
-            lst = [haz[col].to_numpy() for col in haz.columns
-                   if col.startswith('gmv_')]
-            data = numpy.array(lst).T  # shape (E, M)
+            data = haz
         else:  # ZeroGetterfor this site (event based)
             eids = numpy.arange(1)
             data = []
@@ -83,7 +81,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         # ebrisk
         haz.sort(order='eid')
         eids = haz['eid']
-        data = haz['gmv']  # shape (E, M)
+        data = haz
     else:
         raise ValueError('Unexpected haz=%s' % haz)
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
@@ -103,7 +101,9 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
                 if len(data) == 0:
                     dat = [0]
                 elif len(eids):  # gmfs
-                    dat = data[:, rm.imti[lt]]
+                    dat = data[rm.imti[lt]]
+                    if hasattr(dat, 'to_numpy'):
+                        dat = dat.to_numpy()
                 else:  # hcurves
                     dat = data[rm.imti[lt]]
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))

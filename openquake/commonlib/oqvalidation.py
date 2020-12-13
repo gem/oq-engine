@@ -524,7 +524,7 @@ class OqParam(valid.ParamSet):
     @property
     def min_iml(self):
         """
-        :returns: a numpy array of intensities, one per IMT
+        :returns: a dictionary of intensities, one per IMT
         """
         mini = self.minimum_intensity
         if mini:
@@ -537,7 +537,7 @@ class OqParam(valid.ParamSet):
                         'file is missing the IMT %r' % imt)
         if 'default' in mini:
             del mini['default']
-        return F32([mini.get(imt, 0) for imt in self.imtls])
+        return {imt: mini.get(imt, 0) for imt in self.imtls}
 
     def levels_per_imt(self):
         """
