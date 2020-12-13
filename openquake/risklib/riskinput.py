@@ -101,11 +101,11 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
                 if len(data) == 0:
                     dat = [0]
                 elif len(eids):  # gmfs
-                    dat = data[rm.imti[lt]]
+                    dat = data[rm.gfield[lt]]
                     if hasattr(dat, 'to_numpy'):
                         dat = dat.to_numpy()
                 else:  # hcurves
-                    _gmv, m = rm.imti[lt].split('_')  # ex. gmv_0
+                    _gmv, m = rm.gfield[lt].split('_')  # ex. gmv_0
                     dat = data[int(m)]
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
