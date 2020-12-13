@@ -26,8 +26,8 @@ import pandas as pd
 from scipy.spatial import cKDTree
 from openquake.hazardlib.geo import Point, Polygon
 from openquake.hazardlib import const
+from openquake.hazardlib.mesh import Mesh
 from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.geo.polygon import Polygon
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 
 # From http://www.csgnetwork.com/degreelenllavcalc.html
@@ -35,6 +35,10 @@ LEN_1_DEG_LAT_AT_43pt5 = 111.10245
 LEN_1_DEG_LON_AT_43pt5 = 80.87665
 
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'sgobba_2020')
+
+REGIONS = {1: [[13.37, 42.13], [13.60, 42.24], [13.48, 42.51], [13.19, 42.36]],
+           2: [[13.26, 42.41], [13.43, 42.49], [13.27, 43.02], [12.96, 42.86]],
+           3: [[13.03, 42.90], [13.21, 42.99], [13.10, 43.13], [12.90, 43.06]]}
 
 
 class SgobbaEtAl2020(GMPE):
@@ -127,10 +131,10 @@ class SgobbaEtAl2020(GMPE):
         mean = (self._get_magnitude_term(C, rup.mag) +
                 self._get_distance_term(C, rup.mag, dists) +
                 self._get_site_correction(sites.vs30.shape) +
-                self._get_cluster_correction(sites.vs30.shape, rup) +
+                self._get_cluster_correction(sites, rup) +
                 self.be)
 
-        # To natural logarithm 
+        # To natural logarithm
         mean = np.log(10.0**mean)
 
         # Get stds
@@ -156,24 +160,30 @@ class SgobbaEtAl2020(GMPE):
                                                      tmp[0:6])
         return correction
 
-    def _get_cluster_correction(self, shape, rup):
+    def _get_cluster_correction(self, sites, rup):
         """
         Get cluster correction
         """
+        shape = sites.vs30.shape
         correction = np.zeros_like(shape)
+
+        if self.cluster == 0:
+            # TODO complete with udpated polygons
+            self.cluster = None
+            midp = rup.surface.get_middle_point()
+            mesh = Mesh([midp.longitude], [midp.latitude])
+            for key in self.REGIONS:
+                coo = np.array(REGIONS[key])
+                pnts = [Point(lo, la) for lo, la in zip(coo[:, 0], coo[:, 2])]
+                poly = Polygon(pnts)
+                within = poly.intersects(mesh)
+                if all(within):
+                    self.cluster = key
+                    break
+
         if self.cluster is None:
             return correction
-        elif self.cluster == 0:
-            # TODO complete with udpated polygons
-            midp = rup.surface.get_middle_point()
-            cluid = self._get_cluster_region(midp)
-            for key in self.REGIONS:
-                tmp = np.reshape(np.array(self.REGIONS[key]), (-1, 2))
-                import matplotlib.pyplot as plt
-                plt.plot(tmp[:, 0], tmp[:, 1])
-                plt.title(key)
-                plt.show()
-                # poly = Polygon([Point(p[0], p[1]) for p in tmp])
+
         else:
 
             # Cluster coefficients
@@ -188,6 +198,7 @@ class SgobbaEtAl2020(GMPE):
                 correction[self.idxs == idx] = np.interp(0, self.PERIODS,
                                                          tmp[0:6])
             print('correction', correction)
+
         return correction
 
     def _get_magnitude_term(self, C, mag):
