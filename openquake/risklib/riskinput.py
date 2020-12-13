@@ -59,7 +59,8 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
     """
     if hasattr(haz, 'array'):  # classical
         eids = []
-        data = [haz.array[crmodel.imtls(imt), 0] for imt in crmodel.imtls]
+        data = {f'gmv_{m}': haz.array[crmodel.imtls(imt), 0]
+                for m, imt in enumerate(crmodel.imtls)}
     elif isinstance(haz, pandas.DataFrame):
         if 'gmv_0' in haz.columns:  # regular case
             # NB: in GMF-based calculations the order in which
@@ -74,9 +75,9 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
             haz.sort_values('eid', inplace=True)
             eids = haz.eid.to_numpy()
             data = haz
-        else:  # ZeroGetterfor this site (event based)
+        else:  # ZeroGetter for this site (event based)
             eids = numpy.arange(1)
-            data = []
+            data = {f'gmv_{m}': [0] for m, imt in enumerate(crmodel.imtls)}
     elif isinstance(haz, numpy.ndarray):
         # ebrisk
         haz.sort(order='eid')
@@ -98,15 +99,9 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
             arrays = []
             rmodels, weights = crmodel.get_rmodels_weights(taxonomy)
             for rm in rmodels:
-                if len(data) == 0:
-                    dat = [0]
-                elif len(eids):  # gmfs
-                    dat = data[rm.gfield[lt]]
-                    if hasattr(dat, 'to_numpy'):
-                        dat = dat.to_numpy()
-                else:  # hcurves
-                    _gmv, m = rm.gfield[lt].split('_')  # ex. gmv_0
-                    dat = data[int(m)]
+                dat = data[rm.gfield[lt]]
+                if hasattr(dat, 'to_numpy'):
+                    dat = dat.to_numpy()
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)
