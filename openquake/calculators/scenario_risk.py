@@ -162,7 +162,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 for l, name in enumerate(loss_dt.names):
                     totloss = totlosses[r, l]
                     aggloss = agglosses[r, l]['mean']
-                    if not numpy.allclose(totloss, aggloss, rtol=1E-5):
+                    if not numpy.allclose(totloss, aggloss, rtol=1E-6):
                         logging.warning(msg, name, r, totloss, aggloss)
         logging.info('Mean portfolio loss\n' +
                      views.view('portfolio_loss', self.datastore))
