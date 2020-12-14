@@ -323,7 +323,7 @@ def view_totlosses(token, dstore):
     """
     oq = dstore['oqparam']
     tot_losses = dstore['avg_losses-rlzs'][()].sum(axis=0)
-    return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
+    return rst_table(tot_losses.view(oq.loss_dt(float)), fmt='%.6E')
 
 
 def _portfolio_loss(dstore):
