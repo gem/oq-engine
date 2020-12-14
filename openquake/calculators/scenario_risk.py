@@ -33,18 +33,6 @@ F64 = numpy.float64  # higher precision to avoid task order dependency
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
-def ael_dt(loss_names, rlz=False):
-    """
-    :returns: (asset_id, event_id, loss) or (asset_id, event_id, loss)
-    """
-    L = len(loss_names),
-    if rlz:
-        return [('asset_id', U32), ('event_id', U32),
-                ('rlzi', U16), ('loss', (F32, L))]
-    else:
-        return [('asset_id', U32), ('event_id', U32), ('loss', (F32, L))]
-
-
 def scenario_risk(riskinputs, param, monitor):
     """
     Core function for a scenario computation.
@@ -89,9 +77,6 @@ def scenario_risk(riskinputs, param, monitor):
                     for loss, eid in zip(oklosses, okeids):
                         acc[aid, eid][l] = loss
                     result['agg'][okeids, l] += oklosses
-
-    ael = [(aid, eid, loss) for (aid, eid), loss in sorted(acc.items())]
-    result['ael'] = numpy.array(ael, param['ael_dt'])
     return result
 
 
@@ -123,24 +108,16 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.param['weights'] = self.datastore['weights'][()]
         except KeyError:
             self.param['weights'] = [1 / self.R for _ in range(self.R)]
-        self.param['ael_dt'] = dt = ael_dt(oq.loss_names)
         self.rlzs = self.datastore['events']['rlz_id']
         self.param['num_events'] = numpy.bincount(self.rlzs)  # events by rlz
-        A = len(self.assetcol)
-        self.datastore.create_dset('loss_data/data', dt)
-        self.datastore.create_dset('loss_data/indices', U32, (A, 2))
 
     def combine(self, acc, res):
         """
-        Combine the outputs from scenario_risk and incrementally store
-        the asset loss table
+        Combine the outputs from scenario_risk
         """
-        with self.monitor('saving loss_data', measuremem=True):
-            ael = res.pop('ael', ())
-            if len(ael) == 0:
-                return acc + res
-            hdf5.extend(self.datastore['loss_data/data'], ael)
-            return acc + res
+        if res is None:
+            raise MemoryError('You ran out of memory!')
+        return acc + res
 
     def post_execute(self, result):
         """
@@ -184,7 +161,14 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 'event_loss_table/,', loss_types=loss_types)
 
             # sanity check
-            numpy.testing.assert_allclose(
-                losses_by_asset.sum(axis=0), agglosses['mean'], rtol=1E-4)
+            totlosses = losses_by_asset.sum(axis=0)
+            msg = ('%s, rlz=%d: the total loss %s is different from the sum '
+                   'of the average losses %s')
+            for r in range(R):
+                for l, name in enumerate(loss_dt.names):
+                    totloss = totlosses[r, l]
+                    aggloss = agglosses[r, l]['mean']
+                    if not numpy.allclose(totloss, aggloss, rtol=1E-5):
+                        logging.warning(msg, name, r, totloss, aggloss)
         logging.info('Mean portfolio loss\n' +
                      views.view('portfolio_loss', self.datastore))
