@@ -35,7 +35,7 @@ aac = numpy.testing.assert_allclose
 
 
 def tot_loss(dstore):
-    return dstore['loss_data/data']['loss'].sum(axis=0)
+    return dstore['agglosses']['mean'].sum(axis=0)
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
