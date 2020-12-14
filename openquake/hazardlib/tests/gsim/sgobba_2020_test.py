@@ -23,6 +23,7 @@ import pandas as pd
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.sgobba_2020 import SgobbaEtAl2020
 from openquake.hazardlib.contexts import DistancesContext
@@ -63,26 +64,34 @@ class Sgobba2020Test(unittest.TestCase):
         mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
 
         expected = df.PGA.to_numpy()
-        computed    = np.exp(mean)
+        computed = np.exp(mean)
         np.testing.assert_allclose(computed, expected)
-
-        #fmt = 'Between event variability for {:s} is wrong'
-        #msg = fmt.format(ev_id)
-        #self.assertAlmostEqual(gm.be, -0.089081, msg=msg, places=5)
 
     def test_cluster(self):
 
         # Let OQ choose the cluster
-        gmm = SgobbaEtAl2020(cluster=1)
+        gmm = SgobbaEtAl2020()
 
         # Set parameters
-        locations = [Point(13.0, 42.5), Point(13.0, 42.8), Point(12.8, 42.8)]
-        sites = Dummy.get_site_collection(3, vs30=760., location=locations)
-        rup = Dummy.get_rupture(mag=6.0)
-        dists = DistancesContext()
-        dists.rjb = np.array([1., 10., 30.])
+        locations = [Point(10.97410551, 40.76758283),
+                     Point(10.97410551, 40.76758283)]
+        sites = Dummy.get_site_collection(2, vs30=800., location=locations)
+        rup = Dummy.get_rupture(mag=4.0)
+
+        lons = np.array([[13.19, 13.21], [13.19, 13.21]])
+        lats = np.array([[42.79, 42.81], [42.79, 42.81]])
+        deps = np.array([[0.0, 0.0], [10.0, 10.0]])
+        rup.surface = RectangularMesh(lons, lats, deps)
         imt = PGA()
+
+        dists = DistancesContext()
+        dists.rjb = np.array([10.])
         stdt = [const.StdDev.TOTAL]
 
-        # Computes results
-        mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+        # This is just executed to define the attribute idxs
+        _, _ = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+
+        # Compute correction
+        expected = np.array([0.0112902662180024, 0.0112902662180024])
+        computed = gmm._get_cluster_correction(sites, rup, imt)
+        np.testing.assert_allclose(computed, expected)
