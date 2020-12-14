@@ -10,7 +10,7 @@ jobs:
 
   python_devel_catalina:
     name: Catalina Install develop mode on Python 3.7 
-    runs-on: macos-latest
+    runs-on: macos-10.15
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -26,17 +26,10 @@ jobs:
         run: pip3 install -r ./requirements-py37-macos.txt 
       - name: Run Installation of oq-engine in devel mode with osgeo
         run: pip3 install -e .[osgeo]
-      - name: Run dev tests
+      - name: Run tests
         run: |
             oq dbserver start &
-            pytest -vsx openquake/commands/tests/commands_test.py -k nrml
-            pytest -vs openquake/baselib openquake/hazardlib openquake/hmtk
-            pytest -vs openquake/engine
-            pytest -vs openquake/server
-            pytest -vs openquake/calculators
-            pytest -vs openquake/risklib
-            pytest -vs openquake/commonlib
-            pytest -vs openquake/commands 
+            pytest openquake
       - name: Run demos
         run: |
             oq reset -y
@@ -61,20 +54,12 @@ jobs:
         run: pip3 install -r ./requirements-py38-macos.txt 
       - name: Run Installation of oq-engine in devel mode with osgeo
         run: pip3 install -e .[osgeo]
-      - name: Run dev tests
+      - name: Run tests
         run: |
             oq dbserver start &
-            pytest -vsx openquake/commands/tests/commands_test.py -k nrml
-            pytest -vs openquake/baselib openquake/hazardlib openquake/hmtk
-            pytest -vs openquake/engine
-            pytest -vs openquake/server
-            pytest -vs openquake/calculators
-            pytest -vs openquake/risklib
-            pytest -vs openquake/commonlib
-            pytest -vs openquake/commands 
+            pytest openquake
       - name: Run demos
         run: |
             oq reset -y
             oq dbserver start &
             ./bin/run-demos.sh demos
-
