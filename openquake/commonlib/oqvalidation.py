@@ -669,7 +669,9 @@ class OqParam(valid.ParamSet):
         :returns: a composite data type for the GMFs
         """
         dt = F32, (len(self.imtls),)
-        lst = [('sid', U32), ('eid', U32), ('gmv', dt)]
+        lst = [('sid', U32), ('eid', U32)]
+        for m, imt in enumerate(self.imtls):
+            lst.append((f'gmv_{m}', F32))
         for out in self.get_sec_outputs():
             lst.append((out, dt))
         return numpy.dtype(lst)
