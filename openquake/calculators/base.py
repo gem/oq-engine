@@ -952,7 +952,7 @@ class RiskCalculator(HazardCalculator):
             events['id'] = numpy.arange(E, dtype=U32)
             self.datastore['events'] = events
             # convert into an array of dtype gmv_data_dt
-            lst = [(sitecol.sids[s], ei, gmfs[s, ei])
+            lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
                    for s in numpy.arange(N, dtype=U32)
                    for ei, event in enumerate(events)]
             data = numpy.array(lst, oq.gmf_data_dt())
@@ -1098,7 +1098,7 @@ def import_gmfs(dstore, oqparam, sids):
             except KeyError:  # the file contains more than enough IMTs
                 pass
             else:
-                arr['gmv'][:, m] = array[name]
+                arr[f'gmv_{m}'][:] = array[name]
         else:
             arr[name] = array[name]
 
@@ -1145,7 +1145,7 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
         cols.append(col)
         dstore.create_dset('gmf_data/' + col, F32)
         if data is not None:
-            dstore[f'gmf_data/' + col] = data['gmv'][:, m]
+            dstore[f'gmf_data/' + col] = data[f'gmv_{m}']
     for peril in secperils:
         for out in peril.outputs:
             dstore.create_dset(f'gmf_data/{out}', F32)

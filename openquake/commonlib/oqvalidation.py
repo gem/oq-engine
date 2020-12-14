@@ -524,7 +524,7 @@ class OqParam(valid.ParamSet):
     @property
     def min_iml(self):
         """
-        :returns: a numpy array of intensities, one per IMT
+        :returns: a dictionary of intensities, one per IMT
         """
         mini = self.minimum_intensity
         if mini:
@@ -537,7 +537,7 @@ class OqParam(valid.ParamSet):
                         'file is missing the IMT %r' % imt)
         if 'default' in mini:
             del mini['default']
-        return F32([mini.get(imt, 0) for imt in self.imtls])
+        return {imt: mini.get(imt, 0) for imt in self.imtls}
 
     def levels_per_imt(self):
         """
@@ -669,7 +669,9 @@ class OqParam(valid.ParamSet):
         :returns: a composite data type for the GMFs
         """
         dt = F32, (len(self.imtls),)
-        lst = [('sid', U32), ('eid', U32), ('gmv', dt)]
+        lst = [('sid', U32), ('eid', U32)]
+        for m, imt in enumerate(self.imtls):
+            lst.append((f'gmv_{m}', F32))
         for out in self.get_sec_outputs():
             lst.append((out, dt))
         return numpy.dtype(lst)

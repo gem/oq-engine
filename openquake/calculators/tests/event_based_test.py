@@ -148,9 +148,15 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
         # compute hcurves in postprocessing and compare with inprocessing
-        df = self.calc.datastore.read_df('gmf_data', 'sid').loc[0]
-        gmvs = [df[col].to_numpy() for col in df.columns
-                if col.startswith('gmv_')]
+        # take advantage of the fact that there is a single site
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
+        dt = self.calc.datastore['oqparam'].gmf_data_dt()
+        gmvs = numpy.zeros(len(df), dt)
+        gmvs['sid'] = 0
+        gmvs['eid'] = df.eid.to_numpy()
+        for col in df.columns:
+            if col.startswith('gmv_'):
+                gmvs[col] = df[col].to_numpy()
         oq = self.calc.datastore['oqparam']
         poes = gmvs_to_poes(gmvs, oq.imtls, oq.ses_per_logic_tree_path)
         hcurve = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L)
