@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed 32 bit rounding issues in scenario_risk: now the total losses and
+    and the sum of the average losses are much closer
   * Internal: made the loss type `occupants` a bit less special
   * Documented `oq to_nrml`
 

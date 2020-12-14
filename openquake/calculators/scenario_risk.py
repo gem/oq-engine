@@ -19,9 +19,6 @@
 import logging
 import numpy
 
-from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base, views
@@ -30,7 +27,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64  # higher precision to avoid task order dependency
-stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
+stat_dt = numpy.dtype([('mean', F64), ('stddev', F64)])
 
 
 def scenario_risk(riskinputs, param, monitor):
@@ -55,27 +52,24 @@ def scenario_risk(riskinputs, param, monitor):
     crmodel = monitor.read('crmodel')
     E = param['E']
     L = len(crmodel.loss_types)
-    result = dict(agg=numpy.zeros((E, L), F32), avg=[])
-    acc = AccumDict(accum=numpy.zeros(L, F64))  # aid,eid->loss
+    result = dict(agg=numpy.zeros((E, L), F64), avg=[])
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
             r = out.rlzi
             num_events = param['num_events'][r]
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
-                mal = param['minimum_asset_loss'][loss_type]
                 if numpy.product(losses.shape) == 0:  # happens for all NaNs
                     continue
-                avg = numpy.zeros(len(ri.assets), F32)
+                mal = param['minimum_asset_loss'][loss_type]
+                avg = numpy.zeros(len(ri.assets), F64)
                 for a, asset in enumerate(ri.assets):
                     ok = losses[a] >= mal  # shape E'
                     okeids = out.eids[ok]
                     oklosses = losses[a, ok]
                     aid = asset['ordinal']
-                    avg[a] = losses[a, ok].sum() / num_events
-                    result['avg'].append((l, r, asset['ordinal'], avg[a]))
-                    for loss, eid in zip(oklosses, okeids):
-                        acc[aid, eid][l] = loss
+                    avg[a] = oklosses.sum() / num_events
+                    result['avg'].append((l, r, aid, avg[a]))
                     result['agg'][okeids, l] += oklosses
     return result
 
@@ -137,11 +131,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             agglosses = numpy.zeros((R, L), stat_dt)
             for r in range(R):
                 mean, std = scientific.mean_std(res[self.rlzs == r])
-                agglosses[r]['mean'] = F32(mean)
-                agglosses[r]['stddev'] = F32(std)
+                agglosses[r]['mean'] = mean
+                agglosses[r]['stddev'] = std
 
             # avg losses
-            losses_by_asset = numpy.zeros((A, R, L), F32)
+            losses_by_asset = numpy.zeros((A, R, L), F64)
             for (l, r, aid, avg) in result['avg']:
                 losses_by_asset[aid, r, l] = avg
 
