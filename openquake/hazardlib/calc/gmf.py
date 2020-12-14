@@ -180,7 +180,6 @@ class GmfComputer(object):
                     for i, gmv in enumerate(gmfa):
                         if gmv.sum():
                             if No:
-                                import pdb; pdb.set_trace()
                                 data.append((sids[i], eid, rlz) + tuple(gmv) +
                                             tuple(sp_out[:, i]))
                             else:
