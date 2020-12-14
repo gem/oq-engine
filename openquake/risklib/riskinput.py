@@ -57,6 +57,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
     :param rlzi: if given, a realization index
     :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
+    alias = {imt: 'gmv_%d' % i for i, imt in enumerate(crmodel.imtls)}
     if hasattr(haz, 'array'):  # classical
         eids = []
         data = {f'gmv_{m}': haz.array[crmodel.imtls(imt), 0]
@@ -99,7 +100,8 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
             arrays = []
             rmodels, weights = crmodel.get_rmodels_weights(taxonomy)
             for rm in rmodels:
-                dat = data[rm.gfield[lt]]
+                imt = rm.imt_by_lt[lt]
+                dat = data[alias.get(imt, imt)]
                 if hasattr(dat, 'to_numpy'):
                     dat = dat.to_numpy()
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))
