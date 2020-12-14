@@ -80,10 +80,11 @@ class ChiouYoungs2014(GMPE):
         # Get ground motion on reference rock
         ln_y_ref = self.get_ln_y_ref(C, rup, dists)
         y_ref = np.exp(ln_y_ref)
-
         # Get the site amplification
         # Get basin depth
         dz1pt0 = self._get_centered_z1pt0(sites)
+        # In the case that Z1.0 = 0.0 then no deep soil correction is applied
+        dz1pt0[sites.z1pt0 <= 0.0] = 0.0
         f_z1pt0 = self.get_basin_depth_term(C, dz1pt0)
         # Get linear amplification term
         f_lin = self.get_linear_site_term(C, sites)
@@ -249,9 +250,7 @@ class ChiouYoungs2014(GMPE):
         """
         Returns the linear site scaling term
         """
-        vs_norm = np.log(sites.vs30 / 1130.)
-        vs_norm[vs_norm > 0.0] = 0.0
-        return C["phi1"] * vs_norm
+        return C["phi1"] * np.log(sites.vs30 / 1130).clip(-np.inf, 0.0)
 
     def get_basin_depth_term(self, C, centered_z1pt0):
         """
@@ -264,9 +263,8 @@ class ChiouYoungs2014(GMPE):
         Returns the nonlinear site term and the Vs-scaling factor (to be
         used in the standard deviation model
         """
-        vs_norm = sites.vs30.copy()
-        vs_norm[vs_norm > 1130.] = 1130.
-        f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs_norm - 360.)) -
+        vs = sites.vs30.clip(-np.inf, 1130.0)
+        f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs - 360.)) -
                                     np.exp(C["phi3"] * (1130. - 360.)))
         f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
         return f_nl, f_nl_scaling
