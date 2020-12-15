@@ -143,7 +143,7 @@ class VulnerabilityFunction(object):
                     # see https://github.com/gem/oq-engine/issues/4841
                     raise ValueError(
                         'The coefficient of variation %s > %s does not '
-                        'satisfy the requirement 0 < σ < sqrt[μ × (1 - μ)] ' 
+                        'satisfy the requirement 0 < σ < sqrt[μ × (1 - μ)] '
                         'in %s' % (cov, numpy.sqrt(1 / lr - 1), self))
 
         self.distribution_name = distribution
@@ -843,6 +843,28 @@ class LogNormalDistribution(Distribution):
         return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
 
 
+# The beta distribution `numpy.random.beta(alpha, beta)` is singular
+# if the beta array contains some zeros; this happens if the vulnerability
+# function has zero coefficients of variation (stddevs).
+# Even if you do something like this:
+
+# res = numpy.zeros_like(alpha)
+# ok = beta !=0  # not singular
+# res[ok] = numpy.random.beta(alpha[ok], beta[ok])
+# res[~ok] = 1
+
+# this is not going to give results close to you want expect by
+# setting stddev=.0000001 and mean=.00000001 (i.e. smoothly going
+# through the limit) even if the the seed is fixed. The reason is that
+# the random number generator will advance differently.  Suppose the
+# array size is 10 and there is a single singular value with beta=0
+# and 9 values with beta != 0; the call to numpy.random.beta(alpha, beta)
+# will advance the generator by 9 steps, while if you regularize the
+# singularity by using stddev=.0000001 and mean=.00000001 the random
+# generator will advance by 10 steps. The numbers produced by the beta
+# distribution will be quite different.
+# This is why having stddevs == 0 is an error and it is forbidden in
+# VulnerabilityFunction.__init__.
 @DISTRIBUTIONS.add('BT')
 class BetaDistribution(Distribution):
     def sample(self, means, _covs, stddevs, _idxs=None):
