@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Bug fix: ignore_covs=true now sets the coefficient of variations to zero
+
   [Anirudh Rao]
   * Improved error handling of bad or zero coefficients of variation
     for the Beta distribution for vulnerability
