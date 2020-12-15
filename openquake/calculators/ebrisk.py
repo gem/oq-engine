@@ -67,6 +67,11 @@ def calc_risk(gmfs, param, monitor):
     aggby = param['aggregate_by']
     haz_by_sid = general.group_array(gmfs, 'sid')
     losses_by_A = numpy.zeros((len(assets_df), len(elt.loss_names)), F32)
+    acc['avg_gmf'] = avg_gmf = {}
+    for col in gmfs.dtype.names:
+        if col not in 'sid eid rlz':
+            avg_gmf[col] = numpy.zeros(param['N'], F32)
+
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
             haz = haz_by_sid[sid]
@@ -80,9 +85,12 @@ def calc_risk(gmfs, param, monitor):
         with mon_agg:
             elt.aggregate(out, param['minimum_asset_loss'], aggby)
             # NB: after the aggregation out contains losses, not loss_ratios
+        ws = weights[haz['rlz']]
+        for col in gmfs.dtype.names:
+            if col not in 'sid eid rlz':
+                avg_gmf[col][sid] = haz[col] @ ws
         if param['avg_losses']:
             with mon_avg:
-                ws = weights[haz['rlz']]
                 for lni, ln in enumerate(elt.loss_names):
                     losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
     if len(gmfs):
@@ -129,6 +137,7 @@ def ebrisk(rupgetter, param, monitor):
     gmfs = []
     gmf_info = []
     srcfilter = monitor.read('srcfilter')
+    param['N'] = len(srcfilter.sitecol.complete)
     gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'],
                            param['amplifier'])
     nbytes = 0
@@ -142,7 +151,8 @@ def ebrisk(rupgetter, param, monitor):
                                  data.nbytes, mon_haz.dt))
     if not gmfs:
         return {}
-    res = calc_risk(numpy.concatenate(gmfs), param, monitor)
+    conc = numpy.concatenate(gmfs)
+    res = calc_risk(conc, param, monitor)
     if gmf_info:
         res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
     return res
@@ -244,7 +254,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = []
         self.datastore.swmr_on()
-        self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
+        self.avg_gmf = general.AccumDict(
+            accum=numpy.zeros(self.N, F32))  # imt -> gmvs
         smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', srcfilter)
         smap.monitor.save('crmodel', self.crmodel)
@@ -252,8 +263,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore, oq.concurrent_tasks):
             smap.submit((rg, self.param))
         smap.reduce(self.agg_dicts)
-        if self.indices:
-            self.datastore['event_loss_table/indices'] = self.indices
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
@@ -279,6 +288,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
         self.events_per_sid.append(dic['events_per_sid'])
+        self.avg_gmf += dic['avg_gmf']
 
     def post_execute(self, dummy):
         """
@@ -288,6 +298,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         if oq.avg_losses:
             self.datastore['avg_losses-stats'].attrs['stat'] = [b'mean']
+        for field, gmf in self.avg_gmf.items():
+            self.datastore['avg_gmf/' + field] = gmf
+        self.datastore.set_attrs(
+            'avg_gmf', __pdcolumns__=' '.join(self.avg_gmf))
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run()
