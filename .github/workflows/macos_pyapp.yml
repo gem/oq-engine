@@ -29,7 +29,8 @@ jobs:
       - name: Install requirements files
         run: |
           echo "py"$pyth | tr -d . >> $pyver
-          pip3 install -r ./requirements-${{ pyver }}-macos.txt 
+          env
+          #pip3 install -r ./requirements-${{ pyver }}-macos.txt 
       - name: Run Installation of oq-engine in devel mode with osgeo
         run: pip3 install -e .[osgeo]
       - name: Run tests
