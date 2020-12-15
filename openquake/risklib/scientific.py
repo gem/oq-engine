@@ -854,7 +854,7 @@ class LogNormalDistribution(Distribution):
 # res[~ok] = 1
 
 # this is not going to give results close to you want expect by
-# setting stddev=.0000001 and mean=.00000001 (i.e. smoothly going
+# setting stddev=.0000001 and mean=.0000001 (i.e. smoothly going
 # through the limit) even if the the seed is fixed. The reason is that
 # the random number generator will advance differently.  Suppose the
 # array size is 10 and there is a single singular value with beta=0
