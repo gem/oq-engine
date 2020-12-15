@@ -29,8 +29,8 @@ jobs:
           #pip3 install -r ./requirements-${{ pyver }}-macos.txt 
       - name: Install requirements files
         run: |
-            print py${{ matrix.python-version }} | tr -d . 
-            echo "GITHUB_PY=$(print py${{ matrix.python-version }} | tr -d .)" >> $GITHUB_ENV
+            echo py${{ matrix.python-version }} | tr -d . 
+            echo "GITHUB_PY=$(echo py${{ matrix.python-version }} | tr -d .)" >> $GITHUB_ENV
             echo $GITHUB_PY
             env
       - name: Run Installation of oq-engine in devel mode with osgeo
