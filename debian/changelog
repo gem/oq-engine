@@ -1,3 +1,6 @@
+  [Hasan Mousavi]
+  * Implements the Farajpour etal (2019) GMPE
+  
   [Michele Simionato]
   * Added commands `oq nrml_to csv` and  `oq nrml_to gpkg`
   * Supported year and ses_id >= 65536 in event based
