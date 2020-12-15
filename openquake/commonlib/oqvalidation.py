@@ -545,16 +545,14 @@ class OqParam(valid.ParamSet):
         """
         return len(self.imtls.array) // len(self.imtls)
 
-    def set_risk_imtls(self, risklist):
+    def set_risk_imts(self, risklist):
         """
         :param risklist:
             a list of risk functions with attributes .id, .loss_type, .kind
 
         Set the attribute risk_imtls.
         """
-        # NB: different loss types may have different IMLs for the same IMT
-        # in that case we merge the IMLs
-        imtls = AccumDict(accum=[])
+        imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
             if not hasattr(rf, 'imt') or rf.kind.endswith('_retrofitted'):
                 # for consequence or retrofitted
@@ -564,13 +562,11 @@ class OqParam(valid.ParamSet):
                               self.continuous_fragility_discretization,
                               self.steps_per_interval)
                 risklist[i] = rf
-            imt = rf.imt
-            from_string(imt)  # make sure it is a valid IMT
-            imtls[imt].extend(rf.imls)
+            from_string(rf.imt)  # make sure it is a valid IMT
+            imtls[rf.imt].extend(iml for iml in rf.imls if iml > 0)
         suggested = ['\nintensity_measure_types_and_levels = {']
         risk_imtls = {}
         for imt, imls in imtls.items():
-            imls = [iml for iml in imls if iml]  # strip zeros
             risk_imtls[imt] = list(valid.logscale(min(imls), max(imls), 20))
             suggested.append('  %r: logscale(%s, %s, 20),' %
                              (imt, min(imls), max(imls)))
