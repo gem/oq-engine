@@ -26,15 +26,8 @@ jobs:
           python-version:  ${{ matrix.python-version }}
       - name: Install pytest to use with oqengine
         run: pip3 install pytest
-          #pip3 install -r ./requirements-${{ pyver }}-macos.txt 
-      - name: Install requirements files
-        run: |
-            echo py${{ matrix.python-version }} | tr -d . 
-            echo "GITHUB_PY=$(echo py${{ matrix.python-version }} | tr -d .)" >> $GITHUB_ENV
-            echo $GITHUB_PY
-            env
-      - name: Run Installation of oq-engine in devel mode with osgeo
-        run: pip3 install -e .[osgeo]
+      - name: Run Installation of oq-engine in devel mode 
+        run: python3 ./install.py devel
       - name: Run tests
         run: |
             oq dbserver start &
