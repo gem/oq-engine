@@ -678,7 +678,7 @@ def view_avg_gmf(token, dstore):
     avg_df = pandas.DataFrame({col: numpy.zeros(N, F32) for col in cols})
     for sid, df in gmf_df.groupby(gmf_df.index):
         for col in cols:
-            avg_df[col][sid] = df[col] @ weights[rlzs[df.eid]]
+            avg_df[col][sid] = df[col] @ weights[rlzs[df.eid.to_numpy()]]
     return avg_df
 
 
