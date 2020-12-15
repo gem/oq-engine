@@ -310,7 +310,7 @@ class RiskModel(object):
         means, covs, idxs = vf.interpolate(gmvs)
         if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
             pass
-        elif self.ignore_covs or covs.sum() == 0 or len(epsilons) == 0:
+        elif covs.sum() == 0 or len(epsilons) == 0:
             # the ratios are equal for all assets
             ratios = vf.sample(means, covs, idxs, None)  # right shape
             for a in range(A):
@@ -462,7 +462,6 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     extra['risk_investigation_time'] = oqparam.risk_investigation_time
     extra['lrem_steps_per_interval'] = oqparam.lrem_steps_per_interval
     extra['steps_per_interval'] = oqparam.steps_per_interval
-    extra['ignore_covs'] = oqparam.ignore_covs
     extra['time_event'] = oqparam.time_event
     if oqparam.calculation_mode == 'classical_bcr':
         extra['interest_rate'] = oqparam.interest_rate
@@ -617,6 +616,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     self.distributions.add(rf.distribution_name)
                 if hasattr(rf, 'init'):  # vulnerability function
                     rf.seed = oq.master_seed  # setting the seed
+                    if oq.ignore_covs:
+                        rf.covs = numpy.zeros_like(rf.covs)
                     rf.init()
                 # save the number of nonzero coefficients of variation
                 if hasattr(rf, 'covs') and rf.covs.any():
