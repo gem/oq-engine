@@ -122,19 +122,28 @@ class VulnerabilityFunction(object):
             self.covs = numpy.zeros(self.imls.shape)
 
         for lr, cov in zip(self.mean_loss_ratios, self.covs):
-            if lr == 0.0 and cov > 0.0:
-                msg = ("It is not valid to define a loss ratio = 0.0 with a "
-                       "corresponding coeff. of variation > 0.0")
+            if lr == 0 and cov > 0:
+                msg = ("It is not valid to define a mean loss ratio = 0 "
+                       "with a corresponding coefficient of variation > 0")
                 raise ValueError(msg)
+            if cov < 0:
+                raise ValueError(
+                    'Found a negative coefficient of variation in %s' %
+                    self.covs)
             if distribution == 'BT':
                 if lr == 0:  # possible with cov == 0
                     pass
                 elif lr > 1:
-                    raise ValueError('The meanLRs must be <= 1, got %s' % lr)
+                    raise ValueError('The meanLRs must be ≤ 1, got %s' % lr)
+                elif cov == 0:
+                    raise ValueError(
+                        'Found a zero coefficient of variation in %s' %
+                        self.covs)
                 elif cov ** 2 > 1 / lr - 1:
                     # see https://github.com/gem/oq-engine/issues/4841
                     raise ValueError(
-                        'The coefficient of variation %s > %s is too large '
+                        'The coefficient of variation %s > %s does not '
+                        'satisfy the requirement 0 < σ < sqrt[μ × (1 - μ)] ' 
                         'in %s' % (cov, numpy.sqrt(1 / lr - 1), self))
 
         self.distribution_name = distribution

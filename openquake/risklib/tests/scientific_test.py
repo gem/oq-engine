@@ -61,7 +61,15 @@ class BetaDistributionTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             scientific.VulnerabilityFunction(
                 'v1', 'PGA', [.1, .2, .3], [.05, .1, .2], [.1, .2, 3], 'BT')
-        self.assertIn('The coefficient of variation 3.0 > 2.0 is too large',
+        self.assertIn('The coefficient of variation 3.0 > 2.0 does not satisfy'
+                      ' the requirement 0 < σ < sqrt[μ × (1 - μ)] in '
+                      '<VulnerabilityFunction(v1, PGA)>', str(ctx.exception))
+
+    def test_zero_covs(self):
+        with self.assertRaises(ValueError) as ctx:
+            scientific.VulnerabilityFunction(
+                'v1', 'PGA', [.1, .2, .3], [.3, .1, .2], [0, .2, .3], 'BT')
+        self.assertIn('zero coefficient of variation in [0.  0.2 0.3]',
                       str(ctx.exception))
 
 
@@ -207,9 +215,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             vf.seed = 42
             vf.init()
         expected_error = (
-            'It is not valid to define a loss ratio = 0.0 with a corresponding'
-            ' coeff. of variation > 0.0'
-        )
+            'It is not valid to define a mean loss ratio = 0 with a '
+            'corresponding coefficient of variation > 0')
         self.assertEqual(expected_error, str(ar.exception))
 
     def test_lrem_lr_cov_special_cases(self):
