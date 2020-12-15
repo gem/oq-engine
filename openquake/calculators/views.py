@@ -665,6 +665,23 @@ def view_task_ebrisk(token, dstore):
     return msg
 
 
+@view.add('avg_gmf')
+def view_avg_gmf(token, dstore):
+    """
+    Compute the average GMF from gmf_data
+    """
+    N = len(dstore['sitecol'].complete)
+    weights = dstore['weights'][:]
+    rlzs = dstore['events']['rlz_id']
+    gmf_df = dstore.read_df('gmf_data', 'sid')
+    cols = [col for col in gmf_df.columns if col not in 'sid eid']
+    avg_df = pandas.DataFrame({col: numpy.zeros(N, F32) for col in cols})
+    for sid, df in gmf_df.groupby(gmf_df.index):
+        for col in cols:
+            avg_df[col][sid] = df[col] @ weights[rlzs[df.eid]]
+    return avg_df
+
+
 @view.add('global_hazard')
 def view_global_hazard(token, dstore):
     """
