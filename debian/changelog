@@ -3,7 +3,6 @@
     for the Beta distribution for vulnerability
 
   [Michele Simionato]
-  * Added a check for zero coefficient of variations for the Beta distribution
   * Fixed 32 bit rounding issues in scenario_risk: now the total losses and
     and the sum of the average losses are much closer
   * Internal: made the loss type `occupants` a bit less special
