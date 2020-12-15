@@ -27,7 +27,11 @@ jobs:
       - name: Install pytest to use with oqengine
         run: pip3 install pytest
       - name: Run Installation of oq-engine in devel mode 
-        run: python3 ./install.py devel
+        run: |
+            PY_VER=`echo py$${{ matrix.python-version }} | tr -d .` 
+            echo $PY_VER
+            pip3 install -r requirements-py$(PY_VER)-macos.txt
+            pip3 install -e .
       - name: Run tests
         run: |
             oq dbserver start &
