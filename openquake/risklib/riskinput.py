@@ -57,9 +57,11 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
     :param rlzi: if given, a realization index
     :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
+    alias = {imt: 'gmv_%d' % i for i, imt in enumerate(crmodel.imtls)}
     if hasattr(haz, 'array'):  # classical
         eids = []
-        data = [haz.array[crmodel.imtls(imt), 0] for imt in crmodel.imtls]
+        data = {f'gmv_{m}': haz.array[crmodel.imtls(imt), 0]
+                for m, imt in enumerate(crmodel.imtls)}
     elif isinstance(haz, pandas.DataFrame):
         if 'gmv_0' in haz.columns:  # regular case
             # NB: in GMF-based calculations the order in which
@@ -73,17 +75,15 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
             # seed is set correctly; very tricky indeed! (MS)
             haz.sort_values('eid', inplace=True)
             eids = haz.eid.to_numpy()
-            lst = [haz[col].to_numpy() for col in haz.columns
-                   if col.startswith('gmv_')]
-            data = numpy.array(lst).T  # shape (E, M)
-        else:  # ZeroGetterfor this site (event based)
+            data = haz
+        else:  # ZeroGetter for this site (event based)
             eids = numpy.arange(1)
-            data = []
+            data = {f'gmv_{m}': [0] for m, imt in enumerate(crmodel.imtls)}
     elif isinstance(haz, numpy.ndarray):
         # ebrisk
         haz.sort(order='eid')
         eids = haz['eid']
-        data = haz['gmv']  # shape (E, M)
+        data = haz
     else:
         raise ValueError('Unexpected haz=%s' % haz)
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
@@ -100,12 +100,10 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
             arrays = []
             rmodels, weights = crmodel.get_rmodels_weights(taxonomy)
             for rm in rmodels:
-                if len(data) == 0:
-                    dat = [0]
-                elif len(eids):  # gmfs
-                    dat = data[:, rm.imti[lt]]
-                else:  # hcurves
-                    dat = data[rm.imti[lt]]
+                imt = rm.imt_by_lt[lt]
+                dat = data[alias.get(imt, imt)]
+                if hasattr(dat, 'to_numpy'):
+                    dat = dat.to_numpy()
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)

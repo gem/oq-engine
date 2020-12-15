@@ -148,9 +148,15 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
         # compute hcurves in postprocessing and compare with inprocessing
-        df = self.calc.datastore.read_df('gmf_data', 'sid').loc[0]
-        gmvs = [df[col].to_numpy() for col in df.columns
-                if col.startswith('gmv_')]
+        # take advantage of the fact that there is a single site
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
+        dt = self.calc.datastore['oqparam'].gmf_data_dt()
+        gmvs = numpy.zeros(len(df), dt)
+        gmvs['sid'] = 0
+        gmvs['eid'] = df.eid.to_numpy()
+        for col in df.columns:
+            if col.startswith('gmv_'):
+                gmvs[col] = df[col].to_numpy()
         oq = self.calc.datastore['oqparam']
         poes = gmvs_to_poes(gmvs, oq.imtls, oq.ses_per_logic_tree_path)
         hcurve = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L)
@@ -168,7 +174,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(einfo['rupture_class'],
                          'ParametricProbabilisticRupture')
         self.assertEqual(einfo['surface_class'], 'PlanarSurface')
-        self.assertEqual(einfo['serial'], 73073755)
+        self.assertEqual(einfo['seed'], 73073755)
         self.assertEqual(str(einfo['gsim']),
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
@@ -395,7 +401,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # a test with grid and site model
         self.run_calc(case_19.__file__, 'job_grid.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 2)
 
         # error for missing intensity_measure_types
         with self.assertRaises(InvalidFile) as ctx:

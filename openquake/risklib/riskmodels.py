@@ -184,7 +184,7 @@ def get_values(loss_type, assets, time_event=None):
         a numpy array with the values for the given assets, depending on the
         loss_type.
     """
-    if loss_type == 'occupants':
+    if loss_type == 'occupants' and time_event:
         return assets['occupants_%s' % time_event]
     else:
         return assets['value-' + loss_type]
@@ -600,7 +600,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oq, risk_functions=vfs)
         self.imtls = oq.imtls
-        imti = {imt: i for i, imt in enumerate(oq.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         # build a sorted list with all the loss_types contained in the model
@@ -628,9 +627,11 @@ class CompositeRiskModel(collections.abc.Mapping):
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (riskid, ', '.join(missing)))
-            rm.imti = {lt: imti[rm.risk_functions[lt, kind].imt]
-                       for lt, kind in rm.risk_functions
-                       if kind in 'vulnerability fragility'}
+            rm.imt_by_lt = {}  # dictionary loss_type -> imt
+            for lt, kind in rm.risk_functions:
+                if kind in 'vulnerability fragility':
+                    imt = rm.risk_functions[lt, kind].imt
+                    rm.imt_by_lt[lt] = imt
         self.curve_params = self.make_curve_params()
         iml = collections.defaultdict(list)
         for riskid, rm in self._riskmodels.items():

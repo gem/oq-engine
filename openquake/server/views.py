@@ -563,14 +563,16 @@ def submit_job(job_ini, username, hazard_calculation_id=None):
     and run it in a new process. Returns a PID.
     """
     # errors in validating oqparam are reported immediately
-    params = vars(readinput.get_oqparam(job_ini))
+    params = readinput.get_params(job_ini)
     job_id = logs.init('job')
     params['_job_id'] = job_id
     # errors in the calculation are not reported but are visible in the log
+    kw = {'hazard_calculation_id': hazard_calculation_id} \
+        if hazard_calculation_id else {}
     proc = Process(target=engine.run_jobs,
                    args=([params], config.distribution.log_level, None,
                          '', username),
-                   kwargs={'hazard_calculation_id': hazard_calculation_id})
+                   kwargs=kw)
     proc.start()
     return job_id
 

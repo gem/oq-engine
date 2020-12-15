@@ -35,7 +35,7 @@ aac = numpy.testing.assert_allclose
 
 
 def tot_loss(dstore):
-    return dstore['loss_data/data']['loss'].sum(axis=0)
+    return dstore['agglosses']['mean'].sum(axis=0)
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
@@ -50,7 +50,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/gmf-FromFile.csv', fname)
         self.assertEqualFiles('expected/sites.csv', sitefile)
 
-        [fname] = out['losses_by_event', 'csv']
+        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_event.csv', fname)
 
     def test_case_2(self):

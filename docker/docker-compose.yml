@@ -7,6 +7,12 @@ networks:
 
 volumes:
   oqdata:
+  # oqdata-nfs:
+  #   driver: local
+  #   driver_opts:
+  #     type: nfs
+  #     o: nfsvers=4,addr=nfs-server,rw
+  #     device: ":/oqdata"
 
 #definizione di un yaml template da usare poi negli altri servizi
 x-op-service-default: &service_default

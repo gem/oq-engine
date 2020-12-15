@@ -288,8 +288,8 @@ def extract_exposure_metadata(dstore, what):
             set(dstore['asset_risk'].dtype.names) -
             set(dstore['assetcol/array'].dtype.names))
     dic['names'] = [name for name in dstore['assetcol/array'].dtype.names
-                    if name.startswith(('value-', 'number', 'occupants_'))
-                    and not name.endswith('_None')]
+                    if name.startswith(('value-', 'number', 'occupants'))
+                    and name != 'value-occupants']
     return ArrayWrapper((), dict(json=dumps(dic)))
 
 
@@ -573,6 +573,21 @@ def extract_sources(dstore, what):
     for n in oknames:
         arr[n] = info[n]
     return ArrayWrapper(arr, {'wkt_gz': wkt_gz, 'src_gz': src_gz})
+
+
+@extract.add('gridded_sources')
+def extract_gridded_sources(dstore, what):
+    """
+    Extract information about the gridded sources (requires ps_grid_spacing)
+    Use it as /extract/gridded_sources?task_no=0.
+    Returns a json string id -> lonlats
+    """
+    qdict = parse(what)
+    task_no = int(qdict.get('task_no', ['0'])[0])
+    dic = {}
+    for i, lonlats in enumerate(dstore['ps_grid/%02d' % task_no][()]):
+        dic[i] = numpy.round(F64(lonlats), 3)
+    return ArrayWrapper((), {'json': dumps(dic)})
 
 
 @extract.add('task_info')

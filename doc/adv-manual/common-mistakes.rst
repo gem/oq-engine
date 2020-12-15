@@ -93,9 +93,9 @@ in the job.ini; you can determine the distance as follows:
 >>> md('TRT', 6.5)
 150.0
 >>> md('TRT', 7.5)
-250
+250.0
 >>> md('TRT', 8.5)
-300
+300.0
 
 Intensity measure types and levels
 ----------------------------------
@@ -140,16 +140,16 @@ parameter: you can set it in the ``job.ini`` as a dictionary (tectonic
 region type -> distance in km) or as a scalar (in that case it is
 converted into a dictionary ``{"default": distance}`` and the same
 distance is used for all TRTs).  For sites that are more distant than
-the `pointsource_distance` from the point source, the engine ignores
-the hypocenter and nodal plane distributions and consider only the
-first rupture in the distribution, by rescaling its occurrent rate to
-also take into account the effect of the other ruptures. For closer
-points, all the ruptures are considered.  This approximation
-(we call it *rupture collapsing* because it essentially reduces the
-number of ruptures) can give a substantial speedup if the model is
-dominated by PointSources and there are several nodal
-planes/hypocenters in the distribution. In some situations it also
-makes sense to set
+the `pointsource_distance` from the point source, the engine (starting
+from release 3.11) creates an average rupture by taking weighted means
+of the parameters `strike`, `dip`, `rake` and `depth` from the nodal
+plane and hypocenter distributions and by rescaling the occurrence
+rate. For closer points, all the original ruptures are considered.
+This approximation (we call it *rupture collapsing* because it
+essentially reduces the number of ruptures) can give a substantial
+speedup if the model is dominated by PointSources and there are
+several nodal planes/hypocenters in the distribution. In some
+situations it also makes sense to set
 
 ``pointsource_distance = 0``
 
@@ -205,6 +205,11 @@ pointsource_distance, but it is recommended that you use your own distance,
 because in the next version the algorithm used with `pointsource_distance = ?`
 may change again.
 
+In engine 3.11, contrarily to all previous releases, finite side effects
+are not ignored for distance sites, they are simply averaged over. This
+gives a better precision. In some case (i.e. the Alaska model) versions
+of the engine before 3.11 could give giving a completely wrong hazard
+on some sites. This is now fixed.
 
 concurrent_tasks parameter
 ---------------------------

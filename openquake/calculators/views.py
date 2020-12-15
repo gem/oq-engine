@@ -323,12 +323,12 @@ def view_totlosses(token, dstore):
     """
     oq = dstore['oqparam']
     tot_losses = dstore['avg_losses-rlzs'][()].sum(axis=0)
-    return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
+    return rst_table(tot_losses.view(oq.loss_dt(float)), fmt='%.6E')
 
 
 def _portfolio_loss(dstore):
     R = dstore['full_lt'].get_num_rlzs()
-    array = dstore['losses_by_event'][()]
+    array = dstore['event_loss_table/,'][()]
     rlzs = dstore['events']['rlz_id'][array['event_id']]
     L, = array.dtype['loss'].shape  # loss has shape L
     data = numpy.zeros((R, L), F32)
@@ -367,7 +367,7 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     G = getattr(oq, 'number_of_ground_motion_fields', 1)
     R = dstore['full_lt'].get_num_rlzs()
-    loss = dstore['losses_by_event']['loss']  # shape (E, L)
+    loss = dstore['event_loss_table/,']['loss']  # shape (E, L)
     means = loss.sum(axis=0) / R / G
     sums = [loss[idxs].sum(axis=0) for idxs in _indices(len(loss), 10)]
     errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
@@ -835,7 +835,7 @@ def view_elt(token, dstore):
     """
     oq = dstore['oqparam']
     R = len(dstore['full_lt'].rlzs)
-    dic = group_array(dstore['losses_by_event'][()], 'rlzi')
+    dic = group_array(dstore['event_loss_table/,'][()], 'rlzi')
     header = oq.loss_dt().names
     tbl = []
     for rlzi in range(R):

@@ -176,6 +176,7 @@ class OqParam(valid.ParamSet):
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.MagDepDistance.new, None)
     point_rupture_bins = valid.Param(valid.positiveint, 20)
+    ps_grid_spacing = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
@@ -220,8 +221,10 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
-    ebrisk_maxsize = valid.Param(valid.positivefloat, 5E9)  # used in ebrisk
-    min_weight = valid.Param(valid.positiveint, 2_000)  # used in classical
+    ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
+    # NB: you cannot increase too much min_weight otherwise too few tasks will
+    # be generated in cases like Ecuador inside full South America
+    min_weight = valid.Param(valid.positiveint, 200)  # used in classical
     max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
     taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
@@ -255,30 +258,8 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
-        if '_job_id' in names_vals:
-            # assume most attributes already validated
-            vars(self).update(names_vals)
-            if 'hazard_calculation_id' in names_vals:
-                self.hazard_calculation_id = int(
-                    names_vals['hazard_calculation_id'])
-            if 'maximum_distance' in names_vals:
-                self.maximum_distance = valid.MagDepDistance.new(
-                            str(names_vals['maximum_distance']))
-            if 'pointsource_distance' in names_vals:
-                self.pointsource_distance = valid.MagDepDistance.new(
-                    str(names_vals['pointsource_distance']))
-            if 'region_constraint' in names_vals:
-                self.region = valid.wkt_polygon(
-                    names_vals['region_constraint'])
-            if 'minimum_magnitude' in names_vals:
-                self.minimum_magnitude = valid.floatdict(
-                    str(names_vals['minimum_magnitude']))
-            if 'minimum_intensity' in names_vals:
-                self.minimum_intensity = valid.floatdict(
-                    str(names_vals['minimum_intensity']))
-            if 'sites' in names_vals:
-                self.sites = valid.coordinates(names_vals['sites'])
-            return
+        if '_job_id' in names_vals:  # called from engine
+            del names_vals['_job_id']
 
         # support legacy names
         for name in list(names_vals):
@@ -338,6 +319,11 @@ class OqParam(valid.ParamSet):
                     i2 = calc.filters.getdefault(self.maximum_intensity, imt)
                     self.hazard_imtls[imt] = list(valid.logscale(i1, i2, 20))
             delattr(self, 'intensity_measure_types')
+        if ('ps_grid_spacing' in names_vals and
+                'pointsource_distance' not in names_vals):
+            raise InvalidFile('%s: ps_grid_spacing requires setting a '
+                              'pointsource_distance!' % self.inputs['job_ini'])
+
         self._risk_files = get_risk_files(self.inputs)
 
         if self.hazard_precomputed() and self.job_type == 'risk':
@@ -435,6 +421,10 @@ class OqParam(valid.ParamSet):
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
+            if self.ps_grid_spacing:
+                logging.warning('ps_grid_spacing is ignored in event_based '
+                                'calculations"')
+
             if self.ses_per_logic_tree_path >= TWO32:
                 raise ValueError('ses_per_logic_tree_path too big: %d' %
                                  self.ses_per_logic_tree_path)
@@ -534,7 +524,7 @@ class OqParam(valid.ParamSet):
     @property
     def min_iml(self):
         """
-        :returns: a numpy array of intensities, one per IMT
+        :returns: a dictionary of intensities, one per IMT
         """
         mini = self.minimum_intensity
         if mini:
@@ -547,7 +537,7 @@ class OqParam(valid.ParamSet):
                         'file is missing the IMT %r' % imt)
         if 'default' in mini:
             del mini['default']
-        return F32([mini.get(imt, 0) for imt in self.imtls])
+        return {imt: mini.get(imt, 0) for imt in self.imtls}
 
     def levels_per_imt(self):
         """
@@ -679,7 +669,9 @@ class OqParam(valid.ParamSet):
         :returns: a composite data type for the GMFs
         """
         dt = F32, (len(self.imtls),)
-        lst = [('sid', U32), ('eid', U32), ('gmv', dt)]
+        lst = [('sid', U32), ('eid', U32)]
+        for m, imt in enumerate(self.imtls):
+            lst.append((f'gmv_{m}', F32))
         for out in self.get_sec_outputs():
             lst.append((out, dt))
         return numpy.dtype(lst)

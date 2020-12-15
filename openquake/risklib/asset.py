@@ -187,7 +187,8 @@ class Asset(object):
         :returns: the total asset value for `loss_type`
         """
         if loss_type == 'occupants':
-            return self.values['occupants_' + str(time_event)]
+            return (self.values['occupants_' + str(time_event)]
+                    if time_event else self.values['occupants'])
         return self.calc(loss_type, self.values, self.area, self.number)
 
     def retrofitted(self):
@@ -455,9 +456,7 @@ class AssetCollection(object):
         array = self.array
         aval = numpy.zeros((len(self), len(loss_types)), F32)  # (A, L)
         for lti, lt in enumerate(loss_types):
-            if lt == 'occupants':
-                aval[array['ordinal'], lti] = array[lt + '_None']
-            elif lt.endswith('_ins'):
+            if lt.endswith('_ins'):
                 aval[array['ordinal'], lti] = array['value-' + lt[:-4]]
             elif lt in self.fields:
                 aval[array['ordinal'], lti] = array['value-' + lt]
@@ -562,15 +561,13 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     for name in sorted(first_asset.values):
         if name.startswith('occupants_'):
             period = name.split('_', 1)[1]
-            if period != 'None':
-                # see scenario_risk test_case_2d
-                occupancy_periods.append(period)
+            # see scenario_risk test_case_2d
+            occupancy_periods.append(period)
             loss_types.append(name)
-            # discard occupants for different time periods
         else:
             loss_types.append('value-' + name)
     # loss_types can be ['value-business_interruption', 'value-contents',
-    # 'value-nonstructural', 'occupants_None', 'occupants_day',
+    # 'value-nonstructural', 'value-occupants', 'occupants_day',
     # 'occupants_night', 'occupants_transit']
     retro = ['retrofitted'] if first_asset._retrofitted else []
     float_fields = loss_types + retro
@@ -977,7 +974,7 @@ class Exposure(object):
                 num_occupancies += 1
         if num_occupancies:
             # store average occupants
-            values['occupants_None'] = tot_occupants / num_occupancies
+            values['occupants'] = tot_occupants / num_occupancies
 
         # check we are not missing a cost type
         missing = param['relevant_cost_types'] - set(values)

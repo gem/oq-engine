@@ -271,8 +271,9 @@ class EbrCalculator(base.RiskCalculator):
                 ((eid, rlz, losses)
                  for (eid, rlz), losses in zip(self.events, self.agglosses)
                  if losses.any()), elt_dt)
-            self.datastore['losses_by_event'] = agglosses
-            self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
+            self.datastore['event_loss_table/,'] = agglosses
+            self.datastore.set_attrs(
+                'event_loss_table/,', loss_types=loss_types)
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses',
                            asset_id=self.assetcol['id'],

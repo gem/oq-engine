@@ -34,7 +34,6 @@ import tempfile
 import string
 import random
 from django.test import Client
-from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
@@ -66,7 +65,8 @@ class EngineServerTestCase(unittest.TestCase):
         resp = cls.c.get('/v1/calc/%s' % path, data,
                          HTTP_HOST='127.0.0.1')
         if hasattr(resp, 'content'):
-            assert resp.content, 'No content from /v1/calc/%s' % path
+            assert resp.content, (
+                'No content from http://localhost:8800/v1/calc/%s' % path)
             js = resp.content.decode('utf8')
         else:
             js = bytes(loadnpz(resp.streaming_content)['json'])
@@ -90,8 +90,8 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def wait(cls):
         # wait until all calculations stop
-        for i in range(40):  # 20 seconds of timeout
-            time.sleep(0.5)
+        for i in range(30):  # 30 seconds of timeout
+            time.sleep(1)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 return
@@ -99,7 +99,6 @@ class EngineServerTestCase(unittest.TestCase):
         raise unittest.SkipTest('Timeout waiting for %s' % running_calcs)
 
     def postzip(self, archive):
-        config.distribution['log_level'] = 'warning'
         with open(os.path.join(self.datadir, archive), 'rb') as a:
             resp = self.post('run', dict(archive=a))
         try:

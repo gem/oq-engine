@@ -231,6 +231,16 @@ class SourceGroup(collections.abc.Sequence):
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag = max_mag
 
+    def count_ruptures(self):
+        """
+        Set src.num_ruptures on each source in the group
+        """
+        for src in self:
+            src.nsites = 1
+            src.num_ruptures = src.count_ruptures()
+            print(src.weight)
+        return self
+
     def split(self, maxweight):
         """
         Split the group in subgroups with weight <= maxweight, unless it
@@ -460,6 +470,11 @@ class RuptureConverter(object):
            :class:`openquake.hazardlib.geo.GriddedSurface` instance
         4. there is a list of PlanarSurface nodes; returns a
            :class:`openquake.hazardlib.geo.MultiSurface` instance
+        5. there is either a single a kiteSurface or a list of kiteSurface
+           nodes; returns a
+           :class:`openquake.hazardlib.geo.MultiSurface` instance
+           or a :class:`openquake.hazardlib.geo.MultiSurface` instance,
+           respectively
 
         :param surface_nodes: surface nodes as just described
         """
@@ -480,6 +495,22 @@ class RuptureConverter(object):
                 coords = split_coords_3d(~surface_node.posList)
             points = [geo.Point(*p) for p in coords]
             surface = geo.GriddedSurface.from_points_list(points)
+        elif surface_node.tag.endswith('kiteSurface'):
+            # single or multiple kite surfaces
+            profs = []
+            for surface_node in surface_nodes:
+                profs.append(self.geo_lines(surface_node))
+            if len(profs) < 2:
+                surface = geo.KiteSurface.from_profiles(
+                    profs[0], self.rupture_mesh_spacing,
+                    self.rupture_mesh_spacing)
+            else:
+                surfaces = []
+                for prof in profs:
+                    surfaces.append(geo.KiteSurface.from_profiles(
+                        prof, self.rupture_mesh_spacing,
+                        self.rupture_mesh_spacing))
+                surface = geo.MultiSurface(surfaces)
         else:  # a collection of planar surfaces
             planar_surfaces = list(map(self.geo_planar, surface_nodes))
             surface = geo.MultiSurface(planar_surfaces)
@@ -531,6 +562,7 @@ class RuptureConverter(object):
             surface=self.convert_surfaces(surfaces))
         return rupt
 
+    # used in scenario only (?)
     def convert_multiPlanesRupture(self, node):
         """
         Convert a multiPlanesRupture node.
@@ -539,7 +571,17 @@ class RuptureConverter(object):
         """
         mag, rake, hypocenter = self.get_mag_rake_hypo(node)
         with context(self.fname, node):
-            surfaces = list(node.getnodes('planarSurface'))
+            if hasattr(node, 'planarSurface'):
+                surfaces = list(node.getnodes('planarSurface'))
+                for s in surfaces:
+                    assert s.tag.endswith('planarSurface')
+            elif hasattr(node, 'kiteSurface'):
+                surfaces = list(node.getnodes('kiteSurface'))
+                for s in surfaces:
+                    assert s.tag.endswith('kiteSurface')
+            else:
+                raise ValueError('Only multiSurfaces of planarSurfaces or'
+                                 'kiteSurfaces are supported (no mix)')
         rupt = source.rupture.BaseRupture(
             mag=mag, rake=rake,
             tectonic_region_type=None,
@@ -593,8 +635,7 @@ class SourceConverter(RuptureConverter):
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
-                 spinning_floating=True, source_id=None,
-                 discard_trts=''):
+                 source_id=None, discard_trts=''):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -602,7 +643,6 @@ class SourceConverter(RuptureConverter):
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
         self.width_of_mfd_bin = width_of_mfd_bin
-        self.spinning_floating = spinning_floating
         self.source_id = source_id
         self.discard_trts = discard_trts
 
@@ -707,8 +747,6 @@ class SourceConverter(RuptureConverter):
                 npdist.append((prob, geo.NodalPlane(strike, dip, rake)))
         with context(self.fname, npnode):
             fix_dupl(npdist, self.fname, npnode.lineno)
-            if not self.spinning_floating:
-                npdist = [(1, npdist[0][1])]  # consider the first nodal plane
             return pmf.PMF(npdist)
 
     def convert_hddist(self, node):
@@ -724,8 +762,6 @@ class SourceConverter(RuptureConverter):
             hddist = [(hd['probability'], hd['depth']) for hd in hdnode]
         with context(self.fname, hdnode):
             fix_dupl(hddist, self.fname, hdnode.lineno)
-            if not self.spinning_floating:  # consider the first hypocenter
-                hddist = [(1, hddist[0][1])]
             return pmf.PMF(hddist)
 
     def convert_areaSource(self, node):

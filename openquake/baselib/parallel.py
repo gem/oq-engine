@@ -703,8 +703,7 @@ class Starmap(object):
                 concurrent_tasks = CT
             taskargs = [[blk] + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
-        return cls(
-            task, taskargs, distribute, progress, h5).submit_all()
+        return cls(task, taskargs, distribute, progress, h5)
 
     def __init__(self, task_func, task_args=(), distribute=None,
                  progress=logging.info, h5=None):

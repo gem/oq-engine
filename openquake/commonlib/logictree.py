@@ -1441,6 +1441,12 @@ class FullLogicTree(object):
             return sm_rlz.samples
         return self.gsim_lt.get_num_paths()
 
+    def get_num_potential_paths(self):
+        """
+         :returns: the number of potential realizations
+        """
+        return self.gsim_lt.get_num_paths() * self.source_model_lt.num_paths
+
     @property
     def rlzs(self):
         """

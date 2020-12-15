@@ -1,5 +1,38 @@
   [Michele Simionato]
   * Added a check for zero coefficient of variations for the Beta distribution
+  * Fixed 32 bit rounding issues in scenario_risk: now the total losses and
+    and the sum of the average losses are much closer
+  * Internal: made the loss type `occupants` a bit less special
+  * Documented `oq to_nrml`
+
+  [Claudia Mascandola]
+  * Added the Lanzano et al. (2019) GMPE
+
+  [Michele Simionato]
+  * Honored `minimum_asset_loss` also in the fully aggregated loss table,
+    not only in the partially aggregated loss tables and average losses
+  * Bug fixed: the log was disappearing in presence of an unrecognized
+    variable in the job.ini
+  * Implemented `minimum_asset_loss` in scenario_risk for consistency
+    with the `ebrisk` calculator
+  * Added a command `oq plot gridded_sources?`
+  * Fixed `oq recompute_losses` to expose the outputs to the database
+  * Fixed `oq engine --run --params` that was not working for
+    the `pointsource_distance`
+  * Changed the meaning of the `pointsource_distance` approximation
+
+  [Marco Pagani, Michele Simionato, Thomas Chartier]
+  * Added experimental version of KiteSource and KiteSurface
+
+  [Michele Simionato]
+  * Changed the serialization of ruptures to support MultiSurfaces
+  * Fixed a small bug of logic in the WebUI: if the authentication is
+    turned off, everyone must be able to see all calculations
+  * Fixed a bug in the calculation of averages losses in scenario_risk
+    calculations in presence of sites with zero hazard
+  * Optimized the prefiltering by using a KDTree
+  * Experimental: implemented gridding of point sources
+  * Reduced slow tasks due to big complex fault sources
   * Moved the parameter `num_cores` into openquake.cfg
   * Internal: introduced the environment variable OQ_REDUCE
   * Using pandas to export the GMF in CSV format
