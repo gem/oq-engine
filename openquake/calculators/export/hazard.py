@@ -407,7 +407,8 @@ def export_gmf_data_csv(ekey, dstore):
     sites = util.compose_arrays(sids, arr, 'site_id')
     writers.write_csv(f, sites)
     fname = dstore.build_fname('gmf', 'data', 'csv')
-    df.to_csv(fname, index=False, float_format=writers.FIVEDIGITS)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    writer.save_df(df, fname, comment=dstore.metadata)
     if 'sigma_epsilon' in dstore['gmf_data']:
         sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
         sig_eps = dstore['gmf_data/sigma_epsilon'][()]
