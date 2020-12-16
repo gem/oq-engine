@@ -30,16 +30,16 @@ class FarajpourEtAl2019TestCase(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check(self.MEAN_FILE,
-                   max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.5)
 
     def test_std_total(self):
         self.check(self.STD_TOTAL_FILE,
-                   max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.5)
 				   
     def test_std_inter(self):
         self.check(self.STD_INTER_FILE,
-                   max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.5)
 				   
     def test_std_intra(self):
         self.check(self.STD_INTRA_FILE,
-                   max_discrep_percentage=0.1)				   
+                   max_discrep_percentage=0.5)				   
