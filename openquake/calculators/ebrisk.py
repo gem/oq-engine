@@ -159,6 +159,8 @@ def ebrisk(rupgetter, param, monitor):
 
 
 def _aggkey_aggtags(tagcol, aggby):
+    # aggkey is a dictionary tuple of indices -> index
+    # aggtags a list of tags associated to the aggregate_by choices
     aggkey = {(): 0}
     aggtags = [['' for tagname in aggby]]
     if not aggby:
@@ -220,7 +222,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                                        attrs=dict(zip(oq.aggregate_by, tag)))
         self.param['aggkey'] = self.aggkey
         self.param.pop('oqparam', None)  # unneeded
-        self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
+        self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L),
+                                   attrs=dict(stat=[b'mean']))  # mean
         elt_nbytes = 4 * self.E * L
         if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The event loss table is too big to be transfer'
@@ -296,8 +299,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
-        if oq.avg_losses:
-            self.datastore['avg_losses-stats'].attrs['stat'] = [b'mean']
         for field, gmf in self.avg_gmf.items():
             self.datastore['avg_gmf/' + field] = gmf
         self.datastore.set_attrs(
