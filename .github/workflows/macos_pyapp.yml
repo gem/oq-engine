@@ -32,6 +32,7 @@ jobs:
             echo $PY_VER
             pip3 install -r requirements-$PY_VER-macos.txt
             pip3 install -e .
+            pip3 list
       - name: Run tests
         run: |
             oq dbserver start &
