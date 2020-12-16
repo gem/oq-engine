@@ -132,10 +132,16 @@ class DataStoreTestCase(unittest.TestCase):
         self.dstore['df/eid'] = eids
         self.dstore['df/val'] = vals
         self.dstore.getitem('df').attrs['__pdcolumns__'] = 'sid eid val'
+
+        # testing slice
         df = self.dstore.read_df('df', 'sid', slc=slice(1, 3))
         print(df)
-        df = self.dstore.read_df('df', 'eid')
-        print(df)
+
+        # testing selection
+        df = self.dstore.read_df('df', 'eid', sel={'eid': 2, 'sid': 0})
+        self.assertEqual(list(df.index), [2])
+        self.assertEqual(list(df.sid), [0])
+        self.assertEqual(list(df.val), [.1])
 
     def test_pandas_vlen(self):
         self.dstore['test/val'] = [.2, .3]
