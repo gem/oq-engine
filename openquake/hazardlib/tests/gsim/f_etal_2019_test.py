@@ -24,8 +24,8 @@ class FarajpourEtAl2019TestCase(BaseGSIMTestCase):
     GSIM_CLASS = FarajpourEtAl2019
     MEAN_FILE = 'F19/F_etal_2019_MEAN.csv'
     STD_TOTAL_FILE = 'F19/F_etal_2019_TOTAL.csv'
-	STD_INTER_FILE = 'F19/F_etal_2019_INTER.csv'
-	STD_INTRA_FILE = 'F19/F_etal_2019_INTRA.csv'
+    STD_INTER_FILE = 'F19/F_etal_2019_INTER.csv'
+    STD_INTRA_FILE = 'F19/F_etal_2019_INTRA.csv'
 
 
     def test_mean(self):
