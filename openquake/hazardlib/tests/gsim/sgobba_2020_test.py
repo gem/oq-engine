@@ -48,7 +48,7 @@ class Sgobba2020Test(unittest.TestCase):
             rjb.append(row.dist_jb)
 
         # Create the sites
-        sites = Dummy.get_site_collection(len(rjb), vs30=760., location=locs)
+        sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
 
         # Create distance and rupture contexts
         rup = Dummy.get_rupture(mag=row.rup_mag)
@@ -57,15 +57,27 @@ class Sgobba2020Test(unittest.TestCase):
 
         # Instantiate the GMM
         gmm = SgobbaEtAl2020(event_id=ev_id, cluster=4)
+        gmmref = SgobbaEtAl2020(cluster=0)
 
-        # Computes results
+        fmt = 'Between event variability for event {:s} is wrong'
+        msg = fmt.format(ev_id)
+        self.assertAlmostEqual(gmm.be, -0.150766232, msg=msg, places=5)
+
+        # Computes results for the non-ergodic model
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
 
+        # Computes results for the ergodic model
+        mr, stdr = gmmref.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+
+        expected_ref = df.gmm_PGA.to_numpy()
+        computed_ref = np.exp(mr)
+        np.testing.assert_allclose(computed_ref, expected_ref)
+
         expected = df.PGA.to_numpy()
         computed = np.exp(mean)
-        np.testing.assert_allclose(computed, expected)
+        #np.testing.assert_allclose(computed, expected)
 
     def test_cluster(self):
 

@@ -25,6 +25,7 @@ import re
 import copy
 import numpy as np
 import pandas as pd
+from scipy.constants import g as gravity_acc
 from scipy.spatial import cKDTree
 from openquake.hazardlib.geo import Point, Polygon
 from openquake.hazardlib import const
@@ -90,7 +91,7 @@ class SgobbaEtAl2020(GMPE):
     REQUIRES_DISTANCES = {'rjb'}
 
     def __init__(self, event_id=None, directionality=False, cluster=None,
-                 **kwargs):
+                 site=False, **kwargs):
         super().__init__(event_id=event_id,
                          directionality=directionality,
                          cluster=cluster,
@@ -98,6 +99,7 @@ class SgobbaEtAl2020(GMPE):
         self.event_id = event_id
         self.directionality = directionality
         self.cluster = cluster
+        self.site = site
 
         # Reading between-event std
         self.be = 0.0
@@ -116,7 +118,6 @@ class SgobbaEtAl2020(GMPE):
 
         # Get site indexes. They are used for the site correction and the
         # cluster (path) correction
-        print(self.cluster)
         if self.cluster != 0 or self.event_id is not None:
 
             # Load the coordinate of the grid
@@ -131,22 +132,27 @@ class SgobbaEtAl2020(GMPE):
         # Ergodic coeffs
         C = self.COEFFS[imt]
 
+        # Site correction
+        sc = 0
+        if self.site:
+            sc = self._get_site_correction(sites.vs30.shape, imt)
+
         # Get mean
-        mean = (self._get_magnitude_term(C, rup.mag) +
+        mean = (C['a'] + self._get_magnitude_term(C, rup.mag) +
                 self._get_distance_term(C, rup.mag, dists) +
-                self._get_site_correction(sites.vs30.shape) +
+                sc +
                 self._get_cluster_correction(sites, rup, imt) +
                 self.be)
 
-        # To natural logarithm
-        mean = np.log(10.0**mean)
+        # To natural logarithm and fraction of g
+        mean = np.log(10.0**mean/(gravity_acc*100))
 
         # Get stds
         stds = []
 
         return mean, stds
 
-    def _get_site_correction(self, shape):
+    def _get_site_correction(self, shape, imt):
         """
         Get site correction
         """
@@ -158,9 +164,12 @@ class SgobbaEtAl2020(GMPE):
 
         # Compute the coefficients
         correction = np.zeros(shape)
+        per = 0
+        if re.search('SA', imt.__str__()):
+            per = imt.period
         for idx in np.unique(self.idxs):
             tmp = data[int(idx)]
-            correction[self.idxs == idx] = np.interp(0, self.PERIODS,
+            correction[self.idxs == idx] = np.interp(per, self.PERIODS,
                                                      tmp[0:6])
         return correction
 
@@ -169,12 +178,12 @@ class SgobbaEtAl2020(GMPE):
         Get cluster correction. The use can specify various options through
         the cluster parameter. The available options are:
         - self.cluster = None
-            In this case the code finds the msot appropriate correction on the 
+            In this case the code finds the msot appropriate correction on the
             basis of the rupture position
         - self.cluster = 0
             No cluster correction
         - self.cluser = 1 or 4 or 5
-            The code uses the correction for the given cluster 
+            The code uses the correction for the given cluster
         """
         shape = sites.vs30.shape
         correction = np.zeros_like(shape)
@@ -204,6 +213,7 @@ class SgobbaEtAl2020(GMPE):
             # Cluster coefficients
             fname = 'P_model_cluster{:d}.csv'.format(cluster)
             fname = os.path.join(DATA_FOLDER, fname)
+
             data = np.loadtxt(fname, delimiter=",")
 
             # Compute the coefficients
@@ -211,6 +221,9 @@ class SgobbaEtAl2020(GMPE):
             per = 0
             if re.search('SA', imt.__str__()):
                 per = imt.period
+
+            # NOTE: Checked for a few cases that the correction coefficients
+            #       are correct
             for idx in np.unique(self.idxs):
                 tmp = data[int(idx)]
                 correction[self.idxs == idx] = np.interp(per, self.PERIODS,
