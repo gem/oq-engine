@@ -30,6 +30,7 @@ import pandas
 from openquake.baselib import hdf5, config, performance, python3compat, general
 
 
+MAX_ROWS = 10_000_000
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 
 
@@ -191,6 +192,30 @@ def dset2df(dset, indexfield, filterdict):
                 dic[field].append(val)
         dic['value'].append(arr[idx])
     return pandas.DataFrame(dic, index)
+
+
+def extract_cols(datagrp, sel, slc, columns):
+    """
+    :returns: a dictionary col -> array of values
+    """
+    first = columns[0]
+    nrows = len(datagrp[first])
+    if slc.start is None and slc.stop is None:  # split in slices
+        slcs = general.gen_slices(0, nrows, MAX_ROWS)
+    else:
+        slcs = [slc]
+    acc = general.AccumDict(accum=[])  # col -> arrays
+    for slc in slcs:
+        ok = slice(None)
+        dic = {col: datagrp[col][slc] for col in sel}
+        for col in sel:
+            if isinstance(ok, slice):  # first selection
+                ok = dic[col] == sel[col]
+            else:  # other selections
+                ok &= dic[col] == sel[col]
+        for col in columns:
+            acc[col].append(datagrp[col][slc][ok])
+    return {k: numpy.concatenate(vs) for k, vs in acc.items()}
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -487,12 +512,12 @@ class DataStore(collections.abc.MutableMapping):
             return dset2df(dset, index, sel)
         elif '__pdcolumns__' in dset.attrs:
             columns = dset.attrs['__pdcolumns__'].split()
-            dic = {col: dset[col][slc] for col in columns}
+            dic = extract_cols(dset, sel, slc, columns)
             if index is None:
-                df = pandas.DataFrame(dic)
+                return pandas.DataFrame(dic)
             else:
-                df = pandas.DataFrame(dic).set_index(index)
-            return df
+                return pandas.DataFrame(dic).set_index(index)
+
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]
