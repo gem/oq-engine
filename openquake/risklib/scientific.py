@@ -1414,33 +1414,6 @@ class LossCurvesMapsBuilder(object):
             array_stats = None
         return array, array_stats
 
-    # used in event_based_risk postproc
-    def build(self, losses_by_event, stats=()):
-        """
-        :param losses_by_event:
-            the aggregate loss table with shape R -> (E, L)
-        :param stats:
-            list of pairs [(statname, statfunc), ...]
-        :returns:
-            two arrays with shape (P, R, L) and (P, S, L)
-        """
-        P, R = len(self.return_periods), len(self.weights)
-        L = len(self.loss_dt.names)
-        array = numpy.zeros((P, R, L), F32)
-        for r in losses_by_event:
-            num_events = self.num_events.get(r, 0)
-            losses = losses_by_event[r]
-            for l, lt in enumerate(self.loss_dt.names):
-                ls = losses[:, l].flatten()  # flatten only in ucerf
-                # NB: do not use squeeze or the gmf_ebrisk tests will break
-                try:
-                    lbp = losses_by_period(
-                        ls, self.return_periods, num_events, self.eff_time)
-                except ValueError as exc:
-                    raise exc.__class__('%s for %s, rlz=' % (exc, lt, r))
-                array[:, r, l] = lbp
-        return self.pair(array, stats)
-
     # used in event_based_risk
     def build_curve(self, asset_value, loss_ratios, rlzi):
         return asset_value * losses_by_period(
@@ -1465,7 +1438,7 @@ class LossCurvesMapsBuilder(object):
                         array[a, r, c, lti] = clratio
         return self.pair(array, stats)
 
-    # used in ebrisk
+    # used in post_risk
     def build_curves(self, loss_arrays, rlzi):
         if len(loss_arrays) == 0:
             return ()
