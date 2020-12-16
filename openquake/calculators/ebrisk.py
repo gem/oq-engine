@@ -35,6 +35,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 get_n_occ = operator.itemgetter(1)
 
@@ -158,20 +159,25 @@ def ebrisk(rupgetter, param, monitor):
     return res
 
 
-def get_aggkey_attrs(tagcol, aggby):
+def _aggkey_aggtags(tagcol, aggby):
+    # aggkey is a dictionary tuple of indices -> index
+    # aggtags a list of tags associated to the aggregate_by choices
     aggkey = {(): 0}
-    attrs = [{}]
+    aggtags = [['' for tagname in aggby]]
     if not aggby:
-        return aggkey, attrs
+        return aggkey, aggtags
     alltags = [getattr(tagcol, tagname) for tagname in aggby]
     ranges = [range(1, len(tags)) for tags in alltags]
     i = 1
     for idxs in itertools.product(*ranges):
-        d = {name: tags[idx] for idx, name, tags in zip(idxs, aggby, alltags)}
+        lst = [tags[idx] for idx, tags in zip(idxs, alltags)]
         aggkey[idxs] = i
-        attrs.append(d)
+        aggtags.append(lst)
         i += 1
-    return aggkey, attrs
+    if len(aggkey) >= TWO16:
+        raise ValueError('Too many aggregation tags: %d >= %d' %
+                         (len(aggkey), TWO16))
+    return aggkey, aggtags
 
 
 @base.calculators.add('ebrisk')
@@ -192,7 +198,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.policy_dict:
             sec_losses.append(
                 InsuredLosses(self.policy_name, self.policy_dict))
-        self.aggkey, attrs = get_aggkey_attrs(
+        self.aggkey, aggtags = _aggkey_aggtags(
             self.assetcol.tagcol, oq.aggregate_by)
         logging.info('Building %d event loss table(s)', len(self.aggkey))
         if len(self.aggkey) > oq.max_num_loss_curves:
@@ -214,13 +220,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
 
         elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
-        for idxs, attr in zip(self.aggkey, attrs):
+        for idxs, tag in zip(self.aggkey, aggtags):
             idx = ','.join(map(str, idxs)) + ','
             self.datastore.create_dset('event_loss_table/' + idx, elt_dt,
-                                       attrs=attr)
+                                       attrs=dict(zip(oq.aggregate_by, tag)))
         self.param['aggkey'] = self.aggkey
         self.param.pop('oqparam', None)  # unneeded
-        self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
+        self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L),
+                                   attrs=dict(stat=[b'mean']))  # mean
         elt_nbytes = 4 * self.E * L
         if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The event loss table is too big to be transfer'
@@ -296,8 +303,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
-        if oq.avg_losses:
-            self.datastore['avg_losses-stats'].attrs['stat'] = [b'mean']
         for field, gmf in self.avg_gmf.items():
             self.datastore['avg_gmf/' + field] = gmf
         self.datastore.set_attrs(

@@ -672,6 +672,14 @@ class OqParam(valid.ParamSet):
             lst.append((out, dt))
         return numpy.dtype(lst)
 
+    def alt_dt(self, loss_a):
+        """
+        :returns: composite dtype for the agg_loss_table
+        """
+        lst = [('event_id', U32), ('agg_id', U16)] + [
+            (name, F32) for name in self.loss_names]
+        return numpy.dtype(lst)
+
     def get_sec_perils(self):
         """
         :returns: a list of secondary perils
