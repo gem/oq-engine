@@ -192,12 +192,13 @@ class CsvWriter(object):
         Save a DataFrame in CSV + comment format
         """
         if comment is None:
-            df.to_csv(fname, index=False, float_format=self.fmt)
+            df.to_csv(fname, index=False, float_format=self.fmt,
+                      line_terminator='\r\n')
         else:
             write_csv(fname, [], self.sep, self.fmt, list(df.columns),
                       comment=comment)
             df.to_csv(fname, index=False, float_format=self.fmt,
-                      header=False, mode='a')
+                      line_terminator='\r\n', header=False, mode='a')
         self.fnames.add(fname)
 
     def save_block(self, data, dest):
