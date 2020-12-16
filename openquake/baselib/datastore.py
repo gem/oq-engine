@@ -196,6 +196,10 @@ def dset2df(dset, indexfield, filterdict):
 
 def extract_cols(datagrp, sel, slc, columns):
     """
+    :param datagrp: something like and HDF5 data group
+    :param sel: dictionary column name -> value specifying a selection
+    :param slc: a slice object specifying the rows considered
+    :param columns: the full list of column names
     :returns: a dictionary col -> array of values
     """
     first = columns[0]
