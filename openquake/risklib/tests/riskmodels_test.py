@@ -135,8 +135,8 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
 """)
         with self.assertRaises(ValueError) as ar:
             nrml.to_python(vuln_content)
-        self.assertIn('It is not valid to define a loss ratio = 0.0 with a '
-                      'corresponding coeff. of variation > 0.0',
+        self.assertIn('It is not valid to define a mean loss ratio = 0 '
+                      'with a corresponding coefficient of variation > 0',
                       str(ar.exception))
 
     def test_missing_minIML(self):
@@ -325,8 +325,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                nrml.to_python(vuln_model)['PGA', 'RC/A']}
         vfs['structural', 'vulnerability'].seed = 42
         vfs['structural', 'vulnerability'].init()
-        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs,
-                                  ignore_covs=False)
+        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs)
         assets = [0, 1]
         eids = numpy.array([1, 2, 3, 4, 5])
         gmvs = numpy.array([.1, .2, .3, .4, .5])

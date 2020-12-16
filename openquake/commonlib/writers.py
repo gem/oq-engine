@@ -97,7 +97,7 @@ def _header(fields, renamedict):
     return fields
 
 
-def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
+def write_csv(dest, data, sep=',', fmt='%.6E', header=(), comment=None,
               renamedict=None):
     """
     :param dest: None, file, filename or io.StringIO instance
@@ -132,7 +132,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
     else:
         autoheader = build_header(data.dtype)
 
-    nfields = len(autoheader) or len(data[0])
+    nfields = len(autoheader) or len(header) or len(data[0])
     if comment:
         w.writerow(['#'] + [''] * (nfields - 2) + [comment])
 
@@ -174,7 +174,7 @@ class CsvWriter(object):
         self.fmt = fmt
         self.fnames = set()
 
-    def save(self, data, fname, header=None, comment=None, renamedict=None):
+    def save(self, data, fname, header=(), comment=None, renamedict=None):
         """
         Save data on fname.
 
@@ -186,6 +186,20 @@ class CsvWriter(object):
         """
         write_csv(fname, data, self.sep, self.fmt, header, comment, renamedict)
         self.fnames.add(getattr(fname, 'name', fname))
+
+    def save_df(self, df, fname, comment=None):
+        """
+        Save a DataFrame in CSV + comment format
+        """
+        if comment is None:
+            df.to_csv(fname, index=False, float_format=self.fmt,
+                      line_terminator='\r\n')
+        else:
+            write_csv(fname, [], self.sep, self.fmt, list(df.columns),
+                      comment=comment)
+            df.to_csv(fname, index=False, float_format=self.fmt,
+                      line_terminator='\r\n', header=False, mode='a')
+        self.fnames.add(fname)
 
     def save_block(self, data, dest):
         """

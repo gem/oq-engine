@@ -122,19 +122,28 @@ class VulnerabilityFunction(object):
             self.covs = numpy.zeros(self.imls.shape)
 
         for lr, cov in zip(self.mean_loss_ratios, self.covs):
-            if lr == 0.0 and cov > 0.0:
-                msg = ("It is not valid to define a loss ratio = 0.0 with a "
-                       "corresponding coeff. of variation > 0.0")
+            if lr == 0 and cov > 0:
+                msg = ("It is not valid to define a mean loss ratio = 0 "
+                       "with a corresponding coefficient of variation > 0")
                 raise ValueError(msg)
+            if cov < 0:
+                raise ValueError(
+                    'Found a negative coefficient of variation in %s' %
+                    self.covs)
             if distribution == 'BT':
                 if lr == 0:  # possible with cov == 0
                     pass
                 elif lr > 1:
-                    raise ValueError('The meanLRs must be <= 1, got %s' % lr)
+                    raise ValueError('The meanLRs must be ≤ 1, got %s' % lr)
+                elif cov == 0:
+                    raise ValueError(
+                        'Found a zero coefficient of variation in %s' %
+                        self.covs)
                 elif cov ** 2 > 1 / lr - 1:
                     # see https://github.com/gem/oq-engine/issues/4841
                     raise ValueError(
-                        'The coefficient of variation %s > %s is too large '
+                        'The coefficient of variation %s > %s does not '
+                        'satisfy the requirement 0 < σ < sqrt[μ × (1 - μ)] '
                         'in %s' % (cov, numpy.sqrt(1 / lr - 1), self))
 
         self.distribution_name = distribution
@@ -834,6 +843,28 @@ class LogNormalDistribution(Distribution):
         return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
 
 
+# The beta distribution `numpy.random.beta(alpha, beta)` is singular
+# if the beta array contains some zeros; this happens if the vulnerability
+# function has zero coefficients of variation (stddevs).
+# Even if you do something like this:
+
+# res = numpy.zeros_like(alpha)
+# ok = beta !=0  # not singular
+# res[ok] = numpy.random.beta(alpha[ok], beta[ok])
+# res[~ok] = 1
+
+# this is not going to give results close to you want expect by
+# setting stddev=.0000001 and mean=.0000001 (i.e. smoothly going
+# through the limit) even if the the seed is fixed. The reason is that
+# the random number generator will advance differently.  Suppose the
+# array size is 10 and there is a single singular value with beta=0
+# and 9 values with beta != 0; the call to numpy.random.beta(alpha, beta)
+# will advance the generator by 9 steps, while if you regularize the
+# singularity by using stddev=.0000001 and mean=.00000001 the random
+# generator will advance by 10 steps. The numbers produced by the beta
+# distribution will be quite different.
+# This is why having stddevs == 0 is an error and it is forbidden in
+# VulnerabilityFunction.__init__.
 @DISTRIBUTIONS.add('BT')
 class BetaDistribution(Distribution):
     def sample(self, means, _covs, stddevs, _idxs=None):
@@ -1383,33 +1414,6 @@ class LossCurvesMapsBuilder(object):
             array_stats = None
         return array, array_stats
 
-    # used in event_based_risk postproc
-    def build(self, losses_by_event, stats=()):
-        """
-        :param losses_by_event:
-            the aggregate loss table with shape R -> (E, L)
-        :param stats:
-            list of pairs [(statname, statfunc), ...]
-        :returns:
-            two arrays with shape (P, R, L) and (P, S, L)
-        """
-        P, R = len(self.return_periods), len(self.weights)
-        L = len(self.loss_dt.names)
-        array = numpy.zeros((P, R, L), F32)
-        for r in losses_by_event:
-            num_events = self.num_events.get(r, 0)
-            losses = losses_by_event[r]
-            for l, lt in enumerate(self.loss_dt.names):
-                ls = losses[:, l].flatten()  # flatten only in ucerf
-                # NB: do not use squeeze or the gmf_ebrisk tests will break
-                try:
-                    lbp = losses_by_period(
-                        ls, self.return_periods, num_events, self.eff_time)
-                except ValueError as exc:
-                    raise exc.__class__('%s for %s, rlz=' % (exc, lt, r))
-                array[:, r, l] = lbp
-        return self.pair(array, stats)
-
     # used in event_based_risk
     def build_curve(self, asset_value, loss_ratios, rlzi):
         return asset_value * losses_by_period(
@@ -1434,7 +1438,7 @@ class LossCurvesMapsBuilder(object):
                         array[a, r, c, lti] = clratio
         return self.pair(array, stats)
 
-    # used in ebrisk
+    # used in post_risk
     def build_curves(self, loss_arrays, rlzi):
         if len(loss_arrays) == 0:
             return ()

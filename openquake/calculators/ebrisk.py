@@ -35,6 +35,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 get_n_occ = operator.itemgetter(1)
 
@@ -67,6 +68,11 @@ def calc_risk(gmfs, param, monitor):
     aggby = param['aggregate_by']
     haz_by_sid = general.group_array(gmfs, 'sid')
     losses_by_A = numpy.zeros((len(assets_df), len(elt.loss_names)), F32)
+    acc['avg_gmf'] = avg_gmf = {}
+    for col in gmfs.dtype.names:
+        if col not in 'sid eid rlz':
+            avg_gmf[col] = numpy.zeros(param['N'], F32)
+
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
             haz = haz_by_sid[sid]
@@ -80,9 +86,12 @@ def calc_risk(gmfs, param, monitor):
         with mon_agg:
             elt.aggregate(out, param['minimum_asset_loss'], aggby)
             # NB: after the aggregation out contains losses, not loss_ratios
+        ws = weights[haz['rlz']]
+        for col in gmfs.dtype.names:
+            if col not in 'sid eid rlz':
+                avg_gmf[col][sid] = haz[col] @ ws
         if param['avg_losses']:
             with mon_avg:
-                ws = weights[haz['rlz']]
                 for lni, ln in enumerate(elt.loss_names):
                     losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
     if len(gmfs):
@@ -129,6 +138,7 @@ def ebrisk(rupgetter, param, monitor):
     gmfs = []
     gmf_info = []
     srcfilter = monitor.read('srcfilter')
+    param['N'] = len(srcfilter.sitecol.complete)
     gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'],
                            param['amplifier'])
     nbytes = 0
@@ -142,26 +152,32 @@ def ebrisk(rupgetter, param, monitor):
                                  data.nbytes, mon_haz.dt))
     if not gmfs:
         return {}
-    res = calc_risk(numpy.concatenate(gmfs), param, monitor)
+    conc = numpy.concatenate(gmfs)
+    res = calc_risk(conc, param, monitor)
     if gmf_info:
         res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
     return res
 
 
-def get_aggkey_attrs(tagcol, aggby):
+def _aggkey_aggtags(tagcol, aggby):
+    # aggkey is a dictionary tuple of indices -> index
+    # aggtags a list of tags associated to the aggregate_by choices
     aggkey = {(): 0}
-    attrs = [{}]
+    aggtags = [['' for tagname in aggby]]
     if not aggby:
-        return aggkey, attrs
+        return aggkey, aggtags
     alltags = [getattr(tagcol, tagname) for tagname in aggby]
     ranges = [range(1, len(tags)) for tags in alltags]
     i = 1
     for idxs in itertools.product(*ranges):
-        d = {name: tags[idx] for idx, name, tags in zip(idxs, aggby, alltags)}
+        lst = [tags[idx] for idx, tags in zip(idxs, alltags)]
         aggkey[idxs] = i
-        attrs.append(d)
+        aggtags.append(lst)
         i += 1
-    return aggkey, attrs
+    if len(aggkey) >= TWO16:
+        raise ValueError('Too many aggregation tags: %d >= %d' %
+                         (len(aggkey), TWO16))
+    return aggkey, aggtags
 
 
 @base.calculators.add('ebrisk')
@@ -182,7 +198,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.policy_dict:
             sec_losses.append(
                 InsuredLosses(self.policy_name, self.policy_dict))
-        self.aggkey, attrs = get_aggkey_attrs(
+        self.aggkey, aggtags = _aggkey_aggtags(
             self.assetcol.tagcol, oq.aggregate_by)
         logging.info('Building %d event loss table(s)', len(self.aggkey))
         if len(self.aggkey) > oq.max_num_loss_curves:
@@ -204,13 +220,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
 
         elt_dt = [('event_id', U32), ('loss', (F32, (L,)))]
-        for idxs, attr in zip(self.aggkey, attrs):
+        for idxs, tag in zip(self.aggkey, aggtags):
             idx = ','.join(map(str, idxs)) + ','
             self.datastore.create_dset('event_loss_table/' + idx, elt_dt,
-                                       attrs=attr)
+                                       attrs=dict(zip(oq.aggregate_by, tag)))
         self.param['aggkey'] = self.aggkey
         self.param.pop('oqparam', None)  # unneeded
-        self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))  # mean
+        self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L),
+                                   attrs=dict(stat=[b'mean']))  # mean
         elt_nbytes = 4 * self.E * L
         if elt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The event loss table is too big to be transfer'
@@ -244,7 +261,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = []
         self.datastore.swmr_on()
-        self.indices = general.AccumDict(accum=[])  # rlzi -> [(start, stop)]
+        self.avg_gmf = general.AccumDict(
+            accum=numpy.zeros(self.N, F32))  # imt -> gmvs
         smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', srcfilter)
         smap.monitor.save('crmodel', self.crmodel)
@@ -252,8 +270,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore, oq.concurrent_tasks):
             smap.submit((rg, self.param))
         smap.reduce(self.agg_dicts)
-        if self.indices:
-            self.datastore['event_loss_table/indices'] = self.indices
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
@@ -279,6 +295,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
         self.events_per_sid.append(dic['events_per_sid'])
+        self.avg_gmf += dic['avg_gmf']
 
     def post_execute(self, dummy):
         """
@@ -286,8 +303,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
-        if oq.avg_losses:
-            self.datastore['avg_losses-stats'].attrs['stat'] = [b'mean']
+        for field, gmf in self.avg_gmf.items():
+            self.datastore['avg_gmf/' + field] = gmf
+        self.datastore.set_attrs(
+            'avg_gmf', __pdcolumns__=' '.join(self.avg_gmf))
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run()

@@ -698,7 +698,6 @@ def extract_curves(dstore, what, tot):
 
 
 extract.add('tot_curves')(partial(extract_curves, tot='tot_'))
-extract.add('app_curves')(partial(extract_curves, tot='app_'))
 
 
 @extract.add('agg_curves')
