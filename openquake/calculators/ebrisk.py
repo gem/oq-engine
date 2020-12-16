@@ -35,6 +35,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 get_n_occ = operator.itemgetter(1)
 
@@ -173,6 +174,9 @@ def _aggkey_aggtags(tagcol, aggby):
         aggkey[idxs] = i
         aggtags.append(lst)
         i += 1
+    if len(aggkey) >= TWO16:
+        raise ValueError('Too many aggregation tags: %d >= %d' %
+                         (len(aggkey), TWO16))
     return aggkey, aggtags
 
 

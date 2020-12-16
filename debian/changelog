@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a limit of 65,536 to the maximum number of aggregation tags
   * Bug fix: ignore_covs=true now sets the coefficient of variations to zero
 
   [Anirudh Rao]
