@@ -586,7 +586,6 @@ def make_figure_tot_curves(extractors, what):
     ax.set_xlabel('return periods')
     ax.set_ylabel('PoE')
     ax.loglog(tot.return_period, tot[:, 0], '-', label='tot_curves')
-    ax.loglog(app.return_period, app[:, 0], '-', label='app_curves')
     ax.grid(True)
     ax.legend()
     return plt

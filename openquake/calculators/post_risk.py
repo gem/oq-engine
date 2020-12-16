@@ -209,7 +209,6 @@ class PostRiskCalculator(base.RiskCalculator):
                     ds['agg_losses-rlzs'][
                         (slice(None), r) + dic['idx']  # LRT...
                     ] = dic['agg_losses']
-                    ds['app_curves-rlzs'][:, r] += dic['agg_curves']  # PL
 
         lbe = ds['event_loss_table/,'][()]
         rlz_ids = ds['events']['rlz_id'][lbe['event_id']]
@@ -223,9 +222,6 @@ class PostRiskCalculator(base.RiskCalculator):
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         aggby = {tagname: encode(getattr(self.tagcol, tagname)[1:])
                  for tagname in oq.aggregate_by}
-        set_rlzs_stats(self.datastore, 'app_curves',
-                       return_periods=builder.return_periods,
-                       loss_types=oq.loss_names, **aggby, units=units)
         set_rlzs_stats(self.datastore, 'tot_curves',
                        return_periods=builder.return_periods,
                        loss_types=oq.loss_names, **aggby, units=units)
