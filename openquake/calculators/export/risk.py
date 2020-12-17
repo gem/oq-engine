@@ -182,7 +182,7 @@ def export_agg_losses(ekey, dstore):
             l, *tagidxs = multi_idx
             evalue = expvalue[tuple(tagidxs) + (l,)]
             row = tagcol.get_tagvalues(tagnames, tagidxs) + (
-                loss, evalue, loss / evalue)
+                loss, evalue, loss / evalue if loss else 0)
             rows.append((oq.loss_names[l],) + row)
         dest = dstore.build_fname(name, tag, 'csv')
         writer.save(rows, dest, header, comment=md)
