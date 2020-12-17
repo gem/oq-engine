@@ -32,7 +32,6 @@ jobs:
             echo $PY_VER
             pip3 install -r requirements-$PY_VER-macos.txt
             pip3 install -e .\[osgeo\]
-            pip3 install osgeo.gdal
             pip3 list
       - name: Run tests
         run: |
