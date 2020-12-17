@@ -63,7 +63,7 @@ class FarajpourEtAl2019(GMPE):
     #: Required distance measure is rrup
     REQUIRES_DISTANCES = {'rrup'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+  #  def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
