@@ -137,6 +137,8 @@ class PostRiskCalculator(base.RiskCalculator):
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
         self.L = len(oq.loss_names)
         self.tagcol = self.datastore['assetcol/tagcol']
+        self.aggidx = {key: k for k, key in enumerate(
+            self.tagcol.get_aggkey(oq.aggregate_by))}
 
     def build_datasets(self, builder, aggregate_by, prefix):
         """
@@ -147,8 +149,10 @@ class PostRiskCalculator(base.RiskCalculator):
         aggby = {'aggregate_by': aggregate_by}
         for tagname in aggregate_by:
             aggby[tagname] = encode(getattr(self.tagcol, tagname)[1:])
-        shp = self.get_shape(self.L, self.R, aggregate_by=aggregate_by)
-        # shape L, R, T...
+        if prefix == 'tot_':
+            shp = (self.L, self.R)  # shape L, R
+        else:
+            shp = (self.L, self.R, len(self.aggidx))  # shape L, R, T
         self.datastore.create_dset(prefix + 'losses-rlzs', F32, shp)
         shp = self.get_shape(P, self.R, self.L, aggregate_by=aggregate_by)
         # shape P, R, L, T...
@@ -205,9 +209,9 @@ class PostRiskCalculator(base.RiskCalculator):
                     ds['agg_curves-rlzs'][
                         (slice(None), r, slice(None)) + dic['idx']  # PRLT..
                     ] = dic['agg_curves']
-                    ds['agg_losses-rlzs'][
-                        (slice(None), r) + dic['idx']  # LRT...
-                    ] = dic['agg_losses']
+                    key = tuple(i + 1 for i in dic['idx'])
+                    ds['agg_losses-rlzs'][  # LRT
+                        slice(None), r, self.aggidx[key]] = dic['agg_losses']
 
         lbe = ds['event_loss_table/,'][()]
         rlz_ids = ds['events']['rlz_id'][lbe['event_id']]
