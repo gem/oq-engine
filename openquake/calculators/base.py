@@ -1153,6 +1153,11 @@ def save_agg_values(dstore, assetcol, lossnames, tagnames):
     """
     aval = assetcol.arr_value(lossnames)  # shape (A, L)
     if tagnames:
+        aggkey = assetcol.tagcol.get_aggkey(tagnames)
+        dt = [(name + '_', U16) for name in tagnames] + [
+            (name, hdf5.vstr) for name in tagnames]
+        kvs = [key + val for key, val in aggkey.items()]
+        dstore['agg_keys'] = numpy.array(kvs, dt)
         dstore['agg_values'] = assetcol.aggregate_by(
             list(tagnames), aval)
     dstore['tot_values'] = assetcol.aggregate_by([], aval)
