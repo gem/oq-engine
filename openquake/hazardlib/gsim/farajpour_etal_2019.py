@@ -77,8 +77,8 @@ class FarajpourEtAl2019(GMPE):
         stddevs = self._get_stddevs(C, stddev_types)
         return mean, stddevs
 
-    def get_pga_rock_values(self, rup, dists):
-        pga_rock = (self._get_magnitudescaling_rock_term(rup) +
+    #def get_pga_rock_values(self, rup, dists):
+     #   pga_rock = (self._get_magnitudescaling_rock_term(rup) +
                     self._get_styleoffaulting_rock_term(rup) +
                     self._get_faultdip_rock_term(rup) +
                     self._get_hypocentraldepth_rock_term(rup) +
