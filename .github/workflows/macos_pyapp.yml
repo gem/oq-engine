@@ -14,7 +14,7 @@ jobs:
       matrix:
         #os: [macos-latest, windows-latest, ubuntu-latest]
         os: [macos-10.15, macos-11.0]
-        python-version: [3.7, 3.8]
+        python-version: [3.8]
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
@@ -32,6 +32,7 @@ jobs:
             echo $PY_VER
             pip3 install -r requirements-$PY_VER-macos.txt
             pip3 install -e .\[osgeo\]
+            pip3 install osgeo.gdal
             pip3 list
       - name: Run tests
         run: |
