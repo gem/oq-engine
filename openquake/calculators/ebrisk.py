@@ -303,10 +303,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
-        for field, gmf in self.avg_gmf.items():
-            self.datastore['avg_gmf/' + field] = gmf
-        self.datastore.set_attrs(
-            'avg_gmf', __pdcolumns__=' '.join(self.avg_gmf))
+        self.datastore.create_dframe('avg_gmf', self.avg_gmf.items())
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run()

@@ -846,7 +846,7 @@ class HazardCalculator(BaseCalculator):
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):
-            save_exposed_values(
+            save_agg_values(
                 self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 
     def store_rlz_info(self, eff_ruptures):
@@ -1134,40 +1134,25 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
     """
     Create and possibly populate the datasets in the gmf_data group
     """
-    dstore.create_dset('gmf_data/sid', U32)
-    dstore.create_dset('gmf_data/eid', U32)
-    cols = ['sid', 'eid']
-    if data is not None:
-        dstore['gmf_data/sid'] = data['sid']
-        dstore['gmf_data/eid'] = data['eid']
+    n = 0 if data is None else len(data['sid'])
+    items = [('sid', U32 if n == 0 else data['sid']),
+             ('eid', U32 if n == 0 else data['eid'])]
     for m in range(M):
         col = f'gmv_{m}'
-        cols.append(col)
-        dstore.create_dset('gmf_data/' + col, F32)
-        if data is not None:
-            dstore[f'gmf_data/' + col] = data[f'gmv_{m}']
+        items.append((col, F32 if data is None else data[col]))
     for peril in secperils:
         for out in peril.outputs:
-            dstore.create_dset(f'gmf_data/{out}', F32)
-            cols.append(f'{out}')
-    dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
+            val = F32 if n == 0 else numpy.zeros(n, F32)
+            items.append((out, val))
+    dstore.create_dframe('gmf_data', items, 'gzip')
 
 
-def save_exposed_values(dstore, assetcol, lossnames, tagnames):
+def save_agg_values(dstore, assetcol, lossnames, tagnames):
     """
-    Store 2^n arrays where n is the number of tagNames. For instance with
-    the tags country, occupancy it stores 2^2 = 4 arrays:
-
-    exposed_values/agg_country_occupancy  # shape (T1, T2, L)
-    exposed_values/agg_country            # shape (T1, L)
-    exposed_values/agg_occupancy          # shape (T2, L)
-    exposed_values/agg                    # shape (L,)
+    Store an array of shape (T..., L)
     """
     aval = assetcol.arr_value(lossnames)  # shape (A, L)
-    for n in range(len(tagnames) + 1, -1, -1):
-        for names in itertools.combinations(tagnames, n):
-            name = 'exposed_values/' + '_'.join(('agg',) + names)
-            dstore[name] = assetcol.aggregate_by(list(names), aval)
-            attrs = {tagname: getattr(assetcol.tagcol, tagname)[1:]
-                     for tagname in names}
-            dstore.set_shape_attrs(name, **attrs, loss_name=lossnames)
+    if tagnames:
+        dstore['agg_values'] = assetcol.aggregate_by(
+            list(tagnames), aval)
+    dstore['tot_values'] = assetcol.aggregate_by([], aval)
