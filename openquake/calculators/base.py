@@ -1155,4 +1155,4 @@ def save_agg_values(dstore, assetcol, lossnames, tagnames):
     if tagnames:
         dstore['agg_values'] = assetcol.aggregate_by(
             list(tagnames), aval)
-    dstore['tot_values'] = aval.sum(axis=0)
+    dstore['tot_values'] = assetcol.aggregate_by([], aval)
