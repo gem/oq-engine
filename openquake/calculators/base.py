@@ -1149,7 +1149,7 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
 
 def save_agg_values(dstore, assetcol, lossnames, tagnames):
     """
-    Store an array of shape (T..., L)
+    Store agg_keys, agg_values, tot_values
     """
     aval = assetcol.arr_value(lossnames)  # shape (A, L)
     if tagnames:
