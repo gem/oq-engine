@@ -743,7 +743,7 @@ def extract_agg_curves(dstore, what):
         pass
     elif qdic['absolute'] == [0]:
         tl = tuple(tagidx) + (l,)
-        evalue = dstore['exposed_values'][tl]  # shape T...
+        evalue = dstore['agg_values'][tl]  # shape T...
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)

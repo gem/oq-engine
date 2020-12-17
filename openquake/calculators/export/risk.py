@@ -77,7 +77,7 @@ def export_agg_curve_rlzs(ekey, dstore):
     assetcol = dstore['assetcol']
     if ekey[0].startswith('agg_'):
         aggregate_by = oq.aggregate_by
-        aggvalue = dstore['exposed_values'][()]
+        aggvalue = dstore['agg_values'][()]
     else:  # tot_curves
         aggregate_by = []
         aggvalue = dstore['tot_values'][()]
@@ -164,9 +164,9 @@ def export_agg_losses(ekey, dstore):
     aggregate_by = oq.aggregate_by if dskey.startswith('agg_') else []
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    assetcol = dstore['assetcol']
+    tagcol = dstore['assetcol/tagcol']
     if aggregate_by:
-        expvalue = dstore['exposed_values'][()]
+        expvalue = dstore['agg_values'][()]
     else:
         expvalue = dstore['tot_values'][()]
     # shape (T1, T2, ..., L)
@@ -181,7 +181,7 @@ def export_agg_losses(ekey, dstore):
         for multi_idx, loss in numpy.ndenumerate(value[:, r]):
             l, *tagidxs = multi_idx
             evalue = expvalue[tuple(tagidxs) + (l,)]
-            row = assetcol.tagcol.get_tagvalues(tagnames, tagidxs) + (
+            row = tagcol.get_tagvalues(tagnames, tagidxs) + (
                 loss, evalue, loss / evalue)
             rows.append((oq.loss_names[l],) + row)
         dest = dstore.build_fname(name, tag, 'csv')

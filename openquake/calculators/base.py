@@ -846,7 +846,7 @@ class HazardCalculator(BaseCalculator):
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):
-            save_exposed_values(
+            save_agg_values(
                 self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 
     def store_rlz_info(self, eff_ruptures):
@@ -1147,11 +1147,12 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
     dstore.create_dframe('gmf_data', items, 'gzip')
 
 
-def save_exposed_values(dstore, assetcol, lossnames, tagnames):
+def save_agg_values(dstore, assetcol, lossnames, tagnames):
     """
     Store an array of shape (T..., L)
     """
     aval = assetcol.arr_value(lossnames)  # shape (A, L)
     if tagnames:
-        dstore['exposed_values'] = assetcol.aggregate_by(list(tagnames), aval)
+        dstore['agg_values'] = assetcol.aggregate_by(
+            list(tagnames), aval)
     dstore['tot_values'] = aval.sum(axis=0)
