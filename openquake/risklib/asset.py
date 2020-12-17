@@ -314,8 +314,7 @@ class TagCollection(object):
         alltags = [getattr(self, tagname) for tagname in tagnames]
         ranges = [range(1, len(tags)) for tags in alltags]
         for i, idxs in enumerate(itertools.product(*ranges)):
-            tup = tuple(tags[idx] for idx, tags in zip(idxs, alltags))
-            aggkey[idxs] = tup
+            aggkey[idxs] = tuple(tags[idx] for idx, tags in zip(idxs, alltags))
         if len(aggkey) >= TWO16:
             raise ValueError('Too many aggregation tags: %d >= %d' %
                              (len(aggkey), TWO16))
@@ -492,7 +491,7 @@ class AssetCollection(object):
         aval = self.arr_value(loss_types)
         return self.aggregate_by(list(tagnames), aval)
 
-    def gen_key_aggvalues(self, loss_names, *tagnames):
+    def get_agg_values(self, loss_names, tagnames):
         """
         :param loss_names:
             the relevant loss_names
@@ -501,17 +500,22 @@ class AssetCollection(object):
         :yields:
             pairs (key, aggvalues)
         """
+        aggkey = {key: k for k, key in enumerate(
+            self.tagcol.get_aggkey(tagnames))}
+        KL = len(aggkey), len(loss_names)
         dic = {tagname: self[tagname] for tagname in tagnames}
         for ln in loss_names:
             if ln.endswith('_ins'):
                 dic[ln] = self['value-' + ln[:-4]]
             elif ln in self.fields:
                 dic[ln] = self['value-' + ln]
+        agg_values = numpy.zeros(KL)
         df = pandas.DataFrame(dic).set_index(list(tagnames))
         for key, grp in df.groupby(df.index):
             if isinstance(key, int):
                 key = key,  # turn it into a 1-value tuple
-            yield key, numpy.array(grp.sum())
+            agg_values[aggkey[key]] = numpy.array(grp.sum())
+        return agg_values
 
     def reduce(self, sitecol):
         """
