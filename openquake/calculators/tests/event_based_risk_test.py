@@ -447,7 +447,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_recompute(self):
         # test recomputing aggregate loss curves with post_risk
-        self.run_calc(recompute.__file__, 'job.ini')
+        out = self.run_calc(recompute.__file__, 'job.ini', exports='csv')
+        [fname] = out['agg_losses-rlzs', 'csv']
+        self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
+        [fname] = out['agg_curves-rlzs', 'csv']
+        self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
         parent = self.calc.datastore
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
