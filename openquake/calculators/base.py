@@ -1143,7 +1143,7 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
     for peril in secperils:
         for out in peril.outputs:
             val = F32 if n == 0 else numpy.zeros(n, F32)
-            items.append((f'gmf_data/{out}', val))
+            items.append((out, val))
     dstore.create_dframe('gmf_data', items, 'gzip')
 
 
