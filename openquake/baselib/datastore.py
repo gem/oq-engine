@@ -391,7 +391,7 @@ class DataStore(collections.abc.MutableMapping):
 
     def create_dframe(self, key, nametypes, compression=None):
         """
-        Create a HDF5 datagroups readable as a pandas DataFrame
+        Create a HDF5 datagroup readable as a pandas DataFrame
 
         :param key: name of the dataset
         :param nametypes: list of pairs (name, dtype) or (name, array)
