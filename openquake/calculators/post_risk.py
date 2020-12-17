@@ -178,7 +178,6 @@ class PostRiskCalculator(base.RiskCalculator):
         builder = get_loss_builder(self.datastore)
         if oq.aggregate_by:
             self.build_datasets(builder, oq.aggregate_by, 'agg_')
-        self.build_datasets(builder, [], 'app_')
         self.build_datasets(builder, [], 'tot_')
         parent = self.datastore.parent
         full_aggregate_by = (parent['oqparam'].aggregate_by if parent

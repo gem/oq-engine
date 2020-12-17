@@ -163,13 +163,14 @@ def export_agg_losses(ekey, dstore):
     oq = dstore['oqparam']
     aggregate_by = oq.aggregate_by if dskey.startswith('agg_') else []
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
+    # value has shape (L, R, T) for agg_losses and (L, R) for tot_losses
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     tagcol = dstore['assetcol/tagcol']
+    aggkey = tagcol.get_aggkey(aggregate_by)
     if aggregate_by:
-        expvalue = dstore['agg_values'][()]
+        expvalue = dstore['agg_values'][()]  # shape (T..., L)
     else:
-        expvalue = dstore['tot_values'][()]
-    # shape (T1, T2, ..., L)
+        expvalue = dstore['tot_values'][()]  # shape L
     tagnames = tuple(aggregate_by)
     header = ('loss_type',) + tagnames + (
         'loss_value', 'exposed_value', 'loss_ratio')
@@ -179,10 +180,10 @@ def export_agg_losses(ekey, dstore):
     for r, tag in enumerate(tags):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(value[:, r]):
-            l, *tagidxs = multi_idx
-            evalue = expvalue[tuple(tagidxs) + (l,)]
-            row = tagcol.get_tagvalues(tagnames, tagidxs) + (
-                loss, evalue, loss / evalue)
+            l, *tagidxs = multi_idx  # multi_idx is (L, T...)
+            key = tuple(tagidxs)
+            evalue = expvalue[key + (l,)]
+            row = aggkey[key] + (loss, evalue, loss / evalue)
             rows.append((oq.loss_names[l],) + row)
         dest = dstore.build_fname(name, tag, 'csv')
         writer.save(rows, dest, header, comment=md)
