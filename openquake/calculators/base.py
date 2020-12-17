@@ -1134,23 +1134,17 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
     """
     Create and possibly populate the datasets in the gmf_data group
     """
-    dstore.create_dset('gmf_data/sid', U32)
-    dstore.create_dset('gmf_data/eid', U32)
-    cols = ['sid', 'eid']
-    if data is not None:
-        dstore['gmf_data/sid'] = data['sid']
-        dstore['gmf_data/eid'] = data['eid']
+    n = 0 if data is None else len(data['sid'])
+    items = [('sid', U32 if n == 0 else data['sid']),
+             ('eid', U32 if n == 0 else data['eid'])]
     for m in range(M):
         col = f'gmv_{m}'
-        cols.append(col)
-        dstore.create_dset('gmf_data/' + col, F32)
-        if data is not None:
-            dstore[f'gmf_data/' + col] = data[f'gmv_{m}']
+        items.append((col, F32 if data is None else data[col]))
     for peril in secperils:
         for out in peril.outputs:
-            dstore.create_dset(f'gmf_data/{out}', F32)
-            cols.append(f'{out}')
-    dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
+            val = F32 if n == 0 else numpy.zeros(n, F32)
+            items.append((f'gmf_data/{out}', val))
+    dstore.create_dframe('gmf_data', items, 'gzip')
 
 
 def save_exposed_values(dstore, assetcol, lossnames, tagnames):

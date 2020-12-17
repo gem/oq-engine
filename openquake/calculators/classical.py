@@ -290,6 +290,7 @@ class ClassicalCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         if self.few_sites:
+            descr = []  # (param, dt)
             for param in params:
                 if param == 'sids_':
                     dt = hdf5.vuint16
@@ -303,10 +304,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = U16
                 else:
                     dt = F32
-                self.datastore.create_dset('rup/' + param, dt, (None,),
-                                           compression='gzip')
-            dset = self.datastore.getitem('rup')
-            dset.attrs['__pdcolumns__'] = ' '.join(params)
+                descr.append((param, dt))
+            self.datastore.create_dframe('rup', descr, 'gzip')
         self.by_task = {}  # task_no => src_ids
         self.maxradius = 0
         self.Ns = len(self.csm.source_info)
