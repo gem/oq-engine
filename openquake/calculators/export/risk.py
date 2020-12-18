@@ -40,14 +40,6 @@ U32 = numpy.uint32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
-def add_columns(dframe, **columns):
-    """
-    :param dframe: a DataFrame
-    :param columns: a dictionary of functions producing the dynamic columns
-    """
-    return dframe.assign(**columns)
-
-
 def get_rup_data(ebruptures):
     dic = {}
     for ebr in ebruptures:
@@ -69,7 +61,7 @@ def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     lnames = numpy.array(oq.loss_names)
     if ekey[0].startswith('agg_'):
-        aggvalue = dstore['aggvalues'][()]  # shape (T, L)
+        aggvalue = dstore['agg_values'][()]  # shape (T, L)
         tags = dstore['agg_keys'][:][oq.aggregate_by]
     else:  # tot_curves
         aggvalue = dstore['tot_values'][()]  # shape L
@@ -162,7 +154,7 @@ def export_agg_losses(ekey, dstore):
     tagcol = dstore['assetcol/tagcol']
     aggtags = list(tagcol.get_aggkey(aggregate_by).values())
     if aggregate_by:
-        expvalue = dstore['aggvalues'][()]  # shape (T, L)
+        expvalue = dstore['agg_values'][()]  # shape (T, L)
     else:
         expvalue = dstore['tot_values'][()]  # shape L
     tagnames = tuple(aggregate_by)
