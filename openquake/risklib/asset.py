@@ -21,6 +21,7 @@ import logging
 import csv
 import os
 import numpy
+import pandas
 from shapely import wkt, geometry
 
 from openquake.baselib import hdf5, general
@@ -28,6 +29,14 @@ from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
 from openquake.risklib import countries
+
+U8 = numpy.uint8
+U32 = numpy.uint32
+F32 = numpy.float32
+U64 = numpy.uint64
+TWO16 = 2 ** 16
+TWO32 = 2 ** 32
+by_taxonomy = operator.attrgetter('taxonomy')
 
 
 def get_case_similar(names):
@@ -202,14 +211,6 @@ class Asset(object):
         return '<Asset #%s>' % self.ordinal
 
 
-U8 = numpy.uint8
-U32 = numpy.uint32
-F32 = numpy.float32
-U64 = numpy.uint64
-TWO32 = 2 ** 32
-by_taxonomy = operator.attrgetter('taxonomy')
-
-
 class TagCollection(object):
     """
     An iterable collection of tags in the form "tagname=tagvalue".
@@ -304,6 +305,20 @@ class TagCollection(object):
         """
         return {tagname: getattr(self, tagname)[tagidx]
                 for tagidx, tagname in zip(tagidxs, self.tagnames)}
+
+    def get_aggkey(self, tagnames):
+        """
+        :returns: a dictionary tuple of indices -> tagvalues
+        """
+        aggkey = {}
+        alltags = [getattr(self, tagname) for tagname in tagnames]
+        ranges = [range(1, len(tags)) for tags in alltags]
+        for i, idxs in enumerate(itertools.product(*ranges)):
+            aggkey[idxs] = tuple(tags[idx] for idx, tags in zip(idxs, alltags))
+        if len(aggkey) >= TWO16:
+            raise ValueError('Too many aggregation tags: %d >= %d' %
+                             (len(aggkey), TWO16))
+        return aggkey
 
     def gen_tags(self, tagname):
         """
@@ -417,6 +432,7 @@ class AssetCollection(object):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
 
+    # used in the extract API
     def aggregate_by(self, tagnames, array):
         """
         :param tagnames: a list of valid tag names
@@ -474,6 +490,32 @@ class AssetCollection(object):
         """
         aval = self.arr_value(loss_types)
         return self.aggregate_by(list(tagnames), aval)
+
+    def get_agg_values(self, loss_names, tagnames):
+        """
+        :param loss_names:
+            the relevant loss_names
+        :param tagnames:
+            tagnames
+        :yields:
+            pairs (key, aggvalues)
+        """
+        aggkey = {key: k for k, key in enumerate(
+            self.tagcol.get_aggkey(tagnames))}
+        KL = len(aggkey), len(loss_names)
+        dic = {tagname: self[tagname] for tagname in tagnames}
+        for ln in loss_names:
+            if ln.endswith('_ins'):
+                dic[ln] = self['value-' + ln[:-4]]
+            elif ln in self.fields:
+                dic[ln] = self['value-' + ln]
+        agg_values = numpy.zeros(KL)
+        df = pandas.DataFrame(dic).set_index(list(tagnames))
+        for key, grp in df.groupby(df.index):
+            if isinstance(key, int):
+                key = key,  # turn it into a 1-value tuple
+            agg_values[aggkey[key]] = numpy.array(grp.sum())
+        return agg_values
 
     def reduce(self, sitecol):
         """
