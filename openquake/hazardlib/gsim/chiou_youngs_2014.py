@@ -256,7 +256,8 @@ class ChiouYoungs2014(GMPE):
         """
         Returns the basin depth scaling
         """
-        return C["phi5"] * (1.0 - np.exp(-centered_z1pt0 / C["phi6"]))
+        return C["phi5"] * (1.0 - np.exp(-centered_z1pt0 /
+                                         self.CONSTANTS["phi6"]))
 
     def get_nonlinear_site_term(self, C, sites, y_ref):
         """
@@ -352,7 +353,8 @@ class ChiouYoungs2014Japan(ChiouYoungs2014):
             np.sqrt(rrup ** 2. + self.CONSTANTS["crb"] ** 2.))
 
         # Get the magnitude dependent term
-        f_rm = C["cg1"] + (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0))) * rrup
+        f_rm = (C["cg1"] +
+                (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
         if (mag > 6.0) and (mag < 6.9):
             # Apply adjustment factor for Japan
             f_rm *= C["gjpit"]
@@ -362,23 +364,22 @@ class ChiouYoungs2014Japan(ChiouYoungs2014):
         """
         Returns the linear site scaling term
         """
-        vs_norm = np.log(sites.vs30 / 1130.)
-        vs_norm[vs_norm > 0.0] = 0.0
-        return C["phi1jp"] * vs_norm
+        return C["phi1jp"] * np.log(sites.vs30 / 1130).clip(-np.inf, 0.0)
 
     def get_basin_depth_term(self, C, centered_z1pt0):
         """
         Returns the basin depth scaling
         """
-        return C["phi5jp"] * (1.0 - np.exp(-centered_z1pt0 / C["phi6jp"]))
+        return C["phi5jp"] * (1.0 - np.exp(-centered_z1pt0 /
+                                           self.CONSTANTS["phi6jp"]))
 
     def _get_centered_z1pt0(self, sites):
         """
         Get z1pt0 centered on the Vs30- dependent average z1pt0(m) for Japan
         """
         #: Japan
-        mean_z1pt0 = (-5.23 / 2.) * np.log(((sites.vs30) ** 2. + 412.0 ** 2.)
-                                           / (1360 ** 2. + 412.0 ** 2.))
+        mean_z1pt0 = (-5.23 / 2.) * np.log(((sites.vs30 ** 2.) + 412.39 ** 2.)
+                                           / (1360 ** 2. + 412.39 ** 2.))
         return sites.z1pt0 - np.exp(mean_z1pt0)
 
 
@@ -397,9 +398,10 @@ class ChiouYoungs2014Italy(ChiouYoungs2014):
             np.sqrt(rrup ** 2. + self.CONSTANTS["crb"] ** 2.))
 
         # Get the magnitude dependent term
-        f_rm = C["cg1"] + (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0))) * rrup
+        f_rm = (C["cg1"] +
+                (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
         if (mag > 6.0) and (mag < 6.9):
-            # Apply adjustment factor for Japan
+            # Apply adjustment factor for Italy
             f_rm *= C["gjpit"]
         return f_r + f_rm
 
@@ -407,7 +409,10 @@ class ChiouYoungs2014Italy(ChiouYoungs2014):
 class ChiouYoungs2014Wenchuan(ChiouYoungs2014):
     """
     Adaption of the Chiou & Youngs (2014) GMPE for the Wenchuan far-field
-    attenuation scaling, but assuming the California site amplification model
+    attenuation scaling, but assuming the California site amplification model.
+    It should be note that according to Chiou & Youngs (2014) this adjustment
+    is calibrated only for the M7.9 Wenchuan earthquake, so application to
+    other scenarios is at the user's own risk
     """
     def get_far_field_distance_scaling(self, C, mag, rrup):
         """
@@ -419,11 +424,10 @@ class ChiouYoungs2014Wenchuan(ChiouYoungs2014):
             np.sqrt(rrup ** 2. + self.CONSTANTS["crb"] ** 2.))
 
         # Get the magnitude dependent term
-        f_rm = C["cg1"] + (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0))) * rrup
-        if (mag > 6.0) and (mag < 6.9):
-            # Apply adjustment factor for Wenchuan
-            f_rm *= C["gwn"]
-        return f_r + f_rm
+        f_rm = (C["cg1"] +
+                (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
+        # Apply adjustment factor for Wenchuan
+        return f_r + (f_rm * C["gwn"])
 
 
 class ChiouYoungs2014PEER(ChiouYoungs2014):
