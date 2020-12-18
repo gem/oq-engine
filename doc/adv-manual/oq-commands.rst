@@ -14,11 +14,11 @@ You can see the full list of commands by running `oq help`::
 
    $ oq help
    usage: oq [--version]
-             {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,recompute_losses,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot,help}
+             {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot,help}
              ...
    
    positional arguments:
-     {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,recompute_losses,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot,help}
+     {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot,help}
                            available subcommands; use oq help <subcmd>
    
    optional arguments:
