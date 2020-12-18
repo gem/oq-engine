@@ -36,6 +36,7 @@ jobs:
       - name: Run tests
         run: |
             oq dbserver start &
+            echo " pytest openquake"
             pytest openquake
       - name: Run demos
         run: |
