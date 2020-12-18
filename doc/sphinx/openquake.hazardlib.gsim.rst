@@ -510,7 +510,10 @@ farajpour_etal_2019
 ---------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.farajpour_etal_2019
- 
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
 frankel_1996
 --------------------------------------------
 
