@@ -521,7 +521,7 @@ class ArrayWrapper(object):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
         T1, ..., TN which are list of tags of lenghts D1, ... DN into
-        a table with rows (tag1, ... tagN, extra1, ... extraM) of maximum
+        a DataFrame with rows (tag1, ... tagN, extra1, ... extraM) of maximum
         length D1 * ... * DN. Zero values are discarded.
 
         >>> from pprint import pprint
@@ -534,10 +534,10 @@ class ArrayWrapper(object):
         >>> arr[1, 0] = 500
         >>> aw = ArrayWrapper(arr, dic)
         >>> pprint(aw.to_table())
-        [('taxonomy', 'occupancy', 'value'),
-         ('RC', 'RES', 2000.0),
-         ('RC', 'IND', 5000.0),
-         ('WOOD', 'RES', 500.0)]
+        taxonomy occupancy   value
+        0       RC       RES  2000.0
+        1       RC       IND  5000.0
+        2     WOOD       RES   500.0
         """
         if hasattr(self, 'json'):
             vars(self).update(json.loads(self.json))
@@ -569,7 +569,7 @@ class ArrayWrapper(object):
                     out.append(values + tuple(val))
             elif val:
                 out.append(values + (val,))
-        return [fields] + out
+        return pandas.DataFrame(out, columns=fields)
 
     def to_dict(self):
         """

@@ -20,6 +20,7 @@ import os
 import csv
 import tempfile
 import numpy  # this is needed by the doctests, don't remove it
+import pandas
 from openquake.baselib.node import scientificformat
 
 FIVEDIGITS = '%.5E'
@@ -178,28 +179,25 @@ class CsvWriter(object):
         """
         Save data on fname.
 
-        :param data: numpy array or list of lists
+        :param data: numpy array, list of lists or pandas DataFrame
         :param fname: path name
         :param header: header to use
         :param comment: optional dictionary to be converted in a comment
         :param renamedict: a dictionary for renaming the columns
         """
-        write_csv(fname, data, self.sep, self.fmt, header, comment, renamedict)
-        self.fnames.add(getattr(fname, 'name', fname))
-
-    def save_df(self, df, fname, comment=None):
-        """
-        Save a DataFrame in CSV + comment format
-        """
-        if comment is None:
-            df.to_csv(fname, index=False, float_format=self.fmt,
-                      line_terminator='\r\n')
+        if isinstance(data, pandas.DataFrame):
+            if comment is None:
+                data.to_csv(fname, index=False, float_format=self.fmt,
+                            line_terminator='\r\n')
+            else:
+                write_csv(fname, [], self.sep, self.fmt, list(data.columns),
+                          comment=comment)
+                data.to_csv(fname, index=False, float_format=self.fmt,
+                            line_terminator='\r\n', header=False, mode='a')
         else:
-            write_csv(fname, [], self.sep, self.fmt, list(df.columns),
-                      comment=comment)
-            df.to_csv(fname, index=False, float_format=self.fmt,
-                      line_terminator='\r\n', header=False, mode='a')
-        self.fnames.add(fname)
+            write_csv(fname, data, self.sep, self.fmt, header, comment,
+                      renamedict)
+        self.fnames.add(getattr(fname, 'name', fname))
 
     def save_block(self, data, dest):
         """

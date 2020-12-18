@@ -331,7 +331,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
                       'tag=taxonomy&tag=occupancy&kind=quantile-0.5')
-        self.assertEqual(len(arr.to_table()), 5)
+        self.assertEqual(len(arr.to_table()), 4)
 
         # aggregate by all loss types
         fnames = export(
