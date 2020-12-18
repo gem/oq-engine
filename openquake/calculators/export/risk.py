@@ -166,8 +166,9 @@ def export_agg_losses(ekey, dstore):
     # value has shape (L, R, T) for agg_losses and (L, R) for tot_losses
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     tagcol = dstore['assetcol/tagcol']
+    aggtags = list(tagcol.get_aggkey(aggregate_by).values())
     if aggregate_by:
-        expvalue = dstore['agg_values'][()]  # shape (T..., L)
+        expvalue = dstore['aggvalues'][()]  # shape (T, L)
     else:
         expvalue = dstore['tot_values'][()]  # shape L
     tagnames = tuple(aggregate_by)
@@ -180,10 +181,13 @@ def export_agg_losses(ekey, dstore):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(value[:, r]):
             if loss:  # many tag combinations are missing, i.e. zero
-                l, *tagidxs = multi_idx
-                evalue = expvalue[tuple(tagidxs) + (l,)]
-                row = tagcol.get_tagvalues(tagnames, tagidxs) + (
-                    loss, evalue, loss / evalue if loss else 0)
+                l, *tagidxs = multi_idx  # multi_idx is (L, T...)
+                idx = tuple(tagidxs)
+                evalue = expvalue[idx + (l,)]
+                if len(idx):
+                    row = aggtags[idx[0]] + (loss, evalue, loss / evalue)
+                else:
+                    row = (loss, evalue, loss / evalue)
                 rows.append((oq.loss_names[l],) + row)
         dest = dstore.build_fname(name, tag, 'csv')
         writer.save(rows, dest, header, comment=md)

@@ -1,4 +1,4 @@
-#,,,,,,"generated_by='OpenQuake engine 3.11.0-git6f2f2d8b0f', start_date='2020-12-18T06:19:15', checksum=147663202, investigation_time=1000.0, risk_investigation_time=1.0"
+#,,,,,,"generated_by='OpenQuake engine 3.11.0-git7b485902ae', start_date='2020-12-18T06:37:46', checksum=147663202, investigation_time=1000.0, risk_investigation_time=1.0"
 loss_type,NAME_1,NAME_2,taxonomy,loss_value,exposed_value,loss_ratio
 structural,West,Dhaualagiri,Wood,8.20879E+02,7.71120E+06,1.06453E-04
 structural,West,Dhaualagiri,Adobe,8.01887E+02,2.54016E+06,3.15684E-04

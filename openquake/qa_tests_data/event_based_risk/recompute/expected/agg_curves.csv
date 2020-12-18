@@ -1,4 +1,4 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.11.0-git2b8f0ae426', start_date='2020-12-17T16:44:02', checksum=147663202, kind='agg_curves-rlzs', risk_investigation_time=1.0"
+#,,,,,,,,"generated_by='OpenQuake engine 3.11.0-git7b485902ae', start_date='2020-12-18T06:37:46', checksum=147663202, kind='agg_curves-rlzs', risk_investigation_time=1.0"
 return_period,rlz,loss_type,NAME_1,NAME_2,taxonomy,loss_value,loss_ratio,annual_frequency_of_exceedence
 100,0,structural,West,Dhaualagiri,Adobe,9.50828E+03,3.74318E-03,1.00000E-02
 100,0,structural,West,Gandaki,Wood,1.98137E+04,4.94829E-04,1.00000E-02
