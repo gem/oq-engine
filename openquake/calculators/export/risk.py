@@ -180,14 +180,15 @@ def export_agg_losses(ekey, dstore):
     for r, tag in enumerate(tags):
         rows = []
         for multi_idx, loss in numpy.ndenumerate(value[:, r]):
-            l, *tagidxs = multi_idx  # multi_idx is (L, T...)
-            idx = tuple(tagidxs)
-            evalue = expvalue[idx + (l,)]
-            if len(idx):
-                row = aggtags[idx[0]] + (loss, evalue, loss / evalue)
-            else:
-                row = (loss, evalue, loss / evalue)
-            rows.append((oq.loss_names[l],) + row)
+            if loss:  # many tag combinations are missing, i.e. zero
+                l, *tagidxs = multi_idx  # multi_idx is (L, T...)
+                idx = tuple(tagidxs)
+                evalue = expvalue[idx + (l,)]
+                if len(idx):
+                    row = aggtags[idx[0]] + (loss, evalue, loss / evalue)
+                else:
+                    row = (loss, evalue, loss / evalue)
+                rows.append((oq.loss_names[l],) + row)
         dest = dstore.build_fname(name, tag, 'csv')
         writer.save(rows, dest, header, comment=md)
     return writer.getsaved()
