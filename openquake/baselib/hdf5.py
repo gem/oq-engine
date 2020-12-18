@@ -534,7 +534,7 @@ class ArrayWrapper(object):
         >>> arr[1, 0] = 500
         >>> aw = ArrayWrapper(arr, dic)
         >>> pprint(aw.to_dframe())
-        taxonomy occupancy   value
+          taxonomy occupancy   value
         0       RC       RES  2000.0
         1       RC       IND  5000.0
         2     WOOD       RES   500.0
