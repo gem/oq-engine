@@ -554,6 +554,13 @@ faccioli_2010
     :undoc-members:
     :show-inheritance:
 
+<<<<<<< master
+farajpour_etal_2019
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.farajpour_etal_2019
+   
+=======
 faccioli_cauzzi_2006
 ---------------------------------------------
 
@@ -562,6 +569,7 @@ faccioli_cauzzi_2006
     :undoc-members:
     :show-inheritance:
 
+>>>>>>> master
 frankel_1996
 --------------------------------------------
 
