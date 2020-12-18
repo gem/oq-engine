@@ -91,7 +91,7 @@ def form(value):
 
 def rst_table(data, header=None, fmt=None):
     """
-    Build a .rst table from a matrix.
+    Build a .rst table from a matrix or a DataFrame
     
     >>> tbl = [['a', 1], ['b', 2]]
     >>> print(rst_table(tbl, header=['Name', 'Value']))
@@ -102,6 +102,9 @@ def rst_table(data, header=None, fmt=None):
     b    2    
     ==== =====
     """
+    if isinstance(data, pandas.DataFrame):
+        header = header or list(data.columns)
+        data = numpy.array(data)
     if header is None and hasattr(data, '_fields'):
         header = data._fields
     try:

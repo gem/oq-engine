@@ -134,14 +134,15 @@ class PostRiskCalculator(base.RiskCalculator):
     def pre_execute(self):
         oq = self.oqparam
         self.L = len(oq.loss_names)
-        self.tagcol = self.datastore['assetcol/tagcol']
         if oq.hazard_calculation_id and not self.datastore.parent:
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
-            assetcol = self.datastore.parent['assetcol']
+            assetcol = self.datastore['assetcol']
             aggkey = base.save_agg_values(
                 self.datastore, assetcol, oq.loss_names, oq.aggregate_by)
         else:
-            aggkey = self.tagcol.get_aggkey(oq.aggregate_by)
+            assetcol = self.datastore['assetcol']
+            aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
+        self.tagcol = assetcol.tagcol
         self.aggidx = {key: k for k, key in enumerate(aggkey)}
 
     def build_datasets(self, builder, aggregate_by, prefix):
@@ -227,18 +228,19 @@ class PostRiskCalculator(base.RiskCalculator):
             ds['tot_curves-rlzs'][:, r] = curves  # PL
             ds['tot_losses-rlzs'][:, r] = losses.sum(axis=0) * oq.ses_ratio
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
+        L = len(oq.loss_names)
         set_rlzs_stats(self.datastore, 'tot_curves',
-                       return_periods=builder.return_periods,
-                       loss_types=oq.loss_names, units=units)
+                       return_periods=builder.return_periods, lti=L,
+                       units=units)
         set_rlzs_stats(self.datastore, 'tot_losses',
-                       loss_types=oq.loss_names, units=units)
+                       loss_type=oq.loss_names, units=units)
         if oq.aggregate_by:
             K = len(self.aggidx)
             set_rlzs_stats(self.datastore, 'agg_curves',
                            return_periods=builder.return_periods,
-                           loss_types=oq.loss_names, agg_ids=K, units=units)
+                           lti=L, agg_id=K, units=units)
             set_rlzs_stats(self.datastore, 'agg_losses',
-                           loss_types=oq.loss_names, agg_ids=K, units=units)
+                           loss_type=oq.loss_names, agg_id=K, units=units)
         return 1
 
     def post_execute(self, dummy):

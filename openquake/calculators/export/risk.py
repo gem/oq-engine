@@ -19,6 +19,7 @@ import json
 import itertools
 import collections
 import numpy
+import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
@@ -39,20 +40,12 @@ U32 = numpy.uint32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
 
 
-def add_columns(table, **columns):
+def add_columns(dframe, **columns):
     """
-    :param table: a list of rows, with the first row being an header
+    :param dframe: a DataFrame
     :param columns: a dictionary of functions producing the dynamic columns
     """
-    fields, *rows = table
-    Ntuple = collections.namedtuple('nt', fields)
-    newtable = [fields + tuple(columns)]
-    for rec in itertools.starmap(Ntuple, rows):
-        newrow = list(rec)
-        for col in columns:
-            newrow.append(columns[col](rec))
-        newtable.append(newrow)
-    return newtable
+    return dframe.assign(**columns)
 
 
 def get_rup_data(ebruptures):
@@ -74,23 +67,36 @@ def tag2idx(tags):
             ('tot_curves-rlzs', 'csv'), ('tot_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
+    lnames = numpy.array(oq.loss_names)
     if ekey[0].startswith('agg_'):
         aggvalue = dstore['aggvalues'][()]  # shape (T, L)
+        tags = dstore['agg_keys'][:][oq.aggregate_by]
     else:  # tot_curves
         aggvalue = dstore['tot_values'][()]  # shape L
-
+        tags = []
     md = dstore.metadata
     md.update(dict(
         kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
     fname = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     aw = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value')
-    table = add_columns(
-        aw.to_table(),
-        loss_ratio=lambda rec: rec.loss_value / aggvalue[rec.agg_ids],
-        annual_frequency_of_exceedence=lambda rec: 1 / rec.return_periods)
-    table[0] = [c[:-1] if c.endswith('s') else c for c in table[0]]
-    writer.save(table, fname, comment=md)
+    df = aw.to_dframe()
+    dic = dict(return_period=df.return_periods)
+    if 'stats' in ekey[0]:
+        dic['stat'] = df.stat
+    else:
+        dic['rlz'] = df.rlz
+    dic['loss_type'] = lnames[df.lti]
+    if len(tags):
+        for tagname, tagvalues in zip(oq.aggregate_by, tags[df.agg_id].T):
+            dic[tagname] = tagvalues
+    dic['loss_value'] = df.loss_value
+    if ekey[0].startswith('agg_'):
+        dic['loss_ratio'] = df.loss_value / aggvalue[df.agg_id, df.lti]
+    else:  # tot
+        dic['loss_ratio'] = df.loss_value / aggvalue[df.lti]
+    dic['annual_frequency_of_exceedence'] = 1 / df.return_periods
+    writer.save(pandas.DataFrame(dic), fname, comment=md)
     return writer.getsaved()
 
 
@@ -189,21 +195,13 @@ def export_src_loss_table(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    trts = dstore['full_lt'].trts
-    trt_by_source_id = {}
-    for rec in dstore['source_info']:
-        trt_by_source_id[rec['source_id'][:16]] = trts[rec['trti']]
-
-    def get_trt(row):
-        return trt_by_source_id[row.source]
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time))
     aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table'], 'loss_value')
     dest = dstore.build_fname('src_loss_table', '', 'csv')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    rows = add_columns(aw.to_table(), trt=get_trt)
-    writer.save(rows, dest, comment=md)
+    writer.save(aw.to_dframe(), dest, comment=md)
     return writer.getsaved()
 
 
@@ -222,23 +220,23 @@ def export_losses_by_event(ekey, dstore):
         md.update(dict(investigation_time=oq.investigation_time,
                        risk_investigation_time=oq.risk_investigation_time))
     events = dstore['events'][()]
-    columns = dict(rlz_id=lambda rec: events[rec.event_id]['rlz_id'])
+    columns = dict(rlz_id=lambda df: events[df.event_id]['rlz_id'])
     if oq.investigation_time:  # not scenario
-        columns['rup_id'] = lambda rec: events[rec.event_id]['rup_id']
-        columns['year'] = lambda rec: events[rec.event_id]['year']
+        columns['rup_id'] = lambda df: events[df.event_id]['rup_id']
+        columns['year'] = lambda df: events[df.event_id]['year']
     try:
         lbe = dstore['event_loss_table/,'][()]
     except KeyError:  # scenario_damage + consequences
         lbe = dstore['losses_by_event'][()]
     lbe.sort(order='event_id')
-    dic = dict(shape_descr=['event_id'])
-    dic['event_id'] = list(lbe['event_id'])
     # example (0, 1, 2, 3) -> (0, 2, 3, 1)
     axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
     data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
-    aw = hdf5.ArrayWrapper(data, dic, oq.loss_names)
-    table = add_columns(aw.to_table(), **columns)
-    writer.save(table, dest, comment=md)
+    dic = dict(event_id=lbe['event_id'])
+    for l, ln in enumerate(oq.loss_names):
+        dic[ln] = data[..., l]
+    df = pandas.DataFrame(dic).assign(**columns)
+    writer.save(df, dest, comment=md)
     return writer.getsaved()
 
 
@@ -491,7 +489,7 @@ def export_aggregate_by_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
     fname = dstore.export_path(path)
-    writer.save(aw.to_table(), fname)
+    writer.save(aw.to_dframe(), fname)
     fnames.append(fname)
     return fnames
 
