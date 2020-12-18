@@ -26,7 +26,7 @@ import numpy as np
 
 from pyproj import Geod
 from openquake.baselib.node import Node
-from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import npoints_towards
@@ -117,7 +117,6 @@ class KiteSurface(BaseSurface):
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
-                # mesh = Mesh(tlo, tla, tde)
                 mesh = RectangularMesh(tlo, tla, tde)
                 self.mesh = mesh
         else:
@@ -291,7 +290,6 @@ class KiteSurface(BaseSurface):
         # Convert from profiles to edges
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
-        # return cls(Mesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]), profiles)
         return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]), 
                    profiles)
 
