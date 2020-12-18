@@ -202,26 +202,12 @@ class NonParametricSeismicSource(BaseSeismicSource):
                 except:
                     lats.append(la)
 
-            #if isinstance(lo[0], numpy.ndarray):
-            #    lo = numpy.concatenate([a for a in lo[0]])
-            #   la = numpy.concatenate([a for a in la[0]])
-            #lons.extend(lo)
-            #lats.extend(la)
-
         lons = numpy.array(lons)
         lats = numpy.array(lats)
 
-        """
-        lons = numpy.concatenate(
-            [rup.surface.mesh.lons.flatten() for rup, pmf in self.data])
-        lats = numpy.concatenate(
-            [rup.surface.mesh.lats.flatten() for rup, pmf in self.data])
-        """
-
         points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
         numpy.around(numpy.squeeze(lons), 5, points['lon'])
-        #points['lon'] = numpy.round(lons, 5)
-        points['lat'] = numpy.round(lats, 5)
+        numpy.around(numpy.squeeze(lons), 5, points['lat'])
         points = numpy.unique(points)
         mesh = Mesh(points['lon'], points['lat'])
         return mesh.get_convex_hull()
