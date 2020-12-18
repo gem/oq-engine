@@ -564,10 +564,10 @@ class ArrayWrapper(object):
         for idx, values in zip(itertools.product(*idxs),
                                itertools.product(*tags)):
             val = self.array[idx]
-            if tup:
+            if isinstance(val, numpy.ndarray):
                 if val.sum():
                     out.append(values + tuple(val))
-            elif val:
+            elif val:  # is a scalar
                 out.append(values + (val,))
         return pandas.DataFrame(out, columns=fields)
 
