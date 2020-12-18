@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Fixed the loss_ratio for empty aggregations in ebrisk to be zero (not NaN)
+  * Fixed `oq recompute_losses` and renamed it to `oq reaggregate`
   * Added a limit of 65,536 to the maximum number of aggregation tags
   * Bug fix: ignore_covs=true now sets the coefficient of variations to zero
 

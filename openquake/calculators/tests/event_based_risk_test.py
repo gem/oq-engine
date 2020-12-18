@@ -461,3 +461,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         oq.hazard_calculation_id = parent.calc_id
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             prc.run()
+
+        [fname] = export(('agg_losses-rlzs', 'csv'), prc.datastore)
+        self.assertEqualFiles('expected/recomputed_losses.csv', fname,
+                              delta=1E-5)
+
