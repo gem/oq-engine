@@ -191,7 +191,7 @@ def dset2df(dset, indexfield, filterdict):
             else:
                 dic[field].append(val)
         dic['value'].append(arr[idx])
-    return pandas.DataFrame(dic, index)
+    return pandas.DataFrame(dic, index or None)
 
 
 def extract_cols(datagrp, sel, slc, columns):

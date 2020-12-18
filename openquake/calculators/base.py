@@ -1149,11 +1149,13 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
 
 def save_agg_values(dstore, assetcol, lossnames, tagnames):
     """
-    Store agg_keys, agg_values, tot_values
+    Store agg_keys, agg_values, tot_values.
+    :returns: the aggkey dictionary key -> tags
     """
     aval = assetcol.arr_value(lossnames)  # shape (A, L)
     if tagnames:
         aggkey = assetcol.tagcol.get_aggkey(tagnames)
+        logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in tagnames] + [
             (name, hdf5.vstr) for name in tagnames]
         kvs = [key + val for key, val in aggkey.items()]
@@ -1162,3 +1164,4 @@ def save_agg_values(dstore, assetcol, lossnames, tagnames):
             list(tagnames), aval)
         dstore['aggvalues'] = assetcol.get_agg_values(lossnames, tagnames)
     dstore['tot_values'] = assetcol.aggregate_by([], aval)
+    return aggkey if tagnames else {}

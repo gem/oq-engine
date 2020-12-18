@@ -133,16 +133,17 @@ class PostRiskCalculator(base.RiskCalculator):
     """
     def pre_execute(self):
         oq = self.oqparam
+        self.L = len(oq.loss_names)
         if oq.hazard_calculation_id and not self.datastore.parent:
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             assetcol = self.datastore['assetcol']
-            base.save_agg_values(
+            aggkey = base.save_agg_values(
                 self.datastore, assetcol, oq.loss_names, oq.aggregate_by)
-
-        self.L = len(oq.loss_names)
-        self.tagcol = self.datastore['assetcol/tagcol']
-        self.aggidx = {key: k for k, key in enumerate(
-            self.tagcol.get_aggkey(oq.aggregate_by))}
+        else:
+            assetcol = self.datastore['assetcol']
+            aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
+        self.tagcol = assetcol.tagcol
+        self.aggidx = {key: k for k, key in enumerate(aggkey)}
 
     def build_datasets(self, builder, aggregate_by, prefix):
         """
@@ -150,16 +151,19 @@ class PostRiskCalculator(base.RiskCalculator):
         agg_losses-XXX, tot_losses-XXX.
         """
         P = len(builder.return_periods)
+        T = len(self.aggidx)
         aggby = {'aggregate_by': aggregate_by}
         for tagname in aggregate_by:
             aggby[tagname] = encode(getattr(self.tagcol, tagname)[1:])
         if prefix == 'tot_':
-            shp = (self.L, self.R)  # shape L, R
+            shp = (self.L, self.R)
         else:
-            shp = (self.L, self.R, len(self.aggidx))  # shape L, R, T
+            shp = (self.L, self.R, T)
         self.datastore.create_dset(prefix + 'losses-rlzs', F32, shp)
-        shp = self.get_shape(P, self.R, self.L, aggregate_by=aggregate_by)
-        # shape P, R, L, T...
+        if prefix == 'tot_':
+            shp = (P, self.R, self.L)
+        else:
+            shp = (P, self.R, self.L, T)
         self.datastore.create_dset(prefix + 'curves-rlzs', F32, shp)
 
     def execute(self):
@@ -210,12 +214,9 @@ class PostRiskCalculator(base.RiskCalculator):
                 continue
             for r, dic in res.items():
                 if oq.aggregate_by:
-                    ds['agg_curves-rlzs'][
-                        (slice(None), r, slice(None)) + dic['idx']  # PRLT..
-                    ] = dic['agg_curves']
-                    key = tuple(i + 1 for i in dic['idx'])
-                    ds['agg_losses-rlzs'][  # LRT
-                        slice(None), r, self.aggidx[key]] = dic['agg_losses']
+                    k = self.aggidx[tuple(i + 1 for i in dic['idx'])]
+                    ds['agg_curves-rlzs'][:, r, :, k] = dic['agg_curves']
+                    ds['agg_losses-rlzs'][:, r, k] = dic['agg_losses']
 
         lbe = ds['event_loss_table/,'][()]
         rlz_ids = ds['events']['rlz_id'][lbe['event_id']]
@@ -223,23 +224,23 @@ class PostRiskCalculator(base.RiskCalculator):
         df = pandas.DataFrame(dic, rlz_ids)
         for r, losses_df in df.groupby(rlz_ids):
             losses = numpy.array(losses_df)
-            curves = builder.build_curves(losses, r),
+            curves = builder.build_curves(losses, r)
             ds['tot_curves-rlzs'][:, r] = curves  # PL
             ds['tot_losses-rlzs'][:, r] = losses.sum(axis=0) * oq.ses_ratio
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
-        aggby = {tagname: encode(getattr(self.tagcol, tagname)[1:])
-                 for tagname in oq.aggregate_by}
+        L = len(oq.loss_names)
         set_rlzs_stats(self.datastore, 'tot_curves',
-                       return_periods=builder.return_periods,
-                       loss_types=oq.loss_names, **aggby, units=units)
+                       return_periods=builder.return_periods, lti=L,
+                       units=units)
         set_rlzs_stats(self.datastore, 'tot_losses',
-                       loss_types=oq.loss_names, **aggby, units=units)
+                       loss_type=oq.loss_names, units=units)
         if oq.aggregate_by:
+            K = len(self.aggidx)
             set_rlzs_stats(self.datastore, 'agg_curves',
                            return_periods=builder.return_periods,
-                           loss_types=oq.loss_names, **aggby, units=units)
+                           lti=L, agg_id=K, units=units)
             set_rlzs_stats(self.datastore, 'agg_losses',
-                           loss_types=oq.loss_names, **aggby, units=units)
+                           loss_type=oq.loss_names, agg_id=K, units=units)
         return 1
 
     def post_execute(self, dummy):

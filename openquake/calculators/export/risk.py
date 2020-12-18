@@ -67,39 +67,36 @@ def tag2idx(tags):
             ('tot_curves-rlzs', 'csv'), ('tot_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
-    assetcol = dstore['assetcol']
+    lnames = numpy.array(oq.loss_names)
     if ekey[0].startswith('agg_'):
-        aggregate_by = oq.aggregate_by
-        aggvalue = dstore['agg_values'][()]
+        aggvalue = dstore['aggvalues'][()]  # shape (T, L)
+        tags = dstore['agg_keys'][:][oq.aggregate_by]
     else:  # tot_curves
-        aggregate_by = []
-        aggvalue = dstore['tot_values'][()]
-
-    lti = tag2idx(oq.loss_names)
-    tagi = {tagname: tag2idx(getattr(assetcol.tagcol, tagname))
-            for tagname in aggregate_by}
-
-    def get_loss_ratio(df):
-        val = numpy.zeros(len(df))
-        for i, rec in df.iterrows():
-            idxs = tuple(tagi[tagname][getattr(rec, tagname)] - 1
-                         for tagname in aggregate_by) + (lti[rec.loss_types],)
-            val[i] = aggvalue[idxs]
-        return df.loss_value / val
-
-    # shape (T1, T2, ..., L)
+        aggvalue = dstore['tot_values'][()]  # shape L
+        tags = []
     md = dstore.metadata
     md.update(dict(
         kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
     fname = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     aw = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value')
-    table = add_columns(
-        aw.to_dframe(), loss_ratio=get_loss_ratio,
-        annual_frequency_of_exceedence=lambda df: 1 / df.return_periods)
-    # strip trailing "s"
-    ren = {col: col[:-1] for col in table.columns if col[-1] == 's'}
-    writer.save(table.rename(columns=ren), fname, comment=md)
+    df = aw.to_dframe()
+    dic = dict(return_period=df.return_periods)
+    if 'stats' in ekey[0]:
+        dic['stat'] = df.stat
+    else:
+        dic['rlz'] = df.rlz
+    dic['loss_type'] = lnames[df.lti]
+    if len(tags):
+        for tagname, tagvalues in zip(oq.aggregate_by, tags[df.agg_id].T):
+            dic[tagname] = tagvalues
+    dic['loss_value'] = df.loss_value
+    if ekey[0].startswith('agg_'):
+        dic['loss_ratio'] = df.loss_value / aggvalue[df.agg_id, df.lti]
+    else:  # tot
+        dic['loss_ratio'] = df.loss_value / aggvalue[df.lti]
+    dic['annual_frequency_of_exceedence'] = 1 / df.return_periods
+    writer.save(pandas.DataFrame(dic), fname, comment=md)
     return writer.getsaved()
 
 

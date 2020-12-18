@@ -722,13 +722,13 @@ def extract_agg_curves(dstore, what):
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
     tagvalues = [tagdict[t][0] for t in tagnames]
-    tagidx = []
+    idx = ()
     if tagnames:
-        tagcol = dstore['assetcol/tagcol']
-        for tagname, tagvalue in zip(tagnames, tagvalues):
-            values = list(getattr(tagcol, tagname)[1:])
-            tagidx.append(values.index(tagvalue))
-    tup = tuple([slice(None), k, l] + tagidx)
+        for i, tags in enumerate(dstore['agg_keys'][:][tagnames]):
+            if list(tags) == tagvalues:
+                idx = i,
+                break
+    tup = (slice(None), k, l) + idx
     if qdic['rlzs']:
         kinds = ['rlz-%d' % r for r in k]
         arr = dstore['agg_curves-rlzs'][tup]  # shape P, R
@@ -742,8 +742,7 @@ def extract_agg_curves(dstore, what):
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        tl = tuple(tagidx) + (l,)
-        evalue = dstore['agg_values'][tl]  # shape T...
+        evalue = dstore['aggvalues'][i, l]  # shape T, L
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
