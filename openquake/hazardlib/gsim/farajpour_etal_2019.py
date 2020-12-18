@@ -171,7 +171,7 @@ class FarajpourEtAl2019(GMPE):
             fnm = 0.0
             frv = 1.0
 
-        fflt_f = (0 * frv) + (C["z9"] * fnm)
+        fflt_f = (C["z8"] * frv) + (C["z9"] * fnm)
         return fflt_f 
     def _get_fault_dip_term(self, C, rup):
         """
@@ -223,8 +223,8 @@ class FarajpourEtAl2019(GMPE):
         # Get linear global site response term
         f_site_g = C["z14"] * np.log(vs_mod)
         idx = vs30 > C["k1"]
-        f_site_g[idx] = ((f_site_g[idx] + (C["k2"] * 1.18)) *
-                        np.log(vs_mod[idx]))
+        f_site_g[idx] = f_site_g[idx] + (C["k2"] * 1.18 *
+                                         np.log(vs_mod[idx]))
 
         # Get nonlinear site response term
         idx = np.logical_not(idx)
