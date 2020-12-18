@@ -207,7 +207,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
 
         points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
         numpy.around(numpy.squeeze(lons), 5, points['lon'])
-        numpy.around(numpy.squeeze(lons), 5, points['lat'])
+        numpy.around(numpy.squeeze(lats), 5, points['lat'])
         points = numpy.unique(points)
         mesh = Mesh(points['lon'], points['lat'])
         return mesh.get_convex_hull()
