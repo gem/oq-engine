@@ -338,7 +338,7 @@ def split_coords_3d(seq):
     return list(zip(lons, lats, depths))
 
 
-def convert_nonParametricSeismicSource(fname, node):
+def convert_nonParametricSeismicSource(fname, node, rup_spacing=5.0):
     """
     Convert the given node into a non parametric source object.
 
@@ -346,6 +346,8 @@ def convert_nonParametricSeismicSource(fname, node):
         full pathname to the XML file associated to the node
     :param node:
         a Node object coming from an XML file
+    :param rup_spacing:
+        Rupture spacing [km]
     :returns:
         a :class:`openquake.hazardlib.source.NonParametricSeismicSource`
         instance
@@ -377,7 +379,7 @@ def convert_nonParametricSeismicSource(fname, node):
                 raise ValueError(
                     'prob_occurs=%s has %d elements, expected %s'
                     % (po, len(probs.data), num_probs))
-            rup = RuptureConverter(5.).convert_node(rupnode)
+            rup = RuptureConverter(rup_spacing).convert_node(rupnode)
             rup.tectonic_region_type = trt
             rup.weight = None if rups_weights is None else rups_weights[i]
             nps.data.append((rup, probs))
@@ -942,7 +944,8 @@ class SourceConverter(RuptureConverter):
             a :class:`openquake.hazardlib.source.NonParametricSeismicSource`
             instance
         """
-        return convert_nonParametricSeismicSource(self.fname, node)
+        return convert_nonParametricSeismicSource(self.fname, node,
+                                                  self.rupture_mesh_spacing)
 
     def convert_sourceModel(self, node):
         return [self.convert_node(subnode) for subnode in node]
