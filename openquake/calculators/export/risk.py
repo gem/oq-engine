@@ -74,24 +74,11 @@ def tag2idx(tags):
             ('tot_curves-rlzs', 'csv'), ('tot_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
-    assetcol = dstore['assetcol']
     if ekey[0].startswith('agg_'):
-        aggregate_by = oq.aggregate_by
-        aggvalue = dstore['agg_values'][()]
+        aggvalue = dstore['aggvalues'][()]  # shape (T, L)
     else:  # tot_curves
-        aggregate_by = []
-        aggvalue = dstore['tot_values'][()]
+        aggvalue = dstore['tot_values'][()]  # shape L
 
-    lti = tag2idx(oq.loss_names)
-    tagi = {tagname: tag2idx(getattr(assetcol.tagcol, tagname))
-            for tagname in aggregate_by}
-
-    def get_loss_ratio(rec):
-        idxs = tuple(tagi[tagname][getattr(rec, tagname)] - 1
-                     for tagname in aggregate_by) + (lti[rec.loss_types],)
-        return rec.loss_value / aggvalue[idxs]
-
-    # shape (T1, T2, ..., L)
     md = dstore.metadata
     md.update(dict(
         kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
@@ -99,7 +86,8 @@ def export_agg_curve_rlzs(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     aw = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value')
     table = add_columns(
-        aw.to_table(), loss_ratio=get_loss_ratio,
+        aw.to_table(),
+        loss_ratio=lambda rec: rec.loss_value / aggvalue[rec.agg_ids],
         annual_frequency_of_exceedence=lambda rec: 1 / rec.return_periods)
     table[0] = [c[:-1] if c.endswith('s') else c for c in table[0]]
     writer.save(table, fname, comment=md)
