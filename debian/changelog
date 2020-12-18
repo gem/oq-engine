@@ -1,3 +1,6 @@
+  [Hasan Mousavi]
+  * Implemented the farajpoure_etal_2019 GMPEs to the hazardlib as a new model for Iran
+  
   [Michele Simionato]
   * Removed misleading zero losses in agg_losses.csv
   * Fixed `oq recompute_losses` and renamed it to `oq reaggregate`
