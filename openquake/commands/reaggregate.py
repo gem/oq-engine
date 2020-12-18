@@ -25,7 +25,7 @@ from openquake.engine import engine
 
 
 @sap.Script
-def recompute_losses(calc_id, aggregate_by):
+def reaggregate(calc_id, aggregate_by):
     """Re-run the postprocessing after an event based risk calculation"""
     parent = util.read(calc_id)
     oqp = parent['oqparam']
@@ -47,8 +47,8 @@ def recompute_losses(calc_id, aggregate_by):
             parallel.Starmap.shutdown()
 
 
-recompute_losses.arg('calc_id', 'ID of the risk calculation', type=int)
-recompute_losses.arg('aggregate_by', 'comma-separated list of tag names')
+reaggregate.arg('calc_id', 'ID of the risk calculation', type=int)
+reaggregate.arg('aggregate_by', 'comma-separated list of tag names')
 
 if __name__ == '__main__':
-    recompute_losses.callfunc()
+    reaggregate.callfunc()
