@@ -127,13 +127,20 @@ class KiteSurface(BaseSurface):
         if self.width is None:
             widths = []
             for col_idx in range(self.mesh.lons.shape[1]):
-                dists = distance(self.mesh.lons[:-1, col_idx],
-                                 self.mesh.lats[:-1, col_idx],
-                                 self.mesh.depths[:-1, col_idx],
-                                 self.mesh.lons[1:, col_idx],
-                                 self.mesh.lats[1:, col_idx],
-                                 self.mesh.depths[1:, col_idx])
-                widths.append(np.sum(dists))
+                idxs = np.nonzero(np.isfinite(self.mesh.lons[:, col_idx]))
+                tmp = []
+                for i in range(len(self.mesh.lons[:, col_idx])-1):
+                    if (np.isfinite(self.mesh.lons[i, col_idx]) and
+                        np.isfinite(self.mesh.lons[i+1, col_idx])):
+                        dists = distance(self.mesh.lons[i, col_idx],
+                                         self.mesh.lats[i, col_idx],
+                                         self.mesh.depths[i, col_idx],
+                                         self.mesh.lons[i+1, col_idx],
+                                         self.mesh.lats[i+1, col_idx],
+                                         self.mesh.depths[i+1, col_idx])
+                        tmp.append(dists)
+                if len(tmp):
+                    widths.append(np.sum(tmp))
             self.width = np.mean(np.array(widths))
         return self.width
 
@@ -290,7 +297,7 @@ class KiteSurface(BaseSurface):
         # Convert from profiles to edges
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
-        return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]), 
+        return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
                    profiles)
 
     def get_center(self):
@@ -307,6 +314,7 @@ class KiteSurface(BaseSurface):
         icol = int(np.round(mesh.shape[1]/2))
         return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
                      mesh.depths[irow, icol])
+
 
 def _resample_profile(line, sampling_dist):
     # TODO split this function into smaller components.
