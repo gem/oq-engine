@@ -517,7 +517,7 @@ class ArrayWrapper(object):
                 dic[k] = v
         return toml.dumps(dic)
 
-    def to_table(self):
+    def to_dframe(self):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
         T1, ..., TN which are list of tags of lenghts D1, ... DN into
@@ -533,7 +533,7 @@ class ArrayWrapper(object):
         >>> arr[0, 1] = 5000
         >>> arr[1, 0] = 500
         >>> aw = ArrayWrapper(arr, dic)
-        >>> pprint(aw.to_table())
+        >>> pprint(aw.to_dframe())
         taxonomy occupancy   value
         0       RC       RES  2000.0
         1       RC       IND  5000.0

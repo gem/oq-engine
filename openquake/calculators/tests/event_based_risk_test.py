@@ -131,22 +131,22 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # extract tot_curves, no tags
         aw = extract(self.calc.datastore, 'tot_curves?kind=stats&'
                      'loss_type=structural&absolute=1')
-        tmp = gettemp(rst_table(aw.to_table()))
+        tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves1.csv', tmp)
 
         aw = extract(self.calc.datastore, 'tot_curves?kind=rlzs&'
                      'loss_type=structural&absolute=1')
-        tmp = gettemp(rst_table(aw.to_table()))
+        tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves2.csv', tmp)
 
         aw = extract(self.calc.datastore, 'tot_curves?kind=stats&'
                      'loss_type=structural&absolute=0')
-        tmp = gettemp(rst_table(aw.to_table()))
+        tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves3.csv', tmp)
 
         aw = extract(self.calc.datastore, 'tot_curves?kind=rlzs&'
                      'loss_type=structural&absolute=0')
-        tmp = gettemp(rst_table(aw.to_table()))
+        tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves4.csv', tmp)
 
     def test_insured_losses(self):
@@ -158,22 +158,22 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
-        tmp = gettemp(rst_table(aw.to_table()))
+        tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves5.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
-        tmp = gettemp(rst_table(aw.to_table()))
+        tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves6.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
-        tmp = gettemp(rst_table(aw.to_table()))
+        tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves7.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
                      'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
-        tmp = gettemp(rst_table(aw.to_table()))
+        tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves8.csv', tmp)
 
     def test_case_1f(self):
@@ -331,7 +331,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
                       'tag=taxonomy&tag=occupancy&kind=quantile-0.5')
-        self.assertEqual(len(arr.to_table()), 4)
+        self.assertEqual(len(arr.to_dframe()), 4)
 
         # aggregate by all loss types
         fnames = export(

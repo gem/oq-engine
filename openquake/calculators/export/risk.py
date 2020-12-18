@@ -95,7 +95,7 @@ def export_agg_curve_rlzs(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     aw = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value')
     table = add_columns(
-        aw.to_table(), loss_ratio=get_loss_ratio,
+        aw.to_dframe(), loss_ratio=get_loss_ratio,
         annual_frequency_of_exceedence=lambda df: 1 / df.return_periods)
     # strip trailing "s"
     ren = {col: col[:-1] for col in table.columns if col[-1] == 's'}
@@ -204,7 +204,7 @@ def export_src_loss_table(ekey, dstore):
     aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table'], 'loss_value')
     dest = dstore.build_fname('src_loss_table', '', 'csv')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    writer.save(aw.to_table(), dest, comment=md)
+    writer.save(aw.to_dframe(), dest, comment=md)
     return writer.getsaved()
 
 
@@ -492,7 +492,7 @@ def export_aggregate_by_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
     fname = dstore.export_path(path)
-    writer.save(aw.to_table(), fname)
+    writer.save(aw.to_dframe(), fname)
     fnames.append(fname)
     return fnames
 
