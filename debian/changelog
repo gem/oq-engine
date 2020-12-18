@@ -1,5 +1,5 @@
   [Hasan Mousavi]
-  * Implements the Farajpour etal (2019) GMPE
+  * Implemented the farajpoure_etal_2019 GMPEs to the hazardlib as a new model for Iran
   
   [Michele Simionato]
   * Added commands `oq nrml_to csv` and  `oq nrml_to gpkg`
