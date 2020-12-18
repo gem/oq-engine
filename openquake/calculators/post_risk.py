@@ -135,7 +135,7 @@ class PostRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         if oq.hazard_calculation_id and not self.datastore.parent:
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
-            assetcol = self.datastore.parent['assetcol']
+            assetcol = self.datastore['assetcol']
             base.save_agg_values(
                 self.datastore, assetcol, oq.loss_names, oq.aggregate_by)
 
