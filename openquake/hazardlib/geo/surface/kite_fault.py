@@ -127,19 +127,16 @@ class KiteSurface(BaseSurface):
         if self.width is None:
             widths = []
             for col_idx in range(self.mesh.lons.shape[1]):
-                idxs = np.nonzero(np.isfinite(self.mesh.lons[:, col_idx]))
-                tmp = []
-                for i in range(len(self.mesh.lons[:, col_idx])-1):
-                    if (np.isfinite(self.mesh.lons[i, col_idx]) and
-                        np.isfinite(self.mesh.lons[i+1, col_idx])):
-                        dists = distance(self.mesh.lons[i, col_idx],
-                                         self.mesh.lats[i, col_idx],
-                                         self.mesh.depths[i, col_idx],
-                                         self.mesh.lons[i+1, col_idx],
-                                         self.mesh.lats[i+1, col_idx],
-                                         self.mesh.depths[i+1, col_idx])
-                        tmp.append(dists)
-                if len(tmp):
+                tmpa = np.nonzero(np.isfinite(self.mesh.lons[:, col_idx]))[0]
+                tmpb = (tmpa[1:]-tmpa[:-1] == 1).nonzero()[0]
+                idxs_low = tmpa[tmpb.astype(int)]
+                tmp = distance(self.mesh.lons[idxs_low, col_idx],
+                               self.mesh.lats[idxs_low, col_idx],
+                               self.mesh.depths[idxs_low, col_idx],
+                               self.mesh.lons[idxs_low+1, col_idx],
+                               self.mesh.lats[idxs_low+1, col_idx],
+                               self.mesh.depths[idxs_low+1, col_idx])
+                if len(tmp) > 0:
                     widths.append(np.sum(tmp))
             self.width = np.mean(np.array(widths))
         return self.width
