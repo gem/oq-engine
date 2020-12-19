@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2019, GEM Foundation
+# Copyright (C) 2019-2020, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,45 +16,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import ast
 import logging
-import itertools
 import numpy
-import pandas
 
-from openquake.baselib import general, parallel, datastore
-from openquake.baselib.python3compat import encode
+from openquake.baselib import general, datastore, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific
 from openquake.calculators import base, views
 
 F32 = numpy.float32
 U32 = numpy.uint32
-
-
-def build_aggkeys(aggregate_by, tagcol, full_aggregate_by):
-    """
-    :param aggregate_by: what to aggregate
-    :param tagcol: the TagCollection
-    :param full_aggregate_by: maximum possible aggregation
-    """
-    name2index = {n: i for i, n in enumerate(full_aggregate_by)}
-    indexes = [name2index[n] for n in aggregate_by]
-    if indexes != sorted(indexes):
-        raise ValueError('The aggregation tags must be an ordered subset of '
-                         '%s, got %s' % (full_aggregate_by, aggregate_by))
-    tagids = []
-    for tagname in full_aggregate_by:
-        n1 = len(getattr(tagcol, tagname))
-        lst = list(range(1, n1))
-        if tagname in aggregate_by:
-            tagids.append(lst)
-        else:
-            tagids.append([lst])
-    aggkeys = []
-    for ids in itertools.product(*tagids):
-        aggkeys.append(','.join(map(str, ids)) + ',')
-    return sorted(aggkeys)
 
 
 def get_loss_builder(dstore, return_periods=None, loss_dt=None):
@@ -74,56 +45,34 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
         eff_time, oq.risk_investigation_time)
 
 
-def post_ebrisk(dstore, aggkey, monitor):
-    """
-    :param dstore: a DataStore instance
-    :param aggkey: aggregation key
-    :param monitor: Monitor instance
-    :returns: a dictionary rlzi -> {agg_curves, agg_losses, idx}
-    """
-    dstore.open('r')
-    oq = dstore['oqparam']
-    L = len(oq.loss_names)
-    agglist = [x if isinstance(x, list) else [x]
-               for x in ast.literal_eval(aggkey)]
-    idx = tuple(x[0] - 1 for x in agglist if len(x) == 1)
-    rlz_id = dstore['events']['rlz_id']
-    E = len(rlz_id)
-    arr = numpy.zeros((E, L))
-    for ids in itertools.product(*agglist):
-        key = ','.join(map(str, ids)) + ','
-        try:
-            recs = dstore['event_loss_table/' + key][()]
-        except (KeyError, dstore.EmptyDataset):   # no data
-            continue
-        for rec in recs:
-            arr[rec['event_id']] += rec['loss']
-    builder = get_loss_builder(dstore)
-    out = {}
-    for rlz in numpy.unique(rlz_id):
-        # DO NOT USE groupby here! you would run out of memory
-        array = arr[rlz_id == rlz]  # shape E', L
-        out[rlz] = dict(agg_curves=builder.build_curves(array, rlz),
-                        agg_losses=array.sum(axis=0) * oq.ses_ratio,
-                        idx=idx)
-    return out
-
-
 def get_src_loss_table(dstore, L):
     """
     :returns:
         (source_ids, array of losses of shape (Ns, L))
     """
-    lbe = dstore['event_loss_table/,'][()]
-    evs = dstore['events'][()]
-    rlz_ids = evs['rlz_id'][lbe['event_id']]
-    rup_ids = evs['rup_id'][lbe['event_id']]
+    alt = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=0))
+    eids = alt.event_id.to_numpy()
+    evs = dstore['events'][:][eids]
+    rlz_ids = evs['rlz_id']
+    rup_ids = evs['rup_id']
     source_id = dstore['ruptures']['source_id'][rup_ids]
     w = dstore['weights'][:]
     acc = general.AccumDict(accum=numpy.zeros(L, F32))
-    for source_id, rlz_id, loss in zip(source_id, rlz_ids, lbe['loss']):
-        acc[source_id] += loss * w[rlz_id]
+    del alt['event_id']
+    all_losses = numpy.array(alt)
+    for source_id, rlz_id, losses in zip(source_id, rlz_ids, all_losses):
+        acc[source_id] += losses * w[rlz_id]
     return zip(*sorted(acc.items()))
+
+
+def post_risk(builder, krl_losses, monitor):
+    """
+    :returns: dictionary krl -> loss curve
+    """
+    res = {}
+    for k, r, l, losses in krl_losses:
+        res[k, r, l] = (builder.build_curves(losses, r), losses.sum())
+    return res
 
 
 @base.calculators.add('post_risk')
@@ -133,38 +82,15 @@ class PostRiskCalculator(base.RiskCalculator):
     """
     def pre_execute(self):
         oq = self.oqparam
-        self.L = len(oq.loss_names)
         if oq.hazard_calculation_id and not self.datastore.parent:
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             assetcol = self.datastore['assetcol']
-            aggkey = base.save_agg_values(
+            self.aggkey = base.save_agg_values(
                 self.datastore, assetcol, oq.loss_names, oq.aggregate_by)
         else:
             assetcol = self.datastore['assetcol']
-            aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
-        self.tagcol = assetcol.tagcol
-        self.aggidx = {key: k for k, key in enumerate(aggkey)}
-
-    def build_datasets(self, builder, aggregate_by, prefix):
-        """
-        Create the datasets agg_curves-XXX, tot_curves-XXX,
-        agg_losses-XXX, tot_losses-XXX.
-        """
-        P = len(builder.return_periods)
-        T = len(self.aggidx)
-        aggby = {'aggregate_by': aggregate_by}
-        for tagname in aggregate_by:
-            aggby[tagname] = encode(getattr(self.tagcol, tagname)[1:])
-        if prefix == 'tot_':
-            shp = (self.L, self.R)
-        else:
-            shp = (self.L, self.R, T)
-        self.datastore.create_dset(prefix + 'losses-rlzs', F32, shp)
-        if prefix == 'tot_':
-            shp = (P, self.R, self.L)
-        else:
-            shp = (P, self.R, self.L, T)
-        self.datastore.create_dset(prefix + 'curves-rlzs', F32, shp)
+            self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
+        self.L = len(oq.loss_names)
 
     def execute(self):
         oq = self.oqparam
@@ -183,64 +109,60 @@ class PostRiskCalculator(base.RiskCalculator):
             self.datastore.set_shape_attrs('src_loss_table',
                                            source=source_ids,
                                            loss_type=oq.loss_names)
-        shp = self.get_shape(self.L)  # (L, T...)
-        text = ' x '.join(
-            '%d(%s)' % (n, t) for t, n in zip(oq.aggregate_by, shp[1:]))
-        logging.info('Producing %d(loss_types) x %s loss curves', self.L, text)
         builder = get_loss_builder(self.datastore)
-        if oq.aggregate_by:
-            self.build_datasets(builder, oq.aggregate_by, 'agg_')
-        self.build_datasets(builder, [], 'tot_')
-        parent = self.datastore.parent
-        full_aggregate_by = (parent['oqparam'].aggregate_by if parent
-                             else ()) or oq.aggregate_by
-        if oq.aggregate_by:
-            aggkeys = build_aggkeys(oq.aggregate_by, self.tagcol,
-                                    full_aggregate_by)
-            if parent and 'event_loss_table' in parent:
-                ds = parent
-            else:
-                ds = self.datastore
-                ds.swmr_on()
-            smap = parallel.Starmap(
-                post_ebrisk, [(ds, aggkey) for aggkey in aggkeys],
-                h5=self.datastore.hdf5)
-        else:
-            smap = ()
+        try:
+            K = len(self.aggkey)
+        except KeyError:  # no aggregations
+            K = 0
+        P = len(builder.return_periods)
         # do everything in process since it is really fast
-        ds = self.datastore
-        for res in smap:
-            if not res:
-                continue
-            for r, dic in res.items():
-                if oq.aggregate_by:
-                    k = self.aggidx[tuple(i + 1 for i in dic['idx'])]
-                    ds['agg_curves-rlzs'][:, r, :, k] = dic['agg_curves']
-                    ds['agg_losses-rlzs'][:, r, k] = dic['agg_losses']
-
-        lbe = ds['event_loss_table/,'][()]
-        rlz_ids = ds['events']['rlz_id'][lbe['event_id']]
-        dic = dict(enumerate(lbe['loss'].T))  # lti -> losses
-        df = pandas.DataFrame(dic, rlz_ids)
-        for r, losses_df in df.groupby(rlz_ids):
-            losses = numpy.array(losses_df)
-            curves = builder.build_curves(losses, r)
-            ds['tot_curves-rlzs'][:, r] = curves  # PL
-            ds['tot_losses-rlzs'][:, r] = losses.sum(axis=0) * oq.ses_ratio
+        rlz_id = self.datastore['events']['rlz_id']
+        alt_df = self.datastore.read_df('agg_loss_table', 'agg_id')
+        alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
-        L = len(oq.loss_names)
-        set_rlzs_stats(self.datastore, 'tot_curves',
-                       return_periods=builder.return_periods, lti=L,
-                       units=units)
-        set_rlzs_stats(self.datastore, 'tot_losses',
-                       loss_type=oq.loss_names, units=units)
-        if oq.aggregate_by:
-            K = len(self.aggidx)
-            set_rlzs_stats(self.datastore, 'agg_curves',
-                           return_periods=builder.return_periods,
-                           lti=L, agg_id=K, units=units)
-            set_rlzs_stats(self.datastore, 'agg_losses',
-                           loss_type=oq.loss_names, agg_id=K, units=units)
+        with self.monitor('agg_losses and agg_curves', measuremem=True):
+            smap = parallel.Starmap(post_risk, h5=self.datastore.hdf5)
+            num_curves = (K + 1) * self.R * self.L
+            blocksize = int(numpy.ceil(num_curves/(oq.concurrent_tasks or 1)))
+            krl_losses = []
+            agg_losses = numpy.zeros((K, self.R, self.L), F32)
+            agg_curves = numpy.zeros((K, self.R, self.L, P), F32)
+            tot_losses = numpy.zeros((self.L, self.R), F32)
+            tot_curves = numpy.zeros((self.L, self.R, P), F32)
+            gb = alt_df.groupby([alt_df.index, alt_df.rlz_id])
+            logging.info('Computing up to {:_d} of {:_d} curves per task'.
+                         format(blocksize, num_curves))
+            for (k, r), df in gb:
+                for l, lname in enumerate(oq.loss_names):
+                    krl_losses.append((k, r, l, df[lname]))
+                    if len(krl_losses) >= blocksize:
+                        smap.submit((builder, krl_losses))
+                        krl_losses[:] = []
+            if krl_losses:
+                smap.submit((builder, krl_losses))
+            for (k, r, l), (curve, loss) in smap.reduce().items():
+                if k == K:  # tot
+                    tot_curves[l, r] = curve
+                    tot_losses[l, r] = loss
+                else:  # agg
+                    agg_curves[k, r, l] = curve
+                    agg_losses[k, r, l] = loss
+            if K:
+                self.datastore['agg_curves-rlzs'] = agg_curves
+                self.datastore['agg_losses-rlzs'] = agg_losses * oq.ses_ratio
+                set_rlzs_stats(self.datastore, 'agg_curves',
+                               agg_id=K, lti=self.L,
+                               return_periods=builder.return_periods,
+                               units=units)
+                set_rlzs_stats(self.datastore, 'agg_losses',
+                               agg_id=K, loss_types=oq.loss_names, units=units)
+            self.datastore['tot_curves-rlzs'] = tot_curves
+            self.datastore['tot_losses-rlzs'] = tot_losses * oq.ses_ratio
+            set_rlzs_stats(self.datastore, 'tot_curves',
+                           lti=self.L, return_periods=builder.return_periods,
+                           units=units)
+            set_rlzs_stats(self.datastore, 'tot_losses',
+                           loss_types=oq.loss_names, units=units)
         return 1
 
     def post_execute(self, dummy):
@@ -249,32 +171,5 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         logging.info('Mean portfolio loss\n' +
                      views.view('portfolio_loss', self.datastore))
-        logging.info('Sanity check on agg_losses/tot_losses')
-        for kind in 'rlzs', 'stats':
-            agg = 'agg_losses-' + kind
-            tot = 'tot_losses-' + kind
-            if agg not in self.datastore:
-                return
-            if kind == 'rlzs':
-                kinds = ['rlz-%d' % rlz for rlz in range(self.R)]
-            else:
-                kinds = self.oqparam.hazard_stats()
-            for l in range(self.L):
-                ln = self.oqparam.loss_names[l]
-                for r, k in enumerate(kinds):
-                    tot_losses = self.datastore[tot][l, r]
-                    agg_losses = self.datastore[agg][l, r].sum()
-                    if kind == 'rlzs' or k == 'mean':
-                        ok = numpy.allclose(agg_losses, tot_losses, rtol=.001)
-                        if not ok:
-                            logging.warning(
-                                'Inconsistent total losses for %s, %s: '
-                                '%s != %s', ln, k, agg_losses, tot_losses)
-
-    def get_shape(self, *sizes, aggregate_by=None):
-        """
-        :returns: a shape (S1, ... SN, T1 ... TN)
-        """
-        if aggregate_by is None:
-            aggregate_by = self.oqparam.aggregate_by
-        return self.tagcol.agg_shape(sizes, aggregate_by)
+        logging.info('Sanity check on agg_losses')
+        # TODO: add it

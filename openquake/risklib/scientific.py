@@ -1439,24 +1439,12 @@ class LossCurvesMapsBuilder(object):
         return self.pair(array, stats)
 
     # used in post_risk
-    def build_curves(self, loss_arrays, rlzi):
-        if len(loss_arrays) == 0:
-            return ()
-        shp = loss_arrays[0].shape  # (L, T...)
-        P = len(self.return_periods)
-        curves = numpy.zeros((P,) + shp, F32)
-        num_events = self.num_events.get(rlzi, 0)
-        acc = collections.defaultdict(list)
-        for loss_array in loss_arrays:
-            for idx, loss in numpy.ndenumerate(loss_array):
-                acc[idx].append(loss)
-        for idx, losses in acc.items():
-            curves[(slice(None),) + idx] = losses_by_period(
-                losses, self.return_periods, num_events, self.eff_time)
-        return curves
+    def build_curves(self, losses, rlzi):
+        return losses_by_period(
+            losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 
 
-class EventLossTable(AccumDict):
+class AggLossTable(AccumDict):
     """
     A dictionary of matrices of shape (K, L'), with K the number of aggregation
     keys and L' the total number of loss types (primary + secondary).
@@ -1468,12 +1456,13 @@ class EventLossTable(AccumDict):
     alt = None  # set by the ebrisk calculator
 
     def __init__(self, aggkey, loss_types, sec_losses=()):
-        self.aggkey = aggkey
+        self.aggkey = {key: k for k, key in enumerate(aggkey)}
+        self.aggkey[()] = len(aggkey)
         self.loss_names = list(loss_types)
         self.sec_losses = sec_losses
         for sec_loss in sec_losses:
             self.loss_names.extend(sec_loss.outputs)
-        KL = len(aggkey), len(self.loss_names)
+        KL = len(self.aggkey), len(self.loss_names)
         self.accum = numpy.zeros(KL, F32)
 
     def aggregate(self, out, minimum_loss, aggby):
@@ -1509,9 +1498,10 @@ class EventLossTable(AccumDict):
                     out[k][a] = o
 
         # aggregation
+        K = len(self.aggkey) - 1
         for lni, ln in enumerate(self.loss_names):
             for eid, loss in zip(eids, out[ln].T):
-                self[eid][0, lni] += loss.sum()
+                self[eid][K, lni] += loss.sum()
             # this is the slow part, if aggregate_by is given
             for asset, idx, losses in zip(assets, idxs, out[ln]):
                 for eid, loss in zip(eids, losses):

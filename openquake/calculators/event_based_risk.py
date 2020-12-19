@@ -143,11 +143,11 @@ class EbrCalculator(base.RiskCalculator):
         self.A = len(self.assetcol)
         if parent:
             self.datastore['full_lt'] = parent['full_lt']
-            self.events = parent['events'][('id', 'rlz_id')]
+            self.events = parent['events']['id']
             logging.info('There are %d ruptures and %d events',
                          len(parent['ruptures']), len(self.events))
         else:
-            self.events = self.datastore['events'][('id', 'rlz_id')]
+            self.events = self.datastore['events']['id']
         if oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves and maps
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -262,18 +262,21 @@ class EbrCalculator(base.RiskCalculator):
         Save risk data and build the aggregate loss curves
         """
         oq = self.oqparam
-        loss_types = oq.loss_dt().names
         logging.info('Saving event loss table')
-        elt_dt = numpy.dtype(
-            [('event_id', U32), ('rlzi', U16), ('loss', (F32, (self.L,)))])
         with self.monitor('saving event loss table', measuremem=True):
-            agglosses = numpy.fromiter(
-                ((eid, rlz, losses)
-                 for (eid, rlz), losses in zip(self.events, self.agglosses)
-                 if losses.any()), elt_dt)
-            self.datastore['event_loss_table/,'] = agglosses
+            out = []
+            for eid, losses in zip(self.events, self.agglosses):
+                if losses.sum():
+                    out.append((eid, 0) + tuple(losses))
+            arr = numpy.array(out, oq.alt_dt())
+            self.datastore['agg_loss_table/event_id'] = arr['event_id']
+            self.datastore['agg_loss_table/agg_id'] = numpy.zeros(len(arr))
+            cols = ['event_id', 'agg_id']
+            for l, lname in enumerate(oq.loss_names):
+                self.datastore['agg_loss_table/' + lname] = arr[lname]
+                cols.append(lname)
             self.datastore.set_attrs(
-                'event_loss_table/,', loss_types=loss_types)
+                'agg_loss_table', __pdcolumns__=' '.join(cols))
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses',
                            asset_id=self.assetcol['id'],
