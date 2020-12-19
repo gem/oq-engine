@@ -134,7 +134,7 @@ class PostRiskCalculator(base.RiskCalculator):
                          format(blocksize, num_curves))
             for (k, r), df in gb:
                 for l, lname in enumerate(oq.loss_names):
-                    krl_losses.append((k, r, l, df[lname]))
+                    krl_losses.append((k, r, l, df[lname].to_numpy()))
                     if len(krl_losses) >= blocksize:
                         smap.submit((builder, krl_losses))
                         krl_losses[:] = []
