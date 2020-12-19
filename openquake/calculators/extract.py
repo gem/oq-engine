@@ -672,21 +672,22 @@ def extract_curves(dstore, what, tot):
     qdic = parse(what, info)
     k = qdic['k']  # rlz or stat index
     [l] = qdic['loss_type']  # loss type index
-    tup = (slice(None), k, l)
+    # tot_curves-rlzs has shape (L, R, P)
+    tup = (l, k)
     if qdic['rlzs']:
         kinds = ['rlz-%d' % r for r in k]
-        arr = dstore[tot + 'curves-rlzs'][tup]  # shape P, R
+        arr = dstore[tot + 'curves-rlzs'][tup]  # shape R, P
         units = dstore.get_attr(tot + 'curves-rlzs', 'units')
         rps = dstore.get_attr(tot + 'curves-rlzs', 'return_periods')
     else:
         kinds = list(info['stats'])
-        arr = dstore[tot + 'curves-stats'][tup]  # shape P, S
+        arr = dstore[tot + 'curves-stats'][tup]  # shape S, P
         units = dstore.get_attr(tot + 'curves-stats', 'units')
         rps = dstore.get_attr(tot + 'curves-stats', 'return_periods')
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue = dstore['tot_values'][l]  # shape L
+        evalue = dstore['tot_values'][l]
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
@@ -694,7 +695,7 @@ def extract_curves(dstore, what, tot):
     attrs['return_period'] = list(rps)
     attrs['kind'] = kinds
     attrs['units'] = units  # used by the QGIS plugin
-    return ArrayWrapper(arr, attrs)
+    return ArrayWrapper(arr.T, attrs)  # shape P, S
 
 
 extract.add('tot_curves')(partial(extract_curves, tot='tot_'))

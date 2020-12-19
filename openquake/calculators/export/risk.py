@@ -80,8 +80,9 @@ def export_agg_curve_rlzs(ekey, dstore):
         dic['rlz'] = df.rlz
     dic['loss_type'] = lnames[df.lti]
     if len(tags):
-        for tagname, tagvalues in zip(oq.aggregate_by, tags[df.agg_id].T):
-            dic[tagname] = tagvalues
+        tagvalues = tags[df.agg_id]
+        for tagname in oq.aggregate_by:
+            dic[tagname] = tagvalues[tagname]
     dic['loss_value'] = df.loss_value
     if ekey[0].startswith('agg_'):
         dic['loss_ratio'] = df.loss_value / aggvalue[df.agg_id, df.lti]
@@ -149,12 +150,12 @@ def export_agg_losses(ekey, dstore):
     oq = dstore['oqparam']
     aggregate_by = oq.aggregate_by if dskey.startswith('agg_') else []
     name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
-    # value has shape (L, R, T) for agg_losses and (L, R) for tot_losses
+    # value has shape (K, R, L) for agg_losses and (L, R) for tot_losses
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     tagcol = dstore['assetcol/tagcol']
     aggtags = list(tagcol.get_aggkey(aggregate_by).values())
     if aggregate_by:
-        expvalue = dstore['agg_values'][()]  # shape (T, L)
+        expvalue = dstore['agg_values'][()]  # shape (K, L)
     else:
         expvalue = dstore['tot_values'][()]  # shape L
     tagnames = tuple(aggregate_by)
@@ -165,16 +166,17 @@ def export_agg_losses(ekey, dstore):
               risk_investigation_time=oq.risk_investigation_time))
     for r, tag in enumerate(tags):
         rows = []
-        for multi_idx, loss in numpy.ndenumerate(value[:, r]):
-            if loss:  # many tag combinations are missing, i.e. zero
-                l, *tagidxs = multi_idx  # multi_idx is (L, T...)
-                idx = tuple(tagidxs)
-                evalue = expvalue[idx + (l,)]
-                if len(idx):
-                    row = aggtags[idx[0]] + (loss, evalue, loss / evalue)
-                else:
+        for kl, loss in numpy.ndenumerate(value[:, r]):
+            if loss:  # many tag combinations are missing
+                if len(kl) == 2:  # agg_losses
+                    k, li = kl
+                    evalue = expvalue[k, li]
+                    row = aggtags[k] + (loss, evalue, loss / evalue)
+                else:  # tot_losses
+                    li, = kl
+                    evalue = expvalue[li]
                     row = (loss, evalue, loss / evalue)
-                rows.append((oq.loss_names[l],) + row)
+                rows.append((oq.loss_names[li],) + row)
         dest = dstore.build_fname(name, tag, 'csv')
         writer.save(rows, dest, header, comment=md)
     return writer.getsaved()
@@ -212,22 +214,18 @@ def export_losses_by_event(ekey, dstore):
         md.update(dict(investigation_time=oq.investigation_time,
                        risk_investigation_time=oq.risk_investigation_time))
     events = dstore['events'][()]
-    columns = dict(rlz_id=lambda df: events[df.event_id]['rlz_id'])
-    if oq.investigation_time:  # not scenario
-        columns['rup_id'] = lambda df: events[df.event_id]['rup_id']
-        columns['year'] = lambda df: events[df.event_id]['year']
     try:
-        lbe = dstore['event_loss_table/,'][()]
+        df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=0))
     except KeyError:  # scenario_damage + consequences
-        lbe = dstore['losses_by_event'][()]
-    lbe.sort(order='event_id')
-    # example (0, 1, 2, 3) -> (0, 2, 3, 1)
-    axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
-    data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
-    dic = dict(event_id=lbe['event_id'])
-    for l, ln in enumerate(oq.loss_names):
-        dic[ln] = data[..., l]
-    df = pandas.DataFrame(dic).assign(**columns)
+        df = dstore.read_df('losses_by_event')
+        ren = {'loss_%d' % l: ln for l, ln in enumerate(oq.loss_names)}
+        df.rename(columns=ren, inplace=True)
+    evs = events[df.event_id.to_numpy()]
+    df['rlz_id'] = evs['rlz_id']
+    if oq.investigation_time:  # not scenario
+        df['rup_id'] = evs['rup_id']
+        df['year'] = evs['year']
+    df.sort_values('event_id', inplace=True)
     writer.save(df, dest, comment=md)
     return writer.getsaved()
 

@@ -331,12 +331,14 @@ def view_totlosses(token, dstore):
 
 def _portfolio_loss(dstore):
     R = dstore['full_lt'].get_num_rlzs()
-    array = dstore['event_loss_table/,'][()]
-    rlzs = dstore['events']['rlz_id'][array['event_id']]
-    L, = array.dtype['loss'].shape  # loss has shape L
+    df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=0))
+    eids = df.pop('event_id').to_numpy()
+    loss = numpy.array(df)
+    rlzs = dstore['events']['rlz_id'][eids]
+    L = loss.shape[1]
     data = numpy.zeros((R, L), F32)
-    for row, rlz in zip(array, rlzs):
-        data[rlz] += row['loss']
+    for row, rlz in zip(loss, rlzs):
+        data[rlz] += row
     return data
 
 
@@ -370,7 +372,9 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     G = getattr(oq, 'number_of_ground_motion_fields', 1)
     R = dstore['full_lt'].get_num_rlzs()
-    loss = dstore['event_loss_table/,']['loss']  # shape (E, L)
+    df = dstore.read_df('agg_loss_table', ['agg_id', 'event_id'],
+                        dict(agg_id=0))
+    loss = numpy.array(df)
     means = loss.sum(axis=0) / R / G
     sums = [loss[idxs].sum(axis=0) for idxs in _indices(len(loss), 10)]
     errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
@@ -846,24 +850,6 @@ def view_disagg_times(token, dstore):
         tbl.append((duration, task_no) + tuple(data[task_no]))
     header = ('duration', 'task_no') + data.dtype.names
     return rst_table(sorted(tbl), header=header)
-
-
-@view.add('elt')
-def view_elt(token, dstore):
-    """
-    Display the event loss table averaged by event
-    """
-    oq = dstore['oqparam']
-    R = len(dstore['full_lt'].rlzs)
-    dic = group_array(dstore['event_loss_table/,'][()], 'rlzi')
-    header = oq.loss_dt().names
-    tbl = []
-    for rlzi in range(R):
-        if rlzi in dic:
-            tbl.append(dic[rlzi]['loss'].mean(axis=0))
-        else:
-            tbl.append([0.] * len(header))
-    return rst_table(tbl, header)
 
 
 @view.add('bad_ruptures')

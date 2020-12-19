@@ -672,7 +672,7 @@ class OqParam(valid.ParamSet):
             lst.append((out, dt))
         return numpy.dtype(lst)
 
-    def alt_dt(self, loss_a):
+    def alt_dt(self):
         """
         :returns: composite dtype for the agg_loss_table
         """

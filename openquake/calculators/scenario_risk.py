@@ -120,7 +120,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         """
         loss_dt = self.oqparam.loss_dt()
         L = len(loss_dt.names)
-        dtlist = [('event_id', U32), ('loss', (F32, (L,)))]
         R = self.R
         with self.monitor('saving outputs'):
             A = len(self.assetcol)
@@ -146,13 +145,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.datastore['agglosses'] = agglosses
 
             # losses by event
-            lbe = numpy.zeros(E, dtlist)
-            lbe['event_id'] = range(E)
-            lbe['loss'] = res
-            self.datastore['event_loss_table/,'] = lbe
-            loss_types = self.oqparam.loss_dt().names
-            self.datastore.set_attrs(
-                'event_loss_table/,', loss_types=loss_types)
+            data = [('event_id', numpy.arange(E, dtype=U32)),
+                    ('agg_id', numpy.zeros(E, U16))]
+            for l, lname in enumerate(self.oqparam.loss_names):
+                data.append((lname, res[:, l]))
+            self.datastore.create_dframe('agg_loss_table', data)
 
             # sanity check
             totlosses = losses_by_asset.sum(axis=0)
