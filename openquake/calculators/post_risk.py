@@ -106,16 +106,14 @@ class PostRiskCalculator(base.RiskCalculator):
                 return
         if 'source_info' in self.datastore:  # missing for gmf_ebrisk
             logging.info('Building src_loss_table')
-            source_ids, losses = get_src_loss_table(self.datastore, self.L)
-            self.datastore['src_loss_table'] = losses
-            self.datastore.set_shape_attrs('src_loss_table',
-                                           source=source_ids,
-                                           loss_type=oq.loss_names)
+            with self.monitor('src_loss_table', measuremem=True):
+                source_ids, losses = get_src_loss_table(self.datastore, self.L)
+                self.datastore['src_loss_table'] = losses
+                self.datastore.set_shape_attrs('src_loss_table',
+                                               source=source_ids,
+                                               loss_type=oq.loss_names)
         builder = get_loss_builder(self.datastore)
-        try:
-            K = len(self.aggkey)
-        except KeyError:  # no aggregations
-            K = 0
+        K = len(self.aggkey) if oq.aggregate_by else 0
         P = len(builder.return_periods)
         # do everything in process since it is really fast
         rlz_id = self.datastore['events']['rlz_id']
@@ -136,7 +134,7 @@ class PostRiskCalculator(base.RiskCalculator):
                          format(blocksize, num_curves))
             for (k, r), df in gb:
                 for l, lname in enumerate(oq.loss_names):
-                    krl_losses.append((k, r, l, df[lname]))
+                    krl_losses.append((k, r, l, df[lname].to_numpy()))
                     if len(krl_losses) >= blocksize:
                         smap.submit((builder, krl_losses))
                         krl_losses[:] = []
