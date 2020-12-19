@@ -174,4 +174,23 @@ class PostRiskCalculator(base.RiskCalculator):
         logging.info('Mean portfolio loss\n' +
                      views.view('portfolio_loss', self.datastore))
         logging.info('Sanity check on agg_losses')
-        # TODO: add it
+        for kind in 'rlzs', 'stats':
+            agg = 'agg_losses-' + kind
+            tot = 'tot_losses-' + kind
+            if agg not in self.datastore:
+                return
+            if kind == 'rlzs':
+                kinds = ['rlz-%d' % rlz for rlz in range(self.R)]
+            else:
+                kinds = self.oqparam.hazard_stats()
+            for l in range(self.L):
+                ln = self.oqparam.loss_names[l]
+                for r, k in enumerate(kinds):
+                    tot_losses = self.datastore[tot][l, r]
+                    agg_losses = self.datastore[agg][:, r, l].sum()
+                    if kind == 'rlzs' or k == 'mean':
+                        ok = numpy.allclose(agg_losses, tot_losses, rtol=.001)
+                        if not ok:
+                            logging.warning(
+                                'Inconsistent total losses for %s, %s: '
+                                '%s != %s', ln, k, agg_losses, tot_losses)

@@ -191,14 +191,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
 
-        cols = ['event_id', 'agg_id']
-        self.datastore.create_dset('agg_loss_table/event_id', U32)
-        self.datastore.create_dset('agg_loss_table/agg_id', U16)
+        descr = [('event_id', U32), ('agg_id', U16)]
         for name in oq.loss_names:
-            cols.append(name)
-            self.datastore.create_dset('agg_loss_table/' + name, F32)
-        self.datastore['agg_loss_table'].attrs['__pdcolumns__'] = \
-            ' '.join(cols)
+            descr.append((name, F32))
+        self.datastore.create_dframe('agg_loss_table', descr)
         self.param.pop('oqparam', None)  # unneeded
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L),
                                    attrs=dict(stat=[b'mean']))  # mean
@@ -278,10 +274,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
-        for field, gmf in self.avg_gmf.items():
-            self.datastore['avg_gmf/' + field] = gmf
-        self.datastore.set_attrs(
-            'avg_gmf', __pdcolumns__=' '.join(self.avg_gmf))
+        self.datastore.create_dframe('avg_gmf', self.avg_gmf.items())
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run()

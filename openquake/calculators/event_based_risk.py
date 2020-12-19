@@ -269,14 +269,8 @@ class EbrCalculator(base.RiskCalculator):
                 if losses.sum():
                     out.append((eid, 0) + tuple(losses))
             arr = numpy.array(out, oq.alt_dt())
-            self.datastore['agg_loss_table/event_id'] = arr['event_id']
-            self.datastore['agg_loss_table/agg_id'] = numpy.zeros(len(arr), U16)
-            cols = ['event_id', 'agg_id']
-            for l, lname in enumerate(oq.loss_names):
-                self.datastore['agg_loss_table/' + lname] = arr[lname]
-                cols.append(lname)
-            self.datastore.set_attrs(
-                'agg_loss_table', __pdcolumns__=' '.join(cols))
+            self.datastore.create_dframe(
+                'agg_loss_table', [(n, arr[n]) for n in arr.dtype.names])
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses',
                            asset_id=self.assetcol['id'],

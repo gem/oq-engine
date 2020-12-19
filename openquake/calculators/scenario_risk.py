@@ -145,14 +145,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             self.datastore['agglosses'] = agglosses
 
             # losses by event
-            self.datastore['agg_loss_table/event_id'] = numpy.arange(E)
-            self.datastore['agg_loss_table/agg_id'] = numpy.zeros(E, U16)
+            data = [('event_id', numpy.arange(E, dtype=U32)),
+                    ('agg_id', numpy.zeros(E, U16))]
             for l, lname in enumerate(self.oqparam.loss_names):
-                self.datastore['agg_loss_table/' + lname] = res[:, l]
-
-            cols = ['event_id', 'agg_id'] + self.oqparam.loss_names
-            self.datastore.set_attrs(
-                'agg_loss_table', __pdcolumns__=' '.join(cols))
+                data.append((lname, res[:, l]))
+            self.datastore.create_dframe('agg_loss_table', data)
 
             # sanity check
             totlosses = losses_by_asset.sum(axis=0)
