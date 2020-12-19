@@ -311,6 +311,8 @@ class TagCollection(object):
         :returns: a dictionary tuple of indices -> tagvalues
         """
         aggkey = {}
+        if not tagnames:
+            return aggkey
         alltags = [getattr(self, tagname) for tagname in tagnames]
         ranges = [range(1, len(tags)) for tags in alltags]
         for i, idxs in enumerate(itertools.product(*ranges)):

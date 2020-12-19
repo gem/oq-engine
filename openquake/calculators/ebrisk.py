@@ -194,7 +194,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         descr = [('event_id', U32), ('agg_id', U16)]
         for name in oq.loss_names:
             descr.append((name, F32))
-        self.datastore.create_dframe('agg_loss_table', descr)
+        self.datastore.create_dframe(
+            'agg_loss_table', descr, K=len(self.aggkey))
         self.param.pop('oqparam', None)  # unneeded
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L),
                                    attrs=dict(stat=[b'mean']))  # mean
