@@ -29,7 +29,7 @@ BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
 
 
-def ppp(profiles: list, smsh: KiteSurface, title: str = ''):
+def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
 
     """
     Plots the 3D mesh
@@ -56,12 +56,13 @@ def ppp(profiles: list, smsh: KiteSurface, title: str = ''):
         ax.plot(coo[:, 0], coo[:, 1], coo[:, 2]*scl, 'og', lw=1, markersize=3)
 
     # Plotting mesh
-    for i in range(smsh.mesh.lons.shape[0]):
-        ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :],
-                smsh.mesh.depths[i, :]*scl, '-r', lw=0.5)
-    for i in range(smsh.mesh.lons.shape[1]):
-        ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
-                smsh.mesh.depths[:, i]*scl, '-r', lw=0.5)
+    if smsh is not None:
+        for i in range(smsh.mesh.lons.shape[0]):
+            ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :],
+                    smsh.mesh.depths[i, :]*scl, '-r', lw=0.5)
+        for i in range(smsh.mesh.lons.shape[1]):
+            ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
+                    smsh.mesh.depths[:, i]*scl, '-r', lw=0.5)
 
     plt.title(title)
     ax.invert_zaxis()

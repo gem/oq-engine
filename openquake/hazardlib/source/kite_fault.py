@@ -20,7 +20,9 @@ Module :mod:`openquake.hazardlib.source.kite_fault` defines
 
 import numpy as np
 from typing import Tuple, Optional
+from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture \
@@ -55,6 +57,39 @@ class KiteFaultSource(ParametricSeismicSource):
         self.rake = rake
 
         min_mag, max_mag = self.mfd.get_min_max_mag()
+
+    @classmethod
+    def as_simple_fault(cls, source_id, name, tectonic_region_type,
+                        mfd, rupture_mesh_spacing,
+                        magnitude_scaling_relationship, rupture_aspect_ratio,
+                        temporal_occurrence_model,
+                        # simple fault specific parameters
+                        upper_seismogenic_depth, lower_seismogenic_depth,
+                        fault_trace, dip, rake, floating_x_step,
+                        floating_y_step):
+        # Avoids singularity
+        if (dip-90.) < 1e-5:
+            dip = 89.9
+        # Get simple fault surface
+        srfc = SimpleFaultSurface.from_fault_data(fault_trace,
+                                                  upper_seismogenic_depth,
+                                                  lower_seismogenic_depth,
+                                                  dip,
+                                                  rupture_mesh_spacing*1.01)
+        # Creating profiles
+        profiles = []
+        for i in range(srfc.mesh.shape[1]):
+            tmp = [Point(lo, la, de) for lo, la, de
+                   in zip(srfc.mesh.lons[:, i], srfc.mesh.lats[:, i],
+                          srfc.mesh.depths[:, i])]
+            profiles.append(Line(tmp))
+        # Creating Kite Source
+        self = cls(source_id, name, tectonic_region_type, mfd,
+                   rupture_mesh_spacing, magnitude_scaling_relationship,
+                   rupture_aspect_ratio, temporal_occurrence_model,
+                   profiles, floating_x_step,
+                   floating_y_step, rake)
+        return self
 
     @property
     def surface(self) -> KiteSurface:
