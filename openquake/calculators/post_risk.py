@@ -112,10 +112,7 @@ class PostRiskCalculator(base.RiskCalculator):
                                            source=source_ids,
                                            loss_type=oq.loss_names)
         builder = get_loss_builder(self.datastore)
-        try:
-            K = len(self.aggkey)
-        except KeyError:  # no aggregations
-            K = 0
+        K = len(self.aggkey) if oq.aggregate_by else 0
         P = len(builder.return_periods)
         # do everything in process since it is really fast
         rlz_id = self.datastore['events']['rlz_id']
