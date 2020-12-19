@@ -87,6 +87,8 @@ class PostRiskCalculator(base.RiskCalculator):
             assetcol = self.datastore['assetcol']
             self.aggkey = base.save_agg_values(
                 self.datastore, assetcol, oq.loss_names, oq.aggregate_by)
+            aggby = self.datastore.parent['oqparam'].aggregate_by
+            assert oq.aggregate_by == aggby  # temporary check
         else:
             assetcol = self.datastore['assetcol']
             self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)

@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized writing and reading the agg_loss_table
   * Removed misleading zero losses in agg_losses.csv
   * Fixed `oq recompute_losses` and renamed it to `oq reaggregate`
   * Added a limit of 65,536 to the maximum number of aggregation tags

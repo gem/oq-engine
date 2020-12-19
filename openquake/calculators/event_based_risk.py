@@ -270,7 +270,7 @@ class EbrCalculator(base.RiskCalculator):
                     out.append((eid, 0) + tuple(losses))
             arr = numpy.array(out, oq.alt_dt())
             self.datastore['agg_loss_table/event_id'] = arr['event_id']
-            self.datastore['agg_loss_table/agg_id'] = numpy.zeros(len(arr))
+            self.datastore['agg_loss_table/agg_id'] = numpy.zeros(len(arr), U16)
             cols = ['event_id', 'agg_id']
             for l, lname in enumerate(oq.loss_names):
                 self.datastore['agg_loss_table/' + lname] = arr[lname]
