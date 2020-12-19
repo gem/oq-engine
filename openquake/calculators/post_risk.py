@@ -106,11 +106,12 @@ class PostRiskCalculator(base.RiskCalculator):
                 return
         if 'source_info' in self.datastore:  # missing for gmf_ebrisk
             logging.info('Building src_loss_table')
-            source_ids, losses = get_src_loss_table(self.datastore, self.L)
-            self.datastore['src_loss_table'] = losses
-            self.datastore.set_shape_attrs('src_loss_table',
-                                           source=source_ids,
-                                           loss_type=oq.loss_names)
+            with self.monitor('src_loss_table', measuremem=True):
+                source_ids, losses = get_src_loss_table(self.datastore, self.L)
+                self.datastore['src_loss_table'] = losses
+                self.datastore.set_shape_attrs('src_loss_table',
+                                               source=source_ids,
+                                               loss_type=oq.loss_names)
         builder = get_loss_builder(self.datastore)
         K = len(self.aggkey) if oq.aggregate_by else 0
         P = len(builder.return_periods)
