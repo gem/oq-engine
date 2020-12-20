@@ -1353,6 +1353,9 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     """
     P = len(return_periods)
     assert len(losses)
+    if isinstance(losses, list):
+        losses = numpy.array(losses)
+    shp = losses.shape[1:]
     if num_events is None:
         num_events = len(losses)
     elif num_events < len(losses):
@@ -1361,20 +1364,25 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
             % (num_events, len(losses)))
     if eff_time is None:
         eff_time = return_periods[-1]
-    losses = numpy.sort(losses)
+    losses = numpy.sort(losses, axis=0)
     # num_losses < num_events: just add zeros
     num_zeros = num_events - len(losses)
     if num_zeros:
         losses = numpy.concatenate(
-            [numpy.zeros(num_zeros, losses.dtype), losses])
+            [numpy.zeros(((num_zeros,) + shp), losses.dtype), losses])
     periods = eff_time / numpy.arange(num_events, 0., -1)
     num_left = sum(1 for rp in return_periods if rp < periods[0])
     num_right = sum(1 for rp in return_periods if rp > periods[-1])
     rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
-    curve = numpy.zeros(len(return_periods))
-    c = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
-    curve[num_left:P-num_right] = c
-    curve[P-num_right:] = numpy.nan
+    curve = numpy.zeros(shp + (len(return_periods),), F32)
+    logr, logp = numpy.log(rperiods), numpy.log(periods)
+    if shp:  # losses has shape (E, L)
+        for l, ls in enumerate(losses.T):
+            curve[l, num_left:P-num_right] = numpy.interp(logr, logp, ls)
+            curve[l, P-num_right:] = numpy.nan
+    else:
+        curve[num_left:P-num_right] = numpy.interp(logr, logp, losses)
+        curve[P-num_right:] = numpy.nan
     return curve
 
 
