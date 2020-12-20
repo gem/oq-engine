@@ -50,7 +50,8 @@ def get_src_loss_table(dstore, L):
     :returns:
         (source_ids, array of losses of shape (Ns, L))
     """
-    alt = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=0))
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    alt = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
     eids = alt.event_id.to_numpy()
     evs = dstore['events'][:][eids]
     rlz_ids = evs['rlz_id']

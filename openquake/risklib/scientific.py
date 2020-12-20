@@ -1352,8 +1352,7 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     if eff_time is not passed, it is inferred from the longest return period.
     """
     P = len(return_periods)
-    if len(losses) == 0:  # zero-curve
-        return numpy.zeros(P)
+    assert len(losses)
     if num_events is None:
         num_events = len(losses)
     elif num_events < len(losses):
