@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import logging
 import numpy
 
@@ -122,7 +123,10 @@ class PostRiskCalculator(base.RiskCalculator):
         alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         with self.monitor('agg_losses and agg_curves', measuremem=True):
-            smap = parallel.Starmap(post_risk, h5=self.datastore.hdf5)
+            dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+                    else 'processpool')  # use only the local cores
+            smap = parallel.Starmap(post_risk, h5=self.datastore.hdf5,
+                                    distribute=dist)
             # producing concurrent_tasks/2 = num_cores tasks
             blocksize = int(numpy.ceil(
                 (K + 1) * self.R / (oq.concurrent_tasks // 2 or 1)))
@@ -132,7 +136,6 @@ class PostRiskCalculator(base.RiskCalculator):
             tot_losses = numpy.zeros((self.L, self.R), F32)
             tot_curves = numpy.zeros((self.L, self.R, P), F32)
             gb = alt_df.groupby([alt_df.index, alt_df.rlz_id])
-            logging.info('Sending the agg_loss_table to the workers')
             for (k, r), df in gb:
                 arr = numpy.zeros((self.L, len(df)), F32)
                 for l, ln in enumerate(oq.loss_names):
@@ -143,6 +146,9 @@ class PostRiskCalculator(base.RiskCalculator):
                     agg_losses[k, r] = arr.sum(axis=1)
                 kr_losses.append((k, r, arr))
                 if len(kr_losses) >= blocksize:
+                    size = sum(ls.nbytes for k, r, ls in kr_losses)
+                    logging.info('Sending %s of losses',
+                                 general.humansize(size))
                     smap.submit((builder, kr_losses))
                     kr_losses[:] = []
             if kr_losses:
