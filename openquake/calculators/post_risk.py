@@ -72,7 +72,7 @@ def post_risk(builder, kr_losses, monitor):
     """
     res = {}
     for k, r, losses in kr_losses:
-        res[k, r] = (builder.build_curves(losses, r), losses.sum(axis=1))
+        res[k, r] = builder.build_curves(losses, r)
     return res
 
 
@@ -131,24 +131,26 @@ class PostRiskCalculator(base.RiskCalculator):
             tot_losses = numpy.zeros((self.L, self.R), F32)
             tot_curves = numpy.zeros((self.L, self.R, P), F32)
             gb = alt_df.groupby([alt_df.index, alt_df.rlz_id])
-            logging.info('Sending the agg_loss_table to the workers')
+            logging.info('Sending agg_loss_table to the workers')
             for (k, r), df in gb:
                 arr = numpy.zeros((self.L, len(df)))
                 for l, ln in enumerate(oq.loss_names):
                     arr[l] = df[ln].to_numpy()
+                if k == K:
+                    tot_losses[:, r] = arr.sum(axis=1)
+                else:
+                    agg_losses[k, r] = arr.sum(axis=1)
                 kr_losses.append((k, r, arr))
                 if len(kr_losses) >= blocksize:
                     smap.submit((builder, kr_losses))
                     kr_losses[:] = []
             if kr_losses:
                 smap.submit((builder, kr_losses))
-            for (k, r), (curve, loss) in smap.reduce().items():
+            for (k, r), curve in smap.reduce().items():
                 if k == K:  # tot
                     tot_curves[:, r] = curve
-                    tot_losses[:, r] = loss
                 else:  # agg
                     agg_curves[k, r] = curve
-                    agg_losses[k, r] = loss
             if K:
                 self.datastore['agg_curves-rlzs'] = agg_curves
                 self.datastore['agg_losses-rlzs'] = agg_losses * oq.ses_ratio
