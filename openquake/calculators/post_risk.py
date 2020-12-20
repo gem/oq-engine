@@ -131,10 +131,12 @@ class PostRiskCalculator(base.RiskCalculator):
             tot_losses = numpy.zeros((self.L, self.R), F32)
             tot_curves = numpy.zeros((self.L, self.R, P), F32)
             gb = alt_df.groupby([alt_df.index, alt_df.rlz_id])
+            logging.info('Sending the agg_loss_table to the workers')
             for (k, r), df in gb:
-                del df['event_id']
-                del df['rlz_id']
-                kr_losses.append((k, r, numpy.array(df)))
+                arr = numpy.zeros((len(df), self.L))
+                for l, ln in enumerate(oq.loss_names):
+                    arr[:, l] = df[ln].to_numpy()
+                kr_losses.append((k, r, arr))
                 if len(kr_losses) >= blocksize:
                     smap.submit((builder, kr_losses))
                     kr_losses[:] = []
