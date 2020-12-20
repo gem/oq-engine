@@ -72,7 +72,7 @@ def post_risk(builder, kr_losses, monitor):
     """
     res = {}
     for k, r, losses in kr_losses:
-        res[k, r] = (builder.build_curves(losses, r), losses.sum(axis=0))
+        res[k, r] = (builder.build_curves(losses, r), losses.sum(axis=1))
     return res
 
 
@@ -133,9 +133,9 @@ class PostRiskCalculator(base.RiskCalculator):
             gb = alt_df.groupby([alt_df.index, alt_df.rlz_id])
             logging.info('Sending the agg_loss_table to the workers')
             for (k, r), df in gb:
-                arr = numpy.zeros((len(df), self.L))
+                arr = numpy.zeros((self.L, len(df)))
                 for l, ln in enumerate(oq.loss_names):
-                    arr[:, l] = df[ln].to_numpy()
+                    arr[l] = df[ln].to_numpy()
                 kr_losses.append((k, r, arr))
                 if len(kr_losses) >= blocksize:
                     smap.submit((builder, kr_losses))

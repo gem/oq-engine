@@ -1355,34 +1355,34 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     assert len(losses)
     if isinstance(losses, list):
         losses = numpy.array(losses)
-    shp = losses.shape[1:]
+    shp = losses.shape[:-1]  # total shape is (L...E)
+    num_losses = losses.shape[-1]
     if num_events is None:
-        num_events = len(losses)
-    elif num_events < len(losses):
+        num_events = num_losses
+    elif num_events < num_losses:
         raise ValueError(
             'There are not enough events (%d<%d) to compute the loss curve'
-            % (num_events, len(losses)))
+            % (num_events, num_losses))
     if eff_time is None:
         eff_time = return_periods[-1]
-    losses = numpy.sort(losses, axis=0)
+    losses = numpy.sort(losses)
     # num_losses < num_events: just add zeros
-    num_zeros = num_events - len(losses)
+    num_zeros = num_events - num_losses
     if num_zeros:
-        losses = numpy.concatenate(
-            [numpy.zeros(((num_zeros,) + shp), losses.dtype), losses])
+        newlosses = numpy.zeros(shp + (num_events,), losses.dtype)
+        newlosses[..., num_events-num_losses:num_events] = losses
+        losses = newlosses
     periods = eff_time / numpy.arange(num_events, 0., -1)
     num_left = sum(1 for rp in return_periods if rp < periods[0])
     num_right = sum(1 for rp in return_periods if rp > periods[-1])
     rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
-    curve = numpy.zeros(shp + (len(return_periods),), F32)
+    curve = numpy.zeros(shp + (len(return_periods),), losses.dtype)
     logr, logp = numpy.log(rperiods), numpy.log(periods)
-    if shp:  # losses has shape (E, L)
-        for l, ls in enumerate(losses.T):
-            curve[l, num_left:P-num_right] = numpy.interp(logr, logp, ls)
-            curve[l, P-num_right:] = numpy.nan
-    else:
-        curve[num_left:P-num_right] = numpy.interp(logr, logp, losses)
-        curve[P-num_right:] = numpy.nan
+    for idx, _ in numpy.ndenumerate(losses[..., 0]):
+        tup = idx + (slice(num_left, P-num_right),)
+        curve[tup] = numpy.interp(logr, logp, losses[idx])
+        tup = idx + (slice(P-num_right, None),)
+        curve[tup] = numpy.nan
     return curve
 
 
