@@ -106,7 +106,7 @@ class PostRiskCalculator(base.RiskCalculator):
                     eff_time)
                 return
         if 'source_info' in self.datastore:  # missing for gmf_ebrisk
-            logging.info('Building src_loss_table')
+            logging.info('Building the src_loss_table')
             with self.monitor('src_loss_table', measuremem=True):
                 source_ids, losses = get_src_loss_table(self.datastore, self.L)
                 self.datastore['src_loss_table'] = losses
@@ -123,15 +123,16 @@ class PostRiskCalculator(base.RiskCalculator):
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         with self.monitor('agg_losses and agg_curves', measuremem=True):
             smap = parallel.Starmap(post_risk, h5=self.datastore.hdf5)
+            # producing concurrent_tasks/2 = num_cores tasks
             blocksize = int(numpy.ceil(
-                (K + 1) * self.R / (oq.concurrent_tasks or 1)))
+                (K + 1) * self.R / (oq.concurrent_tasks // 2 or 1)))
             kr_losses = []
             agg_losses = numpy.zeros((K, self.R, self.L), F32)
             agg_curves = numpy.zeros((K, self.R, self.L, P), F32)
             tot_losses = numpy.zeros((self.L, self.R), F32)
             tot_curves = numpy.zeros((self.L, self.R, P), F32)
             gb = alt_df.groupby([alt_df.index, alt_df.rlz_id])
-            logging.info('Sending agg_loss_table to the workers')
+            logging.info('Sending the agg_loss_table to the workers')
             for (k, r), df in gb:
                 arr = numpy.zeros((self.L, len(df)), F32)
                 for l, ln in enumerate(oq.loss_names):
