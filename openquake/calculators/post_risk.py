@@ -136,6 +136,7 @@ class PostRiskCalculator(base.RiskCalculator):
             tot_losses = numpy.zeros((self.L, self.R), F32)
             tot_curves = numpy.zeros((self.L, self.R, P), F32)
             gb = alt_df.groupby([alt_df.index, alt_df.rlz_id])
+            # NB: in the future we may use multiprocessing.shared_memory
             for (k, r), df in gb:
                 arr = numpy.zeros((self.L, len(df)), F32)
                 for l, ln in enumerate(oq.loss_names):
