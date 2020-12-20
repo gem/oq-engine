@@ -133,7 +133,7 @@ class PostRiskCalculator(base.RiskCalculator):
             gb = alt_df.groupby([alt_df.index, alt_df.rlz_id])
             logging.info('Sending agg_loss_table to the workers')
             for (k, r), df in gb:
-                arr = numpy.zeros((self.L, len(df)))
+                arr = numpy.zeros((self.L, len(df)), F32)
                 for l, ln in enumerate(oq.loss_names):
                     arr[l] = df[ln].to_numpy()
                 if k == K:
