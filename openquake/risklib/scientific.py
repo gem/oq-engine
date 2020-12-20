@@ -1335,21 +1335,21 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     """
     :param losses: array of simulated losses
     :param return_periods: return periods of interest
-    :param num_events: the number of events (>= to the number of losses)
+    :param num_events: the number of events (>= number of losses)
     :param eff_time: investigation_time * ses_per_logic_tree_path
     :returns: interpolated losses for the return periods, possibly with NaN
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
     where min_time = eff_time /num_events. On the right of the interval they
-    have NaN values and on the left zero values. Here is an example:
+    have NaN values; on the left zero values.
+    If num_events is not passed, it is inferred from the number of losses;
+    if eff_time is not passed, it is inferred from the longest return period.
+    Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20)
     array([ 0. ,  0. ,  0. ,  3.5,  8. , 13. , 23. ])
-
-    If num_events is not passed, it is inferred from the number of losses;
-    if eff_time is not passed, it is inferred from the longest return period.
     """
     P = len(return_periods)
     assert len(losses)
@@ -1357,11 +1357,12 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
         num_events = len(losses)
     elif num_events < len(losses):
         raise ValueError(
-            'There are not enough events (%d) to compute the loss curve'
-            % num_events)
+            'There are not enough events (%d<%d) to compute the loss curve'
+            % (num_events, len(losses)))
     if eff_time is None:
         eff_time = return_periods[-1]
     losses = numpy.sort(losses)
+    # num_losses < num_events: just add zeros
     num_zeros = num_events - len(losses)
     if num_zeros:
         losses = numpy.concatenate(

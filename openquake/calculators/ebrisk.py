@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import copy
 import logging
 import operator
 from datetime import datetime
@@ -58,7 +60,7 @@ def calc_risk(gmfs, param, monitor):
         crmodel = monitor.read('crmodel')
         weights = dstore['weights'][()]
     acc = dict(events_per_sid=0)
-    alt = param['alt']
+    alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
     alt_dt = param['oqparam'].alt_dt()
     tempname = param['tempname']
     aggby = param['aggregate_by']
