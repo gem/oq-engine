@@ -121,6 +121,7 @@ class VulnerabilityFunction(object):
         else:
             self.covs = numpy.zeros(self.imls.shape)
 
+        anycovs = self.covs.any()
         for lr, cov in zip(self.mean_loss_ratios, self.covs):
             if lr == 0 and cov > 0:
                 msg = ("It is not valid to define a mean loss ratio = 0 "
@@ -135,7 +136,7 @@ class VulnerabilityFunction(object):
                     pass
                 elif lr > 1:
                     raise ValueError('The meanLRs must be ≤ 1, got %s' % lr)
-                elif cov == 0:
+                elif cov == 0 and anycovs:
                     raise ValueError(
                         'Found a zero coefficient of variation in %s' %
                         self.covs)
