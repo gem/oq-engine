@@ -231,7 +231,6 @@ class KiteFaultSource(ParametricSeismicSource):
             yield self
             return
         for mag_lab in self._rupture_count:
-            print(mag_lab)
             if self._rupture_rates[mag_lab] == 0:
                 continue
             src = copy.copy(self)

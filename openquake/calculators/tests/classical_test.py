@@ -854,6 +854,6 @@ hazard_uhs-std.csv
 
     def test_case_61(self):
         # kite fault
-        self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(1.0).csv'], 
-                              case_61.__file__, delta=1E-5)
-
+        self.run_calc(case_61.__file__, 'job.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f)

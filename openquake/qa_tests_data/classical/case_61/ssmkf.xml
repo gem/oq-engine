@@ -4,7 +4,6 @@
     <sourceModel name="Example Source Model Containing a Simple Fault Source">
         <sourceGroup name="group 1" tectonicRegion="Active Shallow Crust">
             <kiteFaultSource id="3" name="Kite Fault Source" tectonicRegion="Active Shallow Crust">
-            <!--simpleFaultSource id="3" name="Kite Fault Source" tectonicRegion="Active Shallow Crust"-->
                     
                 <simpleFaultGeometry>
                     <gml:LineString>
