@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import logging
 import numpy
 
@@ -66,13 +67,13 @@ def get_src_loss_table(dstore, L):
     return zip(*sorted(acc.items()))
 
 
-def post_risk(builder, krl_losses, monitor):
+def post_risk(builder, kr_losses, monitor):
     """
-    :returns: dictionary krl -> loss curve
+    :returns: dictionary kr -> loss curve
     """
     res = {}
-    for k, r, l, losses in krl_losses:
-        res[k, r, l] = (builder.build_curves(losses, r), losses.sum())
+    for k, r, losses in kr_losses:
+        res[k, r] = builder.build_curves(losses, r)
     return res
 
 
@@ -106,7 +107,7 @@ class PostRiskCalculator(base.RiskCalculator):
                     eff_time)
                 return
         if 'source_info' in self.datastore:  # missing for gmf_ebrisk
-            logging.info('Building src_loss_table')
+            logging.info('Building the src_loss_table')
             with self.monitor('src_loss_table', measuremem=True):
                 source_ids, losses = get_src_loss_table(self.datastore, self.L)
                 self.datastore['src_loss_table'] = losses
@@ -122,32 +123,42 @@ class PostRiskCalculator(base.RiskCalculator):
         alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         with self.monitor('agg_losses and agg_curves', measuremem=True):
-            smap = parallel.Starmap(post_risk, h5=self.datastore.hdf5)
-            num_curves = (K + 1) * self.R * self.L
-            blocksize = int(numpy.ceil(num_curves/(oq.concurrent_tasks or 1)))
-            krl_losses = []
+            dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
+                    else 'processpool')  # use only the local cores
+            smap = parallel.Starmap(post_risk, h5=self.datastore.hdf5,
+                                    distribute=dist)
+            # producing concurrent_tasks/2 = num_cores tasks
+            blocksize = int(numpy.ceil(
+                (K + 1) * self.R / (oq.concurrent_tasks // 2 or 1)))
+            kr_losses = []
             agg_losses = numpy.zeros((K, self.R, self.L), F32)
             agg_curves = numpy.zeros((K, self.R, self.L, P), F32)
             tot_losses = numpy.zeros((self.L, self.R), F32)
             tot_curves = numpy.zeros((self.L, self.R, P), F32)
             gb = alt_df.groupby([alt_df.index, alt_df.rlz_id])
-            logging.info('Computing up to {:_d} of {:_d} curves per task'.
-                         format(blocksize, num_curves))
+            # NB: in the future we may use multiprocessing.shared_memory
             for (k, r), df in gb:
-                for l, lname in enumerate(oq.loss_names):
-                    krl_losses.append((k, r, l, df[lname].to_numpy()))
-                    if len(krl_losses) >= blocksize:
-                        smap.submit((builder, krl_losses))
-                        krl_losses[:] = []
-            if krl_losses:
-                smap.submit((builder, krl_losses))
-            for (k, r, l), (curve, loss) in smap.reduce().items():
+                arr = numpy.zeros((self.L, len(df)), F32)
+                for l, ln in enumerate(oq.loss_names):
+                    arr[l] = df[ln].to_numpy()
+                if k == K:
+                    tot_losses[:, r] = arr.sum(axis=1)
+                else:
+                    agg_losses[k, r] = arr.sum(axis=1)
+                kr_losses.append((k, r, arr))
+                if len(kr_losses) >= blocksize:
+                    size = sum(ls.nbytes for k, r, ls in kr_losses)
+                    logging.info('Sending %s of losses',
+                                 general.humansize(size))
+                    smap.submit((builder, kr_losses))
+                    kr_losses[:] = []
+            if kr_losses:
+                smap.submit((builder, kr_losses))
+            for (k, r), curve in smap.reduce().items():
                 if k == K:  # tot
-                    tot_curves[l, r] = curve
-                    tot_losses[l, r] = loss
+                    tot_curves[:, r] = curve
                 else:  # agg
-                    agg_curves[k, r, l] = curve
-                    agg_losses[k, r, l] = loss
+                    agg_curves[k, r] = curve
             if K:
                 self.datastore['agg_curves-rlzs'] = agg_curves
                 self.datastore['agg_losses-rlzs'] = agg_losses * oq.ses_ratio
