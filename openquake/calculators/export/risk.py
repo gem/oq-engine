@@ -105,7 +105,7 @@ def export_agg_losses(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     tagcol = dstore['assetcol/tagcol']
     aggtags = list(tagcol.get_aggkey(aggregate_by).values())
-    aggtags.append(('*',) * len(aggregate_by))
+    aggtags.append(('*total*',) * len(aggregate_by))
     expvalue = dstore['agg_values'][()]  # shape (K+1, L)
     tagnames = tuple(aggregate_by)
     header = ('loss_type',) + tagnames + (
