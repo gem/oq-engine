@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.source.kite_fault` defines
 """
 
 import numpy as np
-from typing import Tuple, Optional
+from typing import Tuple
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
@@ -171,7 +171,7 @@ class KiteFaultSource(ParametricSeismicSource):
 
 
 def get_discrete_dimensions(area: float, sampling: float, aspr: float,
-            sampling_y: float = None) -> Tuple[float, float]:
+                            sampling_y: float = None) -> Tuple[float, float]:
     """
     Computes the discrete dimensions of a rupture given rupture area, sampling
     distance (along strike) and aspect ratio.
