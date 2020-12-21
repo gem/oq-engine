@@ -1,4 +1,4 @@
-#,,,,,,"generated_by='OpenQuake engine 3.11.0-git7b485902ae', start_date='2020-12-18T06:37:46', checksum=147663202, investigation_time=1000.0, risk_investigation_time=1.0"
+#,,,,,,"generated_by='OpenQuake engine 3.11.0-git1668cdc9e2', start_date='2020-12-21T07:02:56', checksum=147663202, investigation_time=1000.0, risk_investigation_time=1.0"
 loss_type,NAME_1,NAME_2,taxonomy,loss_value,exposed_value,loss_ratio
 structural,West,Dhaualagiri,Wood,8.20879E+02,7.71120E+06,1.06453E-04
 structural,West,Dhaualagiri,Adobe,8.01887E+02,2.54016E+06,3.15684E-04
@@ -10,7 +10,7 @@ structural,West,Gandaki,Unreinforced-Brick-Masonry,1.28351E+03,1.70100E+06,7.545
 structural,West,Lumbini,Wood,1.10796E+03,8.27820E+06,1.33840E-04
 structural,West,Lumbini,Adobe,1.43456E+04,2.78624E+07,5.14874E-04
 structural,West,Lumbini,Stone-Masonry,2.81071E+03,9.51426E+06,2.95421E-04
-structural,West,Lumbini,Unreinforced-Brick-Masonry,2.79286E+03,5.12568E+06,5.44875E-04
+structural,West,Lumbini,Unreinforced-Brick-Masonry,2.79286E+03,5.12568E+06,5.44876E-04
 structural,Far-Western,Seti,Wood,5.17637E+02,4.86486E+06,1.06403E-04
 structural,Far-Western,Seti,Adobe,1.20124E+04,1.51162E+07,7.94670E-04
 structural,Far-Western,Seti,Stone-Masonry,6.42405E+03,8.35758E+06,7.68650E-04
@@ -52,3 +52,4 @@ structural,Central,Narayani,Wood,5.52695E+03,3.28066E+07,1.68471E-04
 structural,Central,Narayani,Adobe,8.73385E+04,1.08955E+08,8.01603E-04
 structural,Central,Narayani,Stone-Masonry,2.22823E+04,2.92912E+07,7.60718E-04
 structural,Central,Narayani,Unreinforced-Brick-Masonry,7.26465E+03,7.60914E+06,9.54727E-04
+structural,*,*,*,1.51169E+06,1.58716E+09,9.52451E-04
