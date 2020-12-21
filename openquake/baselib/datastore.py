@@ -317,6 +317,25 @@ class DataStore(collections.abc.MutableMapping):
             else:
                 raise
 
+    def get_shape_descr(self, name):
+        """
+        :param name:
+            the name of a dataset/datagroup in the datastore
+        :returns:
+            a dictionary field -> values extracted from the shape_descr
+            attribute (if any)
+        """
+        attrs = self.getitem(name).attrs
+        shape_descr = python3compat.decode(attrs.get('shape_descr', []))
+        if not shape_descr:
+            return {}
+        dic = dict(shape_descr=shape_descr)
+        for field in shape_descr:
+            dic[field] = val = attrs[field]
+            if isinstance(val, numpy.int64):
+                dic[field] = range(val)
+        return dic
+
     def swmr_on(self):
         """
         Enable the SWMR mode on the underlying HDF5 file

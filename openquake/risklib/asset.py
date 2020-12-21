@@ -499,24 +499,27 @@ class AssetCollection(object):
             the relevant loss_names
         :param tagnames:
             tagnames
-        :yields:
-            pairs (key, aggvalues)
+        :returns:
+            an array of shape (K+1, L)
         """
         aggkey = {key: k for k, key in enumerate(
             self.tagcol.get_aggkey(tagnames))}
-        KL = len(aggkey), len(loss_names)
+        K, L = len(aggkey), len(loss_names)
         dic = {tagname: self[tagname] for tagname in tagnames}
         for ln in loss_names:
             if ln.endswith('_ins'):
                 dic[ln] = self['value-' + ln[:-4]]
             elif ln in self.fields:
                 dic[ln] = self['value-' + ln]
-        agg_values = numpy.zeros(KL)
-        df = pandas.DataFrame(dic).set_index(list(tagnames))
-        for key, grp in df.groupby(df.index):
-            if isinstance(key, int):
-                key = key,  # turn it into a 1-value tuple
-            agg_values[aggkey[key]] = numpy.array(grp.sum())
+        agg_values = numpy.zeros((K+1, L))
+        df = pandas.DataFrame(dic)
+        if tagnames:
+            df = df.set_index(list(tagnames))
+            for key, grp in df.groupby(df.index):
+                if isinstance(key, int):
+                    key = key,  # turn it into a 1-value tuple
+                agg_values[aggkey[key], :] = numpy.array(grp.sum())
+        agg_values[-1, :] = [df[ln].sum() for ln in loss_names]
         return agg_values
 
     def reduce(self, sitecol):

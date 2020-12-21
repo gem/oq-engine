@@ -21,7 +21,6 @@ import abc
 import pdb
 import logging
 import operator
-import itertools
 import traceback
 from datetime import datetime
 from shapely import wkt
@@ -1149,10 +1148,9 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
 
 def save_agg_values(dstore, assetcol, lossnames, tagnames):
     """
-    Store agg_keys, agg_values, tot_values.
+    Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
-    aval = assetcol.arr_value(lossnames)  # shape (A, L)
     if tagnames:
         aggkey = assetcol.tagcol.get_aggkey(tagnames)
         logging.info('Storing %d aggregation keys', len(aggkey))
@@ -1160,6 +1158,5 @@ def save_agg_values(dstore, assetcol, lossnames, tagnames):
             (name, hdf5.vstr) for name in tagnames]
         kvs = [key + val for key, val in aggkey.items()]
         dstore['agg_keys'] = numpy.array(kvs, dt)
-        dstore['agg_values'] = assetcol.get_agg_values(lossnames, tagnames)
-    dstore['tot_values'] = assetcol.aggregate_by([], aval)
+    dstore['agg_values'] = assetcol.get_agg_values(lossnames, tagnames)
     return aggkey if tagnames else {}

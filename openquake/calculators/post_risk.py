@@ -69,7 +69,7 @@ def get_src_loss_table(dstore, L):
 
 def post_risk(builder, kr_losses, monitor):
     """
-    :returns: dictionary kr -> loss curve
+    :returns: dictionary kr -> L loss curves
     """
     res = {}
     for k, r, losses in kr_losses:
