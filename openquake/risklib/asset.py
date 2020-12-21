@@ -506,7 +506,8 @@ class AssetCollection(object):
                 if isinstance(key, int):
                     key = key,  # turn it into a 1-value tuple
                 agg_values[aggkey[key], :] = numpy.array(grp.sum())
-        agg_values[-1, :] = [df[ln].sum() for ln in loss_names]
+        if self.fields:  # missing in scenario_damage case_8
+            agg_values[-1, :] = [df[ln].sum() for ln in loss_names]
         return agg_values
 
     def reduce(self, sitecol):
