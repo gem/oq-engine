@@ -389,13 +389,14 @@ class DataStore(collections.abc.MutableMapping):
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
 
-    def create_dframe(self, key, nametypes, compression=None):
+    def create_dframe(self, key, nametypes, compression=None, **kw):
         """
         Create a HDF5 datagroup readable as a pandas DataFrame
 
         :param key: name of the dataset
         :param nametypes: list of pairs (name, dtype) or (name, array)
         :param compression: the kind of HDF5 compression to use
+        :param kw: attributes to add
         """
         names = []
         for name, value in nametypes:
@@ -409,7 +410,10 @@ class DataStore(collections.abc.MutableMapping):
             if is_array:
                 hdf5.extend(dset, value)
             names.append(name)
-        self.hdf5[key].attrs['__pdcolumns__'] = ' '.join(names)
+        attrs = self.hdf5[key].attrs
+        attrs['__pdcolumns__'] = ' '.join(names)
+        for k, v in kw.items():
+            attrs[k] = v
 
     def save(self, key, kw):
         """

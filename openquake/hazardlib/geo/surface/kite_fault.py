@@ -26,7 +26,7 @@ import numpy as np
 
 from pyproj import Geod
 from openquake.baselib.node import Node
-from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -77,6 +77,7 @@ class KiteSurface(BaseSurface):
         # Make sure the mesh respects the right hand rule
         self._fix_right_hand()
         self.strike = self.dip = None
+        self.width = None
 
     @property
     def surface_nodes(self):
@@ -117,11 +118,29 @@ class KiteSurface(BaseSurface):
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
-                mesh = Mesh(tlo, tla, tde)
+                mesh = RectangularMesh(tlo, tla, tde)
                 self.mesh = mesh
         else:
             msg = 'Could not find a valid quadrilateral for strike calculation'
             raise ValueError(msg)
+
+    def get_width(self) -> float:
+        if self.width is None:
+            widths = []
+            for col_idx in range(self.mesh.lons.shape[1]):
+                tmpa = np.nonzero(np.isfinite(self.mesh.lons[:, col_idx]))[0]
+                tmpb = (tmpa[1:]-tmpa[:-1] == 1).nonzero()[0]
+                idxs_low = tmpa[tmpb.astype(int)]
+                tmp = distance(self.mesh.lons[idxs_low, col_idx],
+                               self.mesh.lats[idxs_low, col_idx],
+                               self.mesh.depths[idxs_low, col_idx],
+                               self.mesh.lons[idxs_low+1, col_idx],
+                               self.mesh.lats[idxs_low+1, col_idx],
+                               self.mesh.depths[idxs_low+1, col_idx])
+                if len(tmp) > 0:
+                    widths.append(np.sum(tmp))
+            self.width = np.mean(np.array(widths))
+        return self.width
 
     def get_dip(self) -> float:
         """
@@ -276,7 +295,8 @@ class KiteSurface(BaseSurface):
         # Convert from profiles to edges
         msh = msh.swapaxes(0, 1)
         msh = fix_mesh(msh)
-        return cls(Mesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]), profiles)
+        return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
+                   profiles)
 
     def get_center(self):
         """

@@ -121,6 +121,7 @@ class VulnerabilityFunction(object):
         else:
             self.covs = numpy.zeros(self.imls.shape)
 
+        anycovs = self.covs.any()
         for lr, cov in zip(self.mean_loss_ratios, self.covs):
             if lr == 0 and cov > 0:
                 msg = ("It is not valid to define a mean loss ratio = 0 "
@@ -135,7 +136,7 @@ class VulnerabilityFunction(object):
                     pass
                 elif lr > 1:
                     raise ValueError('The meanLRs must be ≤ 1, got %s' % lr)
-                elif cov == 0:
+                elif cov == 0 and anycovs:
                     raise ValueError(
                         'Found a zero coefficient of variation in %s' %
                         self.covs)
@@ -1335,46 +1336,54 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     """
     :param losses: array of simulated losses
     :param return_periods: return periods of interest
-    :param num_events: the number of events (>= to the number of losses)
+    :param num_events: the number of events (>= number of losses)
     :param eff_time: investigation_time * ses_per_logic_tree_path
     :returns: interpolated losses for the return periods, possibly with NaN
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
     where min_time = eff_time /num_events. On the right of the interval they
-    have NaN values and on the left zero values. Here is an example:
+    have NaN values; on the left zero values.
+    If num_events is not passed, it is inferred from the number of losses;
+    if eff_time is not passed, it is inferred from the longest return period.
+    Here is an example:
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20)
     array([ 0. ,  0. ,  0. ,  3.5,  8. , 13. , 23. ])
-
-    If num_events is not passed, it is inferred from the number of losses;
-    if eff_time is not passed, it is inferred from the longest return period.
     """
     P = len(return_periods)
-    if len(losses) == 0:  # zero-curve
-        return numpy.zeros(P)
+    assert len(losses)
+    if isinstance(losses, list):
+        losses = numpy.array(losses)
+    shp = losses.shape[:-1]  # total shape is (L...E)
+    num_losses = losses.shape[-1]
     if num_events is None:
-        num_events = len(losses)
-    elif num_events < len(losses):
+        num_events = num_losses
+    elif num_events < num_losses:
         raise ValueError(
-            'There are not enough events (%d) to compute the loss curve'
-            % num_events)
+            'There are not enough events (%d<%d) to compute the loss curve'
+            % (num_events, num_losses))
     if eff_time is None:
         eff_time = return_periods[-1]
     losses = numpy.sort(losses)
-    num_zeros = num_events - len(losses)
+    # num_losses < num_events: just add zeros
+    num_zeros = num_events - num_losses
     if num_zeros:
-        losses = numpy.concatenate(
-            [numpy.zeros(num_zeros, losses.dtype), losses])
+        newlosses = numpy.zeros(shp + (num_events,), losses.dtype)
+        newlosses[..., num_events-num_losses:num_events] = losses
+        losses = newlosses
     periods = eff_time / numpy.arange(num_events, 0., -1)
     num_left = sum(1 for rp in return_periods if rp < periods[0])
     num_right = sum(1 for rp in return_periods if rp > periods[-1])
     rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
-    curve = numpy.zeros(len(return_periods))
-    c = numpy.interp(numpy.log(rperiods), numpy.log(periods), losses)
-    curve[num_left:P-num_right] = c
-    curve[P-num_right:] = numpy.nan
+    curve = numpy.zeros(shp + (len(return_periods),), losses.dtype)
+    logr, logp = numpy.log(rperiods), numpy.log(periods)
+    for idx, _ in numpy.ndenumerate(losses[..., 0]):
+        tup = idx + (slice(num_left, P-num_right),)
+        curve[tup] = numpy.interp(logr, logp, losses[idx])
+        tup = idx + (slice(P-num_right, None),)
+        curve[tup] = numpy.nan
     return curve
 
 

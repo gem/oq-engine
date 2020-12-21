@@ -687,7 +687,7 @@ def extract_curves(dstore, what, tot):
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue = dstore['tot_values'][l]
+        evalue = dstore['agg_values'][-1, l]
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)

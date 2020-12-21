@@ -331,7 +331,8 @@ def view_totlosses(token, dstore):
 
 def _portfolio_loss(dstore):
     R = dstore['full_lt'].get_num_rlzs()
-    df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=0))
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
     eids = df.pop('event_id').to_numpy()
     loss = numpy.array(df)
     rlzs = dstore['events']['rlz_id'][eids]
@@ -372,8 +373,9 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     G = getattr(oq, 'number_of_ground_motion_fields', 1)
     R = dstore['full_lt'].get_num_rlzs()
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
     df = dstore.read_df('agg_loss_table', ['agg_id', 'event_id'],
-                        dict(agg_id=0))
+                        dict(agg_id=K))
     loss = numpy.array(df)
     means = loss.sum(axis=0) / R / G
     sums = [loss[idxs].sum(axis=0) for idxs in _indices(len(loss), 10)]

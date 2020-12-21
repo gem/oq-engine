@@ -19,8 +19,7 @@ import unittest
 import matplotlib.pyplot as plt
 
 from matplotlib import animation
-from mpl_toolkits.mplot3d import Axes3D  # This is needed
-
+from mpl_toolkits.mplot3d import Axes3D  # this is needed
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.tom import PoissonTOM
@@ -29,7 +28,7 @@ from openquake.hazardlib.tests import assert_pickleable
 from openquake.hazardlib.scalerel import PeerMSR, WC1994
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
-from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from openquake.hazardlib.mfd import TruncatedGRMFD
 
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 

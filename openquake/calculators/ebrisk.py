@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import copy
 import logging
 import operator
 from datetime import datetime
@@ -58,7 +60,7 @@ def calc_risk(gmfs, param, monitor):
         crmodel = monitor.read('crmodel')
         weights = dstore['weights'][()]
     acc = dict(events_per_sid=0)
-    alt = param['alt']
+    alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
     alt_dt = param['oqparam'].alt_dt()
     tempname = param['tempname']
     aggby = param['aggregate_by']
@@ -194,7 +196,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         descr = [('event_id', U32), ('agg_id', U16)]
         for name in oq.loss_names:
             descr.append((name, F32))
-        self.datastore.create_dframe('agg_loss_table', descr)
+        self.datastore.create_dframe(
+            'agg_loss_table', descr, K=len(self.aggkey))
         self.param.pop('oqparam', None)  # unneeded
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L),
                                    attrs=dict(stat=[b'mean']))  # mean
@@ -208,8 +211,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         Raise an error for too many loss curves (> max_num_loss_curves)
         """
-        shp = self.assetcol.tagcol.agg_shape(
-            (self.L,), aggregate_by=self.oqparam.aggregate_by)
+        shp = self.assetcol.tagcol.agg_shape(self.oqparam.aggregate_by, self.L)
         if numpy.prod(shp) > self.oqparam.max_num_loss_curves:
             dic = dict(loss_types=self.L)
             for aggby in self.oqparam.aggregate_by:
