@@ -277,7 +277,9 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         self.assertTrue(np.all(tmp < 0.02))
 
         if PLOTTING:
-            ppp(self.profiles, srfc)
+            title = 'Simple case: top alignment '
+            title += '(IdealisedSimpleDisalignedMeshTest)'
+            ppp(self.profiles, srfc, title)
 
     def test__spacing(self):
         """ Check v-spacing: two misaligned profiles - no top alignment """
@@ -315,7 +317,8 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         self.assertTrue(np.all(~np.isnan(smsh.lons[0, :])))
 
         if PLOTTING:
-            title = 'Simple case: No top alignment'
+            title = 'Simple case: No top alignment '
+            title += '(IdealisedAsimmetricMeshTest)'
             ppp(self.profiles, srfc, title)
 
     def test_mesh_creation_with_alignment(self):
@@ -330,7 +333,19 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
 
         if PLOTTING:
             title = 'Simple case: Top alignment'
+            title += '(IdealisedAsimmetricMeshTest)'
             ppp(self.profiles, srfc, title)
+
+    def test_get_width(self):
+        """ Test the calculation of the width """
+        h_sampl = 2.5
+        v_sampl = 2.5
+        idl = False
+        alg = True
+        srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
+                                         idl, alg)
+        width = srfc.get_width()
+        np.testing.assert_almost_equal(37.2982758, width)
 
 
 class IdealizedATest(unittest.TestCase):
