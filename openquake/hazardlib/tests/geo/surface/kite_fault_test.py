@@ -26,7 +26,7 @@ from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.surface import KiteSurface
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-PLOTTING = False
+PLOTTING = True
 
 
 def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
@@ -256,7 +256,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         idl = False
         alg = False
         self.smsh = KiteSurface.from_profiles(self.profiles, self.v_sampl,
-                                                   self.h_sampl, idl, alg)
+                                             self.h_sampl, idl, alg)
 
     def test_h_spacing(self):
         """ Check v-spacing: two misaligned profiles - no top alignment """
@@ -333,6 +333,16 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
             title = 'Simple case: Top alignment'
             ppp(self.profiles, srfc, title)
 
+    def test_get_surface_projection(self):
+        """ """
+        h_sampl = 2.5
+        v_sampl = 2.5
+        idl = False
+        alg = True
+        srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
+                                         idl, alg)
+        lons, lats = srfc.surface_projection
+
 
 class IdealizedATest(unittest.TestCase):
 
@@ -347,7 +357,7 @@ class IdealizedATest(unittest.TestCase):
         idl = False
         alg = False
         smsh = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
-                                              idl, alg)
+                                         idl, alg)
         self.assertTrue(np.all(~np.isnan(smsh.mesh.lons[0, :])))
 
         if PLOTTING:
@@ -381,7 +391,7 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         idl = False
         alg = False
         smsh = KiteSurface.from_profiles(self.profiles, sampling,
-                                              sampling, idl, alg)
+                                         sampling, idl, alg)
         idx = np.isfinite(smsh.mesh.lons[:, :])
         self.assertEqual(np.sum(np.sum(idx)), 202)
 

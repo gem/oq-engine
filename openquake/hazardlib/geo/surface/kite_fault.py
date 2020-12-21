@@ -28,6 +28,7 @@ from pyproj import Geod
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import Point, Line
+from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.geodetic import distance, azimuth
@@ -291,6 +292,84 @@ class KiteSurface(BaseSurface):
         icol = int(np.round(mesh.shape[1]/2))
         return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
                      mesh.depths[irow, icol])
+
+    @property
+    def surface_projection(self):
+        """
+        Provides the coordinates of the surface projection of the rupture
+        surface.
+
+        :returns:
+            Two lists with the coordinates of the longitude and latitude
+        """
+
+        los = self.mesh.lons
+        las = self.mesh.lats
+        ro, co = np.mgrid[0:los.shape[0], 0:los.shape[1]]
+
+        plos = []
+        plas = []
+
+        tmp = np.amax(ro, where=~np.isnan(los), initial=np.amin(ro)-1, axis=0)
+        for j, i in enumerate(tmp):
+            if i >= np.amin(ro):
+                plos.append(los[i, j])
+                plas.append(las[i, j])
+
+        tlo = []
+        tla = []
+        tmp = np.amin(ro, where=~np.isnan(los), initial=len(los)+1, axis=0)
+        for j, i in enumerate(tmp):
+            if i <= len(los):
+                tlo.append(los[i, j])
+                tla.append(las[i, j])
+
+        plos.extend(tlo[::-1])
+        plas.extend(tla[::-1])
+
+        return plos, plas
+
+
+def get_profiles_from_simple_fault_data(fault_trace, upper_seismogenic_depth,
+        lower_seismogenic_depth, dip, rupture_mesh_spacing):
+    """
+    Using the same information used for the construction of a simple fault 
+    surface, creates a set of profiles that can be used to instantiate a 
+    kite surface.
+
+    :param fault_trace:
+        A :class:`openquake.hazardlib.geo.line.Line` instance
+    :param upper_seismogenic_depth:
+        The upper seismmogenic depth [km]
+    :param lower_seismogenic_depth:
+        The lower seismmogenic depth [km]
+    :param dip:
+        The dip angle [degrees]
+    :param rupture_mesh_spacing:
+        The size of the mesh used to represent the fault surface. In our case
+        the spacing between profiles [km]
+    """
+
+    # Avoids singularity
+    if (dip-90.) < 1e-5:
+        dip = 89.9
+
+    # Get simple fault surface
+    srfc = SimpleFaultSurface.from_fault_data(fault_trace,
+                                              upper_seismogenic_depth,
+                                              lower_seismogenic_depth,
+                                              dip,
+                                              rupture_mesh_spacing*1.01)
+    # Creating profiles
+    profiles = []
+    for i in range(srfc.mesh.shape[1]):
+        tmp = [Point(lo, la, de) for lo, la, de
+               in zip(srfc.mesh.lons[:, i], srfc.mesh.lats[:, i],
+                      srfc.mesh.depths[:, i])]
+        profiles.append(Line(tmp))
+
+    return profiles
+
 
 def _resample_profile(line, sampling_dist):
     # TODO split this function into smaller components.
