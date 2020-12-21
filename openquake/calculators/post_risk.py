@@ -188,9 +188,8 @@ class PostRiskCalculator(base.RiskCalculator):
             blocksize = int(numpy.ceil(
                 (K + 1) * self.R / (oq.concurrent_tasks // 2 or 1)))
             kr_losses = []
-            agg_losses = numpy.zeros((K, self.R, self.L), F32)
+            agg_losses = numpy.zeros((K + 1, self.R, self.L), F32)
             agg_curves = numpy.zeros((K, self.R, self.L, P), F32)
-            tot_losses = numpy.zeros((self.L, self.R), F32)
             tot_curves = numpy.zeros((self.L, self.R, P), F32)
             gb = alt_df.groupby([alt_df.agg_id, alt_df.rlz_id])
             # NB: in the future we may use multiprocessing.shared_memory
@@ -198,10 +197,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 arr = numpy.zeros((self.L, len(df)), F32)
                 for l, ln in enumerate(oq.loss_names):
                     arr[l] = df[ln].to_numpy()
-                if k == K:
-                    tot_losses[:, r] = arr.sum(axis=1)
-                else:
-                    agg_losses[k, r] = arr.sum(axis=1)
+                agg_losses[k, r] = arr.sum(axis=1)
                 kr_losses.append((k, r, arr))
                 if len(kr_losses) >= blocksize:
                     size = sum(ls.nbytes for k, r, ls in kr_losses)
@@ -216,34 +212,32 @@ class PostRiskCalculator(base.RiskCalculator):
                     tot_curves[:, r] = curve
                 else:  # agg
                     agg_curves[k, r] = curve
+            self.datastore['agg_losses-rlzs'] = agg_losses * oq.ses_ratio
+            set_rlzs_stats(self.datastore, 'agg_losses',
+                           agg_id=K, loss_types=oq.loss_names, units=units)
             if K:
                 self.datastore['agg_curves-rlzs'] = agg_curves
-                self.datastore['agg_losses-rlzs'] = agg_losses * oq.ses_ratio
                 set_rlzs_stats(self.datastore, 'agg_curves',
                                agg_id=K, lti=self.L,
                                return_periods=builder.return_periods,
                                units=units)
-                set_rlzs_stats(self.datastore, 'agg_losses',
-                               agg_id=K, loss_types=oq.loss_names, units=units)
             self.datastore['tot_curves-rlzs'] = tot_curves
-            self.datastore['tot_losses-rlzs'] = tot_losses * oq.ses_ratio
             set_rlzs_stats(self.datastore, 'tot_curves',
                            lti=self.L, return_periods=builder.return_periods,
                            units=units)
-            set_rlzs_stats(self.datastore, 'tot_losses',
-                           loss_types=oq.loss_names, units=units)
         return 1
 
     def post_execute(self, dummy):
         """
         Sanity check on tot_losses
         """
+        if not self.aggkey:
+            return
         logging.info('Mean portfolio loss\n' +
                      views.view('portfolio_loss', self.datastore))
         logging.info('Sanity check on agg_losses')
         for kind in 'rlzs', 'stats':
             agg = 'agg_losses-' + kind
-            tot = 'tot_losses-' + kind
             if agg not in self.datastore:
                 return
             if kind == 'rlzs':
@@ -253,8 +247,8 @@ class PostRiskCalculator(base.RiskCalculator):
             for l in range(self.L):
                 ln = self.oqparam.loss_names[l]
                 for r, k in enumerate(kinds):
-                    tot_losses = self.datastore[tot][l, r]
-                    agg_losses = self.datastore[agg][:, r, l].sum()
+                    tot_losses = self.datastore[agg][-1, r, l]
+                    agg_losses = self.datastore[agg][:-1, r, l].sum()
                     if kind == 'rlzs' or k == 'mean':
                         ok = numpy.allclose(agg_losses, tot_losses, rtol=.001)
                         if not ok:

@@ -91,8 +91,7 @@ def export_agg_curve_rlzs(ekey, dstore):
 
 
 # this is used by ebrisk
-@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'),
-            ('tot_losses-rlzs', 'csv'), ('tot_losses-stats', 'csv'))
+@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
 def export_agg_losses(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -106,6 +105,7 @@ def export_agg_losses(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     tagcol = dstore['assetcol/tagcol']
     aggtags = list(tagcol.get_aggkey(aggregate_by).values())
+    aggtags.append(('*total*',) * len(aggregate_by))
     expvalue = dstore['agg_values'][()]  # shape (K+1, L)
     tagnames = tuple(aggregate_by)
     header = ('loss_type',) + tagnames + (
@@ -115,17 +115,11 @@ def export_agg_losses(ekey, dstore):
               risk_investigation_time=oq.risk_investigation_time))
     for r, tag in enumerate(tags):
         rows = []
-        for kl, loss in numpy.ndenumerate(value[:, r]):
+        for (k, l), loss in numpy.ndenumerate(value[:, r]):
             if loss:  # many tag combinations are missing
-                if len(kl) == 2:  # agg_losses
-                    k, li = kl
-                    evalue = expvalue[k, li]
-                    row = aggtags[k] + (loss, evalue, loss / evalue)
-                else:  # tot_losses
-                    li, = kl
-                    evalue = expvalue[-1, li]
-                    row = (loss, evalue, loss / evalue)
-                rows.append((oq.loss_names[li],) + row)
+                evalue = expvalue[k, l]
+                row = aggtags[k] + (loss, evalue, loss / evalue)
+                rows.append((oq.loss_names[l],) + row)
         dest = dstore.build_fname(name, tag, 'csv')
         writer.save(rows, dest, header, comment=md)
     return writer.getsaved()

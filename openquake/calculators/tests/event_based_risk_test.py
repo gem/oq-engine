@@ -60,7 +60,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                 if 'rlz' in fname:
                     continue
                 elif fname.endswith('.csv') and any(x in fname for x in (
-                        'tot_curves', 'tot_loss', 'avg_loss')):
+                        'tot_curves', 'avg_loss')):
                     all_csv.append(fname)
         assert all_csv, 'Could not find any CSV file??'
         for fname in all_csv:
@@ -118,11 +118,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/eb_%s' % strip_calc_id(fname),
                                   fname, delta=1E-5)
-
-        fnames = export(('tot_losses-stats', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                                  delta=1E-5)
 
         [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
@@ -311,11 +306,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_master.__file__, 'job.ini',
                       calculation_mode='ebrisk', exports='',
                       concurrent_tasks='4')
-
-        # tot_losses-rlzs has shape (L=5, R=9)
-        # tot_losses-stats has shape (L=5, S=4)
-        fname = export(('tot_losses-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-4)
 
         fname = export(('tot_curves-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
