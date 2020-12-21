@@ -480,43 +480,34 @@ class AssetCollection(object):
                 aval[array['ordinal'], lti] = array['value-' + lt]
         return aval
 
-    def agg_value(self, loss_types, *tagnames):
-        """
-        :param loss_types:
-            the relevant loss_types
-        :param tagnames:
-            tagnames of lengths T1, T2, ... respectively
-        :returns:
-            the values of the exposure aggregated by tagnames as an array
-            of shape (T1, T2, ..., L)
-        """
-        aval = self.arr_value(loss_types)
-        return self.aggregate_by(list(tagnames), aval)
-
     def get_agg_values(self, loss_names, tagnames):
         """
         :param loss_names:
             the relevant loss_names
         :param tagnames:
             tagnames
-        :yields:
-            pairs (key, aggvalues)
+        :returns:
+            an array of shape (K+1, L)
         """
         aggkey = {key: k for k, key in enumerate(
             self.tagcol.get_aggkey(tagnames))}
-        KL = len(aggkey), len(loss_names)
+        K, L = len(aggkey), len(loss_names)
         dic = {tagname: self[tagname] for tagname in tagnames}
         for ln in loss_names:
             if ln.endswith('_ins'):
                 dic[ln] = self['value-' + ln[:-4]]
             elif ln in self.fields:
                 dic[ln] = self['value-' + ln]
-        agg_values = numpy.zeros(KL)
-        df = pandas.DataFrame(dic).set_index(list(tagnames))
-        for key, grp in df.groupby(df.index):
-            if isinstance(key, int):
-                key = key,  # turn it into a 1-value tuple
-            agg_values[aggkey[key]] = numpy.array(grp.sum())
+        agg_values = numpy.zeros((K+1, L))
+        df = pandas.DataFrame(dic)
+        if tagnames:
+            df = df.set_index(list(tagnames))
+            for key, grp in df.groupby(df.index):
+                if isinstance(key, int):
+                    key = key,  # turn it into a 1-value tuple
+                agg_values[aggkey[key], :] = numpy.array(grp.sum())
+        if self.fields:  # missing in scenario_damage case_8
+            agg_values[-1, :] = [df[ln].sum() for ln in loss_names]
         return agg_values
 
     def reduce(self, sitecol):

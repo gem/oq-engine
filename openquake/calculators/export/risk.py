@@ -61,11 +61,10 @@ def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     lnames = numpy.array(oq.loss_names)
     if ekey[0].startswith('agg_'):
-        aggvalue = dstore['agg_values'][()]  # shape (T, L)
         tags = dstore['agg_keys'][:][oq.aggregate_by]
     else:  # tot_curves
-        aggvalue = dstore['tot_values'][()]  # shape L
         tags = []
+    aggvalue = dstore['agg_values'][()]  # shape (T, L)
     md = dstore.metadata
     md.update(dict(
         kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
@@ -84,12 +83,51 @@ def export_agg_curve_rlzs(ekey, dstore):
         for tagname in oq.aggregate_by:
             dic[tagname] = tagvalues[tagname]
     dic['loss_value'] = df.loss_value
-    if ekey[0].startswith('agg_'):
-        dic['loss_ratio'] = df.loss_value / aggvalue[df.agg_id, df.lti]
-    else:  # tot
-        dic['loss_ratio'] = df.loss_value / aggvalue[df.lti]
+    dic['loss_ratio'] = df.loss_value / aggvalue[
+        getattr(df, 'agg_id', -1), df.lti]
     dic['annual_frequency_of_exceedence'] = 1 / df.return_periods
     writer.save(pandas.DataFrame(dic), fname, comment=md)
+    return writer.getsaved()
+
+
+# this is used by ebrisk
+@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'),
+            ('tot_losses-rlzs', 'csv'), ('tot_losses-stats', 'csv'))
+def export_agg_losses(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    dskey = ekey[0]
+    oq = dstore['oqparam']
+    aggregate_by = oq.aggregate_by if dskey.startswith('agg_') else []
+    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
+    # value has shape (K, R, L) for agg_losses and (L, R) for tot_losses
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    tagcol = dstore['assetcol/tagcol']
+    aggtags = list(tagcol.get_aggkey(aggregate_by).values())
+    expvalue = dstore['agg_values'][()]  # shape (K+1, L)
+    tagnames = tuple(aggregate_by)
+    header = ('loss_type',) + tagnames + (
+        'loss_value', 'exposed_value', 'loss_ratio')
+    md = dstore.metadata
+    md.update(dict(investigation_time=oq.investigation_time,
+              risk_investigation_time=oq.risk_investigation_time))
+    for r, tag in enumerate(tags):
+        rows = []
+        for kl, loss in numpy.ndenumerate(value[:, r]):
+            if loss:  # many tag combinations are missing
+                if len(kl) == 2:  # agg_losses
+                    k, li = kl
+                    evalue = expvalue[k, li]
+                    row = aggtags[k] + (loss, evalue, loss / evalue)
+                else:  # tot_losses
+                    li, = kl
+                    evalue = expvalue[-1, li]
+                    row = (loss, evalue, loss / evalue)
+                rows.append((oq.loss_names[li],) + row)
+        dest = dstore.build_fname(name, tag, 'csv')
+        writer.save(rows, dest, header, comment=md)
     return writer.getsaved()
 
 
@@ -135,50 +173,6 @@ def export_avg_losses(ekey, dstore):
             array[ln] = values[:, li]
         writer.save(compose_arrays(assets, array), dest, comment=md,
                     renamedict=dict(id='asset_id'))
-    return writer.getsaved()
-
-
-# this is used by ebrisk
-@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'),
-            ('tot_losses-rlzs', 'csv'), ('tot_losses-stats', 'csv'))
-def export_agg_losses(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    dskey = ekey[0]
-    oq = dstore['oqparam']
-    aggregate_by = oq.aggregate_by if dskey.startswith('agg_') else []
-    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
-    # value has shape (K, R, L) for agg_losses and (L, R) for tot_losses
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    tagcol = dstore['assetcol/tagcol']
-    aggtags = list(tagcol.get_aggkey(aggregate_by).values())
-    if aggregate_by:
-        expvalue = dstore['agg_values'][()]  # shape (K, L)
-    else:
-        expvalue = dstore['tot_values'][()]  # shape L
-    tagnames = tuple(aggregate_by)
-    header = ('loss_type',) + tagnames + (
-        'loss_value', 'exposed_value', 'loss_ratio')
-    md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-              risk_investigation_time=oq.risk_investigation_time))
-    for r, tag in enumerate(tags):
-        rows = []
-        for kl, loss in numpy.ndenumerate(value[:, r]):
-            if loss:  # many tag combinations are missing
-                if len(kl) == 2:  # agg_losses
-                    k, li = kl
-                    evalue = expvalue[k, li]
-                    row = aggtags[k] + (loss, evalue, loss / evalue)
-                else:  # tot_losses
-                    li, = kl
-                    evalue = expvalue[li]
-                    row = (loss, evalue, loss / evalue)
-                rows.append((oq.loss_names[li],) + row)
-        dest = dstore.build_fname(name, tag, 'csv')
-        writer.save(rows, dest, header, comment=md)
     return writer.getsaved()
 
 
