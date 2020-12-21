@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import csv
+import json
 import logging
 import numpy
 import shapely
@@ -63,10 +64,9 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     dtlist = []
     field2tup = {}
     occupants = [name for name in assetcol.array.dtype.names
-                 if name.startswith('occupants') and
-                 not name.endswith('_None')]
+                 if name.startswith('occupants')]
     for name, dt in assetcol.array.dtype.descr:
-        if name not in {'area', 'occupants_None', 'ordinal', 'id'}:
+        if name not in {'area', 'value-occupants', 'ordinal', 'id'}:
             dtlist.append((name, dt))
     dtlist.sort()
     dtlist.insert(0, ('id', '<S100'))
@@ -162,16 +162,16 @@ class MultiRiskCalculator(base.RiskCalculator):
     core_task = None  # no parallel
     is_stochastic = True
 
-    def save_multi_peril(self):
+    def import_perils(self):  # called in pre_execute
         """
         Read the hazard fields as csv files, associate them to the sites
         and create the `hazard` dataset.
         """
         oq = self.oqparam
         perils, fnames = zip(*oq.inputs['multi_peril'].items())
-        dt = [(haz, float) for haz in perils]
+        dt = numpy.dtype([(haz, float) for haz in perils])
         N = len(self.sitecol)
-        self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
+        self.datastore.create_dset('multi_peril', dt, (N,), fillvalue=None)
         for name, fname in zip(perils, fnames):
             tofloat = (valid.positivefloat if name == 'ASH'
                        else valid.probability)
@@ -185,9 +185,11 @@ class MultiRiskCalculator(base.RiskCalculator):
             if peril.sum() == 0:
                 logging.warning('No sites were affected by %s' % name)
             self.datastore['multi_peril'][name] = peril
-        self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
 
     def execute(self):
+        """
+        Compute the perils without any parallelization
+        """
         dstates = self.crmodel.damage_states
         ltypes = self.crmodel.loss_types
         theperils = self.oqparam.inputs['multi_peril']
@@ -223,10 +225,10 @@ class MultiRiskCalculator(base.RiskCalculator):
         """
         Compute aggregated risk
         """
-        md = extract(self.datastore, 'exposure_metadata')
-        categories = [cat.replace('value-', 'loss-') for cat in md] + [
+        md = json.loads(extract(self.datastore, 'exposure_metadata').json)
+        categories = [n.replace('value-', 'loss-') for n in md['names']] + [
             ds + '-structural' for ds in self.crmodel.damage_states]
-        multi_risk = list(md.array)
+        multi_risk = md['names']
         multi_risk += sorted(
             set(arr.dtype.names) -
             set(self.datastore['assetcol/array'].dtype.names))

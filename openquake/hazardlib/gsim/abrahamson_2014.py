@@ -79,6 +79,9 @@ class AbrahamsonEtAl2014(GMPE):
     #: page 1031).
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx', 'ry0'}
 
+    #: Reference rock conditions as defined at page 
+    DEFINED_FOR_REFERENCE_VELOCITY = 1180
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method

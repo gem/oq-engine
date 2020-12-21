@@ -12,49 +12,23 @@ xmlns:gml="http://www.opengis.net/gml"
         >
             <singlePlaneRupture
             id="0"
-            multiplicity="2"
-            >
-                <stochasticEventSets>
-                    <SES
-                    id="3"
-                    >
-                        0 1
-                    </SES>
-                </stochasticEventSets>
-                <magnitude>
-                    5.8000002e+00
-                </magnitude>
-                <strike>
-                    0.0000000e+00
-                </strike>
-                <dip>
-                    9.0000000e+01
-                </dip>
-                <rake>
-                    0.0000000e+00
-                </rake>
-                <hypocenter depth="2.1200001E+01" lat="0.0000000E+00" lon="0.0000000E+00"/>
-                <planarSurface>
-                    <topLeft depth="17.2283592" lat="-0.0357178" lon="0.0000000"/>
-                    <topRight depth="17.2283592" lat="0.0357178" lon="0.0000000"/>
-                    <bottomLeft depth="25.1716404" lat="-0.0357178" lon="0.0000000"/>
-                    <bottomRight depth="25.1716404" lat="0.0357178" lon="0.0000000"/>
-                </planarSurface>
-            </singlePlaneRupture>
-            <singlePlaneRupture
-            id="1"
-            multiplicity="2"
+            multiplicity="5"
             >
                 <stochasticEventSets>
                     <SES
                     id="1"
                     >
-                        3
+                        3 4
                     </SES>
                     <SES
                     id="2"
                     >
                         2
+                    </SES>
+                    <SES
+                    id="3"
+                    >
+                        0 1
                     </SES>
                 </stochasticEventSets>
                 <magnitude>
@@ -78,24 +52,19 @@ xmlns:gml="http://www.opengis.net/gml"
                 </planarSurface>
             </singlePlaneRupture>
             <singlePlaneRupture
-            id="2"
-            multiplicity="3"
+            id="1"
+            multiplicity="5"
             >
                 <stochasticEventSets>
                     <SES
-                    id="1"
-                    >
-                        4
-                    </SES>
-                    <SES
                     id="2"
                     >
-                        6
+                        6 9
                     </SES>
                     <SES
                     id="3"
                     >
-                        5
+                        5 7 8
                     </SES>
                 </stochasticEventSets>
                 <magnitude>

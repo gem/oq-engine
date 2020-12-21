@@ -39,9 +39,11 @@ def print_(aw):
     if hasattr(aw, 'json'):
         print(json.dumps(json.loads(aw.json), indent=2))
     elif hasattr(aw, 'shape_descr'):
-        print(rst_table(aw.to_table()))
+        print(rst_table(aw.to_dframe()))
     if hasattr(aw, 'array') and aw.dtype.names:
-        print(write_csv(io.StringIO(), aw.array))
+        sio = io.StringIO()
+        write_csv(sio, aw.array)
+        print(sio.getvalue())
 
 
 @sap.script

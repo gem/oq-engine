@@ -9,6 +9,7 @@ usage: oq engine [-h] [--log-file LOG_FILE] [--no-distribute] [-y]
                  [--export-output OUTPUT_ID TARGET_DIR]
                  [--export-outputs CALCULATION_ID TARGET_DIR] [-e]
                  [-l {debug, info, warn, error, critical}] [-r]
+                 [--param PARAM]
 
 Run a calculation using the traditional command line API
 
@@ -60,7 +61,7 @@ optional arguments:
                         in order of priority
   -l, --log-level {debug, info, warn, error, critical}
                         Defaults to "info"
-  -r, --reuse-hazard    Reuse the event based hazard if available
+  -r, --reuse-input    Read the sources|exposures from the cache (if any)
   --param PARAM, -p PARAM
                         Override parameters specified with the syntax
                         NAME1=VALUE1,NAME2=VALUE2,...

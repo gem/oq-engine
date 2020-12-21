@@ -94,7 +94,7 @@ class EdwardsFah2013Alpine10Bars(GMPE):
 
     #: Vs30 value representing typical rock conditions in Switzerland.
     #: confirmed by the Swiss GMPE group
-    ROCK_VS30 = 1105
+    DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

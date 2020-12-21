@@ -29,6 +29,50 @@ The OpenQuake Engine is also available on **[PyPI](https://pypi.python.org/pypi/
 $ pip install openquake.engine
 ```
 
+If the installation fails the problem could be that some dependency needs compilation environment to be installed, in these cases you can install our already compiled dependencies from our repository with the command:
+
+#### For Linux
+
+##### For Python 3.8
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-linux64.txt openquake.engine
+```
+
+##### For Python 3.6
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py36-linux64.txt openquake.engine
+```
+
+#### For Windows
+
+##### For Python 3.8
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-win64.txt openquake.engine
+```
+
+##### For Python 3.6
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py36-win64.txt openquake.engine
+```
+
+#### For Mac
+
+##### For Python 3.8
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-macos.txt openquake.engine
+```
+
+##### For Python 3.6
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py36-macos.txt openquake.engine
+```
+
 ## Multi users
 
 ### Linux
@@ -52,5 +96,5 @@ A set of [Docker containers](docker.md) is available.
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
   * Contact us on IRC: irc.freenode.net, channel #openquake

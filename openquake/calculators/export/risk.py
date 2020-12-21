@@ -15,9 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import json
 import itertools
 import collections
 import numpy
+import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
@@ -36,22 +38,6 @@ F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
 stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
-
-
-def add_columns(table, **columns):
-    """
-    :param table: a list of rows, with the first row being an header
-    :param columns: a dictionary of functions producing the dynamic columns
-    """
-    fields, *rows = table
-    Ntuple = collections.namedtuple('nt', fields)
-    newtable = [fields + tuple(columns)]
-    for rec in itertools.starmap(Ntuple, rows):
-        newrow = list(rec)
-        for col in columns:
-            newrow.append(columns[col](rec))
-        newtable.append(newrow)
-    return newtable
 
 
 def get_rup_data(ebruptures):
@@ -73,36 +59,69 @@ def tag2idx(tags):
             ('tot_curves-rlzs', 'csv'), ('tot_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
-    assetcol = dstore['assetcol']
+    lnames = numpy.array(oq.loss_names)
     if ekey[0].startswith('agg_'):
-        aggregate_by = oq.aggregate_by
+        tags = dstore['agg_keys'][:][oq.aggregate_by]
     else:  # tot_curves
-        aggregate_by = []
-
-    name = '_'.join(['agg'] + aggregate_by)
-    aggvalue = dstore['exposed_values/' + name][()]
-
-    lti = tag2idx(oq.loss_names)
-    tagi = {tagname: tag2idx(getattr(assetcol.tagcol, tagname))
-            for tagname in aggregate_by}
-
-    def get_loss_ratio(rec):
-        idxs = tuple(tagi[tagname][getattr(rec, tagname)] - 1
-                     for tagname in aggregate_by) + (lti[rec.loss_types],)
-        return rec.loss_value / aggvalue[idxs]
-
-    # shape (T1, T2, ..., L)
+        tags = []
+    aggvalue = dstore['agg_values'][()]  # shape (T, L)
     md = dstore.metadata
     md.update(dict(
         kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
     fname = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     aw = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value')
-    table = add_columns(
-        aw.to_table(), loss_ratio=get_loss_ratio,
-        annual_frequency_of_exceedence=lambda rec: 1 / rec.return_periods)
-    table[0] = [c[:-1] if c.endswith('s') else c for c in table[0]]
-    writer.save(table, fname, comment=md)
+    df = aw.to_dframe()
+    dic = dict(return_period=df.return_periods)
+    if 'stats' in ekey[0]:
+        dic['stat'] = df.stat
+    else:
+        dic['rlz'] = df.rlz
+    dic['loss_type'] = lnames[df.lti]
+    if len(tags):
+        tagvalues = tags[df.agg_id]
+        for tagname in oq.aggregate_by:
+            dic[tagname] = tagvalues[tagname]
+    dic['loss_value'] = df.loss_value
+    dic['loss_ratio'] = df.loss_value / aggvalue[
+        getattr(df, 'agg_id', -1), df.lti]
+    dic['annual_frequency_of_exceedence'] = 1 / df.return_periods
+    writer.save(pandas.DataFrame(dic), fname, comment=md)
+    return writer.getsaved()
+
+
+# this is used by ebrisk
+@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'))
+def export_agg_losses(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    dskey = ekey[0]
+    oq = dstore['oqparam']
+    aggregate_by = oq.aggregate_by if dskey.startswith('agg_') else []
+    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
+    # value has shape (K, R, L) for agg_losses and (L, R) for tot_losses
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    tagcol = dstore['assetcol/tagcol']
+    aggtags = list(tagcol.get_aggkey(aggregate_by).values())
+    aggtags.append(('*total*',) * len(aggregate_by))
+    expvalue = dstore['agg_values'][()]  # shape (K+1, L)
+    tagnames = tuple(aggregate_by)
+    header = ('loss_type',) + tagnames + (
+        'loss_value', 'exposed_value', 'loss_ratio')
+    md = dstore.metadata
+    md.update(dict(investigation_time=oq.investigation_time,
+              risk_investigation_time=oq.risk_investigation_time))
+    for r, tag in enumerate(tags):
+        rows = []
+        for (k, l), loss in numpy.ndenumerate(value[:, r]):
+            if loss:  # many tag combinations are missing
+                evalue = expvalue[k, l]
+                row = aggtags[k] + (loss, evalue, loss / evalue)
+                rows.append((oq.loss_names[l],) + row)
+        dest = dstore.build_fname(name, tag, 'csv')
+        writer.save(rows, dest, header, comment=md)
     return writer.getsaved()
 
 
@@ -151,42 +170,6 @@ def export_avg_losses(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by ebrisk
-@export.add(('agg_losses-rlzs', 'csv'), ('agg_losses-stats', 'csv'),
-            ('tot_losses-rlzs', 'csv'), ('tot_losses-stats', 'csv'))
-def export_agg_losses(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    dskey = ekey[0]
-    oq = dstore['oqparam']
-    aggregate_by = oq.aggregate_by if dskey.startswith('agg_') else []
-    name, value, tags = _get_data(dstore, dskey, oq.hazard_stats())
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    assetcol = dstore['assetcol']
-    aggname = '_'.join(['agg'] + aggregate_by)
-    expvalue = dstore['exposed_values/' + aggname][()]
-    # shape (T1, T2, ..., L)
-    tagnames = tuple(aggregate_by)
-    header = ('loss_type',) + tagnames + (
-        'loss_value', 'exposed_value', 'loss_ratio')
-    md = dstore.metadata
-    md.update(dict(investigation_time=oq.investigation_time,
-              risk_investigation_time=oq.risk_investigation_time))
-    for r, tag in enumerate(tags):
-        rows = []
-        for multi_idx, loss in numpy.ndenumerate(value[:, r]):
-            l, *tagidxs = multi_idx
-            evalue = expvalue[tuple(tagidxs) + (l,)]
-            row = assetcol.tagcol.get_tagvalues(tagnames, tagidxs) + (
-                loss, evalue, loss / evalue)
-            rows.append((oq.loss_names[l],) + row)
-        dest = dstore.build_fname(name, tag, 'csv')
-        writer.save(rows, dest, header, comment=md)
-    return writer.getsaved()
-
-
 @export.add(('src_loss_table', 'csv'))
 def export_src_loss_table(ekey, dstore):
     """
@@ -194,21 +177,13 @@ def export_src_loss_table(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
-    trts = dstore['full_lt'].trts
-    trt_by_source_id = {}
-    for rec in dstore['source_info']:
-        trt_by_source_id[rec['source_id'][:16]] = trts[rec['trti']]
-
-    def get_trt(row):
-        return trt_by_source_id[row.source]
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
                    risk_investigation_time=oq.risk_investigation_time))
     aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table'], 'loss_value')
     dest = dstore.build_fname('src_loss_table', '', 'csv')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    rows = add_columns(aw.to_table(), trt=get_trt)
-    writer.save(rows, dest, comment=md)
+    writer.save(aw.to_dframe(), dest, comment=md)
     return writer.getsaved()
 
 
@@ -227,20 +202,19 @@ def export_losses_by_event(ekey, dstore):
         md.update(dict(investigation_time=oq.investigation_time,
                        risk_investigation_time=oq.risk_investigation_time))
     events = dstore['events'][()]
-    columns = dict(rlz_id=lambda rec: events[rec.event_id]['rlz_id'])
+    try:
+        df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=0))
+    except KeyError:  # scenario_damage + consequences
+        df = dstore.read_df('losses_by_event')
+        ren = {'loss_%d' % l: ln for l, ln in enumerate(oq.loss_names)}
+        df.rename(columns=ren, inplace=True)
+    evs = events[df.event_id.to_numpy()]
+    df['rlz_id'] = evs['rlz_id']
     if oq.investigation_time:  # not scenario
-        columns['rup_id'] = lambda rec: events[rec.event_id]['rup_id']
-        columns['year'] = lambda rec: events[rec.event_id]['year']
-    lbe = dstore['losses_by_event'][()]
-    lbe.sort(order='event_id')
-    dic = dict(shape_descr=['event_id'])
-    dic['event_id'] = list(lbe['event_id'])
-    # example (0, 1, 2, 3) -> (0, 2, 3, 1)
-    axis = [0] + list(range(2, len(lbe['loss'].shape))) + [1]
-    data = lbe['loss'].transpose(axis)  # shape (E, T..., L)
-    aw = hdf5.ArrayWrapper(data, dic, oq.loss_names)
-    table = add_columns(aw.to_table(), **columns)
-    writer.save(table, dest, comment=md)
+        df['rup_id'] = evs['rup_id']
+        df['year'] = evs['year']
+    df.sort_values('event_id', inplace=True)
+    writer.save(df, dest, comment=md)
     return writer.getsaved()
 
 
@@ -321,12 +295,8 @@ def modal_damage_array(data, damage_dt):
     return arr
 
 
-# damages and avg_damages require different DISPLAY_NAMEs, so they are
-# kept separated even if the exporter is the same; see Anirudh's comment
-# in https://github.com/gem/oq-engine/pull/5851
-@export.add(('avg_damages-rlzs', 'csv'), ('avg_damages-stats', 'csv'),
-            ('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
-def export_avg_damages_csv(ekey, dstore):
+@export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
+def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
     dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
@@ -343,11 +313,11 @@ def export_avg_damages_csv(ekey, dstore):
         tags = ['%03d' % r for r in range(len(rlzs))]
     for i, tag in enumerate(tags):
         if oq.modal_damage_state:
-            avg_damages = modal_damage_array(data[:, i], dmg_dt)
+            damages = modal_damage_array(data[:, i], dmg_dt)
         else:
-            avg_damages = build_damage_array(data[:, i], dmg_dt)
+            damages = build_damage_array(data[:, i], dmg_dt)
         fname = dstore.build_fname(ekey[0].split('-')[0], tag, ekey[1])
-        writer.save(compose_arrays(assets, avg_damages), fname,
+        writer.save(compose_arrays(assets, damages), fname,
                     comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
@@ -497,7 +467,7 @@ def export_aggregate_by_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
     fname = dstore.export_path(path)
-    writer.save(aw.to_table(), fname)
+    writer.save(aw.to_dframe(), fname)
     fnames.append(fname)
     return fnames
 
@@ -511,15 +481,15 @@ def export_asset_risk_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     path = '%s.%s' % (sanitize(ekey[0]), ekey[1])
     fname = dstore.export_path(path)
-    md = extract(dstore, 'exposure_metadata')
-    tostr = {'taxonomy': md.taxonomy}
-    for tagname in md.tagnames:
-        tostr[tagname] = getattr(md, tagname)
-    tagnames = sorted(set(md.tagnames) - {'id'})
+    md = json.loads(extract(dstore, 'exposure_metadata').json)
+    tostr = {'taxonomy': md['taxonomy']}
+    for tagname in md['tagnames']:
+        tostr[tagname] = md[tagname]
+    tagnames = sorted(set(md['tagnames']) - {'id'})
     arr = extract(dstore, 'asset_risk').array
     rows = []
     lossnames = sorted(name for name in arr.dtype.names if 'loss' in name)
-    expnames = [name for name in arr.dtype.names if name not in md.tagnames
+    expnames = [name for name in arr.dtype.names if name not in md['tagnames']
                 and 'loss' not in name and name not in 'lon lat']
     colnames = tagnames + ['lon', 'lat'] + expnames + lossnames
     # sanity check
@@ -529,7 +499,7 @@ def export_asset_risk_csv(ekey, dstore):
         for name in colnames:
             value = rec[name]
             try:
-                row.append('"%s"' % tostr[name][value])
+                row.append(tostr[name][value])
             except KeyError:
                 row.append(value)
         rows.append(row)

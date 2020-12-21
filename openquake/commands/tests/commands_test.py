@@ -31,7 +31,7 @@ from openquake.baselib.datastore import read
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
-from openquake.commonlib.readinput import get_oqparam
+from openquake.engine.engine import run_jobs
 from openquake.commands.info import info
 from openquake.commands.tidy import tidy
 from openquake.commands.show import show
@@ -40,7 +40,6 @@ from openquake.commands.export import export
 from openquake.commands.extract import extract
 from openquake.commands.sample import sample
 from openquake.commands.reduce_sm import reduce_sm
-from openquake.commands.engine import run_job, smart_run
 from openquake.commands.db import db
 from openquake.commands.to_shapefile import to_shapefile
 from openquake.commands.from_shapefile import from_shapefile
@@ -85,15 +84,12 @@ class Print(object):
 
 
 class InfoTestCase(unittest.TestCase):
-    EXPECTED = '''<FullLogicTree
-b1, x15.xml, weight=1.0: 1 realization(s)>
-See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for an explanation'''
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
             info(path)
-        self.assertEqual(self.EXPECTED, str(p)[:len(self.EXPECTED)])
+        self.assertIn('hazard_imtls', str(p))
 
     # poor man tests: checking that the flags produce a few characters
     # (more than 10) and do not break; I am not checking the precise output
@@ -143,13 +139,13 @@ See http://docs.openquake.org/oq-engine/stable/effective-realizations.html for a
         with Print.patch() as p:
             info('sources')
         lines = str(p).split()
-        self.assertGreaterEqual(len(lines), 10)
+        self.assertGreaterEqual(len(lines), 9)
 
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
             info(path)
-        self.assertIn('<FullLogicTree\nb1_b2, source_model.xml, weight=0.5: 1 realization(s)\nb1_b3, source_model.xml, weight=0.5: 1 realization(s)>', str(p))
+        self.assertIn('Classical Hazard QA Test, Case 9', str(p))
 
     def test_logictree(self):
         path = os.path.join(os.path.dirname(case_9.__file__),
@@ -250,7 +246,8 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
-            calc = run._run([job_ini], 0, 'nojob', False, 'info', None, '', {})
+            calc = run._run([job_ini], 0, 'nojob', False,
+                            False, 'info', '', {})
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
@@ -267,8 +264,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             show('slow_sources', self.calc_id)
-        self.assertIn('source_id code multiplicity '
-                      'calc_time num_sites', str(p))
+        self.assertIn('source_id code calc_time num_sites', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
@@ -478,13 +474,38 @@ class DbTestCase(unittest.TestCase):
 
 
 class EngineRunJobTestCase(unittest.TestCase):
+    def test_multi_run(self):
+        job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
+        jobparams = run_jobs([job_ini, job_ini], log_level='error', multi=True)
+        jobs, params = zip(*jobparams)
+        with Print.patch():
+            [r1, r2] = commonlib.logs.dbcmd(
+                'select id, hazard_calculation_id from job '
+                'where id in (?S) order by id', jobs)
+        self.assertEqual(r1.hazard_calculation_id, r1.id)
+        self.assertEqual(r2.hazard_calculation_id, r1.id)
+
+    def test_OQ_REDUCE(self):
+        with mock.patch.dict(os.environ, OQ_REDUCE='10'):
+            job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
+            run_jobs([job_ini])
+
+    def test_sensitivity(self):
+        job_ini = gettemp('''[general]
+description = sensitivity test
+calculation_mode = scenario
+sites = 0 0
+sensitivity_analysis = {
+  'maximum_distance': [100, 200]}''')
+        run_jobs([job_ini])
+
     def test_ebr(self):
-        # test a single case of `run_job`, but it is the most complex one,
+        # test a single case of `run_jobs`, but it is the most complex one,
         # event based risk with post processing
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
         with Print.patch() as p:
-            job_id = run_job(job_ini, log_level='error')
+            [(job_id, oqparam)] = run_jobs([job_ini], log_level='error')
         self.assertIn('id | name', str(p))
 
         # sanity check on the performance views: make sure that the most
@@ -494,19 +515,13 @@ class EngineRunJobTestCase(unittest.TestCase):
             perf = view('performance', dstore)
             self.assertIn('total event_based_risk', perf)
 
-    def test_smart_run(self):
-        # test smart_run with gmf_ebrisk, since it was breaking
-        ini = os.path.join(os.path.dirname(ebrisk.__file__), 'job_risk.ini')
-        oqparam = get_oqparam(ini)
-        smart_run(ini, oqparam, 'info', None, '', False)
-
     def test_oqdata(self):
         # the that the environment variable OQ_DATADIR is honored
         job_ini = os.path.join(os.path.dirname(case_2.__file__), 'job_2.ini')
         tempdir = tempfile.mkdtemp()
         dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
-            job_id = run_job(job_ini, log_level='error')
+            [(job_id, oq)] = run_jobs([job_ini], log_level='error')
             job = commonlib.logs.dbcmd('get_job', job_id)
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)
@@ -549,9 +564,13 @@ class PrepareSiteModelTestCase(unittest.TestCase):
                                 True, True, False, 0, 5, output)
         self.assertEqual(len(sc), 148)  # 148 sites within 5 km from the params
 
-        # test sites_csv
-        sc = prepare_site_model([], [output], [vs30_csv],
+        # test sites_csv == vs30_csv
+        sc = prepare_site_model([], [vs30_csv], [vs30_csv],
                                 True, True, False, 0, 5, output)
+
+        # test sites_csv == vs30_csv and grid spacing
+        sc = prepare_site_model([], [vs30_csv], [vs30_csv],
+                                True, True, False, 10, 5, output)
 
 
 class ReduceSourceModelTestCase(unittest.TestCase):
@@ -564,11 +583,12 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         shutil.copytree(calc_dir, os.path.join(temp_dir, 'data'))
         job_ini = os.path.join(temp_dir, 'data', 'job.ini')
         with Print.patch():
-            calc = run._run([job_ini], 0, 'nojob', False, 'info', None, '', {})
+            calc = run._run([job_ini], 0, 'nojob', False, False,
+                            'info', '', {})
         calc_id = calc.datastore.calc_id
         with mock.patch('logging.info') as info:
             reduce_sm(calc_id)
-        self.assertIn('there are duplicated source IDs', info.call_args[0][0])
+        self.assertIn('Removed %d/%d sources', info.call_args[0][0])
         shutil.rmtree(temp_dir)
 
 

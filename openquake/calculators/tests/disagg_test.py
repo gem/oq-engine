@@ -21,15 +21,14 @@ import unittest
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.probability_map import combine
-from openquake.calculators import getters
+from openquake.hazardlib.contexts import read_ctxs
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_master)
+    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -64,22 +63,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             case_1.__file__,
             fmt='csv')
 
-        # disaggregation by source group
-        rlzs = self.calc.datastore['full_lt'].get_realizations()
-        ws = [rlz.weight for rlz in rlzs]
-        pgetter = getters.PmapGetter(self.calc.datastore, ws)
-        pgetter.init()
-        pmaps = []
-        for grp in sorted(pgetter.dstore['poes']):
-            pmaps.append(pgetter.get_mean(grp))
-        # make sure that the combination of the contributions is okay
-        pmap = pgetter.get_mean()  # total mean map
-        cmap = combine(pmaps)  # combination of the mean maps per source group
-        for sid in pmap:
-            numpy.testing.assert_almost_equal(pmap[sid].array, cmap[sid].array)
-
-        check_disagg_by_src(self.calc.datastore)
-
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
         # site #0 is partially discarded
@@ -96,7 +79,6 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         # check that the CSV exporter does not break
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 6)  # number of CSV files
         for fname in fnames:
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)
@@ -109,11 +91,16 @@ class DisaggregationTestCase(CalculatorTestCase):
                           'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None',
                           'iml-SA(0.1)-None'))
 
+        # check the custom_site_id
+        aw = extract(self.calc.datastore, 'sitecol?field=custom_site_id')
+        self.assertEqual(list(aw), [100, 200])
+
     def test_case_3(self):
         # a case with poes_disagg too large
         with self.assertRaises(SystemExit) as ctx:
             self.run_calc(case_3.__file__, 'job.ini')
-        self.assertEqual(str(ctx.exception), 'Cannot do any disaggregation')
+        self.assertEqual(str(ctx.exception),
+                         'Cannot do any disaggregation: zero hazard')
 
     def test_case_4(self):
         # this is case with number of lon/lat bins different for site 0/site 1
@@ -135,10 +122,6 @@ class DisaggregationTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         # there is a collapsed nonparametric source with len(probs_occur)==3
-        # the other sizes are 2
-        sizes = [len(po) for po in self.calc.datastore['rup/probs_occur']]
-        self.assertTrue(any(size == 3 for size in sizes),
-                        'No collapse of probs_occur')
 
     def test_case_6(self):
         # test with international date line
@@ -169,9 +152,25 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         check_disagg_by_src(self.calc.datastore)
 
+    def test_case_7(self):
+        # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
+        self.run_calc(case_7.__file__, 'job.ini')
+        ctxs, _ = read_ctxs(self.calc.datastore)
+        ctxs0 = [ctx for ctx in ctxs if ctx.grp_id == 0]
+        ctxs1 = [ctx for ctx in ctxs if ctx.grp_id == 1]
+        self.assertEqual(len(ctxs0), 7)  # rlz-0, the closest to the mean
+        self.assertEqual(len(ctxs1), 2)  # rlz-1, the one to discard
+        # checking that the wrong realization is indeed discarded
+        pd = self.calc.datastore['performance_data'][:]
+        pd = pd[pd['operation'] == b'disaggregate']
+        self.assertEqual(pd['counts'], 1)  # because g_by_z is empty
+
+        haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
+        self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
+        self.assertEqual(haz[1], 0.18757115242025785)
+
     def test_case_master(self):
-        # this tests exercise the case of a complex logic tree; it also
-        # prints the warning on poe_agg very different from the expected poe
+        # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')
         fname = gettemp(view('mean_disagg', self.calc.datastore))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)

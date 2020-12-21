@@ -1,3 +1,3 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.9.0-git8e9b0ca128', start_date='2020-03-12T04:35:21', checksum=3503747674, kind='mean', investigation_time=50.0, imt='PGA'"
+#,,,,,,,"generated_by='OpenQuake engine 3.11.0-git49bc44ebb8', start_date='2020-10-29T08:37:55', checksum=798997337, kind='mean', investigation_time=50.0, imt='PGA'"
 lon,lat,depth,poe-0.0050000,poe-0.0070000,poe-0.0098000,poe-0.0137000,poe-0.0192000
-0.00000,0.00000,0.00000,9.582124E-01,9.302381E-01,8.895167E-01,8.328323E-01,7.650867E-01
+0.00000,0.00000,0.00000,9.607151E-01,9.315156E-01,8.830513E-01,8.136856E-01,7.531420E-01

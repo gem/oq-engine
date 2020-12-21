@@ -99,7 +99,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
 
 
 class WriteCsvTestCase(unittest.TestCase):
-    def assert_export(self, array, expected, header=None):
+    def assert_export(self, array, expected, header=()):
         fname = tempfile.NamedTemporaryFile().name
         write_csv(fname, array, header=header)
         with open(fname) as f:

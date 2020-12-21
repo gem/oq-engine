@@ -31,7 +31,6 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
 
 F32 = numpy.float32
-point3d = numpy.dtype([('lon', F32), ('lat', F32), ('depth', F32)])
 
 
 def sqrt(array):
@@ -43,23 +42,25 @@ def sqrt(array):
     return numpy.sqrt(array)
 
 
-def surface_to_array(surface):
+def surface_to_arrays(surface):
     """
     :param surface: a Surface object
-    :returns: a 3D array of shape (3, N, M)
+    :returns: a list of arrays of shape (3, N, M)
     """
     if hasattr(surface, 'surfaces'):  # multiplanar surfaces
-        n = len(surface.surfaces)
-        arr = numpy.zeros((3, n, 4), F32)
-        for i, surf in enumerate(surface.surfaces):
-            arr[:, i] = surf.mesh.array
-        return arr
+        lst = []
+        for surf in surface.surfaces:
+            arr = surf.mesh.array
+            if len(arr.shape) == 2:  # PlanarSurface
+                arr = arr.reshape(3, 1, 4)
+            lst.append(arr)
+        return lst
     mesh = surface.mesh
     if len(mesh.lons.shape) == 1:  # 1D mesh
         shp = (3, 1) + mesh.lons.shape
     else:  # 2D mesh
         shp = (3,) + mesh.lons.shape
-    return mesh.array.reshape(shp)
+    return [mesh.array.reshape(shp)]
 
 
 class Mesh(object):

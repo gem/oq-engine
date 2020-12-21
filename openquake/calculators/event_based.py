@@ -18,24 +18,23 @@
 
 import os.path
 import logging
-import operator
 import numpy
 
-from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, get_indices
+from openquake.baselib import hdf5, parallel
+from openquake.baselib.general import AccumDict, copyobj
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
+from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.source import rupture
+from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
+from openquake.hazardlib.source.rupture import EBRupture
+from openquake.commonlib import calc, util, logs, readinput, logictree
 from openquake.risklib.riskinput import str2rsi
-from openquake.baselib import parallel
-from openquake.commonlib import calc, util, logs
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.calculators.getters import (
-    GmfGetter, RuptureGetter, gen_rgetters, gen_rupture_getters,
-    sig_eps_dt, time_dt)
+    GmfGetter, gen_rupture_getters, sig_eps_dt, time_dt)
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
 
@@ -45,7 +44,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = numpy.float64(2 ** 32)
-by_grp = operator.attrgetter('grp_id')
 
 
 # ######################## GMF calculator ############################ #
@@ -64,16 +62,18 @@ def get_mean_curves(dstore, imt):
 # ########################################################################## #
 
 
-def compute_gmfs(rupgetter, srcfilter, param, monitor):
+def compute_gmfs(rupgetter, param, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
     oq = param['oqparam']
-    getter = GmfGetter(rupgetter, srcfilter, oq, param['amplifier'])
-    return getter.compute_gmfs_curves(param.get('rlz_by_event'), monitor)
+    srcfilter = monitor.read('srcfilter')
+    getter = GmfGetter(rupgetter, srcfilter, oq, param['amplifier'],
+                       param['sec_perils'])
+    return getter.compute_gmfs_curves(monitor)
 
 
-@base.calculators.add('event_based', 'ucerf_hazard')
+@base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
 class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and
@@ -87,22 +87,17 @@ class EventBasedCalculator(base.HazardCalculator):
     def init(self):
         if hasattr(self, 'csm'):
             self.check_floating_spinning()
+        if hasattr(self.oqparam, 'maximum_distance'):
+            self.srcfilter = self.src_filter()
+        else:
+            self.srcfilter = nofilter
         if not self.datastore.parent:
-            self.rupser = calc.RuptureSerializer(self.datastore)
-        self.srcfilter = self.src_filter(self.datastore.tempname)
-
-    def init_logic_tree(self, full_lt):
-        self.trt_by_grp = full_lt.trt_by_grp
-        self.rlzs_by_gsim_grp = full_lt.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = full_lt.get_samples_by_grp()
-        self.num_rlzs_by_grp = {
-            grp_id:
-            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
-            for grp_id in self.rlzs_by_gsim_grp}
+            self.datastore.create_dset('ruptures', rupture_dt)
+            self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
 
     def acc0(self):
         """
-        Initial accumulator, a dictionary (grp_id, gsim) -> curves
+        Initial accumulator, a dictionary (et_id, gsim) -> curves
         """
         self.L = len(self.oqparam.imtls.array)
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
@@ -114,6 +109,8 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         logging.info('Building ruptures')
+        for src in self.csm.get_sources():
+            src.nsites = 1  # avoid 0 weight
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
@@ -138,36 +135,36 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
+        self.nruptures = 0
         for dic in smap:
+            # NB: dic should be a dictionary, but when the calculation dies
+            # for an OOM it can become None, thus giving a very confusing error
+            if dic is None:
+                raise MemoryError('You ran out of memory!')
+            rup_array = dic['rup_array']
+            if len(rup_array) == 0:
+                continue
             if dic['calc_times']:
                 calc_times += dic['calc_times']
             if dic['eff_ruptures']:
                 eff_ruptures += dic['eff_ruptures']
-            if dic['rup_array']:
-                with mon:
-                    self.rupser.save(dic['rup_array'])
-        self.rupser.close()
-        if not self.rupser.nruptures:
-            if os.environ.get('OQ_SAMPLE_SOURCES'):
-                raise SystemExit(0)  # success even with no ruptures
+            with mon:
+                n = len(rup_array)
+                rup_array['id'] = numpy.arange(
+                    self.nruptures, self.nruptures + n)
+                self.nruptures += n
+                hdf5.extend(self.datastore['ruptures'], rup_array)
+                hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
+        if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'investigation time is too short')
 
-        # logic tree reduction, must be called before storing the events
-        self.store_rlz_info(eff_ruptures)
-        self.init_logic_tree(self.csm.full_lt)
-        with self.monitor('store source_info'):
-            self.store_source_info(calc_times)
-        logging.info('Reordering the ruptures and storing the events')
-        sorted_ruptures = self.datastore.getitem('ruptures')[()]
-        # order the ruptures by rup_id
-        sorted_ruptures.sort(order='serial')
-        nr = len(sorted_ruptures)
-        assert len(numpy.unique(sorted_ruptures['serial'])) == nr  # sanity
-        self.datastore['ruptures'] = sorted_ruptures
-        self.datastore['ruptures']['id'] = numpy.arange(nr)
-        with self.monitor('saving events'):
-            self.save_events(sorted_ruptures)
+        # must be called before storing the events
+        self.store_rlz_info(eff_ruptures)  # store full_lt
+        self.store_source_info(calc_times)
+        imp = calc.RuptureImporter(self.datastore)
+        with self.monitor('saving ruptures and events'):
+            imp.import_rups(self.datastore.getitem('ruptures')[()])
 
     def agg_dicts(self, acc, result):
         """
@@ -176,18 +173,24 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
+        M = len(self.oqparam.imtls)
+        sec_outputs = self.oqparam.get_sec_outputs()
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
                 times = result.pop('times')
                 rupids = list(times['rup_id'])
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
-                hdf5.extend(self.datastore['gmf_data/data'], data)
+                hdf5.extend(self.datastore['gmf_data/sid'], data['sid'])
+                hdf5.extend(self.datastore['gmf_data/eid'], data['eid'])
+                for m in range(M):
+                    hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
+                                data[f'gmv_{m}'])
+                for sec_out in sec_outputs:
+                    hdf5.extend(self.datastore[f'gmf_data/{sec_out}'],
+                                data[sec_out])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
-                for sid, start, stop in result['indices']:
-                    self.indices[sid, 0].append(start + self.offset)
-                    self.indices[sid, 1].append(stop + self.offset)
                 self.offset += len(data)
         if self.offset >= TWO32:
             raise RuntimeError(
@@ -201,84 +204,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore.flush()
         return acc
 
-    def save_events(self, rup_array):
-        """
-        :param rup_array: an array of ruptures with fields grp_id
-        :returns: a list of RuptureGetters
-        """
-        # this is very fast compared to saving the ruptures
-        eids = rupture.get_eids(
-            rup_array, self.samples_by_grp, self.num_rlzs_by_grp)
-        self.check_overflow()  # check the number of events
-        events = numpy.zeros(len(eids), rupture.events_dt)
-        # when computing the events all ruptures must be considered,
-        # including the ones far away that will be discarded later on
-        rgetters = gen_rgetters(self.datastore)
-        # build the associations eid -> rlz sequentially or in parallel
-        # this is very fast: I saw 30 million events associated in 1 minute!
-        logging.info('Building assocs event_id -> rlz_id for {:_d} events'
-                     ' and {:_d} ruptures'.format(len(events), len(rup_array)))
-        if len(events) < 1E5:
-            it = map(RuptureGetter.get_eid_rlz, rgetters)
-        else:
-            it = parallel.Starmap(RuptureGetter.get_eid_rlz,
-                                  ((rgetter,) for rgetter in rgetters),
-                                  progress=logging.debug,
-                                  h5=self.datastore.hdf5)
-        i = 0
-        for eid_rlz in it:
-            for er in eid_rlz:
-                events[i] = er
-                i += 1
-                if i >= TWO32:
-                    raise ValueError('There are more than %d events!' % i)
-        events.sort(order='rup_id')  # fast too
-        # sanity check
-        n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
-        assert n_unique_events == len(events), (n_unique_events, len(events))
-        events['id'] = numpy.arange(len(events))
-        # set event year and event ses starting from 1
-        itime = int(self.oqparam.investigation_time)
-        nses = self.oqparam.ses_per_logic_tree_path
-        extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
-        numpy.random.seed(self.oqparam.ses_seed)
-        extra['year'] = numpy.random.choice(itime, len(events)) + 1
-        extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
-        self.datastore['events'] = util.compose_arrays(events, extra)
-        eindices = get_indices(events['rup_id'])
-        arr = numpy.array(list(eindices.values()))[:, 0, :]
-        self.datastore['ruptures']['e0'] = arr[:, 0]
-        self.datastore['ruptures']['e1'] = arr[:, 1]
-
-    def check_overflow(self):
-        """
-        Raise a ValueError if the number of sites is larger than 65,536 or the
-        number of IMTs is larger than 256 or the number of ruptures is larger
-        than 4,294,967,296. The limits are due to the numpy dtype used to
-        store the GMFs (gmv_dt). There also a limit of max_potential_gmfs on
-        the number of sites times the number of events, to avoid producing too
-        many GMFs. In that case split the calculation or be smarter.
-        """
-        oq = self.oqparam
-        max_ = dict(sites=TWO32, events=TWO32, imts=2**8)
-        num_ = dict(events=self.E, imts=len(self.oqparam.imtls))
-        n = len(getattr(self, 'sitecol', ()) or ())
-        num_['sites'] = n
-        if oq.calculation_mode == 'event_based' and oq.ground_motion_fields:
-            if n > oq.max_sites_per_gmf:
-                raise ValueError(
-                    'You cannot compute the GMFs for %d > %d sites' %
-                    (n, oq.max_sites_per_gmf))
-            elif n * self.E > oq.max_potential_gmfs:
-                raise ValueError(
-                    'A GMF calculation with %d sites and %d events is '
-                    'impossibly large' % (n, self.E))
-        for var in num_:
-            if num_[var] > max_[var]:
-                raise ValueError(
-                    'The %s calculator is restricted to %d %s, got %d' %
-                    (oq.calculation_mode, max_[var], var, num_[var]))
-
     def set_param(self, **kw):
         oq = self.oqparam
         # set the minimum_intensity
@@ -286,7 +211,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.crmodel.min_iml
         min_iml = oq.min_iml
-        if oq.ground_motion_fields and min_iml.sum() == 0:
+        if oq.ground_motion_fields and sum(min_iml.values()) == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
         else:
@@ -295,19 +220,72 @@ class EventBasedCalculator(base.HazardCalculator):
             oqparam=oq,
             gmf=oq.ground_motion_fields,
             truncation_level=oq.truncation_level,
-            imtls=oq.imtls, filter_distance=oq.filter_distance,
+            imtls=oq.imtls,
             ses_per_logic_tree_path=oq.ses_per_logic_tree_path, **kw)
+
+    def _read_scenario_ruptures(self):
+        oq = self.oqparam
+        gsim_lt = readinput.get_gsim_lt(self.oqparam)
+        G = gsim_lt.get_num_paths()
+        if oq.inputs['rupture_model'].endswith('.xml'):
+            ngmfs = oq.number_of_ground_motion_fields
+            self.gsims = readinput.get_gsims(oq)
+            self.cmaker = ContextMaker(
+                '*', self.gsims, {'maximum_distance': oq.maximum_distance,
+                                  'imtls': oq.imtls})
+            rup = readinput.get_rupture(oq)
+            if self.N > oq.max_sites_disagg:  # many sites, split rupture
+                ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
+                                  0, 0, G, e0=i * G) for i in range(ngmfs)]
+            else:  # keep a single rupture with a big occupation number
+                ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]
+            aw = get_rup_array(ebrs, self.srcfilter)
+        elif oq.inputs['rupture_model'].endswith('.csv'):
+            aw = readinput.get_ruptures(oq.inputs['rupture_model'])
+            aw.array['n_occ'] = G
+        rup_array = aw.array
+        hdf5.extend(self.datastore['rupgeoms'], aw.geom)
+
+        if len(rup_array) == 0:
+            raise RuntimeError(
+                'There are no sites within the maximum_distance'
+                ' of %s km from the rupture' % oq.maximum_distance(
+                    rup.tectonic_region_type, rup.mag))
+
+        # check the number of branchsets
+        branchsets = len(gsim_lt._ltnode)
+        if len(rup_array) == 1 and branchsets > 1:
+            raise InvalidFile(
+                '%s for a scenario calculation must contain a single '
+                'branchset, found %d!' % (oq.inputs['job_ini'], branchsets))
+
+        fake = logictree.FullLogicTree.fake(gsim_lt)
+        self.realizations = fake.get_realizations()
+        self.datastore['full_lt'] = fake
+        self.store_rlz_info({})  # store weights
+        self.save_params()
+        calc.RuptureImporter(self.datastore).import_rups(rup_array)
 
     def execute(self):
         oq = self.oqparam
         self.set_param()
         self.offset = 0
-        self.indices = AccumDict(accum=[])  # sid, idx -> indices
         if oq.hazard_calculation_id:  # from ruptures
             self.datastore.parent = util.read(oq.hazard_calculation_id)
-            self.init_logic_tree(self.datastore.parent['full_lt'])
-        else:  # from sources
+        elif hasattr(self, 'csm'):  # from sources
             self.build_events_from_sources()
+            if (oq.ground_motion_fields is False and
+                    oq.hazard_curves_from_gmfs is False):
+                return {}
+        elif 'rupture_model' not in oq.inputs:  # download ShakeMap
+            logging.warning(
+                'There is no rupture_model, the calculator will just '
+                'import data without performing any calculation')
+            fake = logictree.FullLogicTree.fake()
+            self.datastore['full_lt'] = fake  # needed to expose the outputs
+            return {}
+        else:  # scenario
+            self._read_scenario_ruptures()
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
@@ -316,58 +294,58 @@ class EventBasedCalculator(base.HazardCalculator):
                               oq.inputs['job_ini'])
         N = len(self.sitecol.complete)
         if oq.ground_motion_fields:
+            M = len(oq.imtls)
             nrups = len(self.datastore['ruptures'])
-            self.datastore.create_dset('gmf_data/data', oq.gmf_data_dt())
+            base.create_gmf_data(self.datastore, M, self.param['sec_perils'])
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
-            self.datastore.create_dset(
-                'gmf_data/indices', hdf5.vuint32, shape=(N, 2), fillvalue=None)
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
             self.datastore.create_dset('gmf_data/time_by_rup',
                                        time_dt, (nrups,), fillvalue=None)
-        if oq.hazard_curves_from_gmfs:
-            self.param['rlz_by_event'] = self.datastore['events']['rlz_id']
 
         # compute_gmfs in parallel
+        nr = len(self.datastore['ruptures'])
         self.datastore.swmr_on()
-        logging.info('Reading %d ruptures', len(self.datastore['ruptures']))
-        iterargs = ((rgetter, self.srcfilter, self.param)
+        logging.info('Reading {:_d} ruptures'.format(nr))
+        iterargs = ((rgetter, self.param)
                     for rgetter in gen_rupture_getters(
-                            self.datastore, self.srcfilter,
-                            oq.concurrent_tasks))
-        acc = parallel.Starmap(
-            self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores
-        ).reduce(self.agg_dicts, self.acc0())
-
-        if self.indices:
-            dset = self.datastore['gmf_data/indices']
-            num_evs = self.datastore['gmf_data/events_by_sid']
-            logging.info('Saving gmf_data/indices')
-            with self.monitor('saving gmf_data/indices', measuremem=True):
-                self.datastore['gmf_data/imts'] = ' '.join(oq.imtls)
-                for sid in self.sitecol.complete.sids:
-                    start = numpy.array(self.indices[sid, 0])
-                    stop = numpy.array(self.indices[sid, 1])
-                    dset[sid, 0] = start
-                    dset[sid, 1] = stop
-                    num_evs[sid] = (stop - start).sum()
-            avg_events_by_sid = num_evs[()].sum() / N
-            logging.info('Found ~%d GMVs per site', avg_events_by_sid)
-        elif oq.ground_motion_fields:
-            raise RuntimeError('No GMFs were generated, perhaps they were '
-                               'all below the minimum_intensity threshold')
+                            self.datastore, oq.concurrent_tasks))
+        smap = parallel.Starmap(
+            self.core_task.__func__, iterargs, h5=self.datastore.hdf5)
+        smap.monitor.save('srcfilter', self.srcfilter)
+        acc = smap.reduce(self.agg_dicts, self.acc0())
+        if 'gmf_data' not in self.datastore:
+            return acc
+        if oq.ground_motion_fields:
+            eids = self.datastore['gmf_data/eid'][:]
+            rel_events = numpy.unique(eids)
+            e = len(rel_events)
+            if e == 0:
+                raise RuntimeError(
+                    'No GMFs were generated, perhaps they were '
+                    'all below the minimum_intensity threshold')
+            elif e < len(self.datastore['events']):
+                self.datastore['relevant_events'] = rel_events
+                logging.info('Stored %d relevant event IDs', e)
         return acc
 
     def post_execute(self, result):
         oq = self.oqparam
-        if not oq.ground_motion_fields and not oq.hazard_curves_from_gmfs:
+        if (not result or not oq.ground_motion_fields and not
+                oq.hazard_curves_from_gmfs):
             return
         N = len(self.sitecol.complete)
-        M = len(oq.imtls)
+        M = len(oq.imtls)  # 0 in scenario
         L = len(oq.imtls.array)
-        L1 = L // M
-        if result and oq.hazard_curves_from_gmfs:
+        L1 = L // (M or 1)
+        # check seed dependency
+        if 'gmf_data' in self.datastore:
+            logging.info('Checking GMFs')
+            err = views.view('gmf_error', self.datastore)
+            if err > .05:
+                logging.warning('Your results are expected to have a large '
+                                'dependency from ses_seed')
+        if oq.hazard_curves_from_gmfs:
             rlzs = self.datastore['full_lt'].get_realizations()
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
@@ -433,7 +411,6 @@ class EventBasedCalculator(base.HazardCalculator):
                         hmap = calc.make_hmap(pmap, oq.imtls, oq.poes)
                         for sid in hmap:
                             ds[sid, s] = hmap[sid].array
-
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if oq.compare_with_classical:  # compute classical curves

@@ -12,23 +12,22 @@ seed should result in identical random numbers being generated each time.
 Three different seeds are currently recognized and used by the OpenQuake
 engine.
 
-1. `random_seed` is the seed used for sampling branches from the source 
-model logic tree when the parameter `number_of_logic_tree_samples`
-is non-zero. By changing it, different paths in the source model 
-logic tree will be sampled. It affects both classical calculations 
-and event based calculations.
+1. `random_seed` is the seed that controls the sampling of branches 
+from both the source model logic tree and the ground motion model logic tree,
+when the parameter `number_of_logic_tree_samples` is non-zero.
+It affects both classical calculations and event based calculations.
 
-2. `ses_seed` is used to generate seeds for the ruptures generated 
-by an event based calculation. Changing it will affect the generated 
-ruptures. Note that the generation of ruptures is also affected by
-`random_seed` unless full enumeration of the logic tree is used, 
+2. `ses_seed` is used to generate the seeds for the ruptures involved in
+a scenario or event based calculation. In an event based calculation
+the generation of ruptures is also affected by the
+`random_seed`, unless full enumeration of the logic tree is used, 
 due to the reasons mentioned in the previous paragraph. 
-For an event based calculation, the rupture seeds (which depend on the
-`ses_seed`) are used for sampling ground motion values / intensities 
-from a GMPE / IPE, when the parameter `truncation_level` is non-zero. 
-For historical reasons, sampling ground motion values / intensities 
-from a GMPE / IPE in a scenario calculation is controlled by the 
-`random_seed`.
+For both event based and scenario calculations the rupture seeds are used for
+sampling ground motion values / intensities  from a GMPE / IPE, when the
+parameter `truncation_level` is non-zero. 
+NB: before engine 3.11, sampling ground motion values / intensities  from a
+GMPE / IPE in a scenario calculation was incorrectly controlled by the
+`random_seed` and not the `ses_seed`.
 
 3. `master_seed` is used when generating the epsilons in a calculation 
 involving vulnerability functions with non-zero coefficients of 
@@ -149,26 +148,27 @@ investigation time.
 For instance run the event based risk demo as follows:
 ```bash
 $ oq engine --run job.ini
-
+```
 and export the output "Source Loss Table".
 You should see a table like the one below:
-```
-source,loss_type,loss_value,trt
-231,nonstructural,1.07658E+10,Active Shallow Crust
-231,structural,1.63773E+10,Active Shallow Crust
-386,nonstructural,3.82246E+07,Active Shallow Crust
-386,structural,6.18172E+07,Active Shallow Crust
-238,nonstructural,2.75016E+08,Active Shallow Crust
-238,structural,4.58682E+08,Active Shallow Crust
-239,nonstructural,4.51321E+05,Active Shallow Crust
-239,structural,7.62048E+05,Active Shallow Crust
-240,nonstructural,9.49753E+04,Active Shallow Crust
-240,structural,1.58884E+05,Active Shallow Crust
-280,nonstructural,6.44677E+03,Active Shallow Crust
-280,structural,1.14898E+04,Active Shallow Crust
-374,nonstructural,8.14875E+07,Active Shallow Crust
-374,structural,1.35158E+08,Active Shallow Crust
-...
-```
+
+| source | loss_type     | loss_value  | trt                  |
+|--------|---------------|-------------|----------------------|
+| 231    | nonstructural | 1.07658E+10 | Active Shallow Crust |
+| 231    | structural    | 1.63773E+10 | Active Shallow Crust |
+| 386    | nonstructural | 3.82246E+07 | Active Shallow Crust |
+| 386    | structural    | 6.18172E+07 | Active Shallow Crust |
+| 238    | nonstructural | 2.75016E+08 | Active Shallow Crust |
+| 238    | structural    | 4.58682E+08 | Active Shallow Crust |
+| 239    | nonstructural | 4.51321E+05 | Active Shallow Crust |
+| 239    | structural    | 7.62048E+05 | Active Shallow Crust |
+| 240    | nonstructural | 9.49753E+04 | Active Shallow Crust |
+| 240    | structural    | 1.58884E+05 | Active Shallow Crust |
+| 280    | nonstructural | 6.44677E+03 | Active Shallow Crust |
+| 280    | structural    | 1.14898E+04 | Active Shallow Crust |
+| 374    | nonstructural | 8.14875E+07 | Active Shallow Crust |
+| 374    | structural    | 1.35158E+08 | Active Shallow Crust |
+| ⋮      | ⋮             | ⋮           | ⋮                    |
+
 from which one can infer the sources causing the highest total losses for
 the portfolio of assets within the specified effective investigation time.

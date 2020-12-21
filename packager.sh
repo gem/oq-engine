@@ -817,7 +817,7 @@ devtest_run () {
             deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
         fi
         pushd "_jenkins_deps/$dep"
-        commit="$(git log --pretty='format:%h' -1)"
+        commit="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
         popd
         echo "dependency: $dep"
         echo "repo:       $repo"
@@ -924,7 +924,7 @@ builddoc_run () {
             deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
         fi
         pushd "_jenkins_deps/$dep"
-        commit="$(git log --pretty='format:%h' -1)"
+        commit="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
         popd
         echo "dependency: $dep"
         echo "repo:       $repo"
@@ -981,7 +981,7 @@ builddoc_run () {
 pkgtest_run () {
     local i e branch="$1" commit
 
-    commit="$(git log --pretty='format:%h' -1)"
+    commit="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
 
     if [ ! -d "out_${BUILD_UBUVER}" ]; then
         mkdir "out_${BUILD_UBUVER}"
@@ -1076,7 +1076,7 @@ EOF
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
                 cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.buildinfo \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" || true
-                PKG_COMMIT="$(git log --pretty='format:%h' -1)"
+                PKG_COMMIT="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
                 egrep '_COMMIT=|_PKG=' _jenkins_deps_info \
                   | sed 's/\(^.*=[0-9a-f]\{7\}\).*/\1/g' \
                   > "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/${GEM_DEB_PACKAGE}_${PKG_COMMIT}_deps.txt"
@@ -1249,7 +1249,7 @@ pkg_suf="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+-[^+]\+\(+.*\)
 # echo "pkg [$pkg_vers] [$pkg_maj] [$pkg_min] [$pkg_bfx] [$pkg_deb] [$pkg_suf]"
 
 if [ $BUILD_DEVEL -eq 1 ]; then
-    hash="$(git log --pretty='format:%h' -1)"
+    hash="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
     mv debian/changelog debian/changelog.orig
     cp debian/control debian/control.orig
     for dep_item in $GEM_DEPENDS; do

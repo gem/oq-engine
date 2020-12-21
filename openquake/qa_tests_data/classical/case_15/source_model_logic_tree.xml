@@ -25,7 +25,7 @@
         <logicTreeBranchingLevel branchingLevelID="bl2">
 
             <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-                                applyToSources="1"
+                                applyToSources="3"
                                 applyToBranches="SM2"
                                 branchSetID="bs41">
 

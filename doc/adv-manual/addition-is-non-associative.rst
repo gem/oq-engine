@@ -12,7 +12,7 @@ is not identical to
 >>> .1 + (.2 + .3)                                                         
 0.6
 
-As a consequence, other floating-point operations, such as multiplication
+Other floating-point operations, such as multiplication,
 are also non-associative. The order in which operations are performed plays 
 a role in the results of a calculation.
 
@@ -95,7 +95,7 @@ This is why, as an aid to the interested user,
 starting from version 3.9, the engine logs a warning if it finds
 inconsistencies beyond a tolerance level in the aggregated loss results.
 
-Mandatory readings:
+Recommended readings:
 
 - Goldberg, D. (1991). What every computer scientist should know about floating-point arithmetic. *ACM Computing Surveys (CSUR)*, 23(1), 5-48. Reprinted at https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html
 - https://docs.python.org/3/tutorial/floatingpoint.html

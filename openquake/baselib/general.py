@@ -21,8 +21,10 @@ Utility functions of general interest.
 """
 import os
 import sys
+import zlib
 import copy
 import math
+import pickle
 import socket
 import random
 import atexit
@@ -34,16 +36,20 @@ import tempfile
 import importlib
 import itertools
 import subprocess
+import multiprocessing
+from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
+U8 = numpy.uint8
 U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
+mp = multiprocessing.get_context('spawn')
 
 
 def duplicated(items):
@@ -366,7 +372,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
 _tmp_paths = []
 
 
-def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
+def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     """Create temporary file with the given content.
 
     Please note: the temporary file can be deleted by the caller or not.
@@ -381,7 +387,8 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         if not os.path.exists(dir):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
-    _tmp_paths.append(path)
+    if remove:
+        _tmp_paths.append(path)
     with os.fdopen(fh, "wb") as fh:
         if content:
             if hasattr(content, 'encode'):
@@ -454,6 +461,23 @@ def run_in_process(code, *args):
         # produce escape sequences in stdout, see for instance
         # https://bugs.python.org/issue19884
         return eval(out, {}, {})
+
+
+@contextmanager
+def start_many(func, allargs, **kw):
+    """
+    Start multiple processes simultaneously
+    """
+    procs = []
+    for args in allargs:
+        proc = mp.Process(target=func, args=args, kwargs=kw)
+        proc.start()
+        procs.append(proc)
+    try:
+        yield
+    finally:
+        for proc in procs:
+            proc.join()
 
 
 class CodeDependencyError(Exception):
@@ -724,6 +748,16 @@ class AccumDict(dict):
                                for key, value in self.items()})
 
 
+def copyobj(obj, **kwargs):
+    """
+    :returns: a shallow copy of obj with some changed attributes
+    """
+    new = copy.copy(obj)
+    for k, v in kwargs.items():
+        setattr(new, k, v)
+    return new
+
+
 # return a dict imt -> slice and the total number of levels
 def _slicedict_n(imt_dt):
     n = 0
@@ -880,10 +914,10 @@ def groupby2(records, kfield, vfield):
     return list(dic.items())  # Python3 compatible
 
 
-def bin_idxs(values, nbins, key=None, minval=None, maxval=None):
+def get_bins(values, nbins, key=None, minval=None, maxval=None):
     """
     :param values: an array of N floats (or arrays)
-    :returns: an array of N indices
+    :returns: an array of N bin indices plus an array of B bins
     """
     assert len(values)
     if key is not None:
@@ -896,7 +930,41 @@ def bin_idxs(values, nbins, key=None, minval=None, maxval=None):
         bins = [minval] * nbins
     else:
         bins = numpy.arange(minval, maxval, (maxval-minval) / nbins)
-    return numpy.searchsorted(bins, values, side='right')
+    return numpy.searchsorted(bins, values, side='right'), bins
+
+
+def groupby_grid(xs, ys, deltax, deltay):
+    """
+    :param xs: an array of P abscissas
+    :param ys: an array of P ordinates
+    :param deltax: grid spacing on the x-axis
+    :param deltay: grid spacing on the y-axis
+    :returns:
+        dictionary centroid -> indices (of the points around each centroid)
+    """
+    lx, ly = len(xs), len(ys)
+    assert lx == ly, (lx, ly)
+    assert lx > 1, lx
+    assert deltax > 0, deltax
+    assert deltay > 0, deltay
+    xmin = xs.min()
+    xmax = xs.max()
+    ymin = ys.min()
+    ymax = ys.max()
+    nx = numpy.ceil((xmax - xmin) / deltax)
+    ny = numpy.ceil((ymax - ymin) / deltay)
+    assert nx > 0, nx
+    assert ny > 0, ny
+    xbins = get_bins(xs, nx, None, xmin, xmax)[0]
+    ybins = get_bins(ys, ny, None, ymin, ymax)[0]
+    acc = AccumDict(accum=[])
+    for p, ij in enumerate(zip(xbins, ybins)):
+        acc[ij].append(p)
+    dic = {}
+    for (i, j), ps in acc.items():
+        idxs = numpy.array(ps)
+        dic[xs[idxs].mean(), ys[idxs].mean()] = idxs
+    return dic
 
 
 def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
@@ -910,7 +978,7 @@ def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
     """
     if len(values) == 0:  # do nothing
         return values
-    idxs = bin_idxs(values, nbins, key, minval, maxval)
+    idxs = get_bins(values, nbins, key, minval, maxval)[0]
     acc = AccumDict(accum=[])
     for idx, val in zip(idxs, values):
         if isinstance(idx, numpy.ndarray):
@@ -1128,6 +1196,8 @@ def random_filter(objects, reduction_factor, seed=42):
     list compared to the original list.
     """
     assert 0 < reduction_factor <= 1, reduction_factor
+    if reduction_factor == 1:  # do not reduce
+        return objects
     rnd = random.Random(seed)
     out = []
     for obj in objects:
@@ -1140,13 +1210,15 @@ def random_histogram(counts, nbins, seed):
     """
     Distribute a total number of counts on a set of bins homogenously.
 
-    >>> random_histogram(1, 2, 42)
+    >>> random_histogram(1, 2, seed=42)
     array([1, 0])
-    >>> random_histogram(100, 5, 42)
+    >>> random_histogram(100, 5, seed=42)
     array([28, 18, 17, 19, 18])
-    >>> random_histogram(10000, 5, 42)
+    >>> random_histogram(10000, 5, seed=42)
     array([2043, 2015, 2050, 1930, 1962])
     """
+    if nbins == 1:
+        return numpy.array([counts])
     numpy.random.seed(seed)
     return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
 
@@ -1265,14 +1337,13 @@ def println(msg):
     sys.stdout.flush()
 
 
-def debug(templ, *args):
+def debug(line):
     """
     Append a debug line to the file /tmp/debug.txt
     """
-    msg = templ % args if args else templ
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
-        f.write(msg + '\n')
+        f.write(line + '\n')
 
 
 builtins.debug = debug
@@ -1344,14 +1415,14 @@ def get_duplicates(array, *fields):
 def add_columns(a, b, on, cols=None):
     """
     >>> a_dt = [('aid', int), ('eid', int), ('loss', float)]
-    >>> b_dt = [('ordinal', int), ('zipcode', int)]
+    >>> b_dt = [('ordinal', int), ('custom_site_id', int)]
     >>> a = numpy.array([(1, 0, 2.4), (2, 0, 2.2),
     ...                  (1, 1, 2.1), (2, 1, 2.3)], a_dt)
     >>> b = numpy.array([(0, 20126), (1, 20127), (2, 20128)], b_dt)
-    >>> add_columns(a, b, 'aid', ['zipcode'])
+    >>> add_columns(a, b, 'aid', ['custom_site_id'])
     array([(1, 0, 2.4, 20127), (2, 0, 2.2, 20128), (1, 1, 2.1, 20127),
            (2, 1, 2.3, 20128)],
-          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('zipcode', '<i8')])
+          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('custom_site_id', '<i8')])
     """
     if cols is None:
         cols = b.dtype.names
@@ -1394,16 +1465,17 @@ def categorize(values, nchars=2):
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 
 
-def get_array_nbytes(sizedict, size=8):
+def get_nbytes_msg(sizedict, size=8):
     """
     :param sizedict: mapping name -> num_dimensions
     :returns: (size of the array in bytes, descriptive message)
 
-    >>> get_array_nbytes(dict(nsites=2, nbins=5))
+    >>> get_nbytes_msg(dict(nsites=2, nbins=5))
     (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
     """
     nbytes = numpy.prod(list(sizedict.values())) * size
-    prod = ' * '.join('(%s=%d)' % item for item in sizedict.items())
+    prod = ' * '.join('({}={:_d})'.format(k, int(v))
+                      for k, v in sizedict.items())
     return nbytes, '%s * %d bytes = %s' % (prod, size, humansize(nbytes))
 
 
@@ -1431,3 +1503,29 @@ def agg_probs(*probs):
     for prob in probs[1:]:
         acc *= 1. - prob
     return 1. - acc
+
+# ###########]]]###### COMPRESSION/DECOMPRESSION ##################### #
+
+# Compressing the task outputs makes everything slower, so you should NOT
+# do that, except in one case. The case if when you have a lot of workers
+# (say 320) sending a lot of data (say 320 GB) to a master node which is
+# not able to keep up. Then the zmq queue fills all of the avalaible RAM
+# until the master node blows up. With compression you can reduce the queue
+# size a lot (say one order of magnitude).
+# Therefore by losing a bit of speed (say 3%) you can convert a failing
+# calculation into a successful one.
+
+
+def compress(obj):
+    """
+    gzip a Python object
+    """
+    # level=1: compress the least, but fast, good choice for us
+    return zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL), level=1)
+
+
+def decompress(cbytes):
+    """
+    gunzip compressed bytes into a Python object
+    """
+    return pickle.loads(zlib.decompress(cbytes))

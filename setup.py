@@ -56,10 +56,10 @@ PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
     'setuptools',
-    'h5py >=2.9, <2.11',
+    'h5py >=2.10, <2.11',
     'numpy >=1.16, <1.19',
     'scipy >=1.3, <1.5',
-    'pandas >=0.25, <1.1',
+    'pandas >=0.25, <1.2',
     'pyzmq <20.0',
     'psutil >=2.0, <5.7',
     'shapely >=1.3, <1.8',
@@ -67,7 +67,7 @@ install_requires = [
     'decorator >=4.3',
     'django >=1.11, <2.3',
     'matplotlib >=1.5, <3.2',
-    'requests >=2.20, <2.23',
+    'requests >=2.20, <2.24',
     'pyshp ==1.2.3',
     'toml',
 ]
@@ -79,11 +79,10 @@ extras_require = {
                 "gunicorn",
                 "python-prctl ==1.6.1",
                 "setproctitle"],
-    'plotting':  [
-        'basemap >=1.0',
+    'osgeo':  [
         'pyproj >=1.9',
+        'GDAL >= 2.4',
     ],
-    'platform': ["GDAL >=2.3, <3"],
     'dev':  [
         'pytest >=4.5',
         'flake8 >=3.5, <3.8',

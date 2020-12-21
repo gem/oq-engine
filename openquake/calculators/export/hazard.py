@@ -30,7 +30,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.calculators.views import view
 from openquake.calculators.extract import extract, get_mesh, get_info
 from openquake.calculators.export import export
-from openquake.calculators.getters import gen_rgetters
+from openquake.calculators.getters import gen_rupture_getters
 from openquake.commonlib import writers, hazard_writers, calc, util
 
 F32 = numpy.float32
@@ -59,13 +59,13 @@ def export_ruptures_xml(ekey, dstore):
     oq = dstore['oqparam']
     events = group_array(dstore['events'][()], 'rup_id')
     ruptures_by_grp = AccumDict(accum=[])
-    for rgetter in gen_rgetters(dstore):
+    for rgetter in gen_rupture_getters(dstore):
         ebrs = []
         for proxy in rgetter.get_proxies():
             events_by_ses = group_array(events[proxy['id']], 'ses_id')
-            ebr = proxy.to_ebr(rgetter.trt, rgetter.samples)
+            ebr = proxy.to_ebr(rgetter.trt)
             ebrs.append(ebr.export(events_by_ses))
-        ruptures_by_grp[rgetter.grp_id].extend(ebrs)
+        ruptures_by_grp[rgetter.et_id].extend(ebrs)
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)
@@ -217,7 +217,8 @@ def export_hcurves_csv(ekey, dstore):
                                  hmap.flatten().view(hmap_dt), comment))
         elif key == 'hcurves':
             # shape (N, R|S, M, L1)
-            if 'amplification' in oq.inputs:
+            if ('amplification' in oq.inputs and
+                    oq.amplification_method == 'convolution'):
                 imtls = DictArray(
                     {imt: oq.soil_intensities for imt in oq.imtls})
             else:
@@ -317,12 +318,12 @@ def export_hcurves_xml(ekey, dstore):
             smlt_path = ''
             gsimlt_path = ''
         name = hazard_curve_name(dstore, ekey, kind)
-        hcurves = extract(dstore, 'hcurves?kind=' + kind)[kind]
         for im in oq.imtls:
-            slc = oq.imtls(im)
+            key = 'hcurves?kind=%s&imt=%s' % (kind, im)
+            hcurves = extract(dstore, key)[kind]  # shape (N, 1, L1)
             imt = from_string(im)
             fname = name[:-len_ext] + '-' + im + '.' + fmt
-            data = [HazardCurve(Location(site), poes[slc])
+            data = [HazardCurve(Location(site), poes[0])
                     for site, poes in zip(sitemesh, hcurves)]
             writer = writercls(fname,
                                investigation_time=oq.investigation_time,
@@ -381,8 +382,7 @@ def _extract(hmap, imt, j):
 
 
 @export.add(('hcurves', 'npz'), ('hmaps', 'npz'), ('uhs', 'npz'),
-            ('gmf_data', 'npz'),
-            ('losses_by_asset', 'npz'), ('avg_damages-rlzs', 'npz'))
+            ('losses_by_asset', 'npz'), ('damages-rlzs', 'npz'))
 def export_hazard_npz(ekey, dstore):
     fname = dstore.export_path('%s.%s' % ekey)
     out = extract(dstore, ekey[0])
@@ -394,45 +394,32 @@ def export_hazard_npz(ekey, dstore):
 @export.add(('gmf_data', 'csv'))
 def export_gmf_data_csv(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs = dstore['full_lt'].get_realizations()
     imts = list(oq.imtls)
-    sc = dstore['sitecol'].array
-    arr = sc[['lon', 'lat']]
-    eid = int(ekey[0].split('/')[1]) if '/' in ekey[0] else None
-    gmfa = dstore['gmf_data/data'][('eid', 'sid', 'gmv')]
+    df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
+    ren = {'sid': 'site_id', 'eid': 'event_id'}
+    for m, imt in enumerate(imts):
+        ren[f'gmv_{m}'] = 'gmv_' + imt
+    df.rename(columns=ren, inplace=True)
     event_id = dstore['events']['id']
-    gmfa['eid'] = event_id[gmfa['eid']]
-    if eid is None:  # we cannot use extract here
-        f = dstore.build_fname('sitemesh', '', 'csv')
-        sids = numpy.arange(len(arr), dtype=U32)
-        sites = util.compose_arrays(sids, arr, 'site_id')
-        writers.write_csv(f, sites)
-        fname = dstore.build_fname('gmf', 'data', 'csv')
-        gmfa.sort(order=['eid', 'sid'])
-        writers.write_csv(fname, _expand_gmv(gmfa, imts),
-                          renamedict={'sid': 'site_id', 'eid': 'event_id'})
-        if 'sigma_epsilon' in dstore['gmf_data']:
-            sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
-            sig_eps = dstore['gmf_data/sigma_epsilon'][()]
-            sig_eps['eid'] = event_id[sig_eps['eid']]
-            sig_eps.sort(order='eid')
-            header = list(sig_eps.dtype.names)
-            header[0] = 'event_id'
-            writers.write_csv(sig_eps_csv, sig_eps, header=header)
-            return [fname, sig_eps_csv, f]
-        else:
-            return [fname, f]
-    # old format for single eid
-    # TODO: is this still used?
-    gmfa = gmfa[gmfa['eid'] == eid]
-    eid2rlz = dict(dstore['events'])
-    rlzi = eid2rlz[eid]
-    rlz = rlzs[rlzi]
-    data, comment = _build_csv_data(
-        gmfa, rlz, dstore['sitecol'], imts, oq.investigation_time)
-    fname = dstore.build_fname(
-        'gmf', '%d-rlz-%03d' % (eid, rlzi), 'csv')
-    return writers.write_csv(fname, data, comment=comment)
+    f = dstore.build_fname('sitemesh', '', 'csv')
+    arr = dstore['sitecol'][['lon', 'lat']]
+    sids = numpy.arange(len(arr), dtype=U32)
+    sites = util.compose_arrays(sids, arr, 'site_id')
+    writers.write_csv(f, sites)
+    fname = dstore.build_fname('gmf', 'data', 'csv')
+    writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
+        df, fname, comment=dstore.metadata)
+    if 'sigma_epsilon' in dstore['gmf_data']:
+        sig_eps_csv = dstore.build_fname('sigma_epsilon', '', 'csv')
+        sig_eps = dstore['gmf_data/sigma_epsilon'][()]
+        sig_eps['eid'] = event_id[sig_eps['eid']]
+        sig_eps.sort(order='eid')
+        header = list(sig_eps.dtype.names)
+        header[0] = 'event_id'
+        writers.write_csv(sig_eps_csv, sig_eps, header=header)
+        return [fname, sig_eps_csv, f]
+    else:
+        return [fname, f]
 
 
 def _expand_gmv(array, imts):
@@ -445,30 +432,18 @@ def _expand_gmv(array, imts):
         if name == 'gmv':
             for imt in imts:
                 dtlist.append(('gmv_' + imt, F32))
-        else:
+        elif name in ('sid', 'eid'):
+            dtlist.append((name, dt))
+        else:  # secondary perils
             dtlist.append((name, dt))
     new = numpy.zeros(len(array), dtlist)
-    for name in dtype.names:
-        if name == 'gmv':
-            for i, imt in enumerate(imts):
-                new['gmv_' + imt] = array['gmv'][:, i]
+    imti = {imt: i for i, imt in enumerate(imts)}
+    for name, _dt in dtlist:
+        if name.startswith('gmv_'):
+            new[name] = array['gmv'][:, imti[name[4:]]]
         else:
             new[name] = array[name]
     return new
-
-
-def _build_csv_data(array, rlz, sitecol, imts, investigation_time):
-    # lon, lat, gmv_imt1, ..., gmv_imtN
-    smlt_path = '_'.join(rlz.sm_lt_path)
-    gsimlt_path = rlz.gsim_rlz.pid
-    comment = ('smlt_path=%s, gsimlt_path=%s, investigation_time=%s' %
-               (smlt_path, gsimlt_path, investigation_time))
-    rows = [['lon', 'lat'] + imts]
-    for sid, data in group_array(array, 'sid').items():
-        row = ['%.5f' % sitecol.lons[sid], '%.5f' % sitecol.lats[sid]] + list(
-            data['gmv'])
-        rows.append(row)
-    return rows, comment
 
 
 DisaggMatrix = collections.namedtuple(
@@ -484,8 +459,8 @@ def iproduct(*sizes):
 def export_disagg_csv_xml(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    iml4 = dstore['iml4']
-    N, M, P, Z = iml4.shape
+    hmap4 = dstore['hmap4']
+    N, M, P, Z = hmap4.shape
     imts = list(oq.imtls)
     rlzs = dstore['full_lt'].get_realizations()
     fnames = []
@@ -499,9 +474,9 @@ def export_disagg_csv_xml(ekey, dstore):
         if sum(arr.sum() for arr in dic.values()) == 0:  # no data
             continue
         imt = from_string(imts[m])
-        r = iml4.rlzs[s, z]
+        r = hmap4.rlzs[s, z]
         rlz = rlzs[r]
-        iml = iml4[s, m, p, z]
+        iml = hmap4[s, m, p, z]
         poe_agg = dstore['poe4'][s, m, p, z]
         fname = dstore.export_path(
             'rlz-%d-%s-sid-%d-poe-%d.xml' % (r, imt, s, p))

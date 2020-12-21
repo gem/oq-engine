@@ -35,12 +35,10 @@ F64 = numpy.float64
 getweight = operator.attrgetter('weight')
 
 
-def event_based_risk(riskinputs, crmodel, param, monitor):
+def event_based_risk(riskinputs, param, monitor):
     """
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param crmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         a dictionary of parameters
     :param monitor:
@@ -48,6 +46,7 @@ def event_based_risk(riskinputs, crmodel, param, monitor):
     :returns:
         a dictionary of numpy arrays of shape (L, R)
     """
+    crmodel = monitor.read('crmodel')
     L = len(crmodel.lti)
     tempname = param['tempname']
     for ri in riskinputs:
@@ -144,11 +143,11 @@ class EbrCalculator(base.RiskCalculator):
         self.A = len(self.assetcol)
         if parent:
             self.datastore['full_lt'] = parent['full_lt']
-            self.events = parent['events'][('id', 'rlz_id')]
+            self.events = parent['events']['id']
             logging.info('There are %d ruptures and %d events',
                          len(parent['ruptures']), len(self.events))
         else:
-            self.events = self.datastore['events'][('id', 'rlz_id')]
+            self.events = self.datastore['events']['id']
         if oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves and maps
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
@@ -263,17 +262,15 @@ class EbrCalculator(base.RiskCalculator):
         Save risk data and build the aggregate loss curves
         """
         oq = self.oqparam
-        loss_types = oq.loss_dt().names
         logging.info('Saving event loss table')
-        elt_dt = numpy.dtype(
-            [('event_id', U32), ('rlzi', U16), ('loss', (F32, (self.L,)))])
         with self.monitor('saving event loss table', measuremem=True):
-            agglosses = numpy.fromiter(
-                ((eid, rlz, losses)
-                 for (eid, rlz), losses in zip(self.events, self.agglosses)
-                 if losses.any()), elt_dt)
-            self.datastore['losses_by_event'] = agglosses
-            self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
+            out = []
+            for eid, losses in zip(self.events, self.agglosses):
+                if losses.sum():
+                    out.append((eid, 0) + tuple(losses))
+            arr = numpy.array(out, oq.alt_dt())
+            self.datastore.create_dframe(
+                'agg_loss_table', [(n, arr[n]) for n in arr.dtype.names])
         if oq.avg_losses:
             set_rlzs_stats(self.datastore, 'avg_losses',
                            asset_id=self.assetcol['id'],

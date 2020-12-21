@@ -27,9 +27,10 @@ import numpy
 import h5py
 import pandas
 
-from openquake.baselib import hdf5, config, performance, python3compat
+from openquake.baselib import hdf5, config, performance, python3compat, general
 
 
+MAX_ROWS = 10_000_000
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 
 
@@ -162,17 +163,15 @@ def sel(dset, filterdict):
     return dset[tuple(lst)]
 
 
-def dset2df(dset, index, filterdict):
+def dset2df(dset, indexfield, filterdict):
     """
     Converts an HDF5 dataset with an attribute shape_descr into a Pandas
     dataframe. NB: this is very slow for large datasets.
     """
     arr = sel(dset, filterdict)
     shape_descr = python3compat.decode(dset.attrs['shape_descr'])
-    out = []
     tags = []
     idxs = []
-    dtlist = []
     for dim in shape_descr:
         values = _range(dset.attrs[dim])
         if dim in filterdict:
@@ -182,16 +181,45 @@ def dset2df(dset, index, filterdict):
             values = [val]
         else:
             idxs.append(range(len(values)))
-        if isinstance(values[0], str):  # like the loss_type
-            dt = '<S16'
-        else:
-            dt = type(values[0])
-        dtlist.append((dim, dt))
         tags.append(values)
-    dtlist.append(('value', dset.dtype))
+    dic = general.AccumDict(accum=[])
+    index = []
     for idx, vals in zip(itertools.product(*idxs), itertools.product(*tags)):
-        out.append(vals + (arr[idx],))
-    return pandas.DataFrame.from_records(numpy.array(out, dtlist), index)
+        for field, val in zip(shape_descr, vals):
+            if field == indexfield:
+                index.append(val)
+            else:
+                dic[field].append(val)
+        dic['value'].append(arr[idx])
+    return pandas.DataFrame(dic, index or None)
+
+
+def extract_cols(datagrp, sel, slc, columns):
+    """
+    :param datagrp: something like and HDF5 data group
+    :param sel: dictionary column name -> value specifying a selection
+    :param slc: a slice object specifying the rows considered
+    :param columns: the full list of column names
+    :returns: a dictionary col -> array of values
+    """
+    first = columns[0]
+    nrows = len(datagrp[first])
+    if slc.start is None and slc.stop is None:  # split in slices
+        slcs = general.gen_slices(0, nrows, MAX_ROWS)
+    else:
+        slcs = [slc]
+    acc = general.AccumDict(accum=[])  # col -> arrays
+    for slc in slcs:
+        ok = slice(None)
+        dic = {col: datagrp[col][slc] for col in sel}
+        for col in sel:
+            if isinstance(ok, slice):  # first selection
+                ok = dic[col] == sel[col]
+            else:  # other selections
+                ok &= dic[col] == sel[col]
+        for col in columns:
+            acc[col].append(datagrp[col][slc][ok])
+    return {k: numpy.concatenate(vs) for k, vs in acc.items()}
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -361,6 +389,32 @@ class DataStore(collections.abc.MutableMapping):
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
 
+    def create_dframe(self, key, nametypes, compression=None, **kw):
+        """
+        Create a HDF5 datagroup readable as a pandas DataFrame
+
+        :param key: name of the dataset
+        :param nametypes: list of pairs (name, dtype) or (name, array)
+        :param compression: the kind of HDF5 compression to use
+        :param kw: attributes to add
+        """
+        names = []
+        for name, value in nametypes:
+            is_array = isinstance(value, numpy.ndarray)
+            if is_array:
+                dt = value.dtype
+            else:
+                dt = value
+            dset = hdf5.create(self.hdf5, f'{key}/{name}', dt, (None,),
+                               compression)
+            if is_array:
+                hdf5.extend(dset, value)
+            names.append(name)
+        attrs = self.hdf5[key].attrs
+        attrs['__pdcolumns__'] = ' '.join(names)
+        for k, v in kw.items():
+            attrs[k] = v
+
     def save(self, key, kw):
         """
         Update the object associated to `key` with the `kw` dictionary;
@@ -473,18 +527,27 @@ class DataStore(collections.abc.MutableMapping):
         data = bytes(numpy.asarray(self[key][()]))
         return io.BytesIO(gzip.decompress(data))
 
-    def read_df(self, key, index=None, sel=()):
+    def read_df(self, key, index=None, sel=(), slc=slice(None)):
         """
         :param key: name of the structured dataset
-        :param index: if given, name of the "primary key" field
+        :param index: pandas index (or multi-index), possibly None
         :param sel: dictionary used to select subsets of the dataset
+        :param slc: slice object to extract a slice of the dataset
         :returns: pandas DataFrame associated to the dataset
         """
         dset = self.getitem(key)
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
-        if 'shape_descr' in dset.attrs:
+        elif 'shape_descr' in dset.attrs:
             return dset2df(dset, index, sel)
+        elif '__pdcolumns__' in dset.attrs:
+            columns = dset.attrs['__pdcolumns__'].split()
+            dic = extract_cols(dset, sel, slc, columns)
+            if index is None:
+                return pandas.DataFrame(dic)
+            else:
+                return pandas.DataFrame(dic).set_index(index)
+
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]
@@ -505,6 +568,20 @@ class DataStore(collections.abc.MutableMapping):
             else:  # scalar field
                 data[name] = arr
         return pandas.DataFrame.from_records(data, index=index)
+
+    def read_unique(self, key, field):
+        """
+        :param key: key to a dataset containing a structured array
+        :param field: a field in the structured array
+        :returns: sorted, unique values
+        Works with chunks of 1M records
+        """
+        unique = set()
+        dset = self.getitem(key)
+        for slc in general.gen_slices(0, len(dset), 10_000_000):
+            arr = numpy.unique(dset[slc][field])
+            unique.update(arr)
+        return sorted(unique)
 
     def sel(self, key, **kw):
         """

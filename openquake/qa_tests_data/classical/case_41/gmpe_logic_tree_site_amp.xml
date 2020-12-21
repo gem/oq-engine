@@ -4,21 +4,21 @@ xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
     <logicTree
-    logicTreeID="SERASiteResp"
+    logicTreeID="ESHM20SiteResp"
     >
         <logicTreeBranchingLevel
-        branchingLevelID="SERASR"
+        branchingLevelID="ESHM20SR"
         >
             <logicTreeBranchSet
             applyToTectonicRegionType="Active Shallow Crust"
-            branchSetID="SERA"
+            branchSetID="ESHM20"
             uncertaintyType="gmpeModel"
             >
                 <logicTreeBranch
                 branchID="KothaInfVs30"
                 >
                     <uncertaintyModel>
-                        KothaEtAl2020SERA
+                        KothaEtAl2020ESHM20
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.2
@@ -28,7 +28,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 branchID="KothaGeology"
                 >
                     <uncertaintyModel>
-                         KothaEtAl2020SERASlopeGeology
+                         KothaEtAl2020ESHM20SlopeGeology
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.2
@@ -39,7 +39,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 >
                     <uncertaintyModel>
                         [PitilakisEtAl2018]
-                        gmpe_name = "KothaEtAl2020SERA"
+                        gmpe_name = "KothaEtAl2020ESHM20"
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.2
@@ -50,7 +50,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 >
                     <uncertaintyModel>
                         [Eurocode8Amplification]
-                        gmpe_name = "KothaEtAl2020SERA"
+                        gmpe_name = "KothaEtAl2020ESHM20"
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.13
@@ -61,7 +61,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 >
                     <uncertaintyModel>
                         [Eurocode8AmplificationDefault]
-                        gmpe_name = "KothaEtAl2020SERA"
+                        gmpe_name = "KothaEtAl2020ESHM20"
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.13
@@ -72,7 +72,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 >
                     <uncertaintyModel>
                         [SandikkayaDinsever2018]
-                        gmpe_name = "KothaEtAl2020SERA"
+                        gmpe_name = "KothaEtAl2020ESHM20"
                         [SandikkayaDinsever2018.phi_0]
                         "PGV" = 0.483487360873615
                         "PGA" = 0.510861957895391

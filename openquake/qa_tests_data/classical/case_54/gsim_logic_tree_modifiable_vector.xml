@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.5">
+<logicTree logicTreeID='lt1'>
+
+    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                      applyToTectonicRegionType="Active Shallow Crust">
+
+        <logicTreeBranch branchID="low_median_low_sigma">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.AkkarEtAlRjb2014 = {}
+                [ModifiableGMPE.set_scale_median_vector.scaling_factor]
+                "PGA" = 0.85
+                "SA(0.5)" = 0.95 
+                [ModifiableGMPE.set_scale_total_sigma_vector.scaling_factor]
+                "PGA" = 0.7
+                "SA(0.5)" = 0.8
+            </uncertaintyModel>
+            <uncertaintyWeight>0.3</uncertaintyWeight>
+        </logicTreeBranch>
+        
+        <logicTreeBranch branchID="high_median_low_sigma">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.AkkarEtAlRjb2014 = {}
+                [ModifiableGMPE.set_scale_median_vector.scaling_factor]
+                "PGA" = 1.1
+                "SA(0.5)" = 1.2 
+                [ModifiableGMPE.set_scale_total_sigma_vector.scaling_factor]
+                "PGA" = 0.7
+                "SA(0.5)" = 0.8
+            </uncertaintyModel>
+            <uncertaintyWeight>0.3</uncertaintyWeight>
+        </logicTreeBranch>
+        
+        <logicTreeBranch branchID="low_median_high_sigma">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.AkkarEtAlRjb2014 = {}
+                [ModifiableGMPE.set_scale_median_vector.scaling_factor]
+                "PGA" = 0.85
+                "SA(0.5)" = 0.95 
+                [ModifiableGMPE.set_scale_total_sigma_vector.scaling_factor]
+                "PGA" = 1.15
+                "SA(0.5)" = 1.25
+            </uncertaintyModel>
+            <uncertaintyWeight>0.2</uncertaintyWeight>
+        </logicTreeBranch>
+        
+        <logicTreeBranch branchID="high_median_high_sigma">
+            <uncertaintyModel>
+                [ModifiableGMPE]
+                gmpe.AkkarEtAlRjb2014 = {}
+                [ModifiableGMPE.set_scale_median_vector.scaling_factor]
+                "PGA" = 1.1
+                "SA(0.5)" = 1.2  
+                [ModifiableGMPE.set_scale_total_sigma_vector.scaling_factor]
+                "PGA" = 1.15
+                "SA(0.5)" = 1.25
+            </uncertaintyModel>
+            <uncertaintyWeight>0.2</uncertaintyWeight>
+        </logicTreeBranch>
+    </logicTreeBranchSet>
+</logicTree>
+</nrml>

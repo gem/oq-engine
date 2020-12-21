@@ -28,14 +28,12 @@ bcr_dt = numpy.dtype([('annual_loss_orig', F32), ('annual_loss_retro', F32),
                       ('bcr', F32)])
 
 
-def classical_bcr(riskinputs, crmodel, param, monitor):
+def classical_bcr(riskinputs, param, monitor):
     """
     Compute and return the average losses for each asset.
 
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param crmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         dictionary of extra parameters
     :param monitor:
@@ -43,6 +41,7 @@ def classical_bcr(riskinputs, crmodel, param, monitor):
     """
     R = riskinputs[0].hazard_getter.num_rlzs
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
+    crmodel = monitor.read('crmodel')
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor):
             for asset, (eal_orig, eal_retro, bcr) in zip(

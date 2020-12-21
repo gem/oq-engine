@@ -14,16 +14,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-import pickle
 import numpy
 
 import openquake.hazardlib
 from openquake.baselib.parallel import Starmap, sequential_apply
-from openquake.hazardlib import const
+from openquake.hazardlib import const, nrml, valid
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
-from openquake.hazardlib.calc.filters import SourceFilter, IntegrationDistance
+from openquake.hazardlib.calc.filters import SourceFilter, MagDepDistance
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -32,17 +31,12 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, ArbitraryMFD
 from openquake.hazardlib.source import PointSource, SimpleFaultSource
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.akkar_bommer_2010 import AkkarBommer2010
-from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014PEER
+from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 
 
 class HazardCurvesFiltersTestCase(unittest.TestCase):
-    def test_MagnitudeDistance_pickleable(self):
-        md = IntegrationDistance(
-            dict(default=[(1, 10), (2, 20), (3, 30), (4, 40), (5, 100),
-                          (6, 200), (7, 400), (8, 800)]))
-        md2 = pickle.loads(pickle.dumps(md))
-        self.assertEqual(md.dic, md2.dic)
 
     def test_point_sources(self):
         sources = [
@@ -97,7 +91,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         truncation_level = 1
         imts = {'PGA': [0.1, 0.5, 1.3]}
-        s_filter = SourceFilter(sitecol, {const.TRT.ACTIVE_SHALLOW_CRUST: 30})
+        s_filter = SourceFilter(sitecol, MagDepDistance.new('30'))
         result = calc_hazard_curves(
             sources, s_filter, imts, gsims, truncation_level)['PGA']
         # there are two sources and four sites. The first source contains only
@@ -135,11 +129,6 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(result[0], 0)  # no contrib to site 1
         numpy.testing.assert_allclose(result[1], 0)  # no contrib to site 2
 
-        # test that depths are kept after filtering (sites 3 and 4 remain)
-        s_filter = SourceFilter(sitecol, {'default': 100})
-        numpy.testing.assert_array_equal(
-            s_filter.get_close_sites(sources[0]).depths, ([1, -1]))
-
 
 # this example originally came from the Hazard Modeler Toolkit
 def example_calc(apply):
@@ -162,8 +151,7 @@ def example_calc(apply):
     imtls = {'PGA': [0.01, 0.1, 0.2, 0.5, 0.8],
              'SA(0.5)': [0.01, 0.1, 0.2, 0.5, 0.8]}
     gsims = {'Active Shallow Crust': AkkarBommer2010()}
-    return calc_hazard_curves(sources, sitecol, imtls, gsims, apply=apply,
-                              filter_distance='rrup')
+    return calc_hazard_curves(sources, sitecol, imtls, gsims, apply=apply)
 
 
 class HazardCurvesParallelTestCase(unittest.TestCase):
@@ -222,12 +210,12 @@ class MixtureModelGMPETestCase(unittest.TestCase):
                                      0.0, 12., trace, 90., 0.)]
         imtls = {"PGA": [0.001, 0.01, 0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0,
                          1.25, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.0]}
-        gmpe = ChiouYoungs2014PEER(mixture_model={"factors": [0.8, 1.2],
-                                                  "weights": [0.5, 0.5]})
+        gmpe = ChiouYoungs2014PEER()
+        gmpe.mixture_model = {"factors": [0.8, 1.2], "weights": [0.5, 0.5]}
         hcm = calc_hazard_curves(sources, sitecol, imtls,
                                  {"Active Shallow Crust": gmpe})
         # Match against the benchmark is not exact - but differences in the
-        # log space should be on the order of less than 0.04 % in log space
+        # log space should be on the order of less than 0.04%
         expected = numpy.array([-4.140470001, -4.140913368, -4.259457496,
                                 -4.724733842, -5.900747959, -7.734816415,
                                 -9.019329629, -10.03864778, -10.90333404,
@@ -239,3 +227,51 @@ class MixtureModelGMPETestCase(unittest.TestCase):
         perc_diff = 100.0 * ((hcm_lnpga / expected) - 1.0)
         numpy.testing.assert_allclose(perc_diff, numpy.zeros(len(perc_diff)),
                                       atol=0.04)
+
+
+# an area source with 52 point sources
+asource = nrml.get('''\
+<areaSource
+  id="1"
+  name="Area Source"
+  tectonicRegion="Stable Continental Crust">
+  <areaGeometry>
+      <gml:Polygon>
+          <gml:exterior>
+              <gml:LinearRing>
+                  <gml:posList>
+                    -.5 -.5 -.3 -.1 .1 .2 .3 -.8
+                  </gml:posList>
+              </gml:LinearRing>
+          </gml:exterior>
+      </gml:Polygon>
+      <upperSeismoDepth>0</upperSeismoDepth>
+      <lowerSeismoDepth>10 </lowerSeismoDepth>
+  </areaGeometry>
+  <magScaleRel>WC1994</magScaleRel>
+  <ruptAspectRatio>1</ruptAspectRatio>
+  <truncGutenbergRichterMFD aValue="4.5" bValue="1" maxMag="7" minMag="5"/>
+  <nodalPlaneDist>
+    <nodalPlane dip="90" probability="1" rake="0" strike="0"/>
+  </nodalPlaneDist>
+  <hypoDepthDist>
+     <hypoDepth depth="5" probability="1"/>
+  </hypoDepthDist>
+</areaSource>''')
+
+
+class SingleSiteOptTestCase(unittest.TestCase):
+    """
+    Test the single site optimization for BooreAtkinson2008
+    """
+    def test(self):
+        site = Site(Point(0, 0), vs30=760., z1pt0=48.0, z2pt5=0.607,
+                    vs30measured=True)
+        sitecol = SiteCollection([site])
+        imtls = {"PGA": valid.logscale(.1, 1, 10)}
+        gsim = BooreAtkinson2008()
+        [hcurve] = calc_hazard_curves([asource], sitecol, imtls,
+                                      {"Stable Continental Crust": gsim})
+        exp = [0.879914, 0.747273, 0.566655, 0.376226, 0.217617,
+               0.110198, 0.049159, 0.019335, 0.006663, 0.001989]
+        numpy.testing.assert_allclose(hcurve['PGA'], exp, atol=1E-5)

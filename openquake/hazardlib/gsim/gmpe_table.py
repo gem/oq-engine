@@ -97,8 +97,8 @@ class AmplificationTable(object):
         self.distances = distances
         self.parameter = decode(amplification_group.attrs["apply_to"])
         self.values = numpy.array([float(key) for key in amplification_group])
-        self.argidx = numpy.argsort(self.values)
-        self.values = self.values[self.argidx]
+        self.argrp_id = numpy.argsort(self.values)
+        self.values = self.values[self.argrp_id]
         if self.parameter in RuptureContext._slots_:
             self.element = "Rupture"
         elif self.parameter in site.site_param_dt:
@@ -140,11 +140,11 @@ class AmplificationTable(object):
                     assert numpy.allclose(self.periods, amp_model["IMLs/T"][:])
             for imt in ["SA", "PGA", "PGV"]:
                 if imt in amp_model["IMLs"]:
-                    self.mean[imt][:, :, :, self.argidx[iloc]] = \
+                    self.mean[imt][:, :, :, self.argrp_id[iloc]] = \
                         amp_model["IMLs/" + imt][:]
                     for stddev_type in self.sigma:
                         self.sigma[stddev_type][imt][
-                            :, :, :, self.argidx[iloc]] = \
+                            :, :, :, self.argrp_id[iloc]] = \
                             amp_model["/".join([stddev_type, imt])][:]
         self.shape = (n_d, n_p, n_m, n_levels)
 

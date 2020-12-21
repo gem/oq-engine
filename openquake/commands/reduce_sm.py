@@ -18,8 +18,16 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from openquake.baselib import sap, datastore, performance, general
-from openquake.commonlib import readinput
+from openquake.baselib import sap, performance, general
+from openquake.commonlib import readinput, util
+
+
+def get_dupl(src_ids):
+    dupl = set()
+    for src_id in src_ids:
+        if ';' in src_id:
+            dupl.add(src_id.split(';')[0])
+    return dupl
 
 
 @sap.script
@@ -30,20 +38,17 @@ def reduce_sm(calc_id):
     """
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
-    with datastore.read(calc_id) as dstore:
+    with util.read(calc_id) as dstore:
         oqparam = dstore['oqparam']
         info = dstore['source_info'][()]
-    num_ids = len(info['source_id'])
-    bad_ids = set(info[info['eff_ruptures'] == 0]['source_id'])
-    if len(bad_ids) == 0:
-        dupl = info[info['multiplicity'] > 1]['source_id']
-        if len(dupl) == 0:
-            logging.info('Nothing to remove')
-        else:
-            logging.info('Nothing to remove, but there are duplicated source '
-                         'IDs that could prevent the removal: %s' % dupl)
-        return
+    src_ids = info['source_id']
+    num_ids = len(src_ids)
+    bad_ids = info[info['eff_ruptures'] == 0]['source_id']
     logging.info('Found %d far away sources', len(bad_ids))
+    bad_ids = set(src_id.split(';')[0] for src_id in bad_ids)
+    bad_dupl = bad_ids & get_dupl(src_ids)
+    if bad_dupl:
+        logging.info('Duplicates %s not removed' % bad_dupl)
     ok = info['eff_ruptures'] > 0
     if ok.sum() == 0:
         raise RuntimeError('All sources were filtered away!')

@@ -123,3 +123,31 @@ class DataStoreTestCase(unittest.TestCase):
             'hcurves', sid=[0], imt=imts, lvl=range(L))
         arr = self.dstore.sel('hcurves', imt='PGA', lvl=2)
         self.assertEqual(arr.shape, (1, 1, 1))
+
+    def test_pandas(self):
+        sids = numpy.arange(3)
+        eids = [2, 2, 0]
+        vals = [.1, .2, .3]
+        self.dstore['df/sid'] = sids
+        self.dstore['df/eid'] = eids
+        self.dstore['df/val'] = vals
+        self.dstore.getitem('df').attrs['__pdcolumns__'] = 'sid eid val'
+
+        # testing slice
+        df = self.dstore.read_df('df', 'sid', slc=slice(1, 3))
+        print(df)
+
+        # testing selection
+        df = self.dstore.read_df('df', 'eid', sel={'eid': 2, 'sid': 0})
+        self.assertEqual(list(df.index), [2])
+        self.assertEqual(list(df.sid), [0])
+        self.assertEqual(list(df.val), [.1])
+
+    def test_pandas_vlen(self):
+        self.dstore['test/val'] = [.2, .3]
+        self.dstore.hdf5.save_vlen(
+            'test/val_', [numpy.array([1]), numpy.array([2, 3])])
+        self.dstore.getitem('test').attrs['__pdcolumns__'] = 'val val_'
+        df = self.dstore.read_df('test')
+        numpy.testing.assert_equal(df['val_'].loc[0], [1])
+        numpy.testing.assert_equal(df['val_'].loc[1], [2, 3])

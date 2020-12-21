@@ -25,19 +25,18 @@ from openquake.calculators import base
 F32 = numpy.float32
 
 
-def classical_risk(riskinputs, crmodel, param, monitor):
+def classical_risk(riskinputs, param, monitor):
     """
     Compute and return the average losses for each asset.
 
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param crmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
+    crmodel = monitor.read('crmodel')
     result = dict(loss_curves=[], stat_curves=[])
     weights = [w['default'] for w in param['weights']]
     statnames, stats = zip(*param['stats'])
@@ -89,7 +88,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         super().pre_execute()
-        if 'poes' not in self.datastore:  # when building short report
+        if '_poes' not in self.datastore:  # when building short report
             return
         full_lt = self.datastore['full_lt']
         self.realizations = full_lt.get_realizations()

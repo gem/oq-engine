@@ -55,6 +55,48 @@ complex_fault_mesh_spacing:
   can become up to 25 times faster, assuming the complex fault sources
   are dominating the computation time.
 
+Maximum distance
+----------------
+
+The engine gives users a lot of control on the maximum distance
+parameter. For instance, you can have a different maximum distance
+depending on the tectonic region, like in the following example::
+
+maximum_distance = {'Active Shallow Crust': 200, 'Subduction': 500}
+
+You can also have a magnitude-dependent maximum distance::
+
+  maximum_distance = [(5, 0), (6, 100), (7, 200), (8, 300)]
+
+In this case, given a site, the engine will completely discard
+ruptures with magnitude below 5, keep ruptures up to 100 km for
+magnitudes between 5 and 6, keep ruptures up to 200 km for magnitudes
+between 6 and 7, keep ruptures up to 300 km for magnitudes over 7.
+
+You can have both trt-dependent and mag-dependent maximum distance::
+
+  maximum_distance = {
+     'Active Shallow Crust': [(5, 0), (6, 100), (7, 200), (8, 300)],
+     'Subduction': [(6.5, 300), (9, 500)]}
+
+Given a rupture with tectonic region type ``trt`` and magnitude ``mag``,
+the engine will ignore all sites over the maximum distance ``md(trt, mag)``.
+The precise value is given via linear interpolation of the values listed
+in the job.ini; you can determine the distance as follows:
+
+>>> from openquake.hazardlib.calc.filters import MagDepDistance 
+>>> md = MagDepDistance.new('[(5, 0), (6, 100), (7, 200), (8, 300)]')
+>>> md('TRT', 4.5)
+0.0
+>>> md('TRT', 5.5)
+50.0
+>>> md('TRT', 6.5)
+150.0
+>>> md('TRT', 7.5)
+250.0
+>>> md('TRT', 8.5)
+300.0
+
 Intensity measure types and levels
 ----------------------------------
 
@@ -98,16 +140,16 @@ parameter: you can set it in the ``job.ini`` as a dictionary (tectonic
 region type -> distance in km) or as a scalar (in that case it is
 converted into a dictionary ``{"default": distance}`` and the same
 distance is used for all TRTs).  For sites that are more distant than
-the `pointsource_distance` from the point source, the engine ignores
-the hypocenter and nodal plane distributions and consider only the
-first rupture in the distribution, by rescaling its occurrent rate to
-also take into account the effect of the other ruptures. For closer
-points, all the ruptures are considered.  This approximation
-(we call it *rupture collapsing* because it essentially reduces the
-number of ruptures) can give a substantial speedup if the model is
-dominated by PointSources and there are several nodal
-planes/hypocenters in the distribution. In some situations it also
-makes sense to set
+the `pointsource_distance` from the point source, the engine (starting
+from release 3.11) creates an average rupture by taking weighted means
+of the parameters `strike`, `dip`, `rake` and `depth` from the nodal
+plane and hypocenter distributions and by rescaling the occurrence
+rate. For closer points, all the original ruptures are considered.
+This approximation (we call it *rupture collapsing* because it
+essentially reduces the number of ruptures) can give a substantial
+speedup if the model is dominated by PointSources and there are
+several nodal planes/hypocenters in the distribution. In some
+situations it also makes sense to set
 
 ``pointsource_distance = 0``
 
@@ -163,6 +205,11 @@ pointsource_distance, but it is recommended that you use your own distance,
 because in the next version the algorithm used with `pointsource_distance = ?`
 may change again.
 
+In engine 3.11, contrarily to all previous releases, finite side effects
+are not ignored for distance sites, they are simply averaged over. This
+gives a better precision. In some case (i.e. the Alaska model) versions
+of the engine before 3.11 could give giving a completely wrong hazard
+on some sites. This is now fixed.
 
 concurrent_tasks parameter
 ---------------------------
@@ -187,5 +234,5 @@ certain point the calculation will run out of memory. I have seen this
 to happen when generating tens of thousands of tasks. Again, it is
 best not to touch this parameter unless you know what you are doing.
 
-.. _equivalent distance approximation: equivalent_distance_approximation.rst
+.. _equivalent distance approximation: special-features.html#equivalent-epicenter-distance-approximation
 .. _rupture radius: https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/source/point.py
