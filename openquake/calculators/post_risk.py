@@ -18,6 +18,7 @@
 
 import os
 import logging
+import itertools
 import numpy
 
 from openquake.baselib import general, datastore, parallel
@@ -26,7 +27,53 @@ from openquake.risklib import scientific
 from openquake.calculators import base, views
 
 F32 = numpy.float32
+U16 = numpy.uint16
 U32 = numpy.uint32
+
+
+def reagg_idxs(num_tags, tagnames):
+    """
+    :param num_tags: dictionary tagname -> number of tags with that tagname
+    :param tagnames: subset of tagnames of interest
+    :returns: T = T1 x ... X TN indices with repetitions
+
+    Reaggregate indices. Consider for instance a case with 3 tagnames,
+    taxonomy (4 tags), region (3 tags) and country (2 tags):
+
+    >>> num_tags = dict(taxonomy=4, region=3, country=2)
+
+    There are T = T1 x T2 x T3 = 4 x 3 x 2 = 24 combinations.
+    The function will return 24 reaggregated indices with repetions depending
+    on the selected subset of tagnames.
+
+    For instance reaggregating by taxonomy and region would give:
+
+    >>> list(reagg_idxs(num_tags, ['taxonomy', 'region']))  # 4x3
+    [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11]
+
+    Reaggregating by taxonomy and country would give:
+
+    >>> list(reagg_idxs(num_tags, ['taxonomy', 'country']))  # 4x2
+    [0, 1, 0, 1, 0, 1, 2, 3, 2, 3, 2, 3, 4, 5, 4, 5, 4, 5, 6, 7, 6, 7, 6, 7]
+
+    Reaggregating by region and country would give:
+
+    >>> list(reagg_idxs(num_tags, ['region', 'country']))  # 3x2
+    [0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5]
+
+    Here is an example of single tag aggregation:
+
+    >>> list(reagg_idxs(num_tags, ['taxonomy']))  # 4
+    [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+    """
+    shape = list(num_tags.values())
+    T = numpy.prod(shape)
+    arr = numpy.arange(T).reshape(shape)
+    ranges = [numpy.arange(n) if t in tagnames else [slice(None)]
+              for t, n in num_tags.items()]
+    for i, idx in enumerate(itertools.product(*ranges)):
+        arr[idx] = i
+    return arr.flatten()
 
 
 def get_loss_builder(dstore, return_periods=None, loss_dt=None):
@@ -84,13 +131,17 @@ class PostRiskCalculator(base.RiskCalculator):
     """
     def pre_execute(self):
         oq = self.oqparam
+        self.reaggreate = False
         if oq.hazard_calculation_id and not self.datastore.parent:
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)
             assetcol = self.datastore['assetcol']
             self.aggkey = base.save_agg_values(
                 self.datastore, assetcol, oq.loss_names, oq.aggregate_by)
             aggby = self.datastore.parent['oqparam'].aggregate_by
-            assert oq.aggregate_by == aggby  # temporary check
+            self.reaggreate = oq.aggregate_by != aggby
+            if self.reaggreate:
+                self.num_tags = dict(
+                    zip(aggby, assetcol.tagcol.agg_shape(aggby)))
         else:
             assetcol = self.datastore['assetcol']
             self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
@@ -119,7 +170,13 @@ class PostRiskCalculator(base.RiskCalculator):
         P = len(builder.return_periods)
         # do everything in process since it is really fast
         rlz_id = self.datastore['events']['rlz_id']
-        alt_df = self.datastore.read_df('agg_loss_table', 'agg_id')
+        alt_df = self.datastore.read_df('agg_loss_table')
+        if self.reaggreate:
+            idxs = numpy.concatenate([
+                reagg_idxs(self.num_tags, oq.aggregate_by),
+                numpy.array([K], int)])
+            alt_df['agg_id'] = idxs[alt_df['agg_id'].to_numpy()]
+            alt_df = alt_df.groupby(['event_id', 'agg_id']).sum().reset_index()
         alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         with self.monitor('agg_losses and agg_curves', measuremem=True):
@@ -135,7 +192,7 @@ class PostRiskCalculator(base.RiskCalculator):
             agg_curves = numpy.zeros((K, self.R, self.L, P), F32)
             tot_losses = numpy.zeros((self.L, self.R), F32)
             tot_curves = numpy.zeros((self.L, self.R, P), F32)
-            gb = alt_df.groupby([alt_df.index, alt_df.rlz_id])
+            gb = alt_df.groupby([alt_df.agg_id, alt_df.rlz_id])
             # NB: in the future we may use multiprocessing.shared_memory
             for (k, r), df in gb:
                 arr = numpy.zeros((self.L, len(df)), F32)

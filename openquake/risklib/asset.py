@@ -329,10 +329,12 @@ class TagCollection(object):
         for tagvalue in getattr(self, tagname):
             yield '%s=%s' % (tagname, decode(tagvalue))
 
-    def agg_shape(self, shp, aggregate_by):
+    def agg_shape(self, aggregate_by=None, *shp):
         """
         :returns: a shape shp + (T, ...) depending on the tagnames
         """
+        if aggregate_by is None:
+            aggregate_by = self.tagnames
         return shp + tuple(
             len(getattr(self, tagname)) - 1 for tagname in aggregate_by)
 
