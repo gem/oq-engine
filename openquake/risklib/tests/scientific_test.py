@@ -72,6 +72,11 @@ class BetaDistributionTestCase(unittest.TestCase):
         self.assertIn('zero coefficient of variation in [0.  0.2 0.3]',
                       str(ctx.exception))
 
+    def test_all_zero_covs(self):
+        # this is correct, must use the DegenerateDistribution
+        scientific.VulnerabilityFunction(
+            'v1', 'PGA', [.1, .2, .3], [.3, .1, .2], [0, 0, 0], 'BT')
+
 
 epsilons = scientific.make_epsilons(
     numpy.zeros((1, 3)), seed=3, correlation=0)[0]
