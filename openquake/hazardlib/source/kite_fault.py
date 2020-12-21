@@ -120,7 +120,7 @@ class KiteFaultSource(ParametricSeismicSource):
         self._rupture_rates = rates
         self._rupture_count = count
 
-        return sum([count[k] for k in count])
+        return sum(count[k] for k in count)
 
     def iter_ruptures(self, **kwargs):
         """
