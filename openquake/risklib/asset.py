@@ -480,19 +480,6 @@ class AssetCollection(object):
                 aval[array['ordinal'], lti] = array['value-' + lt]
         return aval
 
-    def agg_value(self, loss_types, *tagnames):
-        """
-        :param loss_types:
-            the relevant loss_types
-        :param tagnames:
-            tagnames of lengths T1, T2, ... respectively
-        :returns:
-            the values of the exposure aggregated by tagnames as an array
-            of shape (T1, T2, ..., L)
-        """
-        aval = self.arr_value(loss_types)
-        return self.aggregate_by(list(tagnames), aval)
-
     def get_agg_values(self, loss_names, tagnames):
         """
         :param loss_names:
