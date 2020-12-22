@@ -202,8 +202,9 @@ def export_losses_by_event(ekey, dstore):
         md.update(dict(investigation_time=oq.investigation_time,
                        risk_investigation_time=oq.risk_investigation_time))
     events = dstore['events'][()]
+    K = dstore.get_attr('agg_loss_table', 'K', 0)
     try:
-        df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=0))
+        df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
     except KeyError:  # scenario_damage + consequences
         df = dstore.read_df('losses_by_event')
         ren = {'loss_%d' % l: ln for l, ln in enumerate(oq.loss_names)}
