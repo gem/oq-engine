@@ -1,4 +1,4 @@
-name: macos_pyapp
+name: macos pyapp
 'on':
   push:
     branches:
@@ -8,73 +8,38 @@ name: macos_pyapp
 
 jobs:
 
-  python_devel_catalina:
-    name: Catalina Install develop mode on Python 3.7 
-    runs-on: macos-latest
+  Matrix-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        #os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-10.15, macos-11.0]
+        python-version: [3.7, 3.8]
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
-      - name: Set up Python 3.7
+        with:
+          ref: macos
+      - name: Set up Python3 
         uses: actions/setup-python@v2
         with:
-          python-version: 3.7
-      - name: check python3 version
-        run: python3 --version
+          python-version:  ${{ matrix.python-version }}
       - name: Install pytest to use with oqengine
         run: pip3 install pytest
-      - name: Install requirements files
-        run: pip3 install -r ./requirements-py37-macos.txt 
-      - name: Run Installation of oq-engine in devel mode with osgeo
-        run: pip3 install -e .[osgeo]
-      - name: Run dev tests
+      - name: Run Installation of oq-engine in devel mode 
+        run: |
+            PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
+            echo $PY_VER
+            pip3 install -r requirements-$PY_VER-macos.txt
+            pip3 install -e .\[osgeo\]
+            pip3 list
+      - name: Run tests
         run: |
             oq dbserver start &
-            pytest -vsx openquake/commands/tests/commands_test.py -k nrml
-            pytest -vs openquake/baselib openquake/hazardlib openquake/hmtk
-            pytest -vs openquake/engine
-            pytest -vs openquake/server
-            pytest -vs openquake/calculators
-            pytest -vs openquake/risklib
-            pytest -vs openquake/commonlib
-            pytest -vs openquake/commands 
+            echo " pytest openquake"
+            pytest openquake
       - name: Run demos
         run: |
             oq reset -y
             oq dbserver start &
             ./bin/run-demos.sh demos
-
-  python3-8_devel_bigsur:
-    name: BigSur Install develop mode on Python 3.8 
-    runs-on: macos-11.0
-    steps:
-      - name: Check out the codebase.
-        uses: actions/checkout@v2
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-      - name: check python3 version
-        run: python3 --version
-      - name: Install pytest to use with oqengine
-        run: pip3 install pytest
-      - name: Install requirements files
-        run: pip3 install -r ./requirements-py38-macos.txt 
-      - name: Run Installation of oq-engine in devel mode with osgeo
-        run: pip3 install -e .[osgeo]
-      - name: Run dev tests
-        run: |
-            oq dbserver start &
-            pytest -vsx openquake/commands/tests/commands_test.py -k nrml
-            pytest -vs openquake/baselib openquake/hazardlib openquake/hmtk
-            pytest -vs openquake/engine
-            pytest -vs openquake/server
-            pytest -vs openquake/calculators
-            pytest -vs openquake/risklib
-            pytest -vs openquake/commonlib
-            pytest -vs openquake/commands 
-      - name: Run demos
-        run: |
-            oq reset -y
-            oq dbserver start &
-            ./bin/run-demos.sh demos
-
