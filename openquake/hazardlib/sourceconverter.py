@@ -888,6 +888,62 @@ class SourceConverter(RuptureConverter):
                 slip_list=slip_list)
         return simple
 
+    def convert_kiteFaultSource(self, node):
+        """
+        Convert the given node into a kite fault object.
+
+        :param node: a node with tag kiteFaultSource
+        :returns: a :class:`openquake.hazardlib.source.KiteFaultSource`
+                  instance
+        """
+        as_kite = True
+        try:
+            geom = node.simpleFaultGeometry
+            fault_trace = self.geo_line(geom)
+            as_kite = False
+        except:
+            geom = node.kiteFaultGeometry
+            profiles = self.geo_lines(geom)
+
+        msr = valid.SCALEREL[~node.magScaleRel]()
+        mfd = self.convert_mfdist(node)
+
+        with context(self.fname, node):
+            if as_kite:
+                outsrc = source.KiteFaultSource(
+                    source_id=node['id'],
+                    name=node['name'],
+                    tectonic_region_type=node.attrib.get('tectonicRegion'),
+                    mfd=mfd,
+                    rupture_mesh_spacing=self.rupture_mesh_spacing,
+                    magnitude_scaling_relationship=msr,
+                    rupture_aspect_ratio=~node.ruptAspectRatio,
+                    temporal_occurrence_model=self.get_tom(node),
+                    profiles=profiles,
+                    floating_x_step=1,
+                    floating_y_step=1,
+                    rake=~node.rake,
+                    profiles_sampling=None
+                    )
+            else:
+                outsrc = source.KiteFaultSource.as_simple_fault(
+                    source_id=node['id'],
+                    name=node['name'],
+                    tectonic_region_type=node.attrib.get('tectonicRegion'),
+                    mfd=mfd,
+                    rupture_mesh_spacing=self.rupture_mesh_spacing,
+                    magnitude_scaling_relationship=msr,
+                    rupture_aspect_ratio=~node.ruptAspectRatio,
+                    upper_seismogenic_depth=~geom.upperSeismoDepth,
+                    lower_seismogenic_depth=~geom.lowerSeismoDepth,
+                    fault_trace=fault_trace,
+                    dip=~geom.dip,
+                    rake=~node.rake,
+                    temporal_occurrence_model=self.get_tom(node),
+                    floating_x_step=1,
+                    floating_y_step=1)
+        return outsrc
+
     def convert_complexFaultSource(self, node):
         """
         Convert the given node into a complex fault object.

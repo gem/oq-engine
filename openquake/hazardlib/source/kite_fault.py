@@ -17,10 +17,14 @@
 Module :mod:`openquake.hazardlib.source.kite_fault` defines
 :class:`KiteFaultSource`.
 """
-
+import copy
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Optional
+from openquake.hazardlib import mfd
+from openquake.hazardlib.geo import Point, Line, Polygon
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.surface.kite_fault import (
+        get_profiles_from_simple_fault_data)
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture \
@@ -32,6 +36,7 @@ class KiteFaultSource(ParametricSeismicSource):
     Kite fault source
     """
 
+    code = b'K'
     MODIFICATIONS = {}
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
@@ -56,6 +61,29 @@ class KiteFaultSource(ParametricSeismicSource):
 
         min_mag, max_mag = self.mfd.get_min_max_mag()
 
+    @classmethod
+    def as_simple_fault(cls, source_id, name, tectonic_region_type,
+                        mfd, rupture_mesh_spacing,
+                        magnitude_scaling_relationship, rupture_aspect_ratio,
+                        temporal_occurrence_model,
+                        # simple fault specific parameters
+                        upper_seismogenic_depth, lower_seismogenic_depth,
+                        fault_trace, dip, rake, floating_x_step,
+                        floating_y_step):
+
+        # Get profiles
+        profiles = get_profiles_from_simple_fault_data(fault_trace, 
+                upper_seismogenic_depth, lower_seismogenic_depth, dip, 
+                rupture_mesh_spacing)
+
+        # Creating Kite Source
+        self = cls(source_id, name, tectonic_region_type, mfd,
+                   rupture_mesh_spacing, magnitude_scaling_relationship,
+                   rupture_aspect_ratio, temporal_occurrence_model,
+                   profiles, floating_x_step,
+                   floating_y_step, rake)
+        return self
+
     @property
     def surface(self) -> KiteSurface:
         """
@@ -74,9 +102,31 @@ class KiteFaultSource(ParametricSeismicSource):
         :returns:
             The number of ruptures that this source generates
         """
-        return sum(1 for r in self.iter_ruptures())
 
-    def iter_ruptures(self):
+        # Counting ruptures and rates
+        rates = {}
+        count = {}
+        for rup in self.iter_ruptures():
+            mag = rup.mag
+            mag_lab = '{:.2f}'.format(mag)
+            if mag_lab in rates:
+                count[mag_lab] += 1
+                rates[mag_lab] += rup.occurrence_rate
+            else:
+                count[mag_lab] = 1
+                rates[mag_lab] = rup.occurrence_rate
+
+        # Saving
+        self._rupture_rates = rates
+        self._rupture_count = count
+
+        return sum(count[k] for k in count)
+
+    def iter_ruptures(self, **kwargs):
+        """
+        See :meth:
+        `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
+        """
 
         # Set magnitude scaling relationship, temporal occurrence model and
         # mesh of the fault surface
@@ -110,6 +160,7 @@ class KiteFaultSource(ParametricSeismicSource):
             # Rupture generator
             for rup in ruptures:
                 hypocenter = rup[0].get_center()
+                # Yield an instance of a ParametricProbabilisticRupture
                 yield ppr(mag, self.rake, self.tectonic_region_type,
                           hypocenter, rup[0], occurrence_rate, tom)
 
@@ -168,6 +219,39 @@ class KiteFaultSource(ParametricSeismicSource):
         Returns the area of the fault surface
         """
         pass
+
+    def __iter__(self):
+        """
+        This method splits the ruptures by magnitude and yields as many sources
+        as the number of magnitude bins admitted by the original source.
+        """
+        if not hasattr(self, '_rupture_rates'):
+            self.count_ruptures()
+        if len(self._rupture_rates) == 1:  # not splittable
+            yield self
+            return
+        for mag_lab in self._rupture_count:
+            if self._rupture_rates[mag_lab] == 0:
+                continue
+            src = copy.copy(self)
+            mag = float(mag_lab)
+            src.mfd = mfd.ArbitraryMFD([mag], [self._rupture_rates[mag_lab]])
+            src.num_ruptures = self._rupture_count[mag_lab]
+            yield src
+
+    @property
+    def polygon(self):
+        """
+        The underlying polygon
+        `"""
+        lons, lats = self.surface.surface_projection
+        return Polygon([Point(lo, la) for lo, la in zip(lons, lats)])
+
+    def wkt(self):
+        """
+        :returns: the geometry as a WKT string
+        """
+        return self.polygon.wkt
 
 
 def get_discrete_dimensions(area: float, sampling: float, aspr: float,

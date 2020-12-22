@@ -60,3 +60,5 @@
 | case_57 | Test for sampling AvgPoeGMPE |
 | case_58 | Test for the truncatedGRFromSlipAbsolute epistemic uncertainty |
 | case_59 | Test for NRCan15SiteTerm |
+| case_60 | |
+| case_61 | Test the Kite Fault with info for Simple Fault |
