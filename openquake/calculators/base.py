@@ -1158,12 +1158,20 @@ def save_agg_values(dstore, assetcol, lossnames, tagnames):
     Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
+    lst = []
     if tagnames:
         aggkey = assetcol.tagcol.get_aggkey(tagnames)
         logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in tagnames] + [
             (name, hdf5.vstr) for name in tagnames]
-        kvs = [key + val for key, val in aggkey.items()]
+        kvs = []
+        for key, val in aggkey.items():
+            kvs.append(key + val)
+            lst.append(' '.join(val))
         dstore['agg_keys'] = numpy.array(kvs, dt)
+    lst.append('*total*')
+    loss_names = dstore['oqparam'].loss_names
     dstore['agg_values'] = assetcol.get_agg_values(lossnames, tagnames)
+    dstore.set_attrs('agg_values', shape_descr=['aggregation', 'loss_type'],
+                     aggregation=lst, loss_type=loss_names)
     return aggkey if tagnames else {}
