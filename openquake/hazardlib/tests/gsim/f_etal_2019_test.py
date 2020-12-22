@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.Farajpour_etal_2019 import (FarajpourEtAl2019)
+from openquake.hazardlib.gsim.farajpour_etal_2019 import (FarajpourEtAl2019)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
