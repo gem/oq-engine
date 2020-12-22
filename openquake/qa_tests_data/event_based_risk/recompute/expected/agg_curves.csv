@@ -1,4 +1,4 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.11.0-git128db2cf38', start_date='2020-12-18T15:43:06', checksum=147663202, kind='agg_curves-rlzs', risk_investigation_time=1.0"
+#,,,,,,,,"generated_by='OpenQuake engine 3.11.0-git2da734e6d1', start_date='2020-12-22T05:51:55', checksum=147663202, kind='agg_curves-rlzs', risk_investigation_time=1.0"
 return_period,rlz,loss_type,NAME_1,NAME_2,taxonomy,loss_value,loss_ratio,annual_frequency_of_exceedence
 200,0,structural,West,Dhaualagiri,Wood,4.03349E+04,5.23069E-03,5.00000E-03
 500,0,structural,West,Dhaualagiri,Wood,1.74524E+05,2.26325E-02,2.00000E-03
@@ -171,3 +171,7 @@ return_period,rlz,loss_type,NAME_1,NAME_2,taxonomy,loss_value,loss_ratio,annual_
 200,0,structural,Central,Narayani,Unreinforced-Brick-Masonry,4.34826E+05,5.71453E-02,5.00000E-03
 500,0,structural,Central,Narayani,Unreinforced-Brick-Masonry,1.56203E+06,2.05283E-01,2.00000E-03
 1000,0,structural,Central,Narayani,Unreinforced-Brick-Masonry,1.56513E+06,2.05690E-01,1.00000E-03
+100,0,structural,*total*,*total*,*total*,4.52242E+07,2.84938E-02,1.00000E-02
+200,0,structural,*total*,*total*,*total*,9.18280E+07,5.78569E-02,5.00000E-03
+500,0,structural,*total*,*total*,*total*,2.57104E+08,1.61990E-01,2.00000E-03
+1000,0,structural,*total*,*total*,*total*,3.33213E+08,2.09943E-01,1.00000E-03

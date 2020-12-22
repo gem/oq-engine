@@ -189,8 +189,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 (K + 1) * self.R / (oq.concurrent_tasks // 2 or 1)))
             kr_losses = []
             agg_losses = numpy.zeros((K + 1, self.R, self.L), F32)
-            agg_curves = numpy.zeros((K, self.R, self.L, P), F32)
-            tot_curves = numpy.zeros((self.L, self.R, P), F32)
+            agg_curves = numpy.zeros((K + 1, self.R, self.L, P), F32)
             gb = alt_df.groupby([alt_df.agg_id, alt_df.rlz_id])
             # NB: in the future we may use multiprocessing.shared_memory
             for (k, r), df in gb:
@@ -208,22 +207,14 @@ class PostRiskCalculator(base.RiskCalculator):
             if kr_losses:
                 smap.submit((builder, kr_losses))
             for (k, r), curve in smap.reduce().items():
-                if k == K:  # tot
-                    tot_curves[:, r] = curve
-                else:  # agg
-                    agg_curves[k, r] = curve
+                agg_curves[k, r] = curve
             self.datastore['agg_losses-rlzs'] = agg_losses * oq.ses_ratio
             set_rlzs_stats(self.datastore, 'agg_losses',
                            agg_id=K, loss_types=oq.loss_names, units=units)
-            if K:
-                self.datastore['agg_curves-rlzs'] = agg_curves
-                set_rlzs_stats(self.datastore, 'agg_curves',
-                               agg_id=K, lti=self.L,
-                               return_periods=builder.return_periods,
-                               units=units)
-            self.datastore['tot_curves-rlzs'] = tot_curves
-            set_rlzs_stats(self.datastore, 'tot_curves',
-                           lti=self.L, return_periods=builder.return_periods,
+            self.datastore['agg_curves-rlzs'] = agg_curves
+            set_rlzs_stats(self.datastore, 'agg_curves',
+                           agg_id=K + 1, lti=self.L,
+                           return_periods=builder.return_periods,
                            units=units)
         return 1
 

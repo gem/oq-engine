@@ -277,8 +277,6 @@ DISPLAY_NAME = {
     'agg_losses-stats': 'Aggregate Losses Statistics',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
-    'tot_curves-rlzs': 'Total Loss Curves',
-    'tot_curves-stats': 'Total Loss Curves Statistics',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'ruptures': 'Earthquake Ruptures',
