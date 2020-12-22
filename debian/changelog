@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Perform the disaggregation checks before starting the classical part
   * The ebrisk outputs "Total Losses" and "Total Loss Curves" are now included
     in the outputs "Aggregate Losses" and "Aggregate Curves"
   * Introduced an `agg_loss_table` dataset and optimized the generation of

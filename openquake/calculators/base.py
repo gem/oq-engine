@@ -169,6 +169,11 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         # info about Calculator.run since the file will be closed later on
         self.oqparam = oqparam
 
+    def pre_checks(self):
+        """
+        Checks to run after the pre_execute but before the execute
+        """
+
     def monitor(self, operation='', **kw):
         """
         :returns: a new Monitor instance
@@ -475,6 +480,7 @@ class HazardCalculator(BaseCalculator):
                         mags_by_trt[trt])
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
+        self.pre_checks()
 
         if (not oq.hazard_calculation_id
                 and oq.calculation_mode != 'preclassical'
@@ -574,6 +580,7 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.from_engine = self.from_engine
+            calc.pre_checks = lambda: self.__class__.pre_checks(calc)
             calc.run(remove=False)
             for name in ('csm param sitecol assetcol crmodel realizations '
                          'policy_name policy_dict full_lt').split():

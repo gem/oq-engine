@@ -194,7 +194,11 @@ class DisaggregationCalculator(base.HazardCalculator):
     precalc = 'classical'
     accept_precalc = ['classical', 'disaggregation']
 
-    def init(self):
+    def pre_checks(self):
+        """
+        Checks on the number of sites, atomic groups and size of the
+        disaggregation matrix.
+        """
         if self.N >= 32768:
             raise ValueError('You can disaggregate at max 32,768 sites')
         few = self.oqparam.max_sites_disagg
@@ -202,7 +206,27 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise ValueError(
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
-        super().init()
+        if hasattr(self, 'csm'):
+            for sg in self.csm.src_groups:
+                if sg.atomic:
+                    raise NotImplementedError(
+                        'Atomic groups are not supported yet')
+        elif self.datastore['source_info'].attrs['atomic']:
+            raise NotImplementedError(
+                'Atomic groups are not supported yet')
+        all_edges, shapedic = disagg.get_edges_shapedic(
+            self.oqparam, self.sitecol, self.datastore['source_mags'])
+        *b, trts = all_edges
+        T = len(trts)
+        shape = [len(bin) - 1 for bin in
+                 (b[0], b[1], b[2][0], b[3][0], b[4])] + [T]
+        matrix_size = numpy.prod(shape)  # 6D
+        if matrix_size > 1E6:
+            raise ValueError(
+                'The disaggregation matrix is too large '
+                '(%d elements): fix the binning!' % matrix_size)
+        tot = get_outputs_size(shapedic, self.oqparam.disagg_outputs)
+        logging.info('Total output size: %s', humansize(sum(tot.values())))
 
     def execute(self):
         """Performs the disaggregation"""
@@ -230,19 +254,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         Run the disaggregation phase.
         """
         oq = self.oqparam
-        mags_by_trt = self.datastore['source_mags']
-        all_edges, self.shapedic = disagg.get_edges_shapedic(
-            oq, self.sitecol, mags_by_trt)
-        *self.bin_edges, self.trts = all_edges
-        if hasattr(self, 'csm'):
-            for sg in self.csm.src_groups:
-                if sg.atomic:
-                    raise NotImplementedError(
-                        'Atomic groups are not supported yet')
-        elif self.datastore['source_info'].attrs['atomic']:
-            raise NotImplementedError(
-                'Atomic groups are not supported yet')
-
+        edges, self.shapedic = disagg.get_edges_shapedic(
+            oq, self.sitecol, self.datastore['source_mags'])
+        self.save_bin_edges(edges)
         self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
@@ -291,10 +305,6 @@ class DisaggregationCalculator(base.HazardCalculator):
             raise SystemExit('Cannot do any disaggregation: zero hazard')
         self.datastore['hmap4'] = self.hmap4
         self.datastore['poe4'] = numpy.zeros_like(self.hmap4.array)
-
-        self.save_bin_edges()
-        tot = get_outputs_size(self.shapedic, oq.disagg_outputs)
-        logging.info('Total output size: %s', humansize(sum(tot.values())))
         return self.compute()
 
     def compute(self):
@@ -389,34 +399,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                     acc[s, m, k][trti, magi] = agg_probs(x, out[k])
         return acc
 
-    def save_bin_edges(self):
-        """
-        Save disagg-bins
-        """
-        b = self.bin_edges
-        T = len(self.trts)
-        shape = [len(bin) - 1 for bin in
-                 (b[0], b[1], b[2][0], b[3][0], b[4])] + [T]
-        matrix_size = numpy.prod(shape)  # 6D
-        if matrix_size > 1E6:
-            raise ValueError(
-                'The disaggregation matrix is too large '
-                '(%d elements): fix the binning!' % matrix_size)
-
-        def a(bin_no):
-            # lon/lat edges for the sites, bin_no can be 2 or 3
-            num_edges = len(b[bin_no][0])
-            arr = numpy.zeros((self.N, num_edges))
-            for sid, edges in b[bin_no].items():
-                arr[sid] = edges
-            return arr
-        self.datastore['disagg-bins/Mag'] = b[0]
-        self.datastore['disagg-bins/Dist'] = b[1]
-        self.datastore['disagg-bins/Lon'] = a(2)
-        self.datastore['disagg-bins/Lat'] = a(3)
-        self.datastore['disagg-bins/Eps'] = b[4]
-        self.datastore['disagg-bins/TRT'] = encode(self.trts)
-
     def post_execute(self, results):
         """
         Save all the results of the disaggregation. NB: the number of results
@@ -438,6 +420,27 @@ class DisaggregationCalculator(base.HazardCalculator):
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         with self.monitor('saving disagg results'):
             self.save_disagg_results(results)
+
+    def save_bin_edges(self, all_edges):
+        """
+        Save disagg-bins
+        """
+        *self.bin_edges, self.trts = all_edges
+        b = self.bin_edges
+
+        def a(bin_no):
+            # lon/lat edges for the sites, bin_no can be 2 or 3
+            num_edges = len(b[bin_no][0])
+            arr = numpy.zeros((self.N, num_edges))
+            for sid, edges in b[bin_no].items():
+                arr[sid] = edges
+            return arr
+        self.datastore['disagg-bins/Mag'] = b[0]
+        self.datastore['disagg-bins/Dist'] = b[1]
+        self.datastore['disagg-bins/Lon'] = a(2)
+        self.datastore['disagg-bins/Lat'] = a(3)
+        self.datastore['disagg-bins/Eps'] = b[4]
+        self.datastore['disagg-bins/TRT'] = encode(self.trts)
 
     def save_disagg_results(self, results):
         """
