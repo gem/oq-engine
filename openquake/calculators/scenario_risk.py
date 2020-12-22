@@ -134,7 +134,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                 agglosses[r]['stddev'] = std
 
             # avg losses
-            losses_by_asset = numpy.zeros((A, R, L), F64)
+            # must be 32 bit otherwise export losses_by_asset will break
+            # the QGIS test for ScenarioRisk
+            losses_by_asset = numpy.zeros((A, R, L), F32)
             for (l, r, aid, avg) in result['avg']:
                 losses_by_asset[aid, r, l] = avg
 

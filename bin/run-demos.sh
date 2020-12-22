@@ -51,13 +51,10 @@ oq run $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/pre-job.ini $1/
 oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv
 MPLBACKEND=Agg oq plot rupture_info?min_mag=6
 echo "Displaying the exposed values in the ebrisk demo"
-oq show exposed_values/agg_NAME_1_taxonomy
-oq show exposed_values/agg_NAME_1
-oq show exposed_values/agg_taxonomy
-oq show exposed_values/agg
+oq show agg_values
 
 # recompute losses
-oq recompute_losses -1 NAME_1
+oq reaggregate -1 NAME_1
 oq engine --list-outputs -1
 
 # display the calculations
