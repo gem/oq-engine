@@ -417,7 +417,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv',
                             minimum_asset_loss='100')
         [fname] = out['agg_curves-rlzs', 'csv']
-        self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=5E-5)
 
         curves = self.calc.datastore.read_df('agg_curves-rlzs')
         self.assertEqual(len(curves), 18)  # (2 tags + 1 total) x 6 periods
@@ -427,7 +427,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             case_6c.__file__, 'job_eb.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = out['agg_curves-rlzs', 'csv']
-        self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=5E-5)
 
     def test_recompute(self):
         # test recomputing aggregate loss curves with post_risk
