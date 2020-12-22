@@ -131,6 +131,8 @@ class PostRiskCalculator(base.RiskCalculator):
     """
     def pre_execute(self):
         oq = self.oqparam
+        size = general.humansize(self.datastore.getsize('agg_loss_table'))
+        logging.info('Stored %s in the agg_loss_table', size)
         self.reaggreate = False
         if oq.hazard_calculation_id and not self.datastore.parent:
             self.datastore.parent = datastore.read(oq.hazard_calculation_id)

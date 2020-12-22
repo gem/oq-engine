@@ -1457,14 +1457,13 @@ class AggLossTable(AccumDict):
     """
     A dictionary of matrices of shape (K, L'), with K the number of aggregation
     keys and L' the total number of loss types (primary + secondary).
-
     :param aggkey: a dictionary tuple -> integer
     :param loss_types: a list of primary loss types
     :param sec_losses: a list of SecondaryLosses (can be empty)
     """
-    alt = None  # set by the ebrisk calculator
-
-    def __init__(self, aggkey, loss_types, sec_losses=()):
+    @classmethod
+    def new(cls, aggkey, loss_types, sec_losses=()):
+        self = cls()
         self.aggkey = {key: k for k, key in enumerate(aggkey)}
         self.aggkey[()] = len(aggkey)
         self.loss_names = list(loss_types)
@@ -1473,6 +1472,7 @@ class AggLossTable(AccumDict):
             self.loss_names.extend(sec_loss.outputs)
         KL = len(self.aggkey), len(self.loss_names)
         self.accum = numpy.zeros(KL, F32)
+        return self
 
     def aggregate(self, out, minimum_loss, aggby):
         """
