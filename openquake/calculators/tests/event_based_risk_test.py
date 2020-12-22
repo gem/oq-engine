@@ -145,11 +145,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg_curves4.csv', tmp)
 
     def test_insured_losses(self):
-        # TODO: fix extract agg_curves for insured types
-
         # extract agg_curves with tags
-        self.run_calc(case_1.__file__, 'job_eb.ini',
-                      aggregate_by='policy,taxonomy')
+        self.run_calc(case_1.__file__, 'job_eb.ini')
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
