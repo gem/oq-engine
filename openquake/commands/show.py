@@ -46,6 +46,8 @@ def print_(aw):
         print(sio.getvalue())
     elif hasattr(aw, 'array'):
         print(aw.array)
+    else:
+        print(aw)
 
 
 @sap.script
