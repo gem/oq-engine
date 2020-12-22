@@ -104,7 +104,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
     def test_case_1_eb(self):
-        # this is a case with no insured losses, no tags
+        # this is a case with insured losses and tags
         self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4')
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
@@ -123,31 +123,28 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
 
-        # extract agg_curves, no tags
-        aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
+        # extract tot_curves
+        aw = extract(self.calc.datastore, 'tot_curves?kind=stats&'
                      'loss_type=structural&absolute=1')
         tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves1.csv', tmp)
 
-        aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
+        aw = extract(self.calc.datastore, 'tot_curves?kind=rlzs&'
                      'loss_type=structural&absolute=1')
         tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves2.csv', tmp)
 
-        aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
+        aw = extract(self.calc.datastore, 'tot_curves?kind=stats&'
                      'loss_type=structural&absolute=0')
         tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves3.csv', tmp)
 
-        aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
+        aw = extract(self.calc.datastore, 'tot_curves?kind=rlzs&'
                      'loss_type=structural&absolute=0')
         tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves4.csv', tmp)
 
-    def test_insured_losses(self):
         # extract agg_curves with tags
-        self.run_calc(case_1.__file__, 'job_eb.ini')
-
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
         tmp = gettemp(rst_table(aw.to_dframe()))

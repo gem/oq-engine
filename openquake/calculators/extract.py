@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
-from functools import lru_cache, partial
+from functools import lru_cache
 import collections
 import logging
 import json
@@ -657,6 +657,43 @@ def get_loss_type_tags(what):
 def _get_curves(curves, li):
     shp = curves.shape + curves.dtype.shape
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
+
+
+@extract.add('tot_curves')
+def extract_tot_curves(dstore, what):
+    """
+    Aggregate loss curves from the ebrisk calculator:
+
+    /extract/tot_curves?
+    kind=stats&absolute=1&loss_type=occupants
+
+    Returns an array of shape (P, S) or (P, R)
+    """
+    info = get_info(dstore)
+    qdic = parse(what, info)
+    k = qdic['k']  # rlz or stat index
+    [l] = qdic['loss_type']  # loss type index
+    if qdic['rlzs']:
+        kinds = ['rlz-%d' % r for r in k]
+        name = 'agg_curves-rlzs'
+    else:
+        kinds = list(info['stats'])
+        name = 'agg_curves-stats'
+    units = dstore.get_attr(name, 'units')
+    rps = dstore.get_attr(name, 'return_periods')
+    K = dstore.get_attr(name, 'K', 0)
+    arr = dstore[name][K, k, l].T  # shape P, R
+    if qdic['absolute'] == [1]:
+        pass
+    elif qdic['absolute'] == [0]:  # relative
+        arr /= dstore['agg_values'][K, l]
+    else:
+        raise ValueError('"absolute" must be 0 or 1 in %s' % what)
+    attrs = dict(shape_descr=['return_period', 'kind'])
+    attrs['return_period'] = list(rps)
+    attrs['kind'] = kinds
+    attrs['units'] = list(units)  # used by the QGIS plugin
+    return ArrayWrapper(arr, dict(json=dumps(attrs)))
 
 
 @extract.add('agg_curves')
