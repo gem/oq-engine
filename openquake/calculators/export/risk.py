@@ -55,21 +55,22 @@ def tag2idx(tags):
 
 
 # this is used by event_based_risk and ebrisk
-@export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'),
-            ('tot_curves-rlzs', 'csv'), ('tot_curves-stats', 'csv'))
+@export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     lnames = numpy.array(oq.loss_names)
-    if ekey[0].startswith('agg_'):
-        tags = dstore['agg_keys'][:][oq.aggregate_by]
-    else:  # tot_curves
-        tags = []
+    if oq.aggregate_by:
+        agg_keys = dstore['agg_keys'][:]
+    agg_tags = {}
+    for tagname in oq.aggregate_by:
+        agg_tags[tagname] = numpy.concatenate([agg_keys[tagname], ['*total*']])
     aggvalue = dstore['agg_values'][()]  # shape (T, L)
     md = dstore.metadata
     md.update(dict(
         kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
     fname = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    K1, R, L, P = dstore[ekey[0]].shape
     aw = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value')
     df = aw.to_dframe()
     dic = dict(return_period=df.return_periods)
@@ -78,13 +79,10 @@ def export_agg_curve_rlzs(ekey, dstore):
     else:
         dic['rlz'] = df.rlz
     dic['loss_type'] = lnames[df.lti]
-    if len(tags):
-        tagvalues = tags[df.agg_id]
-        for tagname in oq.aggregate_by:
-            dic[tagname] = tagvalues[tagname]
+    for tagname in oq.aggregate_by:
+        dic[tagname] = agg_tags[tagname][df.agg_id.to_numpy()]
     dic['loss_value'] = df.loss_value
-    dic['loss_ratio'] = df.loss_value / aggvalue[
-        getattr(df, 'agg_id', -1), df.lti]
+    dic['loss_ratio'] = df.loss_value / aggvalue[df.agg_id, df.lti]
     dic['annual_frequency_of_exceedence'] = 1 / df.return_periods
     writer.save(pandas.DataFrame(dic), fname, comment=md)
     return writer.getsaved()

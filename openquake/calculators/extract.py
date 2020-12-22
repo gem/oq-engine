@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
-from functools import lru_cache, partial
+from functools import lru_cache
 import collections
 import logging
 import json
@@ -659,9 +659,10 @@ def _get_curves(curves, li):
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
 
 
-def extract_curves(dstore, what, tot):
+@extract.add('tot_curves')
+def extract_tot_curves(dstore, what):
     """
-    Porfolio loss curves from the ebrisk calculator:
+    Aggregate loss curves from the ebrisk calculator:
 
     /extract/tot_curves?
     kind=stats&absolute=1&loss_type=occupants
@@ -672,33 +673,27 @@ def extract_curves(dstore, what, tot):
     qdic = parse(what, info)
     k = qdic['k']  # rlz or stat index
     [l] = qdic['loss_type']  # loss type index
-    # tot_curves-rlzs has shape (L, R, P)
-    tup = (l, k)
     if qdic['rlzs']:
         kinds = ['rlz-%d' % r for r in k]
-        arr = dstore[tot + 'curves-rlzs'][tup]  # shape R, P
-        units = dstore.get_attr(tot + 'curves-rlzs', 'units')
-        rps = dstore.get_attr(tot + 'curves-rlzs', 'return_periods')
+        name = 'agg_curves-rlzs'
     else:
         kinds = list(info['stats'])
-        arr = dstore[tot + 'curves-stats'][tup]  # shape S, P
-        units = dstore.get_attr(tot + 'curves-stats', 'units')
-        rps = dstore.get_attr(tot + 'curves-stats', 'return_periods')
+        name = 'agg_curves-stats'
+    units = dstore.get_attr(name, 'units')
+    rps = dstore.get_attr(name, 'return_periods')
+    K = dstore.get_attr(name, 'K', 0)
+    arr = dstore[name][K, k, l].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
-    elif qdic['absolute'] == [0]:
-        evalue = dstore['agg_values'][-1, l]
-        arr /= evalue
+    elif qdic['absolute'] == [0]:  # relative
+        arr /= dstore['agg_values'][K, l]
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
     attrs = dict(shape_descr=['return_period', 'kind'])
     attrs['return_period'] = list(rps)
     attrs['kind'] = kinds
-    attrs['units'] = units  # used by the QGIS plugin
-    return ArrayWrapper(arr.T, attrs)  # shape P, S
-
-
-extract.add('tot_curves')(partial(extract_curves, tot='tot_'))
+    attrs['units'] = list(units)  # used by the QGIS plugin
+    return ArrayWrapper(arr, dict(json=dumps(attrs)))
 
 
 @extract.add('agg_curves')
@@ -723,27 +718,26 @@ def extract_agg_curves(dstore, what):
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
     tagvalues = [tagdict[t][0] for t in tagnames]
-    idx = ()
+    idx = -1
     if tagnames:
         for i, tags in enumerate(dstore['agg_keys'][:][tagnames]):
             if list(tags) == tagvalues:
-                idx = i,
+                idx = i
                 break
-    tup = (slice(None), k, l) + idx
     if qdic['rlzs']:
         kinds = ['rlz-%d' % r for r in k]
-        arr = dstore['agg_curves-rlzs'][tup]  # shape P, R
-        units = dstore.get_attr('agg_curves-rlzs', 'units')
-        rps = dstore.get_attr('agg_curves-rlzs', 'return_periods')
+        name = 'agg_curves-rlzs'
     else:
         kinds = list(info['stats'])
-        arr = dstore['agg_curves-stats'][tup]  # shape P, S
-        units = dstore.get_attr('agg_curves-stats', 'units')
-        rps = dstore.get_attr('agg_curves-stats', 'return_periods')
+        name = 'agg_curves-stats'
+    units = dstore.get_attr(name, 'units')
+    rps = dstore.get_attr(name, 'return_periods')
+    tup = (idx, k, l)
+    arr = dstore[name][tup].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        evalue = dstore['agg_values'][i, l]  # shape T, L
+        evalue = dstore['agg_values'][idx, l]  # shape K, L
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
