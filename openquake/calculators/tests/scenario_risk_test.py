@@ -35,7 +35,7 @@ aac = numpy.testing.assert_allclose
 
 
 def tot_loss(dstore):
-    return dstore['agglosses']['mean'].sum(axis=0)
+    return dstore.sel('agg_losses-rlzs').sum(axis=(0, 1))
 
 
 class ScenarioRiskTestCase(CalculatorTestCase):
@@ -120,8 +120,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # case with two gsims
         self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
                       exports='csv')
-        [f] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_structural.csv', f)
+        [f0, f1] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agg_structural_0.csv', f0)
+        self.assertEqualFiles('expected/agg_structural_1.csv', f1)
 
         # testing the totlosses view
         dstore = self.calc.datastore
