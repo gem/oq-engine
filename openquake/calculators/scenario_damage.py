@@ -156,6 +156,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.riskinputs = self.build_riskinputs('gmf')
 
     def combine(self, acc, res):
+        """
+        Combine the results and grows dd_data
+        """
+        if res is None:
+            raise MemoryError('You ran out of memory!')
         with self.monitor('saving dd_data', measuremem=True):
             aed = res.pop('aed', ())
             if len(aed) == 0:

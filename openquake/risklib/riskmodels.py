@@ -290,40 +290,6 @@ class RiskModel(object):
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values)
 
-    def event_based_risk(self, loss_type, assets, gmvs, eids, epsilons):
-        """
-        :param str loss_type:
-            the loss type considered
-        :param assets:
-           a list of assets on the same site and with the same taxonomy
-        :param gmvs_eids:
-           a pair (gmvs, eids) with E values each
-        :param epsilons:
-           a matrix of epsilons of shape (A, E) (or an empty tuple)
-        :returns:
-            an array of loss ratios of shape (A, E)
-        """
-        E = len(gmvs)
-        A = len(assets)
-        loss_ratios = numpy.zeros((A, E), F32)
-        vf = self.risk_functions[loss_type, 'vulnerability']
-        means, covs, idxs = vf.interpolate(gmvs)
-        if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
-            pass
-        elif covs.sum() == 0 or len(epsilons) == 0:
-            # the ratios are equal for all assets
-            ratios = vf.sample(means, covs, idxs, None)  # right shape
-            for a in range(A):
-                loss_ratios[a, idxs] = ratios
-        else:
-            # take into account the epsilons
-            for a, asset in enumerate(assets):
-                loss_ratios[a, idxs] = vf.sample(
-                    means, covs, idxs, epsilons[a])
-        return loss_ratios
-
-    ebrisk = event_based_risk
-
     def classical_bcr(self, loss_type, assets, hazard, eids=None, eps=None):
         """
         :param loss_type: the loss type
@@ -363,6 +329,40 @@ class RiskModel(object):
                 asset['value-' + loss_type], asset['retrofitted'])
             for i, asset in enumerate(assets)]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
+
+    def event_based_risk(self, loss_type, assets, gmvs, eids, epsilons):
+        """
+        :param str loss_type:
+            the loss type considered
+        :param assets:
+           a list of assets on the same site and with the same taxonomy
+        :param gmvs_eids:
+           a pair (gmvs, eids) with E values each
+        :param epsilons:
+           a matrix of epsilons of shape (A, E) (or an empty tuple)
+        :returns:
+            an array of loss ratios of shape (A, E)
+        """
+        E = len(gmvs)
+        A = len(assets)
+        loss_ratios = numpy.zeros((A, E), F32)
+        vf = self.risk_functions[loss_type, 'vulnerability']
+        means, covs, idxs = vf.interpolate(gmvs)
+        if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
+            pass
+        elif covs.sum() == 0 or len(epsilons) == 0:
+            # the ratios are equal for all assets
+            ratios = vf.sample(means, covs, idxs, None)  # right shape
+            for a in range(A):
+                loss_ratios[a, idxs] = ratios
+        else:
+            # take into account the epsilons
+            for a, asset in enumerate(assets):
+                loss_ratios[a, idxs] = vf.sample(
+                    means, covs, idxs, epsilons[a])
+        return loss_ratios
+
+    ebrisk = event_based_risk
 
     def scenario_risk(self, loss_type, assets, gmvs, eids, epsilons):
         """

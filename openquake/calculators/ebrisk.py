@@ -64,6 +64,7 @@ def calc_risk(gmfs, param, monitor):
     alt_dt = param['oqparam'].alt_dt()
     tempname = param['tempname']
     aggby = param['aggregate_by']
+    mal = param['minimum_asset_loss']
     haz_by_sid = general.group_array(gmfs, 'sid')
     losses_by_A = numpy.zeros((len(assets_df), len(alt.loss_names)), F32)
     acc['avg_gmf'] = avg_gmf = {}
@@ -82,7 +83,7 @@ def calc_risk(gmfs, param, monitor):
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
-            alt.aggregate(out, param['minimum_asset_loss'], aggby)
+            alt.aggregate(out, mal, aggby, to_losses=True)
             # NB: after the aggregation out contains losses, not loss_ratios
         ws = weights[haz['rlz']]
         for col in gmfs.dtype.names:
@@ -178,7 +179,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 InsuredLosses(self.policy_name, self.policy_dict))
         if not hasattr(self, 'aggkey'):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
-        self.param['alt'] = alt = AggLossTable(
+        self.param['alt'] = alt = AggLossTable.new(
             self.aggkey, oq.loss_dt().names, sec_losses)
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
@@ -245,8 +246,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
         logging.info(
             'Produced %s of GMFs', general.humansize(gmf_bytes))
-        size = general.humansize(self.datastore.getsize('agg_loss_table'))
-        logging.info('Stored %s in the agg_loss_table', size)
         return 1
 
     def agg_dicts(self, dummy, dic):

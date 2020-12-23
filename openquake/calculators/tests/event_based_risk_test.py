@@ -449,4 +449,3 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('agg_losses-rlzs', 'csv'), prc.datastore)
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,
                               delta=1E-5)
-

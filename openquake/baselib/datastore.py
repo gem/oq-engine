@@ -412,11 +412,18 @@ class DataStore(collections.abc.MutableMapping):
         """
         Create a HDF5 datagroup readable as a pandas DataFrame
 
-        :param key: name of the dataset
-        :param nametypes: list of pairs (name, dtype) or (name, array)
-        :param compression: the kind of HDF5 compression to use
-        :param kw: attributes to add
+        :param key:
+            name of the dataset
+        :param nametypes:
+            list of pairs (name, dtype) or (name, array) or DataFrame
+        :param compression:
+            the kind of HDF5 compression to use
+        :param kw:
+            extra attributes to store
         """
+        if isinstance(nametypes, pandas.DataFrame):
+            nametypes = {name: nametypes[name].to_numpy()
+                         for name in nametypes.columns}
         names = []
         for name, value in nametypes:
             is_array = isinstance(value, numpy.ndarray)
@@ -500,15 +507,21 @@ class DataStore(collections.abc.MutableMapping):
         self.close()
         os.remove(self.filename)
 
-    def getsize(self, key=None):
+    def getsize(self, key='/'):
         """
         Return the size in byte of the output associated to the given key.
         If no key is given, returns the total size of all files.
         """
-        if key is None:
+        if key == '/':
             return os.path.getsize(self.filename)
-        return hdf5.ByteCounter.get_nbytes(
-            h5py.File.__getitem__(self.hdf5, key))
+        try:
+            dset = self.getitem(key)
+        except KeyError:
+            if self.parent != ():
+                dset = self.parent.getitem(key)
+            else:
+                raise
+        return hdf5.ByteCounter.get_nbytes(dset)
 
     def get(self, key, default):
         """
