@@ -66,8 +66,7 @@ def export_agg_curve_rlzs(ekey, dstore):
         agg_tags[tagname] = numpy.concatenate([agg_keys[tagname], ['*total*']])
     aggvalue = dstore['agg_values'][()]  # shape (K+1, L)
     md = dstore.metadata
-    md.update(dict(
-        kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
+    md['risk_investigation_time'] = oq.risk_investigation_time
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     descr = dstore.get_shape_descr(ekey[0])
     name, suffix = ekey[0].split('-')
@@ -83,6 +82,8 @@ def export_agg_curve_rlzs(ekey, dstore):
         dic['loss_ratio'] = df.loss_value / aggvalue[df.agg_id, df.lti]
         dic['annual_frequency_of_exceedence'] = 1 / df.return_periods
         dest = dstore.build_fname(name, ros, 'csv')
+        md['kind'] = f'{name}-' + (
+            ros if isinstance(ros, str) else 'rlz-%03d' % ros)
         writer.save(pandas.DataFrame(dic), dest, comment=md)
     return writer.getsaved()
 
