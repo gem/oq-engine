@@ -191,7 +191,7 @@ def before_checks(inst, remove, usage):
                  (inst.OQ, os.readlink(inst.OQ)))
 
 
-def install(inst):
+def install(inst, version):
     """
     Install the engine in one of the three possible modes
     """
@@ -229,8 +229,9 @@ def install(inst):
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
                                '-e', '.'])
     else:
+        vers = ('==' + version) if version else ''
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
-                               'openquake.engine', '--upgrade'])
+                               '--upgrade', 'openquake.engine' + vers])
 
     # create openquake.cfg
     if inst is server:
@@ -314,10 +315,12 @@ if __name__ == '__main__':
                         '(default server)')
     parser.add_argument("--remove",  action="store_true",
                         help="disinstall the engine")
+    parser.add_argument("--version",
+                        help="version to install (default latest)")
     args = parser.parse_args()
     inst = globals()[args.inst]
     before_checks(inst, args.remove, parser.format_usage())
     if args.remove:
         remove(inst)
     else:
-        install(inst)
+        install(inst, args.version)
