@@ -274,6 +274,88 @@ add_local_pkg_repo () {
     ssh "$lxc_ip" sudo apt-get update
 }
 
+build_dependencies_file () {
+    local je_deps_base="$1"
+
+    if [ -e ${je_deps_base}_jenkins_deps_info ]; then
+        return
+    fi
+    
+    if [ ! -d ${je_deps_base}_jenkins_deps ]; then
+        mkdir ${je_deps_base}_jenkins_deps
+    fi
+
+    #
+    #  dependencies repos
+    #
+    # in test sources different repositories and branches can be tested
+    # consistently: for each openquake dependency it try to use
+    # the same repository and the same branch OR the gem repository
+    # and the same branch OR the gem repository and the "master" branch
+    #
+    repo_id="$(repo_id_get)"
+    if [ "$repo_id" != "$GEM_GIT_REPO" ]; then
+        repos="git://${repo_id} ${GEM_GIT_REPO}"
+    else
+        repos="${GEM_GIT_REPO}"
+    fi
+    old_ifs="$IFS"
+    IFS=" "
+    for dep_item in $GEM_DEPENDS; do
+        dep="$(echo "$dep_item" | cut -d '|' -f 1)"
+        dep_pkg="$(echo "$dep_item" | cut -d '|' -f 2)"
+        dep_type="$(echo "$dep_item" | cut -d '|' -f 3)"
+        # if the deb is a subpackage we skip source check
+        if [ "$dep_type" == "sub" ]; then
+            continue
+        fi
+        found=0
+        branch_cur="$branch_id"
+        for repo in $repos; do
+            # search of same branch in same repo or in GEM_GIT_REPO repo
+            if git ls-remote --heads "$repo/${dep}.git" | grep -q "refs/heads/$branch_cur" ; then
+                deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur" "$je_deps_base"
+                found=1
+                break
+            fi
+        done
+        # if not found it fallback in master branch of GEM_GIT_REPO repo
+        if [ $found -eq 0 ]; then
+            branch_cur="master"
+            deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur" "$je_deps_base"
+        fi
+        pushd "${je_deps_base}_jenkins_deps/$dep"
+        dep_commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
+        popd
+        echo "dependency: $dep"
+        echo "repo:       $repo"
+        echo "branch:     $branch_cur"
+        echo "commit:     $dep_commit"
+        echo
+        var_pfx="$(dep2var "$dep")"
+        if [ ! -f ${je_deps_base}_jenkins_deps_info ]; then
+            touch ${je_deps_base}_jenkins_deps_info
+        fi
+        if grep -q "^${var_pfx}_COMMIT=" ${je_deps_base}_jenkins_deps_info; then
+            if ! grep -q "^${var_pfx}_COMMIT=$dep_commit" ${je_deps_base}_jenkins_deps_info; then
+                echo "ERROR: $repo -> $branch_cur changed during test:"
+                echo "before:"
+                grep "^${var_pfx}_COMMIT=" ${je_deps_base}_jenkins_deps_info
+                echo "after:"
+                echo "${var_pfx}_COMMIT=$dep_commit"
+                exit 1
+            fi
+        else
+            ( echo "${var_pfx}_COMMIT=$dep_commit"
+              echo "${var_pfx}_REPO=$repo"
+              echo "${var_pfx}_BRANCH=$branch_cur"
+              echo "${var_pfx}_TYPE=$dep_type" ) >> ${je_deps_base}_jenkins_deps_info
+        fi
+    done
+    IFS="$old_ifs"
+}
+
+
 _depends_resolver () {
     local deps_action="$1" je_deps_base="$2"
     local old_ifs dep_item dep dep_pkg dep_type
