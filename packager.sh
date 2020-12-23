@@ -250,6 +250,7 @@ add_local_pkg_repo () {
     from_dir="${GEM_DEB_REPO}/${BUILD_UBUVER}/${GEM_DEB_SERIE}/${dep_pkg}.${!var_commit:0:7}"
     time_start="$(date +%s)"
     while true; do
+        ssh "$lxc_ip" mkdir -p "repo"
         if scp -r "$from_dir" "$lxc_ip:repo/${dep_pkg}"; then
             break
         fi
