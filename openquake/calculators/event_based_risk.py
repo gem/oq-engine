@@ -104,7 +104,6 @@ def event_based_risk(riskinputs, param, monitor):
             acc += dict(zip(out.eids, agglosses))
 
         if 'builder' in param:
-            clp = param['conditional_loss_poes']
             result['curves-rlzs'], result['curves-stats'] = builder.pair(
                 all_curves, param['stats'])
             if R > 1 and param['individual_curves'] is False:
