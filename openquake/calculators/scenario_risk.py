@@ -105,14 +105,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.rlzs = self.datastore['events']['rlz_id']
         self.param['num_events'] = numpy.bincount(self.rlzs)  # events by rlz
 
-    def combine(self, acc, res):
-        """
-        Combine the outputs from scenario_risk
-        """
-        if res is None:
-            raise MemoryError('You ran out of memory!')
-        return acc + res
-
     def post_execute(self, result):
         """
         Compute stats for the aggregated distributions and save
