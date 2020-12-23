@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import json
+import logging
 import itertools
 import collections
 import numpy
@@ -71,19 +72,24 @@ def export_agg_curve_rlzs(ekey, dstore):
     descr = dstore.get_shape_descr(ekey[0])
     name, suffix = ekey[0].split('-')
     rlzs_or_stats = descr[suffix[:-1]]
+    aw = hdf5.ArrayWrapper(dstore[ekey[0]], descr, ('loss_value',))
+    dataf = aw.to_dframe().set_index(suffix[:-1])
     for r, ros in enumerate(rlzs_or_stats):
-        aw = hdf5.ArrayWrapper(dstore[ekey[0]], descr, ('loss_value',))
-        df = aw.to_dframe()
-        dic = dict(return_period=df.return_periods)
-        dic['loss_type'] = lnames[df.lti]
-        for tagname in oq.aggregate_by:
-            dic[tagname] = agg_tags[tagname][df.agg_id.to_numpy()]
-        dic['loss_value'] = df.loss_value
-        dic['loss_ratio'] = df.loss_value / aggvalue[df.agg_id, df.lti]
-        dic['annual_frequency_of_exceedence'] = 1 / df.return_periods
-        dest = dstore.build_fname(name, ros, 'csv')
         md['kind'] = f'{name}-' + (
             ros if isinstance(ros, str) else 'rlz-%03d' % ros)
+        try:
+            df = dataf.loc[ros]
+        except KeyError:
+            logging.warning('No data for %s', md['kind'])
+            continue
+        dic = {col: df[col].to_numpy() for col in dataf.columns}
+        dic['loss_type'] = lnames[dic['lti']]
+        for tagname in oq.aggregate_by:
+            dic[tagname] = agg_tags[tagname][dic['agg_id']]
+        dic['loss_ratio'] = dic['loss_value'] / aggvalue[
+            dic['agg_id'], dic.pop('lti')]
+        dic['annual_frequency_of_exceedence'] = 1 / dic['return_period']
+        dest = dstore.build_fname(name, ros, 'csv')
         writer.save(pandas.DataFrame(dic), dest, comment=md)
     return writer.getsaved()
 

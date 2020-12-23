@@ -680,7 +680,7 @@ def extract_tot_curves(dstore, what):
         kinds = list(info['stats'])
         name = 'agg_curves-stats'
     units = dstore.get_attr(name, 'units')
-    rps = dstore.get_attr(name, 'return_periods')
+    rps = dstore.get_attr(name, 'return_period')
     K = dstore.get_attr(name, 'K', 0)
     arr = dstore[name][K, k, l].T  # shape P, R
     if qdic['absolute'] == [1]:
@@ -731,7 +731,7 @@ def extract_agg_curves(dstore, what):
         kinds = list(info['stats'])
         name = 'agg_curves-stats'
     units = dstore.get_attr(name, 'units')
-    rps = dstore.get_attr(name, 'return_periods')
+    rps = dstore.get_attr(name, 'return_period')
     tup = (idx, k, l)
     arr = dstore[name][tup].T  # shape P, R
     if qdic['absolute'] == [1]:
