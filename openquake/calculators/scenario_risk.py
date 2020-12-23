@@ -103,14 +103,6 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.param['alt'] = scientific.AggLossTable.new(
             aggkey, oq.loss_names, sec_losses=[])
 
-    def combine(self, acc, res):
-        """
-        Combine the outputs from scenario_risk
-        """
-        if res is None:
-            raise MemoryError('You ran out of memory!')
-        return acc + res
-
     def post_execute(self, result):
         """
         Compute stats for the aggregated distributions and save
