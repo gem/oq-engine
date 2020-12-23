@@ -189,6 +189,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # a complex scenario_risk from GMFs where the hazard sites are
         # not in the asset locations
         self.run_calc(case_8.__file__, 'job.ini')
+        [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agglosses.csv', fname)
+
         agglosses = extract(self.calc.datastore, 'agg_losses/structural')
         aac(agglosses.array, [1159325.6])
 
