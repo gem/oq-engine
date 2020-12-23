@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import json
+import logging
 import itertools
 import collections
 import numpy
@@ -64,27 +65,32 @@ def export_agg_curve_rlzs(ekey, dstore):
     agg_tags = {}
     for tagname in oq.aggregate_by:
         agg_tags[tagname] = numpy.concatenate([agg_keys[tagname], ['*total*']])
-    aggvalue = dstore['agg_values'][()]  # shape (T, L)
+    aggvalue = dstore['agg_values'][()]  # shape (K+1, L)
     md = dstore.metadata
-    md.update(dict(
-        kind=ekey[0], risk_investigation_time=oq.risk_investigation_time))
-    fname = dstore.export_path('%s.%s' % ekey)
+    md['risk_investigation_time'] = oq.risk_investigation_time
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    K1, R, L, P = dstore[ekey[0]].shape
-    aw = hdf5.ArrayWrapper.from_(dstore[ekey[0]], 'loss_value')
-    df = aw.to_dframe()
-    dic = dict(return_period=df.return_periods)
-    if 'stats' in ekey[0]:
-        dic['stat'] = df.stat
-    else:
-        dic['rlz'] = df.rlz
-    dic['loss_type'] = lnames[df.lti]
-    for tagname in oq.aggregate_by:
-        dic[tagname] = agg_tags[tagname][df.agg_id.to_numpy()]
-    dic['loss_value'] = df.loss_value
-    dic['loss_ratio'] = df.loss_value / aggvalue[df.agg_id, df.lti]
-    dic['annual_frequency_of_exceedence'] = 1 / df.return_periods
-    writer.save(pandas.DataFrame(dic), fname, comment=md)
+    descr = dstore.get_shape_descr(ekey[0])
+    name, suffix = ekey[0].split('-')
+    rlzs_or_stats = descr[suffix[:-1]]
+    aw = hdf5.ArrayWrapper(dstore[ekey[0]], descr, ('loss_value',))
+    dataf = aw.to_dframe().set_index(suffix[:-1])
+    for r, ros in enumerate(rlzs_or_stats):
+        md['kind'] = f'{name}-' + (
+            ros if isinstance(ros, str) else 'rlz-%03d' % ros)
+        try:
+            df = dataf.loc[ros]
+        except KeyError:
+            logging.warning('No data for %s', md['kind'])
+            continue
+        dic = {col: df[col].to_numpy() for col in dataf.columns}
+        dic['loss_type'] = lnames[dic['lti']]
+        for tagname in oq.aggregate_by:
+            dic[tagname] = agg_tags[tagname][dic['agg_id']]
+        dic['loss_ratio'] = dic['loss_value'] / aggvalue[
+            dic['agg_id'], dic.pop('lti')]
+        dic['annual_frequency_of_exceedence'] = 1 / dic['return_period']
+        dest = dstore.build_fname(name, ros, 'csv')
+        writer.save(pandas.DataFrame(dic), dest, comment=md)
     return writer.getsaved()
 
 
@@ -99,7 +105,7 @@ def export_agg_losses(ekey, dstore):
     oq = dstore['oqparam']
     aggregate_by = oq.aggregate_by if dskey.startswith('agg_') else []
     name, value, rlzs_or_stats = _get_data(dstore, dskey, oq.hazard_stats())
-    # value has shape (K, R, L) for agg_losses and (L, R) for tot_losses
+    # value has shape (K, R, L)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     tagcol = dstore['assetcol/tagcol']
     aggtags = list(tagcol.get_aggkey(aggregate_by).values())
@@ -131,7 +137,7 @@ def _get_data(dstore, dskey, stats):
             rlzs_or_stats = [decode(s) for s in dstore.get_attr(dskey, 'stat')]
             statfuncs = [stats[ros] for ros in rlzs_or_stats]
             value = dstore[dskey][()]  # shape (A, S, LI)
-        else:  # computed on the fly
+        else:  # compute on the fly
             rlzs_or_stats, statfuncs = zip(*stats.items())
             value = compute_stats2(
                 dstore[name + '-rlzs'][()], statfuncs, weights)
