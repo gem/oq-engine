@@ -131,11 +131,10 @@ class PostRiskCalculator(base.RiskCalculator):
     """
     def pre_execute(self):
         oq = self.oqparam
-        size = general.humansize(self.datastore.getsize('agg_loss_table'))
-        logging.info('Stored %s in the agg_loss_table', size)
         self.reaggreate = False
         if oq.hazard_calculation_id and not self.datastore.parent:
-            self.datastore.parent = datastore.read(oq.hazard_calculation_id)
+            ds = datastore.read(oq.hazard_calculation_id)
+            self.datastore.parent = ds
             assetcol = self.datastore['assetcol']
             self.aggkey = base.save_agg_values(
                 self.datastore, assetcol, oq.loss_names, oq.aggregate_by)
@@ -145,9 +144,12 @@ class PostRiskCalculator(base.RiskCalculator):
                 self.num_tags = dict(
                     zip(aggby, assetcol.tagcol.agg_shape(aggby)))
         else:
+            ds = self.datastore
             assetcol = self.datastore['assetcol']
             self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.L = len(oq.loss_names)
+        size = general.humansize(ds.getsize('agg_loss_table'))
+        logging.info('Stored %s in the agg_loss_table', size)
 
     def execute(self):
         oq = self.oqparam
