@@ -1047,6 +1047,7 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
     return numpy.array([loss_ratios, lrem_po.sum(axis=1)])
 
 
+# used in classical_risk only
 def conditional_loss_ratio(loss_ratios, poes, probability):
     """
     Return the loss ratio corresponding to the given PoE (Probability
