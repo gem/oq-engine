@@ -104,16 +104,10 @@ def event_based_risk(riskinputs, param, monitor):
             acc += dict(zip(out.eids, agglosses))
 
         if 'builder' in param:
-            clp = param['conditional_loss_poes']
             result['curves-rlzs'], result['curves-stats'] = builder.pair(
                 all_curves, param['stats'])
             if R > 1 and param['individual_curves'] is False:
                 del result['curves-rlzs']
-            if clp:
-                result['loss_maps-rlzs'], result['loss_maps-stats'] = (
-                    builder.build_maps(all_curves, clp, param['stats']))
-                if R > 1 and param['individual_curves'] is False:
-                    del result['loss_maps-rlzs']
 
         # store info about the GMFs, must be done at the end
         result['agglosses'] = (numpy.array(list(acc)),
@@ -149,7 +143,7 @@ class EbrCalculator(base.RiskCalculator):
         else:
             self.events = self.datastore['events']['id']
         if oq.return_periods != [0]:
-            # setting return_periods = 0 disable loss curves and maps
+            # setting return_periods = 0 disable loss curves
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
             if eff_time < 2:
                 logging.warning(
@@ -187,9 +181,7 @@ class EbrCalculator(base.RiskCalculator):
         A = self.A
         S = len(stats)
         P = len(builder.return_periods)
-        C = len(oq.conditional_loss_poes)
         L = self.L
-        self.loss_maps_dt = (F32, (C, L))
         if oq.individual_curves or R == 1:
             self.datastore.create_dset('curves-rlzs', F32, (A, R, P, L))
             self.datastore.set_shape_attrs(
@@ -198,9 +190,6 @@ class EbrCalculator(base.RiskCalculator):
                 rlzs=numpy.arange(R),
                 return_periods=builder.return_periods,
                 loss_types=oq.loss_names)
-        if oq.conditional_loss_poes:
-            self.datastore.create_dset(
-                'loss_maps-rlzs', self.loss_maps_dt, (A, R), fillvalue=None)
         if R > 1:
             self.datastore.create_dset('curves-stats', F32, (A, S, P, L))
             self.datastore.set_shape_attrs(
@@ -210,13 +199,6 @@ class EbrCalculator(base.RiskCalculator):
                 return_periods=builder.return_periods,
                 loss_types=oq.loss_names
             )
-            if oq.conditional_loss_poes:
-                self.datastore.create_dset(
-                    'loss_maps-stats', self.loss_maps_dt, (A, S),
-                    fillvalue=None)
-                self.datastore.set_attrs(
-                    'loss_maps-stats',
-                    stat=[encode(name) for (name, func) in stats])
 
     def save_losses(self, dic):
         """
@@ -232,7 +214,6 @@ class EbrCalculator(base.RiskCalculator):
         if self.oqparam.avg_losses:
             self.dset[aids, :, :] = dic.pop('avglosses')
         self._save_curves(dic, aids)
-        self._save_maps(dic, aids)
         self.taskno += 1
 
     def _save_curves(self, dic, aids):
@@ -241,12 +222,6 @@ class EbrCalculator(base.RiskCalculator):
             if array is not None:
                 shp = array.shape + (self.L,)
                 self.datastore[key][aids, ...] = array.view(F32).reshape(shp)
-
-    def _save_maps(self, dic, aids):
-        for key in ('loss_maps-rlzs', 'loss_maps-stats'):
-            array = dic.get(key)  # shape (A, S, C, LI)
-            if array is not None:
-                self.datastore[key][aids, ...] = array
 
     def combine(self, dummy, res):
         """
