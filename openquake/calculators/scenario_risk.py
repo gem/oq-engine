@@ -63,8 +63,9 @@ def scenario_risk(riskinputs, param, monitor):
                 avg = numpy.zeros(len(ri.assets), F64)
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
-                    avg[a] = losses.sum() / num_events
-                    result['avg'].append((l, out.rlzi, aid, avg[a]))
+                    avg[a] = av = losses[a].sum() / num_events
+                    if av:
+                        result['avg'].append((l, out.rlzi, aid, av))
     return result
 
 

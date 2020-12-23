@@ -1496,10 +1496,9 @@ class AggLossTable(AccumDict):
         for a, asset in enumerate(out.assets):
             lt_losses = []
             for lti, lt in enumerate(out.loss_types):
-                avalue = asset['value-' + lt]
                 ls = out[lt][a]
                 if to_losses:  # convert ratios to losses
-                    ls *= avalue
+                    ls *= asset['value-' + lt]
                 if minimum_loss[lt]:
                     ls[ls < minimum_loss[lt]] = 0
                 lt_losses.append((lt, ls))
