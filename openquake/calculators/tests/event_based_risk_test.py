@@ -82,7 +82,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   delta=1E-5)
 
         # make sure the agg_curves-stats has the right attrs
-        self.check_attr('return_periods', [30, 60, 120, 240, 480, 960])
+        self.check_attr('return_period', [30, 60, 120, 240, 480, 960])
         self.check_attr('units', ['EUR', 'EUR'])
 
         # test portfolio loss
@@ -291,10 +291,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check curves-rlzs and curves-stats are readable
         df1 = self.calc.datastore.read_df('curves-rlzs', 'assets')
-        aae(df1.columns, ['rlzs', 'return_periods', 'loss_types', 'value'])
+        aae(df1.columns, ['rlzs', 'return_period', 'loss_types', 'value'])
 
         df2 = self.calc.datastore.read_df('curves-stats', 'assets')
-        aae(df2.columns, ['stats', 'return_periods', 'loss_types', 'value'])
+        aae(df2.columns, ['stats', 'return_period', 'loss_types', 'value'])
 
     def test_case_master2(self):
         self.run_calc(case_master.__file__, 'job.ini',

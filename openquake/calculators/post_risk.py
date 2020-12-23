@@ -216,7 +216,7 @@ class PostRiskCalculator(base.RiskCalculator):
             self.datastore['agg_curves-rlzs'] = agg_curves
             set_rlzs_stats(self.datastore, 'agg_curves',
                            agg_id=K + 1, lti=self.L,
-                           return_periods=builder.return_periods,
+                           return_period=builder.return_periods,
                            units=units)
         return 1
 
