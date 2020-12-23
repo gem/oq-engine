@@ -554,7 +554,7 @@ EOF
              "$(wc --bytes Sources | cut --delimiter=' ' --fields=1)"
       printf ' '"$(sha256sum Sources.gz | cut --delimiter=' ' --fields=1)"' %16d Sources.gz\n' \
              "$(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1)" ) >> Release
-    gpg --armor --detach-sign --output Release.gpg --local-user "$DEBFULLNAME" Release
+    gpg --no-tty --armor --detach-sign --output Release.gpg --local-user "$DEBFULLNAME" Release
     cd -
 
     #
@@ -1318,7 +1318,7 @@ EOF
              "$(wc --bytes Sources | cut --delimiter=' ' --fields=1)"
       printf ' '"$(sha256sum Sources.gz | cut --delimiter=' ' --fields=1)"' %16d Sources.gz\n' \
              "$(wc --bytes Sources.gz | cut --delimiter=' ' --fields=1)" ) >> Release
-    gpg --armor --detach-sign --output Release.gpg --local-user "$DEBFULLNAME" Release
+    gpg --no-tty --armor --detach-sign --output Release.gpg --local-user "$DEBFULLNAME" Release
     cd -
 
     sudo echo
