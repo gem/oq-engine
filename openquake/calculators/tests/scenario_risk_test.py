@@ -42,7 +42,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job_risk.ini', exports='csv')
-        [fname] = out['agglosses', 'csv']
+        [fname] = out['agg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg.csv', fname)
 
         # check the exported GMFs
@@ -55,7 +55,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
-        [fname] = out['agglosses', 'csv']
+        [fname] = out['agg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg.csv', fname)
 
     def test_case_2d(self):
@@ -82,7 +82,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
-        [fname] = out['agglosses', 'csv']
+        [fname] = out['agg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_loss.csv', fname)
 
     def test_case_4(self):
@@ -92,7 +92,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('totlosses', self.calc.datastore))
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
-        [fname] = out['agglosses', 'csv']
+        [fname] = out['agg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-6)
 
     def test_occupants(self):
@@ -102,7 +102,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/asset-loss.csv', fname)
 
-        [fname] = out['agglosses', 'csv']
+        [fname] = out['agg-losses_rlzs', 'csv']
         self.assertEqualFiles('expected/agg_loss.csv', fname)
 
     def test_case_5(self):
@@ -120,7 +120,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # case with two gsims
         self.run_calc(case_6a.__file__, 'job_haz.ini,job_risk.ini',
                       exports='csv')
-        [f] = export(('agglosses', 'csv'), self.calc.datastore)
+        [f] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_structural.csv', f)
 
         # testing the totlosses view
@@ -140,7 +140,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_1g(self):
         out = self.run_calc(case_1g.__file__, 'job_haz.ini,job_risk.ini',
                             exports='csv')
-        [fname] = out['agglosses', 'csv']
+        [fname] = out['agg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg-gsimltp_@.csv', fname)
 
     def test_case_1h(self):
@@ -211,7 +211,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(gmfa.shape, (9,))
         self.assertEqual(gmfa.dtype.names,
                          ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
-        [fname] = export(('agglosses', 'csv'), self.calc.datastore)
+        [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
         [fname] = export(('realizations', 'csv'), self.calc.datastore)

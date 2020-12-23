@@ -56,7 +56,6 @@ def scenario_risk(riskinputs, param, monitor):
             num_events = param['num_events'][out.rlzi]
             param['alt'].aggregate(
                 out, param['minimum_asset_loss'], param['aggregate_by'])
-            # NB: after the aggregation out contains losses, not loss ratios
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
                 if numpy.product(losses.shape) == 0:  # happens for all NaNs
@@ -92,16 +91,19 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.param['tempname'] = riskinput.cache_epsilons(
             self.datastore, oq, self.assetcol, self.crmodel, E)
         self.param['aggregate_by'] = oq.aggregate_by
-        # assuming the weights are the same for all IMTs
-        try:
-            self.param['weights'] = self.datastore['weights'][()]
-        except KeyError:
-            self.param['weights'] = [1 / self.R for _ in range(self.R)]
         self.rlzs = self.datastore['events']['rlz_id']
         self.param['num_events'] = numpy.bincount(self.rlzs)  # events by rlz
         aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
-        self.param['alt'] = scientific.AggLossTable.new(
+        self.param['alt'] = alt = scientific.AggLossTable.new(
             aggkey, oq.loss_names, sec_losses=[])
+        self.acc = dict(avg=[], alt=alt)
+
+    def combine(self, acc, res):
+        if res is None:
+            raise MemoryError('You ran out of memory!')
+        acc['alt'] += res['alt']
+        acc['avg'].extend(res['avg'])
+        return acc
 
     def post_execute(self, result):
         """
@@ -111,32 +113,32 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         L = len(oq.loss_names)
         with self.monitor('saving outputs'):
-            A = len(self.assetcol)
-            # avg losses
-            # must be 32 bit otherwise export losses_by_asset will break
-            # the QGIS test for ScenarioRisk
-            losses_by_asset = numpy.zeros((A, self.R, L), F32)
+            # avg losses must be 32 bit otherwise export losses_by_asset will
+            # break the QGIS test for ScenarioRisk
+            losses_by_asset = numpy.zeros((len(self.assetcol), self.R, L), F32)
             for (l, r, aid, avg) in result['avg']:
                 losses_by_asset[aid, r, l] = avg
-
             self.datastore['avg_losses-rlzs'] = losses_by_asset
             set_rlzs_stats(self.datastore, 'avg_losses',
                            asset_id=self.assetcol['id'],
                            loss_type=self.oqparam.loss_names)
 
-            # agg loss table
-            out = general.AccumDict(accum=[])  # col -> values
-            for eid, arr in result['alt'].items():
-                for k, vals in enumerate(arr):  # arr has shape K, L
-                    if vals.sum() > 0:
-                        out['event_id'].append(eid)
-                        out['agg_id'].append(k)
-                        for l, ln in enumerate(oq.loss_names):
-                            out[ln].append(vals[l])
-            out['event_id'] = U32(out['event_id'])
-            out['agg_id'] = U16(out['agg_id'])
-            for ln in oq.loss_names:
-                out[ln] = F32(out['agg_id'])
-            self.datastore.create_dframe('agg_loss_table', out.items())
-        oq.investigation_time = 1
-        post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()
+            # save agg loss table
+            K = len(result['alt'].aggkey)
+            alt = result['alt'].to_dframe()
+            self.datastore.create_dframe(
+                'agg_loss_table', [(col, alt[col].to_numpy())
+                                   for col in alt.columns])
+            alt['rlz_id'] = self.rlzs[alt.event_id.to_numpy()]
+
+            # save agg_losses
+            ne = self.param['num_events']
+            dset = self.datastore.create_dset(
+                'agg_losses-rlzs', F32, (K, self.R, L))
+            for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
+                agglosses = numpy.array([df[ln].sum() for ln in oq.loss_names])
+                dset[agg_id, rlz_id] = agglosses / ne[rlz_id]
+
+            units = self.datastore['cost_calculator'].get_units(oq.loss_names)
+            set_rlzs_stats(self.datastore, 'agg_losses',
+                           agg_id=K, loss_types=oq.loss_names, units=units)

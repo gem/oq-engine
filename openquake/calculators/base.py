@@ -995,6 +995,7 @@ class RiskCalculator(HazardCalculator):
                for ri in riskinputs):
             raise RuntimeError(f'the {kind}s are all zeros on the assets')
         logging.info('Built %d risk inputs', len(riskinputs))
+        self.acc = None
         return riskinputs
 
     def _gen_riskinputs_gmf(self, dstore):
@@ -1068,7 +1069,7 @@ class RiskCalculator(HazardCalculator):
                 if not isinstance(ri.hazard_getter, getters.PmapGetter):
                     ri.hazard_getter.init()
             smap.submit((block, self.param))
-        return smap.reduce(self.combine)
+        return smap.reduce(self.combine, self.acc)
 
     def combine(self, acc, res):
         """

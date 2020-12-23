@@ -27,6 +27,7 @@ import collections
 from functools import lru_cache
 
 import numpy
+import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, random
 
@@ -36,6 +37,7 @@ from openquake.hazardlib.stats import compute_stats2
 F64 = numpy.float64
 F32 = numpy.float32
 U32 = numpy.uint32
+U16 = numpy.uint16
 
 
 def pairwise(iterable):
@@ -1474,7 +1476,7 @@ class AggLossTable(AccumDict):
         self.accum = numpy.zeros(KL, F32)
         return self
 
-    def aggregate(self, out, minimum_loss, aggby):
+    def aggregate(self, out, minimum_loss, aggby, to_losses=False):
         """
         Populate the event loss table
         """
@@ -1496,7 +1498,8 @@ class AggLossTable(AccumDict):
             for lti, lt in enumerate(out.loss_types):
                 avalue = asset['value-' + lt]
                 ls = out[lt][a]
-                ls *= avalue
+                if to_losses:  # convert ratios to losses
+                    ls *= avalue
                 if minimum_loss[lt]:
                     ls[ls < minimum_loss[lt]] = 0
                 lt_losses.append((lt, ls))
@@ -1516,6 +1519,24 @@ class AggLossTable(AccumDict):
                 for eid, loss in zip(eids, losses):
                     if loss:
                         self[eid][idx, lni] += loss
+
+    def to_dframe(self):
+        """
+        Convert the AggLosTable into a DataFrame
+        """
+        out = AccumDict(accum=[])  # col -> values
+        for eid, arr in self.items():
+            for k, vals in enumerate(arr):  # arr has shape K, L'
+                if vals.sum() > 0:
+                    out['event_id'].append(eid)
+                    out['agg_id'].append(k)
+                    for l, ln in enumerate(self.loss_names):
+                        out[ln].append(vals[l])
+        out['event_id'] = U32(out['event_id'])
+        out['agg_id'] = U16(out['agg_id'])
+        for ln in self.loss_names:
+            out[ln] = F32(out[ln])
+        return pandas.DataFrame(out)
 
 
 # must have attribute .outputs and method .compute(asset, losses, loss_type)
