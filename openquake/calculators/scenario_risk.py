@@ -41,22 +41,23 @@ def scenario_risk(riskinputs, param, monitor):
     :returns:
         a dictionary {
         'alt': AggLoggTable instance
-        'avg': list of tuples (lt_idx, rlz_idx, asset_ordinal, statistics)}
+        'losses_by_asset': list of tuples
+        (lt_idx, rlz_idx, asset_ordinal, totloss)}
     """
     crmodel = monitor.read('crmodel')
-    result = dict(avg=[], alt=param['alt'])
+    result = dict(losses_by_asset=[], alt=param['alt'])
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
             param['alt'].aggregate(
                 out, param['minimum_asset_loss'], param['aggregate_by'])
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
-                avg = numpy.zeros(len(ri.assets), F64)
+                losses_by_asset = numpy.zeros(len(ri.assets), F64)
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
-                    avg[a] = av = losses[a].sum()
+                    losses_by_asset[a] = av = losses[a].sum()
                     if av:
-                        result['avg'].append((l, out.rlzi, aid, av))
+                        result['losses_by_asset'].append((l, out.rlzi, aid, av))
     return result
 
 
@@ -98,8 +99,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         if res is None:
             raise MemoryError('You ran out of memory!')
         self.acc += res['alt']
-        for (l, r, aid, avg) in res['avg']:
-            self.avglosses[aid, r, l] = avg * self.avg_ratio[r]
+        for (l, r, aid, lba) in res['losses_by_asset']:
+            self.avglosses[aid, r, l] = lba * self.avg_ratio[r]
         return acc
 
     def post_execute(self, result):
