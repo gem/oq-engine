@@ -817,10 +817,10 @@ def extract_aggregate(dstore, what):
         lti = ltypes[0]
         lt = [lt for lt, i in loss_types.items() if i == lti]
         array = dstore[name + suffix][:, qdic['k'][0], lti]
-        aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {}, lt)
+        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, lt)
     else:
         array = dstore[name + suffix][:, qdic['k'][0]]
-        aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {},
+        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {},
                           loss_types)
     for tagname in tagnames:
         setattr(aw, tagname, getattr(assetcol.tagcol, tagname)[1:])
