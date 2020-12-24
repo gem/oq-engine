@@ -341,11 +341,12 @@ class RiskModel(object):
         :param epsilons:
            a matrix of epsilons of shape (A, E) (or an empty tuple)
         :returns:
-            an array of loss ratios of shape (A, E)
+            an array of losses of shape (A, E)
         """
         E = len(gmvs)
         A = len(assets)
-        loss_ratios = numpy.zeros((A, E), F32)
+        values = get_values(loss_type, assets)  # shape A
+        losses = numpy.zeros((A, E), F32)
         vf = self.risk_functions[loss_type, 'vulnerability']
         means, covs, idxs = vf.interpolate(gmvs)
         if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
@@ -354,13 +355,13 @@ class RiskModel(object):
             # the ratios are equal for all assets
             ratios = vf.sample(means, covs, idxs, None)  # right shape
             for a in range(A):
-                loss_ratios[a, idxs] = ratios
+                losses[a, idxs] = ratios * values[a]
         else:
             # take into account the epsilons
             for a, asset in enumerate(assets):
-                loss_ratios[a, idxs] = vf.sample(
-                    means, covs, idxs, epsilons[a])
-        return loss_ratios
+                losses[a, idxs] = vf.sample(
+                    means, covs, idxs, epsilons[a]) * values[a]
+        return losses
 
     ebrisk = event_based_risk
 

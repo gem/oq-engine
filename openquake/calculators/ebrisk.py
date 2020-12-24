@@ -83,7 +83,7 @@ def calc_risk(gmfs, param, monitor):
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
             out = get_output(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
-            alt.aggregate(out, mal, aggby, to_losses=True)
+            alt.aggregate(out, mal, aggby)
             # NB: after the aggregation out contains losses, not loss_ratios
         ws = weights[haz['rlz']]
         for col in gmfs.dtype.names:
