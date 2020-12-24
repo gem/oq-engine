@@ -78,7 +78,7 @@ def export_agg_curve_rlzs(ekey, dstore):
         md['kind'] = f'{name}-' + (
             ros if isinstance(ros, str) else 'rlz-%03d' % ros)
         try:
-            df = dataf.loc[ros]
+            df = dataf[dataf.index == ros]
         except KeyError:
             logging.warning('No data for %s', md['kind'])
             continue

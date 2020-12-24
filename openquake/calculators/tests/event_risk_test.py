@@ -80,8 +80,8 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
 
-        # checking curves-stats
-        fnames = export(('loss_curves-stats', 'csv'), self.calc.datastore)
+        # checking agg_curves-stats
+        fnames = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
