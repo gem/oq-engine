@@ -109,33 +109,33 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         L = len(oq.loss_names)
-        with self.monitor('saving outputs'):
-            # avg losses must be 32 bit otherwise export losses_by_asset will
-            # break the QGIS test for ScenarioRisk
-            self.datastore['avg_losses-rlzs'] = self.avglosses
-            set_rlzs_stats(self.datastore, 'avg_losses',
-                           asset_id=self.assetcol['id'],
-                           loss_type=self.oqparam.loss_names)
+        # avg losses must be 32 bit otherwise export losses_by_asset will
+        # break the QGIS test for ScenarioRisk
+        self.datastore['avg_losses-rlzs'] = self.avglosses
+        set_rlzs_stats(self.datastore, 'avg_losses',
+                       asset_id=self.assetcol['id'],
+                       loss_type=self.oqparam.loss_names)
 
-            # save agg loss table
+        with self.monitor('saving agg_loss_table'):
+            logging.info('Saving the agg_loss_table')
             K = len(result.aggkey)
             alt = result.to_dframe()
             self.datastore.create_dframe('agg_loss_table', alt)
 
-            # save agg_losses
-            units = self.datastore['cost_calculator'].get_units(oq.loss_names)
-            if oq.investigation_time is None:  # scenario, compute agg_losses
-                alt['rlz_id'] = self.rlzs[alt.event_id.to_numpy()]
-                dset = self.datastore.create_dset(
-                    'agg_losses-rlzs', F32, (K, self.R, L))
-                for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
-                    agglosses = numpy.array(
-                        [df[ln].sum() for ln in oq.loss_names])
-                    dset[agg_id, rlz_id] = agglosses * self.avg_ratio[rlz_id]
-                set_rlzs_stats(self.datastore, 'agg_losses',
-                               agg_id=K, loss_types=oq.loss_names, units=units)
-            else:  # event_based_risk, run post_risk
-                post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()
+        # save agg_losses
+        units = self.datastore['cost_calculator'].get_units(oq.loss_names)
+        if oq.investigation_time is None:  # scenario, compute agg_losses
+            alt['rlz_id'] = self.rlzs[alt.event_id.to_numpy()]
+            dset = self.datastore.create_dset(
+                'agg_losses-rlzs', F32, (K, self.R, L))
+            for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
+                agglosses = numpy.array(
+                    [df[ln].sum() for ln in oq.loss_names])
+                dset[agg_id, rlz_id] = agglosses * self.avg_ratio[rlz_id]
+            set_rlzs_stats(self.datastore, 'agg_losses',
+                           agg_id=K, loss_types=oq.loss_names, units=units)
+        else:  # event_based_risk, run post_risk
+            post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()
 
 
 @base.calculators.add('event_based_risk')

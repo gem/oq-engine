@@ -1527,13 +1527,13 @@ class AggLossTable(AccumDict):
         Convert the AggLosTable into a DataFrame
         """
         out = AccumDict(accum=[])  # col -> values
+        rangeK = numpy.arange(len(self.aggkey))
         for eid, arr in self.items():
-            for k, vals in enumerate(arr):  # arr has shape K, L'
-                if vals.sum() > 0:
-                    out['event_id'].append(eid)
-                    out['agg_id'].append(k)
-                    for l, ln in enumerate(self.loss_names):
-                        out[ln].append(vals[l])
+            ok = arr.sum(axis=1) > 0
+            out['event_id'].extend([eid] * ok.sum())
+            out['agg_id'].extend(rangeK[ok])
+            for l, ln in enumerate(self.loss_names):
+                out[ln].extend(arr[ok, l])
         out['event_id'] = U32(out['event_id'])
         out['agg_id'] = U16(out['agg_id'])
         for ln in self.loss_names:
