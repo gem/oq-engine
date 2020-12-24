@@ -378,6 +378,9 @@ class AssetCollection(object):
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
             assets_by_site, exposure.tagcol.tagnames, time_event)
+        if 'id' in aggregate_by:
+            self.tagcol.add_tagname('id')
+            self.tagcol.id.extend(self['id'])
         exp_periods = exposure.occupancy_periods
         if self.occupancy_periods and not exp_periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
@@ -507,7 +510,9 @@ class AssetCollection(object):
         df = pandas.DataFrame(dic)
         if tagnames:
             df = df.set_index(list(tagnames))
-            if tagnames == ['site_id']:
+            if tagnames == ['id']:
+                df.index = self['ordinal'] + 1
+            elif tagnames == ['site_id']:
                 df.index += 1
             for key, grp in df.groupby(df.index):
                 if isinstance(key, int):
@@ -613,7 +618,8 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     # 'occupants_night', 'occupants_transit']
     retro = ['retrofitted'] if first_asset._retrofitted else []
     float_fields = loss_types + retro
-    int_fields = [(str(name), U32) for name in tagnames if name != 'site_id']
+    int_fields = [(str(name), U32) for name in tagnames
+                  if name not in ('id', 'site_id')]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
         [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),

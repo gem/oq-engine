@@ -1,6 +1,7 @@
   [Michele Simionato]
+  * Accepted aggregate_by=id in scenario/event based calculations
   * Accepted aggregate_by=site_id in scenario/event based calculations
-  * Removed the generation of asset loss curves and maps from event_based_risk
+  * Removed the generation of asset loss maps from event_based_risk
   * Made the "Aggregate Losses" output in scenario_risk consistent with
     event_based_risk and scenario_risk and supported `aggregate_by`
   * Perform the disaggregation checks before starting the classical part
