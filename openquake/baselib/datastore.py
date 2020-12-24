@@ -423,7 +423,7 @@ class DataStore(collections.abc.MutableMapping):
         """
         if isinstance(nametypes, pandas.DataFrame):
             nametypes = {name: nametypes[name].to_numpy()
-                         for name in nametypes.columns}
+                         for name in nametypes.columns}.items()
         names = []
         for name, value in nametypes:
             is_array = isinstance(value, numpy.ndarray)
