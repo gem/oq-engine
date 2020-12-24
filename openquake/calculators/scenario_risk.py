@@ -33,20 +33,16 @@ def scenario_risk(riskinputs, param, monitor):
     """
     Core function for a scenario computation.
 
-    :param riskinput:
-        a of :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskinputs:
+        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
     :param param:
         dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a dictionary {
-        'agg': array of shape (E, L, R, 2),
-        'avg': list of tuples (lt_idx, rlz_idx, asset_ordinal, statistics)
-        }
-        where E is the number of simulated events, L the number of loss types,
-        R the number of realizations  and statistics is an array of shape
-        (n, R, 4), with n the number of assets in the current riskinput object
+        'alt': AggLoggTable instance
+        'avg': list of tuples (lt_idx, rlz_idx, asset_ordinal, statistics)}
     """
     crmodel = monitor.read('crmodel')
     result = dict(avg=[], alt=param['alt'])
@@ -130,12 +126,13 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             alt['rlz_id'] = self.rlzs[alt.event_id.to_numpy()]
 
             # save agg_losses
-            dset = self.datastore.create_dset(
-                'agg_losses-rlzs', F32, (K, self.R, L))
-            for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
-                agglosses = numpy.array([df[ln].sum() for ln in oq.loss_names])
-                dset[agg_id, rlz_id] = agglosses * self.avg_ratio[rlz_id]
-
             units = self.datastore['cost_calculator'].get_units(oq.loss_names)
-            set_rlzs_stats(self.datastore, 'agg_losses',
-                           agg_id=K, loss_types=oq.loss_names, units=units)
+            if oq.investigation_time is None:  # scenario, compute agg_losses
+                dset = self.datastore.create_dset(
+                    'agg_losses-rlzs', F32, (K, self.R, L))
+                for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
+                    agglosses = numpy.array(
+                        [df[ln].sum() for ln in oq.loss_names])
+                    dset[agg_id, rlz_id] = agglosses * self.avg_ratio[rlz_id]
+                set_rlzs_stats(self.datastore, 'agg_losses',
+                               agg_id=K, loss_types=oq.loss_names, units=units)
