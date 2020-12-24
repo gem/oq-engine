@@ -18,10 +18,9 @@
 
 import numpy
 
-from openquake.baselib import general
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
-from openquake.calculators import base, post_risk
+from openquake.calculators import base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -57,8 +56,6 @@ def scenario_risk(riskinputs, param, monitor):
                 out, param['minimum_asset_loss'], param['aggregate_by'])
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
-                if numpy.product(losses.shape) == 0:  # happens for all NaNs
-                    continue
                 avg = numpy.zeros(len(ri.assets), F64)
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
