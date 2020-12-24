@@ -513,7 +513,7 @@ class AssetCollection(object):
             if tagnames == ['id']:
                 df.index = self['ordinal'] + 1
             elif tagnames == ['site_id']:
-                df.index += 1
+                df.index = self['site_id'] + 1
             for key, grp in df.groupby(df.index):
                 if isinstance(key, int):
                     key = key,  # turn it into a 1-value tuple
