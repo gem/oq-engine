@@ -1283,7 +1283,7 @@ pkgtest_run () {
 
     _wait_ssh "$lxc_ip"
 
-    _depends_resolver "install" "../"
+    _depends_resolver "install" "../../"
 
     set +e
     _pkgtest_innervm_run "$lxc_ip" "$branch"
