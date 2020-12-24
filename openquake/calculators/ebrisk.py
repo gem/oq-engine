@@ -187,7 +187,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
         self.L = L = len(alt.loss_names)
-        self.check_number_loss_curves()
         mal = self.param['minimum_asset_loss']
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
                 any(val == 0 for val in mal.values())):
@@ -207,20 +206,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             raise RuntimeError('The event loss table is too big to be transfer'
                                'red with %d tasks' % oq.concurrent_tasks)
         self.datastore.create_dset('gmf_info', gmf_info_dt)
-
-    def check_number_loss_curves(self):
-        """
-        Raise an error for too many loss curves (> max_num_loss_curves)
-        """
-        shp = self.assetcol.tagcol.agg_shape(self.oqparam.aggregate_by, self.L)
-        if numpy.prod(shp) > self.oqparam.max_num_loss_curves:
-            dic = dict(loss_types=self.L)
-            for aggby in self.oqparam.aggregate_by:
-                dic[aggby] = len(getattr(self.assetcol.tagcol, aggby)) - 1
-            tot = numpy.prod(list(dic.values()))
-            msg = ' * ' .join('(%s=%d)' % item for item in dic.items())
-            raise ValueError('Producing too many aggregate loss curves, please'
-                             ' reduce the aggregate_by\n%s = %d' % (msg, tot))
 
     def execute(self):
         self.datastore.flush()  # just to be sure
