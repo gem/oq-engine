@@ -89,6 +89,7 @@ def export_agg_curve_rlzs(ekey, dstore):
         dic['loss_ratio'] = dic['loss_value'] / aggvalue[
             dic['agg_id'], dic.pop('lti')]
         dic['annual_frequency_of_exceedence'] = 1 / dic['return_period']
+        del dic['agg_id']
         dest = dstore.build_fname(name, ros, 'csv')
         writer.save(pandas.DataFrame(dic), dest, comment=md)
     return writer.getsaved()

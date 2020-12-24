@@ -222,7 +222,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertIn('not in the risk model', str(ctx.exception))
 
     def test_case_3(self):
-        # this is a test with statistics and without conditional_loss_poes
+        # this is a test with statistics
         self.run_calc(case_3.__file__, 'job.ini',
                       exports='csv', concurrent_tasks='4')
 

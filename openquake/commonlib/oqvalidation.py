@@ -924,9 +924,12 @@ class OqParam(valid.ParamSet):
 
     def is_valid_aggregate_by(self):
         """
-        At the moment only `aggregate_by=site_id` is accepted
+        At the moment only `aggregate_by=id` or `aggregate_by=site_id`
+        are accepted
         """
-        if 'site_id' in self.aggregate_by and len(self.aggregate_by) > 1:
+        if 'id' in self.aggregate_by and len(self.aggregate_by) > 1:
+            return False
+        elif 'site_id' in self.aggregate_by and len(self.aggregate_by) > 1:
             return False
         return True
 
