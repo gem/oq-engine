@@ -513,7 +513,7 @@ sensitivity_analysis = {
         # refactoring of the monitoring and it happened several times)
         with read(job_id) as dstore:
             perf = view('performance', dstore)
-            self.assertIn('total event_based_risk', perf)
+            self.assertIn('total scenario_risk', perf)
 
     def test_oqdata(self):
         # the that the environment variable OQ_DATADIR is honored

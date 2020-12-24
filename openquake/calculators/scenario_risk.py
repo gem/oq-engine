@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import numpy
-
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base, post_risk
@@ -136,3 +136,33 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                                agg_id=K, loss_types=oq.loss_names, units=units)
             else:  # event_based_risk, run post_risk
                 post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()
+
+
+@base.calculators.add('event_based_risk')
+class EbrCalculator(ScenarioRiskCalculator):
+    """
+    Event based risk calculator
+    """
+    precalc = 'event_based'
+    accept_precalc = ['event_based', 'event_based_risk', 'ebrisk']
+
+    def pre_execute(self):
+        oq = self.oqparam
+        if not oq.ground_motion_fields:
+            return  # this happens in the reportwriter
+
+        parent = self.datastore.parent
+        if parent:
+            self.datastore['full_lt'] = parent['full_lt']
+            ne = len(parent['events'])
+            logging.info('There are %d ruptures and %d events',
+                         len(parent['ruptures']), ne)
+
+        if oq.investigation_time and oq.return_periods != [0]:
+            # setting return_periods = 0 disable loss curves
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+            if eff_time < 2:
+                logging.warning(
+                    'eff_time=%s is too small to compute loss curves',
+                    eff_time)
+        super().pre_execute()
