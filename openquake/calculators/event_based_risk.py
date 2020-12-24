@@ -75,21 +75,20 @@ def event_based_risk(riskinputs, param, monitor):
             r = out.rlzi
             agglosses = numpy.zeros((len(out.eids), L), F32)
             for l, loss_type in enumerate(crmodel.loss_types):
-                loss_ratios = out[loss_type]
-                if loss_ratios is None:  # for GMFs below the minimum_intensity
+                losses = out[loss_type]
+                if losses is None:  # for GMFs below the minimum_intensity
                     continue
                 avalues = riskmodels.get_values(loss_type, ri.assets)
                 for a, asset in enumerate(ri.assets):
                     aval = avalues[a]
                     aid = asset['ordinal']
                     idx = aid2idx[aid]
-                    ratios = loss_ratios[a]  # length E
+                    ratios = losses[a] / aval  # length E
 
                     # average losses
-                    avg[idx, r, l] = (
-                        ratios.sum(axis=0) * param['ses_ratio'] * aval)
+                    avg[idx, r, l] = losses[a].sum(axis=0) * param['ses_ratio']
                     # agglosses
-                    agglosses[:, l] += ratios * aval
+                    agglosses[:, l] += losses[a]
                     if 'builder' in param:
                         with mon:  # this is the heaviest part
                             try:
@@ -161,7 +160,6 @@ class EbrCalculator(base.RiskCalculator):
         self.param['avg_losses'] = oq.avg_losses
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['stats'] = list(oq.hazard_stats().items())
-        self.param['conditional_loss_poes'] = oq.conditional_loss_poes
         self.taskno = 0
         self.start = 0
         avg_losses = oq.avg_losses

@@ -895,13 +895,13 @@ class DiscreteDistribution(Distribution):
     seed = None  # to be set
 
     def sample(self, loss_ratios, probs):
-        ret = []
+        ret = numpy.zeros(probs.shape[1])
         r = numpy.arange(len(loss_ratios))
         for i in range(probs.shape[1]):
             random.seed(self.seed + i)
             # the seed is set inside the loop to avoid block-size dependency
             pmf = stats.rv_discrete(name='pmf', values=(r, probs[:, i])).rvs()
-            ret.append(loss_ratios[pmf])
+            ret[i] = loss_ratios[pmf]
         return ret
 
     def survival(self, loss_ratios, probs):
@@ -1477,7 +1477,7 @@ class AggLossTable(AccumDict):
         self.accum = numpy.zeros(KL, F32)
         return self
 
-    def aggregate(self, out, minimum_loss, aggby, to_losses=False):
+    def aggregate(self, out, minimum_loss, aggby):
         """
         Populate the event loss table
         """
@@ -1498,8 +1498,6 @@ class AggLossTable(AccumDict):
             lt_losses = []
             for lti, lt in enumerate(out.loss_types):
                 ls = out[lt][a]
-                if to_losses:  # convert ratios to losses
-                    ls *= asset['value-' + lt]
                 if minimum_loss[lt]:
                     ls[ls < minimum_loss[lt]] = 0
                 lt_losses.append((lt, ls))
