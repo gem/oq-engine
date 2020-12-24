@@ -1267,11 +1267,49 @@ builddoc_run () {
     return $inner_ret
 }
 
+
 #
 #  pkgtest_run <branch> - main function of package test
 #      <branch>    name of the tested branch
 #
 pkgtest_run () {
+    local i e branch="$1" commit
+
+    commit="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
+
+    sudo echo
+    sudo ${GEM_EPHEM_EXE} 2>&1 | tee /tmp/packager.eph.$$.log &
+    _lxc_name_and_ip_get /tmp/packager.eph.$$.log
+
+    _wait_ssh "$lxc_ip"
+
+    _depends_resolver "install" "../"
+
+    set +e
+    _pkgtest_innervm_run "$lxc_ip" "$branch"
+    inner_ret=$?
+
+    scp "${lxc_ip}:ssh.log" "out_${BUILD_UBUVER}/pkgtest.history"
+    sudo $LXC_TERM -n "$lxc_name"
+    set -e
+
+    if [ -f /tmp/packager.eph.$$.log ]; then
+        rm /tmp/packager.eph.$$.log
+    fi
+    if [ $inner_ret -ne 0 ]; then
+        return $inner_ret
+    fi
+
+    return 0
+}
+
+
+
+#
+#  pkgtest_run <branch> - main function of package test
+#      <branch>    name of the tested branch
+#
+pkgtest_run_old () {
     local i e branch="$1" commit
 
     commit="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
