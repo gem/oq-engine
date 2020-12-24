@@ -922,6 +922,14 @@ class OqParam(valid.ParamSet):
         else:
             return True
 
+    def is_valid_aggregate_by(self):
+        """
+        At the moment only `aggregate_by=site_id` is accepted
+        """
+        if 'site_id' in self.aggregate_by and len(self.aggregate_by) > 1:
+            return False
+        return True
+
     def is_valid_export_dir(self):
         """
         export_dir={export_dir} must refer to a directory,
