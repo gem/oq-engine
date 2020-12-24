@@ -1490,7 +1490,9 @@ class AggLossTable(AccumDict):
                 setattr(out, k, numpy.zeros((len(assets), len(eids))))
 
         # populate outputs
-        if aggby:
+        if aggby == ['site_id']:
+            idxs = [self.aggkey[s1, ] for s1 in assets['site_id'] + 1]
+        elif aggby:
             idxs = [self.aggkey[tuple(rec)] for rec in assets[aggby]]
         else:
             idxs = []

@@ -368,10 +368,13 @@ class TagCollection(object):
 
 
 class AssetCollection(object):
-    def __init__(self, exposure, assets_by_site, time_event):
+    def __init__(self, exposure, assets_by_site, time_event, aggregate_by):
         self.tagcol = exposure.tagcol
-        self.tagcol.site_id = ['?'] + list(range(len(assets_by_site)))
+        if 'site_id' in aggregate_by:
+            self.tagcol.add_tagname('site_id')
+            self.tagcol.site_id.extend(range(len(assets_by_site)))
         self.time_event = time_event
+        self.aggregate_by = aggregate_by
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
             assets_by_site, exposure.tagcol.tagnames, time_event)
@@ -437,7 +440,7 @@ class AssetCollection(object):
         return numpy.array(assets_by_site)
 
     # used in the extract API
-    def aggregate_by(self, tagnames, array):
+    def aggregateby(self, tagnames, array):
         """
         :param tagnames: a list of valid tag names
         :param array: an array with the same length as the asset collection
@@ -504,6 +507,8 @@ class AssetCollection(object):
         df = pandas.DataFrame(dic)
         if tagnames:
             df = df.set_index(list(tagnames))
+            if tagnames == ['site_id']:
+                df.index += 1
             for key, grp in df.groupby(df.index):
                 if isinstance(key, int):
                     key = key,  # turn it into a 1-value tuple
@@ -608,7 +613,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     # 'occupants_night', 'occupants_transit']
     retro = ['retrofitted'] if first_asset._retrofitted else []
     float_fields = loss_types + retro
-    int_fields = [(str(name), U32) for name in tagnames]
+    int_fields = [(str(name), U32) for name in tagnames if name != 'site_id']
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
         [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),

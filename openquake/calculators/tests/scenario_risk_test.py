@@ -185,6 +185,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         tot20 = tot_loss(self.calc.datastore)
         aac(tot10, tot20, atol=.0001)  # must be around 230.0107
 
+        # check aggregate_by site_id
+        [fname] = export(('agg_losses-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agglosses.csv', fname)
+
     def test_case_8(self):
         # a complex scenario_risk from GMFs where the hazard sites are
         # not in the asset locations

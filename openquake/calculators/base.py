@@ -1173,7 +1173,7 @@ def save_agg_values(dstore, assetcol, lossnames, tagnames):
         kvs = []
         for key, val in aggkey.items():
             kvs.append(key + val)
-            lst.append(' '.join(val))
+            lst.append(' '.join(map(str, val)))
         dstore['agg_keys'] = numpy.array(kvs, dt)
     lst.append('*total*')
     loss_names = dstore['oqparam'].loss_names

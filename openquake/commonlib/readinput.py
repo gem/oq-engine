@@ -941,7 +941,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         logging.info('Read %d sites and %d assets from the exposure',
                      len(sitecol), sum(len(a) for a in assets_by_site))
     assetcol = asset.AssetCollection(
-        exposure, assets_by_site, oqparam.time_event)
+        exposure, assets_by_site, oqparam.time_event, oqparam.aggregate_by)
     if assetcol.occupancy_periods:
         missing = set(cost_types) - set(exposure.cost_types['name']) - set(
             ['occupants'])
