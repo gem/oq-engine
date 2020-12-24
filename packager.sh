@@ -458,9 +458,7 @@ _buildfromsrc_innervm_run () {
         export PKG_DIR=\"\$(basename \$(echo \"\$PKG_DSC\") | sed 's/\(^[^_]\+\)_\([^-]\+\)-.*/\1-\2/g')\"
 
         sudo apt-get -y --force-yes install git curl build-essential dpatch fakeroot devscripts equivs lintian quilt lsb-release
-        sudo apt-get install dpkg-dev
-        sudo apt-get install equivs
-        sudo apt-get install build-essential pbuilder
+        sudo apt-get "$APT_FORCE_YES" -y install dpkg-dev equivs build-essential pbuilder
 
         mkdir \"\$GEM_GIT_PACKAGE\"
         cd \"\$GEM_GIT_PACKAGE\"
