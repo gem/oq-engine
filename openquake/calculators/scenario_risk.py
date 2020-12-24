@@ -20,18 +20,17 @@ import numpy
 
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
-from openquake.calculators import base
+from openquake.calculators import base, post_risk
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64  # higher precision to avoid task order dependency
-stat_dt = numpy.dtype([('mean', F64), ('stddev', F64)])
 
 
 def scenario_risk(riskinputs, param, monitor):
     """
-    Core function for a scenario computation.
+    Core function for a scenario_risk/event_based_risk computation.
 
     :param riskinputs:
         a list of :class:`openquake.risklib.riskinput.RiskInput` objects
@@ -79,10 +78,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         super().pre_execute()
         self.assetcol = self.datastore['assetcol']
-        E = oq.number_of_ground_motion_fields * self.R
         self.riskinputs = self.build_riskinputs('gmf')
         self.param['tempname'] = riskinput.cache_epsilons(
-            self.datastore, oq, self.assetcol, self.crmodel, E)
+            self.datastore, oq, self.assetcol, self.crmodel, self.E)
         self.param['aggregate_by'] = oq.aggregate_by
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
@@ -123,11 +121,11 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             K = len(result.aggkey)
             alt = result.to_dframe()
             self.datastore.create_dframe('agg_loss_table', alt)
-            alt['rlz_id'] = self.rlzs[alt.event_id.to_numpy()]
 
             # save agg_losses
             units = self.datastore['cost_calculator'].get_units(oq.loss_names)
             if oq.investigation_time is None:  # scenario, compute agg_losses
+                alt['rlz_id'] = self.rlzs[alt.event_id.to_numpy()]
                 dset = self.datastore.create_dset(
                     'agg_losses-rlzs', F32, (K, self.R, L))
                 for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
@@ -136,3 +134,5 @@ class ScenarioRiskCalculator(base.RiskCalculator):
                     dset[agg_id, rlz_id] = agglosses * self.avg_ratio[rlz_id]
                 set_rlzs_stats(self.datastore, 'agg_losses',
                                agg_id=K, loss_types=oq.loss_names, units=units)
+            else:  # event_based_risk, run post_risk
+                post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()
