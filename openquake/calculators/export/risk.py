@@ -78,7 +78,7 @@ def export_agg_curve_rlzs(ekey, dstore):
         md['kind'] = f'{name}-' + (
             ros if isinstance(ros, str) else 'rlz-%03d' % ros)
         try:
-            df = dataf.loc[ros]
+            df = dataf[dataf.index == ros]
         except KeyError:
             logging.warning('No data for %s', md['kind'])
             continue
@@ -233,7 +233,7 @@ def _compact(array):
     return array.view(numpy.dtype(lst)).reshape(a)
 
 
-# this is used by classical_risk and event_based_risk
+# this is used by classical_risk
 @export.add(('loss_curves-rlzs', 'csv'), ('loss_curves-stats', 'csv'),
             ('loss_curves', 'csv'))
 def export_loss_curves(ekey, dstore):
