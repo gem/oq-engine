@@ -566,9 +566,6 @@ farajpour_etal_2019
 ---------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.farajpour_etal_2019
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 frankel_1996
 --------------------------------------------
@@ -1082,6 +1079,11 @@ yu_2013
     :members:
     :undoc-members:
     :show-inheritance:
+
+zafarani_etal_2018
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.zafarani_etal_2018
 
 zalachoris_rathje_2019
 -----------------------------------------

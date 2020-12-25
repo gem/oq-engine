@@ -1,6 +1,9 @@
   [Hasan Mousavi]
+  * Implemented the zafarani_etal_2018 GMPEs to the hazardlib as a new model for Iran
+
+  [Hasan Mousavi]
   * Implemented the farajpoure_etal_2019 GMPEs to the hazardlib as a new model for Iran
-  
+
   [Michele Simionato]
   * Introduced an `agg_loss_table` dataset and optimized the generation of
     aggregate loss curves (up to 100x speedup)
