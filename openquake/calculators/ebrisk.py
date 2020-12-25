@@ -61,7 +61,6 @@ def calc_risk(gmfs, param, monitor):
         weights = dstore['weights'][()]
     acc = dict(events_per_sid=0)
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
-    alt_dt = param['oqparam'].alt_dt()
     tempname = param['tempname']
     aggby = param['aggregate_by']
     mal = param['minimum_asset_loss']
@@ -95,14 +94,7 @@ def calc_risk(gmfs, param, monitor):
                     losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
-    out = []
-    for eid, arr in alt.items():
-        for k, vals in enumerate(arr):  # arr has shape K, L'
-            if vals.sum() > 0:
-                # in the demo there are 264/1694 nonzero events, i.e.
-                # vals.sum() is zero most of the time
-                out.append((eid, k) + tuple(vals))
-    acc['alt'] = numpy.array(out, alt_dt)
+    acc['alt'] = alt.to_dframe()
     if param['avg_losses']:
         acc['losses_by_A'] = losses_by_A * param['ses_ratio']
     return acc
@@ -244,10 +236,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             return
         self.oqparam.ground_motion_fields = False  # hack
         with self.monitor('saving agg_loss_table'):
-            arr = dic['alt']
-            for name in arr.dtype.names:
+            df = dic['alt']
+            for name in df.columns:
                 dset = self.datastore['agg_loss_table/' + name]
-                hdf5.extend(dset, arr[name])
+                hdf5.extend(dset, df[name].to_numpy())
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
