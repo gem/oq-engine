@@ -243,7 +243,7 @@ add_local_pkg_repo () {
     fi
 
     if [ "$dep_repo" = "$GEM_GIT_REPO" -a "$dep_branch" = "${GEM_MASTER_BRANCH}" ]; then
-        GEM_DEB_SERIE="master"
+        GEM_DEB_SERIE="${GEM_MASTER_BRANCH}"
     else
         GEM_DEB_SERIE="devel/$(echo "$dep_repo" | sed 's@^.*://@@g;s@/@__@g;s/\./-/g')__${dep_branch}"
     fi
@@ -499,7 +499,7 @@ buildfromsrc_run () {
     fi
 
     #
-   #  dependencies repos
+    #  dependencies repos
     #
     # in test sources different repositories and branches can be tested
     # consistently: for each openquake dependency it try to use
