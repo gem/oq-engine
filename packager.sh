@@ -577,9 +577,14 @@ EOF
         if [ -d "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" ]; then
             if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch" == "$GEM_MASTER_BRANCH" ]; then
                 ls ${GEM_BUILD_ROOT}
+
+# +./packager.sh:1675:main: cp build-deb/python3-oq-engine_3.10.0-1~xenial01~dev1609022649+681bada_source.changes build-deb/python3-oq-engine_3.10.0-1~xenial01~dev1609022649+681bada.dsc build-deb/python3-oq-engine_3.10.0-1~xenial01~dev1609022649+681bada.tar.gz /var/lib/jenkins/monotone/xenial/source
+# +./packager.sh:1678:main: cp 'build-deb/python3-oq-engine_*.buildinfo' /var/lib/jenkins/monotone/xenial/source
+
+                
+  #                 ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
+  #                  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.?z \
                 cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb \
-                   ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
-                    ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.?z \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
                 cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.buildinfo \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" || true
