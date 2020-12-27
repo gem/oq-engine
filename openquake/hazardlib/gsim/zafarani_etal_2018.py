@@ -59,8 +59,8 @@ class ZafaraniEtAl2018(GMPE):
     #: Required rupture parameters are magnitude, and rake.
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
-    #: Required distance measure is rrup
-    REQUIRES_DISTANCES = {'rrup'}
+    #: Required distance measure is 'Joyner-Boore' distance.
+    REQUIRES_DISTANCES = {'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -117,7 +117,7 @@ class ZafaraniEtAl2018(GMPE):
         """
         Returns the geometric attenuation term defined in equation 3
         """
-        r_adj = np.sqrt(dists.rrup ** 2.0 + C["h"] ** 2.0)
+        r_adj = np.sqrt(dists.rjb ** 2.0 + C["h"] ** 2.0)
         return C["c1"] * np.log10(r_adj)
     def _get_site_scaling(self, C, vs30):
         """

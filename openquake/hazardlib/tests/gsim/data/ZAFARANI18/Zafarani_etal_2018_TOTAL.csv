@@ -1,4 +1,4 @@
-rup_mag,rup_rake,dist_rrup,site_vs30,result_type,damping,PGA,0.04,0.1,0.2,0.3,1,3
+rup_mag,rup_rake,dist_rjb,site_vs30,result_type,damping,PGA,0.04,0.1,0.2,0.3,1,3
 4.5,90,2,200,TOTAL_STDDEV,5,0.298,0.31,0.326,0.326,0.325,0.342,0.319
 4.5,90,5,200,TOTAL_STDDEV,5,0.298,0.31,0.326,0.326,0.325,0.342,0.319
 4.5,90,10,200,TOTAL_STDDEV,5,0.298,0.31,0.326,0.326,0.325,0.342,0.319

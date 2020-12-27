@@ -904,6 +904,11 @@ sadigh_1997
     :undoc-members:
     :show-inheritance:
 
+sedaghati_pezeshk_2017
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sedaghati_pezeshk_2017
+
 sera_amplification_models
 -------------------------------------------
 
