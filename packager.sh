@@ -590,7 +590,7 @@ EOF
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" || true
                 PKG_COMMIT="$(git rev-parse HEAD | cut -c 1-7)"
                 cat _jenkins_deps_info
-                grep '_COMMIT|_PKG=' _jenkins_deps_info \
+                egrep '_COMMIT=|_PKG=' _jenkins_deps_info \
                   | sed 's/\(^.*=[0-9a-f]\{7\}\).*/\1/g' \
                   > "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/${GEM_DEB_PACKAGE}_${PKG_COMMIT}_deps.txt"
             fi
