@@ -163,10 +163,7 @@ class GmfComputer(object):
             for rlz in rlzs:
                 eids = eids_by_rlz[rlz]
                 for ei, eid in enumerate(eids):
-                    try:
-                        gmfa = array[:, :, n + ei]  # shape (N, M)
-                    except:
-                        import pdb; pdb.set_trace()
+                    gmfa = array[:, :, n + ei]  # shape (N, M)
                     tot = gmfa.sum(axis=0)  # shape (M,)
                     if not tot.sum():
                         continue

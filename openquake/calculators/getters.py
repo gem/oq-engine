@@ -338,17 +338,6 @@ class GmfGetter(object):
         data = self.get_gmfdata()
         return {rlzi: df for rlzi, df in data.groupby('rlz')}
 
-    def get_hazard_by_sid(self, data=None):
-        """
-        :param data: if given, an iterator of records of dtype gmf_dt
-        :returns: sid -> records
-        """
-        if data is None:
-            data = self.get_gmfdata()
-        if len(data) == 0:
-            return {}
-        return {sid: df for sid, df in data.groupby('sid')}
-
     def compute_gmfs_curves(self, monitor):
         """
         :returns: a dict with keys gmfdata, hcurves
