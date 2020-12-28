@@ -1018,7 +1018,7 @@ class RiskCalculator(HazardCalculator):
             except KeyError:
                 getter = getters.ZeroGetter(sid, rlzs, self.R)
             else:
-                df['rlzs'] = rlzs[df.eid.to_numpy()]
+                df['rlz'] = rlzs[df.eid.to_numpy()]
                 getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)
             if len(dstore['gmf_data/gmv_0']) == 0:
                 raise RuntimeError(

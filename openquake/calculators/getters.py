@@ -225,9 +225,9 @@ class GmfDataGetter(object):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: an dict rlzi -> datadict
+        :returns: the underlying DataFrame
         """
-        return dict(list(self.df.groupby('rlzs')))
+        return self.df
 
 
 class ZeroGetter(GmfDataGetter):
@@ -237,7 +237,7 @@ class ZeroGetter(GmfDataGetter):
     def __init__(self, sid, rlzs, num_rlzs):
         self.sids = [sid]
         self.df = pandas.DataFrame({
-            'rlzs': rlzs, 'eid': numpy.arange(len(rlzs))})
+            'rlz': rlzs, 'eid': numpy.arange(len(rlzs))})
         self.num_rlzs = num_rlzs
 
 
@@ -333,10 +333,9 @@ class GmfGetter(object):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: a dictionary rlzi -> dataframe
+        :returns: DataFrame
         """
-        data = self.get_gmfdata()
-        return {rlzi: df for rlzi, df in data.groupby('rlz')}
+        return self.get_gmfdata()
 
     def compute_gmfs_curves(self, monitor):
         """

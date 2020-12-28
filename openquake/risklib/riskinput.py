@@ -141,8 +141,8 @@ class RiskInput(object):
         if haz is None:
             with monitor('getting hazard', measuremem=False):
                 haz = hazard_getter.get_hazard()
-        if isinstance(haz, dict):  # scenario, event_based
-            items = haz.items()
+        if isinstance(haz, pandas.DataFrame):  # scenario, event_based
+            items = haz.groupby('rlz')
         else:  # list of length R, classical
             items = enumerate(haz)
         with monitor('computing risk', measuremem=False):
