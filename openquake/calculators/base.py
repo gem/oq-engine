@@ -1026,7 +1026,7 @@ class RiskCalculator(HazardCalculator):
                     'ground_motion_fields=False or a large minimum_intensity')
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
-                yield riskinput.RiskInput(sid, getter, numpy.array(block))
+                yield riskinput.RiskInput(getter, numpy.array(block))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
                               len(block), sid)
@@ -1041,7 +1041,7 @@ class RiskCalculator(HazardCalculator):
             getter = getters.PmapGetter(dstore, ws, [sid], self.oqparam.imtls)
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
-                yield riskinput.RiskInput(sid, getter, numpy.array(block))
+                yield riskinput.RiskInput(getter, numpy.array(block))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
                               len(block), sid)

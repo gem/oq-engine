@@ -118,8 +118,7 @@ class RiskInput(object):
     :param assets_by_site:
         array of assets, one per site
     """
-    def __init__(self, sid, hazard_getter, assets):
-        self.sid = sid
+    def __init__(self, hazard_getter, assets):
         self.hazard_getter = hazard_getter
         self.assets = assets
         self.weight = len(assets)
@@ -157,8 +156,9 @@ class RiskInput(object):
                 yield out
 
     def __repr__(self):
+        [sid] = self.hazard_getter.sids
         return '<%s sid=%s, %d asset(s)>' % (
-            self.__class__.__name__, self.sid, len(self.aids))
+            self.__class__.__name__, sid, len(self.aids))
 
 
 # used in scenario_risk
