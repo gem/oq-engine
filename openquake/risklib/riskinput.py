@@ -79,11 +79,6 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         else:  # ZeroGetter for this site (event based)
             eids = numpy.arange(1)
             data = {f'gmv_{m}': [0] for m, imt in enumerate(crmodel.imtls)}
-    elif isinstance(haz, numpy.ndarray):
-        # ebrisk
-        haz.sort(order='eid')
-        eids = haz['eid']
-        data = haz
     else:
         raise ValueError('Unexpected haz=%s' % haz)
     dic = dict(eids=eids, assets=assets_by_taxo.assets,

@@ -146,7 +146,6 @@ class GmfComputer(object):
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
-        M = len(min_iml)
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
             if num_events == 0:  # it may happen
@@ -155,6 +154,7 @@ class GmfComputer(object):
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
             array, sig, eps = self.compute(gs, num_events)
+            M = len(array)
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             for i, miniml in enumerate(min_iml.values()):  # gmv < minimum
                 arr = array[:, i, :]
@@ -163,7 +163,10 @@ class GmfComputer(object):
             for rlz in rlzs:
                 eids = eids_by_rlz[rlz]
                 for ei, eid in enumerate(eids):
-                    gmfa = array[:, :, n + ei]  # shape (N, M)
+                    try:
+                        gmfa = array[:, :, n + ei]  # shape (N, M)
+                    except:
+                        import pdb; pdb.set_trace()
                     tot = gmfa.sum(axis=0)  # shape (M,)
                     if not tot.sum():
                         continue
@@ -174,8 +177,8 @@ class GmfComputer(object):
                     items = []
                     for sp in self.sec_perils:
                         o = sp.compute(mag, zip(self.imts, gmfa.T), self.sctx)
-                        for outkey, array in zip(sp.outputs, o):
-                            items.append((outkey, array))
+                        for outkey, outarr in zip(sp.outputs, o):
+                            items.append((outkey, outarr))
                     for i, gmv in enumerate(gmfa):
                         if gmv.sum():
                             data['sid'].append(sids[i])
@@ -183,8 +186,8 @@ class GmfComputer(object):
                             data['rlz'].append(rlz)
                             for m in range(M):
                                 data[f'gmv_{m}'].append(gmv[m])
-                            for outkey, array in items:
-                                data[outkey].append(array[i])
+                            for outkey, outarr in items:
+                                data[outkey].append(outarr[i])
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += len(eids)
