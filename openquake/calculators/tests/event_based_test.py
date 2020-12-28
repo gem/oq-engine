@@ -299,7 +299,11 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # test get_gmfgetter
         gg = get_gmfgetter(self.calc.datastore, rup_id=0)
-        self.assertEqual(len(gg.get_hazard()), 1)  # 1 rlz
+        self.assertEqual(str(gg.get_hazard()), '''\
+   sid  eid  rlz     gmv_0
+0    0    0    0  0.611368
+1    1    0    0  1.556242
+2    2    0    0  1.226484''')
 
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
