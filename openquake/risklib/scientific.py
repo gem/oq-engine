@@ -1522,7 +1522,7 @@ class AggLossTable(AccumDict):
                     if loss:
                         self[eid][idx, lni] += loss
 
-    def to_dframe(self):
+    def to_dframe(self, agg_dtype):
         """
         Convert the AggLosTable into a DataFrame
         """
@@ -1535,7 +1535,7 @@ class AggLossTable(AccumDict):
             for l, ln in enumerate(self.loss_names):
                 out[ln].extend(arr[ok, l])
         out['event_id'] = U32(out['event_id'])
-        out['agg_id'] = U16(out['agg_id'])
+        out['agg_id'] = agg_dtype(out['agg_id'])
         for ln in self.loss_names:
             out[ln] = F32(out[ln])
         return pandas.DataFrame(out)

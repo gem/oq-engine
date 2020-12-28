@@ -92,6 +92,7 @@ class OqParam(valid.ParamSet):
         z2pt5='reference_depth_to_2pt5km_per_sec',
         siteclass='reference_siteclass',
         backarc='reference_backarc')
+    agg_dtype = valid.Param(valid.Choice('uint16', 'uint32'), 'uint16')
     aggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), None)

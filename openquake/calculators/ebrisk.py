@@ -94,7 +94,7 @@ def calc_risk(gmfs, param, monitor):
                     losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
     if len(gmfs):
         acc['events_per_sid'] /= len(gmfs)
-    acc['alt'] = alt.to_dframe()
+    acc['alt'] = alt.to_dframe(getattr(numpy, param['oqparam'].agg_dtype))
     if param['avg_losses']:
         acc['losses_by_A'] = losses_by_A * param['ses_ratio']
     return acc
@@ -185,7 +185,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
 
-        descr = [('event_id', U32), ('agg_id', U16)]
+        descr = [('event_id', U32), ('agg_id', getattr(numpy, oq.agg_dtype))]
         for name in oq.loss_names:
             descr.append((name, F32))
         self.datastore.create_dframe(

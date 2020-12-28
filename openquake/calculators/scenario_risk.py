@@ -120,7 +120,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         with self.monitor('saving agg_loss_table'):
             logging.info('Saving the agg_loss_table')
             K = len(result.aggkey)
-            alt = result.to_dframe()
+            alt = result.to_dframe(getattr(numpy, oq.agg_dtype))
             self.datastore.create_dframe('agg_loss_table', alt)
 
         # save agg_losses
