@@ -137,23 +137,21 @@ class RiskInput(object):
         """
         self.monitor = monitor
         hazard_getter = self.hazard_getter
-        [sid] = hazard_getter.sids
         if haz is None:
             with monitor('getting hazard', measuremem=False):
                 haz = hazard_getter.get_hazard()
-        if isinstance(haz, pandas.DataFrame):  # scenario, event_based
-            items = haz.groupby('rlz')
-        else:  # list of length R, classical
-            items = enumerate(haz)
         with monitor('computing risk', measuremem=False):
             # this approach is slow for event_based_risk since a lot of
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
             assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
-            for rlzi, haz_by_rlzi in items:
-                out = get_output(crmodel, assets_by_taxo, haz_by_rlzi, rlzi)
-                yield out
+            if hasattr(haz, 'groupby'):  # DataFrame
+                for (sid, rlz), df in haz.groupby(['sid', 'rlz']):
+                    yield get_output(crmodel, assets_by_taxo, df, rlz)
+            else:  # list of probability curves
+                for rlz, pc in enumerate(haz):
+                    yield get_output(crmodel, assets_by_taxo, pc, rlz)
 
     def __repr__(self):
         [sid] = self.hazard_getter.sids
