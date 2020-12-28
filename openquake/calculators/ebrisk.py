@@ -185,7 +185,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
 
-        descr = [('event_id', U32), ('agg_id', U16)]
+        descr = [('event_id', U32), ('agg_id', U32)]
         for name in oq.loss_names:
             descr.append((name, F32))
         self.datastore.create_dframe(

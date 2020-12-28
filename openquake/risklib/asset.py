@@ -317,9 +317,9 @@ class TagCollection(object):
         ranges = [range(1, len(tags)) for tags in alltags]
         for i, idxs in enumerate(itertools.product(*ranges)):
             aggkey[idxs] = tuple(tags[idx] for idx, tags in zip(idxs, alltags))
-        if len(aggkey) >= TWO16:
+        if len(aggkey) >= TWO32:
             raise ValueError('Too many aggregation tags: %d >= %d' %
-                             (len(aggkey), TWO16))
+                             (len(aggkey), TWO32))
         return aggkey
 
     def gen_tags(self, tagname):
