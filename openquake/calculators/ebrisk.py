@@ -21,6 +21,7 @@ import logging
 import operator
 from datetime import datetime
 import numpy
+import pandas
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
@@ -43,9 +44,9 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def calc_risk(gmfs, param, monitor):
+def calc_risk(df, param, monitor):
     """
-    :param gmfs: an array of GMFs with fields sid, eid, gmv
+    :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
     :param param: a dictionary of parameters coming from the job.ini
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays with keys alt, losses_by_A
@@ -64,10 +65,10 @@ def calc_risk(gmfs, param, monitor):
     tempname = param['tempname']
     aggby = param['aggregate_by']
     mal = param['minimum_asset_loss']
-    haz_by_sid = general.group_array(gmfs, 'sid')
+    haz_by_sid = {s: d for s, d in df.groupby('sid')}
     losses_by_A = numpy.zeros((len(assets_df), len(alt.loss_names)), F32)
     acc['avg_gmf'] = avg_gmf = {}
-    for col in gmfs.dtype.names:
+    for col in df.columns:
         if col not in 'sid eid rlz':
             avg_gmf[col] = numpy.zeros(param['N'], F32)
 
@@ -85,15 +86,15 @@ def calc_risk(gmfs, param, monitor):
             alt.aggregate(out, mal, aggby)
             # NB: after the aggregation out contains losses, not loss_ratios
         ws = weights[haz['rlz']]
-        for col in gmfs.dtype.names:
+        for col in df.columns:
             if col not in 'sid eid rlz':
                 avg_gmf[col][sid] = haz[col] @ ws
         if param['avg_losses']:
             with mon_avg:
                 for lni, ln in enumerate(alt.loss_names):
                     losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
-    if len(gmfs):
-        acc['events_per_sid'] /= len(gmfs)
+    if len(df):
+        acc['events_per_sid'] /= len(df)
     acc['alt'] = alt.to_dframe()
     if param['avg_losses']:
         acc['losses_by_A'] = losses_by_A * param['ses_ratio']
@@ -127,25 +128,29 @@ def ebrisk(rupgetter, param, monitor):
     """
     mon_rup = monitor('getting ruptures', measuremem=False)
     mon_haz = monitor('getting hazard', measuremem=True)
-    gmfs = []
+    alldata = general.AccumDict(accum=[])
     gmf_info = []
     srcfilter = monitor.read('srcfilter')
     param['N'] = len(srcfilter.sitecol.complete)
     gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'],
                            param['amplifier'])
-    nbytes = 0
     with mon_haz:
         for c in gg.gen_computers(mon_rup):
             data, time_by_rup = c.compute_all(gg.min_iml, gg.rlzs_by_gsim)
             if len(data):
-                gmfs.append(data)
-                nbytes += data.nbytes
+                for key, val in data.items():
+                    alldata[key].extend(data[key])
+                nbytes = len(data['sid']) * len(data) * 4
                 gmf_info.append((c.ebrupture.id, mon_haz.task_no, len(c.sids),
-                                 data.nbytes, mon_haz.dt))
-    if not gmfs:
+                                 nbytes, mon_haz.dt))
+    if not alldata:
         return {}
-    conc = numpy.concatenate(gmfs)
-    res = calc_risk(conc, param, monitor)
+    for key, val in sorted(alldata.items()):
+        if key in 'eid sid rlz':
+            alldata[key] = U32(alldata[key])
+        else:
+            alldata[key] = F32(alldata[key])
+    res = calc_risk(pandas.DataFrame(alldata), param, monitor)
     if gmf_info:
         res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
     return res

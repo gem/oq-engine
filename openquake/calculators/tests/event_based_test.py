@@ -150,15 +150,8 @@ class EventBasedTestCase(CalculatorTestCase):
         # compute hcurves in postprocessing and compare with inprocessing
         # take advantage of the fact that there is a single site
         df = self.calc.datastore.read_df('gmf_data', 'sid')
-        dt = self.calc.datastore['oqparam'].gmf_data_dt()
-        gmvs = numpy.zeros(len(df), dt)
-        gmvs['sid'] = 0
-        gmvs['eid'] = df.eid.to_numpy()
-        for col in df.columns:
-            if col.startswith('gmv_'):
-                gmvs[col] = df[col].to_numpy()
         oq = self.calc.datastore['oqparam']
-        poes = gmvs_to_poes(gmvs, oq.imtls, oq.ses_per_logic_tree_path)
+        poes = gmvs_to_poes(df, oq.imtls, oq.ses_per_logic_tree_path)
         hcurve = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L)
         aae(poes, hcurve)
 
@@ -306,7 +299,11 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # test get_gmfgetter
         gg = get_gmfgetter(self.calc.datastore, rup_id=0)
-        self.assertEqual(len(gg.get_hazard()), 1)  # 1 rlz
+        self.assertEqual(str(gg.get_hazard()), '''\
+   sid  eid  rlz     gmv_0
+0    0    0    0  0.611368
+1    1    0    0  1.556242
+2    2    0    0  1.226484''')
 
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered

@@ -52,12 +52,12 @@ def scenario_risk(riskinputs, param, monitor):
                 out, param['minimum_asset_loss'], param['aggregate_by'])
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
-                losses_by_asset = numpy.zeros(len(ri.assets), F64)
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
-                    losses_by_asset[a] = av = losses[a].sum()
-                    if av:
-                        result['losses_by_asset'].append((l, out.rlzi, aid, av))
+                    lba = losses[a].sum()
+                    if lba:
+                        result['losses_by_asset'].append(
+                            (l, out.rlzi, aid, lba))
     return result
 
 

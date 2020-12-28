@@ -188,9 +188,9 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     return poes
 
 
-def gmvs_to_poes(gmvs, imtls, ses_per_logic_tree_path):
+def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
     """
-    :param gmvs: a composite array with fields gmv_0, .. gmv_{M-1}
+    :param df: a DataFrame with fields gmv_0, .. gmv_{M-1}
     :param imtls: a dictionary imt -> imls with M IMTs and L levels
     :param ses_per_logic_tree_path: a positive integer
     :returns: an array of PoEs of shape (M, L)
@@ -200,7 +200,7 @@ def gmvs_to_poes(gmvs, imtls, ses_per_logic_tree_path):
     arr = numpy.zeros((M, L))
     for m, imt in enumerate(imtls):
         arr[m] = _gmvs_to_haz_curve(
-            gmvs[f'gmv_{m}'], imtls[imt], ses_per_logic_tree_path)
+            df[f'gmv_{m}'].to_numpy(), imtls[imt], ses_per_logic_tree_path)
     return arr
 
 
