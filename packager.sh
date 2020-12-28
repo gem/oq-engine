@@ -637,7 +637,7 @@ _pkgbuild_innervm_run () {
 
     ssh -t "$lxc_ip" cd build-deb \&\& dpkg-buildpackage $DPBP_FLAG
     scp "$lxc_ip:"*.{tar.?z,changes,dsc} ../
-    scp "$lxc_ip:"*.buildinfo ../ || true
+    scp "$lxc_ip:"*.buildinfo ../ \|\| true
     if echo "$DPBP_FLAG" | grep -q -v -- '-S'; then
         scp "$lxc_ip:"*.deb ../
     fi
