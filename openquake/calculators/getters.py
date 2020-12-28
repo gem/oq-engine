@@ -311,28 +311,32 @@ class GmfGetter(object):
 
     def get_gmfdata(self, mon=performance.Monitor()):
         """
-        :returns: an array of the dtype (sid, eid, gmv)
+        :returns: a DataFrame with fields eid, sid, gmv_...
         """
-        alldata = []
+        alldata = general.AccumDict(accum=[])
         self.sig_eps = []
         self.times = []  # rup_id, nsites, dt
         for computer in self.gen_computers(mon):
             data, dt = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
             self.times.append((computer.ebrupture.id, len(computer.sids), dt))
-            alldata.append(data)
-        if not alldata:
-            return []
-        return numpy.concatenate(alldata)
+            for key in data:
+                alldata[key].extend(data[key])
+        for key, val in sorted(alldata.items()):
+            if key in 'eid sid rlz':
+                alldata[key] = U32(alldata[key])
+            else:
+                alldata[key] = F32(alldata[key])
+        return pandas.DataFrame(alldata)
 
     # not called by the engine
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: a dictionary rlzi -> array
+        :returns: a dictionary rlzi -> dataframe
         """
         data = self.get_gmfdata()
-        return general.group_array(data, 'rlz')
+        return {rlzi: df for rlzi, df in data.groupby('rlz')}
 
     def get_hazard_by_sid(self, data=None):
         """
@@ -343,7 +347,7 @@ class GmfGetter(object):
             data = self.get_gmfdata()
         if len(data) == 0:
             return {}
-        return general.group_array(data, 'sid')
+        return {sid: df for sid, df in data.groupby('sid')}
 
     def compute_gmfs_curves(self, monitor):
         """
@@ -355,15 +359,14 @@ class GmfGetter(object):
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
             gmfdata = self.get_gmfdata(mon)  # returned later
-            hazard = self.get_hazard_by_sid(data=gmfdata)
-            for sid, hazardr in hazard.items():
-                dic = general.group_array(hazardr, 'rlz')
-                for rlzi, array in dic.items():
-                    with hc_mon:
-                        poes = gmvs_to_poes(
-                            array, oq.imtls, oq.ses_per_logic_tree_path)
-                        for m, imt in enumerate(oq.imtls):
-                            hcurves[rsi2str(rlzi, sid, imt)] = poes[m]
+            if len(gmfdata) == 0:
+                return dict(gmfdata=(), hcurves=hcurves)
+            for (sid, rlz), df in gmfdata.groupby(['sid', 'rlz']):
+                with hc_mon:
+                    poes = gmvs_to_poes(
+                        df, oq.imtls, oq.ses_per_logic_tree_path)
+                    for m, imt in enumerate(oq.imtls):
+                        hcurves[rsi2str(rlz, sid, imt)] = poes[m]
         if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
         if not oq.hazard_curves_from_gmfs:
