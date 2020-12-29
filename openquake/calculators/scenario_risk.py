@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import copy
 import logging
 import numpy
 from openquake.hazardlib.stats import set_rlzs_stats
@@ -45,10 +46,11 @@ def scenario_risk(riskinputs, param, monitor):
         (lt_idx, rlz_idx, asset_ordinal, totloss)}
     """
     crmodel = monitor.read('crmodel')
-    result = dict(losses_by_asset=[], alt=param['alt'])
+    alt = copy.copy(param['alt'])
+    result = dict(losses_by_asset=[], alt=alt)
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
-            param['alt'].aggregate(
+            alt.aggregate(
                 out, param['minimum_asset_loss'], param['aggregate_by'])
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
@@ -98,9 +100,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     def combine(self, acc, res):
         if res is None:
             raise MemoryError('You ran out of memory!')
-        self.acc += res['alt']
-        for (l, r, aid, lba) in res['losses_by_asset']:
-            self.avglosses[aid, r, l] = lba * self.avg_ratio[r]
+        with self.monitor('aggregating losses', measuremem=False):
+            self.acc += res['alt']
+            for (l, r, aid, lba) in res['losses_by_asset']:
+                self.avglosses[aid, r, l] = lba * self.avg_ratio[r]
         return acc
 
     def post_execute(self, result):
