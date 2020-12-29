@@ -151,15 +151,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.param['master_seed'] = self.oqparam.master_seed
         self.param['num_events'] = numpy.bincount(  # events by rlz
             self.datastore['events']['rlz_id'])
-        fields = []
-        for f, dt in self.param['asset_damage_dt']:
-            self.datastore.create_dset('dd_data/' + f, dt, compression='gzip')
-            fields.append(f)
-        attrs = self.datastore.getitem('dd_data').attrs
-        attrs['__pdcolumns__'] = ' '.join(fields)
+        self.datastore.create_dframe(
+            'dd_data', self.param['asset_damage_dt'], 'gzip')
         self.riskinputs = self.build_riskinputs('gmf')
 
     def combine(self, acc, res):
+        """
+        Combine the results and grows dd_data
+        """
+        if res is None:
+            raise MemoryError('You ran out of memory!')
         with self.monitor('saving dd_data', measuremem=True):
             aed = res.pop('aed', ())
             if len(aed) == 0:

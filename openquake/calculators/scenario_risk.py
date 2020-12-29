@@ -16,89 +16,50 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import functools
+import copy
 import logging
 import numpy
-
-from openquake.baselib import hdf5
-from openquake.baselib.python3compat import zip
-from openquake.baselib.general import AccumDict
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
-from openquake.calculators import base, views
+from openquake.calculators import base, post_risk
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64  # higher precision to avoid task order dependency
-stat_dt = numpy.dtype([('mean', F32), ('stddev', F32)])
-
-
-def value(asset, loss_type):
-    if loss_type == 'occupants':
-        return asset['occupants_None']
-    return asset['value-' + loss_type]
-
-
-def _event_slice(num_gmfs, r):
-    return slice(r * num_gmfs, (r + 1) * num_gmfs)
-
-
-def ael_dt(loss_names, rlz=False):
-    """
-    :returns: (asset_id, event_id, loss) or (asset_id, event_id, loss)
-    """
-    L = len(loss_names),
-    if rlz:
-        return [('asset_id', U32), ('event_id', U32),
-                ('rlzi', U16), ('loss', (F32, L))]
-    else:
-        return [('asset_id', U32), ('event_id', U32), ('loss', (F32, L))]
 
 
 def scenario_risk(riskinputs, param, monitor):
     """
-    Core function for a scenario computation.
+    Core function for a scenario_risk/event_based_risk computation.
 
-    :param riskinput:
-        a of :class:`openquake.risklib.riskinput.RiskInput` object
+    :param riskinputs:
+        a list of :class:`openquake.risklib.riskinput.RiskInput` objects
     :param param:
         dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     :returns:
         a dictionary {
-        'agg': array of shape (E, L, R, 2),
-        'avg': list of tuples (lt_idx, rlz_idx, asset_ordinal, statistics)
-        }
-        where E is the number of simulated events, L the number of loss types,
-        R the number of realizations  and statistics is an array of shape
-        (n, R, 4), with n the number of assets in the current riskinput object
+        'alt': AggLoggTable instance
+        'losses_by_asset': list of tuples
+        (lt_idx, rlz_idx, asset_ordinal, totloss)}
     """
     crmodel = monitor.read('crmodel')
-    E = param['E']
-    L = len(crmodel.loss_types)
-    result = dict(agg=numpy.zeros((E, L), F32), avg=[])
-    acc = AccumDict(accum=numpy.zeros(L, F64))  # aid,eid->loss
+    alt = copy.copy(param['alt'])
+    result = dict(losses_by_asset=[], alt=alt)
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
-            r = out.rlzi
+            alt.aggregate(
+                out, param['minimum_asset_loss'], param['aggregate_by'])
             for l, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
-                if numpy.product(losses.shape) == 0:  # happens for all NaNs
-                    continue
-                avg = numpy.zeros(len(ri.assets), F32)
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
-                    avg[a] = losses[a].mean()
-                    result['avg'].append((l, r, asset['ordinal'], avg[a]))
-                    for loss, eid in zip(losses[a], out.eids):
-                        acc[aid, eid][l] = loss
-                agglosses = losses.sum(axis=0)  # shape num_gmfs
-                result['agg'][out.eids, l] += agglosses
-
-    ael = [(aid, eid, loss) for (aid, eid), loss in sorted(acc.items())]
-    result['ael'] = numpy.array(ael, param['ael_dt'])
+                    lba = losses[a].sum()
+                    if lba:
+                        result['losses_by_asset'].append(
+                            (l, out.rlzi, aid, lba))
     return result
 
 
@@ -120,72 +81,92 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         oq = self.oqparam
         super().pre_execute()
         self.assetcol = self.datastore['assetcol']
-        self.event_slice = functools.partial(
-            _event_slice, oq.number_of_ground_motion_fields)
-        E = oq.number_of_ground_motion_fields * self.R
         self.riskinputs = self.build_riskinputs('gmf')
         self.param['tempname'] = riskinput.cache_epsilons(
-            self.datastore, oq, self.assetcol, self.crmodel, E)
-        self.param['E'] = E
-        # assuming the weights are the same for all IMTs
-        try:
-            self.param['weights'] = self.datastore['weights'][()]
-        except KeyError:
-            self.param['weights'] = [1 / self.R for _ in range(self.R)]
-        self.param['ael_dt'] = dt = ael_dt(oq.loss_names)
-        A = len(self.assetcol)
-        self.datastore.create_dset('loss_data/data', dt)
-        self.datastore.create_dset('loss_data/indices', U32, (A, 2))
+            self.datastore, oq, self.assetcol, self.crmodel, self.E)
+        self.param['aggregate_by'] = oq.aggregate_by
+        self.rlzs = self.datastore['events']['rlz_id']
+        self.num_events = numpy.bincount(self.rlzs)  # events by rlz
+        aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
+        self.param['alt'] = self.acc = scientific.AggLossTable.new(
+            aggkey, oq.loss_names, sec_losses=[])
+        L = len(oq.loss_names)
+        self.avglosses = numpy.zeros((len(self.assetcol), self.R, L), F32)
+        if oq.investigation_time:  # event_based
+            self.avg_ratio = numpy.array([oq.ses_ratio] * self.R)
+        else:  # scenario
+            self.avg_ratio = 1. / self.num_events
 
     def combine(self, acc, res):
-        """
-        Combine the outputs from scenario_risk and incrementally store
-        the asset loss table
-        """
-        with self.monitor('saving loss_data', measuremem=True):
-            ael = res.pop('ael', ())
-            if len(ael) == 0:
-                return acc + res
-            hdf5.extend(self.datastore['loss_data/data'], ael)
-            return acc + res
+        if res is None:
+            raise MemoryError('You ran out of memory!')
+        with self.monitor('aggregating losses', measuremem=False):
+            self.acc += res['alt']
+            for (l, r, aid, lba) in res['losses_by_asset']:
+                self.avglosses[aid, r, l] = lba * self.avg_ratio[r]
+        return acc
 
     def post_execute(self, result):
         """
         Compute stats for the aggregated distributions and save
         the results on the datastore.
         """
-        loss_dt = self.oqparam.loss_dt()
-        L = len(loss_dt.names)
-        dtlist = [('event_id', U32), ('loss', (F32, (L,)))]
-        R = self.R
-        with self.monitor('saving outputs'):
-            A = len(self.assetcol)
+        oq = self.oqparam
+        L = len(oq.loss_names)
+        # avg losses must be 32 bit otherwise export losses_by_asset will
+        # break the QGIS test for ScenarioRisk
+        self.datastore['avg_losses-rlzs'] = self.avglosses
+        set_rlzs_stats(self.datastore, 'avg_losses',
+                       asset_id=self.assetcol['id'],
+                       loss_type=self.oqparam.loss_names)
 
-            # agg losses
-            res = result['agg']
-            E, L = res.shape
-            agglosses = numpy.zeros((R, L), stat_dt)
-            for r in range(R):
-                mean, std = scientific.mean_std(res[self.event_slice(r)])
-                agglosses[r]['mean'] = F32(mean)
-                agglosses[r]['stddev'] = F32(std)
+        with self.monitor('saving agg_loss_table'):
+            logging.info('Saving the agg_loss_table')
+            K = len(result.aggkey)
+            alt = result.to_dframe()
+            self.datastore.create_dframe('agg_loss_table', alt)
 
-            # losses by asset
-            losses_by_asset = numpy.zeros((A, R, L), F32)
-            for (l, r, aid, avg) in result['avg']:
-                losses_by_asset[aid, r, l] = avg
-            self.datastore['avg_losses-rlzs'] = losses_by_asset
-            set_rlzs_stats(self.datastore, 'avg_losses',
-                           asset_id=self.assetcol['id'],
-                           loss_type=self.oqparam.loss_names)
-            self.datastore['agglosses'] = agglosses
+        # save agg_losses
+        units = self.datastore['cost_calculator'].get_units(oq.loss_names)
+        if oq.investigation_time is None:  # scenario, compute agg_losses
+            alt['rlz_id'] = self.rlzs[alt.event_id.to_numpy()]
+            dset = self.datastore.create_dset(
+                'agg_losses-rlzs', F32, (K, self.R, L))
+            for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
+                agglosses = numpy.array(
+                    [df[ln].sum() for ln in oq.loss_names])
+                dset[agg_id, rlz_id] = agglosses * self.avg_ratio[rlz_id]
+            set_rlzs_stats(self.datastore, 'agg_losses',
+                           agg_id=K, loss_types=oq.loss_names, units=units)
+        else:  # event_based_risk, run post_risk
+            post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()
 
-            # losses by event
-            lbe = numpy.zeros(E, dtlist)
-            lbe['event_id'] = range(E)
-            lbe['loss'] = res
-            self.datastore['losses_by_event'] = lbe
-            loss_types = self.oqparam.loss_dt().names
-            self.datastore.set_attrs('losses_by_event', loss_types=loss_types)
-        logging.info('Mean portfolio loss\n' +
-                     views.view('portfolio_loss', self.datastore))
+
+@base.calculators.add('event_based_risk')
+class EbrCalculator(ScenarioRiskCalculator):
+    """
+    Event based risk calculator
+    """
+    precalc = 'event_based'
+    accept_precalc = ['event_based', 'event_based_risk', 'ebrisk']
+
+    def pre_execute(self):
+        oq = self.oqparam
+        if not oq.ground_motion_fields:
+            return  # this happens in the reportwriter
+
+        parent = self.datastore.parent
+        if parent:
+            self.datastore['full_lt'] = parent['full_lt']
+            ne = len(parent['events'])
+            logging.info('There are %d ruptures and %d events',
+                         len(parent['ruptures']), ne)
+
+        if oq.investigation_time and oq.return_periods != [0]:
+            # setting return_periods = 0 disable loss curves
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+            if eff_time < 2:
+                logging.warning(
+                    'eff_time=%s is too small to compute loss curves',
+                    eff_time)
+        super().pre_execute()

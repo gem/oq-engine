@@ -148,11 +148,10 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
         # compute hcurves in postprocessing and compare with inprocessing
-        df = self.calc.datastore.read_df('gmf_data', 'sid').loc[0]
-        gmvs = [df[col].to_numpy() for col in df.columns
-                if col.startswith('gmv_')]
+        # take advantage of the fact that there is a single site
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
         oq = self.calc.datastore['oqparam']
-        poes = gmvs_to_poes(gmvs, oq.imtls, oq.ses_per_logic_tree_path)
+        poes = gmvs_to_poes(df, oq.imtls, oq.ses_per_logic_tree_path)
         hcurve = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L)
         aae(poes, hcurve)
 
@@ -168,7 +167,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(einfo['rupture_class'],
                          'ParametricProbabilisticRupture')
         self.assertEqual(einfo['surface_class'], 'PlanarSurface')
-        self.assertEqual(einfo['serial'], 73073755)
+        self.assertEqual(einfo['seed'], 73073755)
         self.assertEqual(str(einfo['gsim']),
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
@@ -300,7 +299,11 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # test get_gmfgetter
         gg = get_gmfgetter(self.calc.datastore, rup_id=0)
-        self.assertEqual(len(gg.get_hazard()), 1)  # 1 rlz
+        self.assertEqual(str(gg.get_hazard()), '''\
+   sid  eid  rlz     gmv_0
+0    0    0    0  0.611368
+1    1    0    0  1.556242
+2    2    0    0  1.226484''')
 
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
@@ -395,7 +398,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # a test with grid and site model
         self.run_calc(case_19.__file__, 'job_grid.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 2)
 
         # error for missing intensity_measure_types
         with self.assertRaises(InvalidFile) as ctx:
@@ -481,18 +484,17 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertGreater(nd_mean, 0)
         [fname, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         arr = read_csv(fname)[:2]
-        self.assertEqual(arr.dtype.names, ('site_id', 'event_id', 'gmv_PGA'))
+        self.assertEqual(arr.dtype.names,
+                         ('site_id', 'event_id', 'gmv_PGA',
+                          'newmark_disp', 'prob_disp'))
 
     def test_case_26_liq(self):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
-        df = self.calc.datastore.read_df('gmf_data', 'sid')
-        pd_mean = df[df.liq_prob > 0].liq_prob.mean()
-        lat_spread_mean = df.lat_spread.mean()
-        vert_settle_mean = df.vert_settlement.mean()
-        self.assertGreater(pd_mean, 0.)
-        self.assertGreater(lat_spread_mean, 0.)
-        self.assertGreater(vert_settle_mean, 0.)
+        df = view('avg_gmf', self.calc.datastore)
+        aae(df.liq_prob.max(), 0.27772662)
+        aae(df.lat_spread.max(), 0.51429284)
+        aae(df.vert_settlement.max(), 1.1649456)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

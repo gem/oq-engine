@@ -135,8 +135,8 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
 """)
         with self.assertRaises(ValueError) as ar:
             nrml.to_python(vuln_content)
-        self.assertIn('It is not valid to define a loss ratio = 0.0 with a '
-                      'corresponding coeff. of variation > 0.0',
+        self.assertIn('It is not valid to define a mean loss ratio = 0 '
+                      'with a corresponding coefficient of variation > 0',
                       str(ar.exception))
 
     def test_missing_minIML(self):
@@ -296,12 +296,12 @@ lossCategory="contents">
 
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
-    expected_ratios = numpy.array([   # shape (2, 5)
+    expected_losses = numpy.array([   # shape (2, 5)
         [0.3458312, 0.34684792, 0.3478676, 0.3488903, 0.34991604],
         [0.3449187, 0.34501997, 0.34512126, 0.3452226, 0.34532395]])
 
     def test_splittable_events(self):
-        # split the events in two blocks and check that the ratios are
+        # split the events in two blocks and check that the losses are
         # same: there is no randomness in VulnerabilityFunction.sample
         vuln_model = gettemp("""\
 <?xml version='1.0' encoding='utf-8'?>
@@ -325,17 +325,16 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                nrml.to_python(vuln_model)['PGA', 'RC/A']}
         vfs['structural', 'vulnerability'].seed = 42
         vfs['structural', 'vulnerability'].init()
-        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs,
-                                  ignore_covs=False)
-        assets = [0, 1]
+        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs)
+        assets = numpy.array([1, 1], [('value-structural', float)])
         eids = numpy.array([1, 2, 3, 4, 5])
         gmvs = numpy.array([.1, .2, .3, .4, .5])
         epsilons = numpy.array(
             [[.01, .02, .03, .04, .05], [.001, .002, .003, .004, .005]])
 
-        # compute the ratios by considering all the events
-        ratios = rm('structural', assets, gmvs, eids, epsilons)
-        numpy.testing.assert_allclose(ratios, self.expected_ratios)
+        # compute the losses by considering all the events
+        losses = rm('structural', assets, gmvs, eids, epsilons)
+        numpy.testing.assert_allclose(losses, self.expected_losses)
 
         # split the events in two blocks
         eids1 = numpy.array([1, 2])
@@ -344,7 +343,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         gmvs2 = numpy.array([.3, .4, .5])
         eps1 = numpy.array([[.01, .02], [.001, .002]])
         eps2 = numpy.array([[.03, .04, .05], [.003, .004, .005]])
-        ratios1 = rm('structural', assets, gmvs1, eids1, eps1)
-        ratios2 = rm('structural', assets, gmvs2, eids2, eps2)
-        numpy.testing.assert_allclose(ratios1, self.expected_ratios[:, :2])
-        numpy.testing.assert_allclose(ratios2, self.expected_ratios[:, 2:])
+        losses1 = rm('structural', assets, gmvs1, eids1, eps1)
+        losses2 = rm('structural', assets, gmvs2, eids2, eps2)
+        numpy.testing.assert_allclose(losses1, self.expected_losses[:, :2])
+        numpy.testing.assert_allclose(losses2, self.expected_losses[:, 2:])

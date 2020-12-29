@@ -30,7 +30,6 @@ from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import EBRupture
-from openquake.hazardlib.geo.mesh import surface_to_array
 from openquake.commonlib import calc, util, logs, readinput, logictree
 from openquake.risklib.riskinput import str2rsi
 from openquake.calculators import base, views
@@ -138,6 +137,10 @@ class EventBasedCalculator(base.HazardCalculator):
         mon = self.monitor('saving ruptures')
         self.nruptures = 0
         for dic in smap:
+            # NB: dic should be a dictionary, but when the calculation dies
+            # for an OOM it can become None, thus giving a very confusing error
+            if dic is None:
+                raise MemoryError('You ran out of memory!')
             rup_array = dic['rup_array']
             if len(rup_array) == 0:
                 continue
@@ -158,8 +161,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # must be called before storing the events
         self.store_rlz_info(eff_ruptures)  # store full_lt
-        with self.monitor('store source_info'):
-            self.store_source_info(calc_times)
+        self.store_source_info(calc_times)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
             imp.import_rups(self.datastore.getitem('ruptures')[()])
@@ -183,7 +185,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 hdf5.extend(self.datastore['gmf_data/eid'], data['eid'])
                 for m in range(M):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
-                                data['gmv'][:, m])
+                                data[f'gmv_{m}'])
                 for sec_out in sec_outputs:
                     hdf5.extend(self.datastore[f'gmf_data/{sec_out}'],
                                 data[sec_out])
@@ -209,7 +211,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.crmodel.min_iml
         min_iml = oq.min_iml
-        if oq.ground_motion_fields and min_iml.sum() == 0:
+        if oq.ground_motion_fields and sum(min_iml.values()) == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
         else:
@@ -232,21 +234,17 @@ class EventBasedCalculator(base.HazardCalculator):
                 '*', self.gsims, {'maximum_distance': oq.maximum_distance,
                                   'imtls': oq.imtls})
             rup = readinput.get_rupture(oq)
-            mesh = surface_to_array(rup.surface).transpose(1, 2, 0).flatten()
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
                                   0, 0, G, e0=i * G) for i in range(ngmfs)]
-                meshes = numpy.array([mesh] * ngmfs, object)
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]
-                meshes = numpy.array([mesh] * ngmfs, object)
-            rup_array = get_rup_array(ebrs, self.srcfilter).array
-            hdf5.extend(self.datastore['rupgeoms'], meshes)
+            aw = get_rup_array(ebrs, self.srcfilter)
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
             aw.array['n_occ'] = G
-            rup_array = aw.array
-            hdf5.extend(self.datastore['rupgeoms'], aw.geom)
+        rup_array = aw.array
+        hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
         if len(rup_array) == 0:
             raise RuntimeError(
@@ -313,8 +311,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     for rgetter in gen_rupture_getters(
                             self.datastore, oq.concurrent_tasks))
         smap = parallel.Starmap(
-            self.core_task.__func__, iterargs, h5=self.datastore.hdf5,
-            num_cores=oq.num_cores)
+            self.core_task.__func__, iterargs, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in self.datastore:

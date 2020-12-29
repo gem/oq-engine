@@ -29,7 +29,7 @@
 | case_26 | |
 | case_27 | |
 | case_28 | |
-| case_29 | |
+| case_29 | Non-parametric source with one rupture represente by 2 kite surfaces |
 | case_30 | |
 | case_31 | |
 | case_32 | |
@@ -59,3 +59,6 @@
 | case_56 | Another test for oversampling (10 samples out of 6) |
 | case_57 | Test for sampling AvgPoeGMPE |
 | case_58 | Test for the truncatedGRFromSlipAbsolute epistemic uncertainty |
+| case_59 | Test for NRCan15SiteTerm |
+| case_60 | |
+| case_61 | Test the Kite Fault with info for Simple Fault |

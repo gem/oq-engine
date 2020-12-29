@@ -72,7 +72,7 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
         """
 
     def __repr__(self):
-        return '<%s %s>' % self.__class__.__name__
+        return '<%s>' % self.__class__.__name__
 
 
 class _FakePeril(SecondaryPeril):

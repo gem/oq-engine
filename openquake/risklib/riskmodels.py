@@ -184,7 +184,7 @@ def get_values(loss_type, assets, time_event=None):
         a numpy array with the values for the given assets, depending on the
         loss_type.
     """
-    if loss_type == 'occupants':
+    if loss_type == 'occupants' and time_event:
         return assets['occupants_%s' % time_event]
     else:
         return assets['value-' + loss_type]
@@ -290,40 +290,6 @@ class RiskModel(object):
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values)
 
-    def event_based_risk(self, loss_type, assets, gmvs, eids, epsilons):
-        """
-        :param str loss_type:
-            the loss type considered
-        :param assets:
-           a list of assets on the same site and with the same taxonomy
-        :param gmvs_eids:
-           a pair (gmvs, eids) with E values each
-        :param epsilons:
-           a matrix of epsilons of shape (A, E) (or an empty tuple)
-        :returns:
-            an array of loss ratios of shape (A, E)
-        """
-        E = len(gmvs)
-        A = len(assets)
-        loss_ratios = numpy.zeros((A, E), F32)
-        vf = self.risk_functions[loss_type, 'vulnerability']
-        means, covs, idxs = vf.interpolate(gmvs)
-        if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
-            pass
-        elif self.ignore_covs or covs.sum() == 0 or len(epsilons) == 0:
-            # the ratios are equal for all assets
-            ratios = vf.sample(means, covs, idxs, None)  # right shape
-            for a in range(A):
-                loss_ratios[a, idxs] = ratios
-        else:
-            # take into account the epsilons
-            for a, asset in enumerate(assets):
-                loss_ratios[a, idxs] = vf.sample(
-                    means, covs, idxs, epsilons[a])
-        return loss_ratios
-
-    ebrisk = event_based_risk
-
     def classical_bcr(self, loss_type, assets, hazard, eids=None, eps=None):
         """
         :param loss_type: the loss type
@@ -369,16 +335,6 @@ class RiskModel(object):
         :returns: an array of shape (A, E)
         """
         values = get_values(loss_type, assets, self.time_event)
-        ok = ~numpy.isnan(values)
-        if not ok.any():
-            # there are no assets with a value
-            return numpy.zeros(0)
-        # there may be assets without a value
-        missing_value = not ok.all()
-        if missing_value:
-            assets = assets[ok]
-            epsilons = epsilons[ok]
-
         E = len(eids)
 
         # a matrix of A x E elements
@@ -398,7 +354,7 @@ class RiskModel(object):
         loss_matrix[:, :] = (loss_ratio_matrix.T * values).T
         return loss_matrix
 
-    scenario = scenario_risk
+    scenario = ebrisk = event_based_risk = scenario_risk
 
     def scenario_damage(self, loss_type, assets, gmvs, eids=None, eps=None):
         """
@@ -462,7 +418,6 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     extra['risk_investigation_time'] = oqparam.risk_investigation_time
     extra['lrem_steps_per_interval'] = oqparam.lrem_steps_per_interval
     extra['steps_per_interval'] = oqparam.steps_per_interval
-    extra['ignore_covs'] = oqparam.ignore_covs
     extra['time_event'] = oqparam.time_event
     if oqparam.calculation_mode == 'classical_bcr':
         extra['interest_rate'] = oqparam.interest_rate
@@ -600,7 +555,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oq, risk_functions=vfs)
         self.imtls = oq.imtls
-        imti = {imt: i for i, imt in enumerate(oq.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         # build a sorted list with all the loss_types contained in the model
@@ -618,6 +572,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     self.distributions.add(rf.distribution_name)
                 if hasattr(rf, 'init'):  # vulnerability function
                     rf.seed = oq.master_seed  # setting the seed
+                    if oq.ignore_covs:
+                        rf.covs = numpy.zeros_like(rf.covs)
                     rf.init()
                 # save the number of nonzero coefficients of variation
                 if hasattr(rf, 'covs') and rf.covs.any():
@@ -628,9 +584,11 @@ class CompositeRiskModel(collections.abc.Mapping):
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (riskid, ', '.join(missing)))
-            rm.imti = {lt: imti[rm.risk_functions[lt, kind].imt]
-                       for lt, kind in rm.risk_functions
-                       if kind in 'vulnerability fragility'}
+            rm.imt_by_lt = {}  # dictionary loss_type -> imt
+            for lt, kind in rm.risk_functions:
+                if kind in 'vulnerability fragility':
+                    imt = rm.risk_functions[lt, kind].imt
+                    rm.imt_by_lt[lt] = imt
         self.curve_params = self.make_curve_params()
         iml = collections.defaultdict(list)
         for riskid, rm in self._riskmodels.items():

@@ -225,20 +225,21 @@ class GmfDataGetter(object):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: an dict rlzi -> datadict
+        :returns: the underlying DataFrame
         """
-        return dict(list(self.df.groupby('rlzs')))
+        return self.df
 
 
 class ZeroGetter(GmfDataGetter):
     """
     An object with an .init() and .get_hazard() method
     """
-    def __init__(self, sid, rlzs, num_rlzs):
+    def __init__(self, sid, rlzs, R):
+        nr = len(rlzs)
         self.sids = [sid]
         self.df = pandas.DataFrame({
-            'rlzs': rlzs, 'eid': numpy.arange(len(rlzs))})
-        self.num_rlzs = num_rlzs
+            'sid': [sid] * nr, 'rlz': rlzs, 'eid': numpy.arange(nr)})
+        self.num_rlzs = R
 
 
 time_dt = numpy.dtype(
@@ -311,39 +312,31 @@ class GmfGetter(object):
 
     def get_gmfdata(self, mon=performance.Monitor()):
         """
-        :returns: an array of the dtype (sid, eid, gmv)
+        :returns: a DataFrame with fields eid, sid, gmv_...
         """
-        alldata = []
+        alldata = general.AccumDict(accum=[])
         self.sig_eps = []
         self.times = []  # rup_id, nsites, dt
         for computer in self.gen_computers(mon):
             data, dt = computer.compute_all(
                 self.min_iml, self.rlzs_by_gsim, self.sig_eps)
             self.times.append((computer.ebrupture.id, len(computer.sids), dt))
-            alldata.append(data)
-        if not alldata:
-            return []
-        return numpy.concatenate(alldata)
+            for key in data:
+                alldata[key].extend(data[key])
+        for key, val in sorted(alldata.items()):
+            if key in 'eid sid rlz':
+                alldata[key] = U32(alldata[key])
+            else:
+                alldata[key] = F32(alldata[key])
+        return pandas.DataFrame(alldata)
 
     # not called by the engine
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: a dictionary rlzi -> array
+        :returns: DataFrame
         """
-        data = self.get_gmfdata()
-        return general.group_array(data, 'rlz')
-
-    def get_hazard_by_sid(self, data=None):
-        """
-        :param data: if given, an iterator of records of dtype gmf_dt
-        :returns: sid -> records
-        """
-        if data is None:
-            data = self.get_gmfdata()
-        if len(data) == 0:
-            return {}
-        return general.group_array(data, 'sid')
+        return self.get_gmfdata()
 
     def compute_gmfs_curves(self, monitor):
         """
@@ -355,16 +348,14 @@ class GmfGetter(object):
         if oq.hazard_curves_from_gmfs:
             hc_mon = monitor('building hazard curves', measuremem=False)
             gmfdata = self.get_gmfdata(mon)  # returned later
-            hazard = self.get_hazard_by_sid(data=gmfdata)
-            for sid, hazardr in hazard.items():
-                dic = general.group_array(hazardr, 'rlz')
-                for rlzi, array in dic.items():
-                    with hc_mon:
-                        poes = gmvs_to_poes(
-                            array['gmv'].T, oq.imtls,
-                            oq.ses_per_logic_tree_path)
-                        for m, imt in enumerate(oq.imtls):
-                            hcurves[rsi2str(rlzi, sid, imt)] = poes[m]
+            if len(gmfdata) == 0:
+                return dict(gmfdata=(), hcurves=hcurves)
+            for (sid, rlz), df in gmfdata.groupby(['sid', 'rlz']):
+                with hc_mon:
+                    poes = gmvs_to_poes(
+                        df, oq.imtls, oq.ses_per_logic_tree_path)
+                    for m, imt in enumerate(oq.imtls):
+                        hcurves[rsi2str(rlz, sid, imt)] = poes[m]
         if not oq.ground_motion_fields:
             return dict(gmfdata=(), hcurves=hcurves)
         if not oq.hazard_curves_from_gmfs:
@@ -432,7 +423,7 @@ def get_eid_rlz(proxies, rlzs_by_gsim):
     """
     eid_rlz = []
     for rup in proxies:
-        ebr = EBRupture(mock.Mock(rup_id=rup['serial']), rup['source_id'],
+        ebr = EBRupture(mock.Mock(rup_id=rup['seed']), rup['source_id'],
                         rup['et_id'], rup['n_occ'])
         for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
             for eid in eids:
@@ -467,7 +458,7 @@ class RuptureGetter(object):
     def num_ruptures(self):
         return len(self.proxies)
 
-    def get_rupdict(self):
+    def get_rupdict(self):  # used in extract_rupture_info
         """
         :returns: a dictionary with the parameters of the rupture
         """
@@ -476,11 +467,18 @@ class RuptureGetter(object):
         with datastore.read(self.filename) as dstore:
             rupgeoms = dstore['rupgeoms']
             rec = self.proxies[0].rec
-            geom = rupgeoms[rec['id']].reshape(
-                rec['s1'], rec['s2'], 3).transpose(2, 0, 1)
-            dic['lons'] = geom[0]
-            dic['lats'] = geom[1]
-            dic['deps'] = geom[2]
+            geom = rupgeoms[rec['id']]
+            num_surfaces = int(geom[0])
+            start = 2 * num_surfaces + 1
+            dic['lons'], dic['lats'], dic['deps'] = [], [], []
+            for i in range(1, num_surfaces * 2, 2):
+                s1, s2 = int(geom[i]), int(geom[i + 1])
+                size = s1 * s2 * 3
+                arr = geom[start:start + size].reshape(3, -1)
+                dic['lons'].append(arr[0])
+                dic['lats'].append(arr[1])
+                dic['deps'].append(arr[2])
+                start += size
             rupclass, surclass = code2cls[rec['code']]
             dic['rupture_class'] = rupclass.__name__
             dic['surface_class'] = surclass.__name__
@@ -488,7 +486,7 @@ class RuptureGetter(object):
             dic['occurrence_rate'] = rec['occurrence_rate']
             dic['et_id'] = rec['et_id']
             dic['n_occ'] = rec['n_occ']
-            dic['serial'] = rec['serial']
+            dic['seed'] = rec['seed']
             dic['mag'] = rec['mag']
             dic['srcid'] = rec['source_id']
         return dic

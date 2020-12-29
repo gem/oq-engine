@@ -188,19 +188,19 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     return poes
 
 
-def gmvs_to_poes(gmvs, imtls, ses_per_logic_tree_path):
+def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
     """
-    :param gmvs: an array of GMVs of shape (M, E)
+    :param df: a DataFrame with fields gmv_0, .. gmv_{M-1}
     :param imtls: a dictionary imt -> imls with M IMTs and L levels
     :param ses_per_logic_tree_path: a positive integer
     :returns: an array of PoEs of shape (M, L)
     """
     M = len(imtls)
-    assert len(gmvs) == M, (len(gmvs), M)
     L = len(imtls[next(iter(imtls))])
     arr = numpy.zeros((M, L))
-    for m, imls in enumerate(imtls.values()):
-        arr[m] = _gmvs_to_haz_curve(gmvs[m], imls, ses_per_logic_tree_path)
+    for m, imt in enumerate(imtls):
+        arr[m] = _gmvs_to_haz_curve(
+            df[f'gmv_{m}'].to_numpy(), imtls[imt], ses_per_logic_tree_path)
     return arr
 
 
@@ -268,13 +268,14 @@ class RuptureImporter(object):
         Import an array of ruptures in the proper format
         """
         logging.info('Reordering the ruptures and storing the events')
-        # order the ruptures by serial
-        rup_array.sort(order='serial')
+        # order the ruptures by seed
+        rup_array.sort(order='seed')
         nr = len(rup_array)
-        serials, counts = numpy.unique(rup_array['serial'], return_counts=True)
-        if len(serials) != nr:
-            logging.info('The following rupture seeds are duplicated: %s',
-                         serials[counts > 1])
+        seeds, counts = numpy.unique(rup_array['seed'], return_counts=True)
+        if len(seeds) != nr:
+            dupl = seeds[counts > 1]
+            logging.info('The following %d rupture seeds are duplicated: %s',
+                         len(dupl), dupl)
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
         self.datastore['ruptures'] = rup_array

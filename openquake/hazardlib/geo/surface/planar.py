@@ -162,12 +162,12 @@ class PlanarSurface(BaseSurface):
         return self
 
     @classmethod
-    def from_array(cls, array3N):
+    def from_array(cls, array34):
         """
-        :param array3N: an array of shape (3, N)
+        :param array34: an array of shape (3, 4) in order tl, tr, bl, br
         :returns: a :class:`PlanarSurface` instance
         """
-        tl, tr, bl, br = [Point(*p) for p in array3N.T]
+        tl, tr, bl, br = [Point(*p) for p in array34.T]
         strike = tl.azimuth(tr)
         dip = numpy.degrees(
             numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
@@ -175,6 +175,19 @@ class PlanarSurface(BaseSurface):
         # in the datastore, which means it is correct and there is no need to
         # check it again; also the check would fail because of a bug, see
         # https://github.com/gem/oq-engine/issues/3392
+        self = cls(strike, dip, tl, tr, br, bl, check=False)
+        return self
+
+    @classmethod
+    def from_ucerf(cls, array43):
+        """
+        :param array43: an array of shape (4, 3) in order tl, tr, br, bl
+        :returns: a :class:`PlanarSurface` instance
+        """
+        tl, tr, br, bl = [Point(*p) for p in array43]
+        strike = tl.azimuth(tr)
+        dip = numpy.degrees(
+            numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
         self = cls(strike, dip, tl, tr, br, bl, check=False)
         return self
 
@@ -531,9 +544,8 @@ class PlanarSurface(BaseSurface):
         make use of the mesh.
         """
         return geodetic.distance_to_arc(
-            self.corner_lons[0], self.corner_lats[0], self.strike, mesh.lons,
-            mesh.lats
-        )
+            self.corner_lons[0], self.corner_lats[0], self.strike,
+            mesh.lons, mesh.lats)
 
     def get_ry0_distance(self, mesh):
         """

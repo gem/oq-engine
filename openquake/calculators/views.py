@@ -91,7 +91,7 @@ def form(value):
 
 def rst_table(data, header=None, fmt=None):
     """
-    Build a .rst table from a matrix.
+    Build a .rst table from a matrix or a DataFrame
     
     >>> tbl = [['a', 1], ['b', 2]]
     >>> print(rst_table(tbl, header=['Name', 'Value']))
@@ -102,6 +102,9 @@ def rst_table(data, header=None, fmt=None):
     b    2    
     ==== =====
     """
+    if isinstance(data, pandas.DataFrame):
+        header = header or list(data.columns)
+        data = numpy.array(data)
     if header is None and hasattr(data, '_fields'):
         header = data._fields
     try:
@@ -323,17 +326,20 @@ def view_totlosses(token, dstore):
     """
     oq = dstore['oqparam']
     tot_losses = dstore['avg_losses-rlzs'][()].sum(axis=0)
-    return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
+    return rst_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 
 def _portfolio_loss(dstore):
     R = dstore['full_lt'].get_num_rlzs()
-    array = dstore['losses_by_event'][()]
-    rlzs = dstore['events']['rlz_id'][array['event_id']]
-    L, = array.dtype['loss'].shape  # loss has shape L
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    eids = df.pop('event_id').to_numpy()
+    loss = numpy.array(df)
+    rlzs = dstore['events']['rlz_id'][eids]
+    L = loss.shape[1]
     data = numpy.zeros((R, L), F32)
-    for row, rlz in zip(array, rlzs):
-        data[rlz] += row['loss']
+    for row, rlz in zip(loss, rlzs):
+        data[rlz] += row
     return data
 
 
@@ -367,7 +373,10 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     G = getattr(oq, 'number_of_ground_motion_fields', 1)
     R = dstore['full_lt'].get_num_rlzs()
-    loss = dstore['losses_by_event']['loss']  # shape (E, L)
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    df = dstore.read_df('agg_loss_table', ['agg_id', 'event_id'],
+                        dict(agg_id=K))
+    loss = numpy.array(df)
     means = loss.sum(axis=0) / R / G
     sums = [loss[idxs].sum(axis=0) for idxs in _indices(len(loss), 10)]
     errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
@@ -665,6 +674,23 @@ def view_task_ebrisk(token, dstore):
     return msg
 
 
+@view.add('avg_gmf')
+def view_avg_gmf(token, dstore):
+    """
+    Compute the average GMF from gmf_data
+    """
+    N = len(dstore['sitecol'].complete)
+    weights = dstore['weights'][:]
+    rlzs = dstore['events']['rlz_id']
+    gmf_df = dstore.read_df('gmf_data', 'sid')
+    cols = [col for col in gmf_df.columns if col not in 'sid eid']
+    avg_df = pandas.DataFrame({col: numpy.zeros(N, F32) for col in cols})
+    for sid, df in gmf_df.groupby(gmf_df.index):
+        for col in cols:
+            avg_df[col][sid] = df[col] @ weights[rlzs[df.eid.to_numpy()]]
+    return avg_df
+
+
 @view.add('global_hazard')
 def view_global_hazard(token, dstore):
     """
@@ -826,24 +852,6 @@ def view_disagg_times(token, dstore):
         tbl.append((duration, task_no) + tuple(data[task_no]))
     header = ('duration', 'task_no') + data.dtype.names
     return rst_table(sorted(tbl), header=header)
-
-
-@view.add('elt')
-def view_elt(token, dstore):
-    """
-    Display the event loss table averaged by event
-    """
-    oq = dstore['oqparam']
-    R = len(dstore['full_lt'].rlzs)
-    dic = group_array(dstore['losses_by_event'][()], 'rlzi')
-    header = oq.loss_dt().names
-    tbl = []
-    for rlzi in range(R):
-        if rlzi in dic:
-            tbl.append(dic[rlzi]['loss'].mean(axis=0))
-        else:
-            tbl.append([0.] * len(header))
-    return rst_table(tbl, header)
 
 
 @view.add('bad_ruptures')

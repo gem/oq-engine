@@ -79,20 +79,6 @@ def convert_UCERFSource(self, node):
 SourceConverter.convert_UCERFSource = convert_UCERFSource
 
 
-class ImperfectPlanarSurface(PlanarSurface):
-    """
-    The planar surface class sets a narrow tolerance for the rectangular plane
-    to be distorted in cartesian space. Ruptures with aspect ratios << 1.0,
-    and with a dip of less than 90 degrees, cannot be generated in a manner
-    that is consistent with the definitions - and thus cannot be instantiated.
-    This subclass modifies the original planar surface class such that the
-    tolerance checks are over-ridden. We find that distance errors with respect
-    to a simple fault surface with a mesh spacing of 0.001 km are only on the
-    order of < 0.15 % for Rrup (< 2 % for Rjb, < 3.0E-5 % for Rx)
-    """
-    IMPERFECT_RECTANGLE_TOLERANCE = numpy.inf
-
-
 class UCERFSource(BaseSeismicSource):
     """
     :param source_file:
@@ -243,13 +229,11 @@ class UCERFSource(BaseSeismicSource):
         """
         :returns: min_lon, min_lat, max_lon, max_lat
         """
-        lons, lats = [], []
-        sections = set(sec for sections in self.sections for sec in sections)
-        for sec in sections:
-            plane = self.planes[sec]
-            lons.extend(plane[:, 0].flat)
-            lats.extend(plane[:, 1].flat)
-        bbox = min(lons), min(lats), max(lons), max(lats)
+        # this is the bounding box of the background, i.e. all of California!
+        with h5py.File(self.source_file, 'r') as hdf5:
+            locations = hdf5["Grid/Locations"][()]
+        lons, lats = locations[:, 0], locations[:, 1]
+        bbox = lons.min(), lats.min(), lons.max(), lats.max()
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = angular_distance(maxdist, bbox[1], bbox[3])
         return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
@@ -293,19 +277,8 @@ class UCERFSource(BaseSeismicSource):
         surface_set = []
         for sec in sections:
             plane = self.planes[sec]
-            # build simple fault surface
-            for j in range(0, plane.shape[2]):
-                top_left = Point(
-                    plane[0, 0, j], plane[0, 1, j], plane[0, 2, j])
-                top_right = Point(
-                    plane[1, 0, j], plane[1, 1, j], plane[1, 2, j])
-                bottom_right = Point(
-                    plane[2, 0, j], plane[2, 1, j], plane[2, 2, j])
-                bottom_left = Point(
-                    plane[3, 0, j], plane[3, 1, j], plane[3, 2, j])
-                surface_set.append(
-                    ImperfectPlanarSurface.from_corner_points(
-                        top_left, top_right, bottom_right, bottom_left))
+            for p in range(plane.shape[2]):
+                surface_set.append(PlanarSurface.from_ucerf(plane[:, :, p]))
 
         rupture = ParametricProbabilisticRupture(
             mag, self.rake[ridx], self.tectonic_region_type,
@@ -324,7 +297,7 @@ class UCERFSource(BaseSeismicSource):
                 if rup:
                     yield rup
 
-    # called upfront, before classical_split_filter
+    # called upfront, before start_classical
     def __iter__(self):
         if self.stop - self.start <= self.ruptures_per_block:  # already split
             yield self

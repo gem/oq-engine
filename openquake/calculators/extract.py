@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
-from functools import lru_cache, partial
+from functools import lru_cache
 import collections
 import logging
 import json
@@ -288,8 +288,8 @@ def extract_exposure_metadata(dstore, what):
             set(dstore['asset_risk'].dtype.names) -
             set(dstore['assetcol/array'].dtype.names))
     dic['names'] = [name for name in dstore['assetcol/array'].dtype.names
-                    if name.startswith(('value-', 'number', 'occupants_'))
-                    and not name.endswith('_None')]
+                    if name.startswith(('value-', 'number', 'occupants'))
+                    and name != 'value-occupants']
     return ArrayWrapper((), dict(json=dumps(dic)))
 
 
@@ -575,6 +575,21 @@ def extract_sources(dstore, what):
     return ArrayWrapper(arr, {'wkt_gz': wkt_gz, 'src_gz': src_gz})
 
 
+@extract.add('gridded_sources')
+def extract_gridded_sources(dstore, what):
+    """
+    Extract information about the gridded sources (requires ps_grid_spacing)
+    Use it as /extract/gridded_sources?task_no=0.
+    Returns a json string id -> lonlats
+    """
+    qdict = parse(what)
+    task_no = int(qdict.get('task_no', ['0'])[0])
+    dic = {}
+    for i, lonlats in enumerate(dstore['ps_grid/%02d' % task_no][()]):
+        dic[i] = numpy.round(F64(lonlats), 3)
+    return ArrayWrapper((), {'json': dumps(dic)})
+
+
 @extract.add('task_info')
 def extract_task_info(dstore, what):
     """
@@ -644,9 +659,10 @@ def _get_curves(curves, li):
     return curves[()].view(F32).reshape(shp)[:, :, :, li]
 
 
-def extract_curves(dstore, what, tot):
+@extract.add('tot_curves')
+def extract_tot_curves(dstore, what):
     """
-    Porfolio loss curves from the ebrisk calculator:
+    Aggregate loss curves from the ebrisk calculator:
 
     /extract/tot_curves?
     kind=stats&absolute=1&loss_type=occupants
@@ -657,33 +673,27 @@ def extract_curves(dstore, what, tot):
     qdic = parse(what, info)
     k = qdic['k']  # rlz or stat index
     [l] = qdic['loss_type']  # loss type index
-    tup = (slice(None), k, l)
     if qdic['rlzs']:
         kinds = ['rlz-%d' % r for r in k]
-        arr = dstore[tot + 'curves-rlzs'][tup]  # shape P, R
-        units = dstore.get_attr(tot + 'curves-rlzs', 'units')
-        rps = dstore.get_attr(tot + 'curves-rlzs', 'return_periods')
+        name = 'agg_curves-rlzs'
     else:
         kinds = list(info['stats'])
-        arr = dstore[tot + 'curves-stats'][tup]  # shape P, S
-        units = dstore.get_attr(tot + 'curves-stats', 'units')
-        rps = dstore.get_attr(tot + 'curves-stats', 'return_periods')
+        name = 'agg_curves-stats'
+    units = dstore.get_attr(name, 'units')
+    rps = dstore.get_attr(name, 'return_period')
+    K = dstore.get_attr(name, 'K', 0)
+    arr = dstore[name][K, k, l].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
-    elif qdic['absolute'] == [0]:
-        evalue = dstore['exposed_values/agg'][l]
-        arr /= evalue
+    elif qdic['absolute'] == [0]:  # relative
+        arr /= dstore['agg_values'][K, l]
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
     attrs = dict(shape_descr=['return_period', 'kind'])
     attrs['return_period'] = list(rps)
     attrs['kind'] = kinds
-    attrs['units'] = units  # used by the QGIS plugin
-    return ArrayWrapper(arr, attrs)
-
-
-extract.add('tot_curves')(partial(extract_curves, tot='tot_'))
-extract.add('app_curves')(partial(extract_curves, tot='app_'))
+    attrs['units'] = list(units)  # used by the QGIS plugin
+    return ArrayWrapper(arr, dict(json=dumps(attrs)))
 
 
 @extract.add('agg_curves')
@@ -708,29 +718,26 @@ def extract_agg_curves(dstore, what):
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
     tagvalues = [tagdict[t][0] for t in tagnames]
-    tagidx = []
+    idx = -1
     if tagnames:
-        tagcol = dstore['assetcol/tagcol']
-        for tagname, tagvalue in zip(tagnames, tagvalues):
-            values = list(getattr(tagcol, tagname)[1:])
-            tagidx.append(values.index(tagvalue))
-    tup = tuple([slice(None), k, l] + tagidx)
+        for i, tags in enumerate(dstore['agg_keys'][:][tagnames]):
+            if list(tags) == tagvalues:
+                idx = i
+                break
     if qdic['rlzs']:
         kinds = ['rlz-%d' % r for r in k]
-        arr = dstore['agg_curves-rlzs'][tup]  # shape P, R
-        units = dstore.get_attr('agg_curves-rlzs', 'units')
-        rps = dstore.get_attr('agg_curves-rlzs', 'return_periods')
+        name = 'agg_curves-rlzs'
     else:
         kinds = list(info['stats'])
-        arr = dstore['agg_curves-stats'][tup]  # shape P, S
-        units = dstore.get_attr('agg_curves-stats', 'units')
-        rps = dstore.get_attr('agg_curves-stats', 'return_periods')
+        name = 'agg_curves-stats'
+    units = dstore.get_attr(name, 'units')
+    rps = dstore.get_attr(name, 'return_period')
+    tup = (idx, k, l)
+    arr = dstore[name][tup].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
-        aggname = '_'.join(['agg'] + tagnames)
-        tl = tuple(tagidx) + (l,)
-        evalue = dstore['exposed_values/' + aggname][tl]  # shape T...
+        evalue = dstore['agg_values'][idx, l]  # shape K, L
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
@@ -810,10 +817,10 @@ def extract_aggregate(dstore, what):
         lti = ltypes[0]
         lt = [lt for lt, i in loss_types.items() if i == lti]
         array = dstore[name + suffix][:, qdic['k'][0], lti]
-        aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {}, (lt,))
+        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, lt)
     else:
         array = dstore[name + suffix][:, qdic['k'][0]]
-        aw = ArrayWrapper(assetcol.aggregate_by(tagnames, array), {},
+        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {},
                           loss_types)
     for tagname in tagnames:
         setattr(aw, tagname, getattr(assetcol.tagcol, tagname)[1:])

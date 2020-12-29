@@ -30,6 +30,7 @@ import pandas
 from openquake.baselib import hdf5, config, performance, python3compat, general
 
 
+MAX_ROWS = 10_000_000
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 
 
@@ -190,7 +191,35 @@ def dset2df(dset, indexfield, filterdict):
             else:
                 dic[field].append(val)
         dic['value'].append(arr[idx])
-    return pandas.DataFrame(dic, index)
+    return pandas.DataFrame(dic, index or None)
+
+
+def extract_cols(datagrp, sel, slc, columns):
+    """
+    :param datagrp: something like and HDF5 data group
+    :param sel: dictionary column name -> value specifying a selection
+    :param slc: a slice object specifying the rows considered
+    :param columns: the full list of column names
+    :returns: a dictionary col -> array of values
+    """
+    first = columns[0]
+    nrows = len(datagrp[first])
+    if slc.start is None and slc.stop is None:  # split in slices
+        slcs = general.gen_slices(0, nrows, MAX_ROWS)
+    else:
+        slcs = [slc]
+    acc = general.AccumDict(accum=[])  # col -> arrays
+    for slc in slcs:
+        ok = slice(None)
+        dic = {col: datagrp[col][slc] for col in sel}
+        for col in sel:
+            if isinstance(ok, slice):  # first selection
+                ok = dic[col] == sel[col]
+            else:  # other selections
+                ok &= dic[col] == sel[col]
+        for col in columns:
+            acc[col].append(datagrp[col][slc][ok])
+    return {k: numpy.concatenate(vs) for k, vs in acc.items()}
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -345,6 +374,25 @@ class DataStore(collections.abc.MutableMapping):
                 raise
         return dict(dset.attrs)
 
+    def get_shape_descr(self, name):
+        """
+        :param name:
+            the name of a dataset/datagroup in the datastore
+        :returns:
+            a dictionary field -> values extracted from the shape_descr
+            attribute (if any)
+        """
+        attrs = self.getitem(name).attrs
+        shape_descr = python3compat.decode(attrs.get('shape_descr', []))
+        if not shape_descr:
+            return {}
+        dic = dict(shape_descr=shape_descr)
+        for field in shape_descr:
+            dic[field] = val = attrs[field]
+            if isinstance(val, numpy.int64):
+                dic[field] = range(val)
+        return dic
+
     def create_dset(self, key, dtype, shape=(None,), compression=None,
                     fillvalue=0, attrs=None):
         """
@@ -359,6 +407,39 @@ class DataStore(collections.abc.MutableMapping):
         """
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
+
+    def create_dframe(self, key, nametypes, compression=None, **kw):
+        """
+        Create a HDF5 datagroup readable as a pandas DataFrame
+
+        :param key:
+            name of the dataset
+        :param nametypes:
+            list of pairs (name, dtype) or (name, array) or DataFrame
+        :param compression:
+            the kind of HDF5 compression to use
+        :param kw:
+            extra attributes to store
+        """
+        if isinstance(nametypes, pandas.DataFrame):
+            nametypes = {name: nametypes[name].to_numpy()
+                         for name in nametypes.columns}.items()
+        names = []
+        for name, value in nametypes:
+            is_array = isinstance(value, numpy.ndarray)
+            if is_array:
+                dt = value.dtype
+            else:
+                dt = value
+            dset = hdf5.create(self.hdf5, f'{key}/{name}', dt, (None,),
+                               compression)
+            if is_array:
+                hdf5.extend(dset, value)
+            names.append(name)
+        attrs = self.hdf5[key].attrs
+        attrs['__pdcolumns__'] = ' '.join(names)
+        for k, v in kw.items():
+            attrs[k] = v
 
     def save(self, key, kw):
         """
@@ -426,15 +507,21 @@ class DataStore(collections.abc.MutableMapping):
         self.close()
         os.remove(self.filename)
 
-    def getsize(self, key=None):
+    def getsize(self, key='/'):
         """
         Return the size in byte of the output associated to the given key.
         If no key is given, returns the total size of all files.
         """
-        if key is None:
+        if key == '/':
             return os.path.getsize(self.filename)
-        return hdf5.ByteCounter.get_nbytes(
-            h5py.File.__getitem__(self.hdf5, key))
+        try:
+            dset = self.getitem(key)
+        except KeyError:
+            if self.parent != ():
+                dset = self.parent.getitem(key)
+            else:
+                raise
+        return hdf5.ByteCounter.get_nbytes(dset)
 
     def get(self, key, default):
         """
@@ -487,12 +574,12 @@ class DataStore(collections.abc.MutableMapping):
             return dset2df(dset, index, sel)
         elif '__pdcolumns__' in dset.attrs:
             columns = dset.attrs['__pdcolumns__'].split()
-            dic = {col: dset[col][slc] for col in columns}
+            dic = extract_cols(dset, sel, slc, columns)
             if index is None:
-                df = pandas.DataFrame(dic)
+                return pandas.DataFrame(dic)
             else:
-                df = pandas.DataFrame(dic).set_index(index)
-            return df
+                return pandas.DataFrame(dic).set_index(index)
+
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]

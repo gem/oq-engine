@@ -21,7 +21,8 @@ xmlns:gml="http://www.opengis.net/gml"
         <nodalPlane strike="144" dip="87" rake="-179" probability="1"/>
       </nodalPlaneDist>
       <hypoDepthDist>
-        <hypoDepth depth="4" probability="1"/>
+        <hypoDepth depth="3" probability=".66666667"/>
+        <hypoDepth depth="6" probability=".33333333"/>
       </hypoDepthDist>
     </pointSource>
   </sourceModel>

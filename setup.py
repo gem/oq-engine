@@ -59,7 +59,7 @@ install_requires = [
     'h5py >=2.10, <2.11',
     'numpy >=1.16, <1.19',
     'scipy >=1.3, <1.5',
-    'pandas >=0.25, <1.1',
+    'pandas >=0.25, <1.2',
     'pyzmq <20.0',
     'psutil >=2.0, <5.7',
     'shapely >=1.3, <1.8',
