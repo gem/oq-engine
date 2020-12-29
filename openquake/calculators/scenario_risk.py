@@ -19,6 +19,7 @@
 import copy
 import logging
 import numpy
+from scipy import sparse
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base, post_risk
@@ -88,7 +89,9 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
         aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
-        self.param['alt'] = self.acc = scientific.AggLossTable.new(
+        self.param['alt'] = scientific.AggLossTable.new(
+            aggkey, oq.loss_names, sec_losses=[], zeros=sparse.dok_matrix)
+        self.acc = scientific.AggLossTable.new(
             aggkey, oq.loss_names, sec_losses=[])
         L = len(oq.loss_names)
         self.avglosses = numpy.zeros((len(self.assetcol), self.R, L), F32)
@@ -101,7 +104,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         if res is None:
             raise MemoryError('You ran out of memory!')
         with self.monitor('aggregating losses', measuremem=False):
-            self.acc += res['alt']
+            self.acc += {eid: arr.toarray() for eid, arr in res['alt'].items()}
             for (l, r, aid, lba) in res['losses_by_asset']:
                 self.avglosses[aid, r, l] = lba * self.avg_ratio[r]
         return acc
