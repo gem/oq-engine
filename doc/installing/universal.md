@@ -13,7 +13,7 @@ Scientists wanting to develop new GMPEs or new features for the engine should us
 $ git clone https://github.com/gem/oq-engine.git
 $ cd oq-engine && /usr/bin/python3 install.py devel
 ```
-This installation method will create a Python virtual environment in $HOME/openquake and will install the engine
+This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine
 in development mode on it. Then, after activating the virtualenv with
 ```
 $ $HOME/openquake/bin/activate
@@ -30,17 +30,25 @@ installation script:
 $ wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 $ /usr/bin/python3 install.py user
 ```
-This installation method will create a Python virtual environment in $HOME/openquake and will install the engine
-on it. After that, you can activate the virtualenv with
+This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine on it.
+After that, you can activate the virtualenv with
 ```
 $ $HOME/openquake/bin/activate
 ```
-or even call directly `$HOME/openquake/bin/oq` without activating the virtualenv. Calculation data will be stored in `$HOME/oqdata`.
+or even call directly
+```
+$HOME/openquake/bin/oq
+```
+without activating the virtualenv. Calculation data will be stored in `$HOME/oqdata`.
 
 ## `server` installation
 
 If you are on linux and you have root permissions the recommended installation method is `server`: in that case, the engine will work
 with multiple users and two system V services will be automatically installed and started: `openquake-dbserver` and `openquake-webui`.
+
+$ wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+$ sudo -H /usr/bin/python3 install.py user
+
 The installation script will automatically create a user called `openquake` and will install the engine in the directory `/opt/openquake`.
 Calculation data will be stored in `/var/lib/openquake/oqdata`.
 
@@ -52,6 +60,23 @@ It is possible to install the engine on a linux cluster, but it requires additio
 
 A set of [Docker containers](docker.md) is available for installing the engine in the cloud.
 
+## Downgrading an installation
+
+By default, in `user` and `server` mode the script will install the latest stable release of the engine.
+If for some reason you want to use an older version you can specify the version number with the ``--version`` option:
+```
+$ python3 install.py user --version=3.10
+```
+## Disinstalling the engine
+
+To disinstall use the --remove flag:
+```
+$ python3 install.py devel --remove
+$ python3 install.py user --remove
+$ sudo -H /usr/bin/python3 install.py server --remove
+```
+The calculation data (in `$HOME/oqdata` or `/var/lib/openquake/oqdata`) will NOT be removed.
+You will have to remove the directories manually, if you wish so.
 ***
 
 ## Getting help
