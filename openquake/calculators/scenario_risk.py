@@ -100,9 +100,10 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     def combine(self, acc, res):
         if res is None:
             raise MemoryError('You ran out of memory!')
-        self.acc += res['alt']
-        for (l, r, aid, lba) in res['losses_by_asset']:
-            self.avglosses[aid, r, l] = lba * self.avg_ratio[r]
+        with self.monitor('aggregating losses', measuremem=False):
+            self.acc += res['alt']
+            for (l, r, aid, lba) in res['losses_by_asset']:
+                self.avglosses[aid, r, l] = lba * self.avg_ratio[r]
         return acc
 
     def post_execute(self, result):
