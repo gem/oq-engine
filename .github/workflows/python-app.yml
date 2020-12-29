@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  build:
+  engine:
     if: "!contains(github.event.head_commit.message, 'skip CI')"
     runs-on: ubuntu-latest
 
