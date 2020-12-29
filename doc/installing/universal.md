@@ -21,7 +21,7 @@ $ source $HOME/openquake/bin/activate
 it will be possible to develop with the engine. Calculation data will be stored in `$HOME/oqdata`.
 NB: this approach will work on Windows too, provided you adapt the commands to your situation
 (i.e. instead of /usr/bin/python3 use the path of the Python you want to use and instead of
-`source $HOME/openquake/bin/activate` there will be an `penquake/bin/activate.bat`).
+`source $HOME/openquake/bin/activate` there will be an `openquake/bin/activate.bat`).
 
 ## `user` installation
 
