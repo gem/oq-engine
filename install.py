@@ -132,6 +132,11 @@ def before_checks(inst, remove, usage):
     if inst is server and sys.platform != 'linux':
         sys.exit('Error: this installation method is meant for linux!')
 
+    # check venv
+    if sys.prefix != sys.base_prefix:
+        sys.exit('You are inside a virtual environment! '
+                 'Please call `deactivate` first')
+
     # check user
     user = getpass.getuser()
     if inst is server and user != 'root':

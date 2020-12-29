@@ -16,16 +16,16 @@ $ cd oq-engine && /usr/bin/python3 install.py devel
 This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine
 in development mode on it. Then, after activating the virtualenv with
 ```
-$ $HOME/openquake/bin/activate
+$ source $HOME/openquake/bin/activate
 ```
 it will be possible to develop with the engine. Calculation data will be stored in `$HOME/oqdata`.
+NB: this approach will work on Windows too, provided you adapt the commands to your situation
+(i.e. instead of /usr/bin/python3 use the path of the Python you want to use and instead of
+`source $HOME/openquake/bin/activate` there will be an `penquake/bin/activate.bat`).
 
 ## `user` installation
 
-If you do not need to develop with the engine, but only to use it as an application, you want the `user` installation (on windows/mac)
-or the `server` installation (on linux). The `user` installation is the way to go also on linux, in the case you are the only user
-and you do not have root permissions on the machine. There is no need to clone the engine repository, you just need to download the
-installation script:
+If you do not need to develop with the engine, but only to use it as an application, you want the `user` installation (on windows/mac) or the `server` installation (on linux). The `user` installation is the way to go also on linux, in the case you do not have root permissions on the machine. There is no need to clone the engine repository, you just need to download the installation script:
 ```
 $ wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 $ /usr/bin/python3 install.py user
@@ -33,7 +33,7 @@ $ /usr/bin/python3 install.py user
 This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine on it.
 After that, you can activate the virtualenv with
 ```
-$ $HOME/openquake/bin/activate
+$ source $HOME/openquake/bin/activate
 ```
 or even call directly
 ```
