@@ -1458,8 +1458,8 @@ class LossCurvesMapsBuilder(object):
 
 class AggLossTable(AccumDict):
     """
-    A dictionary of matrices of shape (K, L'), with K the number of aggregation
-    keys and L' the total number of loss types (primary + secondary).
+    A dictionary of matrices of shape L', with L' the total number of loss
+    types (primary + secondary).
     :param aggkey: a dictionary tuple -> integer
     :param loss_types: a list of primary loss types
     :param sec_losses: a list of SecondaryLosses (can be empty)
@@ -1473,8 +1473,7 @@ class AggLossTable(AccumDict):
         self.sec_losses = sec_losses
         for sec_loss in sec_losses:
             self.loss_names.extend(sec_loss.outputs)
-        KL = len(self.aggkey), len(self.loss_names)
-        self.accum = numpy.zeros(KL, F32)
+        self.accum = numpy.zeros(len(self.loss_names), F32)
         return self
 
     def aggregate(self, out, minimum_loss, aggby):
@@ -1515,25 +1514,23 @@ class AggLossTable(AccumDict):
         K = len(self.aggkey) - 1
         for lni, ln in enumerate(self.loss_names):
             for eid, loss in zip(eids, out[ln].T):
-                self[eid][K, lni] += loss.sum()
+                self[eid, K][lni] += loss.sum()
             # this is the slow part, if aggregate_by is given
             for asset, idx, losses in zip(assets, idxs, out[ln]):
                 for eid, loss in zip(eids, losses):
                     if loss:
-                        self[eid][idx, lni] += loss
+                        self[eid, idx][lni] += loss
 
     def to_dframe(self):
         """
         Convert the AggLosTable into a DataFrame
         """
         out = AccumDict(accum=[])  # col -> values
-        rangeK = numpy.arange(len(self.aggkey))
-        for eid, arr in self.items():
-            ok = arr.sum(axis=1) > 0
-            out['event_id'].extend([eid] * ok.sum())
-            out['agg_id'].extend(rangeK[ok])
+        for (eid, idx), arr in self.items():
+            out['event_id'].append(eid)
+            out['agg_id'].append(idx)
             for l, ln in enumerate(self.loss_names):
-                out[ln].extend(arr[ok, l])
+                out[ln].append(arr[l])
         out['event_id'] = U32(out['event_id'])
         out['agg_id'] = U32(out['agg_id'])
         for ln in self.loss_names:
