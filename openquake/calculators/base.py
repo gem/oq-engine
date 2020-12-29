@@ -1056,6 +1056,7 @@ class RiskCalculator(HazardCalculator):
             return
         ct = self.oqparam.concurrent_tasks or 1
         maxw = sum(ri.weight for ri in self.riskinputs) / ct
+        self.datastore.swmr_on()
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
         smap.monitor.save('crmodel', self.crmodel)
