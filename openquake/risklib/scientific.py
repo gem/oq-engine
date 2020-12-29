@@ -29,7 +29,7 @@ from functools import lru_cache
 import numpy
 import pandas
 from numpy.testing import assert_equal
-from scipy import interpolate, stats, random, sparse
+from scipy import interpolate, stats, random
 
 from openquake.baselib.general import CallableDict, AccumDict
 from openquake.hazardlib.stats import compute_stats2
@@ -1465,7 +1465,7 @@ class AggLossTable(AccumDict):
     :param sec_losses: a list of SecondaryLosses (can be empty)
     """
     @classmethod
-    def new(cls, aggkey, loss_types, sec_losses=()):
+    def new(cls, aggkey, loss_types, sec_losses=(), zeros=numpy.zeros):
         self = cls()
         self.aggkey = {key: k for k, key in enumerate(aggkey)}
         self.aggkey[()] = len(aggkey)
@@ -1474,7 +1474,7 @@ class AggLossTable(AccumDict):
         for sec_loss in sec_losses:
             self.loss_names.extend(sec_loss.outputs)
         KL = len(self.aggkey), len(self.loss_names)
-        self.accum = sparse.dok_matrix(KL, dtype=F32)
+        self.accum = zeros(KL, dtype=F32)
         return self
 
     def aggregate(self, out, minimum_loss, aggby):
@@ -1528,8 +1528,9 @@ class AggLossTable(AccumDict):
         """
         out = AccumDict(accum=[])  # col -> values
         rangeK = numpy.arange(len(self.aggkey))
-        for eid, spar in self.items():
-            arr = spar.toarray()
+        for eid, arr in self.items():
+            if hasattr(arr, 'toarray'):  # sparse matrix
+                arr = arr.toarray()
             ok = arr.sum(axis=1) > 0
             out['event_id'].extend([eid] * ok.sum())
             out['agg_id'].extend(rangeK[ok])
