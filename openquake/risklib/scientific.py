@@ -624,6 +624,7 @@ class FragilityFunctionList(list):
         :returns: a populated FragilityFunctionList instance
         """
         new = copy.copy(self)
+        new.clear()
         add_zero = (self.format == 'discrete' and
                     self.nodamage and self.nodamage <= self.imls[0])
         new.imls = build_imls(new, discretization)

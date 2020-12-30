@@ -853,7 +853,6 @@ def get_crmodel(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     risklist = get_risk_functions(oqparam)
-    oqparam.set_risk_imts(risklist)
     consdict = {}
     if 'consequence' in oqparam.inputs:
         # build consdict of the form cname_by_tagname -> tag -> array
