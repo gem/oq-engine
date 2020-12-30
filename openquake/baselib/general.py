@@ -758,6 +758,18 @@ def copyobj(obj, **kwargs):
     return new
 
 
+# return a dict imt -> slice and the total number of levels
+def _slicedict_n(imt_dt):
+    n = 0
+    slicedic = {}
+    for imt in imt_dt.names:
+        shp = imt_dt[imt].shape
+        n1 = n + (shp[0] if shp else 1)
+        slicedic[imt] = slice(n, n1)
+        n = n1
+    return slicedic, n
+
+
 class DictArray(Mapping):
     """
     A small wrapper over a dictionary of arrays serializable to HDF5:
@@ -774,18 +786,13 @@ class DictArray(Mapping):
     The DictArray maintains the lexicographic order of the keys.
     """
     def __init__(self, imtls):
-        self.dt = numpy.dtype(
+        self.dt = dt = numpy.dtype(
             [(str(imt), F64,
               (len(imls),) if hasattr(imls, '__len__') else (1,))
              for imt, imls in sorted(imtls.items())])
-        self.slicedic = {}
-        num_levels = 0
-        lenset = set()
-        for imt, imls in imtls.items():
-            n = 1 if imls is None else len(imls)
-            self.slicedic[imt] = slice(num_levels, num_levels + n)
-            num_levels += n
+        self.slicedic, num_levels = _slicedict_n(dt)
         self.array = numpy.zeros(num_levels, F64)
+        lenset = set()
         for imt, imls in imtls.items():
             self[imt] = imls
             try:
