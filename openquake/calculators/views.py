@@ -29,13 +29,14 @@ import pandas
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
     get_array, group_array, fast_agg, fast_agg3)
+from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
-from openquake.calculators.extract import extract, FLOAT, INT
+from openquake.calculators.extract import extract
 
 F32 = numpy.float32
 U32 = numpy.uint32
@@ -391,9 +392,10 @@ def portfolio_damage_error(dstore, avg=None):
     """
     df = dstore.read_df('dd_data', 'eid')
     dset = dstore.getitem('damages-rlzs')
+    dic = get_shape_descr(dset.attrs['json'])
     A, R, L, D = dset.shape
-    dmg_states = dset.attrs['dmg_state']
-    loss_types = dset.attrs['loss_type']
+    dmg_states = dic['dmg_state']
+    loss_types = dic['loss_type']
 
     sums = numpy.zeros((10, L, D-1))
     for i in range(10):
@@ -438,10 +440,10 @@ def view_portfolio_damage(token, dstore):
     """
     # dimensions assets, stat, loss_types, dmg_state
     if 'damages-stats' in dstore:
-        attrs = dstore.getitem('damages-stats').attrs
+        attrs = get_shape_descr(dstore['damages-stats'].attrs['json'])
         arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
     else:
-        attrs = dstore.getitem('damages-rlzs').attrs
+        attrs = get_shape_descr(dstore['damages-rlzs'].attrs['json'])
         arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))
     rows = [[lt] + list(row) for lt, row in zip(attrs['loss_type'], arr)]
     return rst_table(rows, ['loss_type'] + list(attrs['dmg_state']))

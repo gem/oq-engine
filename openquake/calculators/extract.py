@@ -49,33 +49,10 @@ ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
 SOURCE_ID = stochastic.rupture_dt['source_id']
 memoized = lru_cache()
-FLOAT = (float, numpy.float32, numpy.float64)
-INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 
 
 class NotFound(Exception):
     pass
-
-
-def dumps(dic):
-    """
-    Dump in json
-    """
-    new = {}
-    for k, v in dic.items():
-        if isinstance(v, numpy.ndarray):
-            new[k] = v.tolist()
-        elif isinstance(v, list) and v and isinstance(v[0], INT):
-            new[k] = [int(x) for x in v]
-        elif isinstance(v, list) and v and isinstance(v[0], FLOAT):
-            new[k] = [float(x) for x in v]
-        elif isinstance(v, FLOAT):
-            new[k] = float(v)
-        elif isinstance(v, INT):
-            new[k] = int(v)
-        else:
-            new[k] = v
-    return json.dumps(new)
 
 
 def lit_eval(string):
@@ -226,7 +203,7 @@ def extract_oqparam(dstore, dummy):
     """
     Extract job parameters as a JSON npz. Use it as /extract/oqparam
     """
-    js = dumps(vars(dstore['oqparam']))
+    js = hdf5.dumps(vars(dstore['oqparam']))
     return ArrayWrapper((), {'json': js})
 
 
@@ -290,7 +267,7 @@ def extract_exposure_metadata(dstore, what):
     dic['names'] = [name for name in dstore['assetcol/array'].dtype.names
                     if name.startswith(('value-', 'number', 'occupants'))
                     and name != 'value-occupants']
-    return ArrayWrapper((), dict(json=dumps(dic)))
+    return ArrayWrapper((), dict(json=hdf5.dumps(dic)))
 
 
 @extract.add('assets')
@@ -311,7 +288,7 @@ def extract_assets(dstore, what):
             tagidx, = numpy.where(dic[tag] == val)
             cond |= arr[tag] == tagidx
         arr = arr[cond]
-    return ArrayWrapper(arr, dict(json=dumps(dic)))
+    return ArrayWrapper(arr, dict(json=hdf5.dumps(dic)))
 
 
 @extract.add('asset_risk')
@@ -337,7 +314,7 @@ def extract_asset_risk(dstore, what):
             tagidx, = numpy.where(dic[tag] == val)
             cond |= arr[tag] == tagidx
         arr = arr[cond]
-    return ArrayWrapper(arr, dict(json=dumps(dic)))
+    return ArrayWrapper(arr, dict(json=hdf5.dumps(dic)))
 
 
 @extract.add('asset_tags')
@@ -587,7 +564,7 @@ def extract_gridded_sources(dstore, what):
     dic = {}
     for i, lonlats in enumerate(dstore['ps_grid/%02d' % task_no][()]):
         dic[i] = numpy.round(F64(lonlats), 3)
-    return ArrayWrapper((), {'json': dumps(dic)})
+    return ArrayWrapper((), {'json': hdf5.dumps(dic)})
 
 
 @extract.add('task_info')
@@ -679,9 +656,10 @@ def extract_tot_curves(dstore, what):
     else:
         kinds = list(info['stats'])
         name = 'agg_curves-stats'
+    shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
     units = dstore.get_attr(name, 'units')
-    rps = dstore.get_attr(name, 'return_period')
-    K = dstore.get_attr(name, 'K', 0)
+    rps = shape_descr['return_period']
+    K = shape_descr.get('K', 0)
     arr = dstore[name][K, k, l].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
@@ -690,10 +668,10 @@ def extract_tot_curves(dstore, what):
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
     attrs = dict(shape_descr=['return_period', 'kind'])
-    attrs['return_period'] = list(rps)
+    attrs['return_period'] = rps
     attrs['kind'] = kinds
     attrs['units'] = list(units)  # used by the QGIS plugin
-    return ArrayWrapper(arr, dict(json=dumps(attrs)))
+    return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
 
 
 @extract.add('agg_curves')
@@ -731,7 +709,9 @@ def extract_agg_curves(dstore, what):
         kinds = list(info['stats'])
         name = 'agg_curves-stats'
     units = dstore.get_attr(name, 'units')
-    rps = dstore.get_attr(name, 'return_period')
+    shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
+    units = dstore.get_attr(name, 'units')
+    rps = shape_descr['return_period']
     tup = (idx, k, l)
     arr = dstore[name][tup].T  # shape P, R
     if qdic['absolute'] == [1]:
@@ -749,7 +729,7 @@ def extract_agg_curves(dstore, what):
         attrs[tagname] = [tagvalue]
     if tagnames:
         arr = arr.reshape(arr.shape + (1,) * len(tagnames))
-    return ArrayWrapper(arr, dict(json=dumps(attrs)))
+    return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
 
 
 @extract.add('agg_losses')
@@ -769,7 +749,7 @@ def extract_agg_losses(dstore, what):
         raise ValueError('loss_type not passed in agg_losses/<loss_type>')
     L = dstore['oqparam'].lti[loss_type]
     if 'avg_losses-stats' in dstore:
-        stats = decode(dstore['avg_losses-stats'].attrs['stat'])
+        stats = list(dstore['oqparam'].hazard_stats())
         losses = dstore['avg_losses-stats'][:, :, L]
     elif 'avg_losses-rlzs' in dstore:
         stats = ['mean']
@@ -842,7 +822,7 @@ def extract_losses_by_asset(dstore, what):
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
         avg_losses = dstore['avg_losses-stats'][()]
-        stats = decode(dstore['avg_losses-stats'].attrs['stat'])
+        stats = list(dstore['oqparam'].hazard_stats())
         for s, stat in enumerate(stats):
             losses = cast(avg_losses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
@@ -1023,13 +1003,13 @@ def crm_attrs(dstore, what):
         min_iml and covs, needed by the risk exporters.
     """
     attrs = dstore.get_attrs('risk_model')
-    return ArrayWrapper((), dict(json=dumps(attrs)))
+    return ArrayWrapper((), dict(json=hdf5.dumps(attrs)))
 
 
 def _get(dstore, name):
     try:
         dset = dstore[name + '-stats']
-        return dset, decode(dset.attrs['stat'])
+        return dset, list(dstore['oqparam'].hazard_stats())
     except KeyError:  # single realization
         return dstore[name + '-rlzs'], ['mean']
 
@@ -1188,7 +1168,8 @@ def extract_disagg_by_src(dstore, what):
     http://127.0.0.1:8800/v1/calc/30/extract/disagg_by_src?site_id=0&imt_id=0&rlz_id=0&lvl_id=-1
     """
     qdict = parse(what)
-    src_id = dstore['disagg_by_src'].attrs['src_id']
+    dic = hdf5.get_shape_descr(dstore['disagg_by_src'].attrs['json'])
+    src_id = dic['src_id']
     f = norm(qdict, 'site_id rlz_id lvl_id imt_id'.split())
     poe = dstore['disagg_by_src'][
         f['site_id'], f['rlz_id'], f['imt_id'], f['lvl_id']]
@@ -1196,7 +1177,7 @@ def extract_disagg_by_src(dstore, what):
     arr['src_id'] = src_id
     arr['poe'] = poe
     arr.sort(order='poe')
-    return ArrayWrapper(arr[::-1], dict(json=dumps(f)))
+    return ArrayWrapper(arr[::-1], dict(json=hdf5.dumps(f)))
 
 
 @extract.add('disagg_layer')
