@@ -212,7 +212,7 @@ class PostRiskCalculator(base.RiskCalculator):
             agg_curves[k, r] = curve
         self.datastore['agg_losses-rlzs'] = agg_losses * oq.ses_ratio
         set_rlzs_stats(self.datastore, 'agg_losses',
-                       agg_id=K, loss_types=oq.loss_names, units=units)
+                       agg_id=K + 1, loss_types=oq.loss_names, units=units)
         self.datastore['agg_curves-rlzs'] = agg_curves
         set_rlzs_stats(self.datastore, 'agg_curves',
                        agg_id=K + 1, lti=self.L,
