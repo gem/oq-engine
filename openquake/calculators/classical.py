@@ -280,7 +280,7 @@ class ClassicalCalculator(base.HazardCalculator):
                   'nsites', 'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
-            cm = ContextMaker(trt, gsims)
+            cm = ContextMaker(trt, gsims, dict(imtls=self.oqparam.imtls))
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             for dparam in cm.REQUIRES_DISTANCES:
                 params.add(dparam + '_')

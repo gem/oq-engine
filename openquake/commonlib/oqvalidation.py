@@ -501,7 +501,7 @@ class OqParam(valid.ParamSet):
         levels, if given, or the hazard ones.
         """
         imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
-        return DictArray(imtls)
+        return DictArray(imtls) if imtls else {}
 
     @property
     def all_cost_types(self):
@@ -562,7 +562,7 @@ class OqParam(valid.ParamSet):
             from_string(rf.imt)  # make sure it is a valid IMT
             imtls[rf.imt].extend(iml for iml in rf.imls if iml > 0)
         suggested = ['\nintensity_measure_types_and_levels = {']
-        risk_imtls = {}
+        risk_imtls = self.risk_imtls.copy()
         for imt, imls in imtls.items():
             risk_imtls[imt] = list(valid.logscale(min(imls), max(imls), 20))
             suggested.append('  %r: logscale(%s, %s, 20),' %

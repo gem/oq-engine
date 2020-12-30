@@ -495,6 +495,7 @@ class EngineRunJobTestCase(unittest.TestCase):
 description = sensitivity test
 calculation_mode = scenario
 sites = 0 0
+intensity_measure_types = PGA
 sensitivity_analysis = {
   'maximum_distance': [100, 200]}''')
         run_jobs([job_ini])

@@ -176,7 +176,7 @@ class ContextMaker(object):
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
-        param = param or {}
+        param = param or {}  # empty in the gmpe-smtk
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
@@ -214,7 +214,7 @@ class ContextMaker(object):
             self.REQUIRES_DISTANCES.add('repi')
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
-        self.loglevels = DictArray(self.imtls)
+        self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
             # avoid RuntimeWarning: divide by zero encountered in log

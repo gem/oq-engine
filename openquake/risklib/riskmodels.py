@@ -510,6 +510,8 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def init(self):
         oq = self.oqparam
+        if self.risklist:
+            oq.set_risk_imts(self.risklist)
         # extract the consequences from the risk models, if any
         if 'losses_by_taxonomy' not in self.consdict:
             self.consdict['losses_by_taxonomy'] = {}
@@ -595,7 +597,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'imt'):
                     iml[rf.imt].append(rf.imls[0])
-        self.min_iml = {imt: min(iml[imt]) for imt in iml}
+        self.min_iml = {imt: min(iml[imt] or [0]) for imt in self.imtls}
 
     def eid_dmg_dt(self):
         """

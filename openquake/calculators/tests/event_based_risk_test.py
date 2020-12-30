@@ -100,7 +100,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4')
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])

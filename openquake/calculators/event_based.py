@@ -289,9 +289,6 @@ class EventBasedCalculator(base.HazardCalculator):
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
-        if not oq.imtls:
-            raise InvalidFile('There are no intensity measure types in %s' %
-                              oq.inputs['job_ini'])
         N = len(self.sitecol.complete)
         if oq.ground_motion_fields:
             M = len(oq.imtls)
