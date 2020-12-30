@@ -810,23 +810,6 @@ class DictArray(Mapping):
         """
         return numpy.isnan(self.array).all()
 
-    def new(self, array):
-        """
-        Convert an array of compatible length into a DictArray:
-
-        >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-        >>> d.new(numpy.arange(0, 5, 1))  # array of lenght 5 = 3 + 2
-        <DictArray
-        PGA: [0 1 2]
-        PGV: [3 4]>
-        """
-        assert len(self.array) == len(array)
-        arr = object.__new__(self.__class__)
-        arr.dt = self.dt
-        arr.slicedic = self.slicedic
-        arr.array = array
-        return arr
-
     def __call__(self, imt):
         return self.slicedic[imt]
 
