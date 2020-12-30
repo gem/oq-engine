@@ -773,7 +773,7 @@ class HazardCalculator(BaseCalculator):
                 self.assetcol = assetcol
         else:  # no exposure
             self.sitecol = haz_sitecol
-            if self.sitecol:
+            if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
                              len(self.sitecol), len(oq.imtls.array))
 
