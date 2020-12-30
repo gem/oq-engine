@@ -749,7 +749,7 @@ def extract_agg_losses(dstore, what):
         raise ValueError('loss_type not passed in agg_losses/<loss_type>')
     L = dstore['oqparam'].lti[loss_type]
     if 'avg_losses-stats' in dstore:
-        stats = dstore['oqparam'].hazard_stats()
+        stats = list(dstore['oqparam'].hazard_stats())
         losses = dstore['avg_losses-stats'][:, :, L]
     elif 'avg_losses-rlzs' in dstore:
         stats = ['mean']
@@ -822,7 +822,7 @@ def extract_losses_by_asset(dstore, what):
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
         avg_losses = dstore['avg_losses-stats'][()]
-        stats = dstore['oqparam'].hazard_stats()
+        stats = list(dstore['oqparam'].hazard_stats())
         for s, stat in enumerate(stats):
             losses = cast(avg_losses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
@@ -1009,7 +1009,7 @@ def crm_attrs(dstore, what):
 def _get(dstore, name):
     try:
         dset = dstore[name + '-stats']
-        return dset, dstore['oqparam'].hazard_stats()
+        return dset, list(dstore['oqparam'].hazard_stats())
     except KeyError:  # single realization
         return dstore[name + '-rlzs'], ['mean']
 
