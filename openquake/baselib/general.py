@@ -820,7 +820,6 @@ class DictArray(Mapping):
         PGA: [0 1 2]
         PGV: [3 4]>
         """
-        1/0
         assert len(self.array) == len(array)
         arr = object.__new__(self.__class__)
         arr.dt = self.dt
