@@ -46,6 +46,6 @@ class MultiSurfaceTestCase(unittest.TestCase):
 
     def test_rx(self):
         # Test Rx
-        expected = np.array([-3.829952, -13.55452])
+        expected = np.array([-3.416027, -13.276342])
         computed = self.msrf.get_rx_distance(self.mesh)
         np.testing.assert_allclose(computed, expected)

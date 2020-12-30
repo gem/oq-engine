@@ -179,7 +179,7 @@ class MultiSurface(BaseSurface):
                 # The calculation of indexes below is needed because we want
                 # on each 'profile' of the mesh the uppermost node that is
                 # finite (i.e. on the real grid)
-                for icol, irow in zip(range(lons.shape[0]),
+                for icol, irow in zip(range(lons.shape[1]),
                                       numpy.isfinite(lons).argmax(axis=0)):
                     edge.append([mesh.lons[irow, icol], mesh.lats[irow, icol],
                                  mesh.depths[irow, icol]])
@@ -567,7 +567,6 @@ class MultiSurface(BaseSurface):
         # Loop over the traces
         for j, edges in enumerate(self.cartesian_edges):
             # Loop over segments in trace
-            # s_ij_total = 0.0
             for i in range(edges.shape[0] - 1):
                 # Get u_i and t_i
                 u_i, t_i = self._get_ut_i(edges[i:(i + 2), :], sx, sy)
@@ -628,14 +627,21 @@ class MultiSurface(BaseSurface):
         <.base.BaseSurface.get_rx_distance>`
         for spec of input and result values.
         """
+        from openquake.hazardlib.site import SiteCollection
+        if isinstance(mesh, SiteCollection):
+            coo = numpy.array([[p.location.longitude, p.location.latitude]
+                              for p in mesh])
+            mesh = Mesh(coo[:, 0], coo[:, 1])
+
         # If the GC2 calculations have already been computed (by invoking Ry0
         # first) and the mesh is identical then class has GC2 attributes
         # already pre-calculated
-        if not self.tmp_mesh or self.tmp_mesh == mesh:
+        if not self.tmp_mesh or self.tmp_mesh != mesh:
             self.gc2t, self.gc2u = self.get_generalised_coordinates(mesh.lons,
                                                                     mesh.lats)
             # Update mesh
             self.tmp_mesh = deepcopy(mesh)
+
         # Rx coordinate is taken directly from gc2t
         return self.gc2t
 
@@ -648,10 +654,16 @@ class MultiSurface(BaseSurface):
         <.base.BaseSurface.get_ry0_distance>`
         for spec of input and result values.
         """
+        from openquake.hazardlib.site import SiteCollection
+        if isinstance(mesh, SiteCollection):
+            coo = numpy.array([[p.location.longitude, p.location.latitude]
+                              for p in mesh])
+            mesh = Mesh(coo[:, 0], coo[:, 1])
+
         # If the GC2 calculations have already been computed (by invoking Ry0
         # first) and the mesh is identical then class has GC2 attributes
         # already pre-calculated
-        if not self.tmp_mesh or self.tmp_mesh == mesh:
+        if not self.tmp_mesh or self.tmp_mesh != mesh:
             # If that's not the case, or the mesh is different then
             # re-compute GC2 configuration
             self.gc2t, self.gc2u = self.get_generalised_coordinates(mesh.lons,
