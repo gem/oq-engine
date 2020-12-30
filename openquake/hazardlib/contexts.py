@@ -175,7 +175,8 @@ class ContextMaker(object):
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
 
-    def __init__(self, trt, gsims, param, monitor=Monitor()):
+    def __init__(self, trt, gsims, param=None, monitor=Monitor()):
+        param = param or {}  # empty in the gmpe-smtk
         self.af = param.get('af', None)
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.collapse_level = param.get('collapse_level', False)
