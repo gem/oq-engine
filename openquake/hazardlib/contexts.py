@@ -214,7 +214,7 @@ class ContextMaker(object):
             self.REQUIRES_DISTANCES.add('repi')
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
-        self.loglevels = DictArray(self.imtls)
+        self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
             # avoid RuntimeWarning: divide by zero encountered in log
