@@ -44,10 +44,6 @@ def aae(data, expected):
 
 class EventBasedRiskTestCase(CalculatorTestCase):
 
-    def check_attr(self, name, value):
-        got = self.calc.datastore.get_attr('agg_curves-stats', name)
-        numpy.testing.assert_equal(value, got)
-
     def assert_stats_ok(self, pkg, job_ini):
         out = self.run_calc(pkg.__file__, job_ini, exports='csv',
                             concurrent_tasks='4')
@@ -80,10 +76,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
-
-        # make sure the agg_curves-stats has the right attrs
-        self.check_attr('return_period', [30, 60, 120, 240, 480, 960])
-        self.check_attr('units', ['EUR', 'EUR'])
 
         # FIXME: the error in portfolio_loss is not reproducible
         # tmp = gettemp(view('portfolio_loss', self.calc.datastore))

@@ -42,6 +42,9 @@ vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
 
+FLOAT = (float, numpy.float32, numpy.float64)
+INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
+
 
 def maybe_encode(value):
     """
@@ -401,7 +404,32 @@ def array_of_vstr(lst):
     return numpy.array(ls, vstr)
 
 
-def set_shape_attrs(hdf5file, dsetname, kw):
+def dumps(dic):
+    """
+    Dump in json
+    """
+    new = {}
+    for k, v in dic.items():
+        if isinstance(v, numpy.ndarray):
+            lst = v.tolist()
+            if lst and isinstance(lst[0], bytes):
+                new[k] = decode(lst)
+            else:
+                new[k] = lst
+        elif isinstance(v, list) and v and isinstance(v[0], INT):
+            new[k] = [int(x) for x in v]
+        elif isinstance(v, list) and v and isinstance(v[0], FLOAT):
+            new[k] = [float(x) for x in v]
+        elif isinstance(v, FLOAT):
+            new[k] = float(v)
+        elif isinstance(v, INT):
+            new[k] = int(v)
+        else:
+            new[k] = v
+    return json.dumps(new)
+
+
+def set_shape_descr(hdf5file, dsetname, kw):
     """
     Set shape attributes on a dataset (and possibly other attributes)
     """
@@ -410,11 +438,29 @@ def set_shape_attrs(hdf5file, dsetname, kw):
     if len(kw) < S:
         raise ValueError('The dataset %s has %d dimensions but you passed %d'
                          ' axis' % (dsetname, S, len(kw)))
-    dset.attrs['shape_descr'] = encode(list(kw))[:S]
-    for k, v in kw.items():
-        dset.attrs[k] = v
-    for d, k in enumerate(dset.attrs['shape_descr']):
-        dset.dims[d].label = k  # set dimension label
+    keys = list(kw)
+    fields, extra = keys[:S], keys[S:]
+    dic = dict(shape_descr=fields)
+    for f in fields:
+        dic[f] = kw[f]
+    dset.attrs['json'] = dumps(dic)
+    for e in extra:
+        dset.attrs[e] = kw[e]
+
+
+def get_shape_descr(json_string):
+    """
+    :param json_string:
+        JSON string containing the shape_descr
+    :returns:
+        a dictionary field -> values extracted from the shape_descr
+    """
+    dic = json.loads(json_string)
+    for field in dic['shape_descr']:
+        val = dic[field]
+        if isinstance(val, INT):
+            dic[field] = range(val)
+    return dic
 
 
 class ArrayWrapper(object):
@@ -434,12 +480,8 @@ class ArrayWrapper(object):
             return obj
         elif hasattr(obj, 'attrs'):  # is a dataset
             array, attrs = obj[()], dict(obj.attrs)
-            shape_descr = attrs.get('shape_descr', [])
-            for descr in map(decode, shape_descr):
-                val = attrs[descr]
-                if isinstance(val, numpy.int64):
-                    val = range(val)
-                attrs[descr] = list(val)
+            if 'json' in attrs:
+                attrs.update(get_shape_descr(attrs.pop('json')))
         else:  # assume obj is an array
             array, attrs = obj, {}
         return cls(array, attrs, (extra,))

@@ -69,7 +69,7 @@ def export_agg_curve_rlzs(ekey, dstore):
     md = dstore.metadata
     md['risk_investigation_time'] = oq.risk_investigation_time
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    descr = dstore.get_shape_descr(ekey[0])
+    descr = hdf5.get_shape_descr(dstore[ekey[0]].attrs['json'])
     name, suffix = ekey[0].split('-')
     rlzs_or_stats = descr[suffix[:-1]]
     aw = hdf5.ArrayWrapper(dstore[ekey[0]], descr, ('loss_value',))
@@ -135,8 +135,8 @@ def _get_data(dstore, dskey, stats):
     if kind == 'stats':
         weights = dstore['weights'][()]
         if dskey in set(dstore):  # precomputed
-            rlzs_or_stats = [decode(s) for s in dstore.get_attr(dskey, 'stat')]
-            statfuncs = [stats[ros] for ros in rlzs_or_stats]
+            rlzs_or_stats = list(stats)
+            statfuncs = [stats[ros] for ros in stats]
             value = dstore[dskey][()]  # shape (A, S, LI)
         else:  # compute on the fly
             rlzs_or_stats, statfuncs = zip(*stats.items())

@@ -365,7 +365,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if oq.individual_curves:
                 logging.info('Saving individual hazard curves')
                 self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
-                self.datastore.set_shape_attrs(
+                self.datastore.set_shape_descr(
                     'hcurves-rlzs', site_id=N, rlz_id=R,
                     imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
@@ -373,7 +373,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     M = len(oq.imtls)
                     ds = self.datastore.create_dset(
                         'hmaps-rlzs', F32, (N, R, M, P))
-                    self.datastore.set_shape_attrs(
+                    self.datastore.set_shape_descr(
                         'hmaps-rlzs', site_id=N, rlz_id=R,
                         imt=list(oq.imtls), poe=oq.poes)
                 for r, pmap in enumerate(pmaps):
@@ -389,7 +389,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if S:
                 logging.info('Computing statistical hazard curves')
                 self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
-                self.datastore.set_shape_attrs(
+                self.datastore.set_shape_descr(
                     'hcurves-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
@@ -397,7 +397,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     M = len(oq.imtls)
                     ds = self.datastore.create_dset(
                         'hmaps-stats', F32, (N, S, M, P))
-                    self.datastore.set_shape_attrs(
+                    self.datastore.set_shape_descr(
                         'hmaps-stats', site_id=N, stat=list(hstats),
                         imt=list(oq.imtls), poes=oq.poes)
                 for s, stat in enumerate(hstats):

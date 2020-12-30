@@ -1179,6 +1179,5 @@ def save_agg_values(dstore, assetcol, lossnames, tagnames):
     lst.append('*total*')
     loss_names = dstore['oqparam'].loss_names
     dstore['agg_values'] = assetcol.get_agg_values(lossnames, tagnames)
-    dstore.set_attrs('agg_values', shape_descr=['aggregation', 'loss_type'],
-                     aggregation=lst, loss_type=loss_names)
+    dstore.set_shape_descr('agg_values', aggregation=lst, loss_type=loss_names)
     return aggkey if tagnames else {}

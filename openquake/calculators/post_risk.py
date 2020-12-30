@@ -21,7 +21,7 @@ import logging
 import itertools
 import numpy
 
-from openquake.baselib import general, datastore, parallel
+from openquake.baselib import general, datastore, parallel, python3compat
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific
 from openquake.calculators import base, views
@@ -104,7 +104,7 @@ def get_src_loss_table(dstore, L):
     evs = dstore['events'][:][eids]
     rlz_ids = evs['rlz_id']
     rup_ids = evs['rup_id']
-    source_id = dstore['ruptures']['source_id'][rup_ids]
+    source_id = python3compat.decode(dstore['ruptures']['source_id'][rup_ids])
     w = dstore['weights'][:]
     acc = general.AccumDict(accum=numpy.zeros(L, F32))
     del alt['event_id']
@@ -165,7 +165,7 @@ class PostRiskCalculator(base.RiskCalculator):
             with self.monitor('src_loss_table', measuremem=True):
                 source_ids, losses = get_src_loss_table(self.datastore, self.L)
                 self.datastore['src_loss_table'] = losses
-                self.datastore.set_shape_attrs('src_loss_table',
+                self.datastore.set_shape_descr('src_loss_table',
                                                source=source_ids,
                                                loss_type=oq.loss_names)
         builder = get_loss_builder(self.datastore)

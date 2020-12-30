@@ -314,7 +314,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset(
                 'disagg_by_src', F32,
                 (self.N, self.R, self.M, self.L1, self.Ns))
-            self.datastore.set_shape_attrs(
+            self.datastore.set_shape_descr(
                 'disagg_by_src', site_id=self.N, rlz_id=self.R,
                 imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
         return zd
@@ -632,21 +632,21 @@ class ClassicalCalculator(base.HazardCalculator):
         S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
-            self.datastore.set_shape_attrs(
+            self.datastore.set_shape_descr(
                 'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
             if oq.poes:
                 self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
-                self.datastore.set_shape_attrs(
+                self.datastore.set_shape_descr(
                     'hmaps-rlzs', site_id=N, rlz_id=R,
                     imt=list(oq.imtls), poe=oq.poes)
         if hstats:
             self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
-            self.datastore.set_shape_attrs(
+            self.datastore.set_shape_descr(
                 'hcurves-stats', site_id=N, stat=list(hstats),
                 imt=imts, lvl=numpy.arange(L1))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-                self.datastore.set_shape_attrs(
+                self.datastore.set_shape_descr(
                     'hmaps-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), poe=oq.poes)
         ct = oq.concurrent_tasks or 1

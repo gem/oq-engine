@@ -27,7 +27,7 @@ import numpy
 import h5py
 import pandas
 
-from openquake.baselib import hdf5, config, performance, python3compat, general
+from openquake.baselib import hdf5, config, performance, general
 
 
 MAX_ROWS = 10_000_000
@@ -138,24 +138,17 @@ def read(calc_id, mode='r', datadir=None):
     return dstore
 
 
-def _range(value):
-    if hasattr(value, '__len__'):
-        return list(value)
-    else:
-        return list(range(value))
-
-
 def sel(dset, filterdict):
     """
     Select a dataset with shape_descr. For instance
     dstore.sel('hcurves', imt='PGA', sid=2)
     """
-    assert 'shape_descr' in dset.attrs, 'Missing %s.shape_descr' % dset.name
+    dic = hdf5.get_shape_descr(dset.attrs['json'])
     lst = []
-    for dim in python3compat.decode(dset.attrs['shape_descr']):
+    for dim in dic['shape_descr']:
         if dim in filterdict:
             val = filterdict[dim]
-            values = _range(dset.attrs[dim])
+            values = dic[dim]
             idx = values.index(val)
             lst.append(slice(idx, idx + 1))
         else:
@@ -169,29 +162,31 @@ def dset2df(dset, indexfield, filterdict):
     dataframe. NB: this is very slow for large datasets.
     """
     arr = sel(dset, filterdict)
-    shape_descr = python3compat.decode(dset.attrs['shape_descr'])
+    dic = hdf5.get_shape_descr(dset.attrs['json'])
     tags = []
     idxs = []
-    for dim in shape_descr:
-        values = _range(dset.attrs[dim])
+    for dim in dic['shape_descr']:
+        values = dic[dim]
         if dim in filterdict:
             val = filterdict[dim]
             idx = values.index(val)
             idxs.append([idx])
             values = [val]
+        elif hasattr(values, 'stop'):  # a range object already
+            idxs.append(values)
         else:
             idxs.append(range(len(values)))
         tags.append(values)
-    dic = general.AccumDict(accum=[])
+    acc = general.AccumDict(accum=[])
     index = []
     for idx, vals in zip(itertools.product(*idxs), itertools.product(*tags)):
-        for field, val in zip(shape_descr, vals):
+        for field, val in zip(dic['shape_descr'], vals):
             if field == indexfield:
                 index.append(val)
             else:
-                dic[field].append(val)
-        dic['value'].append(arr[idx])
-    return pandas.DataFrame(dic, index or None)
+                acc[field].append(val)
+        acc['value'].append(arr[idx])
+    return pandas.DataFrame(acc, index or None)
 
 
 def extract_cols(datagrp, sel, slc, columns):
@@ -334,11 +329,11 @@ class DataStore(collections.abc.MutableMapping):
         """
         self.hdf5.save_attrs(key, kw)
 
-    def set_shape_attrs(self, key, **kw):
+    def set_shape_descr(self, key, **kw):
         """
         Set shape attributes
         """
-        hdf5.set_shape_attrs(self.hdf5, key, kw)
+        hdf5.set_shape_descr(self.hdf5, key, kw)
 
     def get_attr(self, key, name, default=None):
         """
@@ -373,25 +368,6 @@ class DataStore(collections.abc.MutableMapping):
             else:
                 raise
         return dict(dset.attrs)
-
-    def get_shape_descr(self, name):
-        """
-        :param name:
-            the name of a dataset/datagroup in the datastore
-        :returns:
-            a dictionary field -> values extracted from the shape_descr
-            attribute (if any)
-        """
-        attrs = self.getitem(name).attrs
-        shape_descr = python3compat.decode(attrs.get('shape_descr', []))
-        if not shape_descr:
-            return {}
-        dic = dict(shape_descr=shape_descr)
-        for field in shape_descr:
-            dic[field] = val = attrs[field]
-            if isinstance(val, numpy.int64):
-                dic[field] = range(val)
-        return dic
 
     def create_dset(self, key, dtype, shape=(None,), compression=None,
                     fillvalue=0, attrs=None):
@@ -570,7 +546,7 @@ class DataStore(collections.abc.MutableMapping):
         dset = self.getitem(key)
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
-        elif 'shape_descr' in dset.attrs:
+        elif 'json' in dset.attrs:
             return dset2df(dset, index, sel)
         elif '__pdcolumns__' in dset.attrs:
             columns = dset.attrs['__pdcolumns__'].split()
