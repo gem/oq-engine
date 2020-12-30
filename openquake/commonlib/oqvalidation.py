@@ -501,7 +501,7 @@ class OqParam(valid.ParamSet):
         levels, if given, or the hazard ones.
         """
         imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
-        return DictArray(imtls)
+        return DictArray(imtls) if imtls else {}
 
     @property
     def all_cost_types(self):

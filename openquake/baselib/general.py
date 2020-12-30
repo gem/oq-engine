@@ -786,6 +786,7 @@ class DictArray(Mapping):
     The DictArray maintains the lexicographic order of the keys.
     """
     def __init__(self, imtls):
+        assert imtls
         self.dt = dt = numpy.dtype(
             [(str(imt), F64,
               (len(imls),) if hasattr(imls, '__len__') else (1,))
