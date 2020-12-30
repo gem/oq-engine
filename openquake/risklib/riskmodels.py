@@ -597,7 +597,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'imt'):
                     iml[rf.imt].append(rf.imls[0])
-        self.min_iml = {imt: min(iml[imt]) for imt in iml}
+        self.min_iml = {imt: min(iml[imt] or [0]) for imt in self.imtls}
 
     def eid_dmg_dt(self):
         """
