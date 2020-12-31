@@ -350,7 +350,7 @@ class OqParamTestCase(unittest.TestCase):
                 sites='0.1 0.2',
                 poes='0.2',
                 maximum_distance='400',
-                iml_disagg="{'PGV': [0.1, 0.2, 0.3]}",
+                iml_disagg="{'PGV': 0.1}",
                 poes_disagg="0.1",
                 uniform_hazard_spectra='1')
         self.assertIn("poes_disagg != poes: [0.1]!=[0.2] in job.ini",

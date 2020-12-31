@@ -779,24 +779,22 @@ class DictArray(Mapping):
         self.size = len(imtls) * self.L1
         self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
                                for imt, imls in sorted(imtls.items())])
-        self._array = numpy.zeros(self.size, F64)
+        self.array = numpy.zeros(self.size, F64)
+        self.slicedic = {}
+        n = 0
         for imt, imls in sorted(imtls.items()):
-            self[imt] = imls
+            self.slicedic[imt] = slc = slice(n, n + self.L1)
+            self.array[slc] = imls
+            n += self.L1
 
     def __call__(self, imt):
-        if not hasattr(self, 'slicedic'):
-            self.slicedic = {}
-            n = 0
-            for imt in self:
-                self.slicedic[imt] = slice(n, n + self.L1)
-                n += self.L1
         return self.slicedic[imt]
 
     def __getitem__(self, imt):
-        return self._array[self(imt)]
+        return self.array[self(imt)]
 
     def __setitem__(self, imt, array):
-        self._array[self(imt)] = array
+        self.array[self(imt)] = array
 
     def __iter__(self):
         for imt in self.dt.names:

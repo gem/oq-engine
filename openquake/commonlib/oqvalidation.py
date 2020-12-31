@@ -293,10 +293,9 @@ class OqParam(valid.ParamSet):
         if 'iml_disagg' in names_vals:
             self.iml_disagg.pop('default')
             # normalize things like SA(0.10) -> SA(0.1)
-            self.iml_disagg = {str(from_string(imt)): iml
+            self.iml_disagg = {str(from_string(imt)): [iml]
                                for imt, iml in self.iml_disagg.items()}
-            self.hazard_imtls = {
-                imt: [iml] for imt, iml in self.iml_disagg.items()}
+            self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
                 raise InvalidFile(
                     'Please remove the intensity_measure_types_and_levels '
