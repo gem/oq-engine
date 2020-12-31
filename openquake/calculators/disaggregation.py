@@ -497,6 +497,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt
         if len(vcurves):
-            NML1 = len(vcurves), self.M, len(oq.imtls.array) // self.M
+            NML1 = len(vcurves), self.M, oq.imtls.size // self.M
             self.datastore['_vcurves'] = numpy.array(vcurves).reshape(NML1)
             self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]

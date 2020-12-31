@@ -713,7 +713,10 @@ def view_global_poes(token, dstore):
     """
     tbl = []
     imtls = dstore['oqparam'].imtls
-    header = ['et_id'] + [str(poe) for poe in imtls.array]
+    header = ['et_id']
+    for imt in imtls:
+        for poe in imtls[imt]:
+            header.append(str(poe))
     for grp in sorted(dstore['poes']):
         poes = dstore['poes/' + grp]
         nsites = len(poes)

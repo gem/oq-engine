@@ -775,7 +775,7 @@ class HazardCalculator(BaseCalculator):
             self.sitecol = haz_sitecol
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
-                             len(self.sitecol), len(oq.imtls.array))
+                             len(self.sitecol), oq.imtls.size)
 
         if oq_hazard:
             parent = self.datastore.parent

@@ -540,7 +540,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: the number of levels per IMT (a.ka. L1)
         """
-        return len(self.imtls.array) // len(self.imtls)
+        return self.imtls.size // len(self.imtls)
 
     def set_risk_imts(self, risklist):
         """

@@ -786,13 +786,14 @@ class DictArray(Mapping):
     The DictArray maintains the lexicographic order of the keys.
     """
     def __init__(self, imtls):
-        assert imtls
+        levels = imtls[next(iter(imtls))]
+        self.size = len(imtls) * (1 if levels is None else len(levels))
         self.dt = dt = numpy.dtype(
             [(str(imt), F64,
               (len(imls),) if hasattr(imls, '__len__') else (1,))
              for imt, imls in sorted(imtls.items())])
         self.slicedic, num_levels = _slicedict_n(dt)
-        self.array = numpy.zeros(num_levels, F64)
+        self._array = numpy.zeros(num_levels, F64)
         lenset = set()
         for imt, imls in imtls.items():
             self[imt] = imls
@@ -815,10 +816,10 @@ class DictArray(Mapping):
         return self.slicedic[imt]
 
     def __getitem__(self, imt):
-        return self.array[self.slicedic[imt]]
+        return self._array[self.slicedic[imt]]
 
     def __setitem__(self, imt, array):
-        self.array[self.slicedic[imt]] = array
+        self._array[self.slicedic[imt]] = array
 
     def __iter__(self):
         for imt in self.dt.names:
@@ -826,21 +827,6 @@ class DictArray(Mapping):
 
     def __len__(self):
         return len(self.dt.names)
-
-    def __toh5__(self):
-        carray = numpy.zeros(1, self.dt)
-        for imt in self:
-            carray[imt] = self[imt]
-        return carray, {}
-
-    def __fromh5__(self, carray, attrs):
-        self.array = carray[:].view(F64)
-        self.dt = dt = numpy.dtype(
-            [(str(imt), F64, len(carray[0][imt]))
-             for imt in carray.dtype.names])
-        self.slicedic, num_levels = _slicedict_n(dt)
-        for imt in carray.dtype.names:
-            self[imt] = carray[0][imt]
 
     def __eq__(self, other):
         arr = self.array == other.array

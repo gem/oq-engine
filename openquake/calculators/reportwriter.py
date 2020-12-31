@@ -67,7 +67,7 @@ class ReportWriter(object):
         versions = sorted(dstore['/'].attrs.items())
         self.text += '\n\n' + views.rst_table(versions)
         self.text += '\n\nnum_sites = %d, num_levels = %d, num_rlzs = %s' % (
-            len(dstore['sitecol']), len(oq.imtls.array), num_rlzs)
+            len(dstore['sitecol']), oq.imtls.size, num_rlzs)
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""

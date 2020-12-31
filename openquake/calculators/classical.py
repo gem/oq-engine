@@ -325,7 +325,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         self.M = len(oq.imtls)
-        self.L1 = len(oq.imtls.array) // self.M
+        self.L1 = oq.imtls.size // self.M
         sources = encode([src_id for src_id in self.csm.source_info])
         size, msg = get_nbytes_msg(
             dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
@@ -357,7 +357,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
-        poes_shape = (self.N, len(self.oqparam.imtls.array), len(rlzs_by_g))
+        poes_shape = (self.N, self.oqparam.imtls.size, len(rlzs_by_g))
         size = numpy.prod(poes_shape) * 8
         logging.info('Requiring %s for ProbabilityMap of shape %s',
                      humansize(size), poes_shape)
@@ -493,7 +493,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :returns: the outputs to pass to the Starmap, ordered by weight
         """
         oq = self.oqparam
-        L = len(oq.imtls.array)
+        L = oq.imtls.size
         sids = self.sitecol.complete.sids
         allargs = []
         src_groups = self.csm.src_groups
@@ -618,7 +618,6 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         # initialize datasets
-        imls = oq.imtls.array
         N = len(self.sitecol.complete)
         P = len(oq.poes)
         M = self.M = len(oq.imtls)
@@ -626,7 +625,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.soil_intensities is not None:
             L = M * len(oq.soil_intensities)
         else:
-            L = len(imls)
+            L = oq.imtls.size
         L1 = self.L1 = L // M
         R = len(self.realizations)
         S = len(hstats)
@@ -749,7 +748,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     poes, weights = pgetter.poes, pgetter.weights
     M = len(imtls)
     P = len(poes)
-    L = len(imtls.array)
+    L = imtls.size
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {}

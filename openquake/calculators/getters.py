@@ -41,7 +41,7 @@ def build_stat_curve(poes, imtls, stat, weights):
     Build statistics by taking into account IMT-dependent weights
     """
     assert len(poes) == len(weights), (len(poes), len(weights))
-    L = len(imtls.array)
+    L = imtls.size
     array = numpy.zeros((L, 1))
     if isinstance(weights, list):  # IMT-dependent weights
         # this is slower since the arrays are shorter
@@ -108,7 +108,7 @@ class PmapGetter(object):
 
     @property
     def L(self):
-        return len(self.imtls.array)
+        return self.imtls.size
 
     @property
     def N(self):
@@ -197,7 +197,7 @@ class PmapGetter(object):
                 array[:, 0] = pcurve.array[:, 0]
                 pcurve.array = array
             return pmap
-        L = len(self.imtls.array)
+        L = self.imtls.size
         pmap = probability_map.ProbabilityMap.build(L, 1, self.sids)
         for sid in self.sids:
             pmap[sid] = build_stat_curve(
