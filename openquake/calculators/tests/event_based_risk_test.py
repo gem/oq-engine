@@ -175,10 +175,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_2(self):
         self.run_calc(case_2.__file__, 'job.ini')
 
-        # test the composite_risk_model keys (i.e. slash escaping)
-        crm = sorted(self.calc.datastore.getitem('risk_model'))
-        self.assertEqual(crm, ['RC%2B', 'RM', 'W%2F1'])
-
         # test the case when all GMFs are filtered out
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job.ini', minimum_intensity='10.0')

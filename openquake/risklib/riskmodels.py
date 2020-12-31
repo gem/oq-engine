@@ -461,15 +461,6 @@ class CompositeRiskModel(collections.abc.Mapping):
             rf = hdf5.json_to_obj(rf_json)
             lt = rf.loss_type
             if rf.kind == 'fragility':  # rf is a FragilityFunctionList
-                '''
-                try:
-                    rf = rf.build(
-                        risklist.limit_states,
-                        oqparam.continuous_fragility_discretization,
-                        oqparam.steps_per_interval)
-                except ValueError as err:
-                    raise ValueError('%s: %s' % (rf.id, err))
-                '''
                 risklist.append(rf)
             else:  # rf is a vulnerability function
                 rf.seed = oqparam.master_seed
@@ -741,11 +732,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:
                 attrs['loss_ratios_' + lt] = rf.loss_ratios[lt]
-        dic = self._riskmodels.copy()
-        for k, v in self.consdict.items():
-            if len(v):
-                dic[k] = v
-        return dic, attrs
+        return numpy.zeros(0), attrs
 
     def to_dframe(self):
         """

@@ -153,6 +153,8 @@ class VulnerabilityFunction(object):
 
     def init(self):
         # called by CompositeRiskModel and by __setstate__
+        self.covs = F64(self.covs)
+        self.mean_loss_ratios = F64(self.mean_loss_ratios)
         self._stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
