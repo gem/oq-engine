@@ -135,7 +135,7 @@ def _make_pmap(ctxs, cmaker):
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         cmaker.investigation_time)
     # easy case of independent ruptures, useful for debugging
-    pmap = ProbabilityMap(len(cmaker.loglevels.array), len(cmaker.gsims))
+    pmap = ProbabilityMap(cmaker.loglevels.size, len(cmaker.gsims))
     for ctx, poes in cmaker.gen_ctx_poes(ctxs):
         pnes = ctx.get_probability_no_exceedance(poes)  # (N, L, G)
         for sid, pne in zip(ctx.sids, pnes):
@@ -252,7 +252,7 @@ class ContextMaker(object):
         nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
         C = len(ctxs)
         N = nsites.sum()
-        poes = numpy.zeros((N, len(self.loglevels.array), len(self.gsims)))
+        poes = numpy.zeros((N, self.loglevels.size, len(self.gsims)))
         if self.single_site_opt.any():
             ctx = self.multi(ctxs)
         for g, gsim in enumerate(self.gsims):
@@ -552,7 +552,7 @@ class PmapMaker(object):
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         # NB: if maxsites is too big or too small the performance of
         # get_poes can easily become 2-3 times worse!
-        self.maxsites = 512000 / len(self.gsims) / len(self.imtls.array)
+        self.maxsites = 512000 / len(self.gsims) / self.imtls.size
 
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
@@ -614,7 +614,7 @@ class PmapMaker(object):
             self.numctxs = 0
             self.numsites = 0
             rups = self._ruptures(src)
-            L, G = len(self.cmaker.imtls.array), len(self.cmaker.gsims)
+            L, G = self.cmaker.imtls.size, len(self.cmaker.gsims)
             pmap = ProbabilityMap(L, G)
             self._update_pmap(self._gen_ctxs(rups, sites, src.id), pmap)
             p = pmap
@@ -640,7 +640,7 @@ class PmapMaker(object):
     def make(self):
         self.rupdata = []
         imtls = self.cmaker.imtls
-        L, G = len(imtls.array), len(self.gsims)
+        L, G = imtls.size, len(self.gsims)
         self.pmap = ProbabilityMap(L, G)
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))

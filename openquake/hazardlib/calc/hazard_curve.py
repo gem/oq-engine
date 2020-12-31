@@ -59,7 +59,7 @@ def _cluster(imtls, tom, gsims, pmap):
     """
     Computes the probability map in case of a cluster group
     """
-    L, G = len(imtls.array), len(gsims)
+    L, G = imtls.size, len(gsims)
     pmapclu = ProbabilityMap(L, G)
     # Get temporal occurrence model
     # Number of occurrences for the cluster
@@ -184,7 +184,7 @@ def calc_hazard_curves(
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level, reqv=reqv,
                  cluster=grp.cluster, shift_hypo=shift_hypo)
-    pmap = ProbabilityMap(len(imtls.array), 1)
+    pmap = ProbabilityMap(imtls.size, 1)
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     for group in groups:
@@ -219,6 +219,6 @@ def calc_hazard_curve(site1, src, gsims, oqparam):
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
     pmap, rup_data, calc_times = PmapMaker(cmaker, srcfilter, [src]).make()
     if not pmap:  # filtered away
-        zero = numpy.zeros((len(oqparam.imtls.array), len(gsims)))
+        zero = numpy.zeros((oqparam.imtls.size, len(gsims)))
         return ProbabilityCurve(zero)
     return pmap[0]  # pcurve with shape (L, G) on site 0

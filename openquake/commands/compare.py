@@ -37,7 +37,8 @@ def getdata(what, calc_ids, sitecol, sids):
         numpy.testing.assert_array_equal(
             extractor.get('sitecol')[['lon', 'lat']], sitecol[['lon', 'lat']])
         if what == 'hcurves':
-            numpy.testing.assert_array_equal(oq.imtls.array, imtls.array)
+            for imt in imtls:
+                numpy.testing.assert_array_equal(oq.imtls[imt], imtls[imt])
         elif what == 'hmaps':
             numpy.testing.assert_array_equal(oq.poes, poes)
         arrays.append(extractor.get(what + '?kind=mean').mean[sids])

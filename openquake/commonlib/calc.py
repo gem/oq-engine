@@ -28,7 +28,7 @@ NB: parallelization would kill the performance::
     oq = dstore['oqparam']
     N = len(dstore['sitecol'])
     M = len(oq.imtls)
-    L1 = len(oq.imtls.array) // M
+    L1 = oq.imtls.size // M
     gmf_df = dstore.read_df('gmf_data', 'sid')
     mean = numpy.zeros((N, 1, M, L1))
     for sid, df in gmf_df.groupby(gmf_df.index):

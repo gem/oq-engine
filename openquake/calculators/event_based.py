@@ -99,7 +99,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dictionary (et_id, gsim) -> curves
         """
-        self.L = len(self.oqparam.imtls.array)
+        self.L = self.oqparam.imtls.size
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
 
@@ -333,7 +333,7 @@ class EventBasedCalculator(base.HazardCalculator):
             return
         N = len(self.sitecol.complete)
         M = len(oq.imtls)  # 0 in scenario
-        L = len(oq.imtls.array)
+        L = oq.imtls.size
         L1 = L // (M or 1)
         # check seed dependency
         if 'gmf_data' in self.datastore:
