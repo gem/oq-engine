@@ -53,7 +53,7 @@ def check_same_levels(imtls):
         if not imt.startswith(('PGA', 'SA')):
             raise ValueError('Site amplification works only with '
                              'PGA and SA, got %s' % imt)
-        if numpy.isnan(imtls[imt]).all():
+        if (imtls[imt] == 0).all():
             raise ValueError(
                 'You forgot to set intensity_measure_types_and_levels!')
         elif len(imtls[imt]) != len(imls) or any(
@@ -690,7 +690,7 @@ class OqParam(valid.ParamSet):
         """
         Return True if there are no intensity measure levels
         """
-        return all(numpy.isnan(ls).any() for ls in self.imtls.values())
+        return sum(sum(imls) for imls in self.imtls.values()) == 0
 
     @property
     def correl_model(self):
