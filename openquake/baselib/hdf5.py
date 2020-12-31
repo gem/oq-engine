@@ -410,7 +410,7 @@ def dumps(dic):
     """
     new = {}
     for k, v in dic.items():
-        if k.startswith('_'):
+        if k.startswith('_') or v is None:
             pass
         elif isinstance(v, (list, tuple)) and v:
             if isinstance(v[0], INT):
