@@ -635,9 +635,12 @@ class FragilityFunctionList(list):
             data = self.array[i]
             if self.format == 'discrete':
                 if add_zero:
+                    if len(self.imls) == len(data):  # add no_damage
+                        imls = [self.nodamage] + self.imls
+                    else:  # already added
+                        imls = self.imls
                     new.append(FragilityFunctionDiscrete(
-                        ls, [self.nodamage] + self.imls,
-                        numpy.concatenate([[0.], data]),
+                        ls, imls, numpy.concatenate([[0.], data]),
                         self.nodamage))
                 else:
                     new.append(FragilityFunctionDiscrete(
