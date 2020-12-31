@@ -455,34 +455,24 @@ class CompositeRiskModel(collections.abc.Mapping):
         oqparam = dstore['oqparam']
         crm = dstore.getitem('risk_model')
         risklist = RiskFuncList()
-        risklist.limit_states = crm.attrs['limit_states']
-        for quoted_id, rm in crm.items():
-            riskid = unquote_plus(quoted_id)
-            for lt_kind in rm:
-                lt, kind = lt_kind.rsplit('-', 1)
-                rf = dstore['risk_model/%s/%s' % (quoted_id, lt_kind)]
-                if kind == 'fragility':  # rf is a FragilityFunctionList
-                    try:
-                        rf = rf.build(
-                            risklist.limit_states,
-                            oqparam.continuous_fragility_discretization,
-                            oqparam.steps_per_interval)
-                    except ValueError as err:
-                        raise ValueError('%s: %s' % (riskid, err))
+        risklist.limit_states = dstore.get_attr('risk_model', 'limit_states')
+        df = dstore.read_df('crm', ['riskid', 'loss_type'])
+        for rf_json in df.riskfunc:
+            rf = hdf5.json_to_obj(rf_json)
+            lt = rf.loss_type
+            if rf.kind == 'fragility':  # rf is a FragilityFunctionList
+                risklist.append(rf)
+            else:  # rf is a vulnerability function
+                rf.seed = oqparam.master_seed
+                rf.init()
+                if lt.endswith('_retrofitted'):
+                    # strip _retrofitted, since len('_retrofitted') = 12
+                    rf.loss_type = lt[:-12]
+                    rf.kind = 'vulnerability_retrofitted'
+                else:
                     rf.loss_type = lt
-                    rf.kind = kind
-                    risklist.append(rf)
-                else:  # rf is a vulnerability function
-                    rf.seed = oqparam.master_seed
-                    rf.init()
-                    if lt.endswith('_retrofitted'):
-                        # strip _retrofitted, since len('_retrofitted') = 12
-                        rf.loss_type = lt[:-12]
-                        rf.kind = 'vulnerability_retrofitted'
-                    else:
-                        rf.loss_type = lt
-                        rf.kind = 'vulnerability'
-                    risklist.append(rf)
+                    rf.kind = 'vulnerability'
+                risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
         crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
         return crm
@@ -742,11 +732,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:
                 attrs['loss_ratios_' + lt] = rf.loss_ratios[lt]
-        dic = self._riskmodels.copy()
-        for k, v in self.consdict.items():
-            if len(v):
-                dic[k] = v
-        return dic, attrs
+        return numpy.zeros(0), attrs
 
     def to_dframe(self):
         """

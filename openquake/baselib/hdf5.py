@@ -797,3 +797,11 @@ def save_npz(obj, path):
 
 def obj_to_json(obj):
     return dumps({cls2dotname(obj.__class__): vars(obj)})
+
+
+def json_to_obj(js):
+    [(dotname, attrs)] = json.loads(js).items()
+    cls = dotname2cls(dotname)
+    obj = cls.__new__(cls)
+    vars(obj).update(attrs)
+    return obj

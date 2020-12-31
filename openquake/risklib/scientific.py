@@ -153,6 +153,8 @@ class VulnerabilityFunction(object):
 
     def init(self):
         # called by CompositeRiskModel and by __setstate__
+        self.covs = F64(self.covs)
+        self.mean_loss_ratios = F64(self.mean_loss_ratios)
         self._stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
@@ -635,9 +637,12 @@ class FragilityFunctionList(list):
             data = self.array[i]
             if self.format == 'discrete':
                 if add_zero:
+                    if len(self.imls) == len(data):  # add no_damage
+                        imls = [self.nodamage] + self.imls
+                    else:  # already added
+                        imls = self.imls
                     new.append(FragilityFunctionDiscrete(
-                        ls, [self.nodamage] + self.imls,
-                        numpy.concatenate([[0.], data]),
+                        ls, imls, numpy.concatenate([[0.], data]),
                         self.nodamage))
                 else:
                     new.append(FragilityFunctionDiscrete(
