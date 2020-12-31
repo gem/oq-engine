@@ -293,9 +293,10 @@ class OqParam(valid.ParamSet):
         if 'iml_disagg' in names_vals:
             self.iml_disagg.pop('default')
             # normalize things like SA(0.10) -> SA(0.1)
-            self.iml_disagg = {str(from_string(imt)): val
-                               for imt, val in self.iml_disagg.items()}
-            self.hazard_imtls = self.iml_disagg
+            self.iml_disagg = {str(from_string(imt)): iml
+                               for imt, iml in self.iml_disagg.items()}
+            self.hazard_imtls = {
+                imt: [iml] for imt, iml in self.iml_disagg.items()}
             if 'intensity_measure_types_and_levels' in names_vals:
                 raise InvalidFile(
                     'Please remove the intensity_measure_types_and_levels '
@@ -311,7 +312,8 @@ class OqParam(valid.ParamSet):
                     'Each IMT must have the same number of levels, instead '
                     'you have %s' % dic)
         elif 'intensity_measure_types' in names_vals:
-            self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
+            self.hazard_imtls = dict.fromkeys(
+                self.intensity_measure_types, [0])
             if 'maximum_intensity' in names_vals:
                 minint = self.minimum_intensity or {'default': 1E-2}
                 for imt in self.hazard_imtls:
@@ -568,7 +570,7 @@ class OqParam(valid.ParamSet):
             suggested.append('  %r: logscale(%s, %s, 20),' %
                              (imt, min(imls), max(imls)))
         suggested[-1] += '}'
-        self.risk_imtls = {imt: None for imt in risk_imtls}
+        self.risk_imtls = {imt: [0] for imt in risk_imtls}
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
         if not getattr(self, 'hazard_imtls', []):

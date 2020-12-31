@@ -775,32 +775,28 @@ class DictArray(Mapping):
     """
     def __init__(self, imtls):
         levels = imtls[next(iter(imtls))]
-        self.L1 = 1 if levels is None else len(levels)
+        self.L1 = len(levels)
         self.size = len(imtls) * self.L1
         self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
                                for imt, imls in sorted(imtls.items())])
         self._array = numpy.zeros(self.size, F64)
-        self.slicedic = {}
-        n = 0
         for imt, imls in sorted(imtls.items()):
-            self.slicedic[imt] = slice(n, n + self.L1)
             self[imt] = imls
-            n += self.L1
-
-    def isnan(self):
-        """
-        :returns: true if all the underlying values are NaNs
-        """
-        return numpy.isnan(self.array).all()
 
     def __call__(self, imt):
+        if not hasattr(self, 'slicedic'):
+            self.slicedic = {}
+            n = 0
+            for imt in self:
+                self.slicedic[imt] = slice(n, n + self.L1)
+                n += self.L1
         return self.slicedic[imt]
 
     def __getitem__(self, imt):
-        return self._array[self.slicedic[imt]]
+        return self._array[self(imt)]
 
     def __setitem__(self, imt, array):
-        self._array[self.slicedic[imt]] = array
+        self._array[self(imt)] = array
 
     def __iter__(self):
         for imt in self.dt.names:
