@@ -758,18 +758,6 @@ def copyobj(obj, **kwargs):
     return new
 
 
-# return a dict imt -> slice and the total number of levels
-def _slicedict_n(imt_dt):
-    n = 0
-    slicedic = {}
-    for imt in imt_dt.names:
-        shp = imt_dt[imt].shape
-        n1 = n + (shp[0] if shp else 1)
-        slicedic[imt] = slice(n, n1)
-        n = n1
-    return slicedic, n
-
-
 class DictArray(Mapping):
     """
     A small wrapper over a dictionary of arrays serializable to HDF5:
@@ -787,24 +775,17 @@ class DictArray(Mapping):
     """
     def __init__(self, imtls):
         levels = imtls[next(iter(imtls))]
-        self.size = len(imtls) * (1 if levels is None else len(levels))
-        self.dt = dt = numpy.dtype(
-            [(str(imt), F64,
-              (len(imls),) if hasattr(imls, '__len__') else (1,))
-             for imt, imls in sorted(imtls.items())])
-        self.slicedic, num_levels = _slicedict_n(dt)
-        self._array = numpy.zeros(num_levels, F64)
-        lenset = set()
+        self.L1 = 1 if levels is None else len(levels)
+        self.size = len(imtls) * self.L1
+        self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
+                               for imt, imls in sorted(imtls.items())])
+        self._array = numpy.zeros(self.size, F64)
+        self.slicedic = {}
+        n = 0
         for imt, imls in imtls.items():
+            self.slicedic[imt] = slice(n, n + self.L1)
             self[imt] = imls
-            try:
-                lenset.add(len(imls))
-            except TypeError:
-                lenset.add(1)
-        if len(lenset) == 1:
-            self.L1 = lenset.pop()
-        else:
-            self.L1 = None
+            n += self.L1
 
     def isnan(self):
         """
