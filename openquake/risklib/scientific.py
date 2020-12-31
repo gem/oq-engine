@@ -335,23 +335,6 @@ class VulnerabilityFunction(object):
             [numpy.mean(pair) for pair in pairwise(self.imls)] +
             [self.imls[-1] + (self.imls[-1] - self.imls[-2]) / 2.])
 
-    def __toh5__(self):
-        """
-        :returns: a pair (array, attrs) suitable for storage in HDF5 format
-        """
-        array = numpy.zeros(len(self.imls), self.dtype)
-        array['iml'] = self.imls
-        array['loss_ratio'] = self.mean_loss_ratios
-        array['cov'] = self.covs
-        return array, {'id': self.id, 'imt': self.imt,
-                       'distribution_name': self.distribution_name}
-
-    def __fromh5__(self, array, attrs):
-        vars(self).update(attrs)
-        self.imls = array['iml']
-        self.mean_loss_ratios = array['loss_ratio']
-        self.covs = array['cov']
-
     def __repr__(self):
         return '<VulnerabilityFunction(%s, %s)>' % (self.id, self.imt)
 
@@ -462,24 +445,6 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         """
         # TODO: to be implemented if the classical risk calculator
         # needs to support the pmf vulnerability format
-
-    def __toh5__(self):
-        """
-        :returns: a pair (array, attrs) suitable for storage in HDF5 format
-        """
-        array = numpy.zeros(len(self.imls), self._dtype)
-        array['iml'] = self.imls
-        for i, lr in enumerate(self.loss_ratios):
-            array['prob-%s' % lr] = self.probs[i]
-        return array, {'id': self.id, 'imt': self.imt,
-                       'distribution_name': self.distribution_name}
-
-    def __fromh5__(self, array, attrs):
-        lrs = [n.split('-')[1] for n in array.dtype.names if '-' in n]
-        self.loss_ratios = map(float, lrs)
-        self.imls = array['iml']
-        self.probs = array
-        vars(self).update(attrs)
 
     def __repr__(self):
         return '<VulnerabilityFunctionWithPMF(%s, %s)>' % (self.id, self.imt)
@@ -652,14 +617,6 @@ class FragilityFunctionList(list):
                     ls, data[0], data[1],  # mean and stddev
                     self.minIML, self.maxIML, self.nodamage))
         return new
-
-    def __toh5__(self):
-        return self.array, {k: v for k, v in vars(self).items()
-                            if k != 'array' and v is not None}
-
-    def __fromh5__(self, array, attrs):
-        self.array = array
-        vars(self).update(attrs)
 
     def __repr__(self):
         kvs = ['%s=%s' % item for item in vars(self).items()]

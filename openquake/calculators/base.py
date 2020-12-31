@@ -693,7 +693,7 @@ class HazardCalculator(BaseCalculator):
         self.crmodel = readinput.get_crmodel(self.oqparam)
         if not self.crmodel:
             parent = self.datastore.parent
-            if 'risk_model' in parent:
+            if 'crm' in parent:
                 self.crmodel = riskmodels.CompositeRiskModel.read(parent)
             return
         if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
@@ -707,10 +707,9 @@ class HazardCalculator(BaseCalculator):
         """
         if len(self.crmodel):
             logging.info('Storing risk model')
-            self.datastore.create_dframe('crm', self.crmodel.to_dframe())
-            self.datastore['risk_model'] = rm = self.crmodel
-            attrs = self.datastore.getitem('risk_model').attrs
-            attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
+            attrs = self.crmodel.get_attrs()
+            self.datastore.create_dframe('crm', self.crmodel.to_dframe(),
+                                         'gzip', **attrs)
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
