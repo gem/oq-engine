@@ -782,7 +782,7 @@ class DictArray(Mapping):
         self._array = numpy.zeros(self.size, F64)
         self.slicedic = {}
         n = 0
-        for imt, imls in imtls.items():
+        for imt, imls in sorted(imtls.items()):
             self.slicedic[imt] = slice(n, n + self.L1)
             self[imt] = imls
             n += self.L1
