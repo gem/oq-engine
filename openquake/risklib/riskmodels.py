@@ -453,9 +453,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a :class:`CompositeRiskModel` instance
         """
         oqparam = dstore['oqparam']
-        crm = dstore.getitem('risk_model')
         risklist = RiskFuncList()
-        risklist.limit_states = dstore.get_attr('risk_model', 'limit_states')
+        risklist.limit_states = dstore.get_attr('crm', 'limit_states')
         df = dstore.read_df('crm', ['riskid', 'loss_type'])
         for rf_json in df.riskfunc:
             rf = hdf5.json_to_obj(rf_json)
@@ -474,7 +473,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     rf.kind = 'vulnerability'
                 risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
-        crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
+        crm.tmap = ast.literal_eval(dstore.get_attr('crm', 'tmap'))
         return crm
 
     def __init__(self, oqparam, risklist, consdict=()):
@@ -721,7 +720,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 rm.compositemodel = new
         return new
 
-    def __toh5__(self):
+    def get_attrs(self):
         loss_types = hdf5.array_of_vstr(self.loss_types)
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
@@ -732,7 +731,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:
                 attrs['loss_ratios_' + lt] = rf.loss_ratios[lt]
-        return numpy.zeros(0), attrs
+        return attrs
 
     def to_dframe(self):
         """

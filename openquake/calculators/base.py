@@ -707,8 +707,9 @@ class HazardCalculator(BaseCalculator):
         """
         if len(self.crmodel):
             logging.info('Storing risk model')
-            self.datastore.create_dframe('crm', self.crmodel.to_dframe())
-            self.datastore['risk_model'] = self.crmodel
+            attrs = self.crmodel.get_attrs()
+            self.datastore.create_dframe('crm', self.crmodel.to_dframe(),
+                                         'gzip', **attrs)
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
