@@ -487,46 +487,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
         return crm
 
-    def read_new(cls, dstore):
-        """
-        :param dstore: a DataStore instance
-        :returns: a :class:`CompositeRiskModel` instance
-        """
-        oqparam = dstore['oqparam']
-        crm = dstore.read_df('crm', ['riskid', 'loss_type'])
-        risklist = RiskFuncList()
-        risklist.limit_states = crm.attrs['limit_states']
-        for quoted_id, rm in crm.items():
-            riskid = unquote_plus(quoted_id)
-            for lt_kind in rm:
-                lt, kind = lt_kind.rsplit('-', 1)
-                rf = dstore['risk_model/%s/%s' % (quoted_id, lt_kind)]
-                if kind == 'fragility':  # rf is a FragilityFunctionList
-                    try:
-                        rf = rf.build(
-                            risklist.limit_states,
-                            oqparam.continuous_fragility_discretization,
-                            oqparam.steps_per_interval)
-                    except ValueError as err:
-                        raise ValueError('%s: %s' % (riskid, err))
-                    rf.loss_type = lt
-                    rf.kind = kind
-                    risklist.append(rf)
-                else:  # rf is a vulnerability function
-                    rf.seed = oqparam.master_seed
-                    rf.init()
-                    if lt.endswith('_retrofitted'):
-                        # strip _retrofitted, since len('_retrofitted') = 12
-                        rf.loss_type = lt[:-12]
-                        rf.kind = 'vulnerability_retrofitted'
-                    else:
-                        rf.loss_type = lt
-                        rf.kind = 'vulnerability'
-                    risklist.append(rf)
-        crm = CompositeRiskModel(oqparam, risklist)
-        crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
-        return crm
-
     def __init__(self, oqparam, risklist, consdict=()):
         self.oqparam = oqparam
         self.risklist = risklist  # by taxonomy
