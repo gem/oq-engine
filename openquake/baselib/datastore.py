@@ -403,7 +403,9 @@ class DataStore(collections.abc.MutableMapping):
         names = []
         for name, value in nametypes:
             is_array = isinstance(value, numpy.ndarray)
-            if is_array:
+            if is_array and isinstance(value[0], str):
+                dt = hdf5.vstr
+            elif is_array:
                 dt = value.dtype
             else:
                 dt = value
