@@ -707,6 +707,7 @@ class HazardCalculator(BaseCalculator):
         """
         if len(self.crmodel):
             logging.info('Storing risk model')
+            self.datastore.create_dframe('crm', self.crmodel.to_dframe())
             self.datastore['risk_model'] = rm = self.crmodel
             attrs = self.datastore.getitem('risk_model').attrs
             attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))

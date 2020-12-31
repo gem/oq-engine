@@ -1442,7 +1442,7 @@ def agg_probs(*probs):
         acc *= 1. - prob
     return 1. - acc
 
-# ###########]]]###### COMPRESSION/DECOMPRESSION ##################### #
+# #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
 # do that, except in one case. The case if when you have a lot of workers

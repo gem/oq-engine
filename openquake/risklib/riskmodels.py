@@ -23,6 +23,7 @@ import functools
 import collections
 from urllib.parse import unquote_plus
 import numpy
+import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
@@ -746,6 +747,18 @@ class CompositeRiskModel(collections.abc.Mapping):
             if len(v):
                 dic[k] = v
         return dic, attrs
+
+    def to_dframe(self):
+        """
+        :returns: a DataFrame containing all risk functions
+        """
+        dic = {'riskid': [], 'loss_type': [], 'riskfunc': []}
+        for riskid, rm in self._riskmodels.items():
+            for (lt, kind), rf in rm.risk_functions.items():
+                dic['riskid'].append(riskid)
+                dic['loss_type'].append(lt)
+                dic['riskfunc'].append(hdf5.obj_to_json(rf))
+        return pandas.DataFrame(dic)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]

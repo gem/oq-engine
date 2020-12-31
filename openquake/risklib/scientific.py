@@ -380,7 +380,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.init()
 
         ls = [('iml', F32)] + [('prob-%s' % lr, F32) for lr in loss_ratios]
-        self.dtype = numpy.dtype(ls)
+        self._dtype = numpy.dtype(ls)
 
     def init(self):
         # the seed is reset in CompositeRiskModel.__init__
@@ -465,7 +465,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         """
         :returns: a pair (array, attrs) suitable for storage in HDF5 format
         """
-        array = numpy.zeros(len(self.imls), self.dtype)
+        array = numpy.zeros(len(self.imls), self._dtype)
         array['iml'] = self.imls
         for i, lr in enumerate(self.loss_ratios):
             array['prob-%s' % lr] = self.probs[i]
@@ -644,7 +644,7 @@ class FragilityFunctionList(list):
                         ls, self.imls, data, self.nodamage))
             else:  # continuous
                 new.append(FragilityFunctionContinuous(
-                    ls, data['mean'], data['stddev'],
+                    ls, data[0], data[1],  # mean and stddev
                     self.minIML, self.maxIML, self.nodamage))
         return new
 

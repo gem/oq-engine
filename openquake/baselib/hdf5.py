@@ -410,23 +410,34 @@ def dumps(dic):
     """
     new = {}
     for k, v in dic.items():
-        if isinstance(v, numpy.ndarray):
-            lst = v.tolist()
-            if lst and isinstance(lst[0], bytes):
-                new[k] = decode(lst)
+        if k.startswith('_') or v is None:
+            pass
+        elif isinstance(v, (list, tuple)) and v:
+            if isinstance(v[0], INT):
+                new[k] = [int(x) for x in v]
+            elif isinstance(v[0], FLOAT):
+                new[k] = [float(x) for x in v]
             else:
-                new[k] = lst
-        elif isinstance(v, list) and v and isinstance(v[0], INT):
-            new[k] = [int(x) for x in v]
-        elif isinstance(v, list) and v and isinstance(v[0], FLOAT):
-            new[k] = [float(x) for x in v]
+                new[k] = json.dumps(v)
         elif isinstance(v, FLOAT):
             new[k] = float(v)
         elif isinstance(v, INT):
             new[k] = int(v)
+        elif hasattr(v, 'tolist'):
+            lst = v.tolist()
+            if lst and isinstance(lst[0], bytes):
+                new[k] = json.dumps(decode_array(v))
+            else:
+                new[k] = json.dumps(lst)
+        elif hasattr(v, '__dict__'):
+            new[k] = {cls2dotname(v.__class__): dumps(vars(v))}
+        elif isinstance(v, dict):
+            new[k] = dumps(v)
+        elif isinstance(v, str):
+            new[k] = '"%s"' % v
         else:
             new[k] = v
-    return json.dumps(new)
+    return "{%s}" % ', '.join('"%s": %s' % it for it in new.items())
 
 
 def set_shape_descr(hdf5file, dsetname, kw):
@@ -780,3 +791,9 @@ def save_npz(obj, path):
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=UserWarning)
         numpy.savez_compressed(path, **a)
+
+# #################### obj <-> json ##################### #
+
+
+def obj_to_json(obj):
+    return dumps({cls2dotname(obj.__class__): vars(obj)})
