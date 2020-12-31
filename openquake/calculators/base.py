@@ -693,7 +693,7 @@ class HazardCalculator(BaseCalculator):
         self.crmodel = readinput.get_crmodel(self.oqparam)
         if not self.crmodel:
             parent = self.datastore.parent
-            if 'risk_model' in parent:
+            if 'crm' in parent:
                 self.crmodel = riskmodels.CompositeRiskModel.read(parent)
             return
         if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
