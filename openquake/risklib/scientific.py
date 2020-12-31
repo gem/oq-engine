@@ -644,7 +644,7 @@ class FragilityFunctionList(list):
                         ls, self.imls, data, self.nodamage))
             else:  # continuous
                 new.append(FragilityFunctionContinuous(
-                    ls, data['mean'], data['stddev'],
+                    ls, data[0], data[1],  # mean and stddev
                     self.minIML, self.maxIML, self.nodamage))
         return new
 
