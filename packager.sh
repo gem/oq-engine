@@ -578,12 +578,6 @@ EOF
             if [ "git://$repo_id" == "$GEM_GIT_REPO" -a "$branch" == "$GEM_MASTER_BRANCH" ]; then
                 ls ${GEM_BUILD_ROOT}
 
-# +./packager.sh:1675:main: cp build-deb/python3-oq-engine_3.10.0-1~xenial01~dev1609022649+681bada_source.changes build-deb/python3-oq-engine_3.10.0-1~xenial01~dev1609022649+681bada.dsc build-deb/python3-oq-engine_3.10.0-1~xenial01~dev1609022649+681bada.tar.gz /var/lib/jenkins/monotone/xenial/source
-# +./packager.sh:1678:main: cp 'build-deb/python3-oq-engine_*.buildinfo' /var/lib/jenkins/monotone/xenial/source
-
-                
-  #                 ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.changes \
-  #                  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.dsc ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.tar.?z \
                 cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
                 cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.buildinfo \
@@ -785,10 +779,6 @@ _pkgtest_innervm_run () {
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh "$lxc_ip" mkdir -p "repo/${GEM_DEB_PACKAGE}"
-    #scp "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.deb "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_"*.deb \
-    #    "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_"*.deb "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.changes \
-    #    "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.dsc "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.tar.?z \
-    #    "${GEM_BUILD_ROOT}/Packages"* "${GEM_BUILD_ROOT}/Sources"*  "${GEM_BUILD_ROOT}/Release"* "$lxc_ip:repo/${GEM_DEB_PACKAGE}"
     scp "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.deb "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_"*.deb \
         "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_"*.deb \
         "${GEM_BUILD_ROOT}/Packages"* "${GEM_BUILD_ROOT}/Sources"*  "${GEM_BUILD_ROOT}/Release"* "$lxc_ip:repo/${GEM_DEB_PACKAGE}"
