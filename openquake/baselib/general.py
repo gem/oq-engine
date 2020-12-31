@@ -760,18 +760,8 @@ def copyobj(obj, **kwargs):
 
 class DictArray(Mapping):
     """
-    A small wrapper over a dictionary of arrays serializable to HDF5:
-
-    >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-    >>> from openquake.baselib import hdf5
-    >>> with hdf5.File('/tmp/x.h5', 'w') as f:
-    ...      f['d'] = d
-    ...      f['d']
-    <DictArray
-    PGA: [0.01 0.02 0.04]
-    PGV: [0.1 0.2]>
-
-    The DictArray maintains the lexicographic order of the keys.
+    A small wrapper over a dictionary of arrays with the same lenghts.
+    Ordered by the lexicographic order of the keys.
     """
     def __init__(self, imtls):
         levels = imtls[next(iter(imtls))]
@@ -783,6 +773,9 @@ class DictArray(Mapping):
         self.slicedic = {}
         n = 0
         for imt, imls in sorted(imtls.items()):
+            if len(imls) != self.L1:
+                raise ValueError('imt=%s has %d levels, expected %d' %
+                                 (imt, len(imls), self.L1))
             self.slicedic[imt] = slc = slice(n, n + self.L1)
             self.array[slc] = imls
             n += self.L1
