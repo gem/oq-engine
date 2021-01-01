@@ -88,7 +88,6 @@ def scenario_damage(riskinputs, param, monitor):
     for ri in riskinputs:
         # here instead F32 floats are ok
         acc = []  # (aid, eid, lid, ds...)
-        ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             ne = num_events[r]  # total number of events
