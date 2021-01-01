@@ -796,10 +796,18 @@ def save_npz(obj, path):
 
 
 def obj_to_json(obj):
+    """
+    :param obj: a Python object with a .__dict__
+    :returns: a JSON string
+    """
     return dumps({cls2dotname(obj.__class__): vars(obj)})
 
 
 def json_to_obj(js):
+    """
+    :param js: a JSON string with the form {"cls": {"arg1": ...}}
+    :returns: an instance cls(arg1, ...)
+    """
     [(dotname, attrs)] = json.loads(js).items()
     cls = dotname2cls(dotname)
     obj = cls.__new__(cls)
