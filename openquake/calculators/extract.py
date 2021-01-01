@@ -884,7 +884,7 @@ def build_damage_dt(dstore):
     """
     oq = dstore['oqparam']
     damage_states = ['no_damage'] + list(
-        dstore.get_attr('risk_model', 'limit_states'))
+        dstore.get_attr('crm', 'limit_states'))
     dt_list = []
     for ds in damage_states:
         ds = str(ds)
@@ -1002,7 +1002,7 @@ def crm_attrs(dstore, what):
         the attributes of the risk model, i.e. limit_states, loss_types,
         min_iml and covs, needed by the risk exporters.
     """
-    attrs = dstore.get_attrs('risk_model')
+    attrs = dstore.get_attrs('crm')
     return ArrayWrapper((), dict(json=hdf5.dumps(attrs)))
 
 

@@ -308,7 +308,7 @@ def avglosses_data_transfer(token, dstore):
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
     R = dstore['full_lt'].get_num_rlzs()
-    L = len(dstore.get_attr('risk_model', 'loss_types'))
+    L = len(dstore.get_attr('crm', 'loss_types'))
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * 8 * ct  # 8 byte floats
     return (
