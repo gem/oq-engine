@@ -437,7 +437,7 @@ def dumps(dic):
             new[k] = '"%s"' % v
         else:
             new[k] = v
-    return "{%s}" % ', '.join('"%s": %s' % it for it in new.items())
+    return "{%s}" % ','.join('\n"%s": %s' % it for it in new.items())
 
 
 def set_shape_descr(hdf5file, dsetname, kw):
