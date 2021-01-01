@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the storage of the risk model with a speedup of 60x
+    for a calculation with ~50,000 fragility functions (2 minutes->2seconds)
   * Accepted aggregate_by=id in scenario/event based calculations
   * Accepted aggregate_by=site_id in scenario/event based calculations
   * Removed the generation of asset loss maps from event_based_risk
