@@ -447,12 +447,11 @@ class CompositeRiskModel(collections.abc.Mapping):
     """
     @classmethod
     # TODO: reading new-style consequences is missing
-    def read(cls, dstore):
+    def read(cls, dstore, oqparam):
         """
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance
         """
-        oqparam = dstore['oqparam']
         risklist = RiskFuncList()
         risklist.limit_states = dstore.get_attr('crm', 'limit_states')
         df = dstore.read_df('crm', ['riskid', 'loss_type'])
