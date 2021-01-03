@@ -212,7 +212,12 @@ class MetaGSIM(abc.ABCMeta):
                     if missing:
                         raise ValueError('Unknown distance %s in %s' %
                                          (missing, name))
-        return super().__new__(meta, name, bases, dic)
+        cls = super().__new__(meta, name, bases, dic)
+        ancestors = [vars(ancestor) for ancestor in cls.mro()[1:-1]]
+        if any('get_mean_std1' in ancestor for ancestor in ancestors):
+            if 'get_mean_and_stddevs' in dic and 'get_mean_std1' not in dic:
+                raise TypeError('%s.get_mean_std1 is not defined!' % name)
+        return cls
 
 
 @functools.total_ordering
