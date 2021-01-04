@@ -672,7 +672,7 @@ class OqParam(valid.ParamSet):
         :returns: a composite data type for the GMFs
         """
         lst = [('sid', U32), ('eid', U32)]
-        for m, imt in enumerate(self.hazard_imtls):
+        for m, imt in enumerate(self.get_primary_imtls()):
             lst.append((f'gmv_{m}', F32))
         for out in self.get_sec_imts():
             lst.append((out, F32))
