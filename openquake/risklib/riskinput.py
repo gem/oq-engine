@@ -80,7 +80,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         eids = numpy.arange(1)
         data = {f'gmv_{m}': [0] for m, imt in enumerate(primary)}
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
-               loss_types=crmodel.loss_types)
+               loss_types=crmodel.loss_types, haz=haz)
     if rlzi is not None:
         dic['rlzi'] = rlzi
     for l, lt in enumerate(crmodel.loss_types):
