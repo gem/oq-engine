@@ -478,23 +478,22 @@ class EventBasedTestCase(CalculatorTestCase):
         # cali landslide simplified
         self.run_calc(case_26.__file__, 'job_land.ini')
         df = self.calc.datastore.read_df('gmf_data', 'sid')
-        pd_mean = df[df.prob_disp > 0].prob_disp.mean()
-        nd_mean = df[df.newmark_disp > 0].newmark_disp.mean()
+        pd_mean = df[df.DispProb > 0].DispProb.mean()
+        nd_mean = df[df.Disp > 0].Disp.mean()
         self.assertGreater(pd_mean, 0)
         self.assertGreater(nd_mean, 0)
         [fname, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         arr = read_csv(fname)[:2]
         self.assertEqual(arr.dtype.names,
                          ('site_id', 'event_id', 'gmv_PGA',
-                          'newmark_disp', 'prob_disp'))
+                          'Disp', 'DispProb'))
 
     def test_case_26_liq(self):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
         df = view('avg_gmf', self.calc.datastore)
-        aae(df.liq_prob.max(), 0.27772662)
-        aae(df.lat_spread.max(), 0.51429284)
-        aae(df.vert_settlement.max(), 1.1649456)
+        aae(df.LiqProb.max(), 0.27772662)
+        aae(df.PGDGeomMean.max(), 0.55390346)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
