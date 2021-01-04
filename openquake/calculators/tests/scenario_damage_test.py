@@ -25,7 +25,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8, case_9, case_10)
+    case_6, case_7, case_8, case_9, case_10, case_11)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -194,12 +194,49 @@ RM       4_000
         # check dd_data
         df = self.calc.datastore.read_df('dd_data', 'eid')
         dmg = df.loc[1937]  # damage caused by the event 1937
-        # self.assertEqual(dmg.slight.sum(), 53)  # breaks in github
-        # self.assertEqual(dmg.moderate.sum(), 63)
-        # self.assertEqual(dmg.extensive.sum(), 30)
-        # self.assertEqual(dmg.complete.sum(), 30)
+        self.assertEqual(dmg.slight.sum(), 53)  # breaks in github
+        self.assertEqual(dmg.moderate.sum(), 63)
+        self.assertEqual(dmg.extensive.sum(), 30)
+        self.assertEqual(dmg.complete.sum(), 30)
 
     def test_case_10(self):
         # error case: there a no RiskInputs
         with self.assertRaises(RuntimeError):
             self.run_calc(case_10.__file__, 'job.ini')
+
+    def test_case_11(self):
+        # secondary perils
+        self.run_calc(case_11.__file__, 'job.ini')
+        df = self.calc.datastore.read_df('dd_data', 'aid')
+        df0 = df.loc[0]
+        self.assertEqual(str(df0), '''\
+     eid  lid  moderate  complete
+aid                              
+0      0    0  0.066928  9.932871
+0      1    0  5.402263  4.364481
+0      2    0  6.291139  3.325114
+0      3    0  5.424275  0.065626
+0      4    0  0.042872  9.957011
+0      5    0  0.001594  9.998403
+0      6    0  0.042872  9.957011
+0      7    0  0.027247  9.972686''')
+        df1 = df.loc[1]
+        self.assertEqual(str(df1), '''\
+     eid  lid   moderate   complete
+aid                                
+1      0    0   1.759441  18.215437
+1      1    0   1.567887   0.000060
+1      2    0   1.567887   0.000060
+1      3    0  10.911393   0.131251
+1      4    0  10.309752   9.147042
+1      5    0   8.835979  10.788784
+1      6    0  15.001849   1.981890''')
+        df2 = df.loc[2]
+        self.assertEqual(str(df2), '''\
+     eid  lid   moderate   complete
+aid                                
+2      0    0  21.080206   7.058046
+2      1    0   8.044790   0.010072
+2      2    0  22.812601   2.637918
+2      3    0   0.475818  29.522369
+2      4    0  10.698418  19.052910''')

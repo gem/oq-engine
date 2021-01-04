@@ -1143,13 +1143,13 @@ def import_gmfs(dstore, oqparam, sids):
             gmvs = dic[sid]
             gmvlst.append(gmvs)
     data = numpy.concatenate(gmvlst)
-    create_gmf_data(dstore, len(oqparam.hazard_imtls),
-                    oqparam.get_sec_perils(), data=data)
+    create_gmf_data(dstore, len(oqparam.get_primary_imtls()),
+                    oqparam.get_sec_imts(), data=data)
     dstore['weights'] = numpy.ones(1)
     return eids
 
 
-def create_gmf_data(dstore, M, secperils=(), data=None):
+def create_gmf_data(dstore, M, sec_imts=(), data=None):
     """
     Create and possibly populate the datasets in the gmf_data group
     """
@@ -1159,10 +1159,8 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
     for m in range(M):
         col = f'gmv_{m}'
         items.append((col, F32 if data is None else data[col]))
-    for peril in secperils:
-        for out in peril.outputs:
-            val = F32 if n == 0 else data[out]
-            items.append((out, val))
+    for imt in sec_imts:
+        items.append((imt, F32 if n == 0 else data[imt]))
     dstore.create_dframe('gmf_data', items, 'gzip')
 
 
