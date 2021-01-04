@@ -662,12 +662,11 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composite data type for the GMFs
         """
-        dt = F32, (len(self.imtls),)
         lst = [('sid', U32), ('eid', U32)]
         for m, imt in enumerate(self.imtls):
             lst.append((f'gmv_{m}', F32))
         for out in self.get_sec_outputs():
-            lst.append((out, dt))
+            lst.append((out, F32))
         return numpy.dtype(lst)
 
     def get_sec_perils(self):

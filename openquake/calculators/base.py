@@ -1100,7 +1100,7 @@ def import_gmfs(dstore, oqparam, sids):
     names = array.dtype.names  # rlz_id, sid, ...
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
-    imts = [name[4:] for name in names[2:]]
+    imts = [name.lstrip('gmv_') for name in names[2:]]
     missing = set(oqparam.imtls) - set(imts)
     if missing:
         raise ValueError('The calculation needs %s which is missing from %s' %
