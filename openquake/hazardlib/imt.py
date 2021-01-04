@@ -262,18 +262,6 @@ class LiqProb(IMT):
     """
 
 
-class PGDSettle(IMT):
-    """
-    Peak ground deformation as vertical settlement
-    """
-
-
-class PGDSpread(IMT):
-    """
-    Peak ground deformation as lateral spreading
-    """
-
-
 class PGDMax(IMT):
     """
     Maximum between vert_settlement and lat_spread
