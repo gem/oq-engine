@@ -592,6 +592,11 @@ class ArrayWrapper(object):
         1       RC       IND  5000.0
         2     WOOD       RES   500.0
         """
+        if hasattr(self, 'array'):
+            names = self.array.dtype.names
+            if names:  # wrapper over a structured array
+                return pandas.DataFrame({n: self[n] for n in names})
+
         if hasattr(self, 'json'):
             vars(self).update(json.loads(self.json))
         shape = self.shape

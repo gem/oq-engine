@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Introduced `deformation_component` parameter in the secondary perils
   * Optimized the storage of the risk model with a speedup of 60x
     for a calculation with ~50,000 fragility functions (2 minutes->2seconds)
     and a 3x reduction on disk space
