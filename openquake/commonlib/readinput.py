@@ -982,7 +982,7 @@ def get_pmap_from_csv(oqparam, fnames):
     for wrapper in map(read, fnames):
         dic[wrapper.imt] = wrapper.array
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
-    oqparam.hazard_imtls = imtls
+    oqparam.primary_imtls = imtls
     oqparam.set_risk_imts(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])

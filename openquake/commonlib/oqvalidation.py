@@ -85,7 +85,7 @@ class OqParam(valid.ParamSet):
                     'business_interruption_consequence',
                     'structural_vulnerability_retrofitted',
                     'occupants_vulnerability'}
-    hazard_imtls = {}
+    primary_imtls = {}
     siteparam = dict(
         vs30measured='reference_vs30_type',
         vs30='reference_vs30_value',
@@ -296,30 +296,30 @@ class OqParam(valid.ParamSet):
             # normalize things like SA(0.10) -> SA(0.1)
             self.iml_disagg = {str(from_string(imt)): [iml]
                                for imt, iml in self.iml_disagg.items()}
-            self.hazard_imtls = self.iml_disagg
+            self.primary_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
                 raise InvalidFile(
                     'Please remove the intensity_measure_types_and_levels '
                     'from %s: they will be inferred from the iml_disagg '
                     'dictionary' % job_ini)
         elif 'intensity_measure_types_and_levels' in names_vals:
-            self.hazard_imtls = self.intensity_measure_types_and_levels
+            self.primary_imtls = self.intensity_measure_types_and_levels
             delattr(self, 'intensity_measure_types_and_levels')
-            lens = set(map(len, self.hazard_imtls.values()))
+            lens = set(map(len, self.primary_imtls.values()))
             if len(lens) > 1:
-                dic = {imt: len(ls) for imt, ls in self.hazard_imtls.items()}
+                dic = {imt: len(ls) for imt, ls in self.primary_imtls.items()}
                 raise ValueError(
                     'Each IMT must have the same number of levels, instead '
                     'you have %s' % dic)
         elif 'intensity_measure_types' in names_vals:
-            self.hazard_imtls = dict.fromkeys(
+            self.primary_imtls = dict.fromkeys(
                 self.intensity_measure_types, [0])
             if 'maximum_intensity' in names_vals:
                 minint = self.minimum_intensity or {'default': 1E-2}
-                for imt in self.hazard_imtls:
+                for imt in self.primary_imtls:
                     i1 = calc.filters.getdefault(minint, imt)
                     i2 = calc.filters.getdefault(self.maximum_intensity, imt)
-                    self.hazard_imtls[imt] = list(valid.logscale(i1, i2, 20))
+                    self.primary_imtls[imt] = list(valid.logscale(i1, i2, 20))
             delattr(self, 'intensity_measure_types')
         if ('ps_grid_spacing' in names_vals and
                 'pointsource_distance' not in names_vals):
@@ -502,7 +502,7 @@ class OqParam(valid.ParamSet):
         Returns a DictArray with the risk intensity measure types and
         levels, if given, or the hazard ones.
         """
-        imtls = self.hazard_imtls or self.risk_imtls
+        imtls = self.primary_imtls or self.risk_imtls
         return DictArray(imtls) if imtls else {}
 
     @property
@@ -573,7 +573,7 @@ class OqParam(valid.ParamSet):
         self.risk_imtls = {imt: [0] for imt in risk_imtls}
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
-        if not self.hazard_imtls:
+        if not self.primary_imtls:
             if (self.calculation_mode.startswith('classical') or
                     self.hazard_curves_from_gmfs):
                 raise InvalidFile('%s: %s' % (
@@ -664,7 +664,7 @@ class OqParam(valid.ParamSet):
         :returns: a composite data type for the GMFs
         """
         lst = [('sid', U32), ('eid', U32)]
-        for m, imt in enumerate(self.hazard_imtls):
+        for m, imt in enumerate(self.primary_imtls):
             lst.append((f'gmv_{m}', F32))
         for out in self.get_sec_imts():
             lst.append((out, F32))
@@ -871,7 +871,7 @@ class OqParam(valid.ParamSet):
         if self.risk_files:  # IMTLs extracted from the risk files
             return (self.intensity_measure_types == '' and
                     self.intensity_measure_types_and_levels is None)
-        elif not self.hazard_imtls and not hasattr(self, 'risk_imtls'):
+        elif not self.primary_imtls and not hasattr(self, 'risk_imtls'):
             return False
         return True
 

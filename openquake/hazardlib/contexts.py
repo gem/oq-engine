@@ -204,8 +204,8 @@ class ContextMaker(object):
             self.pointsource_distance = {}
         if 'imtls' in param:
             self.imtls = param['imtls']
-        elif 'hazard_imtls' in param:
-            self.imtls = DictArray(param['hazard_imtls'])
+        elif 'primary_imtls' in param:
+            self.imtls = DictArray(param['primary_imtls'])
         else:
             self.imtls = {}
         self.imts = [imt_module.from_string(imt) for imt in self.imtls]
