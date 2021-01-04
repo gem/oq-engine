@@ -666,7 +666,7 @@ class OqParam(valid.ParamSet):
         lst = [('sid', U32), ('eid', U32)]
         for m, imt in enumerate(self.hazard_imtls):
             lst.append((f'gmv_{m}', F32))
-        for out in self.get_sec_outputs():
+        for out in self.get_sec_imts():
             lst.append((out, F32))
         return numpy.dtype(lst)
 
@@ -677,7 +677,7 @@ class OqParam(valid.ParamSet):
         return SecondaryPeril.instantiate(self.secondary_perils,
                                           self.sec_peril_params)
 
-    def get_sec_outputs(self):
+    def get_sec_imts(self):
         """
         :returns: a list of secondary outputs
         """
