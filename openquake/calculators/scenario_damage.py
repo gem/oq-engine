@@ -85,9 +85,9 @@ def scenario_damage(riskinputs, param, monitor):
         # of addition would hurt too much with multiple tasks
     seed = param['master_seed']
     num_events = param['num_events']  # per realization
+    acc = []  # (aid, eid, lid, ds...)
     for ri in riskinputs:
         # here instead F32 floats are ok
-        acc = []  # (aid, eid, lid, ds...)
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             ne = num_events[r]  # total number of events
@@ -118,7 +118,7 @@ def scenario_damage(riskinputs, param, monitor):
                         by_event = res[name + '_by_event']
                         for eid, value in zip(out.eids, values):
                             by_event[eid][l] += value
-        res['aed'] = numpy.array(acc, param['asset_damage_dt'])
+    res['aed'] = numpy.array(acc, param['asset_damage_dt'])
     return res
 
 

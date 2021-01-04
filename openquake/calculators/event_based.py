@@ -174,7 +174,7 @@ class EventBasedCalculator(base.HazardCalculator):
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
         M = len(self.oqparam.imtls)
-        sec_outputs = self.oqparam.get_sec_outputs()
+        sec_imts = self.oqparam.get_sec_imts()
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
@@ -186,7 +186,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 for m in range(M):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
                                 data[f'gmv_{m}'])
-                for sec_out in sec_outputs:
+                for sec_out in sec_imts:
                     hdf5.extend(self.datastore[f'gmf_data/{sec_out}'],
                                 data[sec_out])
                 sig_eps = result.pop('sig_eps')

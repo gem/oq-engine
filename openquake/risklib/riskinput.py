@@ -57,30 +57,28 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
     :param rlzi: if given, a realization index
     :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
-    alias = {imt: 'gmv_%d' % i for i, imt in enumerate(crmodel.imtls)}
+    primary = crmodel.primary_imtls
+    alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
     if hasattr(haz, 'array'):  # classical
         eids = []
         data = {f'gmv_{m}': haz.array[crmodel.imtls(imt), 0]
-                for m, imt in enumerate(crmodel.imtls)}
-    elif isinstance(haz, pandas.DataFrame):
-        if 'gmv_0' in haz.columns:  # regular case
-            # NB: in GMF-based calculations the order in which
-            # the gmfs are stored is random since it depends on
-            # which hazard task ends first; here we reorder
-            # the gmfs by event ID; this is convenient in
-            # general and mandatory for the case of
-            # VulnerabilityFunctionWithPMF, otherwise the
-            # sample method would receive the means in random
-            # order and produce random results even if the
-            # seed is set correctly; very tricky indeed! (MS)
-            haz = haz.sort_values('eid')
-            eids = haz.eid.to_numpy()
-            data = haz
-        else:  # ZeroGetter for this site (event based)
-            eids = numpy.arange(1)
-            data = {f'gmv_{m}': [0] for m, imt in enumerate(crmodel.imtls)}
-    else:
-        raise ValueError('Unexpected haz=%s' % haz)
+                for m, imt in enumerate(primary)}
+    elif set(haz.columns) - {'sid', 'eid', 'rlz'}:  # regular case
+        # NB: in GMF-based calculations the order in which
+        # the gmfs are stored is random since it depends on
+        # which hazard task ends first; here we reorder
+        # the gmfs by event ID; this is convenient in
+        # general and mandatory for the case of
+        # VulnerabilityFunctionWithPMF, otherwise the
+        # sample method would receive the means in random
+        # order and produce random results even if the
+        # seed is set correctly; very tricky indeed! (MS)
+        haz = haz.sort_values('eid')
+        eids = haz.eid.to_numpy()
+        data = haz
+    else:  # ZeroGetter for this site (event based)
+        eids = numpy.arange(1)
+        data = {f'gmv_{m}': [0] for m, imt in enumerate(primary)}
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
                loss_types=crmodel.loss_types)
     if rlzi is not None:

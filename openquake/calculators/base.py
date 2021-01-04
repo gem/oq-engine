@@ -964,6 +964,7 @@ class RiskCalculator(HazardCalculator):
             lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
                    for s in numpy.arange(N, dtype=U32)
                    for ei, event in enumerate(events)]
+            oq.hazard_imtls = {imt: [0] for imt in imts}
             data = numpy.array(lst, oq.gmf_data_dt())
             create_gmf_data(self.datastore, len(imts), data=data)
         return sitecol, assetcol
@@ -1023,7 +1024,7 @@ class RiskCalculator(HazardCalculator):
             else:
                 df['rlz'] = rlzs[df.eid.to_numpy()]
                 getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)
-            if len(dstore['gmf_data/gmv_0']) == 0:
+            if len(dstore['gmf_data/eid']) == 0:
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '
                     'ground_motion_fields=False or a large minimum_intensity')
@@ -1100,7 +1101,8 @@ def import_gmfs(dstore, oqparam, sids):
     names = array.dtype.names  # rlz_id, sid, ...
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
-    imts = [name[4:] for name in names[2:]]
+    imts = [name.lstrip('gmv_') for name in names[2:]]
+    oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
     if missing:
         raise ValueError('The calculation needs %s which is missing from %s' %
@@ -1141,7 +1143,8 @@ def import_gmfs(dstore, oqparam, sids):
             gmvs = dic[sid]
             gmvlst.append(gmvs)
     data = numpy.concatenate(gmvlst)
-    create_gmf_data(dstore, len(oqparam.imtls), data=data)
+    create_gmf_data(dstore, len(oqparam.hazard_imtls),
+                    oqparam.get_sec_perils(), data=data)
     dstore['weights'] = numpy.ones(1)
     return eids
 
@@ -1158,7 +1161,7 @@ def create_gmf_data(dstore, M, secperils=(), data=None):
         items.append((col, F32 if data is None else data[col]))
     for peril in secperils:
         for out in peril.outputs:
-            val = F32 if n == 0 else numpy.zeros(n, F32)
+            val = F32 if n == 0 else data[out]
             items.append((out, val))
     dstore.create_dframe('gmf_data', items, 'gzip')
 
