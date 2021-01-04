@@ -57,11 +57,12 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
     :param rlzi: if given, a realization index
     :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
-    alias = {imt: 'gmv_%d' % i for i, imt in enumerate(crmodel.imtls)}
+    primary = crmodel.primary_imtls
+    alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
     if hasattr(haz, 'array'):  # classical
         eids = []
         data = {f'gmv_{m}': haz.array[crmodel.imtls(imt), 0]
-                for m, imt in enumerate(crmodel.imtls)}
+                for m, imt in enumerate(primary)}
     elif set(haz.columns) - {'sid', 'eid', 'rlz'}:  # regular case
         # NB: in GMF-based calculations the order in which
         # the gmfs are stored is random since it depends on
@@ -77,7 +78,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         data = haz
     else:  # ZeroGetter for this site (event based)
         eids = numpy.arange(1)
-        data = {f'gmv_{m}': [0] for m, imt in enumerate(crmodel.imtls)}
+        data = {f'gmv_{m}': [0] for m, imt in enumerate(primary)}
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
                loss_types=crmodel.loss_types)
     if rlzi is not None:

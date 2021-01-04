@@ -285,7 +285,7 @@ class RiskModel(object):
         n = len(assets)
         vf = self.risk_functions[loss_type, 'vulnerability']
         lratios = self.loss_ratios[loss_type]
-        imls = self.primary_imtls[vf.imt]
+        imls = self.hazard_imtls[vf.imt]
         values = get_values(loss_type, assets)
         lrcurves = numpy.array(
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
@@ -306,7 +306,7 @@ class RiskModel(object):
         n = len(assets)
         self.assets = assets
         vf = self.risk_functions[loss_type, 'vulnerability']
-        imls = self.primary_imtls[vf.imt]
+        imls = self.hazard_imtls[vf.imt]
         vf_retro = self.risk_functions[loss_type, 'vulnerability_retrofitted']
         curves_orig = functools.partial(
             scientific.classical, vf, imls,
@@ -386,7 +386,7 @@ class RiskModel(object):
         where N is the number of points and D the number of damage states.
         """
         ffl = self.risk_functions[loss_type, 'fragility']
-        hazard_imls = self.primary_imtls[ffl.imt]
+        hazard_imls = self.hazard_imtls[ffl.imt]
         debug = False  # assets['id'] == b'a5' to debug case_master
         damage = scientific.classical_damage(
             ffl, hazard_imls, hazard_curve,
@@ -414,7 +414,7 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     :param extra:
         extra parameters to pass to the RiskModel class
     """
-    extra['primary_imtls'] = oqparam.imtls
+    extra['hazard_imtls'] = oqparam.imtls
     extra['investigation_time'] = oqparam.investigation_time
     extra['risk_investigation_time'] = oqparam.risk_investigation_time
     extra['lrem_steps_per_interval'] = oqparam.lrem_steps_per_interval
@@ -546,6 +546,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     vf.seed = oq.random_seed
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oq, risk_functions=vfs)
+        self.primary_imtls = oq.get_primary_imtls()
         self.imtls = oq.imtls
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation

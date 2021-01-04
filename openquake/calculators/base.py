@@ -964,7 +964,7 @@ class RiskCalculator(HazardCalculator):
             lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
                    for s in numpy.arange(N, dtype=U32)
                    for ei, event in enumerate(events)]
-            oq.primary_imtls = {imt: [0] for imt in imts}
+            oq.hazard_imtls = {imt: [0] for imt in imts}
             data = numpy.array(lst, oq.gmf_data_dt())
             create_gmf_data(self.datastore, len(imts), data=data)
         return sitecol, assetcol
@@ -1102,7 +1102,7 @@ def import_gmfs(dstore, oqparam, sids):
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
     imts = [name.lstrip('gmv_') for name in names[2:]]
-    oqparam.primary_imtls = {imt: [0] for imt in imts}
+    oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
     if missing:
         raise ValueError('The calculation needs %s which is missing from %s' %
@@ -1143,7 +1143,7 @@ def import_gmfs(dstore, oqparam, sids):
             gmvs = dic[sid]
             gmvlst.append(gmvs)
     data = numpy.concatenate(gmvlst)
-    create_gmf_data(dstore, len(oqparam.primary_imtls),
+    create_gmf_data(dstore, len(oqparam.hazard_imtls),
                     oqparam.get_sec_perils(), data=data)
     dstore['weights'] = numpy.ones(1)
     return eids

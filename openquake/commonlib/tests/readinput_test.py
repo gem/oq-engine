@@ -102,7 +102,7 @@ export_dir = %s
                 'reference_depth_to_2pt5km_per_sec': 5.0,
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
-                'primary_imtls': {'PGA': [0.1, 0.2]},
+                'hazard_imtls': {'PGA': [0.1, 0.2]},
                 'risk_investigation_time': None,
             }
 
