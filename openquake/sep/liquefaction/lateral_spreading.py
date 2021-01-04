@@ -15,10 +15,9 @@ def hazus_lateral_spreading_displacement(
         pga: Union[float, np.ndarray],
         liq_susc_cat: Union[str, List[str]],
         thresh_table: dict = LIQUEFACTION_PGA_THRESHOLD_TABLE,
-        return_unit: str ='m'
-    )->Union[float, np.ndarray]:
+        return_unit: str = 'm') -> Union[float, np.ndarray]:
     """
-    Distance of lateral spreading from Hazus 
+    Distance of lateral spreading from Hazus
     (https://www.hsdl.org/?view&did=12760)
 
     :param mag:
@@ -36,7 +35,7 @@ def hazus_lateral_spreading_displacement(
             `m` : Medium
             `l` : Low
             `vl`: Very low
-            `n` : No suceptibility.
+            `n` : No susceptibility.
 
     :returns:
         Displacements from lateral spreading in meters or inches.
@@ -45,11 +44,9 @@ def hazus_lateral_spreading_displacement(
         pga_threshold = thresh_table[liq_susc_cat]
     else:
         pga_threshold = np.array(
-            [thresh_table[susc_cat] for susc_cat in liq_susc_cat]
-        )
-    
-    disp_inch = hazus_lateral_spreading_displacement_fn(mag, pga, pga_threshold)
-
+            [thresh_table[susc_cat] for susc_cat in liq_susc_cat])
+    disp_inch = hazus_lateral_spreading_displacement_fn(
+        mag, pga, pga_threshold)
     if return_unit == 'm':
         disp_m = disp_inch / (INCH_PER_M)
         return disp_m
@@ -59,7 +56,8 @@ def hazus_lateral_spreading_displacement(
     elif return_unit == 'in':
         return disp_inch
     else:
-        raise ValueError("Please choose 'm' or 'in' for return_unit.")
+        raise ValueError("Please choose 'm' or 'in' for return_unit, got %s"
+                         % return_unit)
 
 
 def hazus_lateral_spreading_displacement_fn(
