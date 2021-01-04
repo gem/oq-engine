@@ -1160,7 +1160,7 @@ def create_gmf_data(dstore, M, sec_imts=(), data=None):
         col = f'gmv_{m}'
         items.append((col, F32 if data is None else data[col]))
     for imt in sec_imts:
-        items.append((imt, F32 if n == 0 else data[imt]))
+        items.append((str(imt), F32 if n == 0 else data[imt]))
     dstore.create_dframe('gmf_data', items, 'gzip')
 
 
