@@ -689,14 +689,15 @@ class HazardCalculator(BaseCalculator):
         The crmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
+        oq = self.oqparam
         logging.info('Reading the risk model if present')
-        self.crmodel = readinput.get_crmodel(self.oqparam)
+        self.crmodel = readinput.get_crmodel(oq)
         if not self.crmodel:
             parent = self.datastore.parent
             if 'crm' in parent:
-                self.crmodel = riskmodels.CompositeRiskModel.read(parent)
+                self.crmodel = riskmodels.CompositeRiskModel.read(parent, oq)
             return
-        if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
+        if oq.ground_motion_fields and not oq.imtls:
             raise InvalidFile('No intensity_measure_types specified in %s' %
                               self.oqparam.inputs['job_ini'])
         self.save_params()  # re-save oqparam

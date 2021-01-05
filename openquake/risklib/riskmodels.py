@@ -388,10 +388,11 @@ class RiskModel(object):
         ffl = self.risk_functions[loss_type, 'fragility']
         hazard_imls = self.hazard_imtls[ffl.imt]
         debug = False  # assets['id'] == b'a5' to debug case_master
+        rtime = self.risk_investigation_time or self.investigation_time
         damage = scientific.classical_damage(
             ffl, hazard_imls, hazard_curve,
             investigation_time=self.investigation_time,
-            risk_investigation_time=self.risk_investigation_time,
+            risk_investigation_time=rtime,
             steps_per_interval=self.steps_per_interval, debug=debug)
         res = numpy.array([a['number'] * damage for a in assets])
         return res
@@ -447,12 +448,11 @@ class CompositeRiskModel(collections.abc.Mapping):
     """
     @classmethod
     # TODO: reading new-style consequences is missing
-    def read(cls, dstore):
+    def read(cls, dstore, oqparam):
         """
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance
         """
-        oqparam = dstore['oqparam']
         risklist = RiskFuncList()
         risklist.limit_states = dstore.get_attr('crm', 'limit_states')
         df = dstore.read_df('crm', ['riskid', 'loss_type'])
