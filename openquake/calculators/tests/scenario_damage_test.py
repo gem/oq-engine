@@ -205,7 +205,7 @@ RM       4_000
             self.run_calc(case_10.__file__, 'job.ini')
 
     def test_case_11(self):
-        # secondary perils
+        # secondary perils without secondary simulations
         self.run_calc(case_11.__file__, 'job.ini')
         df = self.calc.datastore.read_df('dd_data', 'aid')
         df0 = df.loc[0]
@@ -240,3 +240,38 @@ aid
 2      2    0  22.812601   2.637918
 2      3    0   0.475818  29.522369
 2      4    0  10.698418  19.052910''')
+
+        # secondary perils with secondary simulations
+        self.run_calc(case_11.__file__, 'job.ini',
+                      secondary_simulations="{'LiqProb': 50}")
+        df = self.calc.datastore.read_df('dd_data', 'aid')
+        df0 = df.loc[0]
+        self.assertEqual(str(df0), '''\
+     eid  lid  moderate  complete
+aid                              
+0      1    0  0.540226  0.436448
+0      2    0  1.761519  0.931032
+0      3    0  0.216971  0.002625
+0      4    0  0.001715  0.398280
+0      5    0  0.000638  3.999361
+0      6    0  0.005145  1.194841
+0      7    0  0.004360  1.595630''')
+        df1 = df.loc[1]
+        self.assertEqual(str(df1), '''\
+     eid  lid  moderate  complete
+aid                              
+1      0    0  0.281511  2.914470
+1      1    0  0.125431  0.000005
+1      2    0  0.846659  0.000032
+1      3    0  4.801013  0.057750
+1      4    0  0.824780  0.731763
+1      5    0  3.004233  3.668187
+1      6    0  4.200518  0.554929''')
+        df2 = df.loc[2]
+        self.assertEqual(str(df2), '''\
+     eid  lid  moderate  complete
+aid                              
+2      0    0  5.480854  1.835092
+2      1    0  4.022395  0.005036
+2      3    0  0.085647  5.314026
+2      4    0  1.069842  1.905291''')
