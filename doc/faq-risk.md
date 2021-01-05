@@ -172,3 +172,14 @@ You should see a table like the one below:
 
 from which one can infer the sources causing the highest total losses for
 the portfolio of assets within the specified effective investigation time.
+
+
+### How does the engine compute the Probably Maximum Losses (PML)?
+
+The PML for a given return period is built from the losses in the event loss
+table depending on the effective investigation time.
+The algorithm used is documented in detail in the [advanced
+manual](https://docs.openquake.org/oq-engine/advanced/risk.html) at
+the end of the section about risk calculations. The section also explains
+why sometimes the PML or the loss curves contain NaN values (the
+effective investigation time is too short compared to the return period).
