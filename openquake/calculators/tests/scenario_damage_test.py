@@ -207,7 +207,8 @@ RM       4_000
     def test_case_11(self):
         # secondary perils without secondary simulations
         self.run_calc(case_11.__file__, 'job.ini')
-        df = self.calc.datastore.read_df('dd_data', 'aid')
+        calc1 = self.calc.datastore
+        df = calc1.read_df('dd_data', 'aid')
         df0 = df.loc[0]
         self.assertEqual(str(df0), '''\
      eid  lid  moderate  complete
@@ -244,7 +245,8 @@ aid
         # secondary perils with secondary simulations
         self.run_calc(case_11.__file__, 'job.ini',
                       secondary_simulations="{'LiqProb': 50}")
-        df = self.calc.datastore.read_df('dd_data', 'aid')
+        calc2 = self.calc.datastore
+        df = calc2.read_df('dd_data', 'aid')
         df0 = df.loc[0]
         self.assertEqual(str(df0), '''\
      eid  lid  moderate  complete
@@ -275,3 +277,9 @@ aid
 2      1    0  4.022395  0.005036
 2      3    0  0.085647  5.314026
 2      4    0  1.069842  1.905291''')
+
+        # check damages-rlzs
+        [fname] = export(('damages-rlzs', 'csv'), calc1)
+        self.assertEqualFiles('expected/avg_damages1.csv', fname)
+        [fname] = export(('damages-rlzs', 'csv'), calc2)
+        self.assertEqualFiles('expected/avg_damages2.csv', fname)
