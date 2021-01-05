@@ -63,19 +63,15 @@ def scenario_damage(riskinputs, param, monitor):
     :param param:
         dictionary of extra parameters
     :returns:
-        a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
-                      'd_event': dict eid -> array of shape (L, D)
-                      + optional consequences}
-
-    `d_asset` and `d_tag` are related to the damage distributions.
+        a dictionary of arrays
     """
     crmodel = monitor.read('crmodel')
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
     # algorithm used to compute the discrete damage distributions
-    approx_ddd = param['approx_ddd']
-    z = numpy.zeros((L, D - 1), F32 if approx_ddd else U32)
+    continuous_dd = param['continuous_dd']
+    z = numpy.zeros((L, D - 1), F32 if continuous_dd else U32)
     d_event = AccumDict(accum=z)
     res = {'d_event': d_event, 'd_asset': []}
     for name in consequences:
@@ -94,7 +90,7 @@ def scenario_damage(riskinputs, param, monitor):
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     aid = asset['ordinal']
-                    if approx_ddd:
+                    if continuous_dd:
                         ddds = fractions * asset['number']
                     else:
                         ddds = bin_ddd(
@@ -144,9 +140,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             aref = self.assetcol.tagcol.id[ass['id']]
             logging.error("The asset %s has number=%s > 2^32-1!",
                           aref, ass['number'])
-        self.param['approx_ddd'] = self.oqparam.approx_ddd or num_floats
+        self.param['continuous_dd'] = self.oqparam.continuous_dd or num_floats
         self.param['asset_damage_dt'] = self.crmodel.asset_damage_dt(
-            self.oqparam.approx_ddd or num_floats)
+            self.oqparam.continuous_dd or num_floats)
         self.param['master_seed'] = self.oqparam.master_seed
         self.param['num_events'] = numpy.bincount(  # events by rlz
             self.datastore['events']['rlz_id'])
@@ -211,7 +207,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
-        dt = F32 if self.param['approx_ddd'] else U32
+        dt = F32 if self.param['continuous_dd'] else U32
         dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
         dbe[:, :, 0] = tot
         for e, dmg_by_lt in result['d_event'].items():
