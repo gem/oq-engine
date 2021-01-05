@@ -283,3 +283,27 @@ aid
         self.assertEqualFiles('expected/avg_damages1.csv', fname)
         [fname] = export(('damages-rlzs', 'csv'), calc2)
         self.assertEqualFiles('expected/avg_damages2.csv', fname)
+
+    def test_case_11_risk(self):
+        # losses due to liquefaction
+        self.run_calc(case_11.__file__, 'job_risk.ini')
+        alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
+
+        aac(losses(0, alt), [0, 352, 905, 55, 199, 1999, 598, 798])
+        aac(losses(1, alt), [4581, 0, 288, 2669, 2287, 6068, 3036, 0])
+        aac(losses(2, alt), [4754, 0, 421, 7141, 3644, 0, 0, 0])
+
+        self.run_calc(case_11.__file__, 'job_risk.ini',
+                      secondary_simulations='{}')
+        alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
+        aac(losses(0, alt), [4982, 3524, 3235, 1388, 4988, 4999, 4988, 4993])
+        aac(losses(1, alt), [38175, 3, 903, 11122, 28598, 30341, 18978, 0])
+        aac(losses(2, alt), [26412, 0, 21055, 44631, 36447, 0, 0, 0])
+
+
+def losses(aid, alt):
+    E = len(alt.event_id.unique())
+    losses = numpy.zeros(E, numpy.uint32)
+    df = alt.loc[aid]
+    losses[df.event_id.to_numpy()] = df.structural.to_numpy()
+    return losses

@@ -52,22 +52,22 @@ def bin_ddd(fractions, n, seed):
     return ddd
 
 
-def run_sec_sims(dds, haz, sec_sims, seed):
+def run_sec_sims(damages, haz, sec_sims, seed):
     """
-    :param dds: array of shape (E, D) for a given asset
+    :param damages: array of shape (E, D) for a given asset
     :param haz: dataframe of size E with a probability field
     :param sec_sims: pair (probability field, number of simulations)
     :param seed: random seed to use
 
-    Run secondary simulations and update the array dds
+    Run secondary simulations and update the array damages
     """
     [(prob_field, num_sims)] = sec_sims
     numpy.random.seed(seed)
     probs = haz[prob_field].to_numpy()   # LiqProb
     affected = numpy.random.random((num_sims, 1)) < probs  # (N, E)
-    for d, num_buildings in enumerate(dds.T[1:], 1):
+    for d, buildings in enumerate(damages.T[1:], 1):
         # doing the mean on the secondary simulations for each event
-        dds[:, d] = numpy.mean(affected * num_buildings, axis=0)  # shape E
+        damages[:, d] = numpy.mean(affected * buildings, axis=0)  # shape E
 
 
 def scenario_damage(riskinputs, param, monitor):
@@ -110,21 +110,22 @@ def scenario_damage(riskinputs, param, monitor):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     aid = asset['ordinal']
                     if continuous_dd:
-                        ddds = fractions * asset['number']
+                        damages = fractions * asset['number']
                         if sec_sims:
-                            run_sec_sims(ddds, out.haz, sec_sims, seed + aid)
+                            run_sec_sims(
+                                damages, out.haz, sec_sims, seed + aid)
                     else:
-                        ddds = bin_ddd(
+                        damages = bin_ddd(
                             fractions, asset['number'], seed + aid)
-                    # ddds has shape E', D with E' == len(out.eids)
-                    for e, ddd in enumerate(ddds):
+                    # damages has shape E', D with E' == len(out.eids)
+                    for e, ddd in enumerate(damages):
                         dmg = ddd[1:]
                         if dmg.sum():
                             eid = out.eids[e]  # (aid, eid, l) is unique
                             acc.append((aid, eid, l) + tuple(dmg))
                             d_event[eid][l] += ddd[1:]
-                    tot = ddds.sum(axis=0)  # (E', D) -> D
-                    nodamage = asset['number'] * (ne - len(ddds))
+                    tot = damages.sum(axis=0)  # (E', D) -> D
+                    nodamage = asset['number'] * (ne - len(damages))
                     tot[0] += nodamage
                     res['d_asset'].append((l, r, aid, tot))
                     # TODO: use the ddd, not the fractions in compute_csq
