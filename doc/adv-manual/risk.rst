@@ -319,11 +319,11 @@ PMLs, one for each return period. For instance
 
 .. code-block::
 
-  >>> from openquake.risklib.scientific import losses_by_period
-  >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13, 0]
-  >>> [PML_500y] = losses_by_period(losses, [500], eff_time=1000)
-  >>> PML_500y
-  13.0
+   >>> from openquake.risklib.scientific import losses_by_period
+   >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13, 0]
+   >>> [PML_500y] = losses_by_period(losses, [500], eff_time=1000)
+   >>> PML_500y
+   13.0
 
 computes the Probably Maximum Loss at 500 years for the given losses
 with an effective investigation time of 1000 years. The algorithm works
