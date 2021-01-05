@@ -29,6 +29,24 @@ F32 = numpy.float32
 F64 = numpy.float64  # higher precision to avoid task order dependency
 
 
+def run_sec_sims(out, loss_types, sec_sims, seed):
+    """
+    :param out: a dictionary of losses
+    :param loss_types: the loss types
+    :param sec_sims: pair (probability field, number of simulations)
+    :param seed: random seed to use
+
+    Run secondary simulations and update the losses
+    """
+    [(prob_field, num_sims)] = sec_sims
+    numpy.random.seed(seed)
+    probs = out.haz[prob_field].to_numpy()   # LiqProb
+    affected = numpy.random.random((num_sims, 1)) < probs  # (N, E)
+    # doing the mean on the secondary simulations for each event
+    for lt in loss_types:
+        out[lt][:] = numpy.mean(affected * out[lt], axis=0)  # shape E
+
+
 def scenario_risk(riskinputs, param, monitor):
     """
     Core function for a scenario_risk/event_based_risk computation.
@@ -48,8 +66,12 @@ def scenario_risk(riskinputs, param, monitor):
     crmodel = monitor.read('crmodel')
     alt = copy.copy(param['alt'])
     result = dict(losses_by_asset=[], alt=alt)
+    sec_sims = param['secondary_simulations'].items()
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
+            if sec_sims:
+                run_sec_sims(out, crmodel.loss_types, sec_sims,
+                             param['master_seed'])
             alt.aggregate(
                 out, param['minimum_asset_loss'], param['aggregate_by'])
             for l, loss_type in enumerate(crmodel.loss_types):
@@ -85,6 +107,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         self.param['tempname'] = riskinput.cache_epsilons(
             self.datastore, oq, self.assetcol, self.crmodel, self.E)
         self.param['aggregate_by'] = oq.aggregate_by
+        self.param['secondary_simulations'] = oq.secondary_simulations
+        self.param['master_seed'] = oq.master_seed
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
         aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
