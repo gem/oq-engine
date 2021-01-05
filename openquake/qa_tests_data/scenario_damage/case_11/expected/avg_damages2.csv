@@ -1,0 +1,5 @@
+#,,,,,,"generated_by='OpenQuake engine 3.11.0-git9c92259a02', start_date='2021-01-05T07:01:59', checksum=3590982611"
+asset_id,taxonomy,lon,lat,structural~no_damage,structural~moderate,structural~complete
+a0,A,0.00000,0.00000,6.409507E-01,3.163216E-01,1.069777E+00
+a1,B,0.00000,1.00000,8.722661E+00,1.760518E+00,9.908921E-01
+a2,A,0.00000,2.00000,1.482586E+01,1.332342E+00,1.132431E+00

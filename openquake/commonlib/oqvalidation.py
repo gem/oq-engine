@@ -85,6 +85,7 @@ class OqParam(valid.ParamSet):
                     'business_interruption_consequence',
                     'structural_vulnerability_retrofitted',
                     'occupants_vulnerability'}
+    hazard_imtls = {}
     siteparam = dict(
         vs30measured='reference_vs30_type',
         vs30='reference_vs30_value',
@@ -123,7 +124,7 @@ class OqParam(valid.ParamSet):
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     distance_bin_width = valid.Param(valid.positivefloat)
-    approx_ddd = valid.Param(valid.boolean, False)
+    continuous_dd = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
@@ -205,6 +206,7 @@ class OqParam(valid.ParamSet):
     save_disk_space = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
+    secondary_simulations = valid.Param(valid.dictionary, {})
     sensitivity_analysis = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
@@ -501,7 +503,7 @@ class OqParam(valid.ParamSet):
         Returns a DictArray with the risk intensity measure types and
         levels, if given, or the hazard ones.
         """
-        imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
+        imtls = self.hazard_imtls or self.risk_imtls
         return DictArray(imtls) if imtls else {}
 
     @property
@@ -572,7 +574,7 @@ class OqParam(valid.ParamSet):
         self.risk_imtls = {imt: [0] for imt in risk_imtls}
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
-        if not getattr(self, 'hazard_imtls', []):
+        if not self.hazard_imtls:
             if (self.calculation_mode.startswith('classical') or
                     self.hazard_curves_from_gmfs):
                 raise InvalidFile('%s: %s' % (
@@ -584,6 +586,14 @@ class OqParam(valid.ParamSet):
                 and self.ground_motion_fields):
             raise ValueError('Please define intensity_measure_types in %s' %
                              self.inputs['job_ini'])
+
+    def get_primary_imtls(self):
+        """
+        :returns: IMTs and levels which are not secondary
+        """
+        sec_imts = set(self.get_sec_imts())
+        return {imt: imls for imt, imls in self.imtls.items()
+                if imt not in sec_imts}
 
     def hmap_dt(self):  # used for CSV export
         """
@@ -662,12 +672,11 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composite data type for the GMFs
         """
-        dt = F32, (len(self.imtls),)
         lst = [('sid', U32), ('eid', U32)]
-        for m, imt in enumerate(self.imtls):
+        for m, imt in enumerate(self.get_primary_imtls()):
             lst.append((f'gmv_{m}', F32))
-        for out in self.get_sec_outputs():
-            lst.append((out, dt))
+        for out in self.get_sec_imts():
+            lst.append((out, F32))
         return numpy.dtype(lst)
 
     def get_sec_perils(self):
@@ -677,7 +686,7 @@ class OqParam(valid.ParamSet):
         return SecondaryPeril.instantiate(self.secondary_perils,
                                           self.sec_peril_params)
 
-    def get_sec_outputs(self):
+    def get_sec_imts(self):
         """
         :returns: a list of secondary outputs
         """
@@ -871,8 +880,7 @@ class OqParam(valid.ParamSet):
         if self.risk_files:  # IMTLs extracted from the risk files
             return (self.intensity_measure_types == '' and
                     self.intensity_measure_types_and_levels is None)
-        elif not hasattr(self, 'hazard_imtls') and not hasattr(
-                self, 'risk_imtls'):
+        elif not self.hazard_imtls and not hasattr(self, 'risk_imtls'):
             return False
         return True
 

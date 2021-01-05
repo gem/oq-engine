@@ -99,5 +99,5 @@ admitted by the logic tree will be 2 and you should expect to get
 about twice the number of occurrences for each rupture.
 
 Users wanting to know the nitty-gritty details should look at the
-code, inside hazardlib/source/base.py, to the method
+code, inside hazardlib/source/base.py, in the method
 ``src.sample_ruptures(eff_num_ses, ses_seed)``.

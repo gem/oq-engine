@@ -545,6 +545,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     vf.seed = oq.random_seed
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oq, risk_functions=vfs)
+        self.primary_imtls = oq.get_primary_imtls()
         self.imtls = oq.imtls
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
@@ -596,12 +597,12 @@ class CompositeRiskModel(collections.abc.Mapping):
         D = len(self.damage_states)
         return numpy.dtype([('eid', U32), ('dmg', (F32, (L, D)))])
 
-    def asset_damage_dt(self, approx_ddd):
+    def asset_damage_dt(self, continuous_dd):
         """
         :returns: a list [('aid', U32), ('eid', U32), ('lid', U8),
                           ('moderate_0', U32), ...]
         """
-        dt = F32 if approx_ddd else U32
+        dt = F32 if continuous_dd else U32
         dtlist = [('aid', U32), ('eid', U32), ('lid', U8)]
         for dmg in self.damage_states[1:]:
             dtlist.append((dmg, dt))

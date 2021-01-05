@@ -173,8 +173,8 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
-        M = len(self.oqparam.imtls)
-        sec_outputs = self.oqparam.get_sec_outputs()
+        primary = self.oqparam.get_primary_imtls()
+        sec_imts = self.oqparam.get_sec_imts()
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
@@ -183,12 +183,12 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
                 hdf5.extend(self.datastore['gmf_data/sid'], data['sid'])
                 hdf5.extend(self.datastore['gmf_data/eid'], data['eid'])
-                for m in range(M):
+                for m in range(len(primary)):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
                                 data[f'gmv_{m}'])
-                for sec_out in sec_outputs:
-                    hdf5.extend(self.datastore[f'gmf_data/{sec_out}'],
-                                data[sec_out])
+                for sec_imt in sec_imts:
+                    hdf5.extend(self.datastore[f'gmf_data/{sec_imt}'],
+                                data[sec_imt])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(data)
@@ -291,9 +291,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 return {}
         N = len(self.sitecol.complete)
         if oq.ground_motion_fields:
-            M = len(oq.imtls)
+            M = len(oq.get_primary_imtls())
             nrups = len(self.datastore['ruptures'])
-            base.create_gmf_data(self.datastore, M, self.param['sec_perils'])
+            base.create_gmf_data(self.datastore, M, oq.get_sec_imts())
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))

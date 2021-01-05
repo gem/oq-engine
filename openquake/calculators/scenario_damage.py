@@ -52,6 +52,24 @@ def bin_ddd(fractions, n, seed):
     return ddd
 
 
+def run_sec_sims(dds, haz, sec_sims, seed):
+    """
+    :param dds: array of shape (E, D) for a given asset
+    :param haz: dataframe of size E with a probability field
+    :param sec_sims: pair (probability field, number of simulations)
+    :param seed: random seed to use
+
+    Run secondary simulations and update the array dds
+    """
+    [(prob_field, num_sims)] = sec_sims
+    numpy.random.seed(seed)
+    probs = haz[prob_field].to_numpy()   # LiqProb
+    affected = numpy.random.random((num_sims, 1)) < probs  # (N, E)
+    for d, num_buildings in enumerate(dds.T[1:], 1):
+        # doing the mean on the secondary simulations for each event
+        dds[:, d] = numpy.mean(affected * num_buildings, axis=0)  # shape E
+
+
 def scenario_damage(riskinputs, param, monitor):
     """
     Core function for a damage computation.
@@ -63,19 +81,15 @@ def scenario_damage(riskinputs, param, monitor):
     :param param:
         dictionary of extra parameters
     :returns:
-        a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
-                      'd_event': dict eid -> array of shape (L, D)
-                      + optional consequences}
-
-    `d_asset` and `d_tag` are related to the damage distributions.
+        a dictionary of arrays
     """
     crmodel = monitor.read('crmodel')
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
     # algorithm used to compute the discrete damage distributions
-    approx_ddd = param['approx_ddd']
-    z = numpy.zeros((L, D - 1), F32 if approx_ddd else U32)
+    continuous_dd = param['continuous_dd']
+    z = numpy.zeros((L, D - 1), F32 if continuous_dd else U32)
     d_event = AccumDict(accum=z)
     res = {'d_event': d_event, 'd_asset': []}
     for name in consequences:
@@ -85,17 +99,20 @@ def scenario_damage(riskinputs, param, monitor):
         # of addition would hurt too much with multiple tasks
     seed = param['master_seed']
     num_events = param['num_events']  # per realization
+    acc = []  # (aid, eid, lid, ds...)
+    sec_sims = param['secondary_simulations'].items()
     for ri in riskinputs:
         # here instead F32 floats are ok
-        acc = []  # (aid, eid, lid, ds...)
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             ne = num_events[r]  # total number of events
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     aid = asset['ordinal']
-                    if approx_ddd:
+                    if continuous_dd:
                         ddds = fractions * asset['number']
+                        if sec_sims:
+                            run_sec_sims(ddds, out.haz, sec_sims, seed + aid)
                     else:
                         ddds = bin_ddd(
                             fractions, asset['number'], seed + aid)
@@ -106,7 +123,7 @@ def scenario_damage(riskinputs, param, monitor):
                             eid = out.eids[e]  # (aid, eid, l) is unique
                             acc.append((aid, eid, l) + tuple(dmg))
                             d_event[eid][l] += ddd[1:]
-                    tot = ddds.sum(axis=0)  # shape D
+                    tot = ddds.sum(axis=0)  # (E', D) -> D
                     nodamage = asset['number'] * (ne - len(ddds))
                     tot[0] += nodamage
                     res['d_asset'].append((l, r, aid, tot))
@@ -118,7 +135,7 @@ def scenario_damage(riskinputs, param, monitor):
                         by_event = res[name + '_by_event']
                         for eid, value in zip(out.eids, values):
                             by_event[eid][l] += value
-        res['aed'] = numpy.array(acc, param['asset_damage_dt'])
+    res['aed'] = numpy.array(acc, param['asset_damage_dt'])
     return res
 
 
@@ -133,6 +150,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
     accept_precalc = ['scenario', 'event_based', 'event_based_risk']
 
     def pre_execute(self):
+        oq = self.oqparam
         super().pre_execute()
         num_floats = floats_in(self.assetcol['number'])
         if num_floats:
@@ -144,10 +162,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             aref = self.assetcol.tagcol.id[ass['id']]
             logging.error("The asset %s has number=%s > 2^32-1!",
                           aref, ass['number'])
-        self.param['approx_ddd'] = self.oqparam.approx_ddd or num_floats
+        self.param['secondary_simulations'] = oq.secondary_simulations
+        self.param['continuous_dd'] = oq.continuous_dd or num_floats
         self.param['asset_damage_dt'] = self.crmodel.asset_damage_dt(
-            self.oqparam.approx_ddd or num_floats)
-        self.param['master_seed'] = self.oqparam.master_seed
+            oq.continuous_dd or num_floats)
+        self.param['master_seed'] = oq.master_seed
         self.param['num_events'] = numpy.bincount(  # events by rlz
             self.datastore['events']['rlz_id'])
         self.datastore.create_dframe(
@@ -211,7 +230,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
-        dt = F32 if self.param['approx_ddd'] else U32
+        dt = F32 if self.param['continuous_dd'] else U32
         dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
         dbe[:, :, 0] = tot
         for e, dmg_by_lt in result['d_event'].items():
