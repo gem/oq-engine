@@ -69,10 +69,8 @@ class BooreAtkinson2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    # NB: this is NEVER called; if it were, the KOR model would fail
-    # since there is no corresponding AtkinsonBoore2006.get_mean_std1,
-    # so it would get inherited and it would try to use the rjb distance
-    # (and it would be wrong anyway); fixing AtkinsonBoore2006 is hard
+    # NB: there is an underscore in front of get_mean_std1 to disable the
+    # single site approximation that would fail the check in MetaGSIM
     def _get_mean_std1(self, ctx, imts):
         """
         :param ctx: a multi-RuptureContext of size U
