@@ -27,19 +27,19 @@ Here is a minimal example of usage:
     ...     for item in sorted(locals().items()):
     ...         print('%s = %s' % item)
 
-    >>> p = sap.Script(fun)
-    >>> p.arg('input', 'input file or archive')
-    >>> p.flg('inplace', 'convert inplace')
-    >>> p.arg('output', 'output archive')
-    >>> p.opt('out', 'optional output file')
+    >>> s = sap.Script(fun)
+    >>> s.arg('input', 'input file or archive')
+    >>> s.flg('inplace', 'convert inplace')
+    >>> s.arg('output', 'output archive')
+    >>> s.opt('out', 'optional output file')
 
-    >>> p.callfunc(['a'])
+    >>> s.callfunc(['a'])
     inplace = False
     input = a
     out = /tmp
     output = None
 
-    >>> p.callfunc(['a', 'b', '-i', '-o', 'OUT'])
+    >>> s.callfunc(['a', 'b', '-i', '-o', 'OUT'])
     inplace = True
     input = a
     out = OUT
@@ -73,8 +73,8 @@ def get_parser(parser, description=None, help=True):
         return parser
 
 
-def str_choices(choices):
-    """Returns {choice1, ..., choiceN} or the empty string"""
+def _choices(choices):
+    # returns {choice1, ..., choiceN} or the empty string
     if choices:
         return '{%s}' % ', '.join(map(str, choices))
     return ''
@@ -125,13 +125,18 @@ class Script(object):
         self.names.append(name)
         self._argno += 1
 
+    def _get_type(self, name, type):
+        if type is None and name in self.func.__annotations__:
+            return self.func.__annotations__[name]
+        return type
+
     def arg(self, name, help, type=None, choices=None, metavar=None,
             nargs=None):
         """
         Describe a positional argument
         """
-        kw = dict(help=help, type=type, choices=choices, metavar=metavar,
-                  nargs=nargs)
+        kw = dict(help=help, type=self._get_type(name, type), choices=choices,
+                  metavar=metavar, nargs=nargs)
         default = self.argdict[name]
         if default is not NODEFAULT:
             kw['nargs'] = nargs or '?'
@@ -144,12 +149,12 @@ class Script(object):
         """
         Describe an option
         """
-        kw = dict(help=help, type=type, choices=choices, metavar=metavar,
-                  nargs=nargs)
+        kw = dict(help=help, type=self._get_type(name, type), choices=choices,
+                  metavar=metavar, nargs=nargs)
         default = self.argdict[name]
         if default is not NODEFAULT:
             kw['default'] = default
-            kw['metavar'] = metavar or str_choices(choices) or str(default)
+            kw['metavar'] = metavar or _choices(choices) or str(default)
         abbrev = abbrev or '-' + name[0]
         abbrevs = set(args[0] for args, kw in self.all_arguments)
         longname = '--' + name.replace('_', '-')
@@ -214,6 +219,8 @@ def compose(scripts, name='main', description=None, prog=None,
     if parser is None:
         parser = argparse.ArgumentParser(
             description=description, add_help=False)
+    elif prog is None:
+        prog = parser.prog
     parser.add_argument('--version', '-v', action='version', version=version)
     subparsers = parser.add_subparsers(
         help='available subcommands; use %s help <subcmd>' % prog,
@@ -231,11 +238,11 @@ def compose(scripts, name='main', description=None, prog=None,
     help_script = Script(gethelp, 'help', help=False)
     progname = '%s ' % prog if prog else ''
     help_script.arg('cmd', progname + 'subcommand')
-    subparser = {}
+    subpdic = {}  # subcommand name -> subparser
     for s in list(scripts) + [help_script]:
         if isinstance(s, str):  # nested subcommand
             subp = subparsers.add_parser(s)
-            subparser[s] = subp
+            subpdic[s] = subp
         else:  # terminal subcommand
             subp = subparsers.add_parser(s.name, description=s.description)
             for args, kw in s.all_arguments:
@@ -250,7 +257,6 @@ def compose(scripts, name='main', description=None, prog=None,
         else:
             return func(**kw)
     main.__name__ = name
-    scr = Script(main, name, parser)
-    for subc, subp in subparser.items():
-        setattr(scr, subc + '_parser', subp)
-    return scr
+    script = Script(main, name, parser)
+    vars(script).update(subpdic)
+    return script
