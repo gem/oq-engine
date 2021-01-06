@@ -603,7 +603,7 @@ def plot_wkt(wkt_string):
     return plt
 
 
-@sap.script
+@sap.Script
 def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
          local=False):
     """

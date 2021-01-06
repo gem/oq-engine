@@ -24,7 +24,7 @@ from openquake.commonlib import logs
 ro_commands = ('status', 'inspect')
 
 
-@sap.script
+@sap.Script
 def workers(cmd):
     """
     start/stop/restart the workers, or return their status

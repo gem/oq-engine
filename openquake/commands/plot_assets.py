@@ -23,7 +23,7 @@ from openquake.hazardlib.geo.utils import cross_idl
 from openquake.commonlib import util
 
 
-@sap.script
+@sap.Script
 def plot_assets(calc_id=-1, site_model=False):
     """
     Plot the sites and the assets

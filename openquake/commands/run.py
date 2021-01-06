@@ -135,7 +135,7 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
     return calc
 
 
-@sap.script
+@sap.Script
 def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
         exports='', loglevel='info', calc_id='nojob', pdb=None,
         reuse_input=None):

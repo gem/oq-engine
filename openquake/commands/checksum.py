@@ -23,7 +23,7 @@ from openquake.commonlib import readinput
 from openquake.commonlib import util
 
 
-@sap.script
+@sap.Script
 def checksum(thing):
     """
     Get the checksum of a calculation from the calculation ID (if already

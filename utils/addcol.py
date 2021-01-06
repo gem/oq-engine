@@ -22,7 +22,7 @@ from openquake.risklib.countries import code2country
 # example: utils/addcol.py country=VEN Exposure_Res_Venezuela.csv
 
 
-@sap.script
+@sap.Script
 def addcol(namevalue, fnames):
     name, value = namevalue.split('=')
     if name == 'country':
