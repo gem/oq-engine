@@ -80,7 +80,7 @@ def _choices(choices):
     return ''
 
 
-def _populate(parser, argdescr):
+def _populate(parser, argdescr, ann):
     # populate the parser
     abbrevs = {'-h'}  # already taken abbreviations
     for name, kw in argdescr.items():
@@ -124,7 +124,7 @@ class Script(object):
         self.argdef.update(argspec.kwonlydefaults or {})
         self.description = descr = func.__doc__ if func.__doc__ else None
         self.parser = get_parser(parser, descr, help)
-        self.argdescr = {}  # argname->argkw
+        self.argdescr = {a: {} for a in argspec.args + argspec.kwonlyargs}
         self._argno = 0  # used in the NameError check in the _add method
         self.checked = False  # used in the check_arguments method
         registry['%s.%s' % (func.__module__, func.__name__)] = self
@@ -247,7 +247,7 @@ def script(scripts, name='main', description=None, prog=None,
             subpdic[s] = subp
         else:  # terminal subcommand
             subp = subparsers.add_parser(s.name, description=s.description)
-            _populate(subp, s.argdescr)
+            _populate(subp, s.argdescr, s.func.__annotations__)
             subp.set_defaults(_func=s.func)
 
     def main(**kw):
@@ -259,6 +259,5 @@ def script(scripts, name='main', description=None, prog=None,
             return func(**kw)
     main.__name__ = name
     script = Script(main, name, parser)
-    _populate(parser, script.argdescr)
     vars(script).update(subpdic)
     return script
