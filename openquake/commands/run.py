@@ -136,9 +136,9 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
 
 
 @sap.Script
-def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
-        exports='', loglevel='info', calc_id='nojob', pdb=None,
-        reuse_input=None):
+def run(job_ini, pdb: bool, reuse_input: bool,
+        slowest=False, hc=None, param='', concurrent_tasks=None,
+        exports='', loglevel='info', calc_id='nojob'):
     """
     Run a calculation bypassing the database layer
     """
@@ -168,6 +168,8 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
 
 run.arg('job_ini', 'calculation configuration file '
         '(or files, space-separated)', nargs='+')
+run.flg('pdb', 'enable post mortem debugging', '-d')
+run.flg('reuse_input', 'reuse source model and exposure')
 run.opt('slowest', 'profile and show the slowest operations', type=int)
 run.opt('hc', 'previous calculation ID', type=int)
 run.opt('param', 'override parameter with the syntax NAME=VALUE,...')
@@ -178,5 +180,3 @@ run.opt('exports', 'export formats as a comma-separated string',
 run.opt('loglevel', 'logging level',
         choices='debug info warn error critical'.split())
 run.opt('calc_id', 'calculation ID (if "nojob" infer it)')
-run.flg('pdb', 'enable post mortem debugging', '-d')
-run.flg('reuse_input', 'reuse source model and exposure')

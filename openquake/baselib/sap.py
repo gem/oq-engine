@@ -126,10 +126,6 @@ class Script(object):
         self.checked = False  # used in the check_arguments method
         registry['%s.%s' % (func.__module__, func.__name__)] = self
 
-    def group(self, descr):
-        """Added a new group of arguments with the given description"""
-        self._group = self.parser.add_argument_group(descr)
-
     def _get_type(self, name, type):
         if type is None and name in self.func.__annotations__:
             return self.func.__annotations__[name]
