@@ -87,12 +87,14 @@ def _populate(parser, argdescr):
         abbrev = dic.pop('abbrev')
         abbrevs = set(d.get('abbrev') for d in argdescr.values())
         longname = '--' + name.replace('_', '-')
-        if abbrev == '-h' or abbrev in abbrevs:
+        if abbrev and (abbrev == '-h' or abbrev in abbrevs):
             # avoid conflicts with predefined abbreviations
             args = longname,
         elif abbrev:
+            # ok abbrev
             args = abbrev, longname
         else:
+            # no abbrev
             args = name,
         parser.add_argument(*args, **dic)
 
@@ -113,7 +115,9 @@ class Script(object):
         # and annotations
         argspec = inspect.getfullargspec(func)
         self.varargs = argspec.varargs
-        assert self.varargs is None, self.varargs
+        if self.varargs is None:
+            raise TypeError('varargs in the signature of %s are not supported'
+                            % func)
         defaults = argspec.defaults or ()
         nodefaults = len(argspec.args) - len(defaults)
         alldefaults = (NODEFAULT,) * nodefaults + defaults
