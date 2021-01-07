@@ -68,14 +68,32 @@ def del_calculation(job_id, confirmed=False):
                 print(resp['error'])
 
 
-@sap.Script  # do not use sap.Script, other oq engine will break
-def engine(log_file, no_distribute, yes: "flag", make_html_report,
-           upgrade_db: "flag", db_version, what_if_I_upgrade, run,
-           list_hazard_calculations, list_risk_calculations,
-           delete_calculation, delete_uncompleted_calculations,
-           hazard_calculation_id, list_outputs, show_log,
-           export_output, export_outputs, multi=False, reuse_input=False,
-           param='', *, config_file=None, exports='', log_level='info'):
+@sap.Script
+def engine(
+        no_distribute: bool,
+        yes: bool,
+        upgrade_db: bool,
+        db_version: bool,
+        what_if_I_upgrade: bool,
+        list_hazard_calculations: bool,
+        list_risk_calculations: bool,
+        delete_uncompleted_calculations: bool,
+        multi: bool,
+        reuse_input: bool,
+        *,
+        log_file=None,
+        make_html_report=None,
+        run=None,
+        delete_calculation=None,
+        hazard_calculation_id=None,
+        list_outputs=None,
+        show_log=None,
+        export_output=None,
+        export_outputs=None,
+        param='',
+        config_file=None,
+        exports='',
+        log_level='info'):
     """
     Run a calculation using the traditional command line API
     """
@@ -196,33 +214,38 @@ def engine(log_file, no_distribute, yes: "flag", make_html_report,
         engine.parentparser.print_usage()
 
 
-engine.opt('log_file', abbrev='-L', help='''\
-Location where to store log messages; if not specified, log messages
-will be printed to the console (to stderr)''')
+# flags
 engine.flg('no_distribute', abbrev='--nd', help='''\
 Disable calculation task distribution and run the
 computation in a single process. This is intended for
 use in debugging and profiling.''')
 engine.flg('yes', 'Automatically answer "yes" when asked to confirm an action')
-engine.opt('make_html_report', abbrev='--r',
-           help='Build an HTML report of the computation at the given date',
-           metavar='YYYY-MM-DD|today')
 engine.flg('upgrade_db', 'Upgrade the openquake database')
 engine.flg('db_version', 'Show the current version of the openquake database')
 engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
            'database if you upgrade')
-engine.opt('run', abbrev='--run',
-           help='Run a job with the specified config file',
-           metavar='JOB_INI', nargs='+')
 engine.flg('list_hazard_calculations', abbrev='--lhc',
            help='List hazard calculation information')
 engine.flg('list_risk_calculations', abbrev='--lrc',
            help='List risk calculation information')
+engine.flg('delete_uncompleted_calculations', abbrev='--duc',
+           help='Delete all the uncompleted calculations')
+engine.flg('multi', 'Run multiple job.inis in parallel')
+engine.flg('reuse_input', 'Read the sources|exposures from the cache (if any)')
+
+# options
+engine.opt('log_file', abbrev='-L', help='''\
+Location where to store log messages; if not specified, log messages
+will be printed to the console (to stderr)''')
+engine.opt('make_html_report', abbrev='--r',
+           help='Build an HTML report of the computation at the given date',
+           metavar='YYYY-MM-DD|today')
+engine.opt('run', abbrev='--run',
+           help='Run a job with the specified config file',
+           metavar='JOB_INI', nargs='+')
 engine.opt('delete_calculation', abbrev='--dc',
            help='Delete a calculation and all associated outputs',
            metavar='CALCULATION_ID', type=int)
-engine.flg('delete_uncompleted_calculations', abbrev='--duc',
-           help='Delete all the uncompleted calculations')
 engine.opt('hazard_calculation_id', abbrev='--hc',
            help='Use the given job as input for the next job')
 engine.opt('list_outputs', abbrev='--lo',
@@ -238,8 +261,6 @@ engine.opt('export_outputs', abbrev='--eos',
            nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'),
            help='Export all of the calculation outputs to the '
            'specified directory')
-engine.flg('multi', 'Run multiple job.inis in parallel')
-engine.flg('reuse_input', 'Read the sources|exposures from the cache (if any)')
 engine.opt('param', abbrev='-p',
            help='Override parameters specified with the syntax '
            'NAME1=VALUE1,NAME2=VALUE2,...')
