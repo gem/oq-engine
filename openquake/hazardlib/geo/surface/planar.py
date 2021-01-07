@@ -29,6 +29,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
+from openquake.hazardlib.geo.geodetic import geodetic_distance
 
 
 class PlanarSurface(BaseSurface):
@@ -430,6 +431,13 @@ class PlanarSurface(BaseSurface):
         )
         return Point(lon, lat, self.corner_depths[0])
 
+    def get_tor_length(self):
+        """
+        Computes the top-of-rupture lenght
+        """
+        return geodetic_distance(self.corner_lons[0], self.corner_lats[0],
+                                 self.corner_lons[1], self.corner_lats[1])
+
     def get_top_edge_depth(self):
         """
         Overrides :meth:`superclass' method
@@ -570,7 +578,6 @@ class PlanarSurface(BaseSurface):
                                         self.top_right.latitude,
                                         (self.strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
-        # Find the points on the rupture
 
         # Get the shortest distance from the two lines
         idx = numpy.sign(dst1) == numpy.sign(dst2)

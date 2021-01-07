@@ -111,12 +111,13 @@ def get_csm(oq, full_lt, h5=None):
             src.checksum = src.et_id = src.id = et_id
             src.samples = sm_rlz.samples
             logging.info('Reading sections and rupture planes for %s', src)
-            planes = src.get_planes()
+            planes, parent_ids = src.get_planes()
             if classical:
                 src.ruptures_per_block = oq.ruptures_per_block
                 sg.sources = list(src)
                 for s in sg:
                     s.planes = planes
+                    s.parent_ids = parent_ids
                     s.sections = s.get_sections()
                 # add background point sources
                 sg = copy.copy(grp)

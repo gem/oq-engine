@@ -26,6 +26,7 @@ import numpy
 import h5py
 import zlib
 
+from openquake.hazardlib.geo import Mesh
 from openquake.baselib.general import AccumDict, cached_property
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.geodetic import min_geodetic_distance
@@ -222,12 +223,15 @@ class UCERFSource(BaseSeismicSource):
         :returns: dictionary of planes, one per section
         """
         dic = {}
+        ids = {}
         with h5py.File(self.source_file, 'r') as hdf5:
             sections = sorted(map(int, hdf5[self.ukey["sec"]]))
             for sec in sections:
-                key = "{:s}/{:d}/RupturePlanes".format(self.ukey["sec"], sec)
-                dic[sec] = hdf5[key][:]
-        return dic
+                keyA = "{:s}/{:d}/RupturePlanes".format(self.ukey["sec"], sec)
+                keyB = "{:s}/{:d}".format(self.ukey["sec"], sec)
+                dic[sec] = hdf5[keyA][:]
+                ids[sec] = hdf5[keyB].attrs["ParentID"]
+        return dic, ids
 
     def get_bounding_box(self, maxdist):
         """
@@ -405,10 +409,18 @@ def compute_distances(srcs, sites, dist_types):
     Compute distances planes -> sites for all the relevant sections
     :returns: a dictionary section index-> multisurface (with distances)
     """
+
     dic = {}  # section index -> multisurface
+
+    # 'src' here is one end-branch of the UCERF3 logic tree. For example,
+    # when using the mean model, src corresponds to the
+    # <UCERFSource FM0_0/MEANFS/MEANMSR/MeanRates> branch. It's an instance
+    # of the class 'openquake.calculators.ucerf_base.UCERFSource'
     for src in srcs:
         src.msurface = dic
+        # Loop over the ruptures
         for sections in src.sections:
+            # Loop over the sections composing portions of a rupture
             for sec in sections:
                 if sec in dic:  # already computed
                     continue
@@ -419,6 +431,7 @@ def compute_distances(srcs, sites, dist_types):
                 for dist_type in dist_types:
                     setattr(ctx.surface, dist_type,
                             get_distances(ctx, sites, dist_type))
+                ctx.surface.parent_id = src.parent_ids[sec]
                 dic[sec] = ctx.surface
     return dic
 
@@ -448,27 +461,93 @@ def ucerf_classical(srcs, gsims, params, monitor):
     def make_ctxs(self, rups, sites, fewsites):
         sitecol = sites.complete
         ctxs = []
-        for rup in rups:
-            surfaces = []
+
+        # Loop over ruptures
+        for idx, rup in enumerate(rups):
+
+            sections_for_parent = {}
+            parents = []
             dists = AccumDict(accum=[])  # dist_type -> distances
+
+            # Loop over the indexes of sections composing the rupture. We
+            # store the sections making sure that they belong to the same
+            # parent.
+            # TODO We must check that the sections belonging to one parent
+            # have the same strike direction and do not contain 'inversions'
             for sec in rup.sections:
-                surfaces.extend(surf[sec].surfaces)
+
+                # Collect the distance types required. Surf is a dictionary
+                # with the ID of sections as a key.
                 for par in self.REQUIRES_DISTANCES:
                     dists[par].append(getattr(surf[sec], par))
+
+                # Dictionary where for each parent we store the indexes of the
+                # child sections.
+                parents.append(surf[sec].parent_id)
+                if surf[sec].parent_id in sections_for_parent:
+                    sections_for_parent[surf[sec].parent_id].append(sec)
+                else:
+                    sections_for_parent[surf[sec].parent_id] = [sec]
+
+            # Context
             ctx = self.make_rctx(rup)
+
+            # Find sites within the integration distance
             rrup = numpy.array(dists['rrup']).min(axis=0)
             ok = rrup <= self.maximum_distance(self.trt, rup.mag)
+
+            # Now let's find the parent section IDs
+            parent_ids = [surf[s].parent_id for s in rup.sections]
+
+            # Find the index of the closest section to each site. The rrup
+            # array obtained has the following shape: # sections x # sites
+            idx = numpy.array(dists['rrup']).argmin(axis=0)
+
+            # Find the IDs of the parent sections for each of the section
+            # within the integration distance
+            parent_ids_selected = [parent_ids[i] for i in idx[ok]]
+
             if ok.any():
+
+                mesh = Mesh(sitecol['lon'][ok], sitecol['lat'][ok])
+
                 ctx.sids = sitecol.sids[ok]
                 ctx.rrup = rrup[ok]
-                for par in self.REQUIRES_DISTANCES - {'rrup'}:
+
+                for par in self.REQUIRES_DISTANCES - {'rrup', 'rx'}:
                     dst = numpy.array(dists[par]).min(axis=0)
                     setattr(ctx, par, dst[ok])
                 for par in self.REQUIRES_SITES_PARAMETERS:
                     setattr(ctx, par, sitecol[par][ok])
+
+                if ('rx' in self.REQUIRES_DISTANCES or
+                        'ry0' in self.REQUIRES_DISTANCES):
+
+                    rx = numpy.zeros_like(rrup[ok])
+                    ry0 = numpy.zeros_like(rrup[ok])
+
+                    # Loop over the parent_ids of the sections closest to at
+                    # least one of the sites within the integration distance
+                    for pid in set(parent_ids_selected):
+                        selected_secs = sections_for_parent[pid]
+                        surfaces = []
+                        for section_id in selected_secs:
+                            surfaces.extend(s for s in
+                                            surf[section_id].surfaces)
+                        msurf = MultiSurface(surfaces)
+                        trx = msurf.get_rx_distance(mesh)
+                        try0 = msurf.get_ry0_distance(mesh)
+                        cond = parent_ids_selected == pid
+                        rx[cond] = trx[cond]
+                        ry0[cond] = try0[cond]
+
+                    setattr(ctx, 'rx', rx)
+                    setattr(ctx, 'ry0', ry0)
+
                 # NB: not computing clon, clat for speed, therefore
                 # disaggregation by LonLat will not work
                 ctxs.append(ctx)
+
         return ctxs
 
     with patch.object(ContextMaker, 'make_ctxs', make_ctxs):
