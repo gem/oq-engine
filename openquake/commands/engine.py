@@ -69,13 +69,13 @@ def del_calculation(job_id, confirmed=False):
 
 
 @sap.Script  # do not use sap.Script, other oq engine will break
-def engine(log_file, no_distribute, yes, config_file, make_html_report,
-           upgrade_db, db_version, what_if_I_upgrade, run,
+def engine(log_file, no_distribute, yes: "flag", make_html_report,
+           upgrade_db: "flag", db_version, what_if_I_upgrade, run,
            list_hazard_calculations, list_risk_calculations,
            delete_calculation, delete_uncompleted_calculations,
            hazard_calculation_id, list_outputs, show_log,
-           export_output, export_outputs, exports='',
-           log_level='info', multi=False, reuse_input=False, param=''):
+           export_output, export_outputs, multi=False, reuse_input=False,
+           param='', *, config_file=None, exports='', log_level='info'):
     """
     Run a calculation using the traditional command line API
     """
@@ -204,8 +204,6 @@ Disable calculation task distribution and run the
 computation in a single process. This is intended for
 use in debugging and profiling.''', action='store_true')
 engine.flg('yes', 'Automatically answer "yes" when asked to confirm an action')
-engine.opt('config_file', 'Custom openquake.cfg file, to override default '
-           'configurations')
 engine._add('make_html_report', '--make-html-report', '--r',
             help='Build an HTML report of the computation at the given date',
             metavar='YYYY-MM-DD|today')
@@ -241,12 +239,14 @@ engine._add('export_outputs', '--export-outputs', '--eos',
             nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'),
             help='Export all of the calculation outputs to the '
             'specified directory')
-engine.opt('exports', 'Comma-separated string specifing the export formats, '
-           'in order of priority')
-engine.opt('log_level', 'Defaults to "info"',
-           choices=['debug', 'info', 'warn', 'error', 'critical'])
 engine.flg('multi', 'Run multiple job.inis in parallel')
 engine.flg('reuse_input', 'Read the sources|exposures from the cache (if any)')
 engine._add('param', '--param', '-p',
             help='Override parameters specified with the syntax '
             'NAME1=VALUE1,NAME2=VALUE2,...')
+engine.opt('config_file', 'Custom openquake.cfg file, to override default '
+           'configurations')
+engine.opt('exports', 'Comma-separated string specifing the export formats, '
+           'in order of priority')
+engine.opt('log_level', 'Defaults to "info"',
+           choices=['debug', 'info', 'warn', 'error', 'critical'])

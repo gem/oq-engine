@@ -92,16 +92,19 @@ class Script(object):
     def __init__(self, func, name=None, parser=None, help=True):
         self.func = func
         self.name = name or func.__name__
-        args, self.varargs, varkw, defaults = inspect.getfullargspec(func)[:4]
+        # set args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults
+        # and annotations
+        argspec = inspect.getfullargspec(func)
+        self.varargs = argspec.varargs
         assert self.varargs is None, self.varargs
-        defaults = defaults or ()
-        nodefaults = len(args) - len(defaults)
+        defaults = argspec.defaults or ()
+        nodefaults = len(argspec.args) - len(defaults)
         alldefaults = (NODEFAULT,) * nodefaults + defaults
-        self.argdict = dict(zip(args, alldefaults))
+        self.argdict = dict(zip(argspec.args, alldefaults))
+        self.argdict.update(argspec.kwonlydefaults or {})
         self.description = descr = func.__doc__ if func.__doc__ else None
         self.parser = get_parser(parser, descr, help)
-        self.names = []
-        self.all_arguments = []
+        self.argdescr = {}  # argname->argkw
         self._group = self.parser
         self._argno = 0  # used in the NameError check in the _add method
         self.checked = False  # used in the check_arguments method
@@ -113,16 +116,14 @@ class Script(object):
 
     def _add(self, name, *args, **kw):
         """
-        Add an argument to the underlying parser and grow the list
-        .all_arguments and the set .names
+        Add an argument to the underlying parser and grow .argdescr
         """
         argname = list(self.argdict)[self._argno]
         if argname != name:
             raise NameError(
                 'Setting argument %s, but it should be %s' % (name, argname))
         self._group.add_argument(*args, **kw)
-        self.all_arguments.append((args, kw))
-        self.names.append(name)
+        self.argdescr[name] = args, kw
         self._argno += 1
 
     def _get_type(self, name, type):
@@ -152,11 +153,11 @@ class Script(object):
         kw = dict(help=help, type=self._get_type(name, type), choices=choices,
                   metavar=metavar, nargs=nargs)
         default = self.argdict[name]
-        if default is not NODEFAULT:
+        if default not in (None, NODEFAULT):
             kw['default'] = default
             kw['metavar'] = metavar or _choices(choices) or str(default)
         abbrev = abbrev or '-' + name[0]
-        abbrevs = set(args[0] for args, kw in self.all_arguments)
+        abbrevs = set(args[0] for args, kw in self.argdescr.values())
         longname = '--' + name.replace('_', '-')
         if abbrev == '-h' or abbrev in abbrevs:
             # avoid conflicts with predefined abbreviations
@@ -177,7 +178,7 @@ class Script(object):
         Make sure all arguments have a specification
         """
         for name, default in self.argdict.items():
-            if name not in self.names and default is NODEFAULT:
+            if name not in self.argdescr and default is NODEFAULT:
                 raise NameError('Missing argparse specification for %r' % name)
 
     def callfunc(self, argv=None):
@@ -198,12 +199,12 @@ class Script(object):
         return self.parser.format_help()
 
     def __repr__(self):
-        args = ', '.join(self.names)
+        args = ', '.join(self.argdescr)
         return '<%s %s(%s)>' % (self.__class__.__name__, self.name, args)
 
 
-def compose(scripts, name='main', description=None, prog=None,
-            version=None, parser=None):
+def script(scripts, name='main', description=None, prog=None,
+           version=None, parser=None):
     """
     Collects together different scripts and builds a single
     script dispatching to the subparsers depending on
@@ -221,7 +222,9 @@ def compose(scripts, name='main', description=None, prog=None,
             description=description, add_help=False)
     elif prog is None:
         prog = parser.prog
-    parser.add_argument('--version', '-v', action='version', version=version)
+    if version:
+        parser.add_argument(
+            '--version', '-v', action='version', version=version)
     subparsers = parser.add_subparsers(
         help='available subcommands; use %s help <subcmd>' % prog,
         prog=prog)
@@ -245,7 +248,7 @@ def compose(scripts, name='main', description=None, prog=None,
             subpdic[s] = subp
         else:  # terminal subcommand
             subp = subparsers.add_parser(s.name, description=s.description)
-            for args, kw in s.all_arguments:
+            for args, kw in s.argdescr.values():
                 subp.add_argument(*args, **kw)
             subp.set_defaults(_func=s.func)
 
