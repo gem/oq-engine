@@ -1,5 +1,5 @@
-Ideas for OpenQuake as a service (OAS)
-======================================
+Ideas for OpenQuake as a Service (OaaS)
+=======================================
 
 We are interested in assessing the feasibility of a cloud service for
 OpenQuake calculations.
