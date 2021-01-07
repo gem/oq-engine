@@ -55,7 +55,7 @@ def print_(aw):
         print(aw)
 
 
-@sap.script
+@sap.Script
 def show(what='contents', calc_id=-1, extra=()):
     """
     Show the content of a datastore (by default the last one).

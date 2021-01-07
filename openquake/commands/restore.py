@@ -29,7 +29,7 @@ from openquake.baselib.general import safeprint
 from openquake.server.dbapi import Db
 
 
-@sap.script
+@sap.Script
 def restore(archive, oqdata):
     """
     Build a new oqdata directory from the data contained in the zip archive

@@ -94,7 +94,7 @@ def compare_rups(calc_1, calc_2):
         _print_diff(a1, a2, df1.index, df2.index, col)
 
 
-@sap.script
+@sap.Script
 def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             threshold=1E-2):
     """

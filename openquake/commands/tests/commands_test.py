@@ -288,7 +288,7 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_extract_sitecol(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            extract('sitecol', self.calc_id, extract_dir=tempdir)
+            extract('sitecol', self.calc_id, False, False, tempdir)
         fnames = os.listdir(tempdir)
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)

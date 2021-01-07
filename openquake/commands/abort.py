@@ -23,7 +23,7 @@ from openquake.baselib import sap
 from openquake.commonlib import logs
 
 
-@sap.script
+@sap.Script
 def abort(job_id):
     """
     Abort the given job
