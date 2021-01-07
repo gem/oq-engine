@@ -92,7 +92,7 @@ def _populate(parser, argdescr):
             args = longname,
         elif abbrev:
             # ok abbrev
-            args = abbrev, longname
+            args = longname, abbrev
             abbrevs.add(abbrev)
         else:
             # no abbrev
