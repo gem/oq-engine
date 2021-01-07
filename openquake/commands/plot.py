@@ -604,8 +604,9 @@ def plot_wkt(wkt_string):
 
 
 @sap.Script
-def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
-         local=False):
+def plot(what='examples', calc_id=-1, other_id=None,
+         webapi: bool = False,
+         local: bool = False):
     """
     Generic plotter for local and remote calculations.
     """

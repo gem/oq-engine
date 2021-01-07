@@ -83,9 +83,17 @@ def check_fname(fname, kind, forbidden):
 
 
 @sap.Script
-def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
-                       z1pt0, z2pt5, vs30measured, grid_spacing=0,
-                       assoc_distance=5, output='site_model.csv'):
+def prepare_site_model(
+        vs30_csv,
+        z1pt0: bool = False,
+        z2pt5: bool = False,
+        vs30measured: bool = False,
+        *,
+        exposure_xml=None,
+        sites_csv=None,
+        grid_spacing=0,
+        assoc_distance=5,
+        output='site_model.csv'):
     """
     Prepare a site_model.csv file from exposure xml files/site csv files,
     vs30 csv files and a grid spacing which can be 0 (meaning no grid).
@@ -166,13 +174,13 @@ def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
     return haz_sitecol
 
 
-prepare_site_model.opt('exposure_xml', 'exposure(s) in XML format', nargs='*')
-prepare_site_model.opt('sites_csv', 'sites in CSV format', nargs='*')
 prepare_site_model.arg('vs30_csv', 'files with lon,lat,vs30 and no header',
                        nargs='+')
 prepare_site_model.flg('z1pt0', 'build the z1pt0', '-1')
 prepare_site_model.flg('z2pt5', 'build the z2pt5', '-2')
 prepare_site_model.flg('vs30measured', 'build the vs30measured', '-3')
+prepare_site_model.opt('exposure_xml', 'exposure(s) in XML format', nargs='*')
+prepare_site_model.opt('sites_csv', 'sites in CSV format', nargs='*')
 prepare_site_model.opt('grid_spacing', 'grid spacing in km '
                        '(the default 0 means no grid)', type=float)
 prepare_site_model.opt('assoc_distance',

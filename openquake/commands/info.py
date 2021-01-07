@@ -87,7 +87,7 @@ choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
 
 
 @sap.Script
-def info(what, report=False):
+def info(what, report: bool=False):
     """
     Give information about the passed keyword or filename
     """

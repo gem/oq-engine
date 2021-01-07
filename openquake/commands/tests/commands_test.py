@@ -280,7 +280,7 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            export('hcurves', self.calc_id, 'csv', tempdir)
+            export('hcurves', self.calc_id, exports='csv', export_dir=tempdir)
         fnames = os.listdir(tempdir)
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
@@ -288,7 +288,7 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_extract_sitecol(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            extract('sitecol', self.calc_id, False, False, tempdir)
+            extract('sitecol', self.calc_id, extract_dir=tempdir)
         fnames = os.listdir(tempdir)
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
@@ -367,7 +367,7 @@ class ZipTestCase(unittest.TestCase):
         ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
-        zip_cmd(ini, xzip, None)
+        zip_cmd(ini, xzip)
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(['Wcrust_high_rhypo.hdf5',
                           'Wcrust_low_rhypo.hdf5',
@@ -384,7 +384,7 @@ class ZipTestCase(unittest.TestCase):
         ini = os.path.join(os.path.dirname(ebrisk.__file__), 'job_risk.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
-        zip_cmd(ini, xzip, None)
+        zip_cmd(ini, xzip)
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(['exposure_model.xml', 'gmf_scenario.csv',
                           'job_risk.ini', 'sites.csv', 'vulnerability.xml'],
@@ -396,7 +396,7 @@ class ZipTestCase(unittest.TestCase):
         ini = os.path.join(os.path.dirname(case_eb.__file__), 'job_eb.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
-        zip_cmd(ini, xzip, None)
+        zip_cmd(ini, xzip)
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(
             ['exposure.csv', 'exposure1.xml', 'gmpe_logic_tree.xml',
@@ -422,19 +422,20 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
     """
     def setUp(self):
         self.OUTDIR = tempfile.mkdtemp()
+        self.out = os.path.join(self.OUTDIR, 'smc')
 
     def test_roundtrip_invalid(self):
         # test the conversion to shapefile and back for an invalid file
         smc = os.path.join(os.path.dirname(__file__),
                            "data", "source_model_complete.xml")
-        to_shapefile(os.path.join(self.OUTDIR, 'smc'), smc, False)
+        to_shapefile(smc, validate=False, output=self.out)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
-        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, False)
+        from_shapefile(shpfiles, validate=False, output=self.out)
 
         # test invalid file
         with self.assertRaises(Exception) as ctx:
-            to_shapefile(os.path.join(self.OUTDIR, 'smc'), smc, True)
+            to_shapefile(smc, validate=True, output=self.out)
         self.assertIn('Edges points are not in the right order',
                       str(ctx.exception))
 
@@ -442,19 +443,19 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         # test the conversion to shapefile and back for a valid file NRML 0.4
         ssm = os.path.join(os.path.dirname(__file__),
                            "data", "sample_source_model.xml")
-        to_shapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
+        to_shapefile(ssm, validate=True, output=self.out)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
-        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
+        from_shapefile(shpfiles, validate=True, output=self.out)
 
     def test_roundtrip_valid_05(self):
         # test the conversion to shapefile and back for a valid file NRML 0.5
         ssm = os.path.join(os.path.dirname(__file__),
                            "data", "sample_source_model_05.xml")
-        to_shapefile(os.path.join(self.OUTDIR, 'smc'), ssm, True)
+        to_shapefile(ssm, validate=True, output=self.out)
         shpfiles = [os.path.join(self.OUTDIR, f)
                     for f in os.listdir(self.OUTDIR)]
-        from_shapefile(os.path.join(self.OUTDIR, 'smc'), shpfiles, True)
+        from_shapefile(shpfiles, validate=True, output=self.out)
 
     def tearDown(self):
         # comment out the line below if you need to debug the test
@@ -527,7 +528,7 @@ sensitivity_analysis = {
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)
         with Print.patch() as p:
-            export('ruptures', job_id, 'csv', tempdir)
+            export('ruptures', job_id, exports='csv', export_dir=tempdir)
         self.assertIn('Exported', str(p))
         shutil.rmtree(tempdir)
 
@@ -553,25 +554,35 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         exposure_xml = os.path.join(inputdir, 'exposure.xml')
         vs30_csv = os.path.join(inputdir, 'vs30.csv')
         sitecol = prepare_site_model(
-            [exposure_xml], [], [vs30_csv], True, True, True,
-            grid_spacing, 5, output)
+            exposure_xml=[exposure_xml],
+            vs30_csv=[vs30_csv],
+            z1pt0=True, z2pt5=True, vs30measured=True,
+            grid_spacing=grid_spacing,
+            assoc_distance=5,
+            output=output)
         sm = read_csv(output, {None: float, 'vs30measured': numpy.uint8})
         self.assertEqual(sm['vs30measured'].sum(), 0)
         self.assertEqual(len(sitecol), 84)  # 84 non-empty grid points
         self.assertEqual(len(sitecol), len(sm))
 
         # test no grid
-        sc = prepare_site_model([exposure_xml], [], [vs30_csv],
-                                True, True, False, 0, 5, output)
+        sc = prepare_site_model(
+            exposure_xml=[exposure_xml], vs30_csv=[vs30_csv],
+            z1pt0=True, z2pt5=True,
+            grid_spacing=0, assoc_distance=5, output=output)
         self.assertEqual(len(sc), 148)  # 148 sites within 5 km from the params
 
         # test sites_csv == vs30_csv
-        sc = prepare_site_model([], [vs30_csv], [vs30_csv],
-                                True, True, False, 0, 5, output)
+        sc = prepare_site_model(
+            vs30_csv=[vs30_csv], sites_csv=[vs30_csv],
+            z1pt0=True, z2pt5=True,
+            grid_spacing=0, assoc_distance=5, output=output)
 
         # test sites_csv == vs30_csv and grid spacing
-        sc = prepare_site_model([], [vs30_csv], [vs30_csv],
-                                True, True, False, 10, 5, output)
+        sc = prepare_site_model(
+            vs30_csv=[vs30_csv], sites_csv=[vs30_csv],
+            z1pt0=True, z2pt5=True,
+            grid_spacing=0, assoc_distance=5, output=output)
 
 
 class ReduceSourceModelTestCase(unittest.TestCase):
@@ -598,7 +609,7 @@ class NRML2CSVTestCase(unittest.TestCase):
     def test_nrml_to_csv(self):
         temp_dir = tempfile.mkdtemp()
         with Print.patch() as p:
-            nrml_to.func('csv', [MIXED_SRC_MODEL], temp_dir, chatty=True)
+            nrml_to('csv', [MIXED_SRC_MODEL], outdir=temp_dir, chatty=True)
         out = str(p)
         self.assertIn('3D MultiPolygon', out)
         self.assertIn('3D MultiLineString', out)
@@ -610,7 +621,7 @@ class NRML2CSVTestCase(unittest.TestCase):
             raise unittest.SkipTest('fiona is missing')
         temp_dir = tempfile.mkdtemp()
         with Print.patch() as p:
-            nrml_to.func('gpkg', [MIXED_SRC_MODEL], temp_dir, chatty=True)
+            nrml_to('gpkg', [MIXED_SRC_MODEL], outdir=temp_dir, chatty=True)
         out = str(p)
         self.assertIn('3D MultiPolygon', out)
         self.assertIn('3D MultiLineString', out)

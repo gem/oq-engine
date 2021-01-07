@@ -82,17 +82,18 @@ def _choices(choices):
 
 def _populate(parser, argdescr):
     # populate the parser
+    abbrevs = {'-h'}  # already taken abbreviations
     for name, kw in argdescr.items():
         dic = kw.copy()
         abbrev = dic.pop('abbrev')
-        abbrevs = set(d.get('abbrev') for d in argdescr.values())
         longname = '--' + name.replace('_', '-')
-        if abbrev and (abbrev == '-h' or abbrev in abbrevs):
-            # avoid conflicts with predefined abbreviations
+        if abbrev and abbrev in abbrevs:
+            # avoid conflicts with previously defined abbreviations
             args = longname,
         elif abbrev:
             # ok abbrev
             args = abbrev, longname
+            abbrevs.add(abbrev)
         else:
             # no abbrev
             args = name,
@@ -111,11 +112,9 @@ class Script(object):
     def __init__(self, func, name=None, parser=None, help=True):
         self.func = func
         self.name = name or func.__name__
-        # set args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults
-        # and annotations
+        # args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, anns
         argspec = inspect.getfullargspec(func)
-        self.varargs = argspec.varargs
-        if self.varargs:
+        if argspec.varargs:
             raise TypeError('varargs in the signature of %s are not supported'
                             % func)
         defaults = argspec.defaults or ()
@@ -178,8 +177,8 @@ class Script(object):
             if name not in self.argdescr and default is NODEFAULT:
                 raise NameError('Missing argparse specification for %r' % name)
 
-    def __call__(self, *args):
-        return self.func(*args)
+    def __call__(self, *args, **kw):
+        return self.func(*args, **kw)
 
     def callfunc(self, argv=None):
         """

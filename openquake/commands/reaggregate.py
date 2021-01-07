@@ -49,6 +49,3 @@ def reaggregate(calc_id, aggregate_by):
 
 reaggregate.arg('calc_id', 'ID of the risk calculation', type=int)
 reaggregate.arg('aggregate_by', 'comma-separated list of tag names')
-
-if __name__ == '__main__':
-    reaggregate.callfunc()

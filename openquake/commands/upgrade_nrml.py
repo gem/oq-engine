@@ -114,7 +114,7 @@ def upgrade_file(path, multipoint):
 # we will implement a more general solution when we will need to pass
 # to version 0.6
 @sap.Script
-def upgrade_nrml(directory, dry_run, multipoint):
+def upgrade_nrml(directory, dry_run: bool, multipoint: bool):
     """
     Upgrade all the NRML files contained in the given directory to the latest
     NRML version. Works by walking all subdirectories.

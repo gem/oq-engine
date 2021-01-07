@@ -40,4 +40,5 @@ def tidy(fnames):
             nrml.write(node.nodes, f, writers.FIVEDIGITS, xmlns=node['xmlns'])
         print('Reformatted %s, original left in %s.bak' % (fname, fname))
 
+
 tidy.arg('fnames', 'NRML file name', nargs='+')

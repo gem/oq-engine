@@ -38,7 +38,7 @@ def smart_save(dbpath, archive, calc_id):
             conn.execute('DELETE FROM job WHERE status != "complete"')
             if calc_id:
                 conn.execute('DELETE FROM job WHERE id != %d' % calc_id)
-    except:
+    except Exception:
         safeprint('Please check the copy of the db in %s' % newdb)
         raise
     zipfiles([newdb], archive, 'a', safeprint)
@@ -46,7 +46,7 @@ def smart_save(dbpath, archive, calc_id):
 
 
 @sap.Script
-def dump(archive, calc_id=0, user=None):
+def dump(archive, calc_id=0, *, user=None):
     """
     Dump the openquake database and all the complete calculations into a zip
     file. In a multiuser installation must be run as administrator.

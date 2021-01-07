@@ -47,7 +47,7 @@ def convert_xml_hdf5(input_file, output_file):
 def to_hdf5(input):
     """
     Convert .xml and .npz files to .hdf5 files.
-    """    
+    """
     with performance.Monitor('to_hdf5') as mon:
         for input_file in input:
             if input_file.endswith('.npz'):
@@ -58,5 +58,6 @@ def to_hdf5(input):
                 continue
             print('Generated %s' % output)
     print(mon)
+
 
 to_hdf5.arg('input', '.npz file to convert', nargs='*')

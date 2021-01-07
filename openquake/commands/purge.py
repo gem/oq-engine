@@ -54,7 +54,7 @@ def purge_all(user=None):
 
 
 @sap.Script
-def purge(calc_id, force=False):
+def purge(calc_id, force: bool):
     """
     Remove the given calculation. If you want to remove all calculations,
     use oq reset.

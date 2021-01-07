@@ -28,7 +28,7 @@ from openquake.commands.purge import purge_one, purge_all
 
 
 @sap.Script
-def reset(yes):
+def reset(yes: bool):
     """
     Remove all the datastores and the database of the current user
     """
