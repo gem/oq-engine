@@ -80,6 +80,22 @@ def _choices(choices):
     return ''
 
 
+def _add_arg(parser, name, kw, argdescr):
+    # populate the parser
+    dic = kw.copy()
+    abbrev = dic.pop('abbrev')
+    abbrevs = set(d.get('abbrev') for d in argdescr.values())
+    longname = '--' + name.replace('_', '-')
+    if abbrev == '-h' or abbrev in abbrevs:
+        # avoid conflicts with predefined abbreviations
+        args = longname,
+    elif abbrev:
+        args = abbrev, longname
+    else:
+        args = name,
+    parser.add_argument(*args, **dic)
+
+
 class Script(object):
     """
     A simple way to define command processors based on argparse.
@@ -100,8 +116,8 @@ class Script(object):
         defaults = argspec.defaults or ()
         nodefaults = len(argspec.args) - len(defaults)
         alldefaults = (NODEFAULT,) * nodefaults + defaults
-        self.argdict = dict(zip(argspec.args, alldefaults))
-        self.argdict.update(argspec.kwonlydefaults or {})
+        self.argdef = dict(zip(argspec.args, alldefaults))
+        self.argdef.update(argspec.kwonlydefaults or {})
         self.description = descr = func.__doc__ if func.__doc__ else None
         self.parser = get_parser(parser, descr, help)
         self.argdescr = {}  # argname->argkw
@@ -114,16 +130,16 @@ class Script(object):
         """Added a new group of arguments with the given description"""
         self._group = self.parser.add_argument_group(descr)
 
-    def _add(self, name, *args, **kw):
+    def _add(self, name, **kw):
         """
         Add an argument to the underlying parser and grow .argdescr
         """
-        argname = list(self.argdict)[self._argno]
+        argname = list(self.argdef)[self._argno]
         if argname != name:
             raise NameError(
                 'Setting argument %s, but it should be %s' % (name, argname))
-        self._group.add_argument(*args, **kw)
-        self.argdescr[name] = args, kw
+        _add_arg(self._group, name, kw, self.argdescr)
+        self.argdescr[name] = kw
         self._argno += 1
 
     def _get_type(self, name, type):
@@ -136,48 +152,41 @@ class Script(object):
         """
         Describe a positional argument
         """
-        kw = dict(help=help, type=self._get_type(name, type), choices=choices,
-                  metavar=metavar, nargs=nargs)
-        default = self.argdict[name]
+        kw = dict(help=help, abbrev=None, type=self._get_type(name, type),
+                  choices=choices, metavar=metavar, nargs=nargs)
+        default = self.argdef[name]
         if default is not NODEFAULT:
             kw['nargs'] = nargs or '?'
             kw['default'] = default
             kw['help'] = kw['help'] + ' [default: %s]' % repr(default)
-        self._add(name, name, **kw)
+        self._add(name, **kw)
 
     def opt(self, name, help, abbrev=None,
             type=None, choices=None, metavar=None, nargs=None):
         """
         Describe an option
         """
-        kw = dict(help=help, type=self._get_type(name, type), choices=choices,
-                  metavar=metavar, nargs=nargs)
-        default = self.argdict[name]
+        kw = dict(help=help, abbrev=abbrev or '-' + name[0],
+                  type=self._get_type(name, type),
+                  choices=choices, metavar=metavar, nargs=nargs)
+        default = self.argdef[name]
         if default not in (None, NODEFAULT):
             kw['default'] = default
             kw['metavar'] = metavar or _choices(choices) or str(default)
-        abbrev = abbrev or '-' + name[0]
-        abbrevs = set(args[0] for args, kw in self.argdescr.values())
-        longname = '--' + name.replace('_', '-')
-        if abbrev == '-h' or abbrev in abbrevs:
-            # avoid conflicts with predefined abbreviations
-            self._add(name, longname, **kw)
-        else:
-            self._add(name, abbrev, longname, **kw)
+        self._add(name, **kw)
 
     def flg(self, name, help, abbrev=None):
         """
         Describe a flag
         """
-        abbrev = abbrev or '-' + name[0]
-        longname = '--' + name.replace('_', '-')
-        self._add(name, abbrev, longname, action='store_true', help=help)
+        self._add(name, help=help, abbrev=abbrev or '-' + name[0],
+                  action='store_true')
 
     def check_arguments(self):
         """
         Make sure all arguments have a specification
         """
-        for name, default in self.argdict.items():
+        for name, default in self.argdef.items():
             if name not in self.argdescr and default is NODEFAULT:
                 raise NameError('Missing argparse specification for %r' % name)
 
@@ -248,8 +257,8 @@ def script(scripts, name='main', description=None, prog=None,
             subpdic[s] = subp
         else:  # terminal subcommand
             subp = subparsers.add_parser(s.name, description=s.description)
-            for args, kw in s.argdescr.values():
-                subp.add_argument(*args, **kw)
+            for name, kw in s.argdescr.items():
+                _add_arg(subp, name, kw, s.argdescr)
             subp.set_defaults(_func=s.func)
 
     def main(**kw):

@@ -196,52 +196,52 @@ def engine(log_file, no_distribute, yes: "flag", make_html_report,
         engine.parentparser.print_usage()
 
 
-engine._add('log_file', '--log-file', '-L', help='''\
+engine._add('log_file', abbrev='-L', help='''\
 Location where to store log messages; if not specified, log messages
 will be printed to the console (to stderr)''')
-engine._add('no_distribute', '--no-distribute', '--nd', help='''\
+engine._add('no_distribute', abbrev='--nd', help='''\
 Disable calculation task distribution and run the
 computation in a single process. This is intended for
 use in debugging and profiling.''', action='store_true')
 engine.flg('yes', 'Automatically answer "yes" when asked to confirm an action')
-engine._add('make_html_report', '--make-html-report', '--r',
+engine._add('make_html_report', abbrev='--r',
             help='Build an HTML report of the computation at the given date',
             metavar='YYYY-MM-DD|today')
 engine.flg('upgrade_db', 'Upgrade the openquake database')
 engine.flg('db_version', 'Show the current version of the openquake database')
 engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
            'database if you upgrade')
-engine._add('run', '--run', help='Run a job with the specified config file',
+engine._add('run', abbrev='--run',
+            help='Run a job with the specified config file',
             metavar='JOB_INI', nargs='+')
-engine._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
+engine._add('list_hazard_calculations', abbrev='--lhc',
             help='List hazard calculation information', action='store_true')
-engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
+engine._add('list_risk_calculations', abbrev='--lrc',
             help='List risk calculation information', action='store_true')
-engine._add('delete_calculation', '--delete-calculation', '--dc',
+engine._add('delete_calculation', abbrev='--dc',
             help='Delete a calculation and all associated outputs',
             metavar='CALCULATION_ID', type=int)
-engine._add('delete_uncompleted_calculations',
-            '--delete-uncompleted-calculations', '--duc',
+engine._add('delete_uncompleted_calculations', abbrev='--duc',
             help='Delete all the uncompleted calculations',
             action='store_true')
-engine._add('hazard_calculation_id', '--hazard-calculation-id', '--hc',
+engine._add('hazard_calculation_id', abbrev='--hc',
             help='Use the given job as input for the next job')
-engine._add('list_outputs', '--list-outputs', '--lo',
+engine._add('list_outputs', abbrev='--lo',
             help='List outputs for the specified calculation',
             metavar='CALCULATION_ID')
-engine._add('show_log', '--show-log', '--sl',
+engine._add('show_log', abbrev='--sl',
             help='Show the log of the specified calculation',
             metavar='CALCULATION_ID')
-engine._add('export_output', '--export-output', '--eo',
+engine._add('export_output', abbrev='--eo',
             nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'),
             help='Export the desired output to the specified directory')
-engine._add('export_outputs', '--export-outputs', '--eos',
+engine._add('export_outputs', abbrev='--eos',
             nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'),
             help='Export all of the calculation outputs to the '
             'specified directory')
 engine.flg('multi', 'Run multiple job.inis in parallel')
 engine.flg('reuse_input', 'Read the sources|exposures from the cache (if any)')
-engine._add('param', '--param', '-p',
+engine._add('param', abbrev='-p',
             help='Override parameters specified with the syntax '
             'NAME1=VALUE1,NAME2=VALUE2,...')
 engine.opt('config_file', 'Custom openquake.cfg file, to override default '
