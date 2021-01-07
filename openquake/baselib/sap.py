@@ -178,6 +178,9 @@ class Script(object):
             if name not in self.argdescr and default is NODEFAULT:
                 raise NameError('Missing argparse specification for %r' % name)
 
+    def __call__(self, *args):
+        return self.func(*args)
+
     def callfunc(self, argv=None):
         """
         Parse the argv list and extract a dictionary of arguments which

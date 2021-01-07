@@ -210,8 +210,8 @@ def engine(
         logs.dbcmd('delete_uncompleted_calculations', getpass.getuser())
 
     else:
-        engine.parentparser.prog = 'oq engine'
-        engine.parentparser.print_usage()
+        engine.parser.prog = 'oq engine'
+        engine.parser.print_usage()
 
 
 # flags

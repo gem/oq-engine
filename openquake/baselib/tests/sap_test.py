@@ -54,7 +54,7 @@ optional arguments:
 other arguments:
   -c, --c      third argument
   -d 1, --d 1  fourth argument
-''' % p.parentparser.prog)
+''' % p.parser.prog)
 
     def test_NameError(self):
         p = sap.Script(f)
@@ -74,7 +74,7 @@ positional arguments:
 
 optional arguments:
   -b B, --b B  second argument
-''' % p.parentparser.prog)
+''' % p.parser.prog)
         # missing argparse specification for 'c'
         with self.assertRaises(NameError):
             p.check_arguments()
@@ -90,4 +90,4 @@ optional arguments:
   -h, --help            show this help message and exit
   -a A_LONG_ARGUMENT, --a-long-argument A_LONG_ARGUMENT
                         a long argument
-''' % p.parentparser.prog)
+''' % p.parser.prog)
