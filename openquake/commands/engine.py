@@ -192,8 +192,8 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
         logs.dbcmd('delete_uncompleted_calculations', getpass.getuser())
 
     else:
-        engine.parentparser.prog = 'oq engine'
-        engine.parentparser.print_usage()
+        engine.parser.prog = 'oq engine'
+        engine.parser.print_usage()
 
 
 engine._add('log_file', '--log-file', '-L', help='''\
