@@ -80,20 +80,21 @@ def _choices(choices):
     return ''
 
 
-def _add_arg(parser, name, kw, argdescr):
+def _populate(parser, argdescr):
     # populate the parser
-    dic = kw.copy()
-    abbrev = dic.pop('abbrev')
-    abbrevs = set(d.get('abbrev') for d in argdescr.values())
-    longname = '--' + name.replace('_', '-')
-    if abbrev == '-h' or abbrev in abbrevs:
-        # avoid conflicts with predefined abbreviations
-        args = longname,
-    elif abbrev:
-        args = abbrev, longname
-    else:
-        args = name,
-    parser.add_argument(*args, **dic)
+    for name, kw in argdescr.items():
+        dic = kw.copy()
+        abbrev = dic.pop('abbrev')
+        abbrevs = set(d.get('abbrev') for d in argdescr.values())
+        longname = '--' + name.replace('_', '-')
+        if abbrev == '-h' or abbrev in abbrevs:
+            # avoid conflicts with predefined abbreviations
+            args = longname,
+        elif abbrev:
+            args = abbrev, longname
+        else:
+            args = name,
+        parser.add_argument(*args, **dic)
 
 
 class Script(object):
@@ -121,7 +122,6 @@ class Script(object):
         self.description = descr = func.__doc__ if func.__doc__ else None
         self.parser = get_parser(parser, descr, help)
         self.argdescr = {}  # argname->argkw
-        self._group = self.parser
         self._argno = 0  # used in the NameError check in the _add method
         self.checked = False  # used in the check_arguments method
         registry['%s.%s' % (func.__module__, func.__name__)] = self
@@ -129,18 +129,6 @@ class Script(object):
     def group(self, descr):
         """Added a new group of arguments with the given description"""
         self._group = self.parser.add_argument_group(descr)
-
-    def _add(self, name, **kw):
-        """
-        Add an argument to the underlying parser and grow .argdescr
-        """
-        argname = list(self.argdef)[self._argno]
-        if argname != name:
-            raise NameError(
-                'Setting argument %s, but it should be %s' % (name, argname))
-        _add_arg(self._group, name, kw, self.argdescr)
-        self.argdescr[name] = kw
-        self._argno += 1
 
     def _get_type(self, name, type):
         if type is None and name in self.func.__annotations__:
@@ -159,7 +147,7 @@ class Script(object):
             kw['nargs'] = nargs or '?'
             kw['default'] = default
             kw['help'] = kw['help'] + ' [default: %s]' % repr(default)
-        self._add(name, **kw)
+        self.argdescr[name] = kw
 
     def opt(self, name, help, abbrev=None,
             type=None, choices=None, metavar=None, nargs=None):
@@ -173,14 +161,14 @@ class Script(object):
         if default not in (None, NODEFAULT):
             kw['default'] = default
             kw['metavar'] = metavar or _choices(choices) or str(default)
-        self._add(name, **kw)
+        self.argdescr[name] = kw
 
     def flg(self, name, help, abbrev=None):
         """
         Describe a flag
         """
-        self._add(name, help=help, abbrev=abbrev or '-' + name[0],
-                  action='store_true')
+        self.argdescr[name] = dict(help=help, abbrev=abbrev or '-' + name[0],
+                                   action='store_true')
 
     def check_arguments(self):
         """
@@ -257,8 +245,7 @@ def script(scripts, name='main', description=None, prog=None,
             subpdic[s] = subp
         else:  # terminal subcommand
             subp = subparsers.add_parser(s.name, description=s.description)
-            for name, kw in s.argdescr.items():
-                _add_arg(subp, name, kw, s.argdescr)
+            _populate(subp, s.argdescr)
             subp.set_defaults(_func=s.func)
 
     def main(**kw):
@@ -270,5 +257,6 @@ def script(scripts, name='main', description=None, prog=None,
             return func(**kw)
     main.__name__ = name
     script = Script(main, name, parser)
+    _populate(parser, script.argdescr)
     vars(script).update(subpdic)
     return script
