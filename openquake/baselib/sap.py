@@ -115,7 +115,7 @@ class Script(object):
         # and annotations
         argspec = inspect.getfullargspec(func)
         self.varargs = argspec.varargs
-        if self.varargs is None:
+        if self.varargs:
             raise TypeError('varargs in the signature of %s are not supported'
                             % func)
         defaults = argspec.defaults or ()
