@@ -602,7 +602,6 @@ def plot_wkt(wkt_string):
     return plt
 
 
-@sap.script
 def plot(what='examples',
          calc_id: int = -1,
          other_id: int = None,
@@ -654,3 +653,4 @@ plot.calc_id = 'computation ID'
 plot.other_id = 'ID of another computation'
 plot.webapi = 'if given, pass through the WebAPI'
 plot.local = 'if passed, use the local WebAPI'
+sap.script(plot)

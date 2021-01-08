@@ -27,7 +27,6 @@ from openquake.server import dbserver
 from openquake.commands.purge import purge_one, purge_all
 
 
-@sap.script
 def reset(yes: bool):
     """
     Remove all the datastores and the database of the current user
@@ -58,3 +57,4 @@ def reset(yes: bool):
 
 
 reset.yes = 'confirmation'
+sap.script(reset)

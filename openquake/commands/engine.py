@@ -68,7 +68,6 @@ def del_calculation(job_id, confirmed=False):
                 print(resp['error'])
 
 
-@sap.script
 def engine(
         no_distribute: bool,
         yes: bool,
@@ -271,3 +270,4 @@ engine.exports = ('Comma-separated string specifing the export formats, '
                   'in order of priority')
 engine.log_level = dict(help='Defaults to "info"',
                         choices=['debug', 'info', 'warn', 'error', 'critical'])
+sap.script(engine)

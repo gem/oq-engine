@@ -55,7 +55,6 @@ def print_(aw):
         print(aw)
 
 
-@sap.script
 def show(what='contents', calc_id: str_or_int = -1, extra=()):
     """
     Show the content of a datastore (by default the last one).
@@ -111,3 +110,4 @@ def show(what='contents', calc_id: str_or_int = -1, extra=()):
 show.what = 'key or view of the datastore'
 show.calc_id = 'calculation ID or datastore path'
 show.extra = dict(help='extra arguments', nargs='*')
+sap.script(show)

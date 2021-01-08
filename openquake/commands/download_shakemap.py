@@ -21,7 +21,6 @@ from openquake.baselib import sap, performance
 from openquake.hazardlib.shakemap import download_array
 
 
-@sap.script
 def download_shakemap(id):
     """
     Example of usage: utils/shakemap usp000fjta
@@ -31,3 +30,5 @@ def download_shakemap(id):
         numpy.save(dest, download_array(id))
     print(mon)
     print('Saved %s' % dest)
+
+sap.script(download_shakemap)

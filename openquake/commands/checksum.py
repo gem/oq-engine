@@ -23,7 +23,6 @@ from openquake.commonlib import readinput
 from openquake.commonlib import util
 
 
-@sap.script
 def checksum(thing):
     """
     Get the checksum of a calculation from the calculation ID (if already
@@ -52,3 +51,4 @@ def checksum(thing):
 
 
 checksum.thing = 'job.ini, job.zip, job ID, smlt file'
+sap.script(checksum)

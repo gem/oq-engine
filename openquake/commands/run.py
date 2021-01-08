@@ -135,7 +135,6 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
     return calc
 
 
-@sap.script
 def run(job_ini,
         pdb: bool = False,
         reuse_input: bool = False,
@@ -184,3 +183,4 @@ run.exports = dict(help='export formats as a comma-separated string')
 run.loglevel = dict(help='logging level',
                     choices='debug info warn error critical'.split())
 run.calc_id = dict(help='calculation ID (if "nojob" infer it)')
+sap.script(run)

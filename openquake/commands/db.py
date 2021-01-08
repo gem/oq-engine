@@ -45,7 +45,6 @@ def convert(strings):
             yield s
 
 
-@sap.script
 def db(cmd, args=()):
     """
     Run a database command
@@ -66,3 +65,4 @@ def db(cmd, args=()):
 
 db.cmd = 'db command'
 db.args = dict(help='db command arguments', nargs='*')
+sap.script(db)

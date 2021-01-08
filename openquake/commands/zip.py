@@ -21,7 +21,6 @@ from openquake.baselib import sap
 from openquake.commonlib import oqzip
 
 
-@sap.script
 def zip(what, archive_zip='', risk_file=''):
     """
     Zip into an archive one or two job.ini files with all related files
@@ -44,3 +43,4 @@ zip.what = ('path to a job.ini, an ssmLT.xml, an exposure.xml, '
             'or to a directory containing a file ssmLT.xml')
 zip.archive_zip = 'path to a non-existing .zip file'
 zip.risk_file = 'optional file for risk'
+sap.script(zip)

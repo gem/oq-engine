@@ -122,7 +122,6 @@ def appendrow(row, rows, chatty):
             raise exc.__class__(wkt)
 
 
-@sap.script
 def nrml_to(what, fnames, chatty: bool = False, *, outdir='.'):
     """
     Convert source models into CSV files or a geopackage.
@@ -166,3 +165,4 @@ nrml_to.what = dict(help='csv or gpkg',
 nrml_to.fnames = dict(help='source model files in XML', nargs='+')
 nrml_to.chatty = 'display sources in progress'
 nrml_to.outdir = 'output directory'
+sap.script(nrml_to)

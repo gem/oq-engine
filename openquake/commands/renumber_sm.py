@@ -21,7 +21,6 @@ def read_sm(fname):
     return root, fname, sources
 
 
-@sap.script
 def renumber_sm(smlt_file):
     """
     Renumber the sources belonging to the same source model, even if split
@@ -49,3 +48,4 @@ def renumber_sm(smlt_file):
 
 
 renumber_sm.smlt_file = 'source model logic tree file'
+sap.script(renumber_sm)

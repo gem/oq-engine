@@ -24,7 +24,6 @@ from openquake.commonlib import logs
 ro_commands = ('status', 'inspect')
 
 
-@sap.script
 def workers(cmd):
     """
     start/stop/restart the workers, or return their status
@@ -37,3 +36,4 @@ def workers(cmd):
 
 workers.cmd = dict(help='command',
                    choices='start stop status restart inspect wait'.split())
+sap.script(workers)

@@ -25,7 +25,6 @@ from openquake.commonlib import oqzip
 from openquake.calculators.extract import WebAPIError
 
 
-@sap.script
 def postzip(zipfile):
     """Post a zipfile to the WebUI"""
     sess = requests.Session()
@@ -47,3 +46,4 @@ def postzip(zipfile):
 
 
 postzip.zipfile = 'archive with the files of the computation'
+sap.script(postzip)

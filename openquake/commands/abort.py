@@ -23,7 +23,6 @@ from openquake.baselib import sap
 from openquake.commonlib import logs
 
 
-@sap.script
 def abort(job_id: int):
     """
     Abort the given job
@@ -54,3 +53,4 @@ def abort(job_id: int):
 
 
 abort.job_id = 'job ID'
+sap.script(abort)

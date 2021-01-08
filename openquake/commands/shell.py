@@ -81,7 +81,6 @@ class OpenQuake(object):
         return numpy.concatenate(lst)
 
 
-@sap.script
 def shell(script=None, args=()):
     """
     Start an embedded (i)python instance with a global object "o" or
@@ -103,3 +102,4 @@ def shell(script=None, args=()):
 
 shell.script = 'python script to run (if any)'
 shell.args = dict(help='arguments to pass to the script', nargs='*')
+sap.script(shell)

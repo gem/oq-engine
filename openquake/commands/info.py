@@ -86,7 +86,6 @@ choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
            'extracts', 'parameters', 'sources', 'mfds']
 
 
-@sap.script
 def info(what, report: bool = False):
     """
     Give information about the passed keyword or filename
@@ -167,3 +166,4 @@ def info(what, report: bool = False):
 
 info.what = 'filename or one of %s' % ', '.join(choices)
 info.report = 'build rst report from job.ini file or zip archive'
+sap.script(info)

@@ -94,7 +94,6 @@ def compare_rups(calc_1, calc_2):
         _print_diff(a1, a2, df1.index, df2.index, col)
 
 
-@sap.script
 def compare(what, imt, calc_ids: int,
             files: bool,
             *,
@@ -180,3 +179,4 @@ compare.samplesites = 'sites to sample (or fname with site IDs)'
 compare.rtol = 'relative tolerance'
 compare.atol = 'absolute tolerance'
 compare.threshold = 'ignore the hazard curves below it'
+sap.script(compare)

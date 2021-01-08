@@ -24,7 +24,6 @@ from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.engine import engine
 
 
-@sap.script
 def reaggregate(calc_id: int, aggregate_by):
     """Re-run the postprocessing after an event based risk calculation"""
     parent = util.read(calc_id)
@@ -49,3 +48,4 @@ def reaggregate(calc_id: int, aggregate_by):
 
 reaggregate.calc_id = 'ID of the risk calculation'
 reaggregate.aggregate_by = 'comma-separated list of tag names'
+sap.script(reaggregate)

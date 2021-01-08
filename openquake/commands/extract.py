@@ -22,7 +22,6 @@ from openquake.calculators.extract import Extractor, WebExtractor
 
 
 # `oq extract` is tested in the demos
-@sap.script
 def extract(what,
             calc_id: int = -1,
             webapi: bool = False,
@@ -60,3 +59,4 @@ extract.calc_id = 'number of the calculation'
 extract.webapi = 'if passed, use the (possibly remote) WebAPI'
 extract.local = 'if passed, use the local WebAPI'
 extract.extract_dir = 'directory where to extract'
+sap.script(extract)

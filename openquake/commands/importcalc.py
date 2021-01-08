@@ -24,7 +24,6 @@ from openquake.engine import engine
 from openquake.server import dbserver
 
 
-@sap.script
 def importcalc(calc_id):
     """
     Import a remote calculation into the local database. server, username
@@ -57,3 +56,4 @@ def importcalc(calc_id):
 
 
 importcalc.calc_id = 'calculation ID or pathname'
+sap.script(importcalc)

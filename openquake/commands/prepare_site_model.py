@@ -82,7 +82,6 @@ def check_fname(fname, kind, forbidden):
                         % (kind, forbidden))
 
 
-@sap.script
 def prepare_site_model(
         vs30_csv,
         z1pt0: bool = False,
@@ -190,4 +189,5 @@ prepare_site_model.grid_spacing = (
     'grid spacing in km (the default 0 means no grid)')
 prepare_site_model.assoc_distance = (
     'sites over this distance are discarded')
-prepare_site_modeloutput = 'output file'
+prepare_site_model.output = 'output file'
+sap.script(prepare_site_model)
