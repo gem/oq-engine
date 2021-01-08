@@ -603,7 +603,8 @@ hazard_uhs-std.csv
 
     def test_case_46(self):
         # SMLT with applyToBranches
-        self.assert_curves_ok(["hazard_curve-mean.csv"], case_46.__file__)
+        self.assert_curves_ok(["hazard_curve-mean.csv"], case_46.__file__,
+                               delta=1E-5)
 
     def test_case_47(self):
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
