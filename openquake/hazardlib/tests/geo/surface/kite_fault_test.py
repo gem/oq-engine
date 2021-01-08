@@ -29,7 +29,7 @@ BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
 
 
-def ppp(profiles: list, smsh: KiteSurface, title: str = ''):
+def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
 
     """
     Plots the 3D mesh
@@ -56,12 +56,13 @@ def ppp(profiles: list, smsh: KiteSurface, title: str = ''):
         ax.plot(coo[:, 0], coo[:, 1], coo[:, 2]*scl, 'og', lw=1, markersize=3)
 
     # Plotting mesh
-    for i in range(smsh.mesh.lons.shape[0]):
-        ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :],
-                smsh.mesh.depths[i, :]*scl, '-r', lw=0.5)
-    for i in range(smsh.mesh.lons.shape[1]):
-        ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
-                smsh.mesh.depths[:, i]*scl, '-r', lw=0.5)
+    if smsh is not None:
+        for i in range(smsh.mesh.lons.shape[0]):
+            ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :],
+                    smsh.mesh.depths[i, :]*scl, '-r', lw=0.5)
+        for i in range(smsh.mesh.lons.shape[1]):
+            ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
+                    smsh.mesh.depths[:, i]*scl, '-r', lw=0.5)
 
     plt.title(title)
     ax.invert_zaxis()
@@ -255,7 +256,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         idl = False
         alg = False
         self.smsh = KiteSurface.from_profiles(self.profiles, self.v_sampl,
-                                                   self.h_sampl, idl, alg)
+                                             self.h_sampl, idl, alg)
 
     def test_h_spacing(self):
         """ Check v-spacing: two misaligned profiles - no top alignment """
@@ -277,7 +278,9 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         self.assertTrue(np.all(tmp < 0.02))
 
         if PLOTTING:
-            ppp(self.profiles, srfc)
+            title = 'Simple case: top alignment '
+            title += '(IdealisedSimpleDisalignedMeshTest)'
+            ppp(self.profiles, srfc, title)
 
     def test__spacing(self):
         """ Check v-spacing: two misaligned profiles - no top alignment """
@@ -315,7 +318,8 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         self.assertTrue(np.all(~np.isnan(smsh.lons[0, :])))
 
         if PLOTTING:
-            title = 'Simple case: No top alignment'
+            title = 'Simple case: No top alignment '
+            title += '(IdealisedAsimmetricMeshTest)'
             ppp(self.profiles, srfc, title)
 
     def test_mesh_creation_with_alignment(self):
@@ -330,7 +334,28 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
 
         if PLOTTING:
             title = 'Simple case: Top alignment'
+            title += '(IdealisedAsimmetricMeshTest)'
             ppp(self.profiles, srfc, title)
+
+    def test_get_surface_projection(self):
+        """ """
+        h_sampl = 2.5
+        v_sampl = 2.5
+        idl = False
+        alg = True
+        srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
+                                         idl, alg)
+        lons, lats = srfc.surface_projection
+    def test_get_width(self):
+        """ Test the calculation of the width """
+        h_sampl = 2.5
+        v_sampl = 2.5
+        idl = False
+        alg = True
+        srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
+                                         idl, alg)
+        width = srfc.get_width()
+        np.testing.assert_almost_equal(37.2982758, width)
 
 
 class IdealizedATest(unittest.TestCase):
@@ -346,7 +371,7 @@ class IdealizedATest(unittest.TestCase):
         idl = False
         alg = False
         smsh = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
-                                              idl, alg)
+                                         idl, alg)
         self.assertTrue(np.all(~np.isnan(smsh.mesh.lons[0, :])))
 
         if PLOTTING:
@@ -380,7 +405,7 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         idl = False
         alg = False
         smsh = KiteSurface.from_profiles(self.profiles, sampling,
-                                              sampling, idl, alg)
+                                         sampling, idl, alg)
         idx = np.isfinite(smsh.mesh.lons[:, :])
         self.assertEqual(np.sum(np.sum(idx)), 202)
 

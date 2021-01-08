@@ -112,7 +112,10 @@ def calc_average(pointsources):
         acc['upper_seismogenic_depth'].append(src.upper_seismogenic_depth)
         acc['lower_seismogenic_depth'].append(src.lower_seismogenic_depth)
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
-    return {key: numpy.average(acc[key], weights=rates) for key in acc}
+    dic = {key: numpy.average(acc[key], weights=rates) for key in acc}
+    dic['lon'] = numpy.round(dic['lon'], 6)
+    dic['lat'] = numpy.round(dic['lat'], 6)
+    return dic
 
 
 class PointSource(ParametricSeismicSource):

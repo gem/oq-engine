@@ -20,6 +20,7 @@ import os
 import csv
 import tempfile
 import numpy  # this is needed by the doctests, don't remove it
+import pandas
 from openquake.baselib.node import scientificformat
 
 FIVEDIGITS = '%.5E'
@@ -97,7 +98,7 @@ def _header(fields, renamedict):
     return fields
 
 
-def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
+def write_csv(dest, data, sep=',', fmt='%.6E', header=(), comment=None,
               renamedict=None):
     """
     :param dest: None, file, filename or io.StringIO instance
@@ -132,7 +133,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
     else:
         autoheader = build_header(data.dtype)
 
-    nfields = len(autoheader) or len(data[0])
+    nfields = len(autoheader) or len(header) or len(data[0])
     if comment:
         w.writerow(['#'] + [''] * (nfields - 2) + [comment])
 
@@ -174,17 +175,28 @@ class CsvWriter(object):
         self.fmt = fmt
         self.fnames = set()
 
-    def save(self, data, fname, header=None, comment=None, renamedict=None):
+    def save(self, data, fname, header=(), comment=None, renamedict=None):
         """
         Save data on fname.
 
-        :param data: numpy array or list of lists
+        :param data: numpy array, list of lists or pandas DataFrame
         :param fname: path name
         :param header: header to use
         :param comment: optional dictionary to be converted in a comment
         :param renamedict: a dictionary for renaming the columns
         """
-        write_csv(fname, data, self.sep, self.fmt, header, comment, renamedict)
+        if isinstance(data, pandas.DataFrame):
+            if comment is None:
+                data.to_csv(fname, index=False, float_format=self.fmt,
+                            line_terminator='\r\n')
+            else:
+                write_csv(fname, [], self.sep, self.fmt, list(data.columns),
+                          comment=comment)
+                data.to_csv(fname, index=False, float_format=self.fmt,
+                            line_terminator='\r\n', header=False, mode='a')
+        else:
+            write_csv(fname, data, self.sep, self.fmt, header, comment,
+                      renamedict)
         self.fnames.add(getattr(fname, 'name', fname))
 
     def save_block(self, data, dest):

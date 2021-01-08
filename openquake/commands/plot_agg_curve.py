@@ -38,7 +38,7 @@ def make_figure(curves):
     return plt
 
 
-@sap.script
+@sap.Script
 def plot_ac(calc_id):
     """
     Aggregate loss curves plotter.

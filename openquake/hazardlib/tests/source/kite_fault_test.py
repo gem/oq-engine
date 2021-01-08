@@ -19,14 +19,16 @@ import unittest
 import matplotlib.pyplot as plt
 
 from matplotlib import animation
-from mpl_toolkits.mplot3d import Axes3D  # This is needed
+from mpl_toolkits.mplot3d import Axes3D  # this is needed
 from openquake.hazardlib.const import TRT
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tests import assert_pickleable
 from openquake.hazardlib.scalerel import PeerMSR, WC1994
+from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
-from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from openquake.hazardlib.mfd import TruncatedGRMFD
 
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 
@@ -48,7 +50,7 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         :param aspect_ratio:
             The rupture aspect ratio
         :param profiles:
-            A list of profiles used to build the fault surface 
+            A list of profiles used to build the fault surface
         """
 
         # Set the fault source parameter
@@ -131,6 +133,53 @@ class _BaseFaultSourceTestCase(unittest.TestCase):
         fname = '/tmp/kite_fault_source_{:s}.html'.format(lab)
         with open(fname, "w") as f:
             print(anim.to_html5_video(), file=f)
+
+
+class FromSimpleFaultDataTestCase(unittest.TestCase):
+    TRT = TRT.ACTIVE_SHALLOW_CRUST
+    RAKE = 0
+    TOM = PoissonTOM(1.)
+
+    def test01(self):
+        source_id = name = 'test-source'
+        trt = self.TRT
+        rake = self.RAKE
+        rupture_mesh_spacing = 2.5
+        upper_seismogenic_depth = 0
+        lower_seismogenic_depth = 4.2426406871192848
+        magnitude_scaling_relationship = PeerMSR()
+        rupture_aspect_ratio = 2.0
+        tom = self.TOM
+        fault_trace = Line([Point(0.0, 0.0),
+                            Point(0.0, 0.0359728811758),
+                            Point(0.0190775080917, 0.0550503815181),
+                            Point(0.03974514139, 0.0723925718855)])
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.8, max_mag=6.2,
+                             bin_width=0.1)
+        floating_x_step = 10.0
+        floating_y_step = 5.0
+        dip = 90.0
+        src = KiteFaultSource.as_simple_fault(source_id, name,
+                trt, mfd, rupture_mesh_spacing,
+                magnitude_scaling_relationship, rupture_aspect_ratio,
+                tom, upper_seismogenic_depth,
+                lower_seismogenic_depth, fault_trace, dip, rake,
+                floating_x_step, floating_y_step)
+
+        sfs = SimpleFaultSurface.from_fault_data(fault_trace,
+                                                 upper_seismogenic_depth,
+                                                 lower_seismogenic_depth,
+                                                 dip, rupture_mesh_spacing)
+
+        msh = Mesh(lons=numpy.array([0.02]), lats=numpy.array([0.03]), 
+                   depths=numpy.array([0.0]))
+
+        rrup_sf = sfs.get_min_distance(msh)
+        rrup_kf = src.surface.get_min_distance(msh)
+        numpy.testing.assert_almost_equal(rrup_sf, rrup_kf, decimal=1)
+
+        if MAKE_PICTURES:
+            ppp(src.profiles, src.surface)
 
 
 class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):

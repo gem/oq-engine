@@ -37,7 +37,8 @@ def getdata(what, calc_ids, sitecol, sids):
         numpy.testing.assert_array_equal(
             extractor.get('sitecol')[['lon', 'lat']], sitecol[['lon', 'lat']])
         if what == 'hcurves':
-            numpy.testing.assert_array_equal(oq.imtls.array, imtls.array)
+            for imt in imtls:
+                numpy.testing.assert_array_equal(oq.imtls[imt], imtls[imt])
         elif what == 'hmaps':
             numpy.testing.assert_array_equal(oq.poes, poes)
         arrays.append(extractor.get(what + '?kind=mean').mean[sids])
@@ -93,7 +94,7 @@ def compare_rups(calc_1, calc_2):
         _print_diff(a1, a2, df1.index, df2.index, col)
 
 
-@sap.script
+@sap.Script
 def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             threshold=1E-2):
     """

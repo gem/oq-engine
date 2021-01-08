@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="ep"
+    >
+        <description>
+            Exposure Model for Liquefaction Test
+        </description>
+        <conversions>
+          <costTypes>
+            <costType name="structural" unit="USD" type="per_asset"/>
+          </costTypes>
+        </conversions>
+        <occupancyPeriods/>
+        <assets>
+            exposure.csv
+        </assets>
+    </exposureModel>
+</nrml>

@@ -29,13 +29,14 @@ import pandas
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
     get_array, group_array, fast_agg, fast_agg3)
+from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
-from openquake.calculators.extract import extract, FLOAT, INT
+from openquake.calculators.extract import extract
 
 F32 = numpy.float32
 U32 = numpy.uint32
@@ -91,7 +92,7 @@ def form(value):
 
 def rst_table(data, header=None, fmt=None):
     """
-    Build a .rst table from a matrix.
+    Build a .rst table from a matrix or a DataFrame
     
     >>> tbl = [['a', 1], ['b', 2]]
     >>> print(rst_table(tbl, header=['Name', 'Value']))
@@ -102,6 +103,9 @@ def rst_table(data, header=None, fmt=None):
     b    2    
     ==== =====
     """
+    if isinstance(data, pandas.DataFrame):
+        header = header or list(data.columns)
+        data = numpy.array(data)
     if header is None and hasattr(data, '_fields'):
         header = data._fields
     try:
@@ -304,7 +308,7 @@ def avglosses_data_transfer(token, dstore):
     oq = dstore['oqparam']
     N = len(dstore['assetcol'])
     R = dstore['full_lt'].get_num_rlzs()
-    L = len(dstore.get_attr('risk_model', 'loss_types'))
+    L = len(dstore.get_attr('crm', 'loss_types'))
     ct = oq.concurrent_tasks
     size_bytes = N * R * L * 8 * ct  # 8 byte floats
     return (
@@ -323,17 +327,20 @@ def view_totlosses(token, dstore):
     """
     oq = dstore['oqparam']
     tot_losses = dstore['avg_losses-rlzs'][()].sum(axis=0)
-    return rst_table(tot_losses.view(oq.loss_dt()), fmt='%.6E')
+    return rst_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 
 def _portfolio_loss(dstore):
     R = dstore['full_lt'].get_num_rlzs()
-    array = dstore['event_loss_table/,'][()]
-    rlzs = dstore['events']['rlz_id'][array['event_id']]
-    L, = array.dtype['loss'].shape  # loss has shape L
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    eids = df.pop('event_id').to_numpy()
+    loss = numpy.array(df)
+    rlzs = dstore['events']['rlz_id'][eids]
+    L = loss.shape[1]
     data = numpy.zeros((R, L), F32)
-    for row, rlz in zip(array, rlzs):
-        data[rlz] += row['loss']
+    for row, rlz in zip(loss, rlzs):
+        data[rlz] += row
     return data
 
 
@@ -367,7 +374,10 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     G = getattr(oq, 'number_of_ground_motion_fields', 1)
     R = dstore['full_lt'].get_num_rlzs()
-    loss = dstore['event_loss_table/,']['loss']  # shape (E, L)
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    df = dstore.read_df('agg_loss_table', ['agg_id', 'event_id'],
+                        dict(agg_id=K))
+    loss = numpy.array(df)
     means = loss.sum(axis=0) / R / G
     sums = [loss[idxs].sum(axis=0) for idxs in _indices(len(loss), 10)]
     errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
@@ -382,9 +392,10 @@ def portfolio_damage_error(dstore, avg=None):
     """
     df = dstore.read_df('dd_data', 'eid')
     dset = dstore.getitem('damages-rlzs')
+    dic = get_shape_descr(dset.attrs['json'])
     A, R, L, D = dset.shape
-    dmg_states = dset.attrs['dmg_state']
-    loss_types = dset.attrs['loss_type']
+    dmg_states = dic['dmg_state']
+    loss_types = dic['loss_type']
 
     sums = numpy.zeros((10, L, D-1))
     for i in range(10):
@@ -429,10 +440,10 @@ def view_portfolio_damage(token, dstore):
     """
     # dimensions assets, stat, loss_types, dmg_state
     if 'damages-stats' in dstore:
-        attrs = dstore.getitem('damages-stats').attrs
+        attrs = get_shape_descr(dstore['damages-stats'].attrs['json'])
         arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
     else:
-        attrs = dstore.getitem('damages-rlzs').attrs
+        attrs = get_shape_descr(dstore['damages-rlzs'].attrs['json'])
         arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))
     rows = [[lt] + list(row) for lt, row in zip(attrs['loss_type'], arr)]
     return rst_table(rows, ['loss_type'] + list(attrs['dmg_state']))
@@ -665,6 +676,23 @@ def view_task_ebrisk(token, dstore):
     return msg
 
 
+@view.add('avg_gmf')
+def view_avg_gmf(token, dstore):
+    """
+    Compute the average GMF from gmf_data
+    """
+    N = len(dstore['sitecol'].complete)
+    weights = dstore['weights'][:]
+    rlzs = dstore['events']['rlz_id']
+    gmf_df = dstore.read_df('gmf_data', 'sid')
+    cols = [col for col in gmf_df.columns if col not in 'sid eid']
+    avg_df = pandas.DataFrame({col: numpy.zeros(N, F32) for col in cols})
+    for sid, df in gmf_df.groupby(gmf_df.index):
+        for col in cols:
+            avg_df[col][sid] = df[col] @ weights[rlzs[df.eid.to_numpy()]]
+    return avg_df
+
+
 @view.add('global_hazard')
 def view_global_hazard(token, dstore):
     """
@@ -685,7 +713,10 @@ def view_global_poes(token, dstore):
     """
     tbl = []
     imtls = dstore['oqparam'].imtls
-    header = ['et_id'] + [str(poe) for poe in imtls.array]
+    header = ['et_id']
+    for imt in imtls:
+        for poe in imtls[imt]:
+            header.append(str(poe))
     for grp in sorted(dstore['poes']):
         poes = dstore['poes/' + grp]
         nsites = len(poes)
@@ -826,24 +857,6 @@ def view_disagg_times(token, dstore):
         tbl.append((duration, task_no) + tuple(data[task_no]))
     header = ('duration', 'task_no') + data.dtype.names
     return rst_table(sorted(tbl), header=header)
-
-
-@view.add('elt')
-def view_elt(token, dstore):
-    """
-    Display the event loss table averaged by event
-    """
-    oq = dstore['oqparam']
-    R = len(dstore['full_lt'].rlzs)
-    dic = group_array(dstore['event_loss_table/,'][()], 'rlzi')
-    header = oq.loss_dt().names
-    tbl = []
-    for rlzi in range(R):
-        if rlzi in dic:
-            tbl.append(dic[rlzi]['loss'].mean(axis=0))
-        else:
-            tbl.append([0.] * len(header))
-    return rst_table(tbl, header)
 
 
 @view.add('bad_ruptures')

@@ -91,7 +91,7 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
 # collapse the ruptures, then _get_poes will be called less times
 def _get_poes(mean_std, loglevels, truncation_level):
     mean, stddev = mean_std  # shape (N, M) each
-    out = numpy.zeros((len(mean), len(loglevels.array)))  # shape (N, L)
+    out = numpy.zeros((len(mean), loglevels.size))  # shape (N, L)
     lvl = 0
     for m, imt in enumerate(loglevels):
         for iml in loglevels[imt]:
@@ -125,7 +125,7 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
     # C - Number of contexts
     # L - Number of intensity measure levels
     mean, stddev = mean_std  # shape (C, M)
-    C, L = len(mean), len(loglevels.array)
+    C, L = len(mean), loglevels.size
     for ctx in ctxs:
         assert len(ctx.sids) == 1  # 1 site
     M = len(loglevels)
@@ -212,7 +212,12 @@ class MetaGSIM(abc.ABCMeta):
                     if missing:
                         raise ValueError('Unknown distance %s in %s' %
                                          (missing, name))
-        return super().__new__(meta, name, bases, dic)
+        cls = super().__new__(meta, name, bases, dic)
+        ancestors = [vars(ancestor) for ancestor in cls.mro()[1:-1]]
+        if any('get_mean_std1' in ancestor for ancestor in ancestors):
+            if 'get_mean_and_stddevs' in dic and 'get_mean_std1' not in dic:
+                raise TypeError('%s.get_mean_std1 is not defined!' % name)
+        return cls
 
 
 @functools.total_ordering
@@ -618,7 +623,7 @@ class GMPE(GroundShakingIntensityModel):
             arr = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
             shp = list(mean_std[0].shape)  # (N, M)
-            shp[1] = len(loglevels.array)  # L
+            shp[1] = loglevels.size  # L
             arr = numpy.zeros(shp)
             for f, w in zip(self.mixture_model["factors"],
                             self.mixture_model["weights"]):

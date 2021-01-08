@@ -42,6 +42,9 @@ vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
 
+FLOAT = (float, numpy.float32, numpy.float64)
+INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
+
 
 def maybe_encode(value):
     """
@@ -401,7 +404,43 @@ def array_of_vstr(lst):
     return numpy.array(ls, vstr)
 
 
-def set_shape_attrs(hdf5file, dsetname, kw):
+def dumps(dic):
+    """
+    Dump in json
+    """
+    new = {}
+    for k, v in dic.items():
+        if k.startswith('_') or v is None:
+            pass
+        elif isinstance(v, (list, tuple)) and v:
+            if isinstance(v[0], INT):
+                new[k] = [int(x) for x in v]
+            elif isinstance(v[0], FLOAT):
+                new[k] = [float(x) for x in v]
+            else:
+                new[k] = json.dumps(v)
+        elif isinstance(v, FLOAT):
+            new[k] = float(v)
+        elif isinstance(v, INT):
+            new[k] = int(v)
+        elif hasattr(v, 'tolist'):
+            lst = v.tolist()
+            if lst and isinstance(lst[0], bytes):
+                new[k] = json.dumps(decode_array(v))
+            else:
+                new[k] = json.dumps(lst)
+        elif hasattr(v, '__dict__'):
+            new[k] = {cls2dotname(v.__class__): dumps(vars(v))}
+        elif isinstance(v, dict):
+            new[k] = dumps(v)
+        elif isinstance(v, str):
+            new[k] = '"%s"' % v
+        else:
+            new[k] = v
+    return "{%s}" % ','.join('\n"%s": %s' % it for it in new.items())
+
+
+def set_shape_descr(hdf5file, dsetname, kw):
     """
     Set shape attributes on a dataset (and possibly other attributes)
     """
@@ -410,11 +449,29 @@ def set_shape_attrs(hdf5file, dsetname, kw):
     if len(kw) < S:
         raise ValueError('The dataset %s has %d dimensions but you passed %d'
                          ' axis' % (dsetname, S, len(kw)))
-    dset.attrs['shape_descr'] = encode(list(kw))[:S]
-    for k, v in kw.items():
-        dset.attrs[k] = v
-    for d, k in enumerate(dset.attrs['shape_descr']):
-        dset.dims[d].label = k  # set dimension label
+    keys = list(kw)
+    fields, extra = keys[:S], keys[S:]
+    dic = dict(shape_descr=fields)
+    for f in fields:
+        dic[f] = kw[f]
+    dset.attrs['json'] = dumps(dic)
+    for e in extra:
+        dset.attrs[e] = kw[e]
+
+
+def get_shape_descr(json_string):
+    """
+    :param json_string:
+        JSON string containing the shape_descr
+    :returns:
+        a dictionary field -> values extracted from the shape_descr
+    """
+    dic = json.loads(json_string)
+    for field in dic['shape_descr']:
+        val = dic[field]
+        if isinstance(val, INT):
+            dic[field] = range(val)
+    return dic
 
 
 class ArrayWrapper(object):
@@ -434,12 +491,8 @@ class ArrayWrapper(object):
             return obj
         elif hasattr(obj, 'attrs'):  # is a dataset
             array, attrs = obj[()], dict(obj.attrs)
-            shape_descr = attrs.get('shape_descr', [])
-            for descr in map(decode, shape_descr):
-                val = attrs[descr]
-                if isinstance(val, numpy.int64):
-                    val = range(val)
-                attrs[descr] = list(val)
+            if 'json' in attrs:
+                attrs.update(get_shape_descr(attrs.pop('json')))
         else:  # assume obj is an array
             array, attrs = obj, {}
         return cls(array, attrs, (extra,))
@@ -517,11 +570,11 @@ class ArrayWrapper(object):
                 dic[k] = v
         return toml.dumps(dic)
 
-    def to_table(self):
+    def to_dframe(self):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
         T1, ..., TN which are list of tags of lenghts D1, ... DN into
-        a table with rows (tag1, ... tagN, extra1, ... extraM) of maximum
+        a DataFrame with rows (tag1, ... tagN, extra1, ... extraM) of maximum
         length D1 * ... * DN. Zero values are discarded.
 
         >>> from pprint import pprint
@@ -533,12 +586,17 @@ class ArrayWrapper(object):
         >>> arr[0, 1] = 5000
         >>> arr[1, 0] = 500
         >>> aw = ArrayWrapper(arr, dic)
-        >>> pprint(aw.to_table())
-        [('taxonomy', 'occupancy', 'value'),
-         ('RC', 'RES', 2000.0),
-         ('RC', 'IND', 5000.0),
-         ('WOOD', 'RES', 500.0)]
+        >>> pprint(aw.to_dframe())
+          taxonomy occupancy   value
+        0       RC       RES  2000.0
+        1       RC       IND  5000.0
+        2     WOOD       RES   500.0
         """
+        if hasattr(self, 'array'):
+            names = self.array.dtype.names
+            if names:  # wrapper over a structured array
+                return pandas.DataFrame({n: self[n] for n in names})
+
         if hasattr(self, 'json'):
             vars(self).update(json.loads(self.json))
         shape = self.shape
@@ -564,12 +622,12 @@ class ArrayWrapper(object):
         for idx, values in zip(itertools.product(*idxs),
                                itertools.product(*tags)):
             val = self.array[idx]
-            if tup:
+            if isinstance(val, numpy.ndarray):
                 if val.sum():
                     out.append(values + tuple(val))
-            elif val:
+            elif val:  # is a scalar
                 out.append(values + (val,))
-        return [fields] + out
+        return pandas.DataFrame(out, columns=fields)
 
     def to_dict(self):
         """
@@ -738,3 +796,25 @@ def save_npz(obj, path):
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=UserWarning)
         numpy.savez_compressed(path, **a)
+
+# #################### obj <-> json ##################### #
+
+
+def obj_to_json(obj):
+    """
+    :param obj: a Python object with a .__dict__
+    :returns: a JSON string
+    """
+    return dumps({cls2dotname(obj.__class__): vars(obj)})
+
+
+def json_to_obj(js):
+    """
+    :param js: a JSON string with the form {"cls": {"arg1": ...}}
+    :returns: an instance cls(arg1, ...)
+    """
+    [(dotname, attrs)] = json.loads(js).items()
+    cls = dotname2cls(dotname)
+    obj = cls.__new__(cls)
+    vars(obj).update(attrs)
+    return obj

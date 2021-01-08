@@ -20,7 +20,7 @@ from openquake.baselib import sap
 from openquake.commonlib import util
 
 
-@sap.script
+@sap.Script
 def plot_pyro(calc_id=-1):
     """
     Plot the pyroclastic cloud and the assets

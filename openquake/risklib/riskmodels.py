@@ -23,6 +23,7 @@ import functools
 import collections
 from urllib.parse import unquote_plus
 import numpy
+import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
@@ -184,7 +185,7 @@ def get_values(loss_type, assets, time_event=None):
         a numpy array with the values for the given assets, depending on the
         loss_type.
     """
-    if loss_type == 'occupants':
+    if loss_type == 'occupants' and time_event:
         return assets['occupants_%s' % time_event]
     else:
         return assets['value-' + loss_type]
@@ -290,40 +291,6 @@ class RiskModel(object):
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values)
 
-    def event_based_risk(self, loss_type, assets, gmvs, eids, epsilons):
-        """
-        :param str loss_type:
-            the loss type considered
-        :param assets:
-           a list of assets on the same site and with the same taxonomy
-        :param gmvs_eids:
-           a pair (gmvs, eids) with E values each
-        :param epsilons:
-           a matrix of epsilons of shape (A, E) (or an empty tuple)
-        :returns:
-            an array of loss ratios of shape (A, E)
-        """
-        E = len(gmvs)
-        A = len(assets)
-        loss_ratios = numpy.zeros((A, E), F32)
-        vf = self.risk_functions[loss_type, 'vulnerability']
-        means, covs, idxs = vf.interpolate(gmvs)
-        if len(means) == 0:  # all gmvs are below the minimum imls, 0 ratios
-            pass
-        elif self.ignore_covs or covs.sum() == 0 or len(epsilons) == 0:
-            # the ratios are equal for all assets
-            ratios = vf.sample(means, covs, idxs, None)  # right shape
-            for a in range(A):
-                loss_ratios[a, idxs] = ratios
-        else:
-            # take into account the epsilons
-            for a, asset in enumerate(assets):
-                loss_ratios[a, idxs] = vf.sample(
-                    means, covs, idxs, epsilons[a])
-        return loss_ratios
-
-    ebrisk = event_based_risk
-
     def classical_bcr(self, loss_type, assets, hazard, eids=None, eps=None):
         """
         :param loss_type: the loss type
@@ -369,16 +336,6 @@ class RiskModel(object):
         :returns: an array of shape (A, E)
         """
         values = get_values(loss_type, assets, self.time_event)
-        ok = ~numpy.isnan(values)
-        if not ok.any():
-            # there are no assets with a value
-            return numpy.zeros(0)
-        # there may be assets without a value
-        missing_value = not ok.all()
-        if missing_value:
-            assets = assets[ok]
-            epsilons = epsilons[ok]
-
         E = len(eids)
 
         # a matrix of A x E elements
@@ -398,7 +355,7 @@ class RiskModel(object):
         loss_matrix[:, :] = (loss_ratio_matrix.T * values).T
         return loss_matrix
 
-    scenario = scenario_risk
+    scenario = ebrisk = event_based_risk = scenario_risk
 
     def scenario_damage(self, loss_type, assets, gmvs, eids=None, eps=None):
         """
@@ -431,10 +388,11 @@ class RiskModel(object):
         ffl = self.risk_functions[loss_type, 'fragility']
         hazard_imls = self.hazard_imtls[ffl.imt]
         debug = False  # assets['id'] == b'a5' to debug case_master
+        rtime = self.risk_investigation_time or self.investigation_time
         damage = scientific.classical_damage(
             ffl, hazard_imls, hazard_curve,
             investigation_time=self.investigation_time,
-            risk_investigation_time=self.risk_investigation_time,
+            risk_investigation_time=rtime,
             steps_per_interval=self.steps_per_interval, debug=debug)
         res = numpy.array([a['number'] * damage for a in assets])
         return res
@@ -462,7 +420,6 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     extra['risk_investigation_time'] = oqparam.risk_investigation_time
     extra['lrem_steps_per_interval'] = oqparam.lrem_steps_per_interval
     extra['steps_per_interval'] = oqparam.steps_per_interval
-    extra['ignore_covs'] = oqparam.ignore_covs
     extra['time_event'] = oqparam.time_event
     if oqparam.calculation_mode == 'classical_bcr':
         extra['interest_rate'] = oqparam.interest_rate
@@ -491,44 +448,32 @@ class CompositeRiskModel(collections.abc.Mapping):
     """
     @classmethod
     # TODO: reading new-style consequences is missing
-    def read(cls, dstore):
+    def read(cls, dstore, oqparam):
         """
         :param dstore: a DataStore instance
         :returns: a :class:`CompositeRiskModel` instance
         """
-        oqparam = dstore['oqparam']
-        crm = dstore.getitem('risk_model')
         risklist = RiskFuncList()
-        risklist.limit_states = crm.attrs['limit_states']
-        for quoted_id, rm in crm.items():
-            riskid = unquote_plus(quoted_id)
-            for lt_kind in rm:
-                lt, kind = lt_kind.rsplit('-', 1)
-                rf = dstore['risk_model/%s/%s' % (quoted_id, lt_kind)]
-                if kind == 'fragility':  # rf is a FragilityFunctionList
-                    try:
-                        rf = rf.build(
-                            risklist.limit_states,
-                            oqparam.continuous_fragility_discretization,
-                            oqparam.steps_per_interval)
-                    except ValueError as err:
-                        raise ValueError('%s: %s' % (riskid, err))
+        risklist.limit_states = dstore.get_attr('crm', 'limit_states')
+        df = dstore.read_df('crm', ['riskid', 'loss_type'])
+        for rf_json in df.riskfunc:
+            rf = hdf5.json_to_obj(rf_json)
+            lt = rf.loss_type
+            if rf.kind == 'fragility':  # rf is a FragilityFunctionList
+                risklist.append(rf)
+            else:  # rf is a vulnerability function
+                rf.seed = oqparam.master_seed
+                rf.init()
+                if lt.endswith('_retrofitted'):
+                    # strip _retrofitted, since len('_retrofitted') = 12
+                    rf.loss_type = lt[:-12]
+                    rf.kind = 'vulnerability_retrofitted'
+                else:
                     rf.loss_type = lt
-                    rf.kind = kind
-                    risklist.append(rf)
-                else:  # rf is a vulnerability function
-                    rf.seed = oqparam.master_seed
-                    rf.init()
-                    if lt.endswith('_retrofitted'):
-                        # strip _retrofitted, since len('_retrofitted') = 12
-                        rf.loss_type = lt[:-12]
-                        rf.kind = 'vulnerability_retrofitted'
-                    else:
-                        rf.loss_type = lt
-                        rf.kind = 'vulnerability'
-                    risklist.append(rf)
+                    rf.kind = 'vulnerability'
+                risklist.append(rf)
         crm = CompositeRiskModel(oqparam, risklist)
-        crm.tmap = ast.literal_eval(dstore.get_attr('risk_model', 'tmap'))
+        crm.tmap = ast.literal_eval(dstore.get_attr('crm', 'tmap'))
         return crm
 
     def __init__(self, oqparam, risklist, consdict=()):
@@ -555,6 +500,8 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def init(self):
         oq = self.oqparam
+        if self.risklist:
+            oq.set_risk_imts(self.risklist)
         # extract the consequences from the risk models, if any
         if 'losses_by_taxonomy' not in self.consdict:
             self.consdict['losses_by_taxonomy'] = {}
@@ -599,8 +546,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     vf.seed = oq.random_seed
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oq, risk_functions=vfs)
+        self.primary_imtls = oq.get_primary_imtls()
         self.imtls = oq.imtls
-        imti = {imt: i for i, imt in enumerate(oq.imtls)}
         self.lti = {}  # loss_type -> idx
         self.covs = 0  # number of coefficients of variation
         # build a sorted list with all the loss_types contained in the model
@@ -618,6 +565,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     self.distributions.add(rf.distribution_name)
                 if hasattr(rf, 'init'):  # vulnerability function
                     rf.seed = oq.master_seed  # setting the seed
+                    if oq.ignore_covs:
+                        rf.covs = numpy.zeros_like(rf.covs)
                     rf.init()
                 # save the number of nonzero coefficients of variation
                 if hasattr(rf, 'covs') and rf.covs.any():
@@ -628,16 +577,18 @@ class CompositeRiskModel(collections.abc.Mapping):
                 raise ValidationError(
                     'Missing vulnerability function for taxonomy %s and loss'
                     ' type %s' % (riskid, ', '.join(missing)))
-            rm.imti = {lt: imti[rm.risk_functions[lt, kind].imt]
-                       for lt, kind in rm.risk_functions
-                       if kind in 'vulnerability fragility'}
+            rm.imt_by_lt = {}  # dictionary loss_type -> imt
+            for lt, kind in rm.risk_functions:
+                if kind in 'vulnerability fragility':
+                    imt = rm.risk_functions[lt, kind].imt
+                    rm.imt_by_lt[lt] = imt
         self.curve_params = self.make_curve_params()
         iml = collections.defaultdict(list)
         for riskid, rm in self._riskmodels.items():
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'imt'):
                     iml[rf.imt].append(rf.imls[0])
-        self.min_iml = {imt: min(iml[imt]) for imt in iml}
+        self.min_iml = {imt: min(iml[imt] or [0]) for imt in self.imtls}
 
     def eid_dmg_dt(self):
         """
@@ -647,12 +598,12 @@ class CompositeRiskModel(collections.abc.Mapping):
         D = len(self.damage_states)
         return numpy.dtype([('eid', U32), ('dmg', (F32, (L, D)))])
 
-    def asset_damage_dt(self, approx_ddd):
+    def asset_damage_dt(self, continuous_dd):
         """
         :returns: a list [('aid', U32), ('eid', U32), ('lid', U8),
                           ('moderate_0', U32), ...]
         """
-        dt = F32 if approx_ddd else U32
+        dt = F32 if continuous_dd else U32
         dtlist = [('aid', U32), ('eid', U32), ('lid', U8)]
         for dmg in self.damage_states[1:]:
             dtlist.append((dmg, dt))
@@ -770,7 +721,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 rm.compositemodel = new
         return new
 
-    def __toh5__(self):
+    def get_attrs(self):
         loss_types = hdf5.array_of_vstr(self.loss_types)
         limit_states = hdf5.array_of_vstr(self.damage_states[1:]
                                           if self.damage_states else [])
@@ -781,13 +732,20 @@ class CompositeRiskModel(collections.abc.Mapping):
         if hasattr(rf, 'loss_ratios'):
             for lt in self.loss_types:
                 attrs['loss_ratios_' + lt] = rf.loss_ratios[lt]
-        dic = self._riskmodels.copy()
-        for k, v in self.consdict.items():
-            if len(v):
-                dic[k] = v
-        return dic, attrs
+        return attrs
+
+    def to_dframe(self):
+        """
+        :returns: a DataFrame containing all risk functions
+        """
+        dic = {'riskid': [], 'loss_type': [], 'riskfunc': []}
+        for riskid, rm in self._riskmodels.items():
+            for (lt, kind), rf in rm.risk_functions.items():
+                dic['riskid'].append(riskid)
+                dic['loss_type'].append(lt)
+                dic['riskfunc'].append(hdf5.obj_to_json(rf))
+        return pandas.DataFrame(dic)
 
     def __repr__(self):
         lines = ['%s: %s' % item for item in sorted(self.items())]
-        return '<%s(%d, %d)\n%s>' % (
-            self.__class__.__name__, len(lines), self.covs, '\n'.join(lines))
+        return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))

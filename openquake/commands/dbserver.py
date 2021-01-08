@@ -24,7 +24,7 @@ from openquake.commonlib import logs
 from openquake.server import dbserver as dbs
 
 
-@sap.script
+@sap.Script
 def dbserver(cmd, dbhostport=None, loglevel='INFO', foreground=False):
     """
     start/stop/restart the database server, or return its status

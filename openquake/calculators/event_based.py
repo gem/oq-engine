@@ -30,7 +30,6 @@ from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import EBRupture
-from openquake.hazardlib.geo.mesh import surface_to_arrays
 from openquake.commonlib import calc, util, logs, readinput, logictree
 from openquake.risklib.riskinput import str2rsi
 from openquake.calculators import base, views
@@ -100,7 +99,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Initial accumulator, a dictionary (et_id, gsim) -> curves
         """
-        self.L = len(self.oqparam.imtls.array)
+        self.L = self.oqparam.imtls.size
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
         return zd
 
@@ -174,8 +173,8 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         sav_mon = self.monitor('saving gmfs')
         agg_mon = self.monitor('aggregating hcurves')
-        M = len(self.oqparam.imtls)
-        sec_outputs = self.oqparam.get_sec_outputs()
+        primary = self.oqparam.get_primary_imtls()
+        sec_imts = self.oqparam.get_sec_imts()
         with sav_mon:
             data = result.pop('gmfdata')
             if len(data):
@@ -184,12 +183,12 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
                 hdf5.extend(self.datastore['gmf_data/sid'], data['sid'])
                 hdf5.extend(self.datastore['gmf_data/eid'], data['eid'])
-                for m in range(M):
+                for m in range(len(primary)):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
-                                data['gmv'][:, m])
-                for sec_out in sec_outputs:
-                    hdf5.extend(self.datastore[f'gmf_data/{sec_out}'],
-                                data[sec_out])
+                                data[f'gmv_{m}'])
+                for sec_imt in sec_imts:
+                    hdf5.extend(self.datastore[f'gmf_data/{sec_imt}'],
+                                data[sec_imt])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(data)
@@ -212,7 +211,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # infer it from the risk models if not directly set in job.ini
             oq.minimum_intensity = self.crmodel.min_iml
         min_iml = oq.min_iml
-        if oq.ground_motion_fields and min_iml.sum() == 0:
+        if oq.ground_motion_fields and sum(min_iml.values()) == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
         else:
@@ -290,14 +289,11 @@ class EventBasedCalculator(base.HazardCalculator):
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
-        if not oq.imtls:
-            raise InvalidFile('There are no intensity measure types in %s' %
-                              oq.inputs['job_ini'])
         N = len(self.sitecol.complete)
         if oq.ground_motion_fields:
-            M = len(oq.imtls)
+            M = len(oq.get_primary_imtls())
             nrups = len(self.datastore['ruptures'])
-            base.create_gmf_data(self.datastore, M, self.param['sec_perils'])
+            base.create_gmf_data(self.datastore, M, oq.get_sec_imts())
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
@@ -337,7 +333,7 @@ class EventBasedCalculator(base.HazardCalculator):
             return
         N = len(self.sitecol.complete)
         M = len(oq.imtls)  # 0 in scenario
-        L = len(oq.imtls.array)
+        L = oq.imtls.size
         L1 = L // (M or 1)
         # check seed dependency
         if 'gmf_data' in self.datastore:
@@ -366,7 +362,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if oq.individual_curves:
                 logging.info('Saving individual hazard curves')
                 self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
-                self.datastore.set_shape_attrs(
+                self.datastore.set_shape_descr(
                     'hcurves-rlzs', site_id=N, rlz_id=R,
                     imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
@@ -374,7 +370,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     M = len(oq.imtls)
                     ds = self.datastore.create_dset(
                         'hmaps-rlzs', F32, (N, R, M, P))
-                    self.datastore.set_shape_attrs(
+                    self.datastore.set_shape_descr(
                         'hmaps-rlzs', site_id=N, rlz_id=R,
                         imt=list(oq.imtls), poe=oq.poes)
                 for r, pmap in enumerate(pmaps):
@@ -390,7 +386,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if S:
                 logging.info('Computing statistical hazard curves')
                 self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
-                self.datastore.set_shape_attrs(
+                self.datastore.set_shape_descr(
                     'hcurves-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), lvl=numpy.arange(L1))
                 if oq.poes:
@@ -398,7 +394,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     M = len(oq.imtls)
                     ds = self.datastore.create_dset(
                         'hmaps-stats', F32, (N, S, M, P))
-                    self.datastore.set_shape_attrs(
+                    self.datastore.set_shape_descr(
                         'hmaps-stats', site_id=N, stat=list(hstats),
                         imt=list(oq.imtls), poes=oq.poes)
                 for s, stat in enumerate(hstats):

@@ -29,6 +29,7 @@ https://wheelhouse.openquake.org/v2/macos/py/idna-2.6-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/requests-2.20.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/toml-0.10.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v2/macos/py36/GDAL-3.1.2-cp36-cp36m-macosx_10_14_x86_64.whl
 
 ### setproctitle ###
 # comment the following lines to skip installation

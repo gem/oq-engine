@@ -53,7 +53,7 @@ def purge_all(user=None):
                 purge_one(calc_id, user, force=True)
 
 
-@sap.script
+@sap.Script
 def purge(calc_id, force=False):
     """
     Remove the given calculation. If you want to remove all calculations,

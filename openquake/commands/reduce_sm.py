@@ -30,7 +30,7 @@ def get_dupl(src_ids):
     return dupl
 
 
-@sap.script
+@sap.Script
 def reduce_sm(calc_id):
     """
     Reduce the source model of the given (pre)calculation by discarding all

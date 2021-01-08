@@ -26,7 +26,7 @@ def f(a, b, c, d=1):
 
 class SapTestCase(unittest.TestCase):
     def test_ok(self):
-        p = sap.script(f)
+        p = sap.Script(f)
         p.arg('a', 'first argument')
         p.opt('b', 'second argument')
         p.flg('c', 'third argument')
@@ -54,10 +54,10 @@ optional arguments:
 other arguments:
   -c, --c      third argument
   -d 1, --d 1  fourth argument
-''' % p.parentparser.prog)
+''' % p.parser.prog)
 
     def test_NameError(self):
-        p = sap.script(f)
+        p = sap.Script(f)
         p.arg('a', 'first argument')
         with self.assertRaises(NameError):
             p.flg('c', 'third argument')
@@ -74,7 +74,7 @@ positional arguments:
 
 optional arguments:
   -b B, --b B  second argument
-''' % p.parentparser.prog)
+''' % p.parser.prog)
         # missing argparse specification for 'c'
         with self.assertRaises(NameError):
             p.check_arguments()
@@ -90,4 +90,4 @@ optional arguments:
   -h, --help            show this help message and exit
   -a A_LONG_ARGUMENT, --a-long-argument A_LONG_ARGUMENT
                         a long argument
-''' % p.parentparser.prog)
+''' % p.parser.prog)

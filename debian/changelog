@@ -1,6 +1,38 @@
+  [Michele Simionato]
+  * Introduced `deformation_component` parameter in the secondary perils
+  * Optimized the storage of the risk model with a speedup of 60x
+    for a calculation with ~50,000 fragility functions (2 minutes->2seconds)
+    and a 3x reduction on disk space
+  * Accepted aggregate_by=id in scenario/event based calculations
+  * Accepted aggregate_by=site_id in scenario/event based calculations
+  * Removed the generation of asset loss maps from event_based_risk
+  * Made the "Aggregate Losses" output in scenario_risk consistent with
+    event_based_risk and scenario_risk and supported `aggregate_by`
+  * Perform the disaggregation checks before starting the classical part
+  * Changed the "Aggregate Loss Curves" CSV exporter to generate a file for
+    each realization, for consistency with the other exporters
+  * The ebrisk outputs "Total Losses" and "Total Loss Curves" are now included
+    in the outputs "Aggregate Losses" and "Aggregate Curves"
+  * Introduced an `agg_loss_table` dataset and optimized the generation of
+    aggregate loss curves (up to 100x speedup)
+  * Removed misleading zero losses in agg_losses.csv
+  * Fixed `oq recompute_losses` and renamed it to `oq reaggregate`
+  * Added a limit of 65,536 to the maximum number of aggregation tags
+  * Bug fix: ignore_covs=true now sets the coefficient of variations to zero
+
+  [Anirudh Rao]
+  * Improved error handling of bad or zero coefficients of variation
+    for the Beta distribution for vulnerability
+
+  [Michele Simionato]
+  * Fixed 32 bit rounding issues in scenario_risk: now the total losses and
+    and the sum of the average losses are much closer
+  * Internal: made the loss type `occupants` a bit less special
+  * Documented `oq to_nrml`
+
   [Claudia Mascandola]
   * Added the Lanzano et al. (2019) GMPE
-  
+
   [Michele Simionato]
   * Honored `minimum_asset_loss` also in the fully aggregated loss table,
     not only in the partially aggregated loss tables and average losses

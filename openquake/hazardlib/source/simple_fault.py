@@ -339,6 +339,10 @@ class SimpleFaultSource(ParametricSeismicSource):
         if not hasattr(self, '_nr'):
             self.count_ruptures()
         for i, (mag, rate) in enumerate(mag_rates):
+            # This is needed in order to reproduce the logic in the
+            # `rupture_count` method
+            if rate == 0:
+                continue
             src = copy.copy(self)
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]

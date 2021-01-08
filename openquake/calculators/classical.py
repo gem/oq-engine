@@ -280,7 +280,7 @@ class ClassicalCalculator(base.HazardCalculator):
                   'nsites', 'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
-            cm = ContextMaker(trt, gsims)
+            cm = ContextMaker(trt, gsims, dict(imtls=self.oqparam.imtls))
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             for dparam in cm.REQUIRES_DISTANCES:
                 params.add(dparam + '_')
@@ -290,6 +290,7 @@ class ClassicalCalculator(base.HazardCalculator):
             mags.update(dset[:])
         mags = sorted(mags)
         if self.few_sites:
+            descr = []  # (param, dt)
             for param in params:
                 if param == 'sids_':
                     dt = hdf5.vuint16
@@ -303,10 +304,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = U16
                 else:
                     dt = F32
-                self.datastore.create_dset('rup/' + param, dt, (None,),
-                                           compression='gzip')
-            dset = self.datastore.getitem('rup')
-            dset.attrs['__pdcolumns__'] = ' '.join(params)
+                descr.append((param, dt))
+            self.datastore.create_dframe('rup', descr, 'gzip')
         self.by_task = {}  # task_no => src_ids
         self.maxradius = 0
         self.Ns = len(self.csm.source_info)
@@ -315,7 +314,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.create_dset(
                 'disagg_by_src', F32,
                 (self.N, self.R, self.M, self.L1, self.Ns))
-            self.datastore.set_shape_attrs(
+            self.datastore.set_shape_descr(
                 'disagg_by_src', site_id=self.N, rlz_id=self.R,
                 imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
         return zd
@@ -326,7 +325,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         self.M = len(oq.imtls)
-        self.L1 = len(oq.imtls.array) // self.M
+        self.L1 = oq.imtls.size // self.M
         sources = encode([src_id for src_id in self.csm.source_info])
         size, msg = get_nbytes_msg(
             dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
@@ -358,7 +357,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
-        poes_shape = (self.N, len(self.oqparam.imtls.array), len(rlzs_by_g))
+        poes_shape = (self.N, self.oqparam.imtls.size, len(rlzs_by_g))
         size = numpy.prod(poes_shape) * 8
         logging.info('Requiring %s for ProbabilityMap of shape %s',
                      humansize(size), poes_shape)
@@ -494,7 +493,7 @@ class ClassicalCalculator(base.HazardCalculator):
         :returns: the outputs to pass to the Starmap, ordered by weight
         """
         oq = self.oqparam
-        L = len(oq.imtls.array)
+        L = oq.imtls.size
         sids = self.sitecol.complete.sids
         allargs = []
         src_groups = self.csm.src_groups
@@ -619,7 +618,6 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         # initialize datasets
-        imls = oq.imtls.array
         N = len(self.sitecol.complete)
         P = len(oq.poes)
         M = self.M = len(oq.imtls)
@@ -627,27 +625,27 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.soil_intensities is not None:
             L = M * len(oq.soil_intensities)
         else:
-            L = len(imls)
+            L = oq.imtls.size
         L1 = self.L1 = L // M
         R = len(self.realizations)
         S = len(hstats)
         if R > 1 and oq.individual_curves or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
-            self.datastore.set_shape_attrs(
+            self.datastore.set_shape_descr(
                 'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
             if oq.poes:
                 self.datastore.create_dset('hmaps-rlzs', F32, (N, R, M, P))
-                self.datastore.set_shape_attrs(
+                self.datastore.set_shape_descr(
                     'hmaps-rlzs', site_id=N, rlz_id=R,
                     imt=list(oq.imtls), poe=oq.poes)
         if hstats:
             self.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
-            self.datastore.set_shape_attrs(
+            self.datastore.set_shape_descr(
                 'hcurves-stats', site_id=N, stat=list(hstats),
                 imt=imts, lvl=numpy.arange(L1))
             if oq.poes:
                 self.datastore.create_dset('hmaps-stats', F32, (N, S, M, P))
-                self.datastore.set_shape_attrs(
+                self.datastore.set_shape_descr(
                     'hmaps-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), poe=oq.poes)
         ct = oq.concurrent_tasks or 1
@@ -750,7 +748,7 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     poes, weights = pgetter.poes, pgetter.weights
     M = len(imtls)
     P = len(poes)
-    L = len(imtls.array)
+    L = imtls.size
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {}

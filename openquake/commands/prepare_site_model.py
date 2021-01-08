@@ -82,7 +82,7 @@ def check_fname(fname, kind, forbidden):
                         % (kind, forbidden))
 
 
-@sap.script
+@sap.Script
 def prepare_site_model(exposure_xml, sites_csv, vs30_csv,
                        z1pt0, z2pt5, vs30measured, grid_spacing=0,
                        assoc_distance=5, output='site_model.csv'):

@@ -600,7 +600,7 @@ def get_ruptures(fname_csv):
         mesh = F32(json.loads(row['mesh']))
         s1, s2 = mesh.shape[1:]
         rec = numpy.zeros(1, rupture_dt)[0]
-        rec['serial'] = row['serial']
+        rec['seed'] = row['seed']
         rec['minlon'] = minlon = mesh[0].min()
         rec['minlat'] = minlat = mesh[1].min()
         rec['maxlon'] = maxlon = mesh[0].max()
@@ -608,7 +608,7 @@ def get_ruptures(fname_csv):
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
         rate = dic.get('occurrence_rate', numpy.nan)
-        tup = (u, row['serial'], 'no-source', trts.index(row['trt']),
+        tup = (u, row['seed'], 'no-source', trts.index(row['trt']),
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, 0, 0)
         rups.append(tup)
@@ -853,7 +853,6 @@ def get_crmodel(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     risklist = get_risk_functions(oqparam)
-    oqparam.set_risk_imtls(risklist)
     consdict = {}
     if 'consequence' in oqparam.inputs:
         # build consdict of the form cname_by_tagname -> tag -> array
@@ -941,7 +940,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         logging.info('Read %d sites and %d assets from the exposure',
                      len(sitecol), sum(len(a) for a in assets_by_site))
     assetcol = asset.AssetCollection(
-        exposure, assets_by_site, oqparam.time_event)
+        exposure, assets_by_site, oqparam.time_event, oqparam.aggregate_by)
     if assetcol.occupancy_periods:
         missing = set(cost_types) - set(exposure.cost_types['name']) - set(
             ['occupants'])
@@ -984,7 +983,7 @@ def get_pmap_from_csv(oqparam, fnames):
         dic[wrapper.imt] = wrapper.array
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
-    oqparam.set_risk_imtls(get_risk_functions(oqparam))
+    oqparam.set_risk_imts(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
     num_levels = sum(len(imls) for imls in oqparam.imtls.values())

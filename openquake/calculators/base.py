@@ -21,7 +21,6 @@ import abc
 import pdb
 import logging
 import operator
-import itertools
 import traceback
 from datetime import datetime
 from shapely import wkt
@@ -169,6 +168,11 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
         self.oqparam = oqparam
+
+    def pre_checks(self):
+        """
+        Checks to run after the pre_execute but before the execute
+        """
 
     def monitor(self, operation='', **kw):
         """
@@ -476,6 +480,7 @@ class HazardCalculator(BaseCalculator):
                         mags_by_trt[trt])
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
+        self.pre_checks()
 
         if (not oq.hazard_calculation_id
                 and oq.calculation_mode != 'preclassical'
@@ -575,6 +580,7 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.from_engine = self.from_engine
+            calc.pre_checks = lambda: self.__class__.pre_checks(calc)
             calc.run(remove=False)
             for name in ('csm param sitecol assetcol crmodel realizations '
                          'policy_name policy_dict full_lt').split():
@@ -683,14 +689,15 @@ class HazardCalculator(BaseCalculator):
         The crmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
+        oq = self.oqparam
         logging.info('Reading the risk model if present')
-        self.crmodel = readinput.get_crmodel(self.oqparam)
+        self.crmodel = readinput.get_crmodel(oq)
         if not self.crmodel:
             parent = self.datastore.parent
-            if 'risk_model' in parent:
-                self.crmodel = riskmodels.CompositeRiskModel.read(parent)
+            if 'crm' in parent:
+                self.crmodel = riskmodels.CompositeRiskModel.read(parent, oq)
             return
-        if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
+        if oq.ground_motion_fields and not oq.imtls:
             raise InvalidFile('No intensity_measure_types specified in %s' %
                               self.oqparam.inputs['job_ini'])
         self.save_params()  # re-save oqparam
@@ -701,16 +708,19 @@ class HazardCalculator(BaseCalculator):
         """
         if len(self.crmodel):
             logging.info('Storing risk model')
-            self.datastore['risk_model'] = rm = self.crmodel
-            attrs = self.datastore.getitem('risk_model').attrs
-            attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
+            attrs = self.crmodel.get_attrs()
+            self.datastore.create_dframe('crm', self.crmodel.to_dframe(),
+                                         'gzip', **attrs)
 
     def _read_risk_data(self):
         # read the exposure (if any), the risk model (if any) and then the
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-
+        if (not oq.imtls and 'shakemap' not in oq.inputs
+                and oq.ground_motion_fields):
+            raise InvalidFile('There are no intensity measure types in %s' %
+                              oq.inputs['job_ini'])
         if oq.hazard_calculation_id:
             with util.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
@@ -764,9 +774,9 @@ class HazardCalculator(BaseCalculator):
                 self.assetcol = assetcol
         else:  # no exposure
             self.sitecol = haz_sitecol
-            if self.sitecol:
+            if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
-                             len(self.sitecol), len(oq.imtls.array))
+                             len(self.sitecol), oq.imtls.size)
 
         if oq_hazard:
             parent = self.datastore.parent
@@ -846,7 +856,7 @@ class HazardCalculator(BaseCalculator):
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):
-            save_exposed_values(
+            save_agg_values(
                 self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 
     def store_rlz_info(self, eff_ruptures):
@@ -952,9 +962,10 @@ class RiskCalculator(HazardCalculator):
             events['id'] = numpy.arange(E, dtype=U32)
             self.datastore['events'] = events
             # convert into an array of dtype gmv_data_dt
-            lst = [(sitecol.sids[s], ei, gmfs[s, ei])
+            lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
                    for s in numpy.arange(N, dtype=U32)
                    for ei, event in enumerate(events)]
+            oq.hazard_imtls = {imt: [0] for imt in imts}
             data = numpy.array(lst, oq.gmf_data_dt())
             create_gmf_data(self.datastore, len(imts), data=data)
         return sitecol, assetcol
@@ -989,6 +1000,7 @@ class RiskCalculator(HazardCalculator):
                for ri in riskinputs):
             raise RuntimeError(f'the {kind}s are all zeros on the assets')
         logging.info('Built %d risk inputs', len(riskinputs))
+        self.acc = None
         return riskinputs
 
     def _gen_riskinputs_gmf(self, dstore):
@@ -1011,15 +1023,15 @@ class RiskCalculator(HazardCalculator):
             except KeyError:
                 getter = getters.ZeroGetter(sid, rlzs, self.R)
             else:
-                df['rlzs'] = rlzs[df.eid.to_numpy()]
+                df['rlz'] = rlzs[df.eid.to_numpy()]
                 getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)
-            if len(dstore['gmf_data/gmv_0']) == 0:
+            if len(dstore['gmf_data/eid']) == 0:
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '
                     'ground_motion_fields=False or a large minimum_intensity')
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
-                yield riskinput.RiskInput(sid, getter, numpy.array(block))
+                yield riskinput.RiskInput(getter, numpy.array(block))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
                               len(block), sid)
@@ -1034,7 +1046,7 @@ class RiskCalculator(HazardCalculator):
             getter = getters.PmapGetter(dstore, ws, [sid], self.oqparam.imtls)
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
-                yield riskinput.RiskInput(sid, getter, numpy.array(block))
+                yield riskinput.RiskInput(getter, numpy.array(block))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
                               len(block), sid)
@@ -1049,6 +1061,7 @@ class RiskCalculator(HazardCalculator):
             return
         ct = self.oqparam.concurrent_tasks or 1
         maxw = sum(ri.weight for ri in self.riskinputs) / ct
+        self.datastore.swmr_on()
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
         smap.monitor.save('crmodel', self.crmodel)
@@ -1062,9 +1075,14 @@ class RiskCalculator(HazardCalculator):
                 if not isinstance(ri.hazard_getter, getters.PmapGetter):
                     ri.hazard_getter.init()
             smap.submit((block, self.param))
-        return smap.reduce(self.combine)
+        return smap.reduce(self.combine, self.acc)
 
     def combine(self, acc, res):
+        """
+        Combine the outputs assuming acc and res are dictionaries
+        """
+        if res is None:
+            raise MemoryError('You ran out of memory!')
         return acc + res
 
 
@@ -1084,7 +1102,8 @@ def import_gmfs(dstore, oqparam, sids):
     names = array.dtype.names  # rlz_id, sid, ...
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
-    imts = [name[4:] for name in names[2:]]
+    imts = [name.lstrip('gmv_') for name in names[2:]]
+    oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
     if missing:
         raise ValueError('The calculation needs %s which is missing from %s' %
@@ -1098,7 +1117,7 @@ def import_gmfs(dstore, oqparam, sids):
             except KeyError:  # the file contains more than enough IMTs
                 pass
             else:
-                arr['gmv'][:, m] = array[name]
+                arr[f'gmv_{m}'][:] = array[name]
         else:
             arr[name] = array[name]
 
@@ -1125,49 +1144,45 @@ def import_gmfs(dstore, oqparam, sids):
             gmvs = dic[sid]
             gmvlst.append(gmvs)
     data = numpy.concatenate(gmvlst)
-    create_gmf_data(dstore, len(oqparam.imtls), data=data)
+    create_gmf_data(dstore, len(oqparam.get_primary_imtls()),
+                    oqparam.get_sec_imts(), data=data)
     dstore['weights'] = numpy.ones(1)
     return eids
 
 
-def create_gmf_data(dstore, M, secperils=(), data=None):
+def create_gmf_data(dstore, M, sec_imts=(), data=None):
     """
     Create and possibly populate the datasets in the gmf_data group
     """
-    dstore.create_dset('gmf_data/sid', U32)
-    dstore.create_dset('gmf_data/eid', U32)
-    cols = ['sid', 'eid']
-    if data is not None:
-        dstore['gmf_data/sid'] = data['sid']
-        dstore['gmf_data/eid'] = data['eid']
+    n = 0 if data is None else len(data['sid'])
+    items = [('sid', U32 if n == 0 else data['sid']),
+             ('eid', U32 if n == 0 else data['eid'])]
     for m in range(M):
         col = f'gmv_{m}'
-        cols.append(col)
-        dstore.create_dset('gmf_data/' + col, F32)
-        if data is not None:
-            dstore[f'gmf_data/' + col] = data['gmv'][:, m]
-    for peril in secperils:
-        for out in peril.outputs:
-            dstore.create_dset(f'gmf_data/{out}', F32)
-            cols.append(f'{out}')
-    dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
+        items.append((col, F32 if data is None else data[col]))
+    for imt in sec_imts:
+        items.append((str(imt), F32 if n == 0 else data[imt]))
+    dstore.create_dframe('gmf_data', items, 'gzip')
 
 
-def save_exposed_values(dstore, assetcol, lossnames, tagnames):
+def save_agg_values(dstore, assetcol, lossnames, tagnames):
     """
-    Store 2^n arrays where n is the number of tagNames. For instance with
-    the tags country, occupancy it stores 2^2 = 4 arrays:
-
-    exposed_values/agg_country_occupancy  # shape (T1, T2, L)
-    exposed_values/agg_country            # shape (T1, L)
-    exposed_values/agg_occupancy          # shape (T2, L)
-    exposed_values/agg                    # shape (L,)
+    Store agg_keys, agg_values.
+    :returns: the aggkey dictionary key -> tags
     """
-    aval = assetcol.arr_value(lossnames)  # shape (A, L)
-    for n in range(len(tagnames) + 1, -1, -1):
-        for names in itertools.combinations(tagnames, n):
-            name = 'exposed_values/' + '_'.join(('agg',) + names)
-            dstore[name] = assetcol.aggregate_by(list(names), aval)
-            attrs = {tagname: getattr(assetcol.tagcol, tagname)[1:]
-                     for tagname in names}
-            dstore.set_shape_attrs(name, **attrs, loss_name=lossnames)
+    lst = []
+    if tagnames:
+        aggkey = assetcol.tagcol.get_aggkey(tagnames)
+        logging.info('Storing %d aggregation keys', len(aggkey))
+        dt = [(name + '_', U16) for name in tagnames] + [
+            (name, hdf5.vstr) for name in tagnames]
+        kvs = []
+        for key, val in aggkey.items():
+            kvs.append(key + val)
+            lst.append(' '.join(map(str, val)))
+        dstore['agg_keys'] = numpy.array(kvs, dt)
+    lst.append('*total*')
+    loss_names = dstore['oqparam'].loss_names
+    dstore['agg_values'] = assetcol.get_agg_values(lossnames, tagnames)
+    dstore.set_shape_descr('agg_values', aggregation=lst, loss_type=loss_names)
+    return aggkey if tagnames else {}

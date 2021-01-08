@@ -758,83 +758,36 @@ def copyobj(obj, **kwargs):
     return new
 
 
-# return a dict imt -> slice and the total number of levels
-def _slicedict_n(imt_dt):
-    n = 0
-    slicedic = {}
-    for imt in imt_dt.names:
-        shp = imt_dt[imt].shape
-        n1 = n + (shp[0] if shp else 1)
-        slicedic[imt] = slice(n, n1)
-        n = n1
-    return slicedic, n
-
-
 class DictArray(Mapping):
     """
-    A small wrapper over a dictionary of arrays serializable to HDF5:
-
-    >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-    >>> from openquake.baselib import hdf5
-    >>> with hdf5.File('/tmp/x.h5', 'w') as f:
-    ...      f['d'] = d
-    ...      f['d']
-    <DictArray
-    PGA: [0.01 0.02 0.04]
-    PGV: [0.1 0.2]>
-
-    The DictArray maintains the lexicographic order of the keys.
+    A small wrapper over a dictionary of arrays with the same lenghts.
+    Ordered by the lexicographic order of the keys.
     """
     def __init__(self, imtls):
-        self.dt = dt = numpy.dtype(
-            [(str(imt), F64,
-              (len(imls),) if hasattr(imls, '__len__') else (1,))
-             for imt, imls in sorted(imtls.items())])
-        self.slicedic, num_levels = _slicedict_n(dt)
-        self.array = numpy.zeros(num_levels, F64)
-        lenset = set()
-        for imt, imls in imtls.items():
-            self[imt] = imls
-            try:
-                lenset.add(len(imls))
-            except TypeError:
-                lenset.add(1)
-        if len(lenset) == 1:
-            self.L1 = lenset.pop()
-        else:
-            self.L1 = None
-
-    def isnan(self):
-        """
-        :returns: true if all the underlying values are NaNs
-        """
-        return numpy.isnan(self.array).all()
-
-    def new(self, array):
-        """
-        Convert an array of compatible length into a DictArray:
-
-        >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-        >>> d.new(numpy.arange(0, 5, 1))  # array of lenght 5 = 3 + 2
-        <DictArray
-        PGA: [0 1 2]
-        PGV: [3 4]>
-        """
-        assert len(self.array) == len(array)
-        arr = object.__new__(self.__class__)
-        arr.dt = self.dt
-        arr.slicedic = self.slicedic
-        arr.array = array
-        return arr
+        levels = imtls[next(iter(imtls))]
+        self.L1 = len(levels)
+        self.size = len(imtls) * self.L1
+        self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
+                               for imt, imls in sorted(imtls.items())])
+        self.array = numpy.zeros(self.size, F64)
+        self.slicedic = {}
+        n = 0
+        for imt, imls in sorted(imtls.items()):
+            if len(imls) != self.L1:
+                raise ValueError('imt=%s has %d levels, expected %d' %
+                                 (imt, len(imls), self.L1))
+            self.slicedic[imt] = slc = slice(n, n + self.L1)
+            self.array[slc] = imls
+            n += self.L1
 
     def __call__(self, imt):
         return self.slicedic[imt]
 
     def __getitem__(self, imt):
-        return self.array[self.slicedic[imt]]
+        return self.array[self(imt)]
 
     def __setitem__(self, imt, array):
-        self.array[self.slicedic[imt]] = array
+        self.array[self(imt)] = array
 
     def __iter__(self):
         for imt in self.dt.names:
@@ -842,21 +795,6 @@ class DictArray(Mapping):
 
     def __len__(self):
         return len(self.dt.names)
-
-    def __toh5__(self):
-        carray = numpy.zeros(1, self.dt)
-        for imt in self:
-            carray[imt] = self[imt]
-        return carray, {}
-
-    def __fromh5__(self, carray, attrs):
-        self.array = carray[:].view(F64)
-        self.dt = dt = numpy.dtype(
-            [(str(imt), F64, len(carray[0][imt]))
-             for imt in carray.dtype.names])
-        self.slicedic, num_levels = _slicedict_n(dt)
-        for imt in carray.dtype.names:
-            self[imt] = carray[0][imt]
 
     def __eq__(self, other):
         arr = self.array == other.array
@@ -1504,7 +1442,7 @@ def agg_probs(*probs):
         acc *= 1. - prob
     return 1. - acc
 
-# ###########]]]###### COMPRESSION/DECOMPRESSION ##################### #
+# #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
 # do that, except in one case. The case if when you have a lot of workers

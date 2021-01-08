@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
+#
 # Copyright (C) 2020, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -19,35 +19,10 @@
 Installation script for the OpenQuake engine on linux.
 Three installation methods are supported:
 
-1. "server" installation, i.e. system-wide installation on /opt/openquake:
+1. "server" installation, i.e. system-wide installation on /opt/openquake
+2. "user" installation on $HOME/openquake
+3. "devel" installation on $HOME/openquake (from the engine repository)
 
-$ wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
-$ sudo -H python3 install.py server
-
-Use this installation method if you want to set up a multi-user installation
-or if have no idea what a virtualenv is and you do not need to interact
-with any other Python software. This installation method also sets up
-automatically two systemd services, openquake-dbserver and openquake-webui.
-
-2. "user" installation on $HOME/openquake:
-
-$ wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
-$ python3 install.py user
-
-Use this installation method if you do not have root permissions, or
-if you need to use the engine as a library to be imported by other
-Python software (the additional software must be installed in the
-virtual environment of the engine, i.e. $HOME/openquake).
-
-3. "devel" installation on $HOME/openquake:
-
-$ git clone https://github.com/gem/oq-engine.git
-$ cd oq-engine && python3 install.py devel
-
-Use this installation method if you need to develop with the engine.
-Recommended to GMPE authors and users wanting to contribute to the engine.
-
-If you need a custom installation you can use `pip` and install as you wish.
 To disinstall use the --remove flag, which remove the services and the
 directories /opt/openquake or $HOME/openquake.
 The calculations will NOT be removed since they live in
@@ -157,6 +132,11 @@ def before_checks(inst, remove, usage):
     if inst is server and sys.platform != 'linux':
         sys.exit('Error: this installation method is meant for linux!')
 
+    # check venv
+    if sys.prefix != sys.base_prefix:
+        sys.exit('You are inside a virtual environment! '
+                 'Please use the system Python')
+
     # check user
     user = getpass.getuser()
     if inst is server and user != 'root':
@@ -191,7 +171,7 @@ def before_checks(inst, remove, usage):
                  (inst.OQ, os.readlink(inst.OQ)))
 
 
-def install(inst):
+def install(inst, version):
     """
     Install the engine in one of the three possible modes
     """
@@ -229,8 +209,9 @@ def install(inst):
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
                                '-e', '.'])
     else:
+        vers = ('==' + version) if version else ''
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
-                               'openquake.engine', '--upgrade'])
+                               '--upgrade', 'openquake.engine' + vers])
 
     # create openquake.cfg
     if inst is server:
@@ -314,10 +295,12 @@ if __name__ == '__main__':
                         '(default server)')
     parser.add_argument("--remove",  action="store_true",
                         help="disinstall the engine")
+    parser.add_argument("--version",
+                        help="version to install (default latest)")
     args = parser.parse_args()
     inst = globals()[args.inst]
     before_checks(inst, args.remove, parser.format_usage())
     if args.remove:
         remove(inst)
     else:
-        install(inst)
+        install(inst, args.version)

@@ -288,7 +288,7 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_extract_sitecol(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            extract('sitecol', self.calc_id, extract_dir=tempdir)
+            extract('sitecol', self.calc_id, False, False, tempdir)
         fnames = os.listdir(tempdir)
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
@@ -495,6 +495,7 @@ class EngineRunJobTestCase(unittest.TestCase):
 description = sensitivity test
 calculation_mode = scenario
 sites = 0 0
+intensity_measure_types = PGA
 sensitivity_analysis = {
   'maximum_distance': [100, 200]}''')
         run_jobs([job_ini])
@@ -513,7 +514,7 @@ sensitivity_analysis = {
         # refactoring of the monitoring and it happened several times)
         with read(job_id) as dstore:
             perf = view('performance', dstore)
-            self.assertIn('total event_based_risk', perf)
+            self.assertIn('total scenario_risk', perf)
 
     def test_oqdata(self):
         # the that the environment variable OQ_DATADIR is honored

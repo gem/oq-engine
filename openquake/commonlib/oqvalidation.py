@@ -53,7 +53,7 @@ def check_same_levels(imtls):
         if not imt.startswith(('PGA', 'SA')):
             raise ValueError('Site amplification works only with '
                              'PGA and SA, got %s' % imt)
-        if numpy.isnan(imtls[imt]).all():
+        if (imtls[imt] == 0).all():
             raise ValueError(
                 'You forgot to set intensity_measure_types_and_levels!')
         elif len(imtls[imt]) != len(imls) or any(
@@ -85,6 +85,7 @@ class OqParam(valid.ParamSet):
                     'business_interruption_consequence',
                     'structural_vulnerability_retrofitted',
                     'occupants_vulnerability'}
+    hazard_imtls = {}
     siteparam = dict(
         vs30measured='reference_vs30_type',
         vs30='reference_vs30_value',
@@ -123,7 +124,7 @@ class OqParam(valid.ParamSet):
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     distance_bin_width = valid.Param(valid.positivefloat)
-    approx_ddd = valid.Param(valid.boolean, False)
+    continuous_dd = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
     export_dir = valid.Param(valid.utf8, '.')
     export_multi_curves = valid.Param(valid.boolean, False)
@@ -205,6 +206,7 @@ class OqParam(valid.ParamSet):
     save_disk_space = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
+    secondary_simulations = valid.Param(valid.dictionary, {})
     sensitivity_analysis = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
@@ -293,8 +295,8 @@ class OqParam(valid.ParamSet):
         if 'iml_disagg' in names_vals:
             self.iml_disagg.pop('default')
             # normalize things like SA(0.10) -> SA(0.1)
-            self.iml_disagg = {str(from_string(imt)): val
-                               for imt, val in self.iml_disagg.items()}
+            self.iml_disagg = {str(from_string(imt)): [iml]
+                               for imt, iml in self.iml_disagg.items()}
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
                 raise InvalidFile(
@@ -311,7 +313,8 @@ class OqParam(valid.ParamSet):
                     'Each IMT must have the same number of levels, instead '
                     'you have %s' % dic)
         elif 'intensity_measure_types' in names_vals:
-            self.hazard_imtls = dict.fromkeys(self.intensity_measure_types)
+            self.hazard_imtls = dict.fromkeys(
+                self.intensity_measure_types, [0])
             if 'maximum_intensity' in names_vals:
                 minint = self.minimum_intensity or {'default': 1E-2}
                 for imt in self.hazard_imtls:
@@ -321,8 +324,8 @@ class OqParam(valid.ParamSet):
             delattr(self, 'intensity_measure_types')
         if ('ps_grid_spacing' in names_vals and
                 'pointsource_distance' not in names_vals):
-            self.pointsource_distance = valid.MagDepDistance.new(
-                    names_vals['ps_grid_spacing'])
+            raise InvalidFile('%s: ps_grid_spacing requires setting a '
+                              'pointsource_distance!' % self.inputs['job_ini'])
 
         self._risk_files = get_risk_files(self.inputs)
 
@@ -406,9 +409,6 @@ class OqParam(valid.ParamSet):
             if self.risk_investigation_time is None:
                 raise InvalidFile('Please set the risk_investigation_time in'
                                   ' %s' % job_ini)
-        elif self.aggregate_by:
-            raise InvalidFile('aggregate_by cannot be set in %s [not ebrisk]'
-                              % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
@@ -421,6 +421,10 @@ class OqParam(valid.ParamSet):
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
+            if self.ps_grid_spacing:
+                logging.warning('ps_grid_spacing is ignored in event_based '
+                                'calculations"')
+
             if self.ses_per_logic_tree_path >= TWO32:
                 raise ValueError('ses_per_logic_tree_path too big: %d' %
                                  self.ses_per_logic_tree_path)
@@ -499,8 +503,8 @@ class OqParam(valid.ParamSet):
         Returns a DictArray with the risk intensity measure types and
         levels, if given, or the hazard ones.
         """
-        imtls = getattr(self, 'hazard_imtls', None) or self.risk_imtls
-        return DictArray(imtls)
+        imtls = self.hazard_imtls or self.risk_imtls
+        return DictArray(imtls) if imtls else {}
 
     @property
     def all_cost_types(self):
@@ -520,7 +524,7 @@ class OqParam(valid.ParamSet):
     @property
     def min_iml(self):
         """
-        :returns: a numpy array of intensities, one per IMT
+        :returns: a dictionary of intensities, one per IMT
         """
         mini = self.minimum_intensity
         if mini:
@@ -533,24 +537,22 @@ class OqParam(valid.ParamSet):
                         'file is missing the IMT %r' % imt)
         if 'default' in mini:
             del mini['default']
-        return F32([mini.get(imt, 0) for imt in self.imtls])
+        return {imt: mini.get(imt, 0) for imt in self.imtls}
 
     def levels_per_imt(self):
         """
         :returns: the number of levels per IMT (a.ka. L1)
         """
-        return len(self.imtls.array) // len(self.imtls)
+        return self.imtls.size // len(self.imtls)
 
-    def set_risk_imtls(self, risklist):
+    def set_risk_imts(self, risklist):
         """
         :param risklist:
             a list of risk functions with attributes .id, .loss_type, .kind
 
         Set the attribute risk_imtls.
         """
-        # NB: different loss types may have different IMLs for the same IMT
-        # in that case we merge the IMLs
-        imtls = AccumDict(accum=[])
+        imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
             if not hasattr(rf, 'imt') or rf.kind.endswith('_retrofitted'):
                 # for consequence or retrofitted
@@ -560,21 +562,19 @@ class OqParam(valid.ParamSet):
                               self.continuous_fragility_discretization,
                               self.steps_per_interval)
                 risklist[i] = rf
-            imt = rf.imt
-            from_string(imt)  # make sure it is a valid IMT
-            imtls[imt].extend(rf.imls)
+            from_string(rf.imt)  # make sure it is a valid IMT
+            imtls[rf.imt].extend(iml for iml in rf.imls if iml > 0)
         suggested = ['\nintensity_measure_types_and_levels = {']
-        risk_imtls = {}
+        risk_imtls = self.risk_imtls.copy()
         for imt, imls in imtls.items():
-            imls = [iml for iml in imls if iml]  # strip zeros
             risk_imtls[imt] = list(valid.logscale(min(imls), max(imls), 20))
             suggested.append('  %r: logscale(%s, %s, 20),' %
                              (imt, min(imls), max(imls)))
         suggested[-1] += '}'
-        self.risk_imtls = {imt: None for imt in risk_imtls}
+        self.risk_imtls = {imt: [0] for imt in risk_imtls}
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
-        if not getattr(self, 'hazard_imtls', []):
+        if not self.hazard_imtls:
             if (self.calculation_mode.startswith('classical') or
                     self.hazard_curves_from_gmfs):
                 raise InvalidFile('%s: %s' % (
@@ -586,6 +586,14 @@ class OqParam(valid.ParamSet):
                 and self.ground_motion_fields):
             raise ValueError('Please define intensity_measure_types in %s' %
                              self.inputs['job_ini'])
+
+    def get_primary_imtls(self):
+        """
+        :returns: IMTs and levels which are not secondary
+        """
+        sec_imts = set(self.get_sec_imts())
+        return {imt: imls for imt, imls in self.imtls.items()
+                if imt not in sec_imts}
 
     def hmap_dt(self):  # used for CSV export
         """
@@ -664,10 +672,11 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composite data type for the GMFs
         """
-        dt = F32, (len(self.imtls),)
-        lst = [('sid', U32), ('eid', U32), ('gmv', dt)]
-        for out in self.get_sec_outputs():
-            lst.append((out, dt))
+        lst = [('sid', U32), ('eid', U32)]
+        for m, imt in enumerate(self.get_primary_imtls()):
+            lst.append((f'gmv_{m}', F32))
+        for out in self.get_sec_imts():
+            lst.append((out, F32))
         return numpy.dtype(lst)
 
     def get_sec_perils(self):
@@ -677,7 +686,7 @@ class OqParam(valid.ParamSet):
         return SecondaryPeril.instantiate(self.secondary_perils,
                                           self.sec_peril_params)
 
-    def get_sec_outputs(self):
+    def get_sec_imts(self):
         """
         :returns: a list of secondary outputs
         """
@@ -690,7 +699,7 @@ class OqParam(valid.ParamSet):
         """
         Return True if there are no intensity measure levels
         """
-        return all(numpy.isnan(ls).any() for ls in self.imtls.values())
+        return sum(sum(imls) for imls in self.imtls.values()) == 0
 
     @property
     def correl_model(self):
@@ -871,8 +880,7 @@ class OqParam(valid.ParamSet):
         if self.risk_files:  # IMTLs extracted from the risk files
             return (self.intensity_measure_types == '' and
                     self.intensity_measure_types_and_levels is None)
-        elif not hasattr(self, 'hazard_imtls') and not hasattr(
-                self, 'risk_imtls'):
+        elif not self.hazard_imtls and not hasattr(self, 'risk_imtls'):
             return False
         return True
 
@@ -914,6 +922,17 @@ class OqParam(valid.ParamSet):
             return False
         else:
             return True
+
+    def is_valid_aggregate_by(self):
+        """
+        At the moment only `aggregate_by=id` or `aggregate_by=site_id`
+        are accepted
+        """
+        if 'id' in self.aggregate_by and len(self.aggregate_by) > 1:
+            return False
+        elif 'site_id' in self.aggregate_by and len(self.aggregate_by) > 1:
+            return False
+        return True
 
     def is_valid_export_dir(self):
         """
