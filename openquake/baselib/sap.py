@@ -128,7 +128,7 @@ class Script(object):
             choices = kw.get('choices')
             default = self.argdef[name]
             if kind == 'pos':
-                if default not in (None, NODEFAULT):
+                if default is not NODEFAULT:
                     kw['default'] = default
                     kw.setdefault('nargs', '?')
                     kw['help'] += ' [default: %s]' % repr(default)

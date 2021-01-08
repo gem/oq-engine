@@ -136,11 +136,15 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
 
 
 @sap.script
-def run(job_ini, pdb: bool, reuse_input: bool,
-        slowest: int = False, hc: int = None, param='',
+def run(job_ini,
+        pdb: bool = False,
+        reuse_input: bool = False,
+        slowest: int = False,
+        hc: int = None, param='',
         concurrent_tasks: int = None,
         exports: valid.export_formats = '',
-        loglevel='info', calc_id='nojob'):
+        loglevel='info',
+        calc_id='nojob'):
     """
     Run a calculation bypassing the database layer
     """
