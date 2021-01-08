@@ -581,7 +581,6 @@ def make_figure_tot_curves(extractors, what):
     fig = plt.figure()
     [ex] = extractors
     tot = ex.get(what)
-    app = ex.get(what.replace('tot_', 'app_'))
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlabel('return periods')
     ax.set_ylabel('PoE')
