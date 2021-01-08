@@ -82,7 +82,7 @@ def check_fname(fname, kind, forbidden):
                         % (kind, forbidden))
 
 
-@sap.Script
+@sap.script
 def prepare_site_model(
         vs30_csv,
         z1pt0: bool = False,
@@ -91,8 +91,8 @@ def prepare_site_model(
         *,
         exposure_xml=None,
         sites_csv=None,
-        grid_spacing=0,
-        assoc_distance=5,
+        grid_spacing: float = 0,
+        assoc_distance: float = 5,
         output='site_model.csv'):
     """
     Prepare a site_model.csv file from exposure xml files/site csv files,
@@ -174,15 +174,20 @@ def prepare_site_model(
     return haz_sitecol
 
 
-prepare_site_model.arg('vs30_csv', 'files with lon,lat,vs30 and no header',
-                       nargs='+')
-prepare_site_model.flg('z1pt0', 'build the z1pt0', '-1')
-prepare_site_model.flg('z2pt5', 'build the z2pt5', '-2')
-prepare_site_model.flg('vs30measured', 'build the vs30measured', '-3')
-prepare_site_model.opt('exposure_xml', 'exposure(s) in XML format', nargs='*')
-prepare_site_model.opt('sites_csv', 'sites in CSV format', nargs='*')
-prepare_site_model.opt('grid_spacing', 'grid spacing in km '
-                       '(the default 0 means no grid)', type=float)
-prepare_site_model.opt('assoc_distance',
-                       'sites over this distance are discarded', type=float)
-prepare_site_model.opt('output', 'output file')
+prepare_site_model.vs30_csv = dict(
+    help='files with lon,lat,vs30 and no header', nargs='+')
+prepare_site_modelz1pt0 = dict(
+    help='build the z1pt0', abbrev='-1')
+prepare_site_model.z2pt5 = dict(
+    help='build the z2pt5', abbrev='-2')
+prepare_site_model.vs30measured = dict(
+    help='build the vs30measured', abbrev='-3')
+prepare_site_model.exposure_xml = dict(
+    help='exposure(s) in XML format', nargs='*')
+prepare_site_modelsites_csv = dict(
+    help='sites in CSV format', nargs='*')
+prepare_site_model.grid_spacing = (
+    'grid spacing in km (the default 0 means no grid)')
+prepare_site_model.assoc_distance = (
+    'sites over this distance are discarded')
+prepare_site_modeloutput = 'output file'

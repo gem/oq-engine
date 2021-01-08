@@ -30,8 +30,8 @@ def get_dupl(src_ids):
     return dupl
 
 
-@sap.Script
-def reduce_sm(calc_id):
+@sap.script
+def reduce_sm(calc_id: int):
     """
     Reduce the source model of the given (pre)calculation by discarding all
     sources that do not contribute to the hazard.
@@ -60,4 +60,4 @@ def reduce_sm(calc_id):
     print(mon)
 
 
-reduce_sm.arg('calc_id', 'calculation ID', type=int)
+reduce_sm.calc_id = 'calculation ID'

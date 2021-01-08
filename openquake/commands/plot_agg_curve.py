@@ -38,8 +38,8 @@ def make_figure(curves):
     return plt
 
 
-@sap.Script
-def plot_ac(calc_id):
+@sap.script
+def plot_ac(calc_id: int):
     """
     Aggregate loss curves plotter.
     """
@@ -50,4 +50,4 @@ def plot_ac(calc_id):
     plt.show()
 
 
-plot_ac.arg('calc_id', 'a computation id', type=int)
+plot_ac.calc_id = 'a computation id'

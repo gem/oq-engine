@@ -24,8 +24,9 @@ from openquake.commonlib import logs
 from openquake.server import dbserver as dbs
 
 
-@sap.Script
-def dbserver(cmd, dbhostport=None,
+@sap.script
+def dbserver(cmd,
+             dbhostport=None,
              foreground: bool = False,
              *,
              loglevel='INFO'):
@@ -51,8 +52,8 @@ def dbserver(cmd, dbhostport=None,
             print('dbserver already running')
 
 
-dbserver.arg('cmd', 'dbserver command',
-             choices='start stop status'.split())
-dbserver.arg('dbhostport', 'dbhost:port')
-dbserver.flg('foreground', 'stay in foreground')
-dbserver.opt('loglevel', 'DEBUG|INFO|WARN')
+dbserver.cmd = dict(help='dbserver command',
+                    choices='start stop status'.split())
+dbserver.dbhostport = 'dbhost:port'
+dbserver.foreground = 'stay in foreground'
+dbserver.loglevel = 'DEBUG|INFO|WARN'

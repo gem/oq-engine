@@ -22,17 +22,15 @@ Here is a minimal example of usage:
 .. code-block:: python
 
     >>> from openquake.baselib import sap
-    >>> def fun(input, inplace, output=None, out='/tmp'):
+    >>> def fun(input, inplace: bool, output=None, out='/tmp'):
     ...     'Example'
     ...     for item in sorted(locals().items()):
     ...         print('%s = %s' % item)
-
-    >>> s = sap.Script(fun)
-    >>> s.arg('input', 'input file or archive')
-    >>> s.flg('inplace', 'convert inplace')
-    >>> s.arg('output', 'output archive')
-    >>> s.opt('out', 'optional output file')
-
+    >>> fun.input = 'input file or archive'
+    >>> fun.inplace = 'convert inplace'
+    >>> fun.output = 'output archive'
+    >>> fun.out = 'optional output file'
+    >>> s = script(fun)
     >>> s.callfunc(['a'])
     inplace = False
     input = a
@@ -80,26 +78,6 @@ def _choices(choices):
     return ''
 
 
-def _populate(parser, argdescr, ann):
-    # populate the parser
-    abbrevs = {'-h'}  # already taken abbreviations
-    for name, kw in argdescr.items():
-        dic = kw.copy()
-        abbrev = dic.pop('abbrev')
-        longname = '--' + name.replace('_', '-')
-        if abbrev and abbrev in abbrevs:
-            # avoid conflicts with previously defined abbreviations
-            args = longname,
-        elif abbrev:
-            # ok abbrev
-            args = longname, abbrev
-            abbrevs.add(abbrev)
-        else:
-            # no abbrev
-            args = name,
-        parser.add_argument(*args, **dic)
-
-
 class Script(object):
     """
     A simple way to define command processors based on argparse.
@@ -124,50 +102,62 @@ class Script(object):
         self.argdef.update(argspec.kwonlydefaults or {})
         self.description = descr = func.__doc__ if func.__doc__ else None
         self.parser = get_parser(parser, descr, help)
-        self.argdescr = {a: {} for a in argspec.args + argspec.kwonlyargs}
+        self.argdescr = []  # list of pairs (argname, argkind)
+        for arg in argspec.args:
+            if argspec.annotations.get('type') is bool:
+                self.argdescr.append((arg, 'flg'))
+            else:
+                self.argdescr.append((arg, 'pos'))
+        for arg in argspec.kwonlyargs:
+            self.argdescr.append((arg, 'opt'))
         self._argno = 0  # used in the NameError check in the _add method
         self.checked = False  # used in the check_arguments method
         registry['%s.%s' % (func.__module__, func.__name__)] = self
+
+    def _populate(self, parser):
+        # populate the parser
+        abbrevs = {'-h'}  # already taken abbreviations
+        for name, kind in self.argdescr:
+            descr = getattr(self.func, name, '')
+            if isinstance(descr, str):
+                kw = dict(help=descr)
+            else:  # assume a dictionary
+                kw = descr.copy()
+            kw['type'] = self._get_type(name, kw.get('type'))
+            abbrev = kw.get('abbrev')
+            choices = kw.get('choices')
+            default = self.argdef[name]
+            if kind == 'pos':
+                if default not in (None, NODEFAULT):
+                    kw['default'] = default
+                    kw.setdefault('nargs', '?')
+                    kw['help'] += ' [default: %s]' % repr(default)
+            elif kind == 'flg':
+                kw.setdefault('abbrev', abbrev or '-' + name[0])
+                kw['action'] = 'store_true'
+            elif kind == 'opt':
+                kw.setdefault('abbrev', abbrev or '-' + name[0])
+                if default not in (None, NODEFAULT):
+                    kw['default'] = default
+                    kw.setdefault('metavar', _choices(choices) or str(default))
+            abbrev = kw.pop('abbrev', None)
+            longname = '--' + name.replace('_', '-')
+            if abbrev and abbrev in abbrevs:
+                # avoid conflicts with previously defined abbreviations
+                args = longname,
+            elif abbrev:
+                # ok abbrev
+                args = longname, abbrev
+                abbrevs.add(abbrev)
+            else:
+                # no abbrev
+                args = name,
+            parser.add_argument(*args, **kw)
 
     def _get_type(self, name, type):
         if type is None and name in self.func.__annotations__:
             return self.func.__annotations__[name]
         return type
-
-    def arg(self, name, help, type=None, choices=None, metavar=None,
-            nargs=None):
-        """
-        Describe a positional argument
-        """
-        kw = dict(help=help, abbrev=None, type=self._get_type(name, type),
-                  choices=choices, metavar=metavar, nargs=nargs)
-        default = self.argdef[name]
-        if default is not NODEFAULT:
-            kw['nargs'] = nargs or '?'
-            kw['default'] = default
-            kw['help'] = kw['help'] + ' [default: %s]' % repr(default)
-        self.argdescr[name] = kw
-
-    def opt(self, name, help, abbrev=None,
-            type=None, choices=None, metavar=None, nargs=None):
-        """
-        Describe an option
-        """
-        kw = dict(help=help, abbrev=abbrev or '-' + name[0],
-                  type=self._get_type(name, type),
-                  choices=choices, metavar=metavar, nargs=nargs)
-        default = self.argdef[name]
-        if default not in (None, NODEFAULT):
-            kw['default'] = default
-            kw['metavar'] = metavar or _choices(choices) or str(default)
-        self.argdescr[name] = kw
-
-    def flg(self, name, help, abbrev=None):
-        """
-        Describe a flag
-        """
-        self.argdescr[name] = dict(help=help, abbrev=abbrev or '-' + name[0],
-                                   action='store_true')
 
     def check_arguments(self):
         """
@@ -198,7 +188,7 @@ class Script(object):
         return self.parser.format_help()
 
     def __repr__(self):
-        args = ', '.join(self.argdescr)
+        args = ', '.join(name for name, kind in self.argdescr)
         return '<%s %s(%s)>' % (self.__class__.__name__, self.name, args)
 
 
@@ -215,7 +205,9 @@ def script(scripts, name='main', description=None, prog=None,
     :param prog: name of the script printed in the usage message
     :param version: version of the script printed with --version
     """
-    assert len(scripts) >= 1, scripts
+    if callable(scripts):
+        Script(scripts)  # register the function
+        return scripts
     if parser is None:
         parser = argparse.ArgumentParser(
             description=description, add_help=False)
@@ -238,8 +230,8 @@ def script(scripts, name='main', description=None, prog=None,
         else:
             print(subp.format_help())
     help_script = Script(gethelp, 'help', help=False)
-    progname = '%s ' % prog if prog else ''
-    help_script.arg('cmd', progname + 'subcommand')
+    # progname = '%s ' % prog if prog else ''
+    # help_script.cmd = progname + 'subcommand'
     subpdic = {}  # subcommand name -> subparser
     for s in list(scripts) + [help_script]:
         if isinstance(s, str):  # nested subcommand
@@ -247,7 +239,7 @@ def script(scripts, name='main', description=None, prog=None,
             subpdic[s] = subp
         else:  # terminal subcommand
             subp = subparsers.add_parser(s.name, description=s.description)
-            _populate(subp, s.argdescr, s.func.__annotations__)
+            s._populate(subp)
             subp.set_defaults(_func=s.func)
 
     def main(**kw):

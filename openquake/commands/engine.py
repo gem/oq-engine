@@ -68,7 +68,7 @@ def del_calculation(job_id, confirmed=False):
                 print(resp['error'])
 
 
-@sap.Script
+@sap.script
 def engine(
         no_distribute: bool,
         yes: bool,
@@ -84,12 +84,12 @@ def engine(
         log_file=None,
         make_html_report=None,
         run=None,
-        delete_calculation=None,
-        hazard_calculation_id=None,
-        list_outputs=None,
+        delete_calculation: int = None,
+        hazard_calculation_id: int = None,
+        list_outputs: int = None,
         show_log=None,
-        export_output=None,
-        export_outputs=None,
+        export_output: int = None,
+        export_outputs: int = None,
         param='',
         config_file=None,
         exports='',
@@ -215,58 +215,59 @@ def engine(
 
 
 # flags
-engine.flg('no_distribute', abbrev='--nd', help='''\
+engine.no_distribute = dict(abbrev='--nd', help='''\
 Disable calculation task distribution and run the
 computation in a single process. This is intended for
 use in debugging and profiling.''')
-engine.flg('yes', 'Automatically answer "yes" when asked to confirm an action')
-engine.flg('upgrade_db', 'Upgrade the openquake database')
-engine.flg('db_version', 'Show the current version of the openquake database')
-engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
-           'database if you upgrade')
-engine.flg('list_hazard_calculations', abbrev='--lhc',
-           help='List hazard calculation information')
-engine.flg('list_risk_calculations', abbrev='--lrc',
-           help='List risk calculation information')
-engine.flg('delete_uncompleted_calculations', abbrev='--duc',
-           help='Delete all the uncompleted calculations')
-engine.flg('multi', 'Run multiple job.inis in parallel')
-engine.flg('reuse_input', 'Read the sources|exposures from the cache (if any)')
+engine.yes = 'Automatically answer "yes" when asked to confirm an action'
+engine.upgrade_db = 'Upgrade the openquake database'
+engine.db_version = 'Show the current version of the openquake database'
+engine.what_if_I_upgrade = (
+    'Show what will happen to the openquake database if you upgrade')
+engine.list_hazard_calculations = dict(
+    abbrev='--lhc', help='List hazard calculation information')
+engine.list_risk_calculations = dict(
+    abbrev='--lrc', help='List risk calculation information')
+engine.delete_uncompleted_calculations = dict(
+    abbrev='--duc', help='Delete all the uncompleted calculations')
+engine.multi = 'Run multiple job.inis in parallel'
+engine.reuse_input = 'Read the sources|exposures from the cache (if any)'
 
 # options
-engine.opt('log_file', abbrev='-L', help='''\
+engine.log_file = dict(
+    abbrev='-L', help='''\
 Location where to store log messages; if not specified, log messages
 will be printed to the console (to stderr)''')
-engine.opt('make_html_report', abbrev='--r',
-           help='Build an HTML report of the computation at the given date',
-           metavar='YYYY-MM-DD|today')
-engine.opt('run', abbrev='--run',
-           help='Run a job with the specified config file',
-           metavar='JOB_INI', nargs='+')
-engine.opt('delete_calculation', abbrev='--dc',
-           help='Delete a calculation and all associated outputs',
-           metavar='CALCULATION_ID', type=int)
-engine.opt('hazard_calculation_id', abbrev='--hc',
-           help='Use the given job as input for the next job')
-engine.opt('list_outputs', abbrev='--lo',
-           help='List outputs for the specified calculation',
-           metavar='CALCULATION_ID')
-engine.opt('show_log', abbrev='--sl',
-           help='Show the log of the specified calculation',
-           metavar='CALCULATION_ID')
-engine.opt('export_output', abbrev='--eo',
-           nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'),
-           help='Export the desired output to the specified directory')
-engine.opt('export_outputs', abbrev='--eos',
-           nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'),
-           help='Export all of the calculation outputs to the '
-           'specified directory')
-engine.opt('param', abbrev='-p',
-           help='Override parameters specified with the syntax '
-           'NAME1=VALUE1,NAME2=VALUE2,...')
-engine.opt('config_file', 'Custom openquake.cfg file, to override default '
-           'configurations')
-engine.opt('exports', 'Comma-separated string specifing the export formats, '
-           'in order of priority')
-engine.opt('log_level', 'Defaults to "info"',
-           choices=['debug', 'info', 'warn', 'error', 'critical'])
+engine.make_html_report = dict(
+    abbrev='--r', metavar='YYYY-MM-DD|today',
+    help='Build an HTML report of the computation at the given date')
+engine.run = dict(abbrev='--run',
+                  help='Run a job with the specified config file',
+                  metavar='JOB_INI', nargs='+')
+engine.delete_calculation = dict(
+    abbrev='--dc',
+    help='Delete a calculation and all associated outputs',
+    metavar='CALCULATION_ID')
+engine.hazard_calculation_id = dict(
+    abbrev='--hc', help='Use the given job as input for the next job')
+engine.list_outputs = dict(
+    abbrev='--lo', help='List outputs for the specified calculation',
+    metavar='CALCULATION_ID')
+engine.show_log = dict(
+    abbrev='--sl', help='Show the log of the specified calculation',
+    metavar='CALCULATION_ID')
+engine.export_output = dict(
+    abbrev='--eo', nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'),
+    help='Export the desired output to the specified directory')
+engine.export_outputs = dict(
+    abbrev='--eos', nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'),
+    help='Export all of the calculation outputs to the specified directory')
+engine.param = dict(
+    abbrev='-p', help='Override parameters specified with the syntax '
+    'NAME1=VALUE1,NAME2=VALUE2,...')
+engine.config_file = ('Custom openquake.cfg file, to override default '
+                      'configurations')
+engine.exports = ('Comma-separated string specifing the export formats, '
+                  'in order of priority')
+engine.log_level = dict(help='Defaults to "info"',
+                        choices=['debug', 'info', 'warn', 'error', 'critical'])

@@ -47,8 +47,8 @@ def rundjango(subcmd, hostport=None, skip_browser: bool = False):
         sys.exit(p.returncode)
 
 
-@sap.Script
-def webui(cmd, hostport='127.0.0.1:8800', skip_browser=False):
+@sap.script
+def webui(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
     """
     start the webui server in foreground or perform other operation on the
     django application
@@ -64,6 +64,6 @@ def webui(cmd, hostport='127.0.0.1:8800', skip_browser=False):
         rundjango(cmd)
 
 
-webui.arg('cmd', 'webui command', choices=commands)
-webui.arg('hostport', 'a string of the form <hostname:port>')
-webui.flg('skip_browser', 'do not automatically open the browser')
+webui.cmd = dict(help='webui command', choices=commands)
+webui.hostport = 'a string of the form <hostname:port>'
+webui.skip_browser = 'do not automatically open the browser'

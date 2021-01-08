@@ -135,10 +135,12 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
     return calc
 
 
-@sap.Script
+@sap.script
 def run(job_ini, pdb: bool, reuse_input: bool,
-        slowest=False, hc=None, param='', concurrent_tasks=None,
-        exports='', loglevel='info', calc_id='nojob'):
+        slowest: int = False, hc: int = None, param='',
+        concurrent_tasks: int = None,
+        exports: valid.export_formats = '',
+        loglevel='info', calc_id='nojob'):
     """
     Run a calculation bypassing the database layer
     """
@@ -166,17 +168,15 @@ def run(job_ini, pdb: bool, reuse_input: bool,
         parallel.Starmap.shutdown()
 
 
-run.arg('job_ini', 'calculation configuration file '
-        '(or files, space-separated)', nargs='+')
-run.flg('pdb', 'enable post mortem debugging', '-d')
-run.flg('reuse_input', 'reuse source model and exposure')
-run.opt('slowest', 'profile and show the slowest operations', type=int)
-run.opt('hc', 'previous calculation ID', type=int)
-run.opt('param', 'override parameter with the syntax NAME=VALUE,...')
-run.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
-        type=int)
-run.opt('exports', 'export formats as a comma-separated string',
-        type=valid.export_formats)
-run.opt('loglevel', 'logging level',
-        choices='debug info warn error critical'.split())
-run.opt('calc_id', 'calculation ID (if "nojob" infer it)')
+run.job_ini = dict(help='calculation configuration file '
+                   '(or files, space-separated)', nargs='+')
+run.pdb = dict(help='enable post mortem debugging', abbrev='-d')
+run.reuse_input = dict(help='reuse source model and exposure')
+run.slowest = dict(help='profile and show the slowest operations')
+run.hc = dict(help='previous calculation ID')
+run.param = dict(help='override parameter with the syntax NAME=VALUE,...')
+run.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
+run.exports = dict(help='export formats as a comma-separated string')
+run.loglevel = dict(help='logging level',
+                    choices='debug info warn error critical'.split())
+run.calc_id = dict(help='calculation ID (if "nojob" infer it)')

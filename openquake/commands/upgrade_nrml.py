@@ -113,7 +113,7 @@ def upgrade_file(path, multipoint):
 # NB: this works only for migrations from NRML version 0.4 to 0.5
 # we will implement a more general solution when we will need to pass
 # to version 0.6
-@sap.Script
+@sap.script
 def upgrade_nrml(directory, dry_run: bool, multipoint: bool):
     """
     Upgrade all the NRML files contained in the given directory to the latest
@@ -152,6 +152,6 @@ def upgrade_nrml(directory, dry_run: bool, multipoint: bool):
                         print('Not upgrading', path)
 
 
-upgrade_nrml.arg('directory', 'directory to consider')
-upgrade_nrml.flg('dry_run', 'test the upgrade without replacing the files')
-upgrade_nrml.flg('multipoint', 'replace PointSources with MultiPointSources')
+upgrade_nrml.directory = 'directory to consider'
+upgrade_nrml.dry_run = 'test the upgrade without replacing the files'
+upgrade_nrml.multipoint = 'replace PointSources with MultiPointSources'

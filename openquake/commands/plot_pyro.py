@@ -20,8 +20,8 @@ from openquake.baselib import sap
 from openquake.commonlib import util
 
 
-@sap.Script
-def plot_pyro(calc_id=-1):
+@sap.script
+def plot_pyro(calc_id: int = -1):
     """
     Plot the pyroclastic cloud and the assets
     """
@@ -40,6 +40,3 @@ def plot_pyro(calc_id=-1):
     lats = sitecol.lats[building_pyro]
     p.scatter(lons, lats, marker='.', color='green')
     p.show()
-
-
-plot_pyro.arg('calc_id', 'a computation id', type=int)

@@ -94,7 +94,7 @@ def compare_rups(calc_1, calc_2):
         _print_diff(a1, a2, df1.index, df2.index, col)
 
 
-@sap.Script
+@sap.script
 def compare(what, imt, calc_ids: int,
             files: bool,
             *,
@@ -171,12 +171,12 @@ def compare(what, imt, calc_ids: int,
             print(views.rst_table(rows, ['poe', 'rms-diff']))
 
 
-compare.arg('what', '"hmaps", "hcurves" or "cumtime of"',
-            choices={'rups', 'hmaps', 'hcurves', 'cumtime'})
-compare.arg('imt', 'intensity measure type to compare')
-compare.arg('calc_ids', 'calculation IDs', nargs='+')
-compare.flg('files', 'write the results in multiple files')
-compare.opt('samplesites', 'sites to sample (or fname with site IDs)')
-compare.opt('rtol', 'relative tolerance')
-compare.opt('atol', 'absolute tolerance')
-compare.opt('threshold', 'ignore the hazard curves below it')
+compare.what = dict(help='"hmaps", "hcurves" or "cumtime of"',
+                    choices={'rups', 'hmaps', 'hcurves', 'cumtime'})
+compare.imt = 'intensity measure type to compare'
+compare.calc_ids = dict(help='calculation IDs', nargs='+')
+compare.files = 'write the results in multiple files'
+compare.samplesites = 'sites to sample (or fname with site IDs)'
+compare.rtol = 'relative tolerance'
+compare.atol = 'absolute tolerance'
+compare.threshold = 'ignore the hazard curves below it'

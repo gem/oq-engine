@@ -46,8 +46,8 @@ def make_figure(losses_by_rlzi, loss_types, nbins):
     return plt
 
 
-@sap.Script
-def plot_losses(calc_id, bins=7):
+@sap.script
+def plot_losses(calc_id: int, bins: int = 7):
     """
     losses_by_event plotter
     """
@@ -59,5 +59,5 @@ def plot_losses(calc_id, bins=7):
     plt.show()
 
 
-plot_losses.arg('calc_id', 'a computation id', type=int)
-plot_losses.opt('bins', 'number of histogram bins', type=int)
+plot_losses.calc_id = 'a computation id'
+plot_losses.bins = 'number of histogram bins'
