@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Support for input URLs associated to an input archive
   * Introduced `deformation_component` parameter in the secondary perils
   * Optimized the storage of the risk model with a speedup of 60x
     for a calculation with ~50,000 fragility functions (2 minutes->2seconds)

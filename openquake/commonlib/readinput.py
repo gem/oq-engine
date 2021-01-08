@@ -36,7 +36,7 @@ import requests
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates)
+    random_filter, countby, group_array, get_duplicates, gettemp)
 from openquake.baselib.python3compat import zip
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -213,12 +213,17 @@ def get_params(job_ini, kw={}):
     Parse a .ini file or a .zip archive
 
     :param job_ini:
-        Configuration file or zip archive
+        Configuration file | zip archive | URL
     :param kw:
         Optionally override some parameters
     :returns:
         A dictionary of parameters
     """
+    if job_ini.startswith(('http://', 'https://')):
+        resp = requests.get(job_ini)
+        job_ini = gettemp(suffix='.zip')
+        with open(job_ini, 'wb') as f:
+            f.write(resp.content)
     # directory containing the config files we're parsing
     job_ini = os.path.abspath(job_ini)
     base_path = os.path.dirname(job_ini)
