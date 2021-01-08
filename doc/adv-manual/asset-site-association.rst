@@ -44,7 +44,7 @@ There are a number of error situations:
    ``oq prepare_site_model``
    to manually prepare a site model on the location of the sites.
 5. Having duplicates (i.e. rows with identical lon, lat up to 5 digits)
-   in the site model is an error.   
+   in the site model is an error.
 
 If you want to compute the hazard on the locations specified by the site model
 and not on the exposure locations, you can split the calculation in two files:
