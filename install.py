@@ -117,6 +117,7 @@ PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'darwin': ('macos',),
             'win32': ('win64',)}
 DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
+GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
 
 
 def before_checks(inst, remove, usage):
@@ -204,15 +205,17 @@ def install(inst, version):
         'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
     subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', '-r', req])
 
-    # install the engine
-    if inst is devel:
+    if inst is devel:  # install from the local repo
+        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', '-e', '.'])
+    elif version is None:  # install the stable version
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
-                               '-e', '.'])
-    else:
-        vers = ('==' + version) if version else ''
+                               '--upgrade', 'openquake.engine'])
+    if '.' in version:  # install an official version
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
-                               '--upgrade', 'openquake.engine' + vers])
-
+                               '--upgrade', 'openquake.engine==' + version])
+    else:  # install a branch from github
+        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
+                               '--upgrade', GITBRANCH % version])
     # create openquake.cfg
     if inst is server:
         if os.path.exists(inst.CFG):
