@@ -209,13 +209,12 @@ def script(scripts, name='main', description=None, prog=None,
         Script(scripts)  # register the function
         return scripts
     if parser is None:
-        parser = argparse.ArgumentParser(
-            description=description, add_help=False)
+        parser = argparse.ArgumentParser(prog, description=description)
     elif prog is None:
         prog = parser.prog
     if version:
         parser.add_argument(
-            '--version', '-v', action='version', version=version)
+            '-v', '--version', action='version', version=version)
     subparsers = parser.add_subparsers(
         help='available subcommands; use %s help <subcmd>' % prog,
         prog=prog)
@@ -230,8 +229,6 @@ def script(scripts, name='main', description=None, prog=None,
         else:
             print(subp.format_help())
     help_script = Script(gethelp, 'help', help=False)
-    # progname = '%s ' % prog if prog else ''
-    # help_script.cmd = progname + 'subcommand'
     subpdic = {}  # subcommand name -> subparser
     for s in list(scripts) + [help_script]:
         if isinstance(s, str):  # nested subcommand
