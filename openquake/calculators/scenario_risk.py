@@ -134,15 +134,13 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         """
         Log a warning if relevant events are missing from the loss table
         """
-        try:
-            rel = set(self.datastore['relevant_events'][:])
-        except KeyError:
-            rel = set(self.datastore['events']['id'])
-
-        missing = list(rel - set(alt.event_id.unique()))
-        if missing:
-            logging.warning('There are relevant events missing from the loss '
-                            'table: %s', numpy.sort(missing))
+        eids = set(alt.event_id.unique())  # events with losses
+        for sid, gmv_df in self.df_by_sid.items():
+            missing = list(set(gmv_df.eid.to_numpy()) - eids)
+            if missing:
+                logging.warning(
+                    'There are events missing from the loss '
+                    'table for site ID %d: %s', sid, numpy.sort(missing))
 
     def post_execute(self, result):
         """
@@ -163,7 +161,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             K = len(result.aggkey)
             alt = result.to_dframe()
             self.datastore.create_dframe('agg_loss_table', alt)
-            self.check_events_no_losses(alt)
+            if oq.hazard_calculation_id:
+                self.check_events_no_losses(alt)
 
         # save agg_losses
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)

@@ -1015,6 +1015,7 @@ class RiskCalculator(HazardCalculator):
             gmf_df = dstore.read_df('gmf_data', 'sid')
             by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
         logging.info('Grouped the GMFs by site ID')
+        self.df_by_sid = {}
         for sid, assets in enumerate(self.assetcol.assets_by_site()):
             if len(assets) == 0:
                 continue
@@ -1023,6 +1024,7 @@ class RiskCalculator(HazardCalculator):
             except KeyError:
                 getter = getters.ZeroGetter(sid, rlzs, self.R)
             else:
+                self.df_by_sid[sid] = df
                 df['rlz'] = rlzs[df.eid.to_numpy()]
                 getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)
             if len(dstore['gmf_data/eid']) == 0:
