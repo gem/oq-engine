@@ -269,7 +269,7 @@ class WorkerPool(object):
         return 'WorkerPool %s killed' % self.ctrl_url
 
 
-def workerpool(worker_url='tcp://0.0.0.0:1909', num_workers: int = -1):
+def workerpool(worker_url='tcp://0.0.0.0:1909', *, num_workers: int = -1):
     # start a workerpool without a streamer
     WorkerPool(worker_url, num_workers).start()
 
