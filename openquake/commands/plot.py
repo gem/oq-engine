@@ -601,7 +601,7 @@ def plot_wkt(wkt_string):
     return plt
 
 
-def plot(what='examples',
+def plot(what,
          calc_id: int = -1,
          other_id: int = None,
          webapi=False,

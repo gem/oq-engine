@@ -32,125 +32,78 @@ def _choices(choices):
     return ''
 
 
-class _Script(object):
-    def __init__(self, func, parser, name=None):
-        self.func = func
-        self.name = name or func.__name__
-        # args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, anns
-        argspec = inspect.getfullargspec(func)
-        if argspec.varargs:
-            raise TypeError('varargs in the signature of %s are not supported'
-                            % func)
-        defaults = argspec.defaults or ()
-        nodefaults = len(argspec.args) - len(defaults)
-        alldefaults = (NODEFAULT,) * nodefaults + defaults
-        self.argdef = dict(zip(argspec.args, alldefaults))
-        self.argdef.update(argspec.kwonlydefaults or {})
-        self.description = func.__doc__ if func.__doc__ else None
-        self.parser = parser
-        self.argdescr = []  # list of pairs (argname, argkind)
-        for arg in argspec.args:
-            if self.argdef[arg] is False:
-                self.argdescr.append((arg, 'flg'))
-            else:
-                self.argdescr.append((arg, 'pos'))
-        for arg in argspec.kwonlyargs:
-            self.argdescr.append((arg, 'opt'))
-
-    def _populate(self):
-        # populate the parser
-        abbrevs = {'-h'}  # already taken abbreviations
-        for name, kind in self.argdescr:
-            descr = getattr(self.func, name, '')
-            if isinstance(descr, str):
-                kw = dict(help=descr)
-            else:  # assume a dictionary
-                kw = descr.copy()
-            if kw.get('type') is None and type in self.func.__annotations__:
-                kw.setdefault('type', self.func.__annotations__['type'])
-            abbrev = kw.get('abbrev')
-            choices = kw.get('choices')
-            default = self.argdef[name]
-            if kind == 'pos':
-                if default is not NODEFAULT:
-                    kw['default'] = default
-                    kw.setdefault('nargs', '?')
-                    kw['help'] += ' [default: %s]' % repr(default)
-            elif kind == 'flg':
-                kw.setdefault('abbrev', abbrev or '-' + name[0])
-                kw['action'] = 'store_true'
-            elif kind == 'opt':
-                kw.setdefault('abbrev', abbrev or '-' + name[0])
-                if default not in (None, NODEFAULT):
-                    kw['default'] = default
-                    kw.setdefault('metavar', _choices(choices) or str(default))
-            abbrev = kw.pop('abbrev', None)
-            longname = '--' + name.replace('_', '-')
-            if abbrev and abbrev in abbrevs:
-                # avoid conflicts with previously defined abbreviations
-                args = longname,
-            elif abbrev:
-                # ok abbrev
-                args = longname, abbrev
-                abbrevs.add(abbrev)
-            else:
-                # no abbrev
-                args = name,
-            self.parser.add_argument(*args, **kw)
-
-    def __repr__(self):
-        args = ', '.join(name for name, kind in self.argdescr)
-        return '<%s %s(%s)>' % (self.__class__.__name__, self.name, args)
-
-
-class Parser(argparse.ArgumentParser):
-    """
-    argparse.ArgumentParser with a .run method
-    """
-    def run(self, argv=None):
-        """
-        Parse the command-line and run the script
-        """
-        namespace = self.parse_args(argv or sys.argv[1:])
-        try:
-            func = namespace.__dict__.pop('_func')
-        except KeyError:
-            self.print_usage()
+def _populate(parser, func, prog):
+    # populate the parser
+    # args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, anns
+    argspec = inspect.getfullargspec(func)
+    if argspec.varargs:
+        raise TypeError('varargs in the signature of %s are not supported'
+                        % func)
+    defaults = argspec.defaults or ()
+    nodefaults = len(argspec.args) - len(defaults)
+    alldefaults = (NODEFAULT,) * nodefaults + defaults
+    argdef = dict(zip(argspec.args, alldefaults))
+    argdef.update(argspec.kwonlydefaults or {})
+    parser.prog = prog
+    parser.description = func.__doc__
+    parser.set_defaults(_func=func)
+    argdescr = []  # list of pairs (argname, argkind)
+    for arg in argspec.args:
+        if argdef[arg] is False:
+            argdescr.append((arg, 'flg'))
         else:
-            return func(**vars(namespace))
-
-
-def parser(funcdict, prog=None, description=None, version=None) -> Parser:
-    """
-    :param funcdict: a function or a nested dictionary of functions
-    :param prog: the name of the associated command line application
-    :param description: description of the application
-    :param version: version of the application printed with --version
-    :returns: a sap.Parser instance
-    """
-    parser = Parser(prog, description=description)
-    if version:
-        parser.add_argument(
-            '-v', '--version', action='version', version=version)
-    if callable(funcdict):
-        _Script(funcdict, parser)._populate()
-    elif isinstance(funcdict, str):  # passed a package name
-        funcdict = find_main(funcdict)
-    _rec_populate(parser, funcdict, prog)
-    return parser
+            argdescr.append((arg, 'pos'))
+    for arg in argspec.kwonlyargs:
+        argdescr.append((arg, 'opt'))
+    abbrevs = {'-h'}  # already taken abbreviations
+    for name, kind in argdescr:
+        descr = getattr(func, name, '')
+        if isinstance(descr, str):
+            kw = dict(help=descr)
+        else:  # assume a dictionary
+            kw = descr.copy()
+        if kw.get('type') is None and type in func.__annotations__:
+            kw.setdefault('type', func.__annotations__['type'])
+        abbrev = kw.get('abbrev')
+        choices = kw.get('choices')
+        default = argdef[name]
+        if kind == 'pos':
+            if default is not NODEFAULT:
+                kw['default'] = default
+                kw.setdefault('nargs', '?')
+                kw['help'] += ' [default: %s]' % repr(default)
+        elif kind == 'flg':
+            kw.setdefault('abbrev', abbrev or '-' + name[0])
+            kw['action'] = 'store_true'
+        elif kind == 'opt':
+            kw.setdefault('abbrev', abbrev or '-' + name[0])
+            if default not in (None, NODEFAULT):
+                kw['default'] = default
+                kw.setdefault('metavar', _choices(choices) or str(default))
+        abbrev = kw.pop('abbrev', None)
+        longname = '--' + name.replace('_', '-')
+        if abbrev and abbrev in abbrevs:
+            # avoid conflicts with previously defined abbreviations
+            args = longname,
+        elif abbrev:
+            # ok abbrev
+            args = longname, abbrev
+            abbrevs.add(abbrev)
+        else:
+            # no abbrev
+            args = name,
+        parser.add_argument(*args, **kw)
 
 
 def _rec_populate(parser, funcdict, prog):
     subparsers = parser.add_subparsers(
         help='available subcommands; use %s <subcmd> --help' % prog, prog=prog)
     for name, func in funcdict.items():
+        subp = subparsers.add_parser(name, prog=prog + ' ' + name)
         if isinstance(func, dict):  # nested subcommand
-            _rec_populate(subparsers.add_parser(name), func, prog + ' ' + name)
+            _rec_populate(subp, func, prog)
         else:  # terminal subcommand
-            subp = subparsers.add_parser(name, description=func.__doc__,
-                                         prog=prog + ' ' + name)
-            subp.set_defaults(_func=func)
-            _Script(func, subp)._populate()
+            _populate(subp, func, prog)
 
 
 def find_main(pkgname):
@@ -174,3 +127,41 @@ def find_main(pkgname):
                 if hasattr(mod, main):
                     dic[main] = getattr(mod, main)
     return dic
+
+
+class _Parser(argparse.ArgumentParser):
+    """
+    argparse.ArgumentParser with a .run method
+    """
+    def run(self, argv=None):
+        """
+        Parse the command-line and run the script
+        """
+        namespace = self.parse_args(argv or sys.argv[1:])
+        try:
+            func = namespace.__dict__.pop('_func')
+        except KeyError:
+            self.print_usage()
+        else:
+            return func(**vars(namespace))
+
+
+def parser(funcdict, prog=None, description=None, version=None) -> _Parser:
+    """
+    :param funcdict: a function or a nested dictionary of functions
+    :param prog: the name of the associated command line application
+    :param description: description of the application
+    :param version: version of the application printed with --version
+    :returns: a sap.Parser instance
+    """
+    parser = _Parser(prog, description=description)
+    if version:
+        parser.add_argument(
+            '-v', '--version', action='version', version=version)
+    if isinstance(funcdict, str):  # passed a package name
+        funcdict = find_main(funcdict)
+    if callable(funcdict):
+        _populate(parser, funcdict, prog)
+    else:
+        _rec_populate(parser, funcdict, prog)
+    return parser
