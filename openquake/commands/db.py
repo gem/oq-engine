@@ -45,7 +45,7 @@ def convert(strings):
             yield s
 
 
-def db(cmd, args=()):
+def main(cmd, args=()):
     """
     Run a database command
     """
@@ -63,5 +63,5 @@ def db(cmd, args=()):
         print(res)
 
 
-db.cmd = 'db command'
-db.args = dict(help='db command arguments', nargs='*')
+main.cmd = 'db command'
+main.args = dict(help='db command arguments', nargs='*')

@@ -24,7 +24,7 @@ from openquake.engine import engine
 from openquake.server import dbserver
 
 
-def importcalc(calc_id):
+def main(calc_id):
     """
     Import a remote calculation into the local database. server, username
     and password must be specified in an openquake.cfg file.
@@ -55,4 +55,4 @@ def importcalc(calc_id):
     logging.info('Imported calculation %s successfully', calc_id)
 
 
-importcalc.calc_id = 'calculation ID or pathname'
+main.calc_id = 'calculation ID or pathname'

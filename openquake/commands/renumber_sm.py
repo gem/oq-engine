@@ -21,7 +21,7 @@ def read_sm(fname):
     return root, fname, sources
 
 
-def renumber_sm(smlt_file):
+def main(smlt_file):
     """
     Renumber the sources belonging to the same source model, even if split
     in multiple files, to avoid duplicated source IDs. NB: it changes the
@@ -47,4 +47,4 @@ def renumber_sm(smlt_file):
             nrml.write(root, f, xmlns=root['xmlns'])
 
 
-renumber_sm.smlt_file = 'source model logic tree file'
+main.smlt_file = 'source model logic tree file'

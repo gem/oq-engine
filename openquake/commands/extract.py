@@ -22,12 +22,12 @@ from openquake.calculators.extract import Extractor, WebExtractor
 
 
 # `oq extract` is tested in the demos
-def extract(what,
-            calc_id: int = -1,
-            webapi=False,
-            local=False,
-            *,
-            extract_dir='.'):
+def main(what,
+         calc_id: int = -1,
+         webapi=False,
+         local=False,
+         *,
+         extract_dir='.'):
     """
     Extract an output from the datastore and save it into an .hdf5 file.
     By default uses the WebAPI, otherwise the extraction is done locally.
@@ -54,8 +54,8 @@ def extract(what,
         print(mon)
 
 
-extract.what = 'string specifying what to extract'
-extract.calc_id = 'number of the calculation'
-extract.webapi = 'if passed, use the (possibly remote) WebAPI'
-extract.local = 'if passed, use the local WebAPI'
-extract.extract_dir = 'directory where to extract'
+main.what = 'string specifying what to extract'
+main.calc_id = 'number of the calculation'
+main.webapi = 'if passed, use the (possibly remote) WebAPI'
+main.local = 'if passed, use the local WebAPI'
+main.extract_dir = 'directory where to extract'

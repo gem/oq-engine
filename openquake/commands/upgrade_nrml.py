@@ -112,7 +112,7 @@ def upgrade_file(path, multipoint):
 # NB: this works only for migrations from NRML version 0.4 to 0.5
 # we will implement a more general solution when we will need to pass
 # to version 0.6
-def upgrade_nrml(directory, dry_run=False, multipoint=False):
+def main(directory, dry_run=False, multipoint=False):
     """
     Upgrade all the NRML files contained in the given directory to the latest
     NRML version. Works by walking all subdirectories.
@@ -150,6 +150,6 @@ def upgrade_nrml(directory, dry_run=False, multipoint=False):
                         print('Not upgrading', path)
 
 
-upgrade_nrml.directory = 'directory to consider'
-upgrade_nrml.dry_run = 'test the upgrade without replacing the files'
-upgrade_nrml.multipoint = 'replace PointSources with MultiPointSources'
+main.directory = 'directory to consider'
+main.dry_run = 'test the upgrade without replacing the files'
+main.multipoint = 'replace PointSources with MultiPointSources'

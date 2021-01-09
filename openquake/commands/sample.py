@@ -56,7 +56,7 @@ def reduce_source_model(fname, reduction_factor):
     save_bak(fname, node, num_nodes, total)
 
 
-def sample(fname, reduction_factor: valid.probability):
+def main(fname, reduction_factor: valid.probability):
     """
     Produce a submodel from `fname` by sampling the nodes randomly.
     Supports source models, site models and exposure models. As a special
@@ -110,5 +110,5 @@ def sample(fname, reduction_factor: valid.probability):
     save_bak(fname, node, num_nodes, total)
 
 
-sample.fname = 'path to the model file'
-sample.reduction_factor = 'reduction factor in the range 0..1'
+main.fname = 'path to the model file'
+main.reduction_factor = 'reduction factor in the range 0..1'

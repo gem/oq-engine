@@ -53,7 +53,7 @@ def purge_all(user=None):
                 purge_one(calc_id, user, force=True)
 
 
-def purge(calc_id: int, force=False):
+def main(calc_id: int, force=False):
     """
     Remove the given calculation. If you want to remove all calculations,
     use oq reset.
@@ -67,5 +67,5 @@ def purge(calc_id: int, force=False):
     purge_one(calc_id, getpass.getuser(), force)
 
 
-purge.calc_id = 'calculation ID'
-purge.force = 'ignore dependent calculations'
+main.calc_id = 'calculation ID'
+main.force = 'ignore dependent calculations'

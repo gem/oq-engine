@@ -19,7 +19,7 @@ import numpy
 from openquake.commonlib import util
 
 
-def plot_pyro(calc_id: int = -1):
+def main(calc_id: int = -1):
     """
     Plot the pyroclastic cloud and the assets
     """

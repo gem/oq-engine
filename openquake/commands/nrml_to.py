@@ -121,7 +121,7 @@ def appendrow(row, rows, chatty):
             raise exc.__class__(wkt)
 
 
-def nrml_to(what, fnames, chatty=False, *, outdir='.'):
+def main(what, fnames, chatty=False, *, outdir='.'):
     """
     Convert source models into CSV files or a geopackage.
     """
@@ -159,8 +159,8 @@ def nrml_to(what, fnames, chatty=False, *, outdir='.'):
     logging.info('Finished in %d seconds', time.time() - t0)
 
 
-nrml_to.what = dict(help='csv or gpkg',
-                    choices=['csv', 'gpkg'] if fiona else ['csv'])
-nrml_to.fnames = dict(help='source model files in XML', nargs='+')
-nrml_to.chatty = 'display sources in progress'
-nrml_to.outdir = 'output directory'
+main.what = dict(help='csv or gpkg',
+                 choices=['csv', 'gpkg'] if fiona else ['csv'])
+main.fnames = dict(help='source model files in XML', nargs='+')
+main.chatty = 'display sources in progress'
+main.outdir = 'output directory'

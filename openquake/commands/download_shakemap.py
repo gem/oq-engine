@@ -21,7 +21,7 @@ from openquake.baselib import performance
 from openquake.hazardlib.shakemap import download_array
 
 
-def download_shakemap(id):
+def main(id):
     """
     Example of usage: utils/shakemap usp000fjta
     """

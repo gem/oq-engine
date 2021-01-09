@@ -27,7 +27,7 @@ from openquake.server import dbserver
 from openquake.commands.purge import purge_one, purge_all
 
 
-def reset(yes=False):
+def main(yes=False):
     """
     Remove all the datastores and the database of the current user
     """
@@ -56,4 +56,4 @@ def reset(yes=False):
             print('Removed %s' % dbpath)
 
 
-reset.yes = 'confirmation'
+main.yes = 'confirmation'

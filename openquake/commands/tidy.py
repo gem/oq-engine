@@ -19,7 +19,7 @@ from openquake.hazardlib import nrml
 from openquake.commonlib import writers
 
 
-def tidy(fnames):
+def main(fnames):
     """
     Reformat a NRML file in a canonical form. That also means reducing the
     precision of the floats to a standard value. If the file is invalid,
@@ -39,4 +39,4 @@ def tidy(fnames):
         print('Reformatted %s, original left in %s.bak' % (fname, fname))
 
 
-tidy.fnames = dict(help='NRML file name', nargs='+')
+main.fnames = dict(help='NRML file name', nargs='+')

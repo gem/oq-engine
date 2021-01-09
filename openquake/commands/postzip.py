@@ -25,7 +25,7 @@ from openquake.commonlib import oqzip
 from openquake.calculators.extract import WebAPIError
 
 
-def postzip(zipfile):
+def main(zipfile):
     """Post a zipfile to the WebUI"""
     sess = requests.Session()
     if config.webapi.username:
@@ -45,4 +45,4 @@ def postzip(zipfile):
     print(json.loads(resp.text))
 
 
-postzip.zipfile = 'archive with the files of the computation'
+main.zipfile = 'archive with the files of the computation'

@@ -45,7 +45,7 @@ def make_figure(losses_by_rlzi, loss_types, nbins):
     return plt
 
 
-def plot_losses(calc_id: int, bins: int = 7):
+def main(calc_id: int, bins: int = 7):
     """
     losses_by_event plotter
     """
@@ -57,5 +57,5 @@ def plot_losses(calc_id: int, bins: int = 7):
     plt.show()
 
 
-plot_losses.calc_id = 'a computation id'
-plot_losses.bins = 'number of histogram bins'
+main.calc_id = 'a computation id'
+main.bins = 'number of histogram bins'

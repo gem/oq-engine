@@ -18,13 +18,13 @@
 import sys
 import getpass
 from pprint import pprint
-from openquake.baselib import  config
+from openquake.baselib import config
 from openquake.commonlib import logs
 
 ro_commands = ('status', 'inspect')
 
 
-def workers(cmd):
+def main(cmd):
     """
     start/stop/restart the workers, or return their status
     """
@@ -34,5 +34,5 @@ def workers(cmd):
     pprint(logs.dbcmd('zmq_' + cmd))
 
 
-workers.cmd = dict(help='command',
-                   choices='start stop status restart inspect wait'.split())
+main.cmd = dict(help='command',
+                choices='start stop status restart inspect wait'.split())

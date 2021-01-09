@@ -30,7 +30,7 @@ def get_dupl(src_ids):
     return dupl
 
 
-def reduce_sm(calc_id: int):
+def main(calc_id: int):
     """
     Reduce the source model of the given (pre)calculation by discarding all
     sources that do not contribute to the hazard.
@@ -59,4 +59,4 @@ def reduce_sm(calc_id: int):
     print(mon)
 
 
-reduce_sm.calc_id = 'calculation ID'
+main.calc_id = 'calculation ID'

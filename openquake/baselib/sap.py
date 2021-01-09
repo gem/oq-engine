@@ -117,8 +117,13 @@ def find_main(pkgname):
     """
     :param pkgname: name of a packake (i.e. myapp.plot) with "main" functions
     :returns: a dictionary name -> func_or_subdic
+
+    If pkgname actually refers to a module, the main function of the module
+    is returned (or an AttributeError is raised, if missing)
     """
     pkg = importlib.import_module(pkgname)
+    if not hasattr(pkg, '__path__'):  # is a module, not a package
+        return pkg.main
     dic = {}
     for path in pkg.__path__:
         for name in os.listdir(path):
@@ -130,9 +135,8 @@ def find_main(pkgname):
                     dic[name] = subdic
             elif name.endswith('.py') and name != '__init__.py':
                 mod = importlib.import_module(dotname[:-3])
-                main = name[:-3]
-                if hasattr(mod, main):
-                    dic[main] = getattr(mod, main)
+                if hasattr(mod, 'main'):
+                    dic[name[:-3]] = mod.main
     return dic
 
 

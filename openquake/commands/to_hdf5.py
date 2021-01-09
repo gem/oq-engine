@@ -43,7 +43,7 @@ def convert_xml_hdf5(input_file, output_file):
     return output_file
 
 
-def to_hdf5(input):
+def main(input):
     """
     Convert .xml and .npz files to .hdf5 files.
     """
@@ -59,4 +59,4 @@ def to_hdf5(input):
     print(mon)
 
 
-to_hdf5.input = dict(help='.npz file to convert', nargs='+')
+main.input = dict(help='.npz file to convert', nargs='+')

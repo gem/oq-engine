@@ -76,11 +76,11 @@ else:
             for active in sum(actives.values(), []):
                 print(active['hostname'], active['args'])
 
-    def celery(cmd):
+    def main(cmd):
         """
         Return information about the celery workers
         """
         globals()[cmd]()
 
-    celery.cmd = dict(help='celery command',
-                      choices='status inspect'.split())
+    main.cmd = dict(help='celery command',
+                    choices='status inspect'.split())

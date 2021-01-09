@@ -601,7 +601,7 @@ def plot_wkt(wkt_string):
     return plt
 
 
-def plot(what,
+def main(what,
          calc_id: int = -1,
          other_id: int = None,
          webapi=False,
@@ -647,8 +647,8 @@ def plot(what,
     plt.show()
 
 
-plot.what = 'what to extract'
-plot.calc_id = 'computation ID'
-plot.other_id = 'ID of another computation'
-plot.webapi = 'if given, pass through the WebAPI'
-plot.local = 'if passed, use the local WebAPI'
+main.what = 'what to extract'
+main.calc_id = 'computation ID'
+main.other_id = 'ID of another computation'
+main.webapi = 'if given, pass through the WebAPI'
+main.local = 'if passed, use the local WebAPI'

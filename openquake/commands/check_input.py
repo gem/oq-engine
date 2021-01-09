@@ -26,7 +26,7 @@ from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml  # this is necessary
 
 
-def check_input(job_ini_or_zip_or_nrmls):
+def main(job_ini_or_zip_or_nrmls):
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     for job_ini_or_zip_or_nrml in job_ini_or_zip_or_nrmls:
@@ -49,4 +49,4 @@ def check_input(job_ini_or_zip_or_nrmls):
                 calc.read_inputs()
 
 
-check_input.job_ini_or_zip_or_nrmls = dict(help='Check the input', nargs='+')
+main.job_ini_or_zip_or_nrmls = dict(help='Check the input', nargs='+')

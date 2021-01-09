@@ -37,7 +37,7 @@ def make_figure(curves):
     return plt
 
 
-def plot_ac(calc_id: int):
+def main(calc_id: int):
     """
     Aggregate loss curves plotter.
     """
@@ -48,4 +48,4 @@ def plot_ac(calc_id: int):
     plt.show()
 
 
-plot_ac.calc_id = 'a computation id'
+main.calc_id = 'a computation id'

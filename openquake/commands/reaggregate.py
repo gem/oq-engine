@@ -24,7 +24,7 @@ from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.engine import engine
 
 
-def reaggregate(calc_id: int, aggregate_by):
+def main(calc_id: int, aggregate_by):
     """Re-run the postprocessing after an event based risk calculation"""
     parent = util.read(calc_id)
     oqp = parent['oqparam']
@@ -46,5 +46,5 @@ def reaggregate(calc_id: int, aggregate_by):
             parallel.Starmap.shutdown()
 
 
-reaggregate.calc_id = 'ID of the risk calculation'
-reaggregate.aggregate_by = 'comma-separated list of tag names'
+main.calc_id = 'ID of the risk calculation'
+main.aggregate_by = 'comma-separated list of tag names'

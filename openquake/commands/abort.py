@@ -22,7 +22,7 @@ import psutil
 from openquake.commonlib import logs
 
 
-def abort(job_id: int):
+def main(job_id: int):
     """
     Abort the given job
     """
@@ -51,4 +51,4 @@ def abort(job_id: int):
               ' setting it as failed' % job.id)
 
 
-abort.job_id = 'job ID'
+main.job_id = 'job ID'

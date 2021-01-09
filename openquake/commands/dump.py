@@ -44,7 +44,7 @@ def smart_save(dbpath, archive, calc_id):
     shutil.rmtree(tmpdir)
 
 
-def dump(archive, calc_id: int = 0, *, user=None):
+def main(archive, calc_id: int = 0, *, user=None):
     """
     Dump the openquake database and all the complete calculations into a zip
     file. In a multiuser installation must be run as administrator.
@@ -75,6 +75,6 @@ def dump(archive, calc_id: int = 0, *, user=None):
               % (len(fnames), archive, dt))
 
 
-dump.archive = 'path to the zip file where to dump the calculations'
-dump.calc_id = 'calculation ID; if missing, dump all calculations'
-dump.user = 'if missing, dump all calculations'
+main.archive = 'path to the zip file where to dump the calculations'
+main.calc_id = 'calculation ID; if missing, dump all calculations'
+main.user = 'if missing, dump all calculations'
