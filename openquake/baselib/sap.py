@@ -93,8 +93,10 @@ def _populate(parser, func):
             # avoid conflicts with previously defined abbreviations
             args = longname,
         elif abbrev:
-            # ok abbrev
-            args = longname, abbrev
+            if len(abbrev) > 2:  # no single-letter abbrev
+                args = longname, abbrev
+            else:  # single-letter abbrev
+                args = abbrev, longname
             abbrevs.add(abbrev)
         else:
             # no abbrev
