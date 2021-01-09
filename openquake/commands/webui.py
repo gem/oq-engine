@@ -21,7 +21,7 @@ import sys
 import subprocess
 import webbrowser
 
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.server import dbserver
 from openquake.server.utils import check_webserver_running
 
@@ -47,7 +47,7 @@ def rundjango(subcmd, hostport=None, skip_browser=False):
         sys.exit(p.returncode)
 
 
-def webui(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
+def main(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
     """
     start the webui server in foreground or perform other operation on the
     django application
@@ -63,7 +63,6 @@ def webui(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
         rundjango(cmd)
 
 
-webui.cmd = dict(help='webui command', choices=commands)
-webui.hostport = 'a string of the form <hostname:port>'
-webui.skip_browser = 'do not automatically open the browser'
-sap.script(webui)
+main.cmd = dict(help='webui command', choices=commands)
+main.hostport = 'a string of the form <hostname:port>'
+main.skip_browser = 'do not automatically open the browser'

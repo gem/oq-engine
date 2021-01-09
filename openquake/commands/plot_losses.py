@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib import sap
 from openquake.calculators.extract import extract
 from openquake.commonlib import util
 
@@ -46,7 +45,7 @@ def make_figure(losses_by_rlzi, loss_types, nbins):
     return plt
 
 
-def plot_losses(calc_id: int, bins: int = 7):
+def main(calc_id: int, bins: int = 7):
     """
     losses_by_event plotter
     """
@@ -58,6 +57,5 @@ def plot_losses(calc_id: int, bins: int = 7):
     plt.show()
 
 
-plot_losses.calc_id = 'a computation id'
-plot_losses.bins = 'number of histogram bins'
-sap.script(plot_losses)
+main.calc_id = 'a computation id'
+main.bins = 'number of histogram bins'

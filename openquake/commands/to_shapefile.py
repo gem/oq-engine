@@ -16,11 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os.path
-from openquake.baselib import sap
 from openquake.commonlib import shapefileparser
 
 
-def to_shapefile(input_nrml_file, validate=False, *, output=None):
+def main(input_nrml_file, validate=False, *, output=None):
     """
     Convert a NRML source model file to ESRI Shapefile(s).
 
@@ -39,7 +38,6 @@ def to_shapefile(input_nrml_file, validate=False, *, output=None):
     shapefileparser.ShapefileParser().write(output, source_model)
 
 
-to_shapefile.input_nrml_file = 'path to source model NRML file'
-to_shapefile.validate = 'Apply validation to input model (can be slow)'
-to_shapefile.output = 'output path (no extension)'
-sap.script(to_shapefile)
+main.input_nrml_file = 'path to source model NRML file'
+main.validate = 'Apply validation to input model (can be slow)'
+main.output = 'output path (no extension)'

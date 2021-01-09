@@ -18,7 +18,7 @@
 import os
 import logging
 import numpy
-from openquake.baselib import sap, performance, datastore
+from openquake.baselib import performance, datastore
 from openquake.hazardlib import site, valid
 from openquake.hazardlib.geo.utils import assoc
 from openquake.risklib.asset import Exposure
@@ -82,7 +82,7 @@ def check_fname(fname, kind, forbidden):
                         % (kind, forbidden))
 
 
-def prepare_site_model(
+def main(
         vs30_csv,
         z1pt0=False,
         z2pt5=False,
@@ -173,21 +173,12 @@ def prepare_site_model(
     return haz_sitecol
 
 
-prepare_site_model.vs30_csv = dict(
-    help='files with lon,lat,vs30 and no header', nargs='+')
-prepare_site_modelz1pt0 = dict(
-    help='build the z1pt0', abbrev='-1')
-prepare_site_model.z2pt5 = dict(
-    help='build the z2pt5', abbrev='-2')
-prepare_site_model.vs30measured = dict(
-    help='build the vs30measured', abbrev='-3')
-prepare_site_model.exposure_xml = dict(
-    help='exposure(s) in XML format', nargs='*')
-prepare_site_modelsites_csv = dict(
-    help='sites in CSV format', nargs='*')
-prepare_site_model.grid_spacing = (
-    'grid spacing in km (the default 0 means no grid)')
-prepare_site_model.assoc_distance = (
-    'sites over this distance are discarded')
-prepare_site_model.output = 'output file'
-sap.script(prepare_site_model)
+main.vs30_csv = dict(help='files with lon,lat,vs30 and no header', nargs='+')
+mainz1pt0 = dict(help='build the z1pt0', abbrev='-1')
+main.z2pt5 = dict(help='build the z2pt5', abbrev='-2')
+main.vs30measured = dict(help='build the vs30measured', abbrev='-3')
+main.exposure_xml = dict(help='exposure(s) in XML format', nargs='*')
+mainsites_csv = dict(help='sites in CSV format', nargs='*')
+main.grid_spacing = 'grid spacing in km (the default 0 means no grid)'
+main.assoc_distance = 'sites over this distance are discarded'
+main.output = 'output file'

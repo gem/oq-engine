@@ -20,15 +20,12 @@
 import os
 import sys
 import logging
-import importlib
 
 from openquake.baselib import sap
 from openquake.commonlib import __version__
-from openquake import commands
-
-PY_VER = sys.version_info[:3]
 
 # check for Python version
+PY_VER = sys.version_info[:3]
 if PY_VER < (3, 6):
     sys.exit('Python 3.6+ is required, you are using %s', sys.executable)
 
@@ -44,14 +41,7 @@ def oq():
         # oq engine and oq dbserver define their own log levels
         level = logging.DEBUG if 'debug' in args else logging.INFO
         logging.basicConfig(level=level)
-    modnames = ['openquake.commands.%s' % mod[:-3]
-                for mod in os.listdir(commands.__path__[0])
-                if mod.endswith('.py') and not mod.startswith('_')]
-    for modname in modnames:
-        importlib.import_module(modname)
-    script = sap.script(sap.registry.values(),
-                        prog='oq', version=__version__)
-    script.callfunc()
+    sap.run('openquake.commands', 'oq', version=__version__)
 
 
 if __name__ == '__main__':

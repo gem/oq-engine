@@ -18,7 +18,7 @@
 import os
 import sys
 import getpass
-from openquake.baselib import sap, config, datastore
+from openquake.baselib import config, datastore
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs
@@ -27,7 +27,7 @@ from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
 from openquake.server import dbserver
-from openquake.commands.abort import abort
+from openquake.commands.abort import main as abort
 
 
 DEFAULT_EXPORTS = 'csv,xml,rst'
@@ -68,7 +68,7 @@ def del_calculation(job_id, confirmed=False):
                 print(resp['error'])
 
 
-def engine(
+def main(
         no_distribute=False,
         yes=False,
         upgrade_db=False,
@@ -212,60 +212,59 @@ def engine(
 
 
 # flags
-engine.no_distribute = dict(abbrev='--nd', help='''\
+main.no_distribute = dict(abbrev='--nd', help='''\
 Disable calculation task distribution and run the
 computation in a single process. This is intended for
 use in debugging and profiling.''')
-engine.yes = 'Automatically answer "yes" when asked to confirm an action'
-engine.upgrade_db = 'Upgrade the openquake database'
-engine.db_version = 'Show the current version of the openquake database'
-engine.what_if_I_upgrade = (
+main.yes = 'Automatically answer "yes" when asked to confirm an action'
+main.upgrade_db = 'Upgrade the openquake database'
+main.db_version = 'Show the current version of the openquake database'
+main.what_if_I_upgrade = (
     'Show what will happen to the openquake database if you upgrade')
-engine.list_hazard_calculations = dict(
+main.list_hazard_calculations = dict(
     abbrev='--lhc', help='List hazard calculation information')
-engine.list_risk_calculations = dict(
+main.list_risk_calculations = dict(
     abbrev='--lrc', help='List risk calculation information')
-engine.delete_uncompleted_calculations = dict(
+main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
-engine.multi = 'Run multiple job.inis in parallel'
-engine.reuse_input = 'Read the sources|exposures from the cache (if any)'
+main.multi = 'Run multiple job.inis in parallel'
+main.reuse_input = 'Read the sources|exposures from the cache (if any)'
 
 # options
-engine.log_file = dict(
+main.log_file = dict(
     abbrev='-L', help='''\
 Location where to store log messages; if not specified, log messages
 will be printed to the console (to stderr)''')
-engine.make_html_report = dict(
+main.make_html_report = dict(
     abbrev='--r', metavar='YYYY-MM-DD|today',
     help='Build an HTML report of the computation at the given date')
-engine.run = dict(abbrev='--run',
-                  help='Run a job with the specified config file',
-                  metavar='JOB_INI', nargs='+')
-engine.delete_calculation = dict(
+main.run = dict(abbrev='--run',
+                help='Run a job with the specified config file',
+                metavar='JOB_INI', nargs='+')
+main.delete_calculation = dict(
     abbrev='--dc',
     help='Delete a calculation and all associated outputs',
     metavar='CALCULATION_ID')
-engine.hazard_calculation_id = dict(
+main.hazard_calculation_id = dict(
     abbrev='--hc', help='Use the given job as input for the next job')
-engine.list_outputs = dict(
+main.list_outputs = dict(
     abbrev='--lo', help='List outputs for the specified calculation',
     metavar='CALCULATION_ID')
-engine.show_log = dict(
+main.show_log = dict(
     abbrev='--sl', help='Show the log of the specified calculation',
     metavar='CALCULATION_ID')
-engine.export_output = dict(
+main.export_output = dict(
     abbrev='--eo', nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'),
     help='Export the desired output to the specified directory')
-engine.export_outputs = dict(
+main.export_outputs = dict(
     abbrev='--eos', nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'),
     help='Export all of the calculation outputs to the specified directory')
-engine.param = dict(
+main.param = dict(
     abbrev='-p', help='Override parameters specified with the syntax '
     'NAME1=VALUE1,NAME2=VALUE2,...')
-engine.config_file = ('Custom openquake.cfg file, to override default '
-                      'configurations')
-engine.exports = ('Comma-separated string specifing the export formats, '
-                  'in order of priority')
-engine.log_level = dict(help='Defaults to "info"',
-                        choices=['debug', 'info', 'warn', 'error', 'critical'])
-sap.script(engine)
+main.config_file = ('Custom openquake.cfg file, to override default '
+                    'configurations')
+main.exports = ('Comma-separated string specifing the export formats, '
+                'in order of priority')
+main.log_level = dict(help='Defaults to "info"',
+                      choices=['debug', 'info', 'warn', 'error', 'critical'])

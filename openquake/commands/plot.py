@@ -20,7 +20,6 @@ import json
 import logging
 import shapely
 import numpy
-from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
@@ -602,7 +601,7 @@ def plot_wkt(wkt_string):
     return plt
 
 
-def plot(what='examples',
+def main(what,
          calc_id: int = -1,
          other_id: int = None,
          webapi=False,
@@ -648,9 +647,8 @@ def plot(what='examples',
     plt.show()
 
 
-plot.what = 'what to extract'
-plot.calc_id = 'computation ID'
-plot.other_id = 'ID of another computation'
-plot.webapi = 'if given, pass through the WebAPI'
-plot.local = 'if passed, use the local WebAPI'
-sap.script(plot)
+main.what = 'what to extract'
+main.calc_id = 'computation ID'
+main.other_id = 'ID of another computation'
+main.webapi = 'if given, pass through the WebAPI'
+main.local = 'if passed, use the local WebAPI'

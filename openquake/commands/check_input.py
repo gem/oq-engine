@@ -19,7 +19,6 @@ import os
 import sys
 import logging
 from unittest import mock
-from openquake.baselib import sap
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import readinput, logs
 from openquake.calculators import base
@@ -27,7 +26,7 @@ from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml  # this is necessary
 
 
-def check_input(job_ini_or_zip_or_nrmls):
+def main(job_ini_or_zip_or_nrmls):
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     for job_ini_or_zip_or_nrml in job_ini_or_zip_or_nrmls:
@@ -50,5 +49,4 @@ def check_input(job_ini_or_zip_or_nrmls):
                 calc.read_inputs()
 
 
-check_input.job_ini_or_zip_or_nrmls = dict(help='Check the input', nargs='+')
-sap.script(check_input)
+main.job_ini_or_zip_or_nrmls = dict(help='Check the input', nargs='+')

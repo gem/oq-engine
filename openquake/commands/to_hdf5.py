@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import numpy
-from openquake.baselib import sap, hdf5, node, performance
+from openquake.baselib import hdf5, node, performance
 from openquake.hazardlib import nrml
 
 
@@ -43,7 +43,7 @@ def convert_xml_hdf5(input_file, output_file):
     return output_file
 
 
-def to_hdf5(input):
+def main(input):
     """
     Convert .xml and .npz files to .hdf5 files.
     """
@@ -59,5 +59,4 @@ def to_hdf5(input):
     print(mon)
 
 
-to_hdf5.input = dict(help='.npz file to convert', nargs='+')
-sap.script(to_hdf5)
+main.input = dict(help='.npz file to convert', nargs='+')

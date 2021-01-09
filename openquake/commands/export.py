@@ -17,13 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 
-from openquake.baselib import general, performance, sap
+from openquake.baselib import general, performance
 from openquake.commonlib import util
 from openquake.calculators.export import export as export_
 
 
 # the export is tested in the demos
-def export(datastore_key, calc_id: int = -1, *, exports='csv', export_dir='.'):
+def main(datastore_key, calc_id: int = -1, *, exports='csv', export_dir='.'):
     """
     Export an output from the datastore. To see the available datastore
     keys, use the command `oq info exports`.
@@ -43,8 +43,7 @@ def export(datastore_key, calc_id: int = -1, *, exports='csv', export_dir='.'):
     dstore.close()
 
 
-export.datastore_key = 'datastore key'
-export.calc_id = 'number of the calculation'
-export.exports = 'export formats (comma separated)'
-export.export_dir = dict(help='export directory', abbrev='-d')
-sap.script(export)
+main.datastore_key = 'datastore key'
+main.calc_id = 'number of the calculation'
+main.exports = 'export formats (comma separated)'
+main.export_dir = dict(help='export directory', abbrev='-d')

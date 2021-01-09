@@ -20,14 +20,14 @@ import sys
 import time
 import signal
 import getpass
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.commonlib import logs
 from openquake.engine.utils import confirm
 from openquake.server import dbserver
 from openquake.commands.purge import purge_one, purge_all
 
 
-def reset(yes=False):
+def main(yes=False):
     """
     Remove all the datastores and the database of the current user
     """
@@ -56,5 +56,4 @@ def reset(yes=False):
             print('Removed %s' % dbpath)
 
 
-reset.yes = 'confirmation'
-sap.script(reset)
+main.yes = 'confirmation'

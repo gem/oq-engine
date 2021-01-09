@@ -19,16 +19,16 @@ import os
 import sys
 import signal
 import getpass
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.commonlib import logs
 from openquake.server import dbserver as dbs
 
 
-def dbserver(cmd,
-             dbhostport=None,
-             foreground=False,
-             *,
-             loglevel='INFO'):
+def main(cmd,
+         dbhostport=None,
+         foreground=False,
+         *,
+         loglevel='INFO'):
     """
     start/stop/restart the database server, or return its status
     """
@@ -51,9 +51,7 @@ def dbserver(cmd,
             print('dbserver already running')
 
 
-dbserver.cmd = dict(help='dbserver command',
-                    choices='start stop status'.split())
-dbserver.dbhostport = 'dbhost:port'
-dbserver.foreground = 'stay in foreground'
-dbserver.loglevel = 'DEBUG|INFO|WARN'
-sap.script(dbserver)
+main.cmd = dict(help='dbserver command', choices='start stop status'.split())
+main.dbhostport = 'dbhost:port'
+main.foreground = 'stay in foreground'
+main.loglevel = 'DEBUG|INFO|WARN'

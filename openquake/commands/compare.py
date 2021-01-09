@@ -18,7 +18,6 @@
 import sys
 import collections
 import numpy
-from openquake.baselib import sap
 from openquake.commonlib import util
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
@@ -94,13 +93,13 @@ def compare_rups(calc_1, calc_2):
         _print_diff(a1, a2, df1.index, df2.index, col)
 
 
-def compare(what, imt, calc_ids: int,
-            files=False,
-            *,
-            samplesites='',
-            rtol: float = 0,
-            atol: float = 1E-3,
-            threshold: float = 1E-2):
+def main(what, imt, calc_ids: int,
+         files=False,
+         *,
+         samplesites='',
+         rtol: float = 0,
+         atol: float = 1E-3,
+         threshold: float = 1E-2):
     """
     Compare the hazard curves or maps of two or more calculations.
     Also used to compare the times with `oq compare cumtime of -1 -2`.
@@ -170,13 +169,12 @@ def compare(what, imt, calc_ids: int,
             print(views.rst_table(rows, ['poe', 'rms-diff']))
 
 
-compare.what = dict(help='"hmaps", "hcurves" or "cumtime of"',
-                    choices={'rups', 'hmaps', 'hcurves', 'cumtime'})
-compare.imt = 'intensity measure type to compare'
-compare.calc_ids = dict(help='calculation IDs', nargs='+')
-compare.files = 'write the results in multiple files'
-compare.samplesites = 'sites to sample (or fname with site IDs)'
-compare.rtol = 'relative tolerance'
-compare.atol = 'absolute tolerance'
-compare.threshold = 'ignore the hazard curves below it'
-sap.script(compare)
+main.what = dict(help='"hmaps", "hcurves" or "cumtime of"',
+                 choices={'rups', 'hmaps', 'hcurves', 'cumtime'})
+main.imt = 'intensity measure type to compare'
+main.calc_ids = dict(help='calculation IDs', nargs='+')
+main.files = 'write the results in multiple files'
+main.samplesites = 'sites to sample (or fname with site IDs)'
+main.rtol = 'relative tolerance'
+main.atol = 'absolute tolerance'
+main.threshold = 'ignore the hazard curves below it'

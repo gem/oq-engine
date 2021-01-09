@@ -32,23 +32,23 @@ from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.engine.engine import run_jobs
-from openquake.commands.info import info
-from openquake.commands.tidy import tidy
-from openquake.commands.show import show
-from openquake.commands.show_attrs import show_attrs
-from openquake.commands.export import export
-from openquake.commands.extract import extract
-from openquake.commands.sample import sample
-from openquake.commands.reduce_sm import reduce_sm
-from openquake.commands.db import db
-from openquake.commands.to_shapefile import to_shapefile
-from openquake.commands.from_shapefile import from_shapefile
-from openquake.commands.zip import zip as zip_cmd
-from openquake.commands.check_input import check_input
-from openquake.commands.prepare_site_model import prepare_site_model
-from openquake.commands.nrml_to import nrml_to, fiona
+from openquake.commands.info import main as info
+from openquake.commands.tidy import main as tidy
+from openquake.commands.show import main as show
+from openquake.commands.show_attrs import main as show_attrs
+from openquake.commands.export import main as export
+from openquake.commands.extract import main as extract
+from openquake.commands.sample import main as sample
+from openquake.commands.reduce_sm import main as reduce_sm
+from openquake.commands.db import main as db
+from openquake.commands.to_shapefile import main as to_shapefile
+from openquake.commands.from_shapefile import main as from_shapefile
+from openquake.commands.zip import main as zip_cmd
+from openquake.commands.check_input import main as check_input
+from openquake.commands.prepare_site_model import main as prepare_site_model
+from openquake.commands.nrml_to import main as nrml_to, fiona
 from openquake.commands import run
-from openquake.commands.upgrade_nrml import upgrade_nrml
+from openquake.commands.upgrade_nrml import main as upgrade_nrml
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18

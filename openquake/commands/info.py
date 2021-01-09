@@ -22,7 +22,6 @@ import operator
 import collections
 import numpy
 from decorator import FunctionMaker
-from openquake.baselib import sap
 from openquake.baselib.general import groupby, gen_subclasses
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt
@@ -86,7 +85,7 @@ choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
            'extracts', 'parameters', 'sources', 'mfds']
 
 
-def info(what, report=False):
+def main(what, report=False):
     """
     Give information about the passed keyword or filename
     """
@@ -164,6 +163,5 @@ def info(what, report=False):
         print("No info for '%s'" % what)
 
 
-info.what = 'filename or one of %s' % ', '.join(choices)
-info.report = 'build rst report from job.ini file or zip archive'
-sap.script(info)
+main.what = 'filename or one of %s' % ', '.join(choices)
+main.report = 'build rst report from job.ini file or zip archive'

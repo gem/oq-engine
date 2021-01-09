@@ -21,7 +21,6 @@ import toml
 from openquake.baselib import sap
 
 
-@sap.Script
 def main(dirname):
     """
     Convert all .yml files in the given directory into .toml files,
@@ -39,8 +38,8 @@ def main(dirname):
                 print('Saved %s' % target.name)
 
 
-main.arg('dirname', 'directory')
+main.dirname = 'directory'
 
 
 if __name__ == '__main__':
-    main.callfunc()
+    sap.run(main)

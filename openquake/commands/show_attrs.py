@@ -15,12 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap
 from openquake.commonlib import util
 import h5py
 
 
-def show_attrs(key, calc_id: int = -1):
+def main(key, calc_id: int = -1):
     """
     Show the attributes of a HDF5 dataset in the datastore.
     """
@@ -38,6 +37,5 @@ def show_attrs(key, calc_id: int = -1):
         ds.close()
 
 
-show_attrs.key = 'key of the datastore'
-show_attrs.calc_id = 'calculation ID'
-sap.script(show_attrs)
+main.key = 'key of the datastore'
+main.calc_id = 'calculation ID'

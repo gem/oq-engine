@@ -19,7 +19,6 @@ import sys
 import runpy
 from functools import partial
 import numpy
-from openquake.baselib import sap
 from openquake.hazardlib import nrml
 from openquake.baselib.datastore import read
 from openquake.hazardlib.geo.geodetic import geodetic_distance
@@ -81,7 +80,7 @@ class OpenQuake(object):
         return numpy.concatenate(lst)
 
 
-def shell(script=None, args=()):
+def main(script=None, args=()):
     """
     Start an embedded (i)python instance with a global object "o" or
     run a Python script in the engine environment.
@@ -100,6 +99,5 @@ def shell(script=None, args=()):
                       local=dict(o=o))
 
 
-shell.script = 'python script to run (if any)'
-shell.args = dict(help='arguments to pass to the script', nargs='*')
-sap.script(shell)
+main.script = 'python script to run (if any)'
+main.args = dict(help='arguments to pass to the script', nargs='*')

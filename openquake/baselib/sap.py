@@ -15,14 +15,22 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""
+`openquake.baselib.sap` is a Simple Argument Parser based on argparse
+which is extremely powerful. Its features are
 
-import sys
+1. zero boilerplate (no decorators)
+2. supports arbitrarily nested subcommands with an easy sintax
+3. automatically generates a simple parser from a Python module and
+   a hierarchic parser from a Python package.
+"""
+
+import os
 import inspect
 import argparse
-
+import importlib
 
 NODEFAULT = object()
-registry = {}  # dotname -> function
 
 
 def _choices(choices):
@@ -32,148 +40,150 @@ def _choices(choices):
     return ''
 
 
-class Script(object):
+def _populate(parser, func):
+    # populate the parser
+    # args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, anns
+    argspec = inspect.getfullargspec(func)
+    if argspec.varargs:
+        raise TypeError('varargs in the signature of %s are not supported'
+                        % func)
+    defaults = argspec.defaults or ()
+    nodefaults = len(argspec.args) - len(defaults)
+    alldefaults = (NODEFAULT,) * nodefaults + defaults
+    argdef = dict(zip(argspec.args, alldefaults))
+    argdef.update(argspec.kwonlydefaults or {})
+    parser.description = func.__doc__
+    parser.set_defaults(_func=func)
+    argdescr = []  # list of pairs (argname, argkind)
+    for arg in argspec.args:
+        if argdef[arg] is False:
+            argdescr.append((arg, 'flg'))
+        else:
+            argdescr.append((arg, 'pos'))
+    for arg in argspec.kwonlyargs:
+        argdescr.append((arg, 'opt'))
+    abbrevs = {'-h'}  # already taken abbreviations
+    for name, kind in argdescr:
+        descr = getattr(func, name, '')
+        if isinstance(descr, str):
+            kw = dict(help=descr)
+        else:  # assume a dictionary
+            kw = descr.copy()
+        if kw.get('type') is None and type in func.__annotations__:
+            kw.setdefault('type', func.__annotations__['type'])
+        abbrev = kw.get('abbrev')
+        choices = kw.get('choices')
+        default = argdef[name]
+        if kind == 'pos':
+            if default is not NODEFAULT:
+                kw['default'] = default
+                kw.setdefault('nargs', '?')
+                kw['help'] += ' [default: %s]' % repr(default)
+        elif kind == 'flg':
+            kw.setdefault('abbrev', abbrev or '-' + name[0])
+            kw['action'] = 'store_true'
+        elif kind == 'opt':
+            kw.setdefault('abbrev', abbrev or '-' + name[0])
+            if default not in (None, NODEFAULT):
+                kw['default'] = default
+                kw.setdefault('metavar', _choices(choices) or str(default))
+        abbrev = kw.pop('abbrev', None)
+        longname = '--' + name.replace('_', '-')
+        if abbrev and abbrev in abbrevs:
+            # avoid conflicts with previously defined abbreviations
+            args = longname,
+        elif abbrev:
+            # ok abbrev
+            args = longname, abbrev
+            abbrevs.add(abbrev)
+        else:
+            # no abbrev
+            args = name,
+        parser.add_argument(*args, **kw)
+
+
+def _rec_populate(parser, funcdict):
+    subparsers = parser.add_subparsers(
+        help='available subcommands; use %s <subcmd> --help' % parser.prog)
+    for name, func in funcdict.items():
+        subp = subparsers.add_parser(name, prog=parser.prog + ' ' + name)
+        if isinstance(func, dict):  # nested subcommand
+            _rec_populate(subp, func)
+        else:  # terminal subcommand
+            _populate(subp, func)
+
+
+def find_main(pkgname):
     """
-    A simple way to define command processors based on argparse.
-    Each parser is associated to a function and parsers can be
-    composed together, by dispatching on a given name (if not given,
-    the function name is used).
+    :param pkgname: name of a packake (i.e. myapp.plot) with "main" functions
+    :returns: a dictionary name -> func_or_subdic
+
+    If pkgname actually refers to a module, the main function of the module
+    is returned (or an AttributeError is raised, if missing)
     """
-    # for instance {'openquake.commands.run': run, ...}
-
-    def __init__(self, func, parser, name=None, help=True):
-        self.func = func
-        self.name = name or func.__name__
-        # args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, anns
-        argspec = inspect.getfullargspec(func)
-        if argspec.varargs:
-            raise TypeError('varargs in the signature of %s are not supported'
-                            % func)
-        defaults = argspec.defaults or ()
-        nodefaults = len(argspec.args) - len(defaults)
-        alldefaults = (NODEFAULT,) * nodefaults + defaults
-        self.argdef = dict(zip(argspec.args, alldefaults))
-        self.argdef.update(argspec.kwonlydefaults or {})
-        self.description = func.__doc__ if func.__doc__ else None
-        self.parser = parser
-        self.argdescr = []  # list of pairs (argname, argkind)
-        for arg in argspec.args:
-            if self.argdef[arg] is False:
-                self.argdescr.append((arg, 'flg'))
-            else:
-                self.argdescr.append((arg, 'pos'))
-        for arg in argspec.kwonlyargs:
-            self.argdescr.append((arg, 'opt'))
-        registry['%s.%s' % (func.__module__, func.__name__)] = self
-
-    def _populate(self, parser):
-        # populate the parser
-        abbrevs = {'-h'}  # already taken abbreviations
-        for name, kind in self.argdescr:
-            descr = getattr(self.func, name, '')
-            if isinstance(descr, str):
-                kw = dict(help=descr)
-            else:  # assume a dictionary
-                kw = descr.copy()
-            if kw.get('type') is None and type in self.func.__annotations__:
-                kw.setdefault('type', self.func.__annotations__['type'])
-            abbrev = kw.get('abbrev')
-            choices = kw.get('choices')
-            default = self.argdef[name]
-            if kind == 'pos':
-                if default is not NODEFAULT:
-                    kw['default'] = default
-                    kw.setdefault('nargs', '?')
-                    kw['help'] += ' [default: %s]' % repr(default)
-            elif kind == 'flg':
-                kw.setdefault('abbrev', abbrev or '-' + name[0])
-                kw['action'] = 'store_true'
-            elif kind == 'opt':
-                kw.setdefault('abbrev', abbrev or '-' + name[0])
-                if default not in (None, NODEFAULT):
-                    kw['default'] = default
-                    kw.setdefault('metavar', _choices(choices) or str(default))
-            abbrev = kw.pop('abbrev', None)
-            longname = '--' + name.replace('_', '-')
-            if abbrev and abbrev in abbrevs:
-                # avoid conflicts with previously defined abbreviations
-                args = longname,
-            elif abbrev:
-                # ok abbrev
-                args = longname, abbrev
-                abbrevs.add(abbrev)
-            else:
-                # no abbrev
-                args = name,
-            parser.add_argument(*args, **kw)
-
-    def __call__(self, *args, **kw):
-        return self.func(*args, **kw)
-
-    def callfunc(self, argv=None):
-        """
-        Parse the argv list and extract a dictionary of arguments which
-        is then passed to  the function underlying the script.
-        """
-        namespace = self.parser.parse_args(argv or sys.argv[1:])
-        return self.func(**vars(namespace))
-
-    def help(self):
-        """
-        Return the help message as a string
-        """
-        return self.parser.format_help()
-
-    def __repr__(self):
-        args = ', '.join(name for name, kind in self.argdescr)
-        return '<%s %s(%s)>' % (self.__class__.__name__, self.name, args)
+    pkg = importlib.import_module(pkgname)
+    if not hasattr(pkg, '__path__'):  # is a module, not a package
+        return pkg.main
+    dic = {}
+    for path in pkg.__path__:
+        for name in os.listdir(path):
+            fname = os.path.join(path, name)
+            dotname = pkgname + '.' + name
+            if os.path.isdir(fname) and '__init__.py' in os.listdir(fname):
+                subdic = find_main(dotname)
+                if subdic:
+                    dic[name] = subdic
+            elif name.endswith('.py') and name != '__init__.py':
+                mod = importlib.import_module(dotname[:-3])
+                if hasattr(mod, 'main'):
+                    dic[name[:-3]] = mod.main
+    return dic
 
 
-def script(scripts, name='main', description=None, prog=None,
-           version=None, parser=None):
+class _Parser(argparse.ArgumentParser):
     """
-    Collects together different scripts and builds a single
-    script dispatching to the subparsers depending on
-    the first argument, i.e. the name of the subparser to invoke.
-
-    :param scripts: a list of script instances
-    :param name: the name of the composed parser
-    :param description: description of the composed parser
-    :param prog: name of the script printed in the usage message
-    :param version: version of the script printed with --version
+    argparse.ArgumentParser with a .run method
     """
-    if parser is None:
-        parser = argparse.ArgumentParser(prog, description=description)
-    elif prog is None:
-        prog = parser.prog
+    def run(self, argv=None):
+        """
+        Parse the command-line and run the script
+        """
+        namespace = self.parse_args(argv)
+        try:
+            func = namespace.__dict__.pop('_func')
+        except KeyError:
+            self.print_usage()
+        else:
+            return func(**vars(namespace))
+
+
+def parser(funcdict, prog=None, description=None, version=None) -> _Parser:
+    """
+    :param funcdict: a function or a nested dictionary of functions
+    :param prog: the name of the associated command line application
+    :param description: description of the application
+    :param version: version of the application printed with --version
+    :returns: a sap.Parser instance
+    """
+    parser = _Parser(prog, description=description)
     if version:
         parser.add_argument(
             '-v', '--version', action='version', version=version)
-    if callable(scripts):
-        script = Script(scripts, parser)
-        script._populate(parser)
-        return script
-    subparsers = parser.add_subparsers(
-        help='available subcommands; use %s help <subcmd>' % prog,
-        prog=prog)
-    subpdic = {}  # subcommand name -> subparser
-    for s in list(scripts):
-        if isinstance(s, str):  # nested subcommand
-            subp = subparsers.add_parser(s)
-            subpdic[s] = subp
-        else:  # terminal subcommand
-            subp = subparsers.add_parser(s.name, description=s.description)
-            s._populate(subp)
-            subp.set_defaults(_func=s.func)
+    if isinstance(funcdict, str):  # passed a package name
+        funcdict = find_main(funcdict)
+    if callable(funcdict):
+        _populate(parser, funcdict)
+    else:
+        _rec_populate(parser, funcdict)
+    return parser
 
-    def main(**kw):
-        try:
-            func = kw.pop('_func')
-        except KeyError:
-            parser.print_usage()
-        else:
-            return func(**kw)
-    main.__name__ = name
-    script = Script(main, parser, name)
-    vars(script).update(subpdic)
-    return script
+
+def run(funcdict, prog=None, description=None, version=None, argv=None):
+    """
+    :param funcdict: a function or a nested dictionary of functions
+    :param prog: the name of the associated command line application
+    :param description: description of the application
+    :param version: version of the application printed with --version
+    :param argv: a list of command-line arguments (if None, use sys.argv[1:])
+    """
+    parser(funcdict, prog, description, version).run(argv)

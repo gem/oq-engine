@@ -20,7 +20,6 @@ import os
 import json
 import logging
 
-from openquake.baselib import sap
 from openquake.baselib import datastore, hdf5
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib import util
@@ -55,7 +54,7 @@ def print_(aw):
         print(aw)
 
 
-def show(what='contents', calc_id: str_or_int = -1, extra=()):
+def main(what='contents', calc_id: str_or_int = -1, extra=()):
     """
     Show the content of a datastore (by default the last one).
     """
@@ -107,7 +106,6 @@ def show(what='contents', calc_id: str_or_int = -1, extra=()):
     ds.close()
 
 
-show.what = 'key or view of the datastore'
-show.calc_id = 'calculation ID or datastore path'
-show.extra = dict(help='extra arguments', nargs='*')
-sap.script(show)
+main.what = 'key or view of the datastore'
+main.calc_id = 'calculation ID or datastore path'
+main.extra = dict(help='extra arguments', nargs='*')

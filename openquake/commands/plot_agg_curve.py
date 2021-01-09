@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap
 from openquake.commonlib import util
 
 
@@ -38,7 +37,7 @@ def make_figure(curves):
     return plt
 
 
-def plot_ac(calc_id: int):
+def main(calc_id: int):
     """
     Aggregate loss curves plotter.
     """
@@ -49,5 +48,4 @@ def plot_ac(calc_id: int):
     plt.show()
 
 
-plot_ac.calc_id = 'a computation id'
-sap.script(plot_ac)
+main.calc_id = 'a computation id'
