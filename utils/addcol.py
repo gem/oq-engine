@@ -22,7 +22,6 @@ from openquake.risklib.countries import code2country
 # example: utils/addcol.py country=VEN Exposure_Res_Venezuela.csv
 
 
-@sap.script
 def addcol(namevalue, fnames):
     name, value = namevalue.split('=')
     if name == 'country':
@@ -38,8 +37,8 @@ def addcol(namevalue, fnames):
         print('Added %s to %s' % (namevalue, fname))
 
 
-addcol.arg('namevalue', 'string of the form column_name=column_value')
-addcol.arg('fnames', 'CSV files to update', nargs='+')
+addcol.namevalue = 'string of the form column_name=column_value'
+addcol.fnames = dict(help='CSV files to update', nargs='+')
 
 if __name__ == '__main__':
-    addcol.callfunc()
+    sap.run(addcol)

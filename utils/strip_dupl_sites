@@ -22,8 +22,8 @@ import shutil
 from openquake.baselib import sap, hdf5
 from openquake.commonlib.writers import write_csv
 
-@sap.Script
-def strip_dupl(fname, ndigits=5):
+
+def strip_dupl(fname, ndigits: int = 5):
     """
     Strip duplicates from a CSV file
     """
@@ -45,8 +45,8 @@ def strip_dupl(fname, ndigits=5):
         print(f'Reduced {fname} from {len(arr)} to {len(new)} sites and saved '
               f'the original in {fname}.bak')
 
-strip_dupl.arg('fname', 'CSV file with fields lon, lat')
-strip_dupl.arg('ndigits', 'number of digits to keep', type=int)
+strip_dupl.fname = 'CSV file with fields lon, lat'
+strip_dupl.ndigits = 'number of digits to keep'
 
 if __name__ == '__main__':
-    strip_dupl.callfunc()
+    sap.run(strip_dupl)

@@ -29,7 +29,6 @@ except ImportError:
 from openquake.baselib import sap
 
 
-@sap.script
 def viewlog(calc_id, host='localhost', port=8000):
     """
     Extract the log of the given calculation ID from the WebUI
@@ -45,11 +44,12 @@ def viewlog(calc_id, host='localhost', port=8000):
                 print(' '.join(row))
             start += len(rows)
             time.sleep(1)
-    except:
+    except BaseException:
         pass
 
+
 if __name__ == '__main__':
-    viewlog.arg('calc_id', 'calculation ID', type=int)
-    viewlog.arg('host', 'hostname of the engine server')
-    viewlog.arg('port', 'port of the engine server')
-    viewlog.callfunc()
+    viewlog.calc_id = 'calculation ID'
+    viewlog.host = 'hostname of the engine server'
+    viewlog.port = 'port of the engine server'
+    sap.run(viewlog)

@@ -137,7 +137,7 @@ class _Parser(argparse.ArgumentParser):
         """
         Parse the command-line and run the script
         """
-        namespace = self.parse_args(argv or sys.argv[1:])
+        namespace = self.parse_args(argv)
         try:
             func = namespace.__dict__.pop('_func')
         except KeyError:
@@ -165,3 +165,14 @@ def parser(funcdict, prog=None, description=None, version=None) -> _Parser:
     else:
         _rec_populate(parser, funcdict, prog)
     return parser
+
+
+def run(funcdict, prog=None, description=None, version=None, argv=None):
+    """
+    :param funcdict: a function or a nested dictionary of functions
+    :param prog: the name of the associated command line application
+    :param description: description of the application
+    :param version: version of the application printed with --version
+    :param argv: a list of command-line arguments (if None, use sys.argv[1:])
+    """
+    parser(funcdict, prog, description, version).run(argv)
