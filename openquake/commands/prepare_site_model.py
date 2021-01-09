@@ -174,7 +174,7 @@ def main(
 
 
 main.vs30_csv = dict(help='files with lon,lat,vs30 and no header', nargs='+')
-mainz1pt0 = dict(help='build the z1pt0', abbrev='-1')
+main.z1pt0 = dict(help='build the z1pt0', abbrev='-1')
 main.z2pt5 = dict(help='build the z2pt5', abbrev='-2')
 main.vs30measured = dict(help='build the vs30measured', abbrev='-3')
 main.exposure_xml = dict(help='exposure(s) in XML format', nargs='*')

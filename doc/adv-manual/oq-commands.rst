@@ -10,38 +10,40 @@ not reached the same level of maturity and stability. Still, some of
 them are quite stable and quite useful for the final users, so feel free
 to use them.
 
-You can see the full list of commands by running `oq help`::
+You can see the full list of commands by running `oq --help`::
 
-   $ oq help
+   $ oq --help
    usage: oq [--version]
-             {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot,help}
+             {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
              ...
    
    positional arguments:
-     {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot,help}
-                           available subcommands; use oq help <subcmd>
+     {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,from_shapefile,zip,checksum,to_shapefile,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
+                           available subcommands; use oq <subcmd> --help
    
    optional arguments:
-     --version, -v         show program's version number and exit
-   
+     -h, --help            show this help message and exit
+     -v, --version         show program's version number and exit
+
 This is the output that you get at the present time (engine 3.11); depending
 on your version of the engine you may get a different output. As you see, there
 are several commands, like `purge`, `show_attrs`, `export`, `restore`, ...
-You can get information about each command with `oq help <command>`;
+You can get information about each command with `oq <command> --help`;
 for instance, here is the help for `purge`::
 
-  $ oq help purge
-  usage: oq purge [-h] calc_id
-  
+  $ oq purge --help
+  usage: oq purge [-h] [-f] calc_id
+
   Remove the given calculation. If you want to remove all calculations, use oq
   reset.
   
   positional arguments:
-    calc_id     calculation ID
+    calc_id      calculation ID
   
   optional arguments:
-    -h, --help  show this help message and exit
-
+    -h, --help   show this help message and exit
+    -f, --force  ignore dependent calculations
+  
 Some of these commands are highly experimental and may disappear; others are
 meant for debugging and are not meant to be used by end-users. Here I will
 document only the commands that are useful for the general public and
@@ -82,7 +84,7 @@ we are not there yet.
 
 Here is the usage message::
 
-  $ oq help export
+  $ oq export --help
   usage: oq export [-h] [-e csv] [-d .] datastore_key [calc_id]
 
   Export an output from the datastore.
@@ -115,15 +117,13 @@ this number changes at each version::
   avg_losses-stats ['csv']
   bcr-rlzs ['csv']
   bcr-stats ['csv']
-  damages-rlzs ['csv']
+  damages-rlzs ['npz', 'csv']
   damages-stats ['csv']
-  disagg ['xml', 'csv']
-  disagg_by_src ['csv']
-  dmg_by_asset ['npz', 'csv']
+  disagg ['csv', 'xml']
   dmg_by_event ['csv']
   events ['csv']
   fullreport ['rst']
-  gmf_data ['npz', 'csv']
+  gmf_data ['csv']
   hcurves ['csv', 'xml', 'npz']
   hmaps ['csv', 'xml', 'npz']
   input ['zip']
@@ -132,16 +132,13 @@ this number changes at each version::
   loss_curves-stats ['csv']
   loss_maps-rlzs ['csv', 'npz']
   loss_maps-stats ['csv', 'npz']
-  losses_by_asset ['npz', 'csv']
+  losses_by_asset ['npz']
   losses_by_event ['csv']
   realizations ['csv']
   ruptures ['xml', 'csv']
-  tot_curves-rlzs ['csv']
-  tot_curves-stats ['csv']
-  tot_losses-rlzs ['csv']
-  tot_losses-stats ['csv']
+  src_loss_table ['csv']
   uhs ['csv', 'xml', 'npz']
-  There are 51 exporters defined.
+  There are 44 exporters defined.
 
 At the present the supported export types are `xml`, `csv`, `rst`, `npz` and 
 `hdf5`. `xml` has been deprecated for some outputs and is not the recommended 
@@ -164,7 +161,7 @@ oq zip
 An extremely useful command if you need to copy the files associated
 to a computation from a machine to another is `oq zip`::
 
-  $ oq help zip
+  $ oq zip --help
   usage: oq zip [-h] [-r] what [archive_zip]
   
   positional arguments:
@@ -219,7 +216,7 @@ the `oq` plotting commands are useful for debugging purposes. Here I will
 describe the `plot_assets` command, which allows to plot the
 exposure used in a calculation together with the hazard sites::
 
-  $ oq help plot_assets
+  $ oq plot_assets --help
   usage: oq plot_assets [-h] [calc_id]
   
   Plot the sites and the assets
@@ -237,7 +234,7 @@ Very often, it is interesting to plot the sources. While there is a
 primitive functionality for that in `oq plot`, we recommend to convert
 the sources into .gpkg format and use QGIS to plot them::
 
-  $ oq help nrml_to
+  $ oq nrml_to --help
   usage: oq nrml_to [-h] [-o .] [-c] {csv,gpkg} fnames [fnames ...]
   
   Convert source models into CSV files or a geopackage.
@@ -274,9 +271,9 @@ the exposure and with vs30 values extracted from the vs30 file with a nearest
 neighbour algorithm::
 
   $ oq prepare_site_model -h
-  usage: oq prepare_site_model [-h] [-e [EXPOSURE_XML [EXPOSURE_XML ...]]]
-                               [-s [SITES_CSV [SITES_CSV ...]]] [-1] [-2] [-3]
-                               [-g 0] [-a 5] [-o site_model.csv]
+  usage: oq prepare_site_model [-h] [-1] [-2] [-3]
+                               [-e [EXPOSURE_XML [EXPOSURE_XML ...]]]
+                               [-s SITES_CSV] [-g 0] [-a 5] [-o site_model.csv]
                                vs30_csv [vs30_csv ...]
   
   Prepare a site_model.csv file from exposure xml files/site csv files, vs30 csv
@@ -290,13 +287,12 @@ neighbour algorithm::
   
   optional arguments:
     -h, --help            show this help message and exit
-    -e [EXPOSURE_XML [EXPOSURE_XML ...]], --exposure-xml [EXPOSURE_XML [EXPOSURE  _XML ...]]
-                          exposure(s) in XML format
-    -s [SITES_CSV [SITES_CSV ...]], --sites-csv [SITES_CSV [SITES_CSV ...]]
-                          sites in CSV format
-    -1, --z1pt0           build the z1pt0
+    -1, --z1pt0
     -2, --z2pt5           build the z2pt5
     -3, --vs30measured    build the vs30measured
+    -e [EXPOSURE_XML [EXPOSURE_XML ...]], --exposure-xml [EXPOSURE_XML [EXPOSURE_XML ...]]
+                          exposure(s) in XML format
+    -s SITES_CSV, --sites-csv SITES_CSV
     -g 0, --grid-spacing 0
                           grid spacing in km (the default 0 means no grid)
     -a 5, --assoc-distance 5
