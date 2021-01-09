@@ -29,8 +29,8 @@ FROM python:3.8-slim AS build-image
 COPY --from=compile-image /opt/ /opt/
 ENV PATH="/opt/openquake/bin:$PATH"
 ENV LANG en_US.UTF-8
-RUN apt-get update &&  apt-get install -y --no-install-recommends git ssh && useradd -m -u 1000 -s /bin/bash openquake 
-USER root
+RUN apt-get update &&  apt-get install -y --no-install-recommends git ssh sudo && useradd -m -u 1000 -s /bin/bash openquake 
+USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
 #
