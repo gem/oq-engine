@@ -20,7 +20,6 @@ import os
 import json
 import logging
 
-from openquake.baselib import sap
 from openquake.baselib import datastore, hdf5
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib import util
@@ -110,4 +109,3 @@ def show(what='contents', calc_id: str_or_int = -1, extra=()):
 show.what = 'key or view of the datastore'
 show.calc_id = 'calculation ID or datastore path'
 show.extra = dict(help='extra arguments', nargs='*')
-sap.script(show)

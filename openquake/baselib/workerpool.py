@@ -269,7 +269,6 @@ class WorkerPool(object):
         return 'WorkerPool %s killed' % self.ctrl_url
 
 
-@sap.script
 def workerpool(worker_url='tcp://0.0.0.0:1909', num_workers: int = -1):
     # start a workerpool without a streamer
     WorkerPool(worker_url, num_workers).start()
@@ -280,4 +279,4 @@ workerpool.worker_url = dict(
 workerpool.num_workers = dict(help='number of cores to use')
 
 if __name__ == '__main__':
-    workerpool.callfunc()
+    sap.Parser(workerpool).run()

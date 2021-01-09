@@ -20,7 +20,7 @@
 import json
 import logging
 import requests
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.commonlib import oqzip
 from openquake.calculators.extract import WebAPIError
 
@@ -46,4 +46,3 @@ def postzip(zipfile):
 
 
 postzip.zipfile = 'archive with the files of the computation'
-sap.script(postzip)

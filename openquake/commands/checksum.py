@@ -18,7 +18,6 @@
 import sys
 import unittest.mock as mock
 import os.path
-from openquake.baselib import sap
 from openquake.commonlib import readinput
 from openquake.commonlib import util
 
@@ -51,4 +50,3 @@ def checksum(thing):
 
 
 checksum.thing = 'job.ini, job.zip, job ID, smlt file'
-sap.script(checksum)

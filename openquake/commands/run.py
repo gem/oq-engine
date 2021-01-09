@@ -22,7 +22,7 @@ import os.path
 import cProfile
 import pstats
 
-from openquake.baselib import performance, general, sap, datastore, parallel
+from openquake.baselib import performance, general, datastore, parallel
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators import base, views
@@ -184,4 +184,3 @@ run.exports = dict(help='export formats as a comma-separated string')
 run.loglevel = dict(help='logging level',
                     choices='debug info warn error critical'.split())
 run.calc_id = dict(help='calculation ID (if "nojob" infer it)')
-sap.script(run)

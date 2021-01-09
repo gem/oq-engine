@@ -18,7 +18,7 @@
 import os
 import sys
 import getpass
-from openquake.baselib import sap, config, datastore
+from openquake.baselib import config, datastore
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs
@@ -268,4 +268,3 @@ engine.exports = ('Comma-separated string specifing the export formats, '
                   'in order of priority')
 engine.log_level = dict(help='Defaults to "info"',
                         choices=['debug', 'info', 'warn', 'error', 'critical'])
-sap.script(engine)

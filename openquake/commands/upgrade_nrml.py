@@ -20,7 +20,6 @@ import shutil
 import operator
 from xml.etree.ElementTree import iterparse
 
-from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib.nrml import NRML05
@@ -154,4 +153,3 @@ def upgrade_nrml(directory, dry_run=False, multipoint=False):
 upgrade_nrml.directory = 'directory to consider'
 upgrade_nrml.dry_run = 'test the upgrade without replacing the files'
 upgrade_nrml.multipoint = 'replace PointSources with MultiPointSources'
-sap.script(upgrade_nrml)

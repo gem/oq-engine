@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib import sap
 from openquake.calculators.extract import extract
 from openquake.commonlib import util
 
@@ -60,4 +59,3 @@ def plot_losses(calc_id: int, bins: int = 7):
 
 plot_losses.calc_id = 'a computation id'
 plot_losses.bins = 'number of histogram bins'
-sap.script(plot_losses)

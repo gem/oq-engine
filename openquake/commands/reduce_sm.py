@@ -18,7 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from openquake.baselib import sap, performance, general
+from openquake.baselib import performance, general
 from openquake.commonlib import readinput, util
 
 
@@ -60,4 +60,3 @@ def reduce_sm(calc_id: int):
 
 
 reduce_sm.calc_id = 'calculation ID'
-sap.script(reduce_sm)

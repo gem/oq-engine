@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib import sap, performance
+from openquake.baselib import performance
 from openquake.hazardlib.shakemap import download_array
 
 
@@ -30,5 +30,3 @@ def download_shakemap(id):
         numpy.save(dest, download_array(id))
     print(mon)
     print('Saved %s' % dest)
-
-sap.script(download_shakemap)

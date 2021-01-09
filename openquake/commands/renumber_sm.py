@@ -1,7 +1,7 @@
 import logging
 import operator
 import collections
-from openquake.baselib import sap, parallel, general
+from openquake.baselib import parallel, general
 from openquake.commonlib import logictree
 from openquake.hazardlib import nrml
 
@@ -48,4 +48,3 @@ def renumber_sm(smlt_file):
 
 
 renumber_sm.smlt_file = 'source model logic tree file'
-sap.script(renumber_sm)

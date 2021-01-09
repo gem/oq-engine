@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib import sap
 from openquake.commonlib import util
 
 
@@ -39,6 +38,3 @@ def plot_pyro(calc_id: int = -1):
     lats = sitecol.lats[building_pyro]
     p.scatter(lons, lats, marker='.', color='green')
     p.show()
-
-
-sap.script(plot_pyro)

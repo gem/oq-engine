@@ -19,7 +19,6 @@
 import os
 import signal
 import psutil
-from openquake.baselib import sap
 from openquake.commonlib import logs
 
 
@@ -53,4 +52,3 @@ def abort(job_id: int):
 
 
 abort.job_id = 'job ID'
-sap.script(abort)

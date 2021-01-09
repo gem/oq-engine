@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import numpy
-from openquake.baselib import sap, hdf5, node, performance
+from openquake.baselib import hdf5, node, performance
 from openquake.hazardlib import nrml
 
 
@@ -60,4 +60,3 @@ def to_hdf5(input):
 
 
 to_hdf5.input = dict(help='.npz file to convert', nargs='+')
-sap.script(to_hdf5)

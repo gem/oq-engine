@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import os.path
-from openquake.baselib import sap
 from openquake.commonlib import oqzip
 
 
@@ -43,4 +42,3 @@ zip.what = ('path to a job.ini, an ssmLT.xml, an exposure.xml, '
             'or to a directory containing a file ssmLT.xml')
 zip.archive_zip = 'path to a non-existing .zip file'
 zip.risk_file = 'optional file for risk'
-sap.script(zip)

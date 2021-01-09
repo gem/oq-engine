@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from openquake.baselib import sap
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.logictree import SourceModelLogicTree
 
@@ -36,4 +35,3 @@ def ltcsv(fname, out=None):
 
 ltcsv.fname = 'path to the XML source model logic tree'
 ltcsv.out = 'path to the CSV source model logic tree'
-sap.script(ltcsv)

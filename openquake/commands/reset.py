@@ -20,7 +20,7 @@ import sys
 import time
 import signal
 import getpass
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.commonlib import logs
 from openquake.engine.utils import confirm
 from openquake.server import dbserver
@@ -57,4 +57,3 @@ def reset(yes=False):
 
 
 reset.yes = 'confirmation'
-sap.script(reset)

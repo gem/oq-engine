@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap
 from openquake.commonlib import util
 
 
@@ -50,4 +49,3 @@ def plot_ac(calc_id: int):
 
 
 plot_ac.calc_id = 'a computation id'
-sap.script(plot_ac)

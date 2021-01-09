@@ -19,7 +19,7 @@ import os
 import sys
 import signal
 import getpass
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.commonlib import logs
 from openquake.server import dbserver as dbs
 
@@ -56,4 +56,3 @@ dbserver.cmd = dict(help='dbserver command',
 dbserver.dbhostport = 'dbhost:port'
 dbserver.foreground = 'stay in foreground'
 dbserver.loglevel = 'DEBUG|INFO|WARN'
-sap.script(dbserver)

@@ -31,7 +31,6 @@ import time
 import logging
 import collections
 import shapely.wkt
-from openquake.baselib import sap
 from openquake.hazardlib import nrml, sourceconverter
 from openquake.hazardlib.geo.packager import GeoPackager, fiona
 from openquake.commonlib.writers import write_csv
@@ -165,4 +164,3 @@ nrml_to.what = dict(help='csv or gpkg',
 nrml_to.fnames = dict(help='source model files in XML', nargs='+')
 nrml_to.chatty = 'display sources in progress'
 nrml_to.outdir = 'output directory'
-sap.script(nrml_to)

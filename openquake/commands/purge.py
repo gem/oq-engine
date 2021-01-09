@@ -18,7 +18,7 @@
 import os
 import re
 import getpass
-from openquake.baselib import sap, datastore
+from openquake.baselib import datastore
 from openquake.commonlib.logs import dbcmd
 
 datadir = datastore.get_datadir()
@@ -69,4 +69,3 @@ def purge(calc_id: int, force=False):
 
 purge.calc_id = 'calculation ID'
 purge.force = 'ignore dependent calculations'
-sap.script(purge)

@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os.path
-from openquake.baselib import sap
 from openquake.commonlib import shapefileparser
 
 
@@ -37,4 +36,3 @@ from_shapefile.input_shp_files = dict(
     help='path(s) to source model ESRI shapefile(s)', nargs='+')
 from_shapefile.validate = 'Apply validation to input model (can be slow)'
 from_shapefile.output = 'output path (no extension)'
-sap.script(from_shapefile)

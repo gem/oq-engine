@@ -23,7 +23,6 @@ try:
 except ImportError:
     pass
 else:
-    from openquake.baselib import sap
     from openquake.engine.celeryconfig import broker_url, result_backend
 
     def status():
@@ -85,4 +84,3 @@ else:
 
     celery.cmd = dict(help='celery command',
                       choices='status inspect'.split())
-    sap.script(celery)

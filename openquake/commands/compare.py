@@ -18,7 +18,6 @@
 import sys
 import collections
 import numpy
-from openquake.baselib import sap
 from openquake.commonlib import util
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
@@ -179,4 +178,3 @@ compare.samplesites = 'sites to sample (or fname with site IDs)'
 compare.rtol = 'relative tolerance'
 compare.atol = 'absolute tolerance'
 compare.threshold = 'ignore the hazard curves below it'
-sap.script(compare)

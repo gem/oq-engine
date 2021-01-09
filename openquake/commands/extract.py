@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-from openquake.baselib import performance, sap, hdf5
+from openquake.baselib import performance, hdf5
 from openquake.commonlib import logs
 from openquake.calculators.extract import Extractor, WebExtractor
 
@@ -59,4 +59,3 @@ extract.calc_id = 'number of the calculation'
 extract.webapi = 'if passed, use the (possibly remote) WebAPI'
 extract.local = 'if passed, use the local WebAPI'
 extract.extract_dir = 'directory where to extract'
-sap.script(extract)

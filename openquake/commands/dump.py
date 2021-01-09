@@ -20,7 +20,6 @@ import shutil
 import sqlite3
 import os.path
 import tempfile
-from openquake.baselib import sap
 from openquake.baselib.general import safeprint, zipfiles
 from openquake.server.dbserver import db
 
@@ -79,4 +78,3 @@ def dump(archive, calc_id: int = 0, *, user=None):
 dump.archive = 'path to the zip file where to dump the calculations'
 dump.calc_id = 'calculation ID; if missing, dump all calculations'
 dump.user = 'if missing, dump all calculations'
-sap.script(dump)

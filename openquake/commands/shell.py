@@ -19,7 +19,6 @@ import sys
 import runpy
 from functools import partial
 import numpy
-from openquake.baselib import sap
 from openquake.hazardlib import nrml
 from openquake.baselib.datastore import read
 from openquake.hazardlib.geo.geodetic import geodetic_distance
@@ -102,4 +101,3 @@ def shell(script=None, args=()):
 
 shell.script = 'python script to run (if any)'
 shell.args = dict(help='arguments to pass to the script', nargs='*')
-sap.script(shell)

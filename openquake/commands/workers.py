@@ -18,7 +18,7 @@
 import sys
 import getpass
 from pprint import pprint
-from openquake.baselib import sap, config
+from openquake.baselib import  config
 from openquake.commonlib import logs
 
 ro_commands = ('status', 'inspect')
@@ -36,4 +36,3 @@ def workers(cmd):
 
 workers.cmd = dict(help='command',
                    choices='start stop status restart inspect wait'.split())
-sap.script(workers)

@@ -18,7 +18,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from openquake.baselib import sap, parallel
+from openquake.baselib import parallel
 from openquake.commonlib import logs, util
 from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.engine import engine
@@ -48,4 +48,3 @@ def reaggregate(calc_id: int, aggregate_by):
 
 reaggregate.calc_id = 'ID of the risk calculation'
 reaggregate.aggregate_by = 'comma-separated list of tag names'
-sap.script(reaggregate)

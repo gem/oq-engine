@@ -21,7 +21,7 @@ import sys
 import subprocess
 import webbrowser
 
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.server import dbserver
 from openquake.server.utils import check_webserver_running
 
@@ -66,4 +66,3 @@ def webui(cmd, hostport='127.0.0.1:8800', skip_browser: bool = False):
 webui.cmd = dict(help='webui command', choices=commands)
 webui.hostport = 'a string of the form <hostname:port>'
 webui.skip_browser = 'do not automatically open the browser'
-sap.script(webui)

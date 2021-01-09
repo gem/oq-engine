@@ -20,7 +20,7 @@ import sys
 import inspect
 import getpass
 from decorator import getfullargspec
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.calculators.views import rst_table
 from openquake.commonlib import logs
 from openquake.server import dbserver
@@ -65,4 +65,3 @@ def db(cmd, args=()):
 
 db.cmd = 'db command'
 db.args = dict(help='db command arguments', nargs='*')
-sap.script(db)

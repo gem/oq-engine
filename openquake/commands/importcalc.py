@@ -17,7 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import logging
-from openquake.baselib import sap, datastore
+from openquake.baselib import datastore
 from openquake.commonlib import logs
 from openquake.calculators.extract import WebExtractor
 from openquake.engine import engine
@@ -56,4 +56,3 @@ def importcalc(calc_id):
 
 
 importcalc.calc_id = 'calculation ID or pathname'
-sap.script(importcalc)

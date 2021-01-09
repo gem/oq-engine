@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import numpy
 import shapely.wkt
-from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.commonlib import util
 
@@ -68,4 +67,3 @@ def plot_assets(calc_id: int = -1, site_model=False):
 
 plot_assets.calc_id = 'a computation id'
 plot_assets.site_model = 'plot the site model too'
-sap.script(plot_assets)

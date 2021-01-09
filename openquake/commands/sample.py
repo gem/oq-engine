@@ -21,7 +21,7 @@ import shutil
 import numpy
 from openquake.hazardlib import valid, nrml
 from openquake.baselib.python3compat import encode
-from openquake.baselib import sap, general
+from openquake.baselib import general
 from openquake.commonlib import logictree
 
 
@@ -112,4 +112,3 @@ def sample(fname, reduction_factor: valid.probability):
 
 sample.fname = 'path to the model file'
 sample.reduction_factor = 'reduction factor in the range 0..1'
-sap.script(sample)

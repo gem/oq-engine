@@ -19,7 +19,6 @@ import os
 import sys
 import logging
 from unittest import mock
-from openquake.baselib import sap
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import readinput, logs
 from openquake.calculators import base
@@ -51,4 +50,3 @@ def check_input(job_ini_or_zip_or_nrmls):
 
 
 check_input.job_ini_or_zip_or_nrmls = dict(help='Check the input', nargs='+')
-sap.script(check_input)

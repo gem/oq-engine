@@ -18,7 +18,7 @@
 import os
 import logging
 import numpy
-from openquake.baselib import sap, performance, datastore
+from openquake.baselib import performance, datastore
 from openquake.hazardlib import site, valid
 from openquake.hazardlib.geo.utils import assoc
 from openquake.risklib.asset import Exposure
@@ -190,4 +190,3 @@ prepare_site_model.grid_spacing = (
 prepare_site_model.assoc_distance = (
     'sites over this distance are discarded')
 prepare_site_model.output = 'output file'
-sap.script(prepare_site_model)

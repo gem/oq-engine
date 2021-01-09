@@ -16,13 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import sys
 import inspect
 import argparse
-
+import importlib
 
 NODEFAULT = object()
-registry = {}  # dotname -> function
 
 
 def _choices(choices):
@@ -32,16 +32,8 @@ def _choices(choices):
     return ''
 
 
-class Script(object):
-    """
-    A simple way to define command processors based on argparse.
-    Each parser is associated to a function and parsers can be
-    composed together, by dispatching on a given name (if not given,
-    the function name is used).
-    """
-    # for instance {'openquake.commands.run': run, ...}
-
-    def __init__(self, func, parser, name=None, help=True):
+class _Script(object):
+    def __init__(self, func, parser, name=None):
         self.func = func
         self.name = name or func.__name__
         # args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, anns
@@ -64,9 +56,8 @@ class Script(object):
                 self.argdescr.append((arg, 'pos'))
         for arg in argspec.kwonlyargs:
             self.argdescr.append((arg, 'opt'))
-        registry['%s.%s' % (func.__module__, func.__name__)] = self
 
-    def _populate(self, parser):
+    def _populate(self):
         # populate the parser
         abbrevs = {'-h'}  # already taken abbreviations
         for name, kind in self.argdescr:
@@ -105,75 +96,81 @@ class Script(object):
             else:
                 # no abbrev
                 args = name,
-            parser.add_argument(*args, **kw)
-
-    def __call__(self, *args, **kw):
-        return self.func(*args, **kw)
-
-    def callfunc(self, argv=None):
-        """
-        Parse the argv list and extract a dictionary of arguments which
-        is then passed to  the function underlying the script.
-        """
-        namespace = self.parser.parse_args(argv or sys.argv[1:])
-        return self.func(**vars(namespace))
-
-    def help(self):
-        """
-        Return the help message as a string
-        """
-        return self.parser.format_help()
+            self.parser.add_argument(*args, **kw)
 
     def __repr__(self):
         args = ', '.join(name for name, kind in self.argdescr)
         return '<%s %s(%s)>' % (self.__class__.__name__, self.name, args)
 
 
-def script(scripts, name='main', description=None, prog=None,
-           version=None, parser=None):
+class Parser(argparse.ArgumentParser):
     """
-    Collects together different scripts and builds a single
-    script dispatching to the subparsers depending on
-    the first argument, i.e. the name of the subparser to invoke.
+    argparse.ArgumentParser with a .run method
+    """
+    def run(self, argv=None):
+        """
+        Parse the command-line and run the script
+        """
+        namespace = self.parse_args(argv or sys.argv[1:])
+        try:
+            func = namespace.__dict__.pop('_func')
+        except KeyError:
+            self.print_usage()
+        else:
+            return func(**vars(namespace))
 
-    :param scripts: a list of script instances
-    :param name: the name of the composed parser
-    :param description: description of the composed parser
-    :param prog: name of the script printed in the usage message
-    :param version: version of the script printed with --version
+
+def parser(funcdict, prog=None, description=None, version=None) -> Parser:
     """
-    if parser is None:
-        parser = argparse.ArgumentParser(prog, description=description)
-    elif prog is None:
-        prog = parser.prog
+    :param funcdict: a function or a nested dictionary of functions
+    :param prog: the name of the associated command line application
+    :param description: description of the application
+    :param version: version of the application printed with --version
+    :returns: a sap.Parser instance
+    """
+    parser = Parser(prog, description=description)
     if version:
         parser.add_argument(
             '-v', '--version', action='version', version=version)
-    if callable(scripts):
-        script = Script(scripts, parser)
-        script._populate(parser)
-        return script
-    subparsers = parser.add_subparsers(
-        help='available subcommands; use %s help <subcmd>' % prog,
-        prog=prog)
-    subpdic = {}  # subcommand name -> subparser
-    for s in list(scripts):
-        if isinstance(s, str):  # nested subcommand
-            subp = subparsers.add_parser(s)
-            subpdic[s] = subp
-        else:  # terminal subcommand
-            subp = subparsers.add_parser(s.name, description=s.description)
-            s._populate(subp)
-            subp.set_defaults(_func=s.func)
+    if callable(funcdict):
+        _Script(funcdict, parser)._populate()
+    elif isinstance(funcdict, str):  # passed a package name
+        funcdict = find_main(funcdict)
+    _rec_populate(parser, funcdict, prog)
+    return parser
 
-    def main(**kw):
-        try:
-            func = kw.pop('_func')
-        except KeyError:
-            parser.print_usage()
-        else:
-            return func(**kw)
-    main.__name__ = name
-    script = Script(main, parser, name)
-    vars(script).update(subpdic)
-    return script
+
+def _rec_populate(parser, funcdict, prog):
+    subparsers = parser.add_subparsers(
+        help='available subcommands; use %s <subcmd> --help' % prog, prog=prog)
+    for name, func in funcdict.items():
+        if isinstance(func, dict):  # nested subcommand
+            _rec_populate(subparsers.add_parser(name), func, prog + ' ' + name)
+        else:  # terminal subcommand
+            subp = subparsers.add_parser(name, description=func.__doc__,
+                                         prog=prog + ' ' + name)
+            subp.set_defaults(_func=func)
+            _Script(func, subp)._populate()
+
+
+def find_main(pkgname):
+    """
+    :param pkgname: name of a packake (i.e. myapp.plot) with "main" functions
+    :returns: a dictionary name -> func_or_subdic
+    """
+    pkg = importlib.import_module(pkgname)
+    dic = {}
+    for path in pkg.__path__:
+        for name in os.listdir(path):
+            fname = os.path.join(path, name)
+            dotname = pkgname + '.' + name
+            if os.path.isdir(fname) and '__init__.py' in os.listdir(fname):
+                subdic = find_main(dotname)
+                if subdic:
+                    dic[name] = subdic
+            elif name.endswith('.py') and name != '__init__.py':
+                mod = importlib.import_module(dotname[:-3])
+                main = name[:-3]
+                if hasattr(mod, main):
+                    dic[main] = getattr(mod, main)
+    return dic

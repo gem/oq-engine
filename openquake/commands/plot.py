@@ -20,7 +20,6 @@ import json
 import logging
 import shapely
 import numpy
-from openquake.baselib import sap
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
@@ -653,4 +652,3 @@ plot.calc_id = 'computation ID'
 plot.other_id = 'ID of another computation'
 plot.webapi = 'if given, pass through the WebAPI'
 plot.local = 'if passed, use the local WebAPI'
-sap.script(plot)
