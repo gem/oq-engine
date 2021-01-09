@@ -27,7 +27,7 @@ from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
 from openquake.server import dbserver
-from openquake.commands.abort import abort
+from openquake.commands.abort import main as abort
 
 
 DEFAULT_EXPORTS = 'csv,xml,rst'
