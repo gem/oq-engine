@@ -15,9 +15,17 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""
+`openquake.baselib.sap` is a Simple Argument Parser based on argparse
+which is extremely powerful. Its features are
+
+1. zero boilerplate (no decorators)
+2. supports arbitrarily nested subcommands with an easy sintax
+3. automatically generates a simple parser from a Python module and
+   a hierarchic parser from a Python package.
+"""
 
 import os
-import sys
 import inspect
 import argparse
 import importlib
@@ -32,7 +40,7 @@ def _choices(choices):
     return ''
 
 
-def _populate(parser, func, prog):
+def _populate(parser, func):
     # populate the parser
     # args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, anns
     argspec = inspect.getfullargspec(func)
@@ -44,7 +52,6 @@ def _populate(parser, func, prog):
     alldefaults = (NODEFAULT,) * nodefaults + defaults
     argdef = dict(zip(argspec.args, alldefaults))
     argdef.update(argspec.kwonlydefaults or {})
-    parser.prog = prog
     parser.description = func.__doc__
     parser.set_defaults(_func=func)
     argdescr = []  # list of pairs (argname, argkind)
@@ -95,15 +102,15 @@ def _populate(parser, func, prog):
         parser.add_argument(*args, **kw)
 
 
-def _rec_populate(parser, funcdict, prog):
+def _rec_populate(parser, funcdict):
     subparsers = parser.add_subparsers(
-        help='available subcommands; use %s <subcmd> --help' % prog, prog=prog)
+        help='available subcommands; use %s <subcmd> --help' % parser.prog)
     for name, func in funcdict.items():
-        subp = subparsers.add_parser(name, prog=prog + ' ' + name)
+        subp = subparsers.add_parser(name, prog=parser.prog + ' ' + name)
         if isinstance(func, dict):  # nested subcommand
-            _rec_populate(subp, func, prog)
+            _rec_populate(subp, func)
         else:  # terminal subcommand
-            _populate(subp, func, prog)
+            _populate(subp, func)
 
 
 def find_main(pkgname):
@@ -161,9 +168,9 @@ def parser(funcdict, prog=None, description=None, version=None) -> _Parser:
     if isinstance(funcdict, str):  # passed a package name
         funcdict = find_main(funcdict)
     if callable(funcdict):
-        _populate(parser, funcdict, prog)
+        _populate(parser, funcdict)
     else:
-        _rec_populate(parser, funcdict, prog)
+        _rec_populate(parser, funcdict)
     return parser
 
 
