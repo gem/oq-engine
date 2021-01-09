@@ -68,14 +68,31 @@ def del_calculation(job_id, confirmed=False):
                 print(resp['error'])
 
 
-@sap.Script  # do not use sap.Script, other oq engine will break
-def engine(log_file, no_distribute, yes, config_file, make_html_report,
-           upgrade_db, db_version, what_if_I_upgrade, run,
-           list_hazard_calculations, list_risk_calculations,
-           delete_calculation, delete_uncompleted_calculations,
-           hazard_calculation_id, list_outputs, show_log,
-           export_output, export_outputs, exports='',
-           log_level='info', multi=False, reuse_input=False, param=''):
+def engine(
+        no_distribute=False,
+        yes=False,
+        upgrade_db=False,
+        db_version=False,
+        what_if_I_upgrade=False,
+        list_hazard_calculations=False,
+        list_risk_calculations=False,
+        delete_uncompleted_calculations=False,
+        multi=False,
+        reuse_input=False,
+        *,
+        log_file=None,
+        make_html_report=None,
+        run=None,
+        delete_calculation: int = None,
+        hazard_calculation_id: int = None,
+        list_outputs: int = None,
+        show_log=None,
+        export_output: int = None,
+        export_outputs: int = None,
+        param='',
+        config_file=None,
+        exports='',
+        log_level='info'):
     """
     Run a calculation using the traditional command line API
     """
@@ -190,63 +207,65 @@ def engine(log_file, no_distribute, yes, config_file, make_html_report,
 
     elif delete_uncompleted_calculations:
         logs.dbcmd('delete_uncompleted_calculations', getpass.getuser())
-
     else:
-        engine.parser.prog = 'oq engine'
-        engine.parser.print_usage()
+        print("Please pass some option, see oq engine --help")
 
 
-engine._add('log_file', '--log-file', '-L', help='''\
-Location where to store log messages; if not specified, log messages
-will be printed to the console (to stderr)''')
-engine._add('no_distribute', '--no-distribute', '--nd', help='''\
+# flags
+engine.no_distribute = dict(abbrev='--nd', help='''\
 Disable calculation task distribution and run the
 computation in a single process. This is intended for
-use in debugging and profiling.''', action='store_true')
-engine.flg('yes', 'Automatically answer "yes" when asked to confirm an action')
-engine.opt('config_file', 'Custom openquake.cfg file, to override default '
-           'configurations')
-engine._add('make_html_report', '--make-html-report', '--r',
-            help='Build an HTML report of the computation at the given date',
-            metavar='YYYY-MM-DD|today')
-engine.flg('upgrade_db', 'Upgrade the openquake database')
-engine.flg('db_version', 'Show the current version of the openquake database')
-engine.flg('what_if_I_upgrade', 'Show what will happen to the openquake '
-           'database if you upgrade')
-engine._add('run', '--run', help='Run a job with the specified config file',
-            metavar='JOB_INI', nargs='+')
-engine._add('list_hazard_calculations', '--list-hazard-calculations', '--lhc',
-            help='List hazard calculation information', action='store_true')
-engine._add('list_risk_calculations', '--list-risk-calculations', '--lrc',
-            help='List risk calculation information', action='store_true')
-engine._add('delete_calculation', '--delete-calculation', '--dc',
-            help='Delete a calculation and all associated outputs',
-            metavar='CALCULATION_ID', type=int)
-engine._add('delete_uncompleted_calculations',
-            '--delete-uncompleted-calculations', '--duc',
-            help='Delete all the uncompleted calculations',
-            action='store_true')
-engine._add('hazard_calculation_id', '--hazard-calculation-id', '--hc',
-            help='Use the given job as input for the next job')
-engine._add('list_outputs', '--list-outputs', '--lo',
-            help='List outputs for the specified calculation',
-            metavar='CALCULATION_ID')
-engine._add('show_log', '--show-log', '--sl',
-            help='Show the log of the specified calculation',
-            metavar='CALCULATION_ID')
-engine._add('export_output', '--export-output', '--eo',
-            nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'),
-            help='Export the desired output to the specified directory')
-engine._add('export_outputs', '--export-outputs', '--eos',
-            nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'),
-            help='Export all of the calculation outputs to the '
-            'specified directory')
-engine.opt('exports', 'Comma-separated string specifing the export formats, '
-           'in order of priority')
-engine.opt('log_level', 'Defaults to "info"',
-           choices=['debug', 'info', 'warn', 'error', 'critical'])
-engine.flg('multi', 'Run multiple job.inis in parallel')
-engine.flg('reuse_input', 'Read the sources|exposures from the cache (if any)')
-engine._add('param', '--param', '-p',
-            help='Override parameters specified with the syntax '
-            'NAME1=VALUE1,NAME2=VALUE2,...')
+use in debugging and profiling.''')
+engine.yes = 'Automatically answer "yes" when asked to confirm an action'
+engine.upgrade_db = 'Upgrade the openquake database'
+engine.db_version = 'Show the current version of the openquake database'
+engine.what_if_I_upgrade = (
+    'Show what will happen to the openquake database if you upgrade')
+engine.list_hazard_calculations = dict(
+    abbrev='--lhc', help='List hazard calculation information')
+engine.list_risk_calculations = dict(
+    abbrev='--lrc', help='List risk calculation information')
+engine.delete_uncompleted_calculations = dict(
+    abbrev='--duc', help='Delete all the uncompleted calculations')
+engine.multi = 'Run multiple job.inis in parallel'
+engine.reuse_input = 'Read the sources|exposures from the cache (if any)'
+
+# options
+engine.log_file = dict(
+    abbrev='-L', help='''\
+Location where to store log messages; if not specified, log messages
+will be printed to the console (to stderr)''')
+engine.make_html_report = dict(
+    abbrev='--r', metavar='YYYY-MM-DD|today',
+    help='Build an HTML report of the computation at the given date')
+engine.run = dict(abbrev='--run',
+                  help='Run a job with the specified config file',
+                  metavar='JOB_INI', nargs='+')
+engine.delete_calculation = dict(
+    abbrev='--dc',
+    help='Delete a calculation and all associated outputs',
+    metavar='CALCULATION_ID')
+engine.hazard_calculation_id = dict(
+    abbrev='--hc', help='Use the given job as input for the next job')
+engine.list_outputs = dict(
+    abbrev='--lo', help='List outputs for the specified calculation',
+    metavar='CALCULATION_ID')
+engine.show_log = dict(
+    abbrev='--sl', help='Show the log of the specified calculation',
+    metavar='CALCULATION_ID')
+engine.export_output = dict(
+    abbrev='--eo', nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'),
+    help='Export the desired output to the specified directory')
+engine.export_outputs = dict(
+    abbrev='--eos', nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'),
+    help='Export all of the calculation outputs to the specified directory')
+engine.param = dict(
+    abbrev='-p', help='Override parameters specified with the syntax '
+    'NAME1=VALUE1,NAME2=VALUE2,...')
+engine.config_file = ('Custom openquake.cfg file, to override default '
+                      'configurations')
+engine.exports = ('Comma-separated string specifing the export formats, '
+                  'in order of priority')
+engine.log_level = dict(help='Defaults to "info"',
+                        choices=['debug', 'info', 'warn', 'error', 'critical'])
+sap.script(engine)

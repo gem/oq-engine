@@ -53,8 +53,7 @@ def purge_all(user=None):
                 purge_one(calc_id, user, force=True)
 
 
-@sap.Script
-def purge(calc_id, force=False):
+def purge(calc_id: int, force=False):
     """
     Remove the given calculation. If you want to remove all calculations,
     use oq reset.
@@ -68,5 +67,6 @@ def purge(calc_id, force=False):
     purge_one(calc_id, getpass.getuser(), force)
 
 
-purge.arg('calc_id', 'calculation ID', type=int)
-purge.flg('force', 'ignore dependent calculations')
+purge.calc_id = 'calculation ID'
+purge.force = 'ignore dependent calculations'
+sap.script(purge)

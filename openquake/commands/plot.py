@@ -581,7 +581,6 @@ def make_figure_tot_curves(extractors, what):
     fig = plt.figure()
     [ex] = extractors
     tot = ex.get(what)
-    app = ex.get(what.replace('tot_', 'app_'))
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlabel('return periods')
     ax.set_ylabel('PoE')
@@ -603,8 +602,10 @@ def plot_wkt(wkt_string):
     return plt
 
 
-@sap.Script
-def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
+def plot(what='examples',
+         calc_id: int = -1,
+         other_id: int = None,
+         webapi=False,
          local=False):
     """
     Generic plotter for local and remote calculations.
@@ -647,8 +648,9 @@ def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
     plt.show()
 
 
-plot.arg('what', 'what to extract')
-plot.arg('calc_id', 'computation ID', type=int)
-plot.arg('other_id', 'ID of another computation', type=int)
-plot.flg('webapi', 'if given, pass through the WebAPI')
-plot.flg('local', 'if passed, use the local WebAPI')
+plot.what = 'what to extract'
+plot.calc_id = 'computation ID'
+plot.other_id = 'ID of another computation'
+plot.webapi = 'if given, pass through the WebAPI'
+plot.local = 'if passed, use the local WebAPI'
+sap.script(plot)

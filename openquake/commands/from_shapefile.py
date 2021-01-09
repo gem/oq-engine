@@ -20,8 +20,7 @@ from openquake.baselib import sap
 from openquake.commonlib import shapefileparser
 
 
-@sap.Script
-def from_shapefile(output, input_shp_files, validate):
+def from_shapefile(input_shp_files, validate=False, *, output=None):
     """
     Convert multiple ESRI Shapefile(s) into a single NRML source model file.
     """
@@ -34,7 +33,8 @@ def from_shapefile(output, input_shp_files, validate):
     shapefileparser.SourceModelParser().write(output + '.xml', source_model)
 
 
-from_shapefile.opt('output', 'output path (no extension)')
-from_shapefile.arg('input_shp_files',
-                   'path(s) to source model ESRI shapefile(s)', nargs='+')
-from_shapefile.flg('validate', 'Apply validation to input model (can be slow)')
+from_shapefile.input_shp_files = dict(
+    help='path(s) to source model ESRI shapefile(s)', nargs='+')
+from_shapefile.validate = 'Apply validation to input model (can be slow)'
+from_shapefile.output = 'output path (no extension)'
+sap.script(from_shapefile)

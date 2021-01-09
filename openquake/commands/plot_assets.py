@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -23,8 +22,7 @@ from openquake.hazardlib.geo.utils import cross_idl
 from openquake.commonlib import util
 
 
-@sap.Script
-def plot_assets(calc_id=-1, site_model=False):
+def plot_assets(calc_id: int = -1, site_model=False):
     """
     Plot the sites and the assets
     """
@@ -68,5 +66,6 @@ def plot_assets(calc_id=-1, site_model=False):
     p.show()
 
 
-plot_assets.arg('calc_id', 'a computation id', type=int)
-plot_assets.flg('site_model', 'plot the site model too')
+plot_assets.calc_id = 'a computation id'
+plot_assets.site_model = 'plot the site model too'
+sap.script(plot_assets)

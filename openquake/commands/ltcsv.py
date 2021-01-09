@@ -22,7 +22,6 @@ from openquake.commonlib.writers import write_csv
 from openquake.commonlib.logictree import SourceModelLogicTree
 
 
-@sap.Script
 def ltcsv(fname, out=None):
     """
     Convert logic tree source model file from XML into CSV
@@ -35,5 +34,6 @@ def ltcsv(fname, out=None):
     logging.info('Saved %s', out)
 
 
-ltcsv.arg('fname', 'path to the XML source model logic tree')
-ltcsv.arg('out', 'path to the CSV source model logic tree')
+ltcsv.fname = 'path to the XML source model logic tree'
+ltcsv.out = 'path to the CSV source model logic tree'
+sap.script(ltcsv)

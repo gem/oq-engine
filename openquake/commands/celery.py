@@ -77,12 +77,12 @@ else:
             for active in sum(actives.values(), []):
                 print(active['hostname'], active['args'])
 
-    @sap.Script
     def celery(cmd):
         """
         Return information about the celery workers
         """
         globals()[cmd]()
 
-    celery.arg('cmd', 'celery command',
-               choices='status inspect'.split())
+    celery.cmd = dict(help='celery command',
+                      choices='status inspect'.split())
+    sap.script(celery)

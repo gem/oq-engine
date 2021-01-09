@@ -27,7 +27,6 @@ from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml  # this is necessary
 
 
-@sap.Script
 def check_input(job_ini_or_zip_or_nrmls):
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
@@ -51,4 +50,5 @@ def check_input(job_ini_or_zip_or_nrmls):
                 calc.read_inputs()
 
 
-check_input.arg('job_ini_or_zip_or_nrmls', 'Check the input', nargs='+')
+check_input.job_ini_or_zip_or_nrmls = dict(help='Check the input', nargs='+')
+sap.script(check_input)

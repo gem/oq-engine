@@ -269,14 +269,15 @@ class WorkerPool(object):
         return 'WorkerPool %s killed' % self.ctrl_url
 
 
-@sap.Script
-def workerpool(worker_url='tcp://0.0.0.0:1909', num_workers=-1):
+@sap.script
+def workerpool(worker_url='tcp://0.0.0.0:1909', num_workers: int = -1):
     # start a workerpool without a streamer
     WorkerPool(worker_url, num_workers).start()
 
 
-workerpool.arg('worker_url', 'ZMQ address (tcp:///w.x.y.z:port) of the worker')
-workerpool.opt('num_workers', 'number of cores to use', type=int)
+workerpool.worker_url = dict(
+    help='ZMQ address (tcp:///w.x.y.z:port) of the worker')
+workerpool.num_workers = dict(help='number of cores to use')
 
 if __name__ == '__main__':
     workerpool.callfunc()

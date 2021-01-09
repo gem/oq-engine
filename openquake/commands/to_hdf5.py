@@ -43,11 +43,10 @@ def convert_xml_hdf5(input_file, output_file):
     return output_file
 
 
-@sap.Script
 def to_hdf5(input):
     """
     Convert .xml and .npz files to .hdf5 files.
-    """    
+    """
     with performance.Monitor('to_hdf5') as mon:
         for input_file in input:
             if input_file.endswith('.npz'):
@@ -59,4 +58,6 @@ def to_hdf5(input):
             print('Generated %s' % output)
     print(mon)
 
-to_hdf5.arg('input', '.npz file to convert', nargs='*')
+
+to_hdf5.input = dict(help='.npz file to convert', nargs='+')
+sap.script(to_hdf5)

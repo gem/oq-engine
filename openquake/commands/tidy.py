@@ -20,7 +20,6 @@ from openquake.hazardlib import nrml
 from openquake.commonlib import writers
 
 
-@sap.Script
 def tidy(fnames):
     """
     Reformat a NRML file in a canonical form. That also means reducing the
@@ -40,4 +39,6 @@ def tidy(fnames):
             nrml.write(node.nodes, f, writers.FIVEDIGITS, xmlns=node['xmlns'])
         print('Reformatted %s, original left in %s.bak' % (fname, fname))
 
-tidy.arg('fnames', 'NRML file name', nargs='+')
+
+tidy.fnames = dict(help='NRML file name', nargs='+')
+sap.script(tidy)

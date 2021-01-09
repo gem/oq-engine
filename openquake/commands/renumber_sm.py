@@ -21,7 +21,6 @@ def read_sm(fname):
     return root, fname, sources
 
 
-@sap.Script
 def renumber_sm(smlt_file):
     """
     Renumber the sources belonging to the same source model, even if split
@@ -48,7 +47,5 @@ def renumber_sm(smlt_file):
             nrml.write(root, f, xmlns=root['xmlns'])
 
 
-renumber_sm.arg('smlt_file', 'source model logic tree file')
-
-if __name__ == '__main__':
-    renumber_sm.callfunc()
+renumber_sm.smlt_file = 'source model logic tree file'
+sap.script(renumber_sm)
