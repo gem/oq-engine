@@ -86,7 +86,7 @@ choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
            'extracts', 'parameters', 'sources', 'mfds']
 
 
-def info(what, report: bool = False):
+def info(what, report=False):
     """
     Give information about the passed keyword or filename
     """

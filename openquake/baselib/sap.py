@@ -58,7 +58,7 @@ class Script(object):
         self.parser = parser
         self.argdescr = []  # list of pairs (argname, argkind)
         for arg in argspec.args:
-            if argspec.annotations.get('type') is bool:
+            if self.argdef[arg] is False:
                 self.argdescr.append((arg, 'flg'))
             else:
                 self.argdescr.append((arg, 'pos'))
@@ -75,7 +75,8 @@ class Script(object):
                 kw = dict(help=descr)
             else:  # assume a dictionary
                 kw = descr.copy()
-            kw['type'] = self._get_type(name, kw.get('type'))
+            if kw.get('type') is None and type in self.func.__annotations__:
+                kw.setdefault('type', self.func.__annotations__['type'])
             abbrev = kw.get('abbrev')
             choices = kw.get('choices')
             default = self.argdef[name]
@@ -105,11 +106,6 @@ class Script(object):
                 # no abbrev
                 args = name,
             parser.add_argument(*args, **kw)
-
-    def _get_type(self, name, type):
-        if type is None and name in self.func.__annotations__:
-            return self.func.__annotations__[name]
-        return type
 
     def __call__(self, *args, **kw):
         return self.func(*args, **kw)

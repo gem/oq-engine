@@ -605,8 +605,8 @@ def plot_wkt(wkt_string):
 def plot(what='examples',
          calc_id: int = -1,
          other_id: int = None,
-         webapi: bool = False,
-         local: bool = False):
+         webapi=False,
+         local=False):
     """
     Generic plotter for local and remote calculations.
     """

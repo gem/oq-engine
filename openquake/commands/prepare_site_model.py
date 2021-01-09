@@ -84,9 +84,9 @@ def check_fname(fname, kind, forbidden):
 
 def prepare_site_model(
         vs30_csv,
-        z1pt0: bool = False,
-        z2pt5: bool = False,
-        vs30measured: bool = False,
+        z1pt0=False,
+        z2pt5=False,
+        vs30measured=False,
         *,
         exposure_xml=None,
         sites_csv=None,

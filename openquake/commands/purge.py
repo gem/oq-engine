@@ -53,7 +53,7 @@ def purge_all(user=None):
                 purge_one(calc_id, user, force=True)
 
 
-def purge(calc_id: int, force: bool):
+def purge(calc_id: int, force=False):
     """
     Remove the given calculation. If you want to remove all calculations,
     use oq reset.

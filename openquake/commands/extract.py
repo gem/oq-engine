@@ -24,8 +24,8 @@ from openquake.calculators.extract import Extractor, WebExtractor
 # `oq extract` is tested in the demos
 def extract(what,
             calc_id: int = -1,
-            webapi: bool = False,
-            local: bool = False,
+            webapi=False,
+            local=False,
             *,
             extract_dir='.'):
     """

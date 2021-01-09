@@ -122,7 +122,7 @@ def appendrow(row, rows, chatty):
             raise exc.__class__(wkt)
 
 
-def nrml_to(what, fnames, chatty: bool = False, *, outdir='.'):
+def nrml_to(what, fnames, chatty=False, *, outdir='.'):
     """
     Convert source models into CSV files or a geopackage.
     """

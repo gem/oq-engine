@@ -26,7 +26,7 @@ from openquake.server import dbserver as dbs
 
 def dbserver(cmd,
              dbhostport=None,
-             foreground: bool = False,
+             foreground=False,
              *,
              loglevel='INFO'):
     """

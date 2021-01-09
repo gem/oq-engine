@@ -28,7 +28,7 @@ from openquake.server.utils import check_webserver_running
 commands = ['start', 'migrate', 'createsuperuser', 'collectstatic']
 
 
-def rundjango(subcmd, hostport=None, skip_browser: bool = False):
+def rundjango(subcmd, hostport=None, skip_browser=False):
     args = [sys.executable, '-m', 'openquake.server.manage', subcmd]
     if subcmd == 'runserver':
         # the reload functionality of the Django development server interferes

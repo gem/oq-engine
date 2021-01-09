@@ -95,7 +95,7 @@ def compare_rups(calc_1, calc_2):
 
 
 def compare(what, imt, calc_ids: int,
-            files: bool,
+            files=False,
             *,
             samplesites='',
             rtol: float = 0,
