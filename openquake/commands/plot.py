@@ -647,7 +647,7 @@ def main(what,
     plt.show()
 
 
-main.what = 'what to extract'
+main.what = 'what to extract (try examples)'
 main.calc_id = 'computation ID'
 main.other_id = 'ID of another computation'
 main.webapi = 'if given, pass through the WebAPI'

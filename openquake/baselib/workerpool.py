@@ -279,4 +279,4 @@ workerpool.worker_url = dict(
 workerpool.num_workers = dict(help='number of cores to use')
 
 if __name__ == '__main__':
-    sap.Parser(workerpool).run()
+    sap.run(workerpool)
