@@ -207,10 +207,8 @@ def engine(
 
     elif delete_uncompleted_calculations:
         logs.dbcmd('delete_uncompleted_calculations', getpass.getuser())
-
     else:
-        engine.parser.prog = 'oq engine'
-        engine.parser.print_usage()
+        print("Please pass some option, see oq engine --help")
 
 
 # flags
