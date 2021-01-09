@@ -331,6 +331,9 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
             raise
         finally:
             parallel.Starmap.shutdown()
+    # sanity check to make sure that the logging on file is working
+    if log_file and log_file != os.devnull and os.path.getsize(log_file) == 0:
+        logging.warning('The log file %s is empty!?' % log_file)
     return calc
 
 
