@@ -36,9 +36,9 @@ ENV HOME /home/openquake
 WORKDIR ${HOME}
 #
 ADD scripts/oq-start.sh ${HOME}
+ADD zmq/openquake.cfg /etc/openquake/openquake.cfg
 RUN mkdir oqdata 
 # if want to copy engine src to home
 #ADD oq-engine-master ${HOME}
-EXPOSE 8800:8800
 STOPSIGNAL SIGINT
 ENTRYPOINT ["/bin/bash"]
