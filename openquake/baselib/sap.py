@@ -206,11 +206,14 @@ def _run(parser, argv):
         func = namespace.__dict__.pop('_func')
     except KeyError:
         parser.print_usage()
-    else:
+        return
+    if hasattr(parser, 'aliases'):
         # go back from stripped to unstripped names
         dic = {parser.aliases.get(name, name): value
                for name, value in vars(namespace).items()}
-        return func(**dic)
+    else:
+        dic = vars(namespace)
+    return func(**dic)
 
 
 def run(funcdict, prog=None, description=None, version=None, argv=None):
