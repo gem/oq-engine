@@ -28,38 +28,30 @@ Here is a minimal example of usage:
 ￼
 .. code-block:: python
 
- >>> def fun(input, output='out.zip', inplace=False, *, out='/tmp'):
+ >>> def convert_archive(input_, output=None, inplace=False, *, out='/tmp'):
  ...    "Example"
- ...    for item in sorted(locals().items()):
- ...        print('%s = %s' % item)
- ...
- >>> fun.input = 'input file or archive'
- >>> fun.inplace = 'convert inplace'
- >>> fun.output = 'output archive'
- >>> fun.out = 'output directory'
- >>> parser(fun, 'app').print_help()
+ ...    print(input_, output, inplace, out)
+ >>> convert_archive.input_ = 'input file or archive'
+ >>> convert_archive.inplace = 'convert inplace'
+ >>> convert_archive.output = 'output archive'
+ >>> convert_archive.out = 'output directory'
+ >>> parser(convert_archive, 'app').print_help()
  usage: app [-h] [-i] [-o /tmp] input [output]
  <BLANKLINE>
  Example
  <BLANKLINE>
  positional arguments:
    input                input file or archive
-   output               output archive [default: 'out.zip']
+   output               output archive
  <BLANKLINE>
  optional arguments:
    -h, --help           show this help message and exit
    -i, --inplace        convert inplace
    -o /tmp, --out /tmp  output directory
- >>> run(fun, argv=['a'])
- inplace = False
- input = a
- out = /tmp
- output = out.zip
- >>> run(fun, argv=['a', 'b', '-i', '-o', '/tmp/x.zip'])
- inplace = True
- input = a
- out = /tmp/x.zip
- output = b
+ >>> run(convert_archive, argv=['a'])
+ a None False /tmp
+ >>> run(convert_archive, argv=['a', 'b', '-i', '-o', '/tmp/x.zip'])
+ a b True /tmp/x.zip
 """
 
 import os
@@ -91,6 +83,7 @@ def _populate(parser, func):
     argdef.update(argspec.kwonlydefaults or {})
     parser.description = func.__doc__
     parser.set_defaults(_func=func)
+    parser.aliases = {}
     argdescr = []  # list of pairs (argname, argkind)
     for arg in argspec.args:
         if argdef[arg] is False:
@@ -101,6 +94,12 @@ def _populate(parser, func):
         argdescr.append((arg, 'opt'))
     abbrevs = {'-h'}  # already taken abbreviations
     for name, kind in argdescr:
+        if name.endswith('_'):
+            # make it possible use bultins/keywords as argument names
+            stripped = name.rstrip('_')
+            parser.aliases[stripped] = name
+        else:
+            stripped = name
         descr = getattr(func, name, '')
         if isinstance(descr, str):
             kw = dict(help=descr)
@@ -126,7 +125,7 @@ def _populate(parser, func):
                 kw['default'] = default
                 kw.setdefault('metavar', _choices(choices) or str(default))
         abbrev = kw.pop('abbrev', None)
-        longname = '--' + name.replace('_', '-')
+        longname = '--' + stripped.replace('_', '-')
         if abbrev and abbrev in abbrevs:
             # avoid conflicts with previously defined abbreviations
             args = longname,
@@ -138,7 +137,7 @@ def _populate(parser, func):
             abbrevs.add(abbrev)
         else:
             # no abbrev
-            args = name,
+            args = stripped,
         parser.add_argument(*args, **kw)
 
 
@@ -208,7 +207,10 @@ def _run(parser, argv):
     except KeyError:
         parser.print_usage()
     else:
-        return func(**vars(namespace))
+        # go back from stripped to unstripped names
+        dic = {parser.aliases.get(name, name): value
+               for name, value in vars(namespace).items()}
+        return func(**dic)
 
 
 def run(funcdict, prog=None, description=None, version=None, argv=None):
