@@ -28,7 +28,7 @@ Here is a minimal example of usage:
 ￼
 .. code-block:: python
 
- >>> def fun(input, output=None, inplace=False, *, out='/tmp'):
+ >>> def fun(input, output='out.zip', inplace=False, *, out='/tmp'):
  ...    "Example"
  ...    for item in sorted(locals().items()):
  ...        print('%s = %s' % item)
@@ -44,7 +44,7 @@ Here is a minimal example of usage:
  <BLANKLINE>
  positional arguments:
    input                input file or archive
-   output               output archive [default: None]
+   output               output archive [default: 'out.zip']
  <BLANKLINE>
  optional arguments:
    -h, --help           show this help message and exit
@@ -54,11 +54,11 @@ Here is a minimal example of usage:
  inplace = False
  input = a
  out = /tmp
- output = None
- >>> run(fun, argv=['a', 'b', '-i', '-o', 'OUT'])
+ output = out.zip
+ >>> run(fun, argv=['a', 'b', '-i', '-o', '/tmp/x.zip'])
  inplace = True
  input = a
- out = OUT
+ out = /tmp/x.zip
  output = b
 """
 
@@ -115,7 +115,8 @@ def _populate(parser, func):
             if default is not NODEFAULT:
                 kw['default'] = default
                 kw.setdefault('nargs', '?')
-                kw['help'] += ' [default: %s]' % repr(default)
+                if default is not None:
+                    kw['help'] += ' [default: %s]' % repr(default)
         elif kind == 'flg':
             kw.setdefault('abbrev', abbrev or '-' + name[0])
             kw['action'] = 'store_true'
