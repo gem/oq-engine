@@ -22,7 +22,7 @@ import sys
 import logging
 
 from openquake.baselib import sap
-from openquake.commonlib import __version__
+from openquake import commands
 
 # check for Python version
 PY_VER = sys.version_info[:3]
@@ -41,7 +41,7 @@ def oq():
         # oq engine and oq dbserver define their own log levels
         level = logging.DEBUG if 'debug' in args else logging.INFO
         logging.basicConfig(level=level)
-    sap.run('openquake.commands', 'oq', version=__version__)
+    sap.run(commands, prog='oq')
 
 
 if __name__ == '__main__':

@@ -152,46 +152,48 @@ def _rec_populate(parser, funcdict):
             _populate(subp, func)
 
 
-def find_main(pkgname):
+def find_main(pkg):
     """
-    :param pkgname: name of a packake (i.e. myapp.plot) with "main" functions
-    :returns: a dictionary name -> func_or_subdic
+    :param pkg: a python module or package
+    :returns: a dictionary name -> func_or_dic_of_funcs
 
-    If pkgname actually refers to a module, the main function of the module
-    is returned (or an AttributeError is raised, if missing)
+    If `pkg` is actually a module, then the main function of the module
+    is returned or an AttributeError is raised, if missing.
     """
-    pkg = importlib.import_module(pkgname)
     if not hasattr(pkg, '__path__'):  # is a module, not a package
         return pkg.main
     dic = {}
     for path in pkg.__path__:
         for name in os.listdir(path):
             fname = os.path.join(path, name)
-            dotname = pkgname + '.' + name
+            dotname = pkg.__name__ + '.' + name
             if os.path.isdir(fname) and '__init__.py' in os.listdir(fname):
-                subdic = find_main(dotname)
+                subdic = find_main(importlib.import_module(dotname))
                 if subdic:
                     dic[name] = subdic
-            elif name.endswith('.py') and name != '__init__.py':
+            elif name.endswith('.py') and name not in (
+                    '__init__.py', '__main__.py'):
                 mod = importlib.import_module(dotname[:-3])
                 if hasattr(mod, 'main'):
                     dic[name[:-3]] = mod.main
     return dic
 
 
-def parser(funcdict, prog=None, description=None, version=None):
+def parser(funcdict, **kw):
     """
     :param funcdict: a function or a nested dictionary of functions
-    :param prog: the name of the associated command line application
-    :param description: description of the application
-    :param version: version of the application printed with --version
-    :returns: an ArgumentParser instance
+    :param kw: keyword arguments passed to the underlying ArgumentParser
+    :returns: the ArgumentParser instance
     """
-    parser = argparse.ArgumentParser(prog, description=description)
+    if isinstance(funcdict, dict):
+        version = funcdict.pop('__version__', None)
+    else:
+        version = getattr(funcdict, '__version__', None)
+    parser = argparse.ArgumentParser(**kw)
     if version:
         parser.add_argument(
             '-v', '--version', action='version', version=version)
-    if isinstance(funcdict, str):  # passed a package name
+    if hasattr(funcdict, '__path__'):  # passed a package name
         funcdict = find_main(funcdict)
     if callable(funcdict):
         _populate(parser, funcdict)
@@ -216,12 +218,10 @@ def _run(parser, argv):
     return func(**dic)
 
 
-def run(funcdict, prog=None, description=None, version=None, argv=None):
+def run(funcdict, argv=None, **parserkw):
     """
     :param funcdict: a function or a nested dictionary of functions
-    :param prog: the name of the associated command line application
-    :param description: description of the application
-    :param version: version of the application printed with --version
     :param argv: a list of command-line arguments (if None, use sys.argv[1:])
+    :param parserkw: arguments accepted by argparse.ArgumentParser
     """
-    _run(parser(funcdict, prog, description, version), argv)
+    _run(parser(funcdict, **parserkw), argv)
