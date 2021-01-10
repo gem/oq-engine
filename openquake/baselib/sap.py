@@ -16,13 +16,50 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-`openquake.baselib.sap` is a Simple Argument Parser based on argparse
+``openquake.baselib.sap`` is a Simple Argument Parser based on argparse
 which is extremely powerful. Its features are
 
 1. zero boilerplate (no decorators)
 2. supports arbitrarily nested subcommands with an easy sintax
 3. automatically generates a simple parser from a Python module and
    a hierarchic parser from a Python package.
+
+Here is a minimal example of usage:
+￼
+.. code-block:: python
+
+ >>> def fun(input, output=None, inplace=False, *, out='/tmp'):
+ ...    "Example"
+ ...    for item in sorted(locals().items()):
+ ...        print('%s = %s' % item)
+ ...
+ >>> fun.input = 'input file or archive'
+ >>> fun.inplace = 'convert inplace'
+ >>> fun.output = 'output archive'
+ >>> fun.out = 'output directory'
+ >>> parser(fun, 'app').print_help()
+ usage: app [-h] [-i] [-o /tmp] input [output]
+ <BLANKLINE>
+ Example
+ <BLANKLINE>
+ positional arguments:
+   input                input file or archive
+   output               output archive [default: None]
+ <BLANKLINE>
+ optional arguments:
+   -h, --help           show this help message and exit
+   -i, --inplace        convert inplace
+   -o /tmp, --out /tmp  output directory
+ >>> run(fun, argv=['a'])
+ inplace = False
+ input = a
+ out = /tmp
+ output = None
+ >>> run(fun, argv=['a', 'b', '-i', '-o', 'OUT'])
+ inplace = True
+ input = a
+ out = OUT
+ output = b
 """
 
 import os
@@ -142,32 +179,15 @@ def find_main(pkgname):
     return dic
 
 
-class _Parser(argparse.ArgumentParser):
-    """
-    argparse.ArgumentParser with a .run method
-    """
-    def run(self, argv=None):
-        """
-        Parse the command-line and run the script
-        """
-        namespace = self.parse_args(argv)
-        try:
-            func = namespace.__dict__.pop('_func')
-        except KeyError:
-            self.print_usage()
-        else:
-            return func(**vars(namespace))
-
-
-def parser(funcdict, prog=None, description=None, version=None) -> _Parser:
+def parser(funcdict, prog=None, description=None, version=None):
     """
     :param funcdict: a function or a nested dictionary of functions
     :param prog: the name of the associated command line application
     :param description: description of the application
     :param version: version of the application printed with --version
-    :returns: a sap.Parser instance
+    :returns: an ArgumentParser instance
     """
-    parser = _Parser(prog, description=description)
+    parser = argparse.ArgumentParser(prog, description=description)
     if version:
         parser.add_argument(
             '-v', '--version', action='version', version=version)
@@ -180,6 +200,16 @@ def parser(funcdict, prog=None, description=None, version=None) -> _Parser:
     return parser
 
 
+def _run(parser, argv):
+    namespace = parser.parse_args(argv)
+    try:
+        func = namespace.__dict__.pop('_func')
+    except KeyError:
+        parser.print_usage()
+    else:
+        return func(**vars(namespace))
+
+
 def run(funcdict, prog=None, description=None, version=None, argv=None):
     """
     :param funcdict: a function or a nested dictionary of functions
@@ -188,4 +218,4 @@ def run(funcdict, prog=None, description=None, version=None, argv=None):
     :param version: version of the application printed with --version
     :param argv: a list of command-line arguments (if None, use sys.argv[1:])
     """
-    parser(funcdict, prog, description, version).run(argv)
+    _run(parser(funcdict, prog, description, version), argv)
