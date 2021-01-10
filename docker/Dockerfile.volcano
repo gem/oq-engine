@@ -29,7 +29,8 @@ FROM python:3.8-slim AS build-image
 COPY --from=compile-image /opt/ /opt/
 ENV PATH="/opt/openquake/bin:$PATH"
 ENV LANG en_US.UTF-8
-RUN apt-get update &&  apt-get install -y --no-install-recommends git ssh sudo && useradd -m -u 1000 -G sudo -s /bin/bash openquake 
+RUN apt-get update &&  apt-get install -y --no-install-recommends git ssh sudo && \
+    useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
 USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
@@ -40,4 +41,4 @@ RUN mkdir oqdata
 #ADD oq-engine-master ${HOME}
 EXPOSE 8800:8800
 STOPSIGNAL SIGINT
-ENTRYPOINT ["/bin/bash", "-c"]
+ENTRYPOINT ["/bin/bash"]
