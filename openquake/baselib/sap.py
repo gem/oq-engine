@@ -193,7 +193,7 @@ def parser(funcdict, **kw):
     if version:
         parser.add_argument(
             '-v', '--version', action='version', version=version)
-    if hasattr(funcdict, '__path__'):  # passed a package name
+    if inspect.ismodule(funcdict):  # passed a module or package
         funcdict = find_main(funcdict)
     if callable(funcdict):
         _populate(parser, funcdict)
