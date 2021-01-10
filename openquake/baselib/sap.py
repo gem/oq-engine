@@ -48,10 +48,10 @@ Here is a minimal example of usage:
    -h, --help           show this help message and exit
    -i, --inplace        convert inplace
    -o /tmp, --out /tmp  output directory
- >>> run(convert_archive, argv=['a'])
- a None False /tmp
- >>> run(convert_archive, argv=['a', 'b', '-i', '-o', '/tmp/x.zip'])
- a b True /tmp/x.zip
+ >>> run(convert_archive, argv=['a.zip', 'b.zip'])
+ a.zip b.zip False /tmp
+ >>> run(convert_archive, argv=['a.zip', '-i', '-o', '/tmp/x'])
+ a.zip None True /tmp/x
 """
 
 import os
