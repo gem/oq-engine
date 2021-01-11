@@ -173,7 +173,7 @@ class EventBasedCalculator(base.HazardCalculator):
         for sid, df in gmf_df.groupby(gmf_df.sid):
             weights = self.weights[self.rlzs[df.eid.to_numpy()]]
             for col in self.avg_gmf:
-                self.avg_gmf[col][sid] = df[col] @ weights
+                self.avg_gmf[col][sid] += df[col] @ weights
 
     def agg_dicts(self, acc, result):
         """
