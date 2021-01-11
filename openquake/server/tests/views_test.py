@@ -185,7 +185,14 @@ class EngineServerTestCase(unittest.TestCase):
         got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['array']), 25)
 
-        # check avg_losses-rlzs
+        # check losses_by_asset
+        resp = self.c.get(extract_url + 'losses_by_asset')
+        if resp.status_code == 500:  # should never happen
+            raise RuntimeError(resp.content.decode('utf8'))
+        got = loadnpz(resp.streaming_content)
+        self.assertEqual(len(got['rlz-000']), 95)
+
+        # check agg_losses
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=W-SLFB-1')
         got = loadnpz(resp.streaming_content)
