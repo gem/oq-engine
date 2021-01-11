@@ -105,8 +105,9 @@ def _populate(parser, func):
             kw = dict(help=descr)
         else:  # assume a dictionary
             kw = descr.copy()
-        if kw.get('type') is None and type in func.__annotations__:
-            kw.setdefault('type', func.__annotations__['type'])
+        if (kind != 'flg' and kw.get('type') is None and
+                name in func.__annotations__):
+            kw.setdefault('type', func.__annotations__[name])
         abbrev = kw.get('abbrev')
         choices = kw.get('choices')
         default = argdef[name]

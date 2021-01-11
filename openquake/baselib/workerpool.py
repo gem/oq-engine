@@ -271,7 +271,7 @@ class WorkerPool(object):
 
 def workerpool(worker_url='tcp://0.0.0.0:1909', *, num_workers: int = -1):
     # start a workerpool without a streamer
-    WorkerPool(worker_url, int(num_workers)).start()
+    WorkerPool(worker_url, num_workers).start()
 
 
 workerpool.worker_url = dict(
