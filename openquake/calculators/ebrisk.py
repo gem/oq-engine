@@ -198,7 +198,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param.pop('oqparam', None)  # unneeded
         self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))
         self.datastore.set_shape_descr(
-            'avg_losses-stats', asset_id=self.assetcol['id'], stat='mean',
+            'avg_losses-stats', asset_id=self.assetcol['id'], stat=['mean'],
             loss_type=oq.loss_names)
         alt_nbytes = 4 * self.E * L
         if alt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
