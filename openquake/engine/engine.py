@@ -162,9 +162,10 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if 'avg_losses-stats' in dstore or (
-            'avg_losses-rlzs' in dstore and len(rlzs)):
-        dskeys.add('avg_losses-stats')
+    if len(rlzs) > 1 and not oq.individual_curves:
+        for out in ['avg_losses-rlzs', 'agg_losses-rlzs', 'agg_curves-rlzs']:
+            if out in dskeys:
+                dskeys.remove(out)
     if 'curves-rlzs' in dstore and len(rlzs) == 1:
         dskeys.add('loss_curves-rlzs')
     if 'curves-stats' in dstore and len(rlzs) > 1:
@@ -172,12 +173,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
-    if 'all_loss_ratios' in dskeys:
-        dskeys.remove('all_loss_ratios')  # export only specific IDs
     if 'ruptures' in dskeys and 'scenario' in calcmode:
         exportable.remove('ruptures')  # do not export, as requested by Vitor
-    if 'rup_loss_table' in dskeys:  # keep it hidden for the moment
-        dskeys.remove('rup_loss_table')
     if 'hmaps' in dskeys and not oq.hazard_maps:
         dskeys.remove('hmaps')  # do not export the hazard maps
     if logs.dbcmd('get_job', dstore.calc_id) is None:
@@ -188,11 +185,11 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     keysize = []
     for key in sorted(dskeys & exportable):
         try:
-            size_mb = dstore.get_attr(key, 'nbytes') / MB
+            size_mb = dstore.getsize(key) / MB
         except (KeyError, AttributeError):
             size_mb = None
         keysize.append((key, size_mb))
-    ds_size = os.path.getsize(dstore.filename) / MB
+    ds_size = dstore.getsize() / MB
     logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
 
 

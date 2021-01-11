@@ -163,7 +163,8 @@ class ScenarioRiskCalculator(base.RiskCalculator):
             set_rlzs_stats(self.datastore, 'agg_losses',
                            agg_id=K, loss_types=oq.loss_names, units=units)
         else:  # event_based_risk, run post_risk
-            post_risk.PostRiskCalculator(oq, self.datastore.calc_id).run()
+            prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
+            prc.run(exports='')
 
 
 @base.calculators.add('event_based_risk')

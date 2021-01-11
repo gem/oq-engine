@@ -260,4 +260,4 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.create_dframe('avg_gmf', self.avg_gmf.items())
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
-        prc.run()
+        prc.run(exports='')
