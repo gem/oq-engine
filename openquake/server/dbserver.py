@@ -70,6 +70,11 @@ class DbServer(object):
                 if cmd == 'getpid':
                     sock.send(self.pid)
                     continue
+                elif cmd.startswith('zmq_') and self.zmaster:
+                    msg = getattr(self.zmaster, cmd[4:])()
+                    logging.info(msg)
+                    sock.send(msg)
+                    continue
                 try:
                     func = getattr(actions, cmd)
                 except AttributeError:  # SQL string
