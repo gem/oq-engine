@@ -56,6 +56,26 @@ def make_figure_hcurves(extractors, what):
     return plt
 
 
+def make_figure_avg_gmf(extractors, what):
+    """
+    $ oq plot "avg_gmf?imt=gmv_0"
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    [ex] = extractors
+    avg_gmf = ex.get(what)
+    imt = what.split('=')[1]
+    ax = fig.add_subplot(1, 1, 1)
+    ax.grid(True)
+    ax.set_title('Avg GMF for %s' % imt)
+    ax.set_xlabel('Lon')
+    ax.set_ylabel('Lat')
+    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'],
+                      c=avg_gmf[imt], cmap='jet')
+    plt.colorbar(coll)
+    return plt
+
+
 def make_figure_vs30(extractors, what):
     """
     $ oq plot "vs30?"
