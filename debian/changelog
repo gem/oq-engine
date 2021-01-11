@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Internal: stored `avg_gmf` as a DataFrame
+  * Honored the `individual_curves` parameter in avg_losses, agg_losses and
+    and agg_curves (i.e. by default only expose the statistical results)
   * Refactored the `oq commands` and removed the redundant `oq help` since
     there is `oq --help` instead
   * Support for input URLs associated to an input archive

@@ -23,7 +23,6 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5
-from openquake.baselib.python3compat import decode
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (

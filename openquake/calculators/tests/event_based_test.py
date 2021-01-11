@@ -491,7 +491,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_26_liq(self):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
-        df = view('avg_gmf', self.calc.datastore)
+        df = self.calc.datastore.read_df('avg_gmf')
         aae(df.LiqProb.max(), 0.27772662)
         aae(df.PGDGeomMean.max(), 0.55390346)
 
