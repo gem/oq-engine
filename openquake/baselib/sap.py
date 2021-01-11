@@ -35,7 +35,7 @@ Here is a minimal example of usage:
  >>> convert_archive.inplace = 'convert inplace'
  >>> convert_archive.output = 'output archive'
  >>> convert_archive.out = 'output directory'
- >>> parser(convert_archive, 'app').print_help()
+ >>> parser(convert_archive, prog='app').print_help()
  usage: app [-h] [-i] [-o /tmp] input [output]
  <BLANKLINE>
  Example

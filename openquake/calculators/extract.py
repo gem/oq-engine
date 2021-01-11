@@ -821,8 +821,8 @@ def extract_losses_by_asset(dstore, what):
             data = util.compose_arrays(assets, losses)
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
-        avg_losses = dstore['avg_losses-stats'][()]
-        stats = list(dstore['oqparam'].hazard_stats())
+        avg_losses = dstore['avg_losses-stats']
+        stats = decode(avg_losses.attrs['stat'])
         for s, stat in enumerate(stats):
             losses = cast(avg_losses[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
