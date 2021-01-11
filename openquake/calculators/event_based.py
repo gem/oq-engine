@@ -324,10 +324,10 @@ class EventBasedCalculator(base.HazardCalculator):
         self.rlzs = self.datastore['events']['rlz_id']
         self.avg_gmf = {imt: numpy.zeros(self.N, F32) for imt in oq.all_imts()}
         acc = smap.reduce(self.agg_dicts, self.acc0())
-        self.datastore.create_dframe('avg_gmf', self.avg_gmf.items())
         if 'gmf_data' not in self.datastore:
             return acc
         if oq.ground_motion_fields:
+            self.datastore.create_dframe('avg_gmf', self.avg_gmf.items())
             eids = self.datastore['gmf_data/eid'][:]
             rel_events = numpy.unique(eids)
             e = len(rel_events)
