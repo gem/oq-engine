@@ -667,9 +667,9 @@ class ClassicalCalculator(base.HazardCalculator):
         parallel.Starmap(
             build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
-        with self.monitor('saving hazard'):
-            for kind in sorted(self.hazard):
-                self.datastore[kind][:] = self.hazard.pop(kind)
+        for kind in sorted(self.hazard):
+            logging.info('Saving %s', kind)
+            self.datastore[kind][:] = self.hazard.pop(kind)
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
             dur = task_info.loc[b'classical'].duration
