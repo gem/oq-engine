@@ -681,7 +681,7 @@ class OqParam(valid.ParamSet):
 
     def all_imts(self):
         """
-        :returns: gmv_0, ... gmv_N, sec_imt...
+        :returns: gmv_0, ... gmv_M, sec_imt...
         """
         lst = []
         for m, imt in enumerate(self.get_primary_imtls()):

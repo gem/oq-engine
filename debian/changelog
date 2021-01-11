@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Internal: store `avg_gmf` as a DataFrame
+  * Internal: stored `avg_gmf` as a DataFrame
   * Honored the `individual_curves` parameter in avg_losses, agg_losses and
     and agg_curves (i.e. by default only expose the statistical results)
   * Refactored the `oq commands` and removed the redundant `oq help` since
