@@ -550,23 +550,18 @@ class ClassicalCalculator(base.HazardCalculator):
 
         :param acc: ignored
         :param pmap_by_kind: a dictionary of ProbabilityMaps
-
-        kind can be ('hcurves', 'mean'), ('hmaps', 'mean'),  ...
         """
         with self.monitor('saving statistics'):
-            for kind in pmap_by_kind:  # i.e. kind == 'hcurves-stats'
+            for kind in pmap_by_kind:  # hmaps-XXX, hcurves-XXX
                 pmaps = pmap_by_kind[kind]
-                if kind in ('hmaps-rlzs', 'hmaps-stats'):
-                    # pmaps is a list of R pmaps
-                    dset = self.datastore.getitem(kind)
-                    for r, pmap in enumerate(pmaps):
-                        for s in pmap:
-                            dset[s, r] = pmap[s].array  # shape (M, P)
-                elif kind in ('hcurves-rlzs', 'hcurves-stats'):
-                    dset = self.datastore.getitem(kind)
-                    for r, pmap in enumerate(pmaps):
-                        for s in pmap:
-                            dset[s, r] = pmap[s].array.reshape(self.M, self.L1)
+                dset = self.datastore.getitem(kind)
+                for r, pmap in enumerate(pmaps):
+                    for s in pmap:
+                        if kind.startswith('hmaps'):
+                            arr = pmap[s].array  # shape (M, P)
+                        else:
+                            arr = pmap[s].array.reshape(self.M, self.L1)
+                        dset[s, r] = arr
             self.datastore.flush()
 
     def post_execute(self, pmap_by_key):
