@@ -18,7 +18,7 @@
 import sys
 import collections
 import numpy
-from openquake.baselib import sap
+from openquake.commonlib import util
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
@@ -33,12 +33,13 @@ def getdata(what, calc_ids, sitecol, sids):
     extractor.close()
     for extractor in extractors[1:]:
         oq = extractor.oqparam
-        numpy.testing.assert_equal(
-            extractor.get('sitecol').array, sitecol.array)
+        numpy.testing.assert_array_equal(
+            extractor.get('sitecol')[['lon', 'lat']], sitecol[['lon', 'lat']])
         if what == 'hcurves':
-            numpy.testing.assert_equal(oq.imtls.array, imtls.array)
+            for imt in imtls:
+                numpy.testing.assert_array_equal(oq.imtls[imt], imtls[imt])
         elif what == 'hmaps':
-            numpy.testing.assert_equal(oq.poes, poes)
+            numpy.testing.assert_array_equal(oq.poes, poes)
         arrays.append(extractor.get(what + '?kind=mean').mean[sids])
         extractor.close()
     return imtls, poes, numpy.array(arrays)  # shape (C, N, L)
@@ -61,9 +62,44 @@ def get_diff_idxs(array, rtol, atol, threshold):
     return numpy.fromiter(diff_idxs, int)
 
 
-@sap.script
-def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
-            threshold=1E-2):
+def _print_diff(a1, a2, idx1, idx2, col):
+    if col.endswith('_'):
+        for i, (v1, v2) in enumerate(zip(a1, a2)):
+            idx = numpy.where(numpy.abs(v1-v2) > 1e-5)
+            if len(idx[0]):
+                print(col, idx1[i], v1[idx])
+                print(col, idx2[i], v2[idx])
+                break
+    else:
+        i, = numpy.where(numpy.abs(a1-a2) > 1e-5)
+        if len(i):
+            print(col, idx1[i], a1[i])
+            print(col, idx2[i], a2[i])
+
+
+def compare_rups(calc_1, calc_2):
+    """
+    Compare the ruptures of two calculations as pandas DataFrames
+    """
+    with util.read(calc_1) as ds1, util.read(calc_2) as ds2:
+        df1 = ds1.read_df('rup').sort_values(['src_id', 'mag'])
+        df2 = ds2.read_df('rup').sort_values(['src_id', 'mag'])
+    cols = [col for col in df1.columns if col not in
+            {'probs_occur_', 'clon_', 'clat_'}]
+    for col in cols:
+        a1 = df1[col].to_numpy()
+        a2 = df2[col].to_numpy()
+        assert len(a1) == len(a2), (len(a1), len(a2))
+        _print_diff(a1, a2, df1.index, df2.index, col)
+
+
+def main(what, imt, calc_ids: int,
+         files=False,
+         *,
+         samplesites='',
+         rtol: float = 0,
+         atol: float = 1E-3,
+         threshold: float = 1E-2):
     """
     Compare the hazard curves or maps of two or more calculations.
     Also used to compare the times with `oq compare cumtime of -1 -2`.
@@ -75,6 +111,8 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             data.append((calc_id, time))
         print(views.rst_table(data, ['calc_id', 'time']))
         return
+    if what == 'rups':
+        return compare_rups(int(imt), calc_ids[0])
     sitecol = Extractor(calc_ids[0]).get('sitecol')
     sids = sitecol['sids']
     if samplesites:
@@ -89,6 +127,7 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
                     len(sitecol), numsamples, replace=False)
     sids.sort()
     imtls, poes, arrays = getdata(what, calc_ids, sitecol, sids)
+    imti = {imt: i for i, imt in enumerate(imtls)}
     try:
         levels = imtls[imt]
     except KeyError:
@@ -97,7 +136,7 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
     imt2idx = {imt: i for i, imt in enumerate(imtls)}
     head = ['site_id'] if files else ['site_id', 'calc_id']
     if what == 'hcurves':
-        array_imt = arrays[:, :, imtls(imt)]
+        array_imt = arrays[:, :, imti[imt], :]  # shape (C, N, L1)
         header = head + ['%.5f' % lvl for lvl in levels]
     else:  # hmaps
         array_imt = arrays[:, :, imt2idx[imt]]
@@ -124,14 +163,18 @@ def compare(what, imt, calc_ids, files, samplesites='', rtol=0, atol=1E-3,
             print('Generated %s' % f.name)
     else:
         print(views.rst_table(rows['all'], header))
+        if len(calc_ids) == 2 and what == 'hmaps':
+            ms = numpy.mean((array_imt[0] - array_imt[1])**2, axis=0)  # P
+            rows = [(str(poe), m) for poe, m in zip(poes, numpy.sqrt(ms))]
+            print(views.rst_table(rows, ['poe', 'rms-diff']))
 
 
-compare.arg('what', '"hmaps", "hcurves" or "cumtime of"',
-            choices={'hmaps', 'hcurves', 'cumtime'})
-compare.arg('imt', 'intensity measure type to compare')
-compare.arg('calc_ids', 'calculation IDs', type=int, nargs='+')
-compare.flg('files', 'write the results in multiple files')
-compare.opt('samplesites', 'sites to sample (or fname with site IDs)')
-compare.opt('rtol', 'relative tolerance', type=float)
-compare.opt('atol', 'absolute tolerance', type=float)
-compare.opt('threshold', 'ignore the hazard curves below it', type=float)
+main.what = dict(help='"hmaps", "hcurves" or "cumtime of"',
+                 choices={'rups', 'hmaps', 'hcurves', 'cumtime'})
+main.imt = 'intensity measure type to compare'
+main.calc_ids = dict(help='calculation IDs', nargs='+')
+main.files = 'write the results in multiple files'
+main.samplesites = 'sites to sample (or fname with site IDs)'
+main.rtol = 'relative tolerance'
+main.atol = 'absolute tolerance'
+main.threshold = 'ignore the hazard curves below it'

@@ -23,14 +23,14 @@ Make sure to run the script located under `/Applications/Python 3.6/Install Cert
 
 ## Install packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.9.0-2.run using any browser.
+Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.10.1-1.run using any browser.
 
 From the Terminal app (or using iTerm) run:
 
 ```bash
 cd Downloads
-chmod +x openquake-setup-macos-3.9.0-2.run
-./openquake-setup-macos-3.9.0-2.run
+chmod +x openquake-setup-macos-3.10.1-1.run
+./openquake-setup-macos-3.10.1-1.run
 ```
 then follow the wizard on screen. By default the code is installed in `~/openquake`.
 
@@ -45,8 +45,9 @@ Do you want to make the 'oq' command available by default? [y/n]: y
 Installation completed. To enable it run 'source /Users/auser/openquake/env.sh'
 ```
 
-The demo files are located in `~/openquake/demos`.
+The demo files are located in `~/openquake/share/demos` for standard installations or `__custom_folder__/share/demos` if a different folder is specified during installation.
 
+The OpenQuake manual is located in `~/openquake/share/doc/OpenQuake manual.pdf` for standard installations or `__custom_folder__/share/doc/OpenQuake manual.pdf` if a different folder is specified during installation.
 
 ### Upgrade from a previous installation
 

@@ -49,8 +49,8 @@ class ReportWriter(object):
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
         'slow_sources': 'Slowest sources',
-        'task:classical_split_filter:0': 'Fastest task',
-        'task:classical_split_filter:-1': 'Slowest task',
+        'task:start_classical:0': 'Fastest task',
+        'task:start_classical:-1': 'Slowest task',
         'task_info': 'Information about the tasks',
         'times_by_source_class': 'Computation times by source typology',
         'performance': 'Slowest operations',
@@ -67,7 +67,7 @@ class ReportWriter(object):
         versions = sorted(dstore['/'].attrs.items())
         self.text += '\n\n' + views.rst_table(versions)
         self.text += '\n\nnum_sites = %d, num_levels = %d, num_rlzs = %s' % (
-            len(dstore['sitecol']), len(oq.imtls.array), num_rlzs)
+            len(dstore['sitecol']), oq.imtls.size, num_rlzs)
 
     def add(self, name, obj=None):
         """Add the view named `name` to the report text"""
@@ -102,9 +102,9 @@ class ReportWriter(object):
         if 'task_info' in ds:
             self.add('task_info')
             tasks = set(ds['task_info']['taskname'])
-            if 'classical_split_filter' in tasks:
-                self.add('task:classical_split_filter:0')
-                self.add('task:classical_split_filter:-1')
+            if 'start_classical' in tasks:
+                self.add('task:start_classical:0')
+                self.add('task:start_classical:-1')
             self.add('job_info')
         if 'performance_data' in ds:
             self.add('performance')

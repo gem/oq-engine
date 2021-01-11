@@ -142,12 +142,11 @@ class OqParamTestCase(unittest.TestCase):
             maximum_distance='{"wrong TRT": 200}')
         oq.inputs['source_model_logic_tree'] = 'something'
 
-        oq._gsims_by_trt = {'Active Shallow Crust': []}
+        oq._trts = {'Active Shallow Crust'}
         self.assertFalse(oq.is_valid_maximum_distance())
         self.assertIn('setting the maximum_distance for wrong TRT', oq.error)
 
-        oq._gsims_by_trt = {'Active Shallow Crust': [],
-                            'Stable Continental Crust': []}
+        oq._trts = {'Active Shallow Crust', 'Stable Continental Crust'}
         oq.maximum_distance = {'Active Shallow Crust': 200}
         self.assertFalse(oq.is_valid_maximum_distance())
         self.assertEqual('missing distance for Stable Continental Crust '
@@ -191,16 +190,6 @@ class OqParamTestCase(unittest.TestCase):
             ).validate()
         self.assertIn('The `export_dir` parameter must refer to a '
                       'directory', str(ctx.exception))
-
-    def test_missing_export_dir(self):
-        oq = OqParam(
-            calculation_mode='event_based', inputs=GST,
-            sites='0.1 0.2',
-            intensity_measure_types='PGA',
-            reference_vs30_value='200',
-            maximum_distance='400')
-        oq.validate()
-        self.assertEqual(oq.export_dir, os.getcwd())
 
     def test_invalid_imt(self):
         with self.assertRaises(ValueError) as ctx:
@@ -246,13 +235,13 @@ class OqParamTestCase(unittest.TestCase):
 
     def test_missing_levels_event_based(self):
         with self.assertRaises(ValueError) as ctx:
-            OqParam(
+            oq = OqParam(
                 calculation_mode='event_based', inputs=fakeinputs,
                 sites='0.1 0.2',
                 maximum_distance='400',
                 intensity_measure_types='PGA',
-                hazard_curves_from_gmfs='true',
-            ).validate()
+                hazard_curves_from_gmfs='true')
+            oq.validate()
         self.assertIn('`intensity_measure_types_and_levels`',
                       str(ctx.exception))
 
@@ -308,7 +297,7 @@ class OqParamTestCase(unittest.TestCase):
                 intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
                 uniform_hazard_spectra='1',
                 inputs=fakeinputs,
-            ).set_risk_imtls({})
+            ).set_risk_imts({})
         self.assertIn("The `uniform_hazard_spectra` can be True only if "
                       "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
@@ -324,7 +313,7 @@ class OqParamTestCase(unittest.TestCase):
                 intensity_measure_types_and_levels="{'PGA': [0.1, 0.2, 0.3]}",
                 uniform_hazard_spectra='1',
                 inputs=fakeinputs,
-            ).set_risk_imtls({})
+            ).set_risk_imts({})
         self.assertIn("There is a single IMT, the uniform_hazard_spectra plot "
                       "will contain a single point", w.call_args[0][0])
 
@@ -361,7 +350,7 @@ class OqParamTestCase(unittest.TestCase):
                 sites='0.1 0.2',
                 poes='0.2',
                 maximum_distance='400',
-                iml_disagg="{'PGV': [0.1, 0.2, 0.3]}",
+                iml_disagg="{'PGV': 0.1}",
                 poes_disagg="0.1",
                 uniform_hazard_spectra='1')
         self.assertIn("poes_disagg != poes: [0.1]!=[0.2] in job.ini",

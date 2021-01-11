@@ -62,7 +62,7 @@ investigation_time = 50
 export_dir = %s
         """ % (site_model_input, TMP))
         with self.assertRaises(ValueError) as ctx:
-            readinput.get_params([job_config])
+            readinput.get_params(job_config, {})
         self.assertIn('is an absolute path', str(ctx.exception))
 
     def test_get_oqparam_with_sites_csv(self):
@@ -328,6 +328,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
     def test_zero_number(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
+        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = False
@@ -345,6 +346,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
     def test_invalid_asset_id(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
+        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': [self.exposure1]}
@@ -361,6 +363,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
     def test_no_assets(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
+        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.insured_losses = True
@@ -379,6 +382,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
     def test_wrong_cost_type(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
+        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.ignore_missing_costs = []
@@ -396,6 +400,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
     def test_invalid_taxonomy(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
+        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': [self.exposure3]}
@@ -515,8 +520,8 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         readinput.exposure = None
 
     def test_grid_site_model_exposure(self):
-        oq = readinput.get_oqparam(
-            'job.ini', case_16, region_grid_spacing='15')
+        oq = readinput.get_oqparam('job.ini', case_16)
+        oq.region_grid_spacing = 15
         sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
@@ -537,7 +542,3 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             site_amplification.Amplifier(oq.imtls, df)
         self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
-
-    def test_site_model_sites(self):
-        # you can set them at the same time
-        readinput.get_oqparam('job.ini', case_16, sites='0 0')

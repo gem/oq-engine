@@ -61,7 +61,7 @@ optional arguments:
                         in order of priority
   -l, --log-level {debug, info, warn, error, critical}
                         Defaults to "info"
-  -r, --reuse-hazard    Read the source models from the cache (if any)
+  -r, --reuse-input    Read the sources|exposures from the cache (if any)
   --param PARAM, -p PARAM
                         Override parameters specified with the syntax
                         NAME1=VALUE1,NAME2=VALUE2,...

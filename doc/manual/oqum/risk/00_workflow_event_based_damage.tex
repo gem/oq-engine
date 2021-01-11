@@ -57,11 +57,11 @@ is specified in the job file). The use of logic trees allows for the
 consideration of uncertainty in the choice of a \glsdesc{acr:ssm}, and in the 
 choice of \glspl{groundmotionmodel} for the different tectonic regions.
 
-For each \gls{acr:gmf} realization, a loss ratio is sampled for every
-\gls{asset} in the \gls{exposuremodel} using the provided probabilistic
-\gls{fragilitymodel}, taking into consideration the correlation model for
-vulnerability of different \glspl{asset} of a given taxonomy. Finally loss
-exceedance curves are computed for ground-up losses.
+For each \gls{acr:gmf} realization, a damage state is siumulated for each
+building of every \gls{asset} in the \gls{exposuremodel} using the provided
+\gls{fragilitymodel}. The asset-level event damage table is saved to the datastore.
+Time-averaged damage distributions at the asset-level can be obtained from
+the event damage table. Finally damage state exceedance curves can be computed.
 
 The required input files required for running a probabilistic stochastic
 event-based damage calculation and the resulting output files are depicted in
@@ -69,9 +69,9 @@ Figure~\ref{fig:io-structure-event-based-damage}
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=9cm,height=7cm]{figures/risk/io-structure-event-based-risk.pdf}
+\includegraphics[width=12cm]{figures/risk/io-structure-event-based-damage.pdf}
 \caption{Probabilistic Event-based Damage Calculator input/output structure.}
-\label{fig:io-structure-event-based-risk}
+\label{fig:io-structure-event-based-damage}
 \end{figure}
 
 Similar to the scenario damage calculator, \gls{consequencemodel} files can also be

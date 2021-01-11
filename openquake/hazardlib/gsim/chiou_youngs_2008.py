@@ -57,6 +57,8 @@ class ChiouYoungs2008(GMPE):
         const.StdDev.INTRA_EVENT
     ])
 
+    DEFINED_FOR_REFERENCE_VELOCITY = 1130.
+
     #: Required site parameters are Vs30 (eq. 13b), Vs30 measured flag (eq. 20)
     #: and Z1.0 (eq. 13b).
     REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}

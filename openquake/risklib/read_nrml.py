@@ -189,14 +189,14 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
             minIML = min_iml
         attrs['minIML'] = minIML
         attrs['maxIML'] = float(imls['maxIML'])
-        array = numpy.zeros(LS, [('mean', F64), ('stddev', F64)])
+        array = numpy.zeros((LS, 2), F64)
         for i, ls, node in zip(range(LS), limit_states, ff[1:]):
             if ls != node['ls']:
                 with context(fname, node):
                     raise InvalidFile('expected %s, found' %
                                       (ls, node['ls']))
-            array['mean'][i] = node['mean']
-            array['stddev'][i] = node['stddev']
+            array[i, 0] = node['mean']
+            array[i, 1] = node['stddev']
     elif ff['format'] == 'discrete':
         attrs['imls'] = ~imls
         valid.check_levels(attrs['imls'], attrs['imt'], min_iml)

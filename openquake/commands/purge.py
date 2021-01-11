@@ -18,7 +18,7 @@
 import os
 import re
 import getpass
-from openquake.baselib import sap, datastore
+from openquake.baselib import datastore
 from openquake.commonlib.logs import dbcmd
 
 datadir = datastore.get_datadir()
@@ -45,14 +45,15 @@ def purge_all(user=None):
     user = user or getpass.getuser()
     if os.path.exists(datadir):
         for fname in os.listdir(datadir):
+            if fname.endswith('.pik'):
+                os.remove(os.path.join(datadir, fname))
             mo = re.match(r'(calc_|cache_)(\d+)\.hdf5', fname)
             if mo is not None:
                 calc_id = int(mo.group(2))
                 purge_one(calc_id, user, force=True)
 
 
-@sap.script
-def purge(calc_id, force=False):
+def main(calc_id: int, force=False):
     """
     Remove the given calculation. If you want to remove all calculations,
     use oq reset.
@@ -66,5 +67,5 @@ def purge(calc_id, force=False):
     purge_one(calc_id, getpass.getuser(), force)
 
 
-purge.arg('calc_id', 'calculation ID', type=int)
-purge.flg('force', 'ignore dependent calculations')
+main.calc_id = 'calculation ID'
+main.force = 'ignore dependent calculations'

@@ -1,8 +1,20 @@
-#,,,,,,"generated_by='OpenQuake engine 3.10.0-gitbb763e96b2', start_date='2020-06-15T09:27:22', checksum=4079935332, kind='agg_curves-rlzs', risk_investigation_time=1.0"
-return_period,rlz,loss_type,NAME_1,loss_value,loss_ratio,annual_frequency_of_exceedence
-50,0,structural,Region A,1.01975E+03,5.09876E-02,2.00000E-02
-50,0,structural,RegionB,6.59048E+02,1.31810E-02,2.00000E-02
-100,0,structural,Region A,1.46158E+03,7.30791E-02,1.00000E-02
-100,0,structural,RegionB,1.96263E+03,3.92525E-02,1.00000E-02
-200,0,structural,Region A,4.45815E+03,2.22908E-01,5.00000E-03
-200,0,structural,RegionB,3.20539E+03,6.41078E-02,5.00000E-03
+#,,,,,"generated_by='OpenQuake engine 3.11.0-gitdb8cbd829d', start_date='2020-12-24T10:04:11', checksum=1896526101, risk_investigation_time=1.0, kind='agg_curves-rlz-000'"
+return_period,loss_value,loss_type,NAME_1,loss_ratio,annual_frequency_of_exceedence
+50,9.70588E+02,structural,Region A,4.85294E-02,2.00000E-02
+100,1.51023E+03,structural,Region A,7.55117E-02,1.00000E-02
+200,2.38330E+03,structural,Region A,1.19165E-01,5.00000E-03
+500,4.38608E+03,structural,Region A,2.19304E-01,2.00000E-03
+1000,7.10667E+03,structural,Region A,3.55333E-01,1.00000E-03
+2000,7.28113E+03,structural,Region A,3.64057E-01,5.00000E-04
+50,9.11078E+02,structural,RegionB,1.82216E-02,2.00000E-02
+100,1.42602E+03,structural,RegionB,2.85204E-02,1.00000E-02
+200,2.06115E+03,structural,RegionB,4.12231E-02,5.00000E-03
+500,4.80969E+03,structural,RegionB,9.61937E-02,2.00000E-03
+1000,6.29985E+03,structural,RegionB,1.25997E-01,1.00000E-03
+2000,7.71703E+03,structural,RegionB,1.54341E-01,5.00000E-04
+50,2.11681E+03,structural,*total*,3.02401E-02,2.00000E-02
+100,3.03808E+03,structural,*total*,4.34011E-02,1.00000E-02
+200,4.53740E+03,structural,*total*,6.48201E-02,5.00000E-03
+500,9.19577E+03,structural,*total*,1.31368E-01,2.00000E-03
+1000,1.28239E+04,structural,*total*,1.83198E-01,1.00000E-03
+2000,1.48237E+04,structural,*total*,2.11767E-01,5.00000E-04

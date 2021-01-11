@@ -22,7 +22,6 @@ import operator
 import collections
 import numpy
 from decorator import FunctionMaker
-from openquake.baselib import sap
 from openquake.baselib.general import groupby, gen_subclasses
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt
@@ -65,18 +64,6 @@ def source_model_info(sm_nodes):
     return rst_table(out)
 
 
-def print_full_lt(fname):
-    """
-    Parse the composite source model and
-    prints information about its composition and the full logic tree
-    """
-    oqparam = readinput.get_oqparam(fname)
-    full_lt = readinput.get_full_lt(oqparam)
-    print(full_lt)
-    print('See http://docs.openquake.org/oq-engine/stable/'
-          'effective-realizations.html for an explanation')
-
-
 def do_build_reports(directory):
     """
     Walk the directory and builds pre-calculation reports for all the
@@ -98,8 +85,7 @@ choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
            'extracts', 'parameters', 'sources', 'mfds']
 
 
-@sap.script
-def info(what, report=False):
+def main(what, report=False):
     """
     Give information about the passed keyword or filename
     """
@@ -170,12 +156,12 @@ def info(what, report=False):
             if report:
                 print('Generated', reportwriter.build_report(what))
             else:
-                print_full_lt(what)
+                print(readinput.get_oqparam(what).json())
         if mon.duration > 1:
             print(mon)
     elif what:
         print("No info for '%s'" % what)
 
 
-info.arg('what', 'filename or one of %s' % ', '.join(choices))
-info.flg('report', 'build rst report from job.ini file or zip archive')
+main.what = 'filename or one of %s' % ', '.join(choices)
+main.report = 'build rst report from job.ini file or zip archive'

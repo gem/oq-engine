@@ -1,3 +1,3 @@
-#,,,,"generated_by='OpenQuake engine 3.10.0-gita8aaa843f4', start_date='2020-06-19T06:27:47', checksum=2743600684"
-rlz_id,loss_type,unit,mean,stddev
-0,structural,USD,1.370416E+07,5.312043E+06
+#,,,"generated_by='OpenQuake engine 3.11.0-git61080b4098', start_date='2020-12-23T07:48:41', checksum=1721309988, investigation_time=None, risk_investigation_time=None"
+loss_type,loss_value,exposed_value,loss_ratio
+structural,1.32844E+07,4.62672E+07,2.87124E-01

@@ -203,7 +203,7 @@ except ImportError:
     def setproctitle(title):
         "Do nothing"
 
-from openquake.baselib import config, hdf5, workerpool, __version__
+from openquake.baselib import config, hdf5, workerpool, version
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
@@ -409,11 +409,11 @@ class Result(object):
         :returns: a new Result instance
         """
         try:
-            if mon.version != __version__:
+            if mon.version != version:
                 raise RuntimeError(
                     'The master is at version %s while the worker %s is at '
                     'version %s' % (mon.version, socket.gethostname(),
-                                    __version__))
+                                    version))
             with mon:
                 val = func(*args)
         except StopIteration:
@@ -445,7 +445,7 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 
 
 dummy_mon = Monitor()
-dummy_mon.version = __version__
+dummy_mon.version = version
 dummy_mon.backurl = None
 
 
@@ -635,10 +635,10 @@ class Starmap(object):
     running_tasks = []  # currently running tasks
     # use only the "visible" cores, not the total system cores
     # if the underlying OS supports it (macOS does not)
-    num_cores = None
+    num_cores = int(config.distribution.get('num_cores', '0'))
 
     @classmethod
-    def init(cls, poolsize=None, distribute=None):
+    def init(cls, distribute=None):
         cls.distribute = distribute or oq_distribute()
         if cls.distribute == 'processpool' and not hasattr(cls, 'pool'):
             # unregister custom handlers before starting the processpool
@@ -648,14 +648,14 @@ class Starmap(object):
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = multiprocessing.get_context('spawn').Pool(
-                poolsize, init_workers)
+                cls.num_cores or None, init_workers)
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
             signal.signal(signal.SIGINT, int_handler)
             cls.pids = [proc.pid for proc in cls.pool._pool]
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.dummy.Pool(poolsize)
+            cls.pool = multiprocessing.dummy.Pool(cls.num_cores or None)
         elif cls.distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
 
@@ -676,8 +676,7 @@ class Starmap(object):
     def apply(cls, task, args, concurrent_tasks=None,
               maxweight=None, weight=lambda item: 1,
               key=lambda item: 'Unspecified',
-              distribute=None, progress=logging.info, h5=None,
-              num_cores=None):
+              distribute=None, progress=logging.info, h5=None):
         r"""
         Apply a task to a tuple of the form (sequence, \*other_args)
         by first splitting the sequence in chunks, according to the weight
@@ -693,7 +692,6 @@ class Starmap(object):
         :param distribute: if not given, inferred from OQ_DISTRIBUTE
         :param progress: logging function to use (default logging.info)
         :param h5: an open hdf5.File where to store the performance info
-        :param num_cores: the number of available cores
         :returns: an :class:`IterResult` object
         """
         arg0, *args = args
@@ -705,12 +703,10 @@ class Starmap(object):
                 concurrent_tasks = CT
             taskargs = [[blk] + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
-        return cls(
-            task, taskargs, distribute, progress, h5, num_cores
-        ).submit_all()
+        return cls(task, taskargs, distribute, progress, h5)
 
     def __init__(self, task_func, task_args=(), distribute=None,
-                 progress=logging.info, h5=None, num_cores=None):
+                 progress=logging.info, h5=None):
         self.__class__.init(distribute=distribute)
         self.task_func = task_func
         if h5:
@@ -727,7 +723,6 @@ class Starmap(object):
         self.task_args = task_args
         self.progress = progress
         self.h5 = h5
-        self.num_cores = num_cores
         self.task_queue = []
         try:
             self.num_tasks = len(self.task_args)
@@ -777,7 +772,7 @@ class Starmap(object):
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
             monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
-            monitor.version = __version__
+            monitor.version = version
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
         if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
             self.task_no += 1
@@ -867,10 +862,7 @@ class Starmap(object):
                 yield res
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
-                if self.num_cores is None:
-                    self._submit_many(1)  # oversubmit
-                elif self.todo < self.num_cores:
-                    self._submit_many(self.num_cores - self.todo)
+                self._submit_many(1)
             else:
                 yield res
         self.log_percent()

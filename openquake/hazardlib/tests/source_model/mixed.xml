@@ -105,9 +105,7 @@ xmlns:gml="http://www.opengis.net/gml"
             id="1"
             name="Quito"
             >
-                <areaGeometry
-                discretization="2.0"
-                >
+                <areaGeometry>
                     <gml:Polygon>
                         <gml:exterior>
                             <gml:LinearRing>

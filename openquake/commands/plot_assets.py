@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
@@ -17,14 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import numpy
-import shapely.wkt
-from openquake.baselib import sap
-from openquake.hazardlib.geo.utils import cross_idl
+import shapely
 from openquake.commonlib import util
+from openquake.hazardlib.geo.utils import cross_idl
 
 
-@sap.script
-def plot_assets(calc_id=-1, site_model=False):
+def main(calc_id: int = -1, site_model=False):
     """
     Plot the sites and the assets
     """
@@ -68,5 +65,5 @@ def plot_assets(calc_id=-1, site_model=False):
     p.show()
 
 
-plot_assets.arg('calc_id', 'a computation id', type=int)
-plot_assets.flg('site_model', 'plot the site model too')
+main.calc_id = 'a computation id'
+main.site_model = 'plot the site model too'

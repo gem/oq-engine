@@ -41,19 +41,16 @@ class LinLee2008SInter(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see tables 3 and 4, pages 227 and 228.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components, see equation 10 page 226.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total, see equation 10 page 226.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+
+    DEFINED_FOR_REFERENCE_VELOCITY = 360
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).

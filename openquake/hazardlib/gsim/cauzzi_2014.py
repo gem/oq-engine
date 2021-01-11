@@ -85,6 +85,10 @@ class CauzziEtAl2014(GMPE):
     #: Required distance measure is Rrup,
     REQUIRES_DISTANCES = {'rrup'}
 
+    #: The reference rock conditions. The definition of this parameter is 
+    #: unclear in the paper so we assume a value of 800 m/s
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.0
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method

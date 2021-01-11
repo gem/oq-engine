@@ -27,6 +27,7 @@ import time
 import signal
 import getpass
 import logging
+import itertools
 import traceback
 import platform
 import psutil
@@ -40,6 +41,7 @@ from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, __version__, zeromq as z)
+from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
 from openquake.calculators import base, export
@@ -160,9 +162,10 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if 'avg_losses-stats' in dstore or (
-            'avg_losses-rlzs' in dstore and len(rlzs)):
-        dskeys.add('avg_losses-stats')
+    if len(rlzs) > 1 and not oq.individual_curves:
+        for out in ['avg_losses-rlzs', 'agg_losses-rlzs', 'agg_curves-rlzs']:
+            if out in dskeys:
+                dskeys.remove(out)
     if 'curves-rlzs' in dstore and len(rlzs) == 1:
         dskeys.add('loss_curves-rlzs')
     if 'curves-stats' in dstore and len(rlzs) > 1:
@@ -170,12 +173,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
-    if 'all_loss_ratios' in dskeys:
-        dskeys.remove('all_loss_ratios')  # export only specific IDs
     if 'ruptures' in dskeys and 'scenario' in calcmode:
         exportable.remove('ruptures')  # do not export, as requested by Vitor
-    if 'rup_loss_table' in dskeys:  # keep it hidden for the moment
-        dskeys.remove('rup_loss_table')
     if 'hmaps' in dskeys and not oq.hazard_maps:
         dskeys.remove('hmaps')  # do not export the hazard maps
     if logs.dbcmd('get_job', dstore.calc_id) is None:
@@ -186,11 +185,11 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     keysize = []
     for key in sorted(dskeys & exportable):
         try:
-            size_mb = dstore.get_attr(key, 'nbytes') / MB
+            size_mb = dstore.getsize(key) / MB
         except (KeyError, AttributeError):
             size_mb = None
         keysize.append((key, size_mb))
-    ds_size = os.path.getsize(dstore.filename) / MB
+    ds_size = dstore.getsize() / MB
     logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
 
 
@@ -242,45 +241,6 @@ def register_signals():
                 signal.signal(signal.SIGHUP, manage_signals)
     except ValueError:
         pass
-
-
-def job_from_file(job_ini, job_id, username, **kw):
-    """
-    Create a full job profile from a job config file.
-
-    :param job_ini:
-        Path to a job.ini file
-    :param job_id:
-        ID of the created job
-    :param username:
-        The user who will own this job profile and all results
-    :param kw:
-         Extra parameters including `calculation_mode` and `exposure_file`
-    :returns:
-        an oqparam instance
-    """
-    hc_id = kw.pop('hazard_calculation_id', None)
-    try:
-        oq = readinput.get_oqparam(job_ini, hc_id=hc_id, **kw)
-    except Exception:
-        logs.dbcmd('finish', job_id, 'deleted')
-        raise
-    if 'calculation_mode' in kw:
-        oq.calculation_mode = kw.pop('calculation_mode')
-    if 'description' in kw:
-        oq.description = kw.pop('description')
-    if 'exposure_file' in kw:  # hack used in commands.engine
-        fnames = kw.pop('exposure_file').split()
-        if fnames:
-            oq.inputs['exposure'] = fnames
-        elif 'exposure' in oq.inputs:
-            del oq.inputs['exposure']
-    logs.dbcmd('update_job', job_id,
-               dict(calculation_mode=oq.calculation_mode,
-                    description=oq.description,
-                    user_name=username,
-                    hazard_calculation_id=hc_id))
-    return oq
 
 
 def poll_queue(job_id, poll_time):
@@ -368,7 +328,127 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
             raise
         finally:
             parallel.Starmap.shutdown()
+    # sanity check to make sure that the logging on file is working
+    if log_file and log_file != os.devnull and os.path.getsize(log_file) == 0:
+        logging.warning('The log file %s is empty!?' % log_file)
     return calc
+
+
+def _init_logs(dic, lvl):
+    if '_job_id' in dic:  # reuse job_id
+        logs.init(dic['_job_id'], lvl)
+    else:  # create a new job_id
+        dic['_job_id'] = logs.init('job', lvl)
+
+
+def create_jobs(job_inis, loglvl, kw):
+    """
+    Create job records on the database (if not already there) and configure
+    the logging.
+    """
+    dicts = []
+    for i, job_ini in enumerate(job_inis):
+        if isinstance(job_ini, dict):
+            dic = job_ini
+        else:
+            # NB: `get_params` must NOT log, since the logging is not
+            # configured yet, otherwise the log will disappear :-(
+            dic = readinput.get_params(job_ini, kw)
+        if 'sensitivity_analysis' in dic:
+            analysis = valid.dictionary(dic['sensitivity_analysis'])
+            for values in itertools.product(*analysis.values()):
+                new = dic.copy()
+                _init_logs(new, loglvl)
+                if '_job_id' in dic:
+                    del dic['_job_id']
+                pars = dict(zip(analysis, values))
+                for param, value in pars.items():
+                    new[param] = str(value)
+                new['description'] = '%s %s' % (new['description'], pars)
+                logging.info('Job with %s', pars)
+                dicts.append(new)
+        else:
+            _init_logs(dic, loglvl)
+            dicts.append(dic)
+    return dicts
+
+
+def run_jobs(job_inis, log_level='info', log_file=None, exports='',
+             username=getpass.getuser(), **kw):
+    """
+    Run jobs using the specified config file and other options.
+
+    :param str job_inis:
+        A list of paths to .ini files, or a list of job dictionaries
+    :param str log_level:
+        'debug', 'info', 'warn', 'error', or 'critical'
+    :param str log_file:
+        Path to log file.
+    :param exports:
+        A comma-separated string of export types requested by the user.
+    :param username:
+        Name of the user running the job
+    :param kw:
+        Extra parameters like hazard_calculation_id and calculation_mode
+    """
+    dist = parallel.oq_distribute()
+    jobparams = []
+    multi = kw.pop('multi', None)
+    loglvl = getattr(logging, log_level.upper())
+    jobs = create_jobs(job_inis, loglvl, kw)  # inizialize the logs
+    if kw.get('hazard_calculation_id'):
+        hc_id = int(kw['hazard_calculation_id'])
+    else:
+        hc_id = None
+    for job in jobs:
+        job_id = job['_job_id']
+        with logs.handle(job_id, log_level, log_file):
+            oqparam = readinput.get_oqparam(job)
+        dic = dict(calculation_mode=oqparam.calculation_mode,
+                   description=oqparam.description,
+                   user_name=username, is_running=1)
+        if hc_id:
+            dic['hazard_calculation_id'] = hc_id
+        logs.dbcmd('update_job', job_id, dic)
+        if (not jobparams and not multi and 'hazard_calculation_id' not in kw
+                and 'sensitivity_analysis' not in job):
+            hc_id = job_id
+        jobparams.append((job_id, oqparam))
+    jobarray = len(jobparams) > 1 and multi
+    try:
+        poll_queue(job_id, poll_time=15)
+        # wait for an empty slot or a CTRL-C
+    except BaseException:
+        # the job aborted even before starting
+        for job_id, oqparam in jobparams:
+            logs.dbcmd('finish', job_id, 'aborted')
+        return jobparams
+    else:
+        for job_id, oqparam in jobparams:
+            dic = {'status': 'executing', 'pid': _PID}
+            if jobarray:
+                dic['hazard_calculation_id'] = jobparams[0][0]
+            logs.dbcmd('update_job', job_id, dic)
+    try:
+        if dist == 'zmq' and config.zworkers['host_cores']:
+            logging.info('Asking the DbServer to start the workers')
+            logs.dbcmd('zmq_start')  # start the zworkers
+            logs.dbcmd('zmq_wait')  # wait for them to go up
+        allargs = [(job_id, oqparam, exports, log_level, log_file)
+                   for job_id, oqparam in jobparams]
+        if jobarray:
+            with general.start_many(run_calc, allargs):
+                pass
+        else:
+            for args in allargs:
+                run_calc(*args)
+    finally:
+        if dist == 'zmq' and config.zworkers['host_cores']:
+            logging.info('Stopping the zworkers')
+            logs.dbcmd('zmq_stop')
+        elif dist.startswith('celery'):
+            celery_cleanup(config.distribution.terminate_workers_on_revoke)
+    return jobparams
 
 
 def version_triple(tag):

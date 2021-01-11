@@ -47,7 +47,7 @@ class BBoxError(ValueError):
     """Bounding box too large"""
 
 
-def angular_distance(km, lat, lat2=None):
+def angular_distance(km, lat=0, lat2=None):
     """
     Return the angular distance of two points at the given latitude.
 
@@ -637,7 +637,8 @@ def bbox2poly(bbox):
 # geohash code adapted from Leonard Norrgard's implementation
 # https://github.com/vinsci/geohash/blob/master/Geohash/geohash.py
 # see also https://en.wikipedia.org/wiki/Geohash
-# length 5 = 2.4 km resolution, length 4 = 20 km, length 3 = 78 km
+# length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
+# length 4 = 20 km, length 3 = 78 km
 # it may turn useful in the future (with SiteCollection.geohash)
 def geohash(lon, lat, length):
     """

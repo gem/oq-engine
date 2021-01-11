@@ -19,9 +19,9 @@
 import logging
 import numpy
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict
+from openquake.baselib.general import AccumDict, get_nbytes_msg
 from openquake.hazardlib.stats import set_rlzs_stats
-from openquake.calculators import base
+from openquake.calculators import base, views
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -52,6 +52,24 @@ def bin_ddd(fractions, n, seed):
     return ddd
 
 
+def run_sec_sims(damages, haz, sec_sims, seed):
+    """
+    :param damages: array of shape (E, D) for a given asset
+    :param haz: dataframe of size E with a probability field
+    :param sec_sims: pair (probability field, number of simulations)
+    :param seed: random seed to use
+
+    Run secondary simulations and update the array damages
+    """
+    [(prob_field, num_sims)] = sec_sims
+    numpy.random.seed(seed)
+    probs = haz[prob_field].to_numpy()   # LiqProb
+    affected = numpy.random.random((num_sims, 1)) < probs  # (N, E)
+    for d, buildings in enumerate(damages.T[1:], 1):
+        # doing the mean on the secondary simulations for each event
+        damages[:, d] = numpy.mean(affected * buildings, axis=0)  # shape E
+
+
 def scenario_damage(riskinputs, param, monitor):
     """
     Core function for a damage computation.
@@ -63,19 +81,15 @@ def scenario_damage(riskinputs, param, monitor):
     :param param:
         dictionary of extra parameters
     :returns:
-        a dictionary {'d_asset': [(l, r, a, mean-stddev), ...],
-                      'd_event': dict eid -> array of shape (L, D)
-                      + optional consequences}
-
-    `d_asset` and `d_tag` are related to the damage distributions.
+        a dictionary of arrays
     """
-    crmodel = monitor.read_pik('crmodel')
+    crmodel = monitor.read('crmodel')
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
     # algorithm used to compute the discrete damage distributions
-    approx_ddd = param['approx_ddd']
-    z = numpy.zeros((L, D - 1), F32 if approx_ddd else U32)
+    continuous_dd = param['continuous_dd']
+    z = numpy.zeros((L, D - 1), F32 if continuous_dd else U32)
     d_event = AccumDict(accum=z)
     res = {'d_event': d_event, 'd_asset': []}
     for name in consequences:
@@ -85,27 +99,33 @@ def scenario_damage(riskinputs, param, monitor):
         # of addition would hurt too much with multiple tasks
     seed = param['master_seed']
     num_events = param['num_events']  # per realization
+    acc = []  # (aid, eid, lid, ds...)
+    sec_sims = param['secondary_simulations'].items()
     for ri in riskinputs:
         # here instead F32 floats are ok
-        ddic = AccumDict(accum=numpy.zeros((L, D - 1), F32))  # aid,eid->dd
-        ri.hazard_getter.init()
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             ne = num_events[r]  # total number of events
             for l, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     aid = asset['ordinal']
-                    if approx_ddd:
-                        ddds = fractions * asset['number']
+                    if continuous_dd:
+                        damages = fractions * asset['number']
+                        if sec_sims:
+                            run_sec_sims(
+                                damages, out.haz, sec_sims, seed + aid)
                     else:
-                        ddds = bin_ddd(
+                        damages = bin_ddd(
                             fractions, asset['number'], seed + aid)
-                    for e, ddd in enumerate(ddds):
-                        eid = out.eids[e]
-                        ddic[aid, eid][l] = ddd[1:]
-                        d_event[eid][l] += ddd[1:]
-                    tot = ddds.sum(axis=0)  # shape D
-                    nodamage = asset['number'] * (ne - len(ddds))
+                    # damages has shape E', D with E' == len(out.eids)
+                    for e, ddd in enumerate(damages):
+                        dmg = ddd[1:]
+                        if dmg.sum():
+                            eid = out.eids[e]  # (aid, eid, l) is unique
+                            acc.append((aid, eid, l) + tuple(dmg))
+                            d_event[eid][l] += ddd[1:]
+                    tot = damages.sum(axis=0)  # (E', D) -> D
+                    nodamage = asset['number'] * (ne - len(damages))
                     tot[0] += nodamage
                     res['d_asset'].append((l, r, aid, tot))
                     # TODO: use the ddd, not the fractions in compute_csq
@@ -116,24 +136,22 @@ def scenario_damage(riskinputs, param, monitor):
                         by_event = res[name + '_by_event']
                         for eid, value in zip(out.eids, values):
                             by_event[eid][l] += value
-
-        res['aed'] = aed = numpy.zeros(len(ddic), param['aed_dt'])
-        for i, ((aid, eid), dd) in enumerate(sorted(ddic.items())):
-            aed[i] = (aid, eid, dd)
+    res['aed'] = numpy.array(acc, param['asset_damage_dt'])
     return res
 
 
-@base.calculators.add('scenario_damage')
+@base.calculators.add('scenario_damage', 'event_based_damage')
 class ScenarioDamageCalculator(base.RiskCalculator):
     """
-    Scenario damage calculator
+    Damage calculator
     """
     core_task = scenario_damage
     is_stochastic = True
-    precalc = 'scenario'
-    accept_precalc = ['scenario']
+    precalc = 'event_based'
+    accept_precalc = ['scenario', 'event_based', 'event_based_risk']
 
     def pre_execute(self):
+        oq = self.oqparam
         super().pre_execute()
         num_floats = floats_in(self.assetcol['number'])
         if num_floats:
@@ -145,23 +163,29 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             aref = self.assetcol.tagcol.id[ass['id']]
             logging.error("The asset %s has number=%s > 2^32-1!",
                           aref, ass['number'])
-        self.param['approx_ddd'] = self.oqparam.approx_ddd or num_floats
-        self.param['aed_dt'] = aed_dt = self.crmodel.aid_eid_dd_dt(
-            self.oqparam.approx_ddd or num_floats)
-        self.param['master_seed'] = self.oqparam.master_seed
+        self.param['secondary_simulations'] = oq.secondary_simulations
+        self.param['continuous_dd'] = oq.continuous_dd or num_floats
+        self.param['asset_damage_dt'] = self.crmodel.asset_damage_dt(
+            oq.continuous_dd or num_floats)
+        self.param['master_seed'] = oq.master_seed
         self.param['num_events'] = numpy.bincount(  # events by rlz
             self.datastore['events']['rlz_id'])
-        A = len(self.assetcol)
-        self.datastore.create_dset('dd_data/data', aed_dt, compression='gzip')
-        self.datastore.create_dset('dd_data/indices', U32, (A, 2))
+        self.datastore.create_dframe(
+            'dd_data', self.param['asset_damage_dt'], 'gzip')
         self.riskinputs = self.build_riskinputs('gmf')
 
     def combine(self, acc, res):
+        """
+        Combine the results and grows dd_data
+        """
+        if res is None:
+            raise MemoryError('You ran out of memory!')
         with self.monitor('saving dd_data', measuremem=True):
             aed = res.pop('aed', ())
             if len(aed) == 0:
                 return acc + res
-            hdf5.extend(self.datastore['dd_data/data'], aed)
+            for name in aed.dtype.names:
+                hdf5.extend(self.datastore['dd_data/' + name], aed[name])
             return acc + res
 
     def post_execute(self, result):
@@ -178,23 +202,28 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         R = self.R
         D = len(dstates)
         A = len(self.assetcol)
-        if not len(self.datastore['dd_data/data']):
-            logging.warning('There is no damage at all!')
+        E = len(self.datastore['events'])
+
+        # reduction factor
+        _, msg1 = get_nbytes_msg(dict(A=A, E=E, L=L))
+        _, msg2 = get_nbytes_msg(dict(nrows=len(self.datastore['dd_data/eid']),
+                                      ncols=D+2))
+        logging.info('Using %s\ninstead of %s', msg2, msg1)
 
         # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
         if oq.investigation_time:  # event_based_damage
-            avg_ratio = oq.ses_ratio
+            avg_ratio = numpy.array([oq.ses_ratio] * R)
         else:  # scenario_damage
-            avg_ratio = 1. / oq.number_of_ground_motion_fields
+            avg_ratio = 1. / self.param['num_events']
 
         # damage by asset
         d_asset = numpy.zeros((A, R, L, D), F32)
         for (l, r, a, tot) in result['d_asset']:
-            d_asset[a, r, l] = tot
-        self.datastore['avg_damages-rlzs'] = d_asset * avg_ratio
+            d_asset[a, r, l] = tot * avg_ratio[r]
+        self.datastore['damages-rlzs'] = d_asset
         set_rlzs_stats(self.datastore,
-                       'avg_damages',
+                       'damages',
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
@@ -202,7 +231,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # damage by event: make sure the sum of the buildings is consistent
         tot = self.assetcol['number'].sum()
-        dt = F32 if self.param['approx_ddd'] else U32
+        dt = F32 if self.param['continuous_dd'] else U32
         dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
         dbe[:, :, 0] = tot
         for e, dmg_by_lt in result['d_event'].items():
@@ -220,8 +249,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             if name.startswith('avg_'):
                 c_asset = numpy.zeros((A, R, L), F32)
                 for (l, r, a, stat) in result[name]:
-                    c_asset[a, r, l] = stat
-                self.datastore[name + '-rlzs'] = c_asset * avg_ratio
+                    c_asset[a, r, l] = stat * avg_ratio[r]
+                self.datastore[name + '-rlzs'] = c_asset
                 set_rlzs_stats(self.datastore, name,
                                asset_id=self.assetcol['id'],
                                loss_type=oq.loss_names)
@@ -236,39 +265,22 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         Sanity check on the total number of assets
         """
         if self.R == 1:
-            avgdamages = self.datastore.sel('avg_damages-rlzs')
+            arr = self.datastore.sel('damages-rlzs')  # shape (A, 1, L, D)
         else:
-            avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')
-        num_assets = avgdamages.sum(axis=(0, 1, 3))  # by loss_type
+            arr = self.datastore.sel('damages-stats', stat='mean')
+        avg = arr.sum(axis=(0, 1))  # shape (L, D)
+        if not len(self.datastore['dd_data/aid']):
+            logging.warning('There is no damage at all!')
+        else:
+            df = views.portfolio_damage_error(self.datastore, avg[:, 1:])
+            rst = views.rst_table(numpy.array(df), list(df.columns))
+            logging.info('Portfolio damage\n%s' % rst)
+        num_assets = avg.sum(axis=1)  # by loss_type
         expected = self.assetcol['number'].sum()
         nums = set(num_assets) | {expected}
         if len(nums) > 1:
             numdic = dict(expected=expected)
             for lt, num in zip(self.oqparam.loss_names, num_assets):
                 numdic[lt] = num
-            logging.info('Due to numeric errors the total number of assets '
-                         'is imprecise: %s', numdic)
-
-
-@base.calculators.add('event_based_damage')
-class EventBasedDamageCalculator(ScenarioDamageCalculator):
-    """
-    Event Based Damage calculator, able to compute avg_damages-rlzs,
-    dmg_by_event and consequences.
-    """
-    core_task = scenario_damage
-    precalc = 'event_based'
-    accept_precalc = ['event_based', 'event_based_risk']
-
-    def sanity_check(self):
-        if self.R == 1:
-            avgdamages = self.datastore.sel('avg_damages-rlzs')[:, 0]
-        else:
-            avgdamages = self.datastore.sel('avg_damages-stats', stat='mean')[
-                :, 0]  # shape A, S, L, D, -> A, L, D
-        F = self.param['num_events'].mean()
-        dic = dict(got=avgdamages.sum() / self.L / F / self.oqparam.ses_ratio,
-                   expected=self.assetcol['number'].sum())
-        if dic['got'] != dic['expected']:
-            logging.info('Due to numeric errors the total number of assets '
-                         'is imprecise: %s', dic)
+            logging.info('Due to numeric errors the total number of assets'
+                         ' is imprecise: %s', numdic)

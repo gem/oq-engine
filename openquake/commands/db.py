@@ -20,7 +20,7 @@ import sys
 import inspect
 import getpass
 from decorator import getfullargspec
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.calculators.views import rst_table
 from openquake.commonlib import logs
 from openquake.server import dbserver
@@ -45,8 +45,7 @@ def convert(strings):
             yield s
 
 
-@sap.script
-def db(cmd, args=()):
+def main(cmd, args=()):
     """
     Run a database command
     """
@@ -64,5 +63,5 @@ def db(cmd, args=()):
         print(res)
 
 
-db.arg('cmd', 'db command')
-db.arg('args', 'db command arguments', nargs='*')
+main.cmd = 'db command'
+main.args = dict(help='db command arguments', nargs='*')

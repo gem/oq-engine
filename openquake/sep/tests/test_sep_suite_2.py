@@ -53,17 +53,16 @@ class test_landslides_cali_small(unittest.TestCase):
         np.testing.assert_array_almost_equal(self.sites["Fs"], factor_of_safety)
 
     def test_critical_accel(self):
-        ca = np.array([ 0.56452189, 0.65842754, 0.59037594, 0. , 1.51020721,
-            0.53719692, 0.42855996, 13.85248171, 0.6525478 , 0.64080284])
+        ca = np.array([5.53795977, 6.45917414, 5.791588, 0., 14.81513269,
+            5.26990181, 4.20417316, 135.89284561, 6.40149393, 6.28627584])
+
         np.testing.assert_array_almost_equal(self.sites["crit_accel"], ca)
 
     def test_newmark_displacement(self):
         self.sites["newmark_disp"] = newmark_displ_from_pga_M(pga=self.pga,
             critical_accel=self.sites['crit_accel'], M=7.5)
 
-        nd = np.array([0.00000000e+00, 7.89939769e-04, 0.00000000e+00,
-            2.19233517e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
-            0.00000000e+00, 9.14544278e-06, 9.66079448e-05])
+        nd = np.array([0., 0., 0., 2.19233517, 0., 0., 0., 0., 0., 0.])
 
         np.testing.assert_array_almost_equal(self.sites["newmark_disp"], nd)
 
@@ -75,9 +74,7 @@ class test_landslides_cali_small(unittest.TestCase):
             self.sites["newmark_disp"]
         )
 
-        prob_d = np.array([0.00000000e+00, 3.02568994e-04, 0.00000000e+00,
-            3.35000000e-01, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
-            0.00000000e+00, 2.82209270e-07, 1.12933769e-05])
+        prob_d = np.array([0., 0., 0., 0.335, 0., 0., 0., 0., 0., 0.])
 
         np.testing.assert_array_almost_equal(self.sites["prob_disp"], prob_d)
 

@@ -17,15 +17,14 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import logging
-from openquake.baselib import sap, datastore
+from openquake.baselib import datastore
 from openquake.commonlib import logs
 from openquake.calculators.extract import WebExtractor
 from openquake.engine import engine
 from openquake.server import dbserver
 
 
-@sap.script
-def importcalc(calc_id):
+def main(calc_id):
     """
     Import a remote calculation into the local database. server, username
     and password must be specified in an openquake.cfg file.
@@ -56,4 +55,4 @@ def importcalc(calc_id):
     logging.info('Imported calculation %s successfully', calc_id)
 
 
-importcalc.arg('calc_id', 'calculation ID or pathname')
+main.calc_id = 'calculation ID or pathname'

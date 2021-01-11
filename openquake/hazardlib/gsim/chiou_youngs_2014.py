@@ -17,11 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`ChiouYoungs2014`.
+Module exports :class:`ChiouYoungs2014`
+               :class:`ChiouYoungs2014Japan`
+               :class:`ChiouYoungs2014Italy`
+               :class:`ChiouYoungs2014Wenchuan`
+               :class:`ChiouYoungs2014PEER`
+               :class:`ChiouYoungs2014NearFaultEffect`
 """
 import numpy as np
-import math
-
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -30,9 +33,12 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 class ChiouYoungs2014(GMPE):
     """
     Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs
-    and published as "Updated of the Chiou and Youngs NGA Model for the
-    Average Horizontal Component of Peak Ground Motion and Response Spectra"
-    (2014, Earthquake Spectra).
+
+    Chiou, B. S.-J. and Youngs, R. R. (2014), "Updated of the Chiou and Youngs
+    NGA Model for the Average Horizontal Component of Peak Ground Motion and
+    Response Spectra, Earthquake Spectra, 30(3), 1117 - 1153,
+    DOI: 10.1193/072813EQS219M
+
     """
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -70,176 +76,199 @@ class ChiouYoungs2014(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type.
         C = self.COEFFS[imt]
-
-        # intensity on a reference soil is used for both mean
-        # and stddev calculations.
-        ln_y_ref = self._get_ln_y_ref(rup, dists, C)
-
-        # exp1 and exp2 are parts of eq. 12 and eq. 13,
-        # calculate it once for both.
-        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
-        exp2 = np.exp(C['phi3'] * (1130 - 360))
-
-        mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2)
-        stddevs = self._get_stddevs(sites, rup, C, stddev_types,
-                                    ln_y_ref, exp1, exp2)
-
+        # Get ground motion on reference rock
+        ln_y_ref = self.get_ln_y_ref(C, rup, dists)
+        y_ref = np.exp(ln_y_ref)
+        # Get the site amplification
+        # Get basin depth
+        dz1pt0 = self._get_centered_z1pt0(sites)
+        # In the case that Z1.0 = 0.0 then no deep soil correction is applied
+        dz1pt0[sites.z1pt0 <= 0.0] = 0.0
+        f_z1pt0 = self.get_basin_depth_term(C, dz1pt0)
+        # Get linear amplification term
+        f_lin = self.get_linear_site_term(C, sites)
+        # Get nonlinear amplification term
+        f_nl, f_nl_scaling = self.get_nonlinear_site_term(C, sites, y_ref)
+        # Add on the site amplification
+        mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
+        # Get standard deviations
+        stddevs = self.get_stddevs(C, sites, rup.mag, y_ref, f_nl_scaling,
+                                   stddev_types)
         return mean, stddevs
 
-    def _get_mean(self, sites, C, ln_y_ref, exp1, exp2):
+    def get_ln_y_ref(self, C, rup, dists):
         """
-        Add site effects to an intensity.
-
-        Implements eq. 13b.
+        Returns the ground motion on the reference rock, described fully by
+        Equation 11
         """
+        delta_ztor = self._get_centered_ztor(rup)
+        return (self.get_stress_scaling(C) +
+                self.get_magnitude_scaling(C, rup.mag) +
+                self.get_source_scaling_terms(C, rup, delta_ztor) +
+                self.get_hanging_wall_term(C, rup, dists) +
+                self.get_geometric_spreading(C, rup.mag, dists.rrup) +
+                self.get_far_field_distance_scaling(C, rup.mag, dists.rrup) +
+                self.get_directivity(C, rup, dists))
 
-        # we do not support estimating of basin depth and instead
-        # rely on it being available (since we require it).
-        # centered_z1pt0
-        centered_z1pt0 = self._get_centered_z1pt0(sites)
-
-        # we consider random variables being zero since we want
-        # to find the exact mean value.
-        eta = epsilon = 0.
-
-        # deep soil correction
-        no_correction = sites.z1pt0 <= 0
-        deep_s = C['phi5'] * (1.0 - np.exp(-1. * centered_z1pt0 / C['phi6']))
-        deep_s[no_correction] = 0
-
-        ln_y = (
-            # first line of eq. 12
-            ln_y_ref + eta
-            # second + 3rd line
-            + self._get_site_term(C, sites.vs30, ln_y_ref, exp1, exp2)
-            # fourth line
-            + deep_s
-            # fifth line
-            + epsilon
-        )
-
-        return ln_y
-
-    def _get_site_term(self, C, vs30, ln_y_ref, exp1=None, exp2=None):
+    def get_stddevs(self, C, sites, mag, y_ref, f_nl_scaling, stddev_types):
         """
-        This implements the site term of the CY14 GMM. See
-        :class:`openquake.hazardlib.gsim.chiou_youngs_2014.ChiouYoungs2014`
-        for additional information.
+        Returns the standard deviation model described in equation 13
         """
-        if exp1 is None:
-            exp1 = np.exp(C['phi3'] * (vs30.clip(-np.inf, 1130) - 360))
-        if exp2 is None:
-            exp2 = np.exp(C['phi3'] * (1130 - 360))
-        exp2 = np.exp(C['phi3'] * (1130 - 360))
-        eta = 0
-        af = (C['phi1'] * np.log(vs30 / 1130).clip(-np.inf, 0) +
-              C['phi2'] * (exp1 - exp2) *
-              np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) /
-                     C['phi4']))
-        return af
-
-    def _get_stddevs(self, sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
-        """
-        Get standard deviation for a given intensity on reference soil.
-
-        Implements equations 13 for inter-event, intra-event
-        and total standard deviations.
-        """
-        Fmeasured = sites.vs30measured
-        Finferred = 1 - sites.vs30measured
-
-        # eq. 13 to calculate inter-event standard error
-        mag_test = min(max(rup.mag, 5.0), 6.5) - 5.0
-        tau = C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
-
-        # b and c coeffs from eq. 10
-        b = C['phi2'] * (exp1 - exp2)
-        c = C['phi4']
-
-        y_ref = np.exp(ln_y_ref)
-        # eq. 13
-        NL = b * y_ref / (y_ref + c)
-        sigma = ((C['sig1'] + (C['sig2'] - C['sig1']) * mag_test / 1.5)
-                 * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured) +
-                           (1. + NL) ** 2.))
-
-        ret = []
+        # Determines the nonlinear term described in equation 13, line 4
+        nl0 = f_nl_scaling * (y_ref / (y_ref + C["phi4"]))
+        # Get between and within-event variability
+        tau = self.get_tau(C, mag)
+        phi_nl0 = self.get_phi(C, mag, sites, nl0)
+        # Get total standard deviation propagating the uncertainty in the
+        # nonlinear amplification term
+        sigma = np.sqrt(((1.0 + nl0) ** 2.) * (tau ** 2.) + phi_nl0 ** 2.)
+        stddevs = []
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                # eq. 13
-                ret += [np.sqrt(((1 + NL) ** 2) * (tau ** 2) + (sigma ** 2))]
+                # Equation 13, line 1
+                stddevs.append(sigma)
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                ret.append(sigma)
+                stddevs.append(phi_nl0)
             elif stddev_type == const.StdDev.INTER_EVENT:
-                # this is implied in eq. 21
-                ret.append(np.abs((1 + NL) * tau))
-        return ret
+                # This is implied by equation 13, line 1
+                stddevs.append(np.abs((1 + nl0) * tau))
+        return stddevs
 
-    def _get_ln_y_ref(self, rup, dists, C):
+    def get_tau(self, C, mag):
         """
-        Get an intensity on a reference soil.
-
-        Implements eq. 13a.
+        Returns the between-event variability described in equation 13, line 2
         """
-        # reverse faulting flag
-        Frv = 1. if 30 <= rup.rake <= 150 else 0.
-        # normal faulting flag
-        Fnm = 1. if -120 <= rup.rake <= -60 else 0.
-        # hanging wall flag
+        # eq. 13 to calculate inter-event standard error
+        mag_test = min(max(mag, 5.0), 6.5) - 5.0
+        return C['tau1'] + ((C['tau2'] - C['tau1']) / 1.5) * mag_test
 
-        Fhw = np.zeros_like(dists.rx)
-        idx = np.nonzero(dists.rx >= 0.)
-        Fhw[idx] = 1.
+    def get_phi(self, C, mag, sites, nl0):
+        """
+        Returns the within-event variability described in equation 13, line 3
+        """
+        phi = C["sig3"] * np.ones(sites.vs30.shape)
+        phi[sites.vs30measured] = 0.7
+        phi = np.sqrt(phi + ((1.0 + nl0) ** 2.))
+        mdep = C["sig1"] + (((C["sig2"] - C["sig1"]) / 1.5) *
+                            (min(max(mag, 5.0), 6.5) - 5.0))
+        return mdep * phi
 
-        # a part in eq. 11
-        mag_test1 = np.cosh(2. * max(rup.mag - 4.5, 0))
+    def get_stress_scaling(self, C):
+        """
+        Returns the stress drop scaling factor
+        """
+        return C["c1"]
 
-        # centered DPP
-        centered_dpp = self._get_centered_cdpp(dists)
-        # centered_ztor
-        centered_ztor = self._get_centered_ztor(rup, Frv)
-        #
-        dist_taper = np.fmax(1 - (np.fmax(dists.rrup - 40,
-                                  np.zeros_like(dists)) / 30.),
-                             np.zeros_like(dists))
-        dist_taper = dist_taper.astype(np.float64)
-        ln_y_ref = (
-            # first part of eq. 11
-            C['c1']
-            + (C['c1a'] + C['c1c'] / mag_test1) * Frv
-            + (C['c1b'] + C['c1d'] / mag_test1) * Fnm
-            + (C['c7'] + C['c7b'] / mag_test1) * centered_ztor
-            + (C['c11'] + C['c11b'] / mag_test1) *
-            np.cos(math.radians(rup.dip)) ** 2
-            # second part
-            + C['c2'] * (rup.mag - 6)
-            + ((C['c2'] - C['c3']) / C['cn'])
-            * np.log(1 + np.exp(C['cn'] * (C['cm'] - rup.mag)))
-            # third part
-            + C['c4']
-            * np.log(dists.rrup + C['c5']
-                     * np.cosh(C['c6'] * max(rup.mag - C['chm'], 0)))
-            + (C['c4a'] - C['c4'])
-            * np.log(np.sqrt(dists.rrup ** 2 + C['crb'] ** 2))
-            # forth part
-            + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
-            * dists.rrup
-            # fifth part
-            + C['c8'] * dist_taper
-            * min(max(rup.mag - 5.5, 0) / 0.8, 1.0)
-            * np.exp(-1 * C['c8a'] * (rup.mag - C['c8b']) ** 2) * centered_dpp
-            # sixth part
-            + C['c9'] * Fhw * np.cos(math.radians(rup.dip)) *
-            (C['c9a'] + (1 - C['c9a']) * np.tanh(dists.rx / C['c9b']))
-            * (1 - np.sqrt(dists.rjb ** 2 + rup.ztor ** 2)
-               / (dists.rrup + 1.0))
-        )
+    def get_magnitude_scaling(self, C, mag):
+        """
+        Returns the magnitude scaling
+        """
+        f_m = np.log(1.0 + np.exp(C["cn"] * (C["cm"] - mag)))
+        f_m = self.CONSTANTS["c2"] * (mag - 6.0) +\
+            ((self.CONSTANTS["c2"] - C["c3"]) / C["cn"]) * f_m
+        return f_m
 
-        return ln_y_ref
+    def get_geometric_spreading(self, C, mag, rrup):
+        """
+        Returns the near-field geometric spreading term
+        """
+        # Get the near-field magnitude scaling
+        return self.CONSTANTS["c4"] * np.log(
+            rrup + C["c5"] * np.cosh(C["c6"] * max(mag - C["chm"], 0.0)))
+
+    def get_far_field_distance_scaling(self, C, mag, rrup):
+        """
+        Returns the far-field distance scaling term - both magnitude and
+        distance
+        """
+        # Get the attenuation distance scaling
+        f_r = (self.CONSTANTS["c4a"] - self.CONSTANTS["c4"]) * np.log(
+            np.sqrt(rrup ** 2. + self.CONSTANTS["crb"] ** 2.))
+        # Get the magnitude dependent term
+        f_rm = C["cg1"] + (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))
+        return f_r + f_rm * rrup
+
+    def get_source_scaling_terms(self, C, rup, delta_ztor):
+        """
+        Returns additional source scaling parameters related to style of
+        faulting, dip and top of rupture depth
+        """
+        f_src = 0.0
+        coshm = np.cosh(2.0 * max(rup.mag - 4.5, 0.0))
+        # Style of faulting term
+        if 30 <= rup.rake <= 150:
+            # reverse faulting flag
+            f_src += (C["c1a"] + (C["c1c"] / coshm))
+        elif -120 <= rup.rake <= -60:
+            # normal faulting flag
+            f_src += (C["c1b"] + (C["c1d"] / coshm))
+        # Top of rupture term
+        f_src += ((C["c7"] + (C["c7b"] / coshm)) * delta_ztor)
+        # Dip term
+        f_src += ((self.CONSTANTS["c11"] + (C["c11b"] / coshm)) *
+                  np.cos(np.radians(rup.dip)) ** 2.0)
+        return f_src
+
+    def get_hanging_wall_term(self, C, rup, dists):
+        """
+        Returns the hanging wall term
+        """
+        fhw = np.zeros(dists.rrup.shape)
+        idx = dists.rrup > 0.0
+        if np.any(idx):
+            fdist = 1.0 - (np.sqrt(dists.rjb[idx] ** 2. + rup.ztor ** 2.) /
+                           (dists.rrup[idx] + 1.0))
+            fdist *= (C["c9a"] + (1.0 - C["c9a"]) * np.tanh(dists.rx[idx] /
+                                                            C["c9b"]))
+            fhw[idx] += (C["c9"] * np.cos(np.radians(rup.dip)) * fdist)
+        return fhw
+
+    def get_directivity(self, C, rup, dists):
+        """
+        Returns the directivity term.
+
+        The directivity prediction parameter is centered on the average
+        directivity prediction parameter. Here we set the centered_dpp
+        equal to zero, since the near fault directivity effect prediction is
+        off by default in our calculation.
+        """
+        cdpp = self._get_centered_cdpp(dists)
+        if not np.any(cdpp > 0.0):
+            # No directivity term
+            return 0.0
+        f_dir = np.exp(-C["c8a"] * ((rup.mag - C["c8b"]) ** 2.)) * cdpp
+        f_dir *= min((max(rup.mag - 5.5, 0.0) / 0.8), 1.)
+        rrup_max = dists.rrup - 40.
+        rrup_max[rrup_max < 0.0] = 0.0
+        rrup_max = 1.0 - (rrup_max / 30.)
+        rrup_max[rrup_max < 0.0] = 0.0
+        return C["c8"] * rrup_max * f_dir
+
+    def get_linear_site_term(self, C, sites):
+        """
+        Returns the linear site scaling term
+        """
+        return C["phi1"] * np.log(sites.vs30 / 1130).clip(-np.inf, 0.0)
+
+    def get_basin_depth_term(self, C, centered_z1pt0):
+        """
+        Returns the basin depth scaling
+        """
+        return C["phi5"] * (1.0 - np.exp(-centered_z1pt0 /
+                                         self.CONSTANTS["phi6"]))
+
+    def get_nonlinear_site_term(self, C, sites, y_ref):
+        """
+        Returns the nonlinear site term and the Vs-scaling factor (to be
+        used in the standard deviation model
+        """
+        vs = sites.vs30.clip(-np.inf, 1130.0)
+        f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs - 360.)) -
+                                    np.exp(C["phi3"] * (1130. - 360.)))
+        f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
+        return f_nl, f_nl_scaling
 
     def _get_centered_z1pt0(self, sites):
         """
@@ -248,40 +277,29 @@ class ChiouYoungs2014(GMPE):
 
         """
         #: California and non-Japan regions
-
         mean_z1pt0 = (-7.15 / 4.) * np.log(((sites.vs30) ** 4. + 570.94 ** 4.)
                                            / (1360 ** 4. + 570.94 ** 4.))
-        centered_z1pt0 = sites.z1pt0 - np.exp(mean_z1pt0)
+        return sites.z1pt0 - np.exp(mean_z1pt0)
 
-        return centered_z1pt0
-
-    def _get_centered_ztor(self, rup, Frv):
+    def _get_centered_ztor(self, rup):
         """
         Get ztor centered on the M- dependent avarage ztor(km)
         by different fault types.
         """
-        if Frv == 1:
-
+        if 30 <= rup.rake <= 150:
+            # Reverse and reverse-oblique faulting
             mean_ztor = max(2.704 - 1.226 * max(rup.mag - 5.849, 0.0), 0.) ** 2
-            centered_ztor = rup.ztor - mean_ztor
         else:
-
+            # Strike-slip and normal faulting
             mean_ztor = max(2.673 - 1.136 * max(rup.mag - 4.970, 0.0), 0.) ** 2
-            centered_ztor = rup.ztor - mean_ztor
-
-        return centered_ztor
+        return rup.ztor - mean_ztor
 
     def _get_centered_cdpp(self, dists):
         """
-        Get directivity prediction parameter centered on the avgerage
-        directivity prediction parameter. Here we set the centered_dpp
-        equals to zero, since the near fault directivity effect prediction is
-        off in our calculation.
-
+        Returns the centred dpp term - in this case this is turned off by
+        default
         """
-        centered_dpp = 0.
-
-        return centered_dpp
+        return np.zeros(dists.rrup.shape)
 
     #: Coefficient tables are constructed from values in tables 1 - 5
 
@@ -315,6 +333,102 @@ pgv    2.3549  0.165  -0.0626 -0.165  0.0626  3.3024  5.423   1.06  2.3152  -2.1
 10    -5.3461  0.0124 -0.1    -0.0124 0.1    1.5265   6.7415  1.06  2.9396  -2.1  -0.5  50  7.5818  3.838   0.45    0.0003  -0.0253  0.2154 0.2695  7.77    0.      0.1     6.5     0.      -0.1       -0.00095   -0.0037    3.623   -0.7053   0.       -0.001361  0.000515  0.33   300  1.7679  0.      -0.4068  1.464    800.        0.4612  0.3474  0.4426  0.4426  0.7     0.3755
 """)
 
+    CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
+                 "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
+
+
+class ChiouYoungs2014Japan(ChiouYoungs2014):
+    """
+    Regionalisation of the Chiou & Youngs (2014) GMPE for use with the
+    Japan far-field distance attuation scaling and site model
+    """
+
+    def get_far_field_distance_scaling(self, C, mag, rrup):
+        """
+        Returns the far-field distance scaling term - both magnitude and
+        distance
+        """
+        # Get the attenuation distance scaling
+        f_r = (self.CONSTANTS["c4a"] - self.CONSTANTS["c4"]) * np.log(
+            np.sqrt(rrup ** 2. + self.CONSTANTS["crb"] ** 2.))
+
+        # Get the magnitude dependent term
+        f_rm = (C["cg1"] +
+                (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
+        if (mag > 6.0) and (mag < 6.9):
+            # Apply adjustment factor for Japan
+            f_rm *= C["gjpit"]
+        return f_r + f_rm
+
+    def get_linear_site_term(self, C, sites):
+        """
+        Returns the linear site scaling term
+        """
+        return C["phi1jp"] * np.log(sites.vs30 / 1130).clip(-np.inf, 0.0)
+
+    def get_basin_depth_term(self, C, centered_z1pt0):
+        """
+        Returns the basin depth scaling
+        """
+        return C["phi5jp"] * (1.0 - np.exp(-centered_z1pt0 /
+                                           self.CONSTANTS["phi6jp"]))
+
+    def _get_centered_z1pt0(self, sites):
+        """
+        Get z1pt0 centered on the Vs30- dependent average z1pt0(m) for Japan
+        """
+        #: Japan
+        mean_z1pt0 = (-5.23 / 2.) * np.log(((sites.vs30 ** 2.) + 412.39 ** 2.)
+                                           / (1360 ** 2. + 412.39 ** 2.))
+        return sites.z1pt0 - np.exp(mean_z1pt0)
+
+
+class ChiouYoungs2014Italy(ChiouYoungs2014):
+    """
+    Adaption of the Chiou & Youngs (2014) GMPE for the the Italy far-field
+    attenuation scaling, but assuming the California site amplification model
+    """
+    def get_far_field_distance_scaling(self, C, mag, rrup):
+        """
+        Returns the far-field distance scaling term - both magnitude and
+        distance
+        """
+        # Get the attenuation distance scaling
+        f_r = (self.CONSTANTS["c4a"] - self.CONSTANTS["c4"]) * np.log(
+            np.sqrt(rrup ** 2. + self.CONSTANTS["crb"] ** 2.))
+
+        # Get the magnitude dependent term
+        f_rm = (C["cg1"] +
+                (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
+        if (mag > 6.0) and (mag < 6.9):
+            # Apply adjustment factor for Italy
+            f_rm *= C["gjpit"]
+        return f_r + f_rm
+
+
+class ChiouYoungs2014Wenchuan(ChiouYoungs2014):
+    """
+    Adaption of the Chiou & Youngs (2014) GMPE for the Wenchuan far-field
+    attenuation scaling, but assuming the California site amplification model.
+    It should be note that according to Chiou & Youngs (2014) this adjustment
+    is calibrated only for the M7.9 Wenchuan earthquake, so application to
+    other scenarios is at the user's own risk
+    """
+    def get_far_field_distance_scaling(self, C, mag, rrup):
+        """
+        Returns the far-field distance scaling term - both magnitude and
+        distance
+        """
+        # Get the attenuation distance scaling
+        f_r = (self.CONSTANTS["c4a"] - self.CONSTANTS["c4"]) * np.log(
+            np.sqrt(rrup ** 2. + self.CONSTANTS["crb"] ** 2.))
+
+        # Get the magnitude dependent term
+        f_rm = (C["cg1"] +
+                (C["cg2"] / np.cosh(max(mag - C["cg3"], 0.0)))) * rrup
+        # Apply adjustment factor for Wenchuan
+        return f_r + (f_rm * C["gwn"])
+
 
 class ChiouYoungs2014PEER(ChiouYoungs2014):
     """
@@ -330,7 +444,7 @@ class ChiouYoungs2014PEER(ChiouYoungs2014):
         PGA,
     ])
 
-    def _get_stddevs(self, sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
+    def get_stddevs(self, C, sites, mag, y_ref, f_nl_scaling, stddev_types):
         """
         Returns the standard deviation, which is fixed at 0.65 for every site
         """
@@ -338,7 +452,7 @@ class ChiouYoungs2014PEER(ChiouYoungs2014):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                # eq. 13
+                # Fix total sigma to 0.65
                 ret.append(0.65 * np.ones_like(sites.vs30))
         return ret
 
@@ -359,6 +473,4 @@ class ChiouYoungs2014NearFaultEffect(ChiouYoungs2014):
         directivity prediction parameter.
 
         """
-        centered_dpp = dists.rcdpp
-
-        return centered_dpp
+        return dists.rcdpp

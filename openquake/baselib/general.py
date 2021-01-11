@@ -43,6 +43,7 @@ import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
+U8 = numpy.uint8
 U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
@@ -371,7 +372,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
 _tmp_paths = []
 
 
-def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
+def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     """Create temporary file with the given content.
 
     Please note: the temporary file can be deleted by the caller or not.
@@ -386,7 +387,8 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         if not os.path.exists(dir):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
-    _tmp_paths.append(path)
+    if remove:
+        _tmp_paths.append(path)
     with os.fdopen(fh, "wb") as fh:
         if content:
             if hasattr(content, 'encode'):
@@ -746,83 +748,46 @@ class AccumDict(dict):
                                for key, value in self.items()})
 
 
-# return a dict imt -> slice and the total number of levels
-def _slicedict_n(imt_dt):
-    n = 0
-    slicedic = {}
-    for imt in imt_dt.names:
-        shp = imt_dt[imt].shape
-        n1 = n + (shp[0] if shp else 1)
-        slicedic[imt] = slice(n, n1)
-        n = n1
-    return slicedic, n
+def copyobj(obj, **kwargs):
+    """
+    :returns: a shallow copy of obj with some changed attributes
+    """
+    new = copy.copy(obj)
+    for k, v in kwargs.items():
+        setattr(new, k, v)
+    return new
 
 
 class DictArray(Mapping):
     """
-    A small wrapper over a dictionary of arrays serializable to HDF5:
-
-    >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-    >>> from openquake.baselib import hdf5
-    >>> with hdf5.File('/tmp/x.h5', 'w') as f:
-    ...      f['d'] = d
-    ...      f['d']
-    <DictArray
-    PGA: [0.01 0.02 0.04]
-    PGV: [0.1 0.2]>
-
-    The DictArray maintains the lexicographic order of the keys.
+    A small wrapper over a dictionary of arrays with the same lenghts.
+    Ordered by the lexicographic order of the keys.
     """
     def __init__(self, imtls):
-        self.dt = dt = numpy.dtype(
-            [(str(imt), F64,
-              (len(imls),) if hasattr(imls, '__len__') else (1,))
-             for imt, imls in sorted(imtls.items())])
-        self.slicedic, num_levels = _slicedict_n(dt)
-        self.array = numpy.zeros(num_levels, F64)
-        lenset = set()
-        for imt, imls in imtls.items():
-            self[imt] = imls
-            try:
-                lenset.add(len(imls))
-            except TypeError:
-                lenset.add(1)
-        if len(lenset) == 1:
-            self.L1 = lenset.pop()
-        else:
-            self.L1 = None
-
-    def isnan(self):
-        """
-        :returns: true if all the underlying values are NaNs
-        """
-        return numpy.isnan(self.array).all()
-
-    def new(self, array):
-        """
-        Convert an array of compatible length into a DictArray:
-
-        >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-        >>> d.new(numpy.arange(0, 5, 1))  # array of lenght 5 = 3 + 2
-        <DictArray
-        PGA: [0 1 2]
-        PGV: [3 4]>
-        """
-        assert len(self.array) == len(array)
-        arr = object.__new__(self.__class__)
-        arr.dt = self.dt
-        arr.slicedic = self.slicedic
-        arr.array = array
-        return arr
+        levels = imtls[next(iter(imtls))]
+        self.L1 = len(levels)
+        self.size = len(imtls) * self.L1
+        self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
+                               for imt, imls in sorted(imtls.items())])
+        self.array = numpy.zeros(self.size, F64)
+        self.slicedic = {}
+        n = 0
+        for imt, imls in sorted(imtls.items()):
+            if len(imls) != self.L1:
+                raise ValueError('imt=%s has %d levels, expected %d' %
+                                 (imt, len(imls), self.L1))
+            self.slicedic[imt] = slc = slice(n, n + self.L1)
+            self.array[slc] = imls
+            n += self.L1
 
     def __call__(self, imt):
         return self.slicedic[imt]
 
     def __getitem__(self, imt):
-        return self.array[self.slicedic[imt]]
+        return self.array[self(imt)]
 
     def __setitem__(self, imt, array):
-        self.array[self.slicedic[imt]] = array
+        self.array[self(imt)] = array
 
     def __iter__(self):
         for imt in self.dt.names:
@@ -830,21 +795,6 @@ class DictArray(Mapping):
 
     def __len__(self):
         return len(self.dt.names)
-
-    def __toh5__(self):
-        carray = numpy.zeros(1, self.dt)
-        for imt in self:
-            carray[imt] = self[imt]
-        return carray, {}
-
-    def __fromh5__(self, carray, attrs):
-        self.array = carray[:].view(F64)
-        self.dt = dt = numpy.dtype(
-            [(str(imt), F64, len(carray[0][imt]))
-             for imt in carray.dtype.names])
-        self.slicedic, num_levels = _slicedict_n(dt)
-        for imt in carray.dtype.names:
-            self[imt] = carray[0][imt]
 
     def __eq__(self, other):
         arr = self.array == other.array
@@ -902,10 +852,10 @@ def groupby2(records, kfield, vfield):
     return list(dic.items())  # Python3 compatible
 
 
-def bin_idxs(values, nbins, key=None, minval=None, maxval=None):
+def get_bins(values, nbins, key=None, minval=None, maxval=None):
     """
     :param values: an array of N floats (or arrays)
-    :returns: an array of N indices
+    :returns: an array of N bin indices plus an array of B bins
     """
     assert len(values)
     if key is not None:
@@ -918,7 +868,41 @@ def bin_idxs(values, nbins, key=None, minval=None, maxval=None):
         bins = [minval] * nbins
     else:
         bins = numpy.arange(minval, maxval, (maxval-minval) / nbins)
-    return numpy.searchsorted(bins, values, side='right')
+    return numpy.searchsorted(bins, values, side='right'), bins
+
+
+def groupby_grid(xs, ys, deltax, deltay):
+    """
+    :param xs: an array of P abscissas
+    :param ys: an array of P ordinates
+    :param deltax: grid spacing on the x-axis
+    :param deltay: grid spacing on the y-axis
+    :returns:
+        dictionary centroid -> indices (of the points around each centroid)
+    """
+    lx, ly = len(xs), len(ys)
+    assert lx == ly, (lx, ly)
+    assert lx > 1, lx
+    assert deltax > 0, deltax
+    assert deltay > 0, deltay
+    xmin = xs.min()
+    xmax = xs.max()
+    ymin = ys.min()
+    ymax = ys.max()
+    nx = numpy.ceil((xmax - xmin) / deltax)
+    ny = numpy.ceil((ymax - ymin) / deltay)
+    assert nx > 0, nx
+    assert ny > 0, ny
+    xbins = get_bins(xs, nx, None, xmin, xmax)[0]
+    ybins = get_bins(ys, ny, None, ymin, ymax)[0]
+    acc = AccumDict(accum=[])
+    for p, ij in enumerate(zip(xbins, ybins)):
+        acc[ij].append(p)
+    dic = {}
+    for (i, j), ps in acc.items():
+        idxs = numpy.array(ps)
+        dic[xs[idxs].mean(), ys[idxs].mean()] = idxs
+    return dic
 
 
 def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
@@ -932,7 +916,7 @@ def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
     """
     if len(values) == 0:  # do nothing
         return values
-    idxs = bin_idxs(values, nbins, key, minval, maxval)
+    idxs = get_bins(values, nbins, key, minval, maxval)[0]
     acc = AccumDict(accum=[])
     for idx, val in zip(idxs, values):
         if isinstance(idx, numpy.ndarray):
@@ -1150,6 +1134,8 @@ def random_filter(objects, reduction_factor, seed=42):
     list compared to the original list.
     """
     assert 0 < reduction_factor <= 1, reduction_factor
+    if reduction_factor == 1:  # do not reduce
+        return objects
     rnd = random.Random(seed)
     out = []
     for obj in objects:
@@ -1162,13 +1148,15 @@ def random_histogram(counts, nbins, seed):
     """
     Distribute a total number of counts on a set of bins homogenously.
 
-    >>> random_histogram(1, 2, 42)
+    >>> random_histogram(1, 2, seed=42)
     array([1, 0])
-    >>> random_histogram(100, 5, 42)
+    >>> random_histogram(100, 5, seed=42)
     array([28, 18, 17, 19, 18])
-    >>> random_histogram(10000, 5, 42)
+    >>> random_histogram(10000, 5, seed=42)
     array([2043, 2015, 2050, 1930, 1962])
     """
+    if nbins == 1:
+        return numpy.array([counts])
     numpy.random.seed(seed)
     return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
 
@@ -1415,16 +1403,17 @@ def categorize(values, nchars=2):
     return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
 
 
-def get_array_nbytes(sizedict, size=8):
+def get_nbytes_msg(sizedict, size=8):
     """
     :param sizedict: mapping name -> num_dimensions
     :returns: (size of the array in bytes, descriptive message)
 
-    >>> get_array_nbytes(dict(nsites=2, nbins=5))
+    >>> get_nbytes_msg(dict(nsites=2, nbins=5))
     (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
     """
     nbytes = numpy.prod(list(sizedict.values())) * size
-    prod = ' * '.join('(%s=%d)' % item for item in sizedict.items())
+    prod = ' * '.join('({}={:_d})'.format(k, int(v))
+                      for k, v in sizedict.items())
     return nbytes, '%s * %d bytes = %s' % (prod, size, humansize(nbytes))
 
 
@@ -1453,7 +1442,7 @@ def agg_probs(*probs):
         acc *= 1. - prob
     return 1. - acc
 
-# ###########]]]###### COMPRESSION/DECOMPRESSION ##################### #
+# #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
 # do that, except in one case. The case if when you have a lot of workers
