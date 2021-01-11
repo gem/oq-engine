@@ -92,9 +92,21 @@ class CY14SiteTerm(GMPE):
                                                       imt, stds_types)
 
         # Compute the site term correction factor
-        cy14 = ChiouYoungs2014()
-        vs30 = sites.vs30
-        fa = cy14._get_site_term(cy14.COEFFS[imt], vs30, mean)
+        vs30 = sites.vs30.copy()
+        fa = self._get_site_term(ChiouYoungs2014.COEFFS[imt], vs30, mean)
         mean += fa
 
         return mean, stddvs
+
+    def _get_site_term(self, C, vs30, ln_y_ref):
+        """
+        Applies the linear and nonlinear site amplification term of Chiou &
+        Youngs (2014) (excluding the basin amplification term)
+        """
+        y_ref = np.exp(ln_y_ref)
+        exp1 = np.exp(C['phi3'] * (vs30.clip(-np.inf, 1130) - 360))
+        exp2 = np.exp(C['phi3'] * (1130 - 360))
+        af = (C['phi1'] * np.log(vs30 / 1130).clip(-np.inf, 0) +
+              C['phi2'] * (exp1 - exp2) *
+              np.log((y_ref + C['phi4']) / C['phi4']))
+        return af
