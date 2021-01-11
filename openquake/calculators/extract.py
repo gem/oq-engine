@@ -821,10 +821,9 @@ def extract_losses_by_asset(dstore, what):
             data = util.compose_arrays(assets, losses)
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
-        avg_losses = dstore['avg_losses-stats']
-        stats = decode(avg_losses.attrs['stat'])
-        for s, stat in enumerate(stats):
-            losses = cast(avg_losses[:, s], loss_dt)
+        aw = hdf5.ArrayWrapper.from_(dstore['avg_losses-stats'])
+        for s, stat in enumerate(aw.stat):
+            losses = cast(aw[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
             yield stat, data
     elif 'avg_losses-rlzs' in dstore:  # there is only one realization

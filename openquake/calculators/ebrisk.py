@@ -196,8 +196,10 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.create_dframe(
             'agg_loss_table', descr, K=len(self.aggkey))
         self.param.pop('oqparam', None)  # unneeded
-        self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L),
-                                   attrs=dict(stat=[b'mean']))  # mean
+        self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))
+        self.datastore.set_shape_descr(
+            'avg_losses-stats', asset_id=self.assetcol['id'], stat='mean',
+            loss_type=oq.loss_names)
         alt_nbytes = 4 * self.E * L
         if alt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The event loss table is too big to be transfer'
@@ -260,4 +262,4 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.create_dframe('avg_gmf', self.avg_gmf.items())
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
-        prc.run()
+        prc.run(exports='')
