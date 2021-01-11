@@ -152,23 +152,20 @@ def _rec_populate(parser, funcdict):
             _populate(subp, func)
 
 
-def find_main(pkg):
+def pkg2dic(pkg):
     """
     :param pkg: a python module or package
     :returns: a dictionary name -> func_or_dic_of_funcs
-
-    If `pkg` is actually a module, then the main function of the module
-    is returned or an AttributeError is raised, if missing.
     """
     if not hasattr(pkg, '__path__'):  # is a module, not a package
-        return pkg.main
+        return {pkg.__name__: pkg.main}
     dic = {}
     for path in pkg.__path__:
         for name in os.listdir(path):
             fname = os.path.join(path, name)
             dotname = pkg.__name__ + '.' + name
             if os.path.isdir(fname) and '__init__.py' in os.listdir(fname):
-                subdic = find_main(importlib.import_module(dotname))
+                subdic = pkg2dic(importlib.import_module(dotname))
                 if subdic:
                     dic[name] = subdic
             elif name.endswith('.py') and name not in (
@@ -194,7 +191,7 @@ def parser(funcdict, **kw):
         parser.add_argument(
             '-v', '--version', action='version', version=version)
     if inspect.ismodule(funcdict):  # passed a module or package
-        funcdict = find_main(funcdict)
+        funcdict = pkg2dic(funcdict)
     if callable(funcdict):
         _populate(parser, funcdict)
     else:
