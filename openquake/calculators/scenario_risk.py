@@ -85,15 +85,15 @@ def event_based_risk(riskinputs, param, monitor):
     return result
 
 
-@base.calculators.add('scenario_risk')
-class ScenarioRiskCalculator(base.RiskCalculator):
+@base.calculators.add('scenario_risk', 'event_based_risk')
+class EventBasedRiskCalculator(base.RiskCalculator):
     """
-    Run a scenario risk calculation
+    Run a scenario/event_based risk calculation
     """
     core_task = event_based_risk
     is_stochastic = True
-    precalc = 'scenario'
-    accept_precalc = ['scenario']
+    precalc = 'event_based'
+    accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
 
     def pre_execute(self):
         """
@@ -101,6 +101,23 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         with the unit of measure, used in the export phase.
         """
         oq = self.oqparam
+        if not oq.ground_motion_fields:
+            return  # this happens in the reportwriter
+
+        parent = self.datastore.parent
+        if parent:
+            self.datastore['full_lt'] = parent['full_lt']
+            ne = len(parent['events'])
+            logging.info('There are %d ruptures and %d events',
+                         len(parent['ruptures']), ne)
+
+        if oq.investigation_time and oq.return_periods != [0]:
+            # setting return_periods = 0 disable loss curves
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+            if eff_time < 2:
+                logging.warning(
+                    'eff_time=%s is too small to compute loss curves',
+                    eff_time)
         super().pre_execute()
         self.assetcol = self.datastore['assetcol']
         self.riskinputs = self.build_riskinputs('gmf')
@@ -165,33 +182,3 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         else:  # event_based_risk, run post_risk
             prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
             prc.run(exports='')
-
-
-@base.calculators.add('event_based_risk')
-class EbrCalculator(ScenarioRiskCalculator):
-    """
-    Event based risk calculator
-    """
-    precalc = 'event_based'
-    accept_precalc = ['event_based', 'event_based_risk', 'ebrisk']
-
-    def pre_execute(self):
-        oq = self.oqparam
-        if not oq.ground_motion_fields:
-            return  # this happens in the reportwriter
-
-        parent = self.datastore.parent
-        if parent:
-            self.datastore['full_lt'] = parent['full_lt']
-            ne = len(parent['events'])
-            logging.info('There are %d ruptures and %d events',
-                         len(parent['ruptures']), ne)
-
-        if oq.investigation_time and oq.return_periods != [0]:
-            # setting return_periods = 0 disable loss curves
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-            if eff_time < 2:
-                logging.warning(
-                    'eff_time=%s is too small to compute loss curves',
-                    eff_time)
-        super().pre_execute()
