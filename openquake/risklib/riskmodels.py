@@ -331,7 +331,7 @@ class RiskModel(object):
             for i, asset in enumerate(assets)]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
-    def scenario_risk(self, loss_type, assets, gmvs, eids, epsilons):
+    def event_based_risk(self, loss_type, assets, gmvs, eids, epsilons):
         """
         :returns: an array of shape (A, E)
         """
@@ -355,7 +355,7 @@ class RiskModel(object):
         loss_matrix[:, :] = (loss_ratio_matrix.T * values).T
         return loss_matrix
 
-    scenario = ebrisk = event_based_risk = scenario_risk
+    scenario = ebrisk = scenario_risk = event_based_risk
 
     def scenario_damage(self, loss_type, assets, gmvs, eids=None, eps=None):
         """
