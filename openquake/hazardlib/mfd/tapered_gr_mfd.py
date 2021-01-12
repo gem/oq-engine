@@ -119,11 +119,35 @@ class TaperedGRMFD(BaseMFD):
 
         return rate * scale
 
+    def _get_rate(self, mag):
+        """
+        Calculate and return an annual occurrence rate for a specific bin.
+
+        :param mag:
+            Magnitude value corresponding to the center of the bin of interest.
+        :returns:
+            Float number, the annual occurrence rate
+        """
+        gr_rate = self._dt_gr._get_rate(mag)
+        return self._scale_mag_bin_rate(mag, gr_rate)
+
     def get_min_max_mag(self):
+        """
+        Return the minimum and maximum magnitudes
+        """
         return self._dt_gr.get_min_max_mag()
 
     def get_annual_occurrence_rates(self):
+        """
+        Calculate and return the annual occurrence rates histogram.
 
+        The result histogram has only one bin if minimum and maximum magnitude
+        values appear equal after rounding.
+
+        :returns:
+            See :meth:
+            `openquake.hazardlib.mfd.base.BaseMFD.get_annual_occurrence_rates`.
+        """
         mag_rates = []
 
         gr_rates = self._dt_gr.get_annual_occurrence_rates()
