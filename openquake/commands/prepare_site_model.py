@@ -178,7 +178,7 @@ main.z1pt0 = dict(help='build the z1pt0', abbrev='-1')
 main.z2pt5 = dict(help='build the z2pt5', abbrev='-2')
 main.vs30measured = dict(help='build the vs30measured', abbrev='-3')
 main.exposure_xml = dict(help='exposure(s) in XML format', nargs='*')
-mainsites_csv = dict(help='sites in CSV format', nargs='*')
+main.sites_csv = dict(help='sites in CSV format', nargs='*')
 main.grid_spacing = 'grid spacing in km (the default 0 means no grid)'
 main.assoc_distance = 'sites over this distance are discarded'
 main.output = 'output file'

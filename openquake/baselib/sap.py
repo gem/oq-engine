@@ -222,4 +222,12 @@ def run(funcdict, argv=None, **parserkw):
     :param argv: a list of command-line arguments (if None, use sys.argv[1:])
     :param parserkw: arguments accepted by argparse.ArgumentParser
     """
-    _run(parser(funcdict, **parserkw), argv)
+    return _run(parser(funcdict, **parserkw), argv)
+
+
+def runline(line, **parserkw):
+    """
+    Run a command-line. Useful in the tests.
+    """
+    pkg, *args = line.split()
+    return run(importlib.import_module(pkg), args, **parserkw)
