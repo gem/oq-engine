@@ -32,10 +32,6 @@ from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.engine.engine import run_jobs
-from openquake.commands.check_input import main as check_input
-from openquake.commands.prepare_site_model import main as prepare_site_model
-from openquake.commands.nrml_to import main as nrml_to, fiona
-from openquake.commands import run
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
@@ -604,7 +600,9 @@ class NRML2CSVTestCase(unittest.TestCase):
         shutil.rmtree(temp_dir)
 
     def test_nrml_to_gpkg(self):
-        if not fiona:
+        try:
+            import fiona
+        except ImportError:
             raise unittest.SkipTest('fiona is missing')
         temp_dir = tempfile.mkdtemp()
         with Print.patch() as p:
