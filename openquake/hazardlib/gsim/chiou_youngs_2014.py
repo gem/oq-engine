@@ -216,7 +216,7 @@ class ChiouYoungs2014(GMPE):
         Returns the hanging wall term
         """
         fhw = np.zeros(dists.rrup.shape)
-        idx = dists.rrup > 0.0
+        idx = dists.rx >= 0.0
         if np.any(idx):
             fdist = 1.0 - (np.sqrt(dists.rjb[idx] ** 2. + rup.ztor ** 2.) /
                            (dists.rrup[idx] + 1.0))

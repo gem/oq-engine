@@ -474,7 +474,7 @@ hazard_uhs-std.csv
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.05).csv',
             'hazard_curve-mean-SA(0.1).csv', 'hazard_curve-mean-SA(0.2).csv',
             'hazard_curve-mean-SA(0.5)', 'hazard_curve-mean-SA(1.0).csv',
-            'hazard_curve-mean-SA(2.0).csv'], case_28.__file__, delta=1E-5)
+            'hazard_curve-mean-SA(2.0).csv'], case_28.__file__, delta=1E-6)
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
 
@@ -604,13 +604,13 @@ hazard_uhs-std.csv
     def test_case_46(self):
         # SMLT with applyToBranches
         self.assert_curves_ok(["hazard_curve-mean.csv"], case_46.__file__,
-                               delta=1E-5)
+                               delta=1E-6)
 
     def test_case_47(self):
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
         self.assert_curves_ok(["hazard_curve-rlz-000-PGA.csv",
                                "hazard_curve-rlz-001-PGA.csv"],
-                              case_47.__file__, delta=1E05)
+                              case_47.__file__, delta=1E-5)
 
     def test_case_48(self):
         # pointsource_distance effects on a simple point source.
