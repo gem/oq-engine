@@ -24,7 +24,7 @@ class TimeoutError(RuntimeError):
 def _streamer():
     # streamer for zmq workers running on the master node
     port = int(config.zworkers.ctrl_port)
-    task_input_url = 'tcp://127.0.0.1:%d' % (port + 2)
+    task_input_url = 'tcp://0.0.0.0:%d' % (port + 2)
     task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, port + 1)
     try:
         z.zmq.proxy(z.bind(task_input_url, z.zmq.PULL),
