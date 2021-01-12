@@ -35,10 +35,11 @@ USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
 #
-ADD scripts/oq-start.sh ${HOME}
+ADD scripts/oq-db_start.sh ${HOME}
 ADD zmq/openquake.cfg /etc/openquake/openquake.cfg
 RUN mkdir oqdata 
 # if want to copy engine src to home
 #ADD oq-engine-master ${HOME}
 STOPSIGNAL SIGINT
-ENTRYPOINT ["/bin/bash"]
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["./oq-db_start.sh"]
