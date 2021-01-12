@@ -17,7 +17,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 # This is required to load a custom  local_settings.py when 'oq webui' is used.
-export PYTHONPATH=$HOME
+set -x
+#export PYTHONPATH=$HOME
 
 oq dbserver start &
 
