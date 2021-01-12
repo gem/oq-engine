@@ -47,7 +47,7 @@ def run_sec_sims(out, loss_types, sec_sims, seed):
         out[lt][:] = numpy.mean(affected * out[lt], axis=0)  # shape E
 
 
-def scenario_risk(riskinputs, param, monitor):
+def event_based_risk(riskinputs, param, monitor):
     """
     Core function for a scenario_risk/event_based_risk computation.
 
@@ -90,7 +90,7 @@ class ScenarioRiskCalculator(base.RiskCalculator):
     """
     Run a scenario risk calculation
     """
-    core_task = scenario_risk
+    core_task = event_based_risk
     is_stochastic = True
     precalc = 'scenario'
     accept_precalc = ['scenario']
