@@ -31,8 +31,8 @@ ENV PATH="/opt/openquake/bin:$PATH"
 ENV LANG en_US.UTF-8
 RUN apt-get update &&  apt-get install -y --no-install-recommends git ssh sudo && \
     useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
-ADD zmq/openquake.cfg /etc/openquake/openquake.cfg
-RUN chown -R openquake /etc/openquake/ 
+ADD zmq/openquake.cfg /opt/openquake/openquake.cfg
+RUN chown -R openquake /opt/openquake/ 
 USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
