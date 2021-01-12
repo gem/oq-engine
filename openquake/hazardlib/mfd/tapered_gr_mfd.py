@@ -51,8 +51,13 @@ class TaperedGRMFD(BaseMFD):
         self.large_mo = mag_to_mo(self.TAPERED_LARGE_MAG)
         self.corner_mo = mag_to_mo(corner_mag)
 
+        # This class uses a Double Truncated GR distribution, and the
+        # rates are modified per the tapering.
         self._dt_gr = TruncatedGRMFD(self.min_mag, self.max_mag,
                                      self.bin_width, self.a_val, self.b_val)
+        self._get_min_mag_and_num_bins = self._dt_gr._get_min_mag_and_num_bins
+
+        self.check_constraints()
 
     def check_constraints(self):
         """
@@ -79,14 +84,14 @@ class TaperedGRMFD(BaseMFD):
                              'bin width %g at least' %
                              (self.max_mag, self.min_mag, self.bin_width))
 
-        if not 0 < self.b_val:
+        if not self.b_val > 0.:
             raise ValueError('b-value %g must be non-negative' % self.b_val)
 
         if not self.corner_mag >= self.min_mag + self.bin_width:
             raise ValueError('corner magnitude %g must be higher than '
                              'minimum magnitude %g by '
                              'bin width %g at least' %
-                             (self.max_mag, self.min_mag, self.bin_width))
+                             (self.corner_mag, self.min_mag, self.bin_width))
 
     def _pareto(self, mo, corner_mo):
         """'pareto' function from nhsmp-haz
