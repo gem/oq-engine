@@ -259,9 +259,8 @@ main.export_output = dict(
 main.export_outputs = dict(
     abbrev='--eos', nargs=2, metavar=('CALCULATION_ID', 'TARGET_DIR'),
     help='Export all of the calculation outputs to the specified directory')
-main.param = dict(
-    abbrev='-p', help='Override parameters specified with the syntax '
-    'NAME1=VALUE1,NAME2=VALUE2,...')
+main.param = ('Override parameters specified with the syntax '
+              'NAME1=VALUE1,NAME2=VALUE2,...')
 main.config_file = ('Custom openquake.cfg file, to override default '
                     'configurations')
 main.exports = ('Comma-separated string specifing the export formats, '

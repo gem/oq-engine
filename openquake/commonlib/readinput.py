@@ -255,7 +255,7 @@ def get_params(job_ini, kw={}):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
+def get_oqparam(job_ini, pkg=None, calculators=None, validate=1):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -266,8 +266,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
     :param calculators:
         Sequence of calculator names (optional) used to restrict the
         valid choices for `calculation_mode`
-    :param kw:
-        Dictionary of strings to override the job parameters
     :param validate:
         Flag. By default it is true and the parameters are validated
     :returns:
@@ -284,7 +282,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
         calculators or base.calculators)
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
-        job_ini = get_params(os.path.join(basedir, job_ini), kw)
+        job_ini = get_params(os.path.join(basedir, job_ini))
     re = os.environ.get('OQ_REDUCE')  # debugging facility
     if re:
         # reduce the imtls to the first imt
