@@ -2,12 +2,12 @@ Scenario Damage
 ===============
 
 ============== ===================
-checksum32     711,595,636        
-date           2019-05-10T05:07:25
-engine_version 3.5.0-gitbaeb4c1e35
+checksum32     1_202_211_782      
+date           2020-03-13T11:20:35
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
-num_sites = 1, num_levels = 26, num_rlzs = 1
+num_sites = 2, num_levels = 1, num_rlzs = 1
 
 Parameters
 ----------
@@ -22,6 +22,7 @@ rupture_mesh_spacing            2.0
 complex_fault_mesh_spacing      2.0               
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            {'default': {}}   
 ground_motion_correlation_model 'JB2009'          
 minimum_intensity               {}                
 random_seed                     42                
@@ -43,49 +44,42 @@ structural_fragility `fragility_model.xml <fragility_model.xml>`_
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b_1       1.00000 trivial(1)      1               
-========= ======= =============== ================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[BooreAtkinson2008]': [0]>
-
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b_1       1.00000 1               
+========= ======= ================
 
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     2
+#taxonomies 1
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
-Wood     1.00000 NaN    1   1   1         1         
+Wood     1.00000 0.0    1   1   2         2         
 ======== ======= ====== === === ========= ==========
+
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
-=================== ========= ========= ======
-operation           time_sec  memory_mb counts
-=================== ========= ========= ======
-saving gmfs         0.00201   0.0       1     
-building riskinputs 0.00198   0.0       1     
-computing gmfs      0.00156   0.0       1     
-reading exposure    5.515E-04 0.0       1     
-=================== ========= ========= ======
+====================== ========= ========= ======
+calc_66906             time_sec  memory_mb counts
+====================== ========= ========= ======
+ScenarioCalculator.run 0.05081   0.0       1     
+saving gmfs            0.00296   0.0       1     
+computing gmfs         0.00161   0.0       1     
+building riskinputs    9.875E-04 0.0       1     
+reading exposure       7.279E-04 0.0       1     
+====================== ========= ========= ======

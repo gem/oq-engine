@@ -2,12 +2,12 @@ Scenario QA Test 3
 ==================
 
 ============== ===================
-checksum32     372,210,909        
-date           2019-05-10T05:07:15
-engine_version 3.5.0-gitbaeb4c1e35
+checksum32     372_210_909        
+date           2020-03-13T11:20:19
+engine_version 3.9.0-gitfb3ef3a732
 ============== ===================
 
-num_sites = 4, num_levels = 15, num_rlzs = 1
+num_sites = 4, num_levels = 3, num_rlzs = 1
 
 Parameters
 ----------
@@ -22,6 +22,7 @@ rupture_mesh_spacing            10.0
 complex_fault_mesh_spacing      10.0              
 width_of_mfd_bin                None              
 area_source_discretization      None              
+pointsource_distance            {'default': {}}   
 ground_motion_correlation_model None              
 minimum_intensity               {}                
 random_seed                     3                 
@@ -43,36 +44,18 @@ structural_vulnerability `vulnerability_model.xml <vulnerability_model.xml>`_
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b_1       1.00000 trivial(1)      1               
-========= ======= =============== ================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[ChiouYoungs2008]': [0]>
-
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
+========= ======= ================
+smlt_path weight  num_realizations
+========= ======= ================
+b_1       1.00000 1               
+========= ======= ================
 
 Exposure model
 --------------
-=============== ========
-#assets         4       
-#taxonomies     3       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     4
+#taxonomies 3
+=========== =
 
 ======== ======= ====== === === ========= ==========
 taxonomy mean    stddev min max num_sites num_assets
@@ -82,13 +65,24 @@ W        1.00000 0.0    1   1   2         2
 *ALL*    1.00000 0.0    1   1   4         4         
 ======== ======= ====== === === ========= ==========
 
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
+
 Slowest operations
 ------------------
-=================== ========= ========= ======
-operation           time_sec  memory_mb counts
-=================== ========= ========= ======
-saving gmfs         0.02406   0.50000   1     
-building riskinputs 0.01461   0.0       1     
-computing gmfs      0.00682   0.0       1     
-reading exposure    4.473E-04 0.0       1     
-=================== ========= ========= ======
+====================== ========= ========= ======
+calc_66889             time_sec  memory_mb counts
+====================== ========= ========= ======
+ScenarioCalculator.run 0.08856   0.75000   1     
+saving gmfs            0.03176   0.75000   1     
+computing gmfs         0.00678   0.0       1     
+building riskinputs    0.00125   0.0       1     
+reading exposure       4.783E-04 0.0       1     
+====================== ========= ========= ======

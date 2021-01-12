@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,16 +16,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import csv
+import json
 import logging
 import numpy
+import shapely
 from openquake.baselib import hdf5, general
 from openquake.hazardlib import valid, geo, InvalidFile
-from openquake.commonlib import logictree
 from openquake.calculators import base
 from openquake.calculators.extract import extract
 
 U16 = numpy.uint16
-U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 
@@ -51,25 +51,25 @@ def get_dmg_csq(crm, assets_by_site, gmf):
                 [rm], [w] = crm.get_rmodels_weights(taxonomy)
                 fracs = rm.scenario_damage(loss_type, assets, [gmv])
                 for asset, frac in zip(assets, fracs):
-                    dmg = asset['number'] * frac[0, :D]
-                    csq = asset['value-' + loss_type] * frac[0, D]
+                    dmg = asset['number'] * frac  # shape (1, D)
+                    csq = crm.compute_csq(asset, frac, loss_type)
                     out[asset['ordinal'], l, 0, :D] = dmg
-                    out[asset['ordinal'], l, 0, D] = csq
+                    out[asset['ordinal'], l, 0, D] = csq['losses']
     return out
 
 
 def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
-                     perils, no_frag_perils):
+                     perils, binary_perils):
     # dmg_csq has shape (A, R, L, 1, D + 1)
     dtlist = []
     field2tup = {}
     occupants = [name for name in assetcol.array.dtype.names
-                 if name.startswith('occupants') and
-                 not name.endswith('_None')]
+                 if name.startswith('occupants')]
     for name, dt in assetcol.array.dtype.descr:
-        if name not in {'area', 'occupants_None', 'ordinal'}:
+        if name not in {'area', 'value-occupants', 'ordinal', 'id'}:
             dtlist.append((name, dt))
     dtlist.sort()
+    dtlist.insert(0, ('id', '<S100'))
     if not loss_types:  # missing ASH
         loss_types = ['structural']  # for LAVA, LAHAR, PYRO
     for l, loss_type in enumerate(loss_types):
@@ -78,9 +78,9 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
                 field = ds + '-' + loss_type + '-' + peril
                 field2tup[field] = (p, l, 0, d)
                 dtlist.append((field, F32))
-        for peril in no_frag_perils:
+        for peril in binary_perils:
             dtlist.append(('loss-' + loss_type + '-' + peril, F32))
-    for peril in no_frag_perils:
+    for peril in binary_perils:
         for occ in occupants:
             dtlist.append((occ + '-' + peril, F32))
         dtlist.append(('number-' + peril, F32))
@@ -90,20 +90,68 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
             arr[field] = assetcol.array[field]
         elif field in field2tup:  # dmg_csq field
             arr[field] = dmg_csq[(slice(None),) + field2tup[field]]
-    # computed losses and fatalities for no_frag_perils
+    # computed losses and fatalities for binary_perils
     for rec in arr:
         haz = hazard[rec['site_id']]
         for loss_type in loss_types:
             value = rec['value-' + loss_type]
-            for peril in no_frag_perils:
+            for peril in binary_perils:
                 rec['loss-%s-%s' % (loss_type, peril)] = haz[peril] * value
         for occupant in occupants:
             occ = rec[occupant]
-            for peril in no_frag_perils:
+            for peril in binary_perils:
                 rec[occupant + '-' + peril] = haz[peril] * occ
-        for peril in no_frag_perils:
+        for peril in binary_perils:
             rec['number-' + peril] = haz[peril] * rec['number']
     return arr
+
+
+def csv2peril(fname, name, sitecol, tofloat, asset_hazard_distance):
+    """
+    Converts a CSV file into a peril array of length N
+    """
+    data = []
+    with open(fname) as f:
+        for row in csv.DictReader(f):
+            intensity = tofloat(row['intensity'])
+            if intensity > 0:
+                data.append((valid.longitude(row['lon']),
+                             valid.latitude(row['lat']),
+                             intensity))
+    data = numpy.array(data, [('lon', float), ('lat', float),
+                              ('number', float)])
+    logging.info('Read %s with %d rows' % (fname, len(data)))
+    if len(data) != len(numpy.unique(data[['lon', 'lat']])):
+        raise InvalidFile('There are duplicated points in %s' % fname)
+    try:
+        distance = asset_hazard_distance[name]
+    except KeyError:
+        distance = asset_hazard_distance['default']
+    sites, filtdata, _discarded = geo.utils.assoc(
+        data, sitecol, distance, 'filter')
+    peril = numpy.zeros(len(sitecol), float)
+    peril[sites.sids] = filtdata['number']
+    return peril
+
+
+def wkt2peril(fname, name, sitecol):
+    """
+    Converts a WKT file into a peril array of length N
+    """
+    with open(fname) as f:
+        header = next(f)  # skip header
+        if header != 'geom\n':
+            raise ValueError('%s has header %r, should be geom instead' %
+                             (fname, header))
+        wkt = f.read()
+        if not wkt.startswith('"'):
+            raise ValueError('The geometry must be quoted in %s : "%s..."' %
+                             (fname, wkt.split('(')[0]))
+        geom = shapely.wkt.loads(wkt.strip('"'))  # strip quotes
+    peril = numpy.zeros(len(sitecol), float)
+    for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
+        peril[sid] = shapely.geometry.Point(lon, lat).within(geom)
+    return peril
 
 
 @base.calculators.add('multi_risk')
@@ -114,71 +162,60 @@ class MultiRiskCalculator(base.RiskCalculator):
     core_task = None  # no parallel
     is_stochastic = True
 
-    def save_multi_peril(self):
+    def import_perils(self):  # called in pre_execute
         """
         Read the hazard fields as csv files, associate them to the sites
         and create the `hazard` dataset.
         """
         oq = self.oqparam
-        fnames = oq.inputs['multi_peril']
-        dt = [(haz, float) for haz in oq.multi_peril]
+        perils, fnames = zip(*oq.inputs['multi_peril'].items())
+        dt = numpy.dtype([(haz, float) for haz in perils])
         N = len(self.sitecol)
-        self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
-        for name, fname in zip(oq.multi_peril, fnames):
-            if name in 'LAVA LAHAR PYRO':
-                tofloat = valid.probability
-            else:
-                tofloat = valid.positivefloat
-            data = []
+        self.datastore.create_dset('multi_peril', dt, (N,), fillvalue=None)
+        for name, fname in zip(perils, fnames):
+            tofloat = (valid.positivefloat if name == 'ASH'
+                       else valid.probability)
             with open(fname) as f:
-                for row in csv.DictReader(f):
-                    intensity = tofloat(row['intensity'])
-                    if intensity > 0:
-                        data.append((valid.longitude(row['lon']),
-                                     valid.latitude(row['lat']),
-                                     intensity))
-            data = numpy.array(data, [('lon', float), ('lat', float),
-                                      ('number', float)])
-            logging.info('Read %s with %d rows' % (fname, len(data)))
-            if len(data) != len(numpy.unique(data[['lon', 'lat']])):
-                raise InvalidFile('There are duplicated points in %s' % fname)
-            try:
-                asset_hazard_distance = oq.asset_hazard_distance[name]
-            except KeyError:
-                asset_hazard_distance = oq.asset_hazard_distance['default']
-            sites, filtdata, _discarded = geo.utils.assoc(
-                data, self.sitecol, asset_hazard_distance, 'filter')
-            z = numpy.zeros(N, float)
-            z[sites.sids] = filtdata['number']
-            self.datastore['multi_peril'][name] = z
-        self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
+                header = next(f)
+            if 'geom' in header:
+                peril = wkt2peril(fname, name, self.sitecol)
+            else:
+                peril = csv2peril(fname, name, self.sitecol, tofloat,
+                                  oq.asset_hazard_distance)
+            if peril.sum() == 0:
+                logging.warning('No sites were affected by %s' % name)
+            self.datastore['multi_peril'][name] = peril
 
     def execute(self):
-        dstates = self.riskmodel.damage_states
-        ltypes = self.riskmodel.loss_types
-        P = len(self.oqparam.multi_peril) + 1
+        """
+        Compute the perils without any parallelization
+        """
+        dstates = self.crmodel.damage_states
+        ltypes = self.crmodel.loss_types
+        theperils = self.oqparam.inputs['multi_peril']
+        P = len(theperils) + 1
         L = len(ltypes)
         D = len(dstates)
         A = len(self.assetcol)
         ampl = self.oqparam.ash_wet_amplification_factor
         dmg_csq = numpy.zeros((A, P, L, 1, D + 1), F32)
         perils = []
-        if 'ASH' in self.oqparam.multi_peril:
+        if 'ASH' in theperils:
             assets = self.assetcol.assets_by_site()
             gmf = self.datastore['multi_peril']['ASH']
-            dmg_csq[:, 0] = get_dmg_csq(self.riskmodel, assets, gmf)
+            dmg_csq[:, 0] = get_dmg_csq(self.crmodel, assets, gmf)
             perils.append('ASH_DRY')
-            dmg_csq[:, 1] = get_dmg_csq(self.riskmodel, assets, gmf * ampl)
+            dmg_csq[:, 1] = get_dmg_csq(self.crmodel, assets, gmf * ampl)
             perils.append('ASH_WET')
         hazard = self.datastore['multi_peril']
-        no_frag_perils = []
-        for peril in self.oqparam.multi_peril:
+        binary_perils = []
+        for peril in theperils:
             if peril != 'ASH':
-                no_frag_perils.append(peril)
+                binary_perils.append(peril)
         self.datastore['asset_risk'] = arr = build_asset_risk(
             self.assetcol, dmg_csq, hazard, ltypes, dstates,
-            perils, no_frag_perils)
-        self.all_perils = perils + no_frag_perils
+            perils, binary_perils)
+        self.all_perils = perils + binary_perils
         return arr
 
     def get_fields(self, cat):
@@ -188,10 +225,10 @@ class MultiRiskCalculator(base.RiskCalculator):
         """
         Compute aggregated risk
         """
-        md = extract(self.datastore, 'exposure_metadata')
-        categories = [cat.replace('value-', 'loss-') for cat in md] + [
-            ds + '-structural' for ds in self.riskmodel.damage_states]
-        multi_risk = list(md.array)
+        md = json.loads(extract(self.datastore, 'exposure_metadata').json)
+        categories = [n.replace('value-', 'loss-') for n in md['names']] + [
+            ds + '-structural' for ds in self.crmodel.damage_states]
+        multi_risk = md['names']
         multi_risk += sorted(
             set(arr.dtype.names) -
             set(self.datastore['assetcol/array'].dtype.names))

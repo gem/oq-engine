@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,12 +18,25 @@
 
 import os
 import sys
+import numpy
+import scipy
+import pandas
 import configparser
-from openquake.baselib.general import git_suffix
+
+# disable OpenBLAS threads before the first numpy import
+# see https://github.com/numpy/numpy/issues/11826
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+from openquake.baselib.general import git_suffix  # noqa: E402
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.6.0'
+__version__ = '3.11.0'
 __version__ += git_suffix(__file__)
+
+version = dict(engine=__version__,
+               python='%d.%d' % sys.version_info[:2],
+               numpy=numpy.__version__,
+               scipy=scipy.__version__,
+               pandas=pandas.__version__)
 
 
 class InvalidFile(Exception):
@@ -77,7 +90,9 @@ def read(*paths, **validators):
     """
     paths = config.paths + list(paths)
     parser = configparser.ConfigParser()
-    found = parser.read(os.path.normpath(os.path.expanduser(p)) for p in paths)
+    found = parser.read(
+        [os.path.normpath(os.path.expanduser(p)) for p in paths],
+        encoding='utf8')
     if not found:
         raise IOError('No configuration file found in %s' % str(paths))
     config.found = found
@@ -85,38 +100,36 @@ def read(*paths, **validators):
     for section in parser.sections():
         config[section] = sec = DotDict(parser.items(section))
         for k, v in sec.items():
-            sec[k] = validators.get(k, lambda x: x)(v)
+            try:
+                sec[k] = validators.get(k, lambda x: x)(v)
+            except ValueError as err:
+                raise ValueError('%s for %s in %s' % (err, k, found[0]))
 
 
 config.read = read
 
 
-def boolean(flag):
+def positiveint(flag):
     """
-    Convert string in boolean
+    Convert string into integer
     """
     s = flag.lower()
     if s in ('1', 'yes', 'true'):
-        return True
+        return 1
     elif s in ('0', 'no', 'false'):
-        return False
-    raise ValueError('Unknown flag %r' % s)
+        return 0
+    i = int(s)
+    if i < 0:
+        raise ValueError('Invalid %r' % s)
+    return i
 
 
 config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
-            multi_user=boolean, multi_node=boolean,
-            serialize_jobs=boolean, strict=boolean, max_sites_disagg=int,
-            code=exec)
+            multi_user=positiveint, serialize_jobs=positiveint,
+            strict=positiveint, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
-
-multi_node = config.distribution.get('multi_node', False)
-
-if config.distribution.oq_distribute == 'celery' and not multi_node:
-    sys.stderr.write(
-        'oq_distribute is celery but you are not in a cluster? '
-        'probably you forgot to set `multi_node=true` in openquake.cfg\n')

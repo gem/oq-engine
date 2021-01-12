@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -36,6 +36,7 @@ class ToroEtAl1997MblgNSHMPTestCase(BaseGSIMTestCase):
     def test_std_total(self):
         self.check('TORO97NSHMP/T097MblgNSHMP_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
+
 
 class ToroEtAl1997NSHMPTestCase(BaseGSIMTestCase):
     GSIM_CLASS = ToroEtAl1997MwNSHMP2008

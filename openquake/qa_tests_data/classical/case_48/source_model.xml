@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+  <sourceModel name="Single rupture source">
+    <pointSource
+        id="1"
+        name="point source"
+        tectonicRegion="active shallow crust"
+        >
+      <pointGeometry>
+        <gml:Point><gml:pos>0 0</gml:pos></gml:Point>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>10</lowerSeismoDepth>
+      </pointGeometry>
+      <magScaleRel>PeerMSR</magScaleRel>
+      <ruptAspectRatio>1</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="3" bValue="1" maxMag="7" minMag="5"/>
+      <nodalPlaneDist>
+        <nodalPlane strike="144" dip="87" rake="-179" probability="1"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth depth="3" probability=".66666667"/>
+        <hypoDepth depth="6" probability=".33333333"/>
+      </hypoDepthDist>
+    </pointSource>
+  </sourceModel>
+</nrml>

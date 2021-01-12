@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2019 GEM Foundation
+# Copyright (c) 2016-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,31 @@
 Utilities to compute mean and quantile curves
 """
 import numpy
-from openquake.baselib.python3compat import encode
+from scipy.stats import norm
+
+
+def norm_cdf(x, a, s):
+    """
+    Gaussian cumulative distribution function; if s=0, returns an
+    Heaviside function instead. NB: for x=a, 0.5 is returned for all s.
+
+    >>> norm_cdf(1.2, 1, .1)
+    0.9772498680518208
+    >>> norm_cdf(1.2, 1, 0)
+    1.0
+    >>> norm_cdf(.8, 1, .1)
+    0.022750131948179216
+    >>> norm_cdf(.8, 1, 0)
+    0.0
+    >>> norm_cdf(1, 1, .1)
+    0.5
+    >>> norm_cdf(1, 1, 0)
+    0.5
+    """
+    if s == 0:
+        return numpy.heaviside(x - a, .5)
+    else:
+        return norm.cdf(x, loc=a, scale=s)
 
 
 def mean_curve(values, weights=None):
@@ -41,6 +65,8 @@ def std_curve(values, weights=None):
     return res
 
 
+# NB: for equal weights and sorted values the quantile is computed a
+# numpy.interp(q, [1/N, 2/N, ..., N/N], values)
 def quantile_curve(quantile, curves, weights=None):
     """
     Compute the weighted quantile aggregate of a set of curves.
@@ -66,11 +92,9 @@ def quantile_curve(quantile, curves, weights=None):
     for idx, _ in numpy.ndenumerate(result):
         data = numpy.array([a[idx] for a in curves])
         sorted_idxs = numpy.argsort(data)
-        sorted_weights = weights[sorted_idxs]
-        sorted_data = data[sorted_idxs]
-        cum_weights = numpy.cumsum(sorted_weights)
+        cum_weights = numpy.cumsum(weights[sorted_idxs])
         # get the quantile from the interpolated CDF
-        result[idx] = numpy.interp(quantile, cum_weights, sorted_data)
+        result[idx] = numpy.interp(quantile, cum_weights, data[sorted_idxs])
     return result
 
 
@@ -196,24 +220,24 @@ def apply_stat(f, arraylist, *extra, **kw):
         return f(arraylist, *extra, **kw)
 
 
-def set_rlzs_stats(dstore, prefix, arrayNR=None):
+def set_rlzs_stats(dstore, prefix, **attrs):
     """
     :param dstore: a DataStore object
-    :param prefix: dataset prefix
-    :param arrayNR: an array of shape (N, R, ...)
+    :param prefix: dataset prefix, assume <prefix>-rlzs is already stored
     """
-    if arrayNR is None:
-        # assume the -rlzs array is already stored
-        arrayNR = dstore[prefix + '-rlzs'][()]
-    else:
-        # store passed the -rlzs array
-        dstore[prefix + '-rlzs'] = arrayNR
+    arrayNR = dstore[prefix + '-rlzs'][()]
     R = arrayNR.shape[1]
+    pairs = list(attrs.items())
+    pairs.insert(1, ('rlz', numpy.arange(R)))
+    dstore.set_shape_descr(prefix + '-rlzs', **dict(pairs))
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
         if not stats:
             return
         statnames, statfuncs = zip(*stats.items())
         weights = dstore['weights'][()]
-        dstore[prefix + '-stats'] = compute_stats2(arrayNR, statfuncs, weights)
-        dstore.set_attrs(prefix + '-stats', stats=encode(statnames))
+        name = prefix + '-stats'
+        dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
+        pairs = list(attrs.items())
+        pairs.insert(1, ('stat', statnames))
+        dstore.set_shape_descr(name, **dict(pairs))

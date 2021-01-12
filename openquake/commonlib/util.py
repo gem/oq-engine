@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -111,18 +111,54 @@ def log(array, cutoff):
 
 def closest_to_ref(arrays, ref, cutoff=1E-12):
     """
-    :param arrays: a sequence of R arrays
+    :param arrays: a sequence of arrays
     :param ref: the reference array
-    :returns: a dictionary with keys rlz, value, and dist
+    :returns: a list of indices ordered by closeness
+
+    This function is used to extract the realization closest to the mean in
+    disaggregation. For instance, if there are 2 realizations with indices
+    0 and 1, the first hazard curve having values
+
+    >>> c0 = numpy.array([.99, .97, .5, .1])
+
+    and the second hazard curve having values
+
+    >>> c1 = numpy.array([.98, .96, .45, .09])
+
+    with weights 0.6 and 0.4 and mean
+
+    >>> mean = numpy.average([c0, c1], axis=0, weights=[0.6, 0.4])
+
+    then calling ``closest_to_ref`` will returns the indices 0 and 1
+    respectively:
+
+    >>> closest_to_ref([c0, c1], mean)
+    [0, 1]
+
+    This means that the realization 0 is the closest to the mean, as expected,
+    since it has a larger weight. You can check that it is indeed true by
+    computing the sum of the quadratic deviations:
+
+    >>> ((c0 - mean)**2).sum()
+    0.0004480000000000008
+    >>> ((c1 - mean)**2).sum()
+    0.0010079999999999985
+
+    If the 2 realizations have equal weights the distance from the mean will be
+    the same. In that case both the realizations will be okay; the one that
+    will be chosen by ``closest_to_ref`` depends on the magic of floating point
+    approximation (theoretically identical distances will likely be different
+    as numpy.float64 numbers) or on the magic of Python ``list.sort``.
     """
     dist = numpy.zeros(len(arrays))
     logref = log(ref, cutoff)
-    for rlz, array in enumerate(arrays):
+    pairs = []
+    for idx, array in enumerate(arrays):
         diff = log(array, cutoff) - logref
-        dist[rlz] = numpy.sqrt((diff * diff).sum())
-    rlz = dist.argmin()
-    closest = dict(rlz=rlz, value=arrays[rlz], dist=dist[rlz])
-    return closest
+        dist = numpy.sqrt((diff * diff).sum())
+        pairs.append((dist, idx))
+    pairs.sort()
+    return [idx for dist, idx in pairs]
 
 
 def compose_arrays(a1, a2, firstfield='etag'):
@@ -159,19 +195,19 @@ def compose_arrays(a1, a2, firstfield='etag'):
 def get_assets(dstore):
     """
     :param dstore: a datastore with keys 'assetcol'
-    :returns: an array of records (asset_ref, tag1, ..., tagN, lon, lat)
+    :returns: an array of records (id, tag1, ..., tagN, lon, lat)
     """
     assetcol = dstore['assetcol']
     tagnames = sorted(assetcol.tagnames)
     tag = {t: getattr(assetcol.tagcol, t) for t in tagnames}
-    dtlist = []
+    dtlist = [('id', '<S100')]
     for tagname in tagnames:
-        dtlist.append((tagname, (bytes, 100)))
+        dtlist.append((tagname, '<S100'))
     dtlist.extend([('lon', F32), ('lat', F32)])
     asset_data = []
     for a in assetcol.array:
-        tup = tuple(b'"%s"' % tag[t][a[t]].encode('utf-8') for t in tagnames)
-        asset_data.append(tup + (a['lon'], a['lat']))
+        tup = tuple(b'%s' % tag[t][a[t]].encode('utf-8') for t in tagnames)
+        asset_data.append((a['id'],) + tup + (a['lon'], a['lat']))
     return numpy.array(asset_data, dtlist)
 
 

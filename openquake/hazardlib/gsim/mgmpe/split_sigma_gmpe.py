@@ -42,17 +42,17 @@ class SplitSigmaGMPE(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name, within_absolute=None, between_absolute=None):
-        super().__init__(gmpe_name=gmpe_name)
+    def __init__(self, gmpe_name, within_absolute=None, between_absolute=None,
+                 **kwargs):
+        super().__init__(gmpe_name=gmpe_name, within_absolute=within_absolute,
+                         between_absolute=between_absolute, **kwargs)
         # Create the original GMPE
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
-        assert self.DEFINED_FOR_STANDARD_DEVIATION_TYPES == set([
-            const.StdDev.TOTAL]), "this GMM already supports several STD types"
 
         # Set options for obtaining within and between stds
         self.between_absolute = between_absolute

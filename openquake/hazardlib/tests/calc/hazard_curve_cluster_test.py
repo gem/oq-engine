@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -36,6 +36,7 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
     def setUp(self):
         testfile = os.path.join(DATA, 'source_group_cluster.xml')
         sc = SourceConverter(area_source_discretization=10.,
+                             rupture_mesh_spacing=10.,
                              investigation_time=1.)
         # This provides a SourceModel
         self.sg = getattr(nrml.to_python(testfile, sc), 'src_groups')

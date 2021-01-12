@@ -22,7 +22,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <assets>
             <asset
             id="a101"
-            number="3.0000000E+00"
+            number="3"
             taxonomy="Wood"
             >
                 <location lat="2.8636170E+01" lon="8.3688820E+01"/>
@@ -37,7 +37,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a369"
-            number="1.6000000E+01"
+            number="16"
             taxonomy="Wood"
             >
                 <location lat="2.7361170E+01" lon="8.4738820E+01"/>
@@ -52,7 +52,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a428"
-            number="2.1000000E+01"
+            number="21"
             taxonomy="Wood"
             >
                 <location lat="2.7811170E+01" lon="8.4363820E+01"/>
@@ -67,7 +67,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a599"
-            number="4.1000000E+01"
+            number="41"
             taxonomy="Wood"
             >
                 <location lat="2.9011170E+01" lon="8.0313820E+01"/>
@@ -82,7 +82,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a1134"
-            number="2.0000000E+02"
+            number="200"
             taxonomy="Wood"
             >
                 <location lat="2.9461170E+01" lon="8.1738820E+01"/>
@@ -97,7 +97,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a1739"
-            number="6.4300000E+02"
+            number="643"
             taxonomy="Wood"
             >
                 <location lat="2.7136170E+01" lon="8.7663820E+01"/>
@@ -112,7 +112,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a1808"
-            number="7.4700000E+02"
+            number="747"
             taxonomy="Wood"
             >
                 <location lat="2.7961170E+01" lon="8.4213820E+01"/>
@@ -127,7 +127,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a2517"
-            number="2.5000000E+01"
+            number="25"
             taxonomy="Adobe"
             >
                 <location lat="2.8936170E+01" lon="8.0763820E+01"/>
@@ -142,7 +142,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a2569"
-            number="3.2000000E+01"
+            number="32"
             taxonomy="Adobe"
             >
                 <location lat="2.8336170E+01" lon="8.1513820E+01"/>
@@ -157,7 +157,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a3967"
-            number="1.3970000E+03"
+            number="1397"
             taxonomy="Adobe"
             >
                 <location lat="2.8111170E+01" lon="8.4663820E+01"/>
@@ -172,7 +172,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a4938"
-            number="1.5000000E+01"
+            number="15"
             taxonomy="Stone-Masonry"
             >
                 <location lat="2.8486170E+01" lon="8.4363820E+01"/>
@@ -187,7 +187,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a5010"
-            number="2.0000000E+01"
+            number="20"
             taxonomy="Stone-Masonry"
             >
                 <location lat="2.9611170E+01" lon="8.1813820E+01"/>
@@ -202,7 +202,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a5229"
-            number="4.4000000E+01"
+            number="44"
             taxonomy="Stone-Masonry"
             >
                 <location lat="2.7436170E+01" lon="8.7588820E+01"/>
@@ -217,7 +217,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a5501"
-            number="9.5000000E+01"
+            number="95"
             taxonomy="Stone-Masonry"
             >
                 <location lat="2.7886170E+01" lon="8.4138820E+01"/>
@@ -232,7 +232,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a7180"
-            number="3.9000000E+01"
+            number="39"
             taxonomy="Unreinforced-Brick-Masonry"
             >
                 <location lat="2.9986170E+01" lon="8.1213820E+01"/>
@@ -247,7 +247,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a7216"
-            number="4.4000000E+01"
+            number="44"
             taxonomy="Unreinforced-Brick-Masonry"
             >
                 <location lat="3.0061170E+01" lon="8.0838820E+01"/>
@@ -262,7 +262,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a7392"
-            number="8.6000000E+01"
+            number="86"
             taxonomy="Unreinforced-Brick-Masonry"
             >
                 <location lat="2.9611170E+01" lon="8.1888820E+01"/>
@@ -277,7 +277,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a7591"
-            number="1.6700000E+02"
+            number="167"
             taxonomy="Unreinforced-Brick-Masonry"
             >
                 <location lat="2.7586170E+01" lon="8.6388820E+01"/>
@@ -292,7 +292,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a7713"
-            number="2.2200000E+02"
+            number="222"
             taxonomy="Unreinforced-Brick-Masonry"
             >
                 <location lat="2.7361170E+01" lon="8.7513820E+01"/>
@@ -307,7 +307,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="a8931"
-            number="2.2300000E+02"
+            number="223"
             taxonomy="Wood"
             >
                 <location lat="2.7612500E+01" lon="8.5379170E+01"/>

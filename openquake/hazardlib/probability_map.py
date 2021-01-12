@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2019 GEM Foundation
+# Copyright (c) 2016-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -183,12 +183,14 @@ class ProbabilityMap(dict):
         """The ordered keys of the map as a numpy.uint32 array"""
         return numpy.array(sorted(self), numpy.uint32)
 
-    @property
-    def array(self):
+    def array(self, N):
         """
-        The underlying array of shape (N, L, I)
+        An array of shape (N, L, I)
         """
-        return numpy.array([self[sid].array for sid in sorted(self)])
+        arr = numpy.zeros((N, self.shape_y, self.shape_z))
+        for sid in self:
+            arr[sid] = self[sid].array
+        return arr
 
     @property
     def nbytes(self):
@@ -219,31 +221,6 @@ class ProbabilityMap(dict):
                 curves_by_imt[sid] = self[sid].array[imtls(imt), idx]
         return curves
 
-    def convert2(self, imtls, sids):
-        """
-        Convert a probability map into a composite array of shape (N,)
-        and dtype `imtls.dt`.
-
-        :param imtls:
-            DictArray instance
-        :param sids:
-            the IDs of the sites we are interested in
-        :returns:
-            an array of curves of shape (N,)
-        """
-        assert self.shape_z == 1, self.shape_z
-        curves = numpy.zeros(len(sids), imtls.dt)
-        for imt in curves.dtype.names:
-            curves_by_imt = curves[imt]
-            for i, sid in numpy.ndenumerate(sids):
-                try:
-                    pcurve = self[sid]
-                except KeyError:
-                    pass  # the poes will be zeros
-                else:
-                    curves_by_imt[i] = pcurve.array[imtls(imt), 0]
-        return curves
-
     def filter(self, sids):
         """
         Extracs a submap of self for the given sids.
@@ -269,6 +246,11 @@ class ProbabilityMap(dict):
         return out
 
     def __ior__(self, other):
+        if not other:
+            return self
+        if (other.shape_y, other.shape_z) != (self.shape_y, self.shape_z):
+            raise ValueError('%s has inconsistent shape with %s' %
+                             (other, self))
         self_sids = set(self)
         other_sids = set(other)
         for sid in self_sids & other_sids:
@@ -299,6 +281,13 @@ class ProbabilityMap(dict):
             prob = other.get(sid, 1) if is_pmap else other
             new[sid] = self.get(sid, 1) + prob
         return new
+
+    def __iadd__(self, other):
+        # this is used when composing mutually exclusive probabilities
+        for sid in other:
+            pcurve = self.setdefault(sid, 0)
+            pcurve += other[sid]
+        return self
 
     def __mul__(self, other):
         try:
@@ -333,24 +322,8 @@ class ProbabilityMap(dict):
                 new[sid] = ~self[sid]  # store only nonzero probabilities
         return new
 
-    def __toh5__(self):
-        # converts to an array of shape (num_sids, shape_y, shape_z)
-        size = len(self)
-        sids = self.sids
-        shape = (size, self.shape_y, self.shape_z)
-        array = numpy.zeros(shape, F64)
-        for i, sid in numpy.ndenumerate(sids):
-            array[i] = self[sid].array
-        return dict(array=array, sids=sids), {}
-
-    def __fromh5__(self, dic, attrs):
-        # rebuild the map from sids and probs arrays
-        array = dic['array']
-        sids = dic['sids']
-        self.shape_y = array.shape[1]
-        self.shape_z = array.shape[2]
-        for sid, prob in zip(sids, array):
-            self[sid] = ProbabilityCurve(prob)
+    def __getstate__(self):
+        return dict(shape_y=self.shape_y, shape_z=self.shape_z)
 
 
 def get_shape(pmaps):

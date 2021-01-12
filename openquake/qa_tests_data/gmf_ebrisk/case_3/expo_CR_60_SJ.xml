@@ -19,7 +19,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <assets>
             <asset
             id="14759"
-            number="1.3000000E+01"
+            number="13"
             taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8027200E+00" lon="-8.4198490E+01"/>
@@ -29,7 +29,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14765"
-            number="4.6000000E+01"
+            number="46"
             taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8027200E+00" lon="-8.4198490E+01"/>
@@ -39,7 +39,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14767"
-            number="2.6000000E+01"
+            number="26"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8193900E+00" lon="-8.4198490E+01"/>
@@ -49,7 +49,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14770"
-            number="1.6000000E+01"
+            number="16"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.8193900E+00" lon="-8.4198490E+01"/>
@@ -59,7 +59,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14777"
-            number="6.0000000E+00"
+            number="6"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.8360500E+00" lon="-8.4198490E+01"/>
@@ -69,7 +69,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14784"
-            number="6.9000000E+01"
+            number="69"
             taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8360500E+00" lon="-8.4198490E+01"/>
@@ -79,7 +79,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14785"
-            number="9.0000000E+00"
+            number="9"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8527200E+00" lon="-8.4198490E+01"/>
@@ -89,7 +89,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14799"
-            number="5.0000000E+00"
+            number="5"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.9027200E+00" lon="-8.4198490E+01"/>
@@ -99,7 +99,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14802"
-            number="3.7000000E+01"
+            number="37"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.9027200E+00" lon="-8.4198490E+01"/>
@@ -109,7 +109,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14825"
-            number="1.3100000E+02"
+            number="131"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.9360500E+00" lon="-8.4198490E+01"/>
@@ -119,7 +119,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14846"
-            number="1.6700000E+02"
+            number="167"
             taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
             >
                 <location lat="9.9693900E+00" lon="-8.4198490E+01"/>
@@ -129,7 +129,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14847"
-            number="4.4000000E+01"
+            number="44"
             taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4198490E+01"/>
@@ -139,7 +139,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14852"
-            number="1.9000000E+02"
+            number="190"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4198490E+01"/>
@@ -149,7 +149,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15034"
-            number="3.4000000E+01"
+            number="34"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8027200E+00" lon="-8.4181830E+01"/>
@@ -159,7 +159,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15058"
-            number="1.2000000E+01"
+            number="12"
             taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8360500E+00" lon="-8.4181830E+01"/>
@@ -169,7 +169,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15060"
-            number="9.0000000E+00"
+            number="9"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8693900E+00" lon="-8.4181830E+01"/>
@@ -179,7 +179,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15065"
-            number="2.8000000E+01"
+            number="28"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.9027200E+00" lon="-8.4181830E+01"/>
@@ -189,7 +189,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15068"
-            number="3.7000000E+01"
+            number="37"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.9027200E+00" lon="-8.4181830E+01"/>
@@ -199,7 +199,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15070"
-            number="2.3000000E+01"
+            number="23"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9027200E+00" lon="-8.4181830E+01"/>
@@ -209,7 +209,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15094"
-            number="6.3000000E+01"
+            number="63"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9527200E+00" lon="-8.4181830E+01"/>
@@ -219,7 +219,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15099"
-            number="2.0000000E+01"
+            number="20"
             taxonomy="MR/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9527200E+00" lon="-8.4181830E+01"/>
@@ -229,7 +229,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15110"
-            number="7.6000000E+01"
+            number="76"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9693900E+00" lon="-8.4181830E+01"/>
@@ -239,7 +239,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15117"
-            number="5.2800000E+02"
+            number="528"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4181830E+01"/>
@@ -249,7 +249,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15328"
-            number="3.6000000E+01"
+            number="36"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8027200E+00" lon="-8.4165160E+01"/>
@@ -259,7 +259,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15338"
-            number="8.0000000E+00"
+            number="8"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8360500E+00" lon="-8.4165160E+01"/>
@@ -269,7 +269,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15355"
-            number="4.0000000E+00"
+            number="4"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8693900E+00" lon="-8.4165160E+01"/>
@@ -279,7 +279,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15361"
-            number="2.4200000E+02"
+            number="242"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9027200E+00" lon="-8.4165160E+01"/>
@@ -289,7 +289,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15383"
-            number="5.4000000E+01"
+            number="54"
             taxonomy="MR/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9360500E+00" lon="-8.4165160E+01"/>
@@ -299,7 +299,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15387"
-            number="2.0000000E+01"
+            number="20"
             taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9527200E+00" lon="-8.4165160E+01"/>
@@ -309,7 +309,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15400"
-            number="3.5800000E+02"
+            number="358"
             taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9693900E+00" lon="-8.4165160E+01"/>
@@ -319,7 +319,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15652"
-            number="3.7000000E+01"
+            number="37"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8027200E+00" lon="-8.4148490E+01"/>
@@ -329,7 +329,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15655"
-            number="5.1000000E+01"
+            number="51"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.8027200E+00" lon="-8.4148490E+01"/>
@@ -339,7 +339,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15662"
-            number="1.3000000E+01"
+            number="13"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8193900E+00" lon="-8.4148490E+01"/>
@@ -349,7 +349,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15663"
-            number="5.0000000E+00"
+            number="5"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.8193900E+00" lon="-8.4148490E+01"/>
@@ -359,7 +359,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15689"
-            number="1.4000000E+01"
+            number="14"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8860500E+00" lon="-8.4148490E+01"/>
@@ -369,7 +369,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15707"
-            number="2.5100000E+02"
+            number="251"
             taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
             >
                 <location lat="9.9027200E+00" lon="-8.4148490E+01"/>
@@ -379,7 +379,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15733"
-            number="5.0400000E+02"
+            number="504"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.9527200E+00" lon="-8.4148490E+01"/>
@@ -389,7 +389,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15740"
-            number="1.6100000E+02"
+            number="161"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.9693900E+00" lon="-8.4148490E+01"/>
@@ -399,7 +399,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15942"
-            number="4.8000000E+01"
+            number="48"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8027200E+00" lon="-8.4131830E+01"/>
@@ -409,7 +409,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15954"
-            number="1.2000000E+01"
+            number="12"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8193900E+00" lon="-8.4131830E+01"/>
@@ -419,7 +419,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15963"
-            number="3.8000000E+01"
+            number="38"
             taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8360500E+00" lon="-8.4131830E+01"/>
@@ -429,7 +429,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15967"
-            number="5.4000000E+01"
+            number="54"
             taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8860500E+00" lon="-8.4131830E+01"/>
@@ -439,7 +439,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15975"
-            number="1.5600000E+02"
+            number="156"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9027200E+00" lon="-8.4131830E+01"/>
@@ -449,7 +449,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15983"
-            number="4.1800000E+02"
+            number="418"
             taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
             >
                 <location lat="9.9027200E+00" lon="-8.4131830E+01"/>
@@ -459,7 +459,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16008"
-            number="2.2150000E+03"
+            number="2215"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9527200E+00" lon="-8.4131830E+01"/>
@@ -469,7 +469,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16017"
-            number="2.8600000E+02"
+            number="286"
             taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9693900E+00" lon="-8.4131830E+01"/>
@@ -479,7 +479,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16029"
-            number="4.8400000E+02"
+            number="484"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4131830E+01"/>
@@ -489,7 +489,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16245"
-            number="4.1000000E+01"
+            number="41"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8027200E+00" lon="-8.4115160E+01"/>
@@ -499,7 +499,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16253"
-            number="1.0000000E+01"
+            number="10"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.8193900E+00" lon="-8.4115160E+01"/>
@@ -509,7 +509,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16256"
-            number="1.6000000E+01"
+            number="16"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8193900E+00" lon="-8.4115160E+01"/>
@@ -519,7 +519,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16260"
-            number="2.0000000E+00"
+            number="2"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.8360500E+00" lon="-8.4115160E+01"/>
@@ -529,7 +529,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16269"
-            number="2.8000000E+01"
+            number="28"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8527200E+00" lon="-8.4115160E+01"/>
@@ -539,7 +539,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16270"
-            number="1.0000000E+01"
+            number="10"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.8527200E+00" lon="-8.4115160E+01"/>
@@ -549,7 +549,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16280"
-            number="3.8000000E+01"
+            number="38"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.8693900E+00" lon="-8.4115160E+01"/>
@@ -559,7 +559,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16295"
-            number="3.8000000E+01"
+            number="38"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8860500E+00" lon="-8.4115160E+01"/>
@@ -569,7 +569,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16301"
-            number="3.8000000E+02"
+            number="380"
             taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9027200E+00" lon="-8.4115160E+01"/>
@@ -579,7 +579,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16335"
-            number="1.9100000E+02"
+            number="191"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9527200E+00" lon="-8.4115160E+01"/>
@@ -589,7 +589,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16341"
-            number="2.6200000E+02"
+            number="262"
             taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9693900E+00" lon="-8.4115160E+01"/>
@@ -599,7 +599,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16350"
-            number="2.3200000E+02"
+            number="232"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.9860500E+00" lon="-8.4115160E+01"/>
@@ -609,7 +609,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16352"
-            number="1.6080000E+03"
+            number="1608"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4115160E+01"/>
@@ -619,7 +619,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16563"
-            number="8.0000000E+00"
+            number="8"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.8027200E+00" lon="-8.4098490E+01"/>
@@ -629,7 +629,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16592"
-            number="1.7500000E+02"
+            number="175"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8527200E+00" lon="-8.4098490E+01"/>
@@ -639,7 +639,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16606"
-            number="6.6100000E+02"
+            number="661"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.8693900E+00" lon="-8.4098490E+01"/>
@@ -649,7 +649,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16611"
-            number="1.8000000E+02"
+            number="180"
             taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8860500E+00" lon="-8.4098490E+01"/>
@@ -659,7 +659,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16613"
-            number="1.2500000E+02"
+            number="125"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.8860500E+00" lon="-8.4098490E+01"/>
@@ -669,7 +669,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16638"
-            number="6.1300000E+02"
+            number="613"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9193900E+00" lon="-8.4098490E+01"/>
@@ -679,7 +679,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16639"
-            number="3.9600000E+02"
+            number="396"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.9193900E+00" lon="-8.4098490E+01"/>
@@ -689,7 +689,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16658"
-            number="2.6700000E+02"
+            number="267"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9527200E+00" lon="-8.4098490E+01"/>
@@ -699,7 +699,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16670"
-            number="5.0000000E+02"
+            number="500"
             taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
             >
                 <location lat="9.9693900E+00" lon="-8.4098490E+01"/>
@@ -709,7 +709,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16671"
-            number="5.6000000E+01"
+            number="56"
             taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4098490E+01"/>
@@ -719,7 +719,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16675"
-            number="1.5760000E+03"
+            number="1576"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4098490E+01"/>
@@ -729,7 +729,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16872"
-            number="2.0000000E+00"
+            number="2"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.8027200E+00" lon="-8.4081830E+01"/>
@@ -739,7 +739,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16881"
-            number="1.5000000E+01"
+            number="15"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8193900E+00" lon="-8.4081830E+01"/>
@@ -749,7 +749,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16919"
-            number="1.5100000E+02"
+            number="151"
             taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8860500E+00" lon="-8.4081830E+01"/>
@@ -759,7 +759,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16961"
-            number="6.5000000E+01"
+            number="65"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.9527200E+00" lon="-8.4081830E+01"/>
@@ -769,7 +769,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16970"
-            number="1.3600000E+02"
+            number="136"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9693900E+00" lon="-8.4081830E+01"/>
@@ -779,7 +779,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17197"
-            number="5.0000000E+00"
+            number="5"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8027200E+00" lon="-8.4065160E+01"/>
@@ -789,7 +789,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17198"
-            number="3.5000000E+01"
+            number="35"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8027200E+00" lon="-8.4065160E+01"/>
@@ -799,7 +799,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17204"
-            number="9.0000000E+01"
+            number="90"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8193900E+00" lon="-8.4065160E+01"/>
@@ -809,7 +809,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17210"
-            number="9.7000000E+01"
+            number="97"
             taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8360500E+00" lon="-8.4065160E+01"/>
@@ -819,7 +819,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17219"
-            number="1.5600000E+02"
+            number="156"
             taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8360500E+00" lon="-8.4065160E+01"/>
@@ -829,7 +829,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17228"
-            number="1.1500000E+02"
+            number="115"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8527200E+00" lon="-8.4065160E+01"/>
@@ -839,7 +839,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17254"
-            number="4.4920000E+03"
+            number="4492"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9027200E+00" lon="-8.4065160E+01"/>
@@ -849,7 +849,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17275"
-            number="1.1280000E+03"
+            number="1128"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.9360500E+00" lon="-8.4065160E+01"/>
@@ -859,7 +859,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17302"
-            number="6.6000000E+01"
+            number="66"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.9860500E+00" lon="-8.4065160E+01"/>
@@ -869,7 +869,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17530"
-            number="1.3000000E+01"
+            number="13"
             taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8027200E+00" lon="-8.4048490E+01"/>
@@ -879,7 +879,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17535"
-            number="5.6000000E+01"
+            number="56"
             taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8360500E+00" lon="-8.4048490E+01"/>
@@ -889,7 +889,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17544"
-            number="7.4000000E+01"
+            number="74"
             taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8360500E+00" lon="-8.4048490E+01"/>
@@ -899,7 +899,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17555"
-            number="9.7800000E+02"
+            number="978"
             taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8693900E+00" lon="-8.4048490E+01"/>
@@ -909,7 +909,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17559"
-            number="7.5600000E+02"
+            number="756"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8693900E+00" lon="-8.4048490E+01"/>
@@ -919,7 +919,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17564"
-            number="6.4300000E+02"
+            number="643"
             taxonomy="W+WLI/LWALL+DNO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8693900E+00" lon="-8.4048490E+01"/>
@@ -929,7 +929,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17577"
-            number="8.5000000E+01"
+            number="85"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.9027200E+00" lon="-8.4048490E+01"/>
@@ -939,7 +939,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17582"
-            number="1.4400000E+02"
+            number="144"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9027200E+00" lon="-8.4048490E+01"/>
@@ -949,7 +949,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17590"
-            number="6.4200000E+02"
+            number="642"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.9193900E+00" lon="-8.4048490E+01"/>
@@ -959,7 +959,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17597"
-            number="4.0000000E+01"
+            number="40"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.9360500E+00" lon="-8.4048490E+01"/>
@@ -969,7 +969,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17598"
-            number="3.5100000E+02"
+            number="351"
             taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9360500E+00" lon="-8.4048490E+01"/>
@@ -979,7 +979,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17603"
-            number="2.3000000E+02"
+            number="230"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.9360500E+00" lon="-8.4048490E+01"/>
@@ -989,7 +989,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17613"
-            number="3.5000000E+02"
+            number="350"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.9527200E+00" lon="-8.4048490E+01"/>
@@ -999,7 +999,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17619"
-            number="1.8790000E+03"
+            number="1879"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9693900E+00" lon="-8.4048490E+01"/>
@@ -1009,7 +1009,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17625"
-            number="2.4000000E+01"
+            number="24"
             taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4048490E+01"/>
@@ -1019,7 +1019,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17626"
-            number="6.9000000E+01"
+            number="69"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4048490E+01"/>
@@ -1029,7 +1029,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17628"
-            number="4.8000000E+01"
+            number="48"
             taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4048490E+01"/>
@@ -1039,7 +1039,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17827"
-            number="2.1000000E+01"
+            number="21"
             taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8027200E+00" lon="-8.4031830E+01"/>
@@ -1049,7 +1049,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17839"
-            number="1.1000000E+01"
+            number="11"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8193900E+00" lon="-8.4031830E+01"/>
@@ -1059,7 +1059,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17845"
-            number="8.5000000E+01"
+            number="85"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8360500E+00" lon="-8.4031830E+01"/>
@@ -1069,7 +1069,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17847"
-            number="9.0000000E+00"
+            number="9"
             taxonomy="MR/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8360500E+00" lon="-8.4031830E+01"/>
@@ -1079,7 +1079,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17848"
-            number="1.0000000E+01"
+            number="10"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8360500E+00" lon="-8.4031830E+01"/>
@@ -1089,7 +1089,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17879"
-            number="1.0800000E+02"
+            number="108"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.8860500E+00" lon="-8.4031830E+01"/>
@@ -1099,7 +1099,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17887"
-            number="6.1000000E+02"
+            number="610"
             taxonomy="MR/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9027200E+00" lon="-8.4031830E+01"/>
@@ -1109,7 +1109,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17893"
-            number="5.9000000E+01"
+            number="59"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.9193900E+00" lon="-8.4031830E+01"/>
@@ -1119,7 +1119,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17902"
-            number="2.2800000E+02"
+            number="228"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9360500E+00" lon="-8.4031830E+01"/>
@@ -1129,7 +1129,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17903"
-            number="8.1000000E+01"
+            number="81"
             taxonomy="MATO/LN+DNO/HEX:1/Y99"
             >
                 <location lat="9.9360500E+00" lon="-8.4031830E+01"/>
@@ -1139,7 +1139,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17919"
-            number="4.2100000E+02"
+            number="421"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.9527200E+00" lon="-8.4031830E+01"/>
@@ -1149,7 +1149,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17922"
-            number="1.1330000E+03"
+            number="1133"
             taxonomy="CR+PC/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9693900E+00" lon="-8.4031830E+01"/>
@@ -1159,7 +1159,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17928"
-            number="1.8100000E+02"
+            number="181"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9693900E+00" lon="-8.4031830E+01"/>
@@ -1169,7 +1169,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17936"
-            number="4.4200000E+02"
+            number="442"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4031830E+01"/>
@@ -1179,7 +1179,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17938"
-            number="7.6000000E+01"
+            number="76"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9860500E+00" lon="-8.4031830E+01"/>
@@ -1189,7 +1189,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17939"
-            number="1.7300000E+02"
+            number="173"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.9860500E+00" lon="-8.4031830E+01"/>
@@ -1199,7 +1199,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="18142"
-            number="4.0000000E+00"
+            number="4"
             taxonomy="MR/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8027200E+00" lon="-8.4015160E+01"/>
@@ -1209,7 +1209,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="18148"
-            number="3.2000000E+01"
+            number="32"
             taxonomy="MCF/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.8693900E+00" lon="-8.4015160E+01"/>
@@ -1219,7 +1219,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="18185"
-            number="4.1000000E+01"
+            number="41"
             taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9360500E+00" lon="-8.4015160E+01"/>
@@ -1229,7 +1229,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="18189"
-            number="1.0230000E+03"
+            number="1023"
             taxonomy="MCF/LWALL+DUC/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9360500E+00" lon="-8.4015160E+01"/>
@@ -1239,7 +1239,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="18193"
-            number="1.7500000E+02"
+            number="175"
             taxonomy="W+WLI/LWALL+DLO/HEX:1/YPRE:1980"
             >
                 <location lat="9.9360500E+00" lon="-8.4015160E+01"/>
@@ -1249,7 +1249,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="18195"
-            number="3.8000000E+01"
+            number="38"
             taxonomy="CR+PC/LWALL+DLO/HEX:1/YBET:1980-2010"
             >
                 <location lat="9.9527200E+00" lon="-8.4015160E+01"/>
@@ -1259,7 +1259,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="18210"
-            number="1.0690000E+03"
+            number="1069"
             taxonomy="MCF/LWALL+DUC/HEX:2/YBET:1980-2010"
             >
                 <location lat="9.9693900E+00" lon="-8.4015160E+01"/>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,13 +18,11 @@
 import sys
 import unittest.mock as mock
 import os.path
-from openquake.baselib import sap
 from openquake.commonlib import readinput
 from openquake.commonlib import util
 
 
-@sap.script
-def checksum(thing):
+def main(thing):
     """
     Get the checksum of a calculation from the calculation ID (if already
     done) or from the job.ini/job.zip file (if not done yet). If `thing`
@@ -51,4 +49,4 @@ def checksum(thing):
     print(checksum)
 
 
-checksum.arg('thing', 'job.ini, job.zip, job ID, smlt file')
+main.thing = 'job.ini, job.zip, job ID, smlt file'

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,6 +29,7 @@ urlpatterns = [
     url(r'^v1/valid/', views.validate_nrml),
     url(r'^v1/available_gsims$', views.get_available_gsims),
     url(r'^v1/on_same_fs$', views.on_same_fs, name="on_same_fs"),
+    url(r'^v1/ini_defaults$', views.get_ini_defaults, name="ini_defaults"),
 ]
 
 # it is useful to disable the default redirect if the usage is via API only

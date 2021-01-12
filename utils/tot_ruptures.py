@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,7 +37,7 @@ def main(datadir):
             except (KeyError, AttributeError):  # not a calculation
                 continue
             try:
-                tot_ruptures = dstore['csm_info/sg_data']['totrup'].sum()
+                tot_ruptures = dstore['full_lt/sg_data']['totrup'].sum()
             except KeyError:
                 tot_ruptures = 0
             else:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,10 +20,13 @@
 Module :mod:`openquake.hazardlib.geo.nodalplane` implements
 :class:`NodalPlane`.
 """
-from openquake.baselib.slots import with_slots
+import collections
+
+NP = collections.namedtuple('NP', 'strike dip rake')
 
 
-@with_slots
+# NB: instantiating NodalPlane returns instances of NP, so it is a hack,
+# but it is the simplest solution that maintains backward compatibility
 class NodalPlane(object):
     """
     Nodal plane represents earthquake rupture orientation and propagation
@@ -41,15 +44,12 @@ class NodalPlane(object):
     :raises ValueError:
         If any of parameters exceeds the definition range.
     """
-    _slots_ = ['strike', 'dip', 'rake']
 
-    def __init__(self, strike, dip, rake):
-        self.check_dip(dip)
-        self.check_rake(rake)
-        self.check_strike(strike)
-        self.strike = strike
-        self.dip = dip
-        self.rake = rake
+    def __new__(cls, strike, dip, rake):
+        cls.check_dip(dip)
+        cls.check_rake(rake)
+        cls.check_strike(strike)
+        return NP(strike, dip, rake)
 
     @classmethod
     def check_dip(cls, dip):
@@ -57,7 +57,7 @@ class NodalPlane(object):
         Check if ``dip`` is in range ``(0, 90]``
         and raise ``ValueError`` otherwise.
         """
-        if not 0 < dip <= 90:
+        if not 0 < dip < 90.000001:  # some tolerance for numeric errors
             raise ValueError('dip %g is out of range (0, 90]' % dip)
 
     @classmethod
@@ -75,5 +75,6 @@ class NodalPlane(object):
         Check if ``rake`` is in range ``(-180, 180]``
         and raise ``ValueError`` otherwise.
         """
-        if not (rake == 'undefined' or -180 < rake <= 180):
+        if not (rake == 'undefined' or -180 < rake < 180.000001):
+            # some tolerance for numeric errors
             raise ValueError('rake %g is out of range (-180, 180]' % rake)

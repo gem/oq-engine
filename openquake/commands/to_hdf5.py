@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import numpy
-from openquake.baselib import sap, hdf5, node, performance
+from openquake.baselib import hdf5, node, performance
 from openquake.hazardlib import nrml
 
 
@@ -43,11 +43,10 @@ def convert_xml_hdf5(input_file, output_file):
     return output_file
 
 
-@sap.script
-def to_hdf5(input):
+def main(input):
     """
     Convert .xml and .npz files to .hdf5 files.
-    """    
+    """
     with performance.Monitor('to_hdf5') as mon:
         for input_file in input:
             if input_file.endswith('.npz'):
@@ -59,4 +58,5 @@ def to_hdf5(input):
             print('Generated %s' % output)
     print(mon)
 
-to_hdf5.arg('input', '.npz file to convert', nargs='*')
+
+main.input = dict(help='.npz file to convert', nargs='+')

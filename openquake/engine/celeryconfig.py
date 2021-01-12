@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2019 GEM Foundation
+# Copyright (C) 2010-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -71,4 +71,4 @@ else:
     result_cache_max = 1
     task_ignore_result = True
 
-    imports = ["openquake.baselib.parallel"]
+    imports = ["openquake.baselib.parallel", "openquake.hazardlib.contexts"]

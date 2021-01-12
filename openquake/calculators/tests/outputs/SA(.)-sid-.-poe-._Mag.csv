@@ -1,0 +1,3 @@
+#,"generated_by='OpenQuake engine 3.9.0-git9e7d464372', start_date='2020-04-22T06:03:46', checksum=869570826, imt='SA', investigation_time=1.0, lon=0.0, lat=0.0, poe='0.0304689'"
+mag,poe
+5.05000E+00,4.35502E-03

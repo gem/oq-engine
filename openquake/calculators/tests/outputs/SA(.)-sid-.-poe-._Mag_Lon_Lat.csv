@@ -1,0 +1,3 @@
+#,,,"generated_by='OpenQuake engine 3.7.0-gitab830d1d1c', start_date='2019-09-14T06:49:58', checksum=2607118707, smlt_path='b2', gsimlt_path='b12_b21', imt='SA', investigation_time=50.0, lon=-121.5, lat=38.3, poe='0.0500000', iml='5.1565692e-01', rlz=6"
+mag,lon,lat,poe
+-1.22500E+02,3.75000E+01,4.25000E+00,0.00000E+00

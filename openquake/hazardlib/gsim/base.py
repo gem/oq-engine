@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,7 @@ import warnings
 import functools
 import numpy
 from scipy.special import ndtr
+from scipy.stats import norm
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import imt as imt_module
@@ -47,6 +48,7 @@ ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
 registry = {}  # GSIM name -> GSIM class
+gsim_aliases = {}  # populated for instance in nbcc2015_AA13.py
 
 
 class NotVerifiedWarning(UserWarning):
@@ -56,6 +58,13 @@ class NotVerifiedWarning(UserWarning):
 
 
 class ExperimentalWarning(UserWarning):
+    """
+    Raised for GMPEs that are intended for experimental use or maybe subject
+    to changes in future version.
+    """
+
+
+class AdaptedWarning(UserWarning):
     """
     Raised for GMPEs that are intended for experimental use or maybe subject
     to changes in future version.
@@ -75,6 +84,119 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
     return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
+# this is the critical function for the performance of the classical calculator
+# it is dominated by memory allocations (i.e. _truncnorm_sf is ultra-fast)
+# the only way to speedup is to reduce the maximum_distance, then the array
+# will become shorter in the N dimension (number of affected sites), or to
+# collapse the ruptures, then _get_poes will be called less times
+def _get_poes(mean_std, loglevels, truncation_level):
+    mean, stddev = mean_std  # shape (N, M) each
+    out = numpy.zeros((len(mean), loglevels.size))  # shape (N, L)
+    lvl = 0
+    for m, imt in enumerate(loglevels):
+        for iml in loglevels[imt]:
+            if truncation_level == 0:  # just compare imls to mean
+                out[:, lvl] = iml <= mean[:, m]
+            else:
+                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
+            lvl += 1
+    return _truncnorm_sf(truncation_level, out)
+
+
+def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
+    """
+    NOTE: this works for a single site
+
+    :param mean_std:
+        See :function:`openquake.hazardlib.gsim.base.get_poes`
+    :param loglevels:
+        Intensity measure level per intensity measure type. See
+        :function:`openquake.hazardlib.gsim.base.get_poes`
+    :param truncation_level:
+        The level of truncation of the normal distribution of ground-motion
+        on rock
+    :param ampl:
+        Site amplification function instance of
+        :class:openquake.hazardlib.site_amplification.AmpFunction
+    :param ctxs:
+        Context objects with attributes .mag, .sites, .rrup
+    """
+    # Mean and std of ground motion for the IMTs considered in this analysis
+    # C - Number of contexts
+    # L - Number of intensity measure levels
+    mean, stddev = mean_std  # shape (C, M)
+    C, L = len(mean), loglevels.size
+    for ctx in ctxs:
+        assert len(ctx.sids) == 1  # 1 site
+    M = len(loglevels)
+    L1 = L // M
+
+    # This is the array where we store the output results i.e. poes on soil
+    out_s = numpy.zeros((C, L))
+
+    # `nsamp` is the number of IMLs per IMT used to compute the hazard on rock
+    # while 'L' is total number of ground-motion values
+    nsamp = 40
+
+    # Compute the probability of exceedance for each in intensity
+    # measure type IMT
+    sigma = ampfun.get_max_sigma()
+    mags = [ctx.mag for ctx in ctxs]
+    rrups = [ctx.rrup for ctx in ctxs]
+    ampcode = ctxs[0].sites['ampcode'][0]
+    for m, imt in enumerate(loglevels):
+
+        # Get the values of ground-motion used to compute the probability
+        # of exceedance on soil.
+        soillevels = loglevels[imt]  # shape L1
+
+        # Here we set automatically the IMLs that will be used to compute
+        # the probability of occurrence of GM on rock within discrete
+        # intervals
+        ll = numpy.linspace(min(soillevels) - sigma * 4.,
+                            max(soillevels) + sigma * 4.,
+                            num=nsamp)
+
+        # Calculate for each ground motion interval the probability
+        # of occurrence on rock for all the sites
+        for iml_l, iml_u in zip(ll[:-1], ll[1:]):
+
+            # Set the arguments of the truncated normal distribution
+            # function
+            if truncation_level == 0:
+                out_l = iml_l <= mean[:, m]
+                out_u = iml_u <= mean[:, m]
+            else:
+                out_l = (iml_l - mean[:, m]) / stddev[:, m]
+                out_u = (iml_u - mean[:, m]) / stddev[:, m]
+
+            # Probability of occurrence on rock
+            pocc_rock = (_truncnorm_sf(truncation_level, out_l) -
+                         _truncnorm_sf(truncation_level, out_u))  # shape C
+
+            # Skipping cases where the pocc on rock is negligible
+            if numpy.all(pocc_rock < 1e-10):
+                continue
+
+            # Ground-motion value in the middle of each interval
+            iml_mid = (numpy.exp(iml_l) + numpy.exp(iml_u)) / 2.
+
+            # Get mean and std of the amplification function for this
+            # magnitude, distance and IML
+            median_af, std_af = ampfun.get_mean_std(  # shape C
+                ampcode, imt, iml_mid, mags, rrups)
+
+            # Computing the probability of exceedance of the levels of
+            # ground-motion loglevels on soil
+            logaf = numpy.log(numpy.exp(soillevels) / iml_mid)  # shape L1
+            for l in range(L1):
+                poex_af = 1. - norm.cdf(
+                    logaf[l], numpy.log(median_af), std_af)  # shape C
+                out_s[:, m * L1 + l] += poex_af * pocc_rock  # shape C
+
+    return out_s
+
+
 class MetaGSIM(abc.ABCMeta):
     """
     A metaclass converting set class attributes into frozensets, to avoid
@@ -90,7 +212,12 @@ class MetaGSIM(abc.ABCMeta):
                     if missing:
                         raise ValueError('Unknown distance %s in %s' %
                                          (missing, name))
-        return super().__new__(meta, name, bases, dic)
+        cls = super().__new__(meta, name, bases, dic)
+        ancestors = [vars(ancestor) for ancestor in cls.mro()[1:-1]]
+        if any('get_mean_std1' in ancestor for ancestor in ancestors):
+            if 'get_mean_and_stddevs' in dic and 'get_mean_std1' not in dic:
+                raise TypeError('%s.get_mean_std1 is not defined!' % name)
+        return cls
 
 
 @functools.total_ordering
@@ -104,7 +231,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     at a site given an earthquake rupture.
 
     This class is not intended to be subclassed directly, instead
-    the actual GSIMs should subclass either :class:`GMPE` or :class:`IPE`.
+    the actual GSIMs should subclass :class:`GMPE`
+
 
     Subclasses of both must implement :meth:`get_mean_and_stddevs`
     and all the class attributes with names starting from ``DEFINED_FOR``
@@ -190,10 +318,17 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     superseded_by = None
     non_verified = False
     experimental = False
+    adapted = False
 
     @classmethod
     def __init_subclass__(cls):
-        registry[cls.__name__] = cls
+        stddevtypes = cls.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+        if not isinstance(stddevtypes, abc.abstractproperty):  # concrete class
+            if const.StdDev.TOTAL not in stddevtypes:
+                raise ValueError('%s.DEFINED_FOR_STANDARD_DEVIATION_TYPES is '
+                                 'not defined for const.StdDev.TOTAL' %
+                                 cls.__name__)
+            registry[cls.__name__] = cls
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -210,11 +345,11 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             msg = ('%s is experimental and may change in future versions - '
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, ExperimentalWarning)
-
-    def init(self):
-        """
-        Override this method if you want to further initialize the GSIM
-        """
+        if cls.adapted:
+            msg = ('%s is not intended for general use and the behaviour '
+                   'may not be as expected - '
+                   'the user is liable for their application') % cls.__name__
+            warnings.warn(msg, AdaptedWarning)
 
     @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -271,110 +406,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         compute interim steps).
         """
 
-    def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
-        """
-        Calculate and return probabilities of exceedance (PoEs) of one or more
-        intensity measure levels (IMLs) of one intensity measure type (IMT)
-        for one or more pairs "site -- rupture".
-
-        :param sctx:
-            An instance of :class:`SitesContext` with sites information
-            to calculate PoEs on.
-        :param rctx:
-            An instance of :class:`RuptureContext` with a single rupture
-            information.
-        :param dctx:
-            An instance of :class:`DistancesContext` with information about
-            the distances between sites and a rupture.
-
-            All three contexts (``sctx``, ``rctx`` and ``dctx``) must conform
-            to each other. The easiest way to get them is to call
-            ContextMaker.make_contexts.
-        :param imt:
-            An intensity measure type object (that is, an instance of one
-            of classes from :mod:`openquake.hazardlib.imt`).
-        :param imls:
-            List of interested intensity measure levels (of type ``imt``).
-        :param truncation_level:
-            Can be ``None``, which means that the distribution of intensity
-            is treated as Gaussian distribution with possible values ranging
-            from minus infinity to plus infinity.
-
-            When set to zero, the mean intensity is treated as an exact
-            value (standard deviation is not even computed for that case)
-            and resulting array contains 0 in places where IMT is strictly
-            lower than the mean value of intensity and 1.0 where IMT is equal
-            or greater.
-
-            When truncation level is positive number, the intensity
-            distribution is processed as symmetric truncated Gaussian with
-            range borders being ``mean - truncation_level * stddev`` and
-            ``mean + truncation_level * stddev``. That is, the truncation
-            level expresses how far the range borders are from the mean
-            value and is defined in units of sigmas. The resulting PoEs
-            for that mode are values of complementary cumulative distribution
-            function of that truncated Gaussian applied to IMLs.
-
-        :returns:
-            A dictionary of the same structure as parameter ``imts`` (see
-            above). Instead of lists of IMLs values of the dictionaries
-            have 2d numpy arrays of corresponding PoEs, first dimension
-            represents sites and the second represents IMLs.
-
-        :raises ValueError:
-            If truncation level is not ``None`` and neither non-negative
-            float number, and if ``imts`` dictionary contain wrong or
-            unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
-        """
-        if truncation_level is not None and truncation_level < 0:
-            raise ValueError('truncation level must be zero, positive number '
-                             'or None')
-        self._check_imt(imt)
-
-        if truncation_level == 0:
-            # zero truncation mode, just compare imls to mean
-            imls = self.to_distribution_values(imls)
-            mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [])
-            mean = mean.reshape(mean.shape + (1, ))
-            return (imls <= mean).astype(float)
-        else:
-            # use real normal distribution
-            assert (const.StdDev.TOTAL
-                    in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
-            imls = self.to_distribution_values(imls)
-            mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
-                                                       [const.StdDev.TOTAL])
-            mean = mean.reshape(mean.shape + (1, ))
-            stddev = stddev.reshape(stddev.shape + (1, ))
-            values = (imls - mean) / stddev
-            if truncation_level is None:
-                return _norm_sf(values)
-            else:
-                return _truncnorm_sf(truncation_level, values)
-
-    @abc.abstractmethod
-    def to_distribution_values(self, values):
-        """
-        Convert a list or array of values in units of IMT to a numpy array
-        of values of intensity measure distribution (like taking the natural
-        logarithm for :class:`GMPE`).
-
-        This method is implemented by both :class:`GMPE` and :class:`IPE`
-        so there is no need to override it in actual GSIM implementations.
-        """
-
-    @abc.abstractmethod
-    def to_imt_unit_values(self, values):
-        """
-        Convert a list or array of values of intensity measure distribution
-        (like ones returned from :meth:`get_mean_and_stddevs`) to values
-        in units of IMT. This is the opposite operation
-        to :meth:`to_distribution_values`.
-
-        This method is implemented by both :class:`GMPE` and :class:`IPE`
-        so there is no need to override it in actual GSIM implementations.
-        """
-
     def _check_imt(self, imt):
         """
         Make sure that ``imt`` is valid and is supported by this GSIM.
@@ -422,7 +453,7 @@ def _truncnorm_sf(truncation_level, values):
 
     :param truncation_level:
         Positive float number representing the truncation on both sides
-        around the mean, in units of sigma.
+        around the mean, in units of sigma, or None, for non-truncation
     :param values:
         Numpy array of values as input to a survival function for the given
         distribution.
@@ -432,7 +463,16 @@ def _truncnorm_sf(truncation_level, values):
     >>> from scipy.stats import truncnorm
     >>> truncnorm(-3, 3).sf(0.12345) == _truncnorm_sf(3, 0.12345)
     True
+    >>> from scipy.stats import norm
+    >>> norm.sf(0.12345) == _truncnorm_sf(None, 0.12345)
+    True
     """
+    if truncation_level == 0:
+        return values
+
+    if truncation_level is None:
+        return ndtr(- values)
+
     # notation from http://en.wikipedia.org/wiki/Truncated_normal_distribution.
     # given that mu = 0 and sigma = 1, we have alpha = a and beta = b.
 
@@ -460,26 +500,15 @@ def _truncnorm_sf(truncation_level, values):
     return ((phi_b - ndtr(values)) / z).clip(0.0, 1.0)
 
 
-def _norm_sf(values):
+def to_distribution_values(vals, imt):
     """
-    Survival function for normal distribution.
-
-    Assumes zero mean and standard deviation equal to one.
-
-    ``values`` parameter and the return value are the same
-    as in :func:`_truncnorm_sf`.
-
-    >>> from scipy.stats import norm
-    >>> norm.sf(0.12345) == _norm_sf(0.12345)
-    True
+    :returns: the logarithm of the values unless the IMT is MMI
     """
-    # survival function by definition is ``SF(x) = 1 - CDF(x)``,
-    # which is equivalent to ``SF(x) = CDF(- x)``, since (given
-    # that the normal distribution is symmetric with respect to 0)
-    # the integral between ``[x, +infinity]`` (that is the survival
-    # function) is equal to the integral between ``[-infinity, -x]``
-    # (that is the CDF at ``- x``).
-    return ndtr(- values)
+    if str(imt) == 'MMI':
+        return vals
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return numpy.log(vals)
 
 
 class GMPE(GroundShakingIntensityModel):
@@ -492,20 +521,14 @@ class GMPE(GroundShakingIntensityModel):
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
-    def to_distribution_values(self, values):
+    def open(self, fname_or_file):
         """
-        Returns numpy array of natural logarithms of ``values``.
+        :param fname_or_file: filename or filelike object
+        :returns: the file object
         """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            # avoid RuntimeWarning: divide by zero encountered in log
-            return numpy.log(values)
-
-    def to_imt_unit_values(self, values):
-        """
-        Returns numpy array of exponents of ``values``.
-        """
-        return numpy.exp(values)
+        if hasattr(fname_or_file, 'read'):
+            return fname_or_file
+        return open(fname_or_file, 'rb')
 
     def set_parameters(self):
         """
@@ -521,25 +544,103 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
+    def get_mean_std(self, ctxs, imts):
+        """
+        :returns: an array of shape (2, N, M) with means and stddevs
+        """
+        N = sum(len(ctx.sids) for ctx in ctxs)
+        M = len(imts)
+        arr = numpy.zeros((2, N, M))
+        num_tables = CoeffsTable.num_instances
+        start = 0
+        for ctx in ctxs:
+            stop = start + len(ctx.sids)
+            new = ctx.roundup(self.minimum_distance)
+            for m, imt in enumerate(imts):
+                mean, [std] = self.get_mean_and_stddevs(ctx, ctx, new, imt,
+                                                        [const.StdDev.TOTAL])
+                arr[0, start:stop, m] = mean
+                arr[1, start:stop, m] = std
+                if CoeffsTable.num_instances > num_tables:
+                    raise RuntimeError('Instantiating CoeffsTable inside '
+                                       '%s.get_mean_and_stddevs' %
+                                       self.__class__.__name__)
+            start = stop
+        return arr
 
-class IPE(GroundShakingIntensityModel):
-    """
-    Intensity Prediction Equation is a subclass of generic
-    :class:`GroundShakingIntensityModel` which is suitable for
-    intensity measures that are normally distributed. In particular,
-    for :class:`~openquake.hazardlib.imt.MMI`.
-    """
-    def to_distribution_values(self, values):
+    def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctxs=()):
         """
-        Returns numpy array of ``values`` without any conversion.
-        """
-        return numpy.array(values, dtype=float)
+        Calculate and return probabilities of exceedance (PoEs) of one or more
+        intensity measure levels (IMLs) of one intensity measure type (IMT)
+        for one or more pairs "site -- rupture".
 
-    def to_imt_unit_values(self, values):
+        :param mean_std:
+            An array of shape (2, N, M) with mean and standard deviations
+            for the sites and intensity measure types
+        :param loglevels:
+            A DictArray imt -> logs of intensity measure levels
+        :param trunclevel:
+            Can be ``None``, which means that the distribution of intensity
+            is treated as Gaussian distribution with possible values ranging
+            from minus infinity to plus infinity.
+
+            When set to zero, the mean intensity is treated as an exact
+            value (standard deviation is not even computed for that case)
+            and resulting array contains 0 in places where IMT is strictly
+            lower than the mean value of intensity and 1.0 where IMT is equal
+            or greater.
+
+            When truncation level is positive number, the intensity
+            distribution is processed as symmetric truncated Gaussian with
+            range borders being ``mean - truncation_level * stddev`` and
+            ``mean + truncation_level * stddev``. That is, the truncation
+            level expresses how far the range borders are from the mean
+            value and is defined in units of sigmas. The resulting PoEs
+            for that mode are values of complementary cumulative distribution
+            function of that truncated Gaussian applied to IMLs.
+        :param af:
+            None or an instance of AmplFunction
+        :param ctxs:
+            Context object used to compute mean_std
+        :returns:
+            array of PoEs of shape (N, L)
+        :raises ValueError:
+            If truncation level is not ``None`` and neither non-negative
+            float number, and if ``imts`` dictionary contain wrong or
+            unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
-        Returns numpy array of ``values`` without any conversion.
-        """
-        return numpy.array(values, dtype=float)
+        if trunclevel is not None and trunclevel < 0:
+            raise ValueError('truncation level must be zero, positive number '
+                             'or None')
+        if hasattr(self, 'weights_signs'):
+            outs = []
+            weights, signs = zip(*self.weights_signs)
+            for s in signs:
+                ms = numpy.array(mean_std)  # make a copy
+                for m in range(len(loglevels)):
+                    ms[0, :, m] += s * self.adjustment
+                outs.append(_get_poes(ms, loglevels, trunclevel))
+            arr = numpy.average(outs, weights=weights, axis=0)
+        elif hasattr(self, "mixture_model"):
+            shp = list(mean_std[0].shape)  # (N, M)
+            shp[1] = loglevels.size  # L
+            arr = numpy.zeros(shp)
+            for f, w in zip(self.mixture_model["factors"],
+                            self.mixture_model["weights"]):
+                mean_stdi = numpy.array(mean_std)  # a copy
+                mean_stdi[1] *= f  # multiply stddev by factor
+                arr += w * _get_poes(mean_stdi, loglevels, trunclevel)
+        elif af:  # kernel amplification function
+            arr = _get_poes_site(mean_std, loglevels, trunclevel, af, ctxs)
+        else:  # regular case
+            arr = _get_poes(mean_std, loglevels, trunclevel)
+        imtweight = getattr(self, 'weight', None)  # ImtWeight or None
+        for imt in loglevels:
+            if imtweight and imtweight.dic.get(imt) == 0:
+                # set by the engine when parsing the gsim logictree
+                # when 0 ignore the contribution: see _build_trts_branches
+                arr[:, loglevels(imt)] = 0
+        return arr
 
 
 class CoeffsTable(object):
@@ -656,9 +757,12 @@ class CoeffsTable(object):
     ...           imt.PGV(): {"a": 0.5, "b": 10.0}}
     >>> ct = CoeffsTable(sa_damping=5, table=coeffs)
     """
+    num_instances = 0
+
     def __init__(self, **kwargs):
         if 'table' not in kwargs:
             raise TypeError('CoeffsTable requires "table" kwarg')
+        self._coeffs = {}  # cache
         table = kwargs.pop('table')
         self.sa_coeffs = {}
         self.non_sa_coeffs = {}
@@ -676,6 +780,7 @@ class CoeffsTable(object):
         else:
             raise TypeError("CoeffsTable cannot be constructed with inputs "
                             "of the form '%s'" % table.__class__.__name__)
+        self.__class__.num_instances += 1
 
     def _setup_table_from_str(self, table, sa_damping):
         """
@@ -719,11 +824,16 @@ class CoeffsTable(object):
             If ``imt`` is not available in the table and no interpolation
             can be done.
         """
-        if imt.name != 'SA':
-            return self.non_sa_coeffs[imt]
-
         try:
-            return self.sa_coeffs[imt]
+            return self._coeffs[imt]
+        except KeyError:
+            pass
+        if imt.name != 'SA':
+            self._coeffs[imt] = c = self.non_sa_coeffs[imt]
+            return c
+        try:
+            self._coeffs[imt] = c = self.sa_coeffs[imt]
+            return c
         except KeyError:
             pass
 
@@ -747,6 +857,7 @@ class CoeffsTable(object):
                  / (math.log(min_above.period) - math.log(max_below.period)))
         max_below = self.sa_coeffs[max_below]
         min_above = self.sa_coeffs[min_above]
-        return dict(
-            (co, (min_above[co] - max_below[co]) * ratio + max_below[co])
-            for co in max_below)
+        self._coeffs[imt] = c = {
+            co: (min_above[co] - max_below[co]) * ratio + max_below[co]
+            for co in max_below}
+        return c

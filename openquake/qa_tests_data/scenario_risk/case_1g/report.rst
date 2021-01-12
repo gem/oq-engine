@@ -1,33 +1,34 @@
 Scenario Calculation with Simple Fault Rupture
 ==============================================
 
-============== ===================
-checksum32     1,419,232,840      
-date           2019-05-10T05:07:14
-engine_version 3.5.0-gitbaeb4c1e35
-============== ===================
+============== ====================
+checksum32     884_028_645         
+date           2020-11-02T09:35:33 
+engine_version 3.11.0-git82b78631ac
+============== ====================
 
-num_sites = 7, num_levels = 3, num_rlzs = 1
+num_sites = 7, num_levels = 3, num_rlzs = ?
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'scenario'        
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 200.0}
-investigation_time              None              
-ses_per_logic_tree_path         1                 
-truncation_level                3.0               
-rupture_mesh_spacing            2.0               
-complex_fault_mesh_spacing      2.0               
-width_of_mfd_bin                None              
-area_source_discretization      None              
-ground_motion_correlation_model 'JB2009'          
-minimum_intensity               {}                
-random_seed                     42                
-master_seed                     0                 
-ses_seed                        42                
-=============================== ==================
+=============================== ==========================================
+calculation_mode                'scenario'                                
+number_of_logic_tree_samples    0                                         
+maximum_distance                {'default': [(1.0, 200.0), (10.0, 200.0)]}
+investigation_time              None                                      
+ses_per_logic_tree_path         1                                         
+truncation_level                3.0                                       
+rupture_mesh_spacing            2.0                                       
+complex_fault_mesh_spacing      2.0                                       
+width_of_mfd_bin                None                                      
+area_source_discretization      None                                      
+pointsource_distance            None                                      
+ground_motion_correlation_model 'JB2009'                                  
+minimum_intensity               {}                                        
+random_seed                     42                                        
+master_seed                     0                                         
+ses_seed                        42                                        
+=============================== ==========================================
 
 Input files
 -----------
@@ -39,33 +40,20 @@ rupture_model `rupture_model.xml <rupture_model.xml>`_
 sites         `sites.csv <sites.csv>`_                
 ============= ========================================
 
-Composite source model
-----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b_1       1.00000 trivial(1)      1               
-========= ======= =============== ================
+Information about the tasks
+---------------------------
+Not available
 
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[BooreAtkinson2008]': [0]>
-
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
-========= ======== ========= ======
-operation time_sec memory_mb counts
-========= ======== ========= ======
-========= ======== ========= ======
+================ ======== ========= ======
+calc_47233       time_sec memory_mb counts
+================ ======== ========= ======
+importing inputs 0.00411  0.0       1     
+================ ======== ========= ======

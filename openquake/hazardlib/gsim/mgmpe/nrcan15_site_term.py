@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.mgmp.nrcan15_site_term` implements
 
 import copy
 import numpy as np
+from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
@@ -41,12 +42,12 @@ class NRCan15SiteTerm(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
-    def __init__(self, gmpe_name):
-        super().__init__(gmpe_name=gmpe_name)
+    def __init__(self, gmpe_name, **kwargs):
+        super().__init__(gmpe_name=gmpe_name, **kwargs)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
         #
@@ -71,7 +72,7 @@ class NRCan15SiteTerm(GMPE):
         for spec of input and result values.
         """
         # Prepare sites
-        sites_rock = copy.deepcopy(sites)
+        sites_rock = copy.copy(sites)
         sites_rock.vs30 = np.ones_like(sites_rock.vs30) * 760.
         # compute mean and standard deviation
         mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,

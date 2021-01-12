@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel>
+    <areaSource id="1" name="1" tectonicRegion="Stable Continental Region">
+      <areaGeometry>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>66.15366 44.79889 62.02968 42.7833 60.64807 42.10574 59.65535 42.55674 57.83014 42.99214 53.7657 43.9617 61.33519 49.13345 63.32724 47.14337 67.15366 44.79889 67.15366 44.79889 67.15366 44.79889 66.15366 44.79889</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>10.0</upperSeismoDepth>
+        <lowerSeismoDepth>30.0</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="2.1" bValue="1.0" minMag="5.0" maxMag="7.0"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="125.0" dip="45.0" rake="70.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="20.0"/>
+      </hypoDepthDist>
+    </areaSource>
+    <areaSource id="2" name="2" tectonicRegion="Stable Continental Region">
+      <areaGeometry>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>67.15366 44.79889 62.02968 42.7833 60.64807 42.10574 59.65535 42.55674 57.83014 42.99214 53.7657 43.9617 61.33519 49.13345 63.32724 47.14337 67.15366 44.79889 67.15366 44.79889 67.15366 44.79889 67.15366 44.79889</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>50.0</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="2.3" bValue="1.0" minMag="4.0" maxMag="6.0"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="1.0" strike="150.0" dip="45.0" rake="70.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="15.0"/>
+      </hypoDepthDist>
+    </areaSource>
+  </sourceModel>
+</nrml>

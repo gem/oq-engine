@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -52,6 +52,26 @@ class AbrahamsonEtAl2015SInterTestCase(BaseGSIMTestCase):
     def test_std_intra(self):
         self.check(self.INTRA_FILE,
                    max_discrep_percentage=0.1)
+
+
+class AbrahamsonEtAl2015SInterNonErgodicTestCase(BaseGSIMTestCase):
+    """
+    Tests the intra-event standard deviation and total standard deviation
+    for the non-ergodic case
+    """
+    GSIM_CLASS = AbrahamsonEtAl2015SInter
+    TOTAL_FILE = "BCHYDRO/BCHYDRO_SINTER_CENTRAL_STDDEV_NONERGODIC_TOTAL.csv"
+    INTRA_FILE = "BCHYDRO/BCHYDRO_SINTER_CENTRAL_STDDEV_NONERGODIC_INTRA.csv"
+
+    def test_std_total(self):
+        self.check(self.TOTAL_FILE,
+                   max_discrep_percentage=0.1,
+                   ergodic=False)
+
+    def test_std_intra(self):
+        self.check(self.INTRA_FILE,
+                   max_discrep_percentage=0.1,
+                   ergodic=False)
 
 
 class AbrahamsonEtAl2015SInterHighTestCase(AbrahamsonEtAl2015SInterTestCase):

@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2020 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -46,8 +46,8 @@
 # liability for use of the software.
 
 """
-Module :mod:`openquake.hmtk.parsers.catalogue.base` defines an abstract base class
-for :class:`CatalogueParser <BaseCatalogueParser>`.
+Module :mod:`openquake.hmtk.parsers.catalogue.base` defines an abstract base
+class for :class:`CatalogueParser <BaseCatalogueParser>`.
 """
 import abc
 import os.path
@@ -63,7 +63,7 @@ class BaseCatalogueParser(object):
         """
         self.input_file = input_file
         if not os.path.exists(self.input_file):
-            raise IOError('File not found')
+            raise IOError('File not found: %s' % input_file)
 
     @abc.abstractmethod
     def read_file(self):

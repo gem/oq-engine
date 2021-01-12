@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,9 +45,9 @@ class SadighEtAl1997(GMPE):
     ])
 
     #: Supported intensity measure component is the geometric mean of
-    #two : horizontal components
-    #:attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, : see
-    #page 180.
+    #: two : horizontal components
+    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`, : see
+    #: page 180.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total, see table 3.
@@ -57,13 +57,13 @@ class SadighEtAl1997(GMPE):
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and rake (eq. 1).
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: Required distance measure is RRup (eq. 1).
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: If site vs30 is more than 750 m/s -- treat the soil as rock.
     #: See page 180.

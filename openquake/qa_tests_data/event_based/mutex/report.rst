@@ -1,33 +1,34 @@
 Event Based QA Test, Case 1
 ===========================
 
-============== ===================
-checksum32     3,529,984,501      
-date           2019-05-10T05:07:29
-engine_version 3.5.0-gitbaeb4c1e35
-============== ===================
+============== ====================
+checksum32     4_098_937_088       
+date           2020-11-02T09:36:22 
+engine_version 3.11.0-git82b78631ac
+============== ====================
 
-num_sites = 1, num_levels = 46, num_rlzs = ?
+num_sites = 1, num_levels = 46, num_rlzs = 1
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'event_based'     
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 200.0}
-investigation_time              50.0              
-ses_per_logic_tree_path         2000              
-truncation_level                2.0               
-rupture_mesh_spacing            2.0               
-complex_fault_mesh_spacing      2.0               
-width_of_mfd_bin                1.0               
-area_source_discretization      20.0              
-ground_motion_correlation_model None              
-minimum_intensity               {}                
-random_seed                     42                
-master_seed                     0                 
-ses_seed                        1066              
-=============================== ==================
+=============================== ==========================================
+calculation_mode                'preclassical'                            
+number_of_logic_tree_samples    0                                         
+maximum_distance                {'default': [(1.0, 200.0), (10.0, 200.0)]}
+investigation_time              50.0                                      
+ses_per_logic_tree_path         2000                                      
+truncation_level                2.0                                       
+rupture_mesh_spacing            2.0                                       
+complex_fault_mesh_spacing      2.0                                       
+width_of_mfd_bin                1.0                                       
+area_source_discretization      20.0                                      
+pointsource_distance            None                                      
+ground_motion_correlation_model None                                      
+minimum_intensity               {}                                        
+random_seed                     42                                        
+master_seed                     0                                         
+ses_seed                        1066                                      
+=============================== ==========================================
 
 Input files
 -----------
@@ -39,49 +40,70 @@ job_ini                 `job.ini <job.ini>`_
 source_model_logic_tree `ssmLT.xml <ssmLT.xml>`_
 ======================= ========================
 
+Composite source model
+----------------------
+====== ========================== ====
+grp_id gsim                       rlzs
+====== ========================== ====
+0      '[SiMidorikawa1999SInter]' [0] 
+====== ========================== ====
+
+Required parameters per tectonic region type
+--------------------------------------------
+===== ========================== ========= ========== ==============
+et_id gsims                      distances siteparams ruptparams    
+===== ========================== ========= ========== ==============
+0     '[SiMidorikawa1999SInter]' rrup      vs30       hypo_depth mag
+===== ========================== ========= ========== ==============
+
 Slowest sources
 ---------------
-====== ========= ==== ====== ====== ============ ========= ========= ======
-grp_id source_id code gidx1  gidx2  num_ruptures calc_time num_sites weight
-====== ========= ==== ====== ====== ============ ========= ========= ======
-0      case_10   N    29,255 32,080 1            0.0       0.0       0.0   
-0      case_09   N    28,021 29,255 1            0.0       0.0       0.0   
-0      case_08   N    21,872 28,021 1            0.0       0.0       0.0   
-0      case_07   N    17,050 21,872 1            0.0       0.0       0.0   
-0      case_06   N    12,124 17,050 1            0.0       0.0       0.0   
-0      case_05   N    8,525  12,124 1            0.0       0.0       0.0   
-0      case_04   N    5,132  8,525  1            0.0       0.0       0.0   
-0      case_03   N    3,599  5,132  1            0.0       0.0       0.0   
-0      case_02   N    1,207  3,599  1            0.0       0.0       0.0   
-0      case_01   N    0      1,207  1            0.0       0.0       0.0   
-====== ========= ==== ====== ====== ============ ========= ========= ======
+========= ==== ========= ========= ============
+source_id code calc_time num_sites eff_ruptures
+========= ==== ========= ========= ============
+case_04   N    2.460E-04 1         1           
+case_06   N    2.398E-04 1         1           
+case_02   N    2.365E-04 1         1           
+case_01   N    2.365E-04 1         1           
+case_07   N    2.341E-04 1         1           
+case_03   N    2.327E-04 1         1           
+case_08   N    2.315E-04 1         1           
+case_05   N    2.303E-04 1         1           
+case_09   N    2.253E-04 1         1           
+case_10   N    2.234E-04 1         1           
+========= ==== ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-N    0.0       10    
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+N    0.00234  
+==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.18682 NaN    0.18682 0.18682 1      
-================== ======= ====== ======= ======= =======
+================== ====== ========= ====== ========= =========
+operation-duration counts mean      stddev min       max      
+preclassical       10     7.145E-04 3%     6.726E-04 7.486E-04
+read_source_model  1      0.28333   nan    0.28333   0.28333  
+================== ====== ========= ====== ========= =========
 
 Data transfer
 -------------
-================== ============================ =========
-task               sent                         received 
-read_source_models converter=313 B fnames=107 B 756.09 KB
-================== ============================ =========
+================= ================================= =========
+task              sent                              received 
+read_source_model                                   755.95 KB
+preclassical      srcs=771.41 KB srcfilter=10.03 KB 2.39 KB  
+================= ================================= =========
 
 Slowest operations
 ------------------
-======================== ======== ========= ======
-operation                time_sec memory_mb counts
-======================== ======== ========= ======
-total read_source_models 0.18682  4.74609   1     
-======================== ======== ========= ======
+========================= ======== ========= ======
+calc_47299, maxmem=1.5 GB time_sec memory_mb counts
+========================= ======== ========= ======
+importing inputs          0.69829  1.01172   1     
+composite source model    0.69368  1.01172   1     
+total read_source_model   0.28333  0.37109   1     
+total preclassical        0.00714  0.40625   10    
+========================= ======== ========= ======

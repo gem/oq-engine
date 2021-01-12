@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,7 @@ import logging
 import csv
 import os
 import numpy
+import pandas
 from shapely import wkt, geometry
 
 from openquake.baselib import hdf5, general
@@ -28,6 +29,28 @@ from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
 from openquake.risklib import countries
+
+U8 = numpy.uint8
+U32 = numpy.uint32
+F32 = numpy.float32
+U64 = numpy.uint64
+TWO16 = 2 ** 16
+TWO32 = 2 ** 32
+by_taxonomy = operator.attrgetter('taxonomy')
+
+
+def get_case_similar(names):
+    """
+    :param names: a list of strings
+    :returns: list of case similar names, possibly empty
+
+    >>> get_case_similar(['id', 'ID', 'lon', 'lat', 'Lon'])
+    [['ID', 'id'], ['Lon', 'lon']]
+    """
+    dic = general.AccumDict(accum=[])
+    for name in names:
+        dic[name.lower()].append(name)
+    return [sorted(names) for names in dic.values() if len(names) > 1]
 
 
 class CostCalculator(object):
@@ -90,8 +113,8 @@ class CostCalculator(object):
                 unit = 'people'
             else:
                 unit = self.units[lt]
-            lst.append(encode(unit))
-        return numpy.array(lst)
+            lst.append(unit)
+        return lst
 
     def __toh5__(self):
         loss_types = sorted(self.cost_types)
@@ -129,6 +152,7 @@ class Asset(object):
     a risk analysis (e.g. occupants).
     """
     def __init__(self,
+                 asset_id,
                  ordinal,
                  tagidxs,
                  number,
@@ -138,6 +162,8 @@ class Asset(object):
                  retrofitted=None,
                  calc=costcalculator):
         """
+        :param asset_id:
+            a short string identifier
         :param ordinal:
             an integer identifier for the asset, used to order them
         :param tagidxs:
@@ -155,6 +181,7 @@ class Asset(object):
         :param ordinal:
             asset collection ordinal
         """
+        self.asset_id = asset_id
         self.ordinal = ordinal
         self.tagidxs = tagidxs
         self.number = number
@@ -163,30 +190,15 @@ class Asset(object):
         self.area = area
         self._retrofitted = retrofitted
         self.calc = calc
-        self._cost = {}  # cache for the costs
-
-    @property
-    def taxonomy(self):
-        return self.tagvalue('taxonomy')
-
-    def tagvalue(self, tagname):
-        """
-        :returns: the tagvalue associated to the given tagname
-        """
-        return self.tagidxs[self.calc.tagi[tagname]]
 
     def value(self, loss_type, time_event=None):
         """
         :returns: the total asset value for `loss_type`
         """
         if loss_type == 'occupants':
-            return self.values['occupants_' + str(time_event)]
-        try:  # extract from the cache
-            val = self._cost[loss_type]
-        except KeyError:  # compute
-            val = self.calc(loss_type, self.values, self.area, self.number)
-            self._cost[loss_type] = val
-        return val
+            return (self.values['occupants_' + str(time_event)]
+                    if time_event else self.values['occupants'])
+        return self.calc(loss_type, self.values, self.area, self.number)
 
     def retrofitted(self):
         """
@@ -195,29 +207,8 @@ class Asset(object):
         return self.calc('structural', {'structural': self._retrofitted},
                          self.area, self.number)
 
-    def tagmask(self, tags):
-        """
-        :returns: a boolean array with True where the assets has tags
-        """
-        mask = numpy.zeros(len(tags), bool)
-        for t, tag in enumerate(tags):
-            tagname, tagvalue = tag.split('=')
-            mask[t] = self.tagvalue(tagname) == tagvalue
-        return mask
-
-    def __lt__(self, other):
-        return self.ordinal < other.ordinal
-
     def __repr__(self):
         return '<Asset #%s>' % self.ordinal
-
-
-U8 = numpy.uint8
-U32 = numpy.uint32
-F32 = numpy.float32
-U64 = numpy.uint64
-TWO32 = 2 ** 32
-by_taxonomy = operator.attrgetter('taxonomy')
 
 
 class TagCollection(object):
@@ -237,6 +228,12 @@ class TagCollection(object):
         self.tagnames = []
         for tagname in tagnames:
             self.add_tagname(tagname)
+
+    def get_tagidx(self, tagname):
+        """
+        :returns: a dictionary tag string -> tag index
+        """
+        return {tag: idx for idx, tag in enumerate(getattr(self, tagname))}
 
     def add_tagname(self, tagname):
         self.tagnames.append(tagname)
@@ -302,6 +299,29 @@ class TagCollection(object):
                        for tagidx, tagname in zip(tagidxs, tagnames))
         return values
 
+    def get_tagdict(self, tagidxs):
+        """
+        :returns: dictionary {tagname: tag}
+        """
+        return {tagname: getattr(self, tagname)[tagidx]
+                for tagidx, tagname in zip(tagidxs, self.tagnames)}
+
+    def get_aggkey(self, tagnames):
+        """
+        :returns: a dictionary tuple of indices -> tagvalues
+        """
+        aggkey = {}
+        if not tagnames:
+            return aggkey
+        alltags = [getattr(self, tagname) for tagname in tagnames]
+        ranges = [range(1, len(tags)) for tags in alltags]
+        for i, idxs in enumerate(itertools.product(*ranges)):
+            aggkey[idxs] = tuple(tags[idx] for idx, tags in zip(idxs, alltags))
+        if len(aggkey) >= TWO32:
+            raise ValueError('Too many aggregation tags: %d >= %d' %
+                             (len(aggkey), TWO32))
+        return aggkey
+
     def gen_tags(self, tagname):
         """
         :yields: the tags associated to the given tagname
@@ -309,10 +329,12 @@ class TagCollection(object):
         for tagvalue in getattr(self, tagname):
             yield '%s=%s' % (tagname, decode(tagvalue))
 
-    def agg_shape(self, shp, aggregate_by):
+    def agg_shape(self, aggregate_by=None, *shp):
         """
         :returns: a shape shp + (T, ...) depending on the tagnames
         """
+        if aggregate_by is None:
+            aggregate_by = self.tagnames
         return shp + tuple(
             len(getattr(self, tagname)) - 1 for tagname in aggregate_by)
 
@@ -323,7 +345,7 @@ class TagCollection(object):
             dic[tagname] = numpy.array(getattr(self, tagname))
             sizes.append(len(dic[tagname]))
         return dic, {'tagnames': numpy.array(self.tagnames, hdf5.vstr),
-                     'tagsizes': numpy.array(sizes)}
+                     'tagsizes': sizes}
 
     def __fromh5__(self, dic, attrs):
         self.tagnames = [decode(name) for name in attrs['tagnames']]
@@ -346,12 +368,19 @@ class TagCollection(object):
 
 
 class AssetCollection(object):
-    def __init__(self, exposure, assets_by_site, time_event):
+    def __init__(self, exposure, assets_by_site, time_event, aggregate_by):
         self.tagcol = exposure.tagcol
+        if 'site_id' in aggregate_by:
+            self.tagcol.add_tagname('site_id')
+            self.tagcol.site_id.extend(range(len(assets_by_site)))
         self.time_event = time_event
+        self.aggregate_by = aggregate_by
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
             assets_by_site, exposure.tagcol.tagnames, time_event)
+        if 'id' in aggregate_by:
+            self.tagcol.add_tagname('id')
+            self.tagcol.id.extend(self['id'])
         exp_periods = exposure.occupancy_periods
         if self.occupancy_periods and not exp_periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
@@ -374,7 +403,7 @@ class AssetCollection(object):
         """
         :returns: array of asset ids as strings
         """
-        return self.tagcol.id[1:]
+        return self.array['id']
 
     def num_taxonomies_by_site(self):
         """
@@ -413,7 +442,8 @@ class AssetCollection(object):
             assets_by_site[ass['site_id']].append(self[i])
         return numpy.array(assets_by_site)
 
-    def aggregate_by(self, tagnames, array):
+    # used in the extract API
+    def aggregateby(self, tagnames, array):
         """
         :param tagnames: a list of valid tag names
         :param array: an array with the same length as the asset collection
@@ -428,31 +458,69 @@ class AssetCollection(object):
                              (len(self), A))
         if not tagnames:
             return array.sum(axis=0)
+        elif len(tagnames) == 1:
+            # fast track for single-tag aggregation
+            # for the Canada exposure it is 30x faster
+            # fast_agg(assets['taxonomy'], values)  => 47.6 ms
+            # fast_agg2(assets[['taxonomy']], values) => 1.4 s
+            [tagname] = tagnames
+            avalues = general.fast_agg(self.array[tagname], array)[1:]
+            tagids = [(i + 1,) for i in range(len(avalues))]
+        else:  # multi-tag aggregation
+            tagids, avalues = general.fast_agg2(self.array[tagnames], array)
         shape = [len(getattr(self.tagcol, tagname))-1 for tagname in tagnames]
-        acc = numpy.zeros(shape, (F32, shp) if shp else F32)
-        for asset, row in zip(self.array, array):
-            acc[tuple(idx - 1 for idx in asset[tagnames])] += row
-        return acc
+        arr = numpy.zeros(shape, (F32, tuple(shp)) if shp else F32)
+        for tagid, aval in zip(tagids, avalues):
+            arr[tuple(i - 1 for i in tagid)] = aval
+        return arr
 
-    def agg_value(self, loss_types, *tagnames):
+    def arr_value(self, loss_types):
         """
-        :param loss_types:
-            the relevant loss_types
-        :param tagnames:
-            tagnames of lengths T1, T2, ... respectively
-        :returns:
-            the values of the exposure aggregated by tagnames as an array
-            of shape (T1, T2, ..., L)
+        :param loss_types: the relevant loss types
+        :returns: an array of shape (A, L) with the values of the assets
         """
+        array = self.array
         aval = numpy.zeros((len(self), len(loss_types)), F32)  # (A, L)
-        for asset in self:
-            for lti, lt in enumerate(loss_types):
-                if lt == 'occupants':
-                    aval[asset['ordinal'], lti] = asset[lt + '_None']
-                elif lt in self.fields:
-                    aval[asset['ordinal'], lti] = asset['value-' + lt]
-        res = self.aggregate_by(list(tagnames), aval)
-        return res
+        for lti, lt in enumerate(loss_types):
+            if lt.endswith('_ins'):
+                aval[array['ordinal'], lti] = array['value-' + lt[:-4]]
+            elif lt in self.fields:
+                aval[array['ordinal'], lti] = array['value-' + lt]
+        return aval
+
+    def get_agg_values(self, loss_names, tagnames):
+        """
+        :param loss_names:
+            the relevant loss_names
+        :param tagnames:
+            tagnames
+        :returns:
+            an array of shape (K+1, L)
+        """
+        aggkey = {key: k for k, key in enumerate(
+            self.tagcol.get_aggkey(tagnames))}
+        K, L = len(aggkey), len(loss_names)
+        dic = {tagname: self[tagname] for tagname in tagnames}
+        for ln in loss_names:
+            if ln.endswith('_ins'):
+                dic[ln] = self['value-' + ln[:-4]]
+            elif ln in self.fields:
+                dic[ln] = self['value-' + ln]
+        agg_values = numpy.zeros((K+1, L))
+        df = pandas.DataFrame(dic)
+        if tagnames:
+            df = df.set_index(list(tagnames))
+            if tagnames == ['id']:
+                df.index = self['ordinal'] + 1
+            elif tagnames == ['site_id']:
+                df.index = self['site_id'] + 1
+            for key, grp in df.groupby(df.index):
+                if isinstance(key, int):
+                    key = key,  # turn it into a 1-value tuple
+                agg_values[aggkey[key], :] = numpy.array(grp.sum())
+        if self.fields:  # missing in scenario_damage case_8
+            agg_values[-1, :] = [df[ln].sum() for ln in loss_names]
+        return agg_values
 
     def reduce(self, sitecol):
         """
@@ -540,23 +608,23 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     for name in sorted(first_asset.values):
         if name.startswith('occupants_'):
             period = name.split('_', 1)[1]
-            if period != 'None':
-                # see scenario_risk test_case_2d
-                occupancy_periods.append(period)
+            # see scenario_risk test_case_2d
+            occupancy_periods.append(period)
             loss_types.append(name)
-            # discard occupants for different time periods
         else:
             loss_types.append('value-' + name)
     # loss_types can be ['value-business_interruption', 'value-contents',
-    # 'value-nonstructural', 'occupants_None', 'occupants_day',
+    # 'value-nonstructural', 'value-occupants', 'occupants_day',
     # 'occupants_night', 'occupants_transit']
     retro = ['retrofitted'] if first_asset._retrofitted else []
     float_fields = loss_types + retro
-    int_fields = [(str(name), U32) for name in tagnames]
+    int_fields = [(str(name), U32) for name in tagnames
+                  if name not in ('id', 'site_id')]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
-        [('ordinal', U32), ('lon', F32), ('lat', F32), ('site_id', U32),
-         ('number', F32), ('area', F32)] + [
+        [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
+         ('ordinal', U32), ('lon', F32), ('lat', F32),
+         ('site_id', U32), ('number', F32), ('area', F32)] + [
              (str(name), float) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
@@ -568,7 +636,9 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
             record = assetcol[asset_ordinal]
             asset_ordinal += 1
             for field in fields:
-                if field == 'ordinal':
+                if field == 'id':
+                    value = asset.asset_id
+                elif field == 'ordinal':
                     value = asset.ordinal
                 elif field == 'number':
                     value = asset.number
@@ -634,7 +704,7 @@ def _get_exposure(fname, stop=None):
         tagNames = exposure.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
-    tagnames = ['id'] + (~tagNames or [])
+    tagnames = ~tagNames or []
     if set(tagnames) & {'taxonomy', 'exposure', 'country'}:
         raise InvalidFile('taxonomy, exposure and country are reserved names '
                           'you cannot use it in <tagNames>: %s' % fname)
@@ -672,7 +742,7 @@ def _get_exposure(fname, stop=None):
     exp = Exposure(
         exposure['id'], exposure['category'],
         description.text, cost_types, occupancy_periods, retrofitted,
-        area.attrib, [], [], cc, TagCollection(tagnames))
+        area.attrib, [], cc, TagCollection(tagnames))
     assets_text = exposure.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -750,18 +820,25 @@ class Exposure(object):
     """
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'retrofitted',
-              'area', 'assets', 'asset_refs',
-              'cost_calculator', 'tagcol']
+              'area', 'assets', 'cost_calculator', 'tagcol']
+
+    @staticmethod
+    def check(fname):
+        exp = Exposure.read([fname])
+        err = []
+        for asset in exp.assets:
+            if asset.number > 65535:
+                err.append('Asset %s has number %s > 65535' %
+                           (asset.asset_id, asset.number))
+        return '\n'.join(err)
 
     @staticmethod
     def read(fnames, calculation_mode='', region_constraint='',
-             ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
+             ignore_missing_costs=(), check_dupl=True,
              tagcol=None, by_country=False):
         """
-        Call `Exposure.read(fname)` to get an :class:`Exposure` instance
-        keeping all the assets in memory or
-        `Exposure.read(fname, asset_nodes=True)` to get an iterator over
-        Node objects (one Node for each asset).
+        Call `Exposure.read(fnames)` to get an :class:`Exposure` instance
+        keeping all the assets in memory.
         """
         if by_country:  # E??_ -> countrycode
             prefix2cc = countries.from_exposures(
@@ -778,8 +855,7 @@ class Exposure(object):
             else:
                 prefix = ''
             allargs.append((fname, calculation_mode, region_constraint,
-                            ignore_missing_costs, asset_nodes, check_dupl,
-                            prefix, tagcol))
+                            ignore_missing_costs, check_dupl, prefix, tagcol))
         exp = None
         for exposure in itertools.starmap(Exposure.read_exp, allargs):
             if exp is None:  # first time
@@ -791,15 +867,17 @@ class Exposure(object):
                 assert exposure.retrofitted == exp.retrofitted
                 assert exposure.area == exp.area
                 exp.assets.extend(exposure.assets)
-                exp.asset_refs.extend(exposure.asset_refs)
                 exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
+        for i, ass in enumerate(exp.assets):
+            # used by the GED4ALL importer
+            ass.tags = exp.tagcol.get_tagdict(ass.tagidxs)
         return exp
 
     @staticmethod
     def read_exp(fname, calculation_mode='', region_constraint='',
-                 ignore_missing_costs=(), asset_nodes=False, check_dupl=True,
+                 ignore_missing_costs=(), check_dupl=True,
                  asset_prefix='', tagcol=None, monitor=None):
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
@@ -860,6 +938,10 @@ class Exposure(object):
         for op in self.occupancy_periods.split():
             fields.append(occupants + op)
         fields.extend(self.tagcol.tagnames)
+        wrong = get_case_similar(set(fields))
+        if wrong:
+            raise InvalidFile('Found case-duplicated fields %s in %s' %
+                              (wrong, self.datafiles))
         return sorted(set(fields))
 
     def _read_csv(self):
@@ -868,17 +950,19 @@ class Exposure(object):
         """
         expected_header = set(self._csv_header('', ''))
         for fname in self.datafiles:
-            with open(fname, encoding='utf-8') as f:
+            with open(fname, encoding='utf-8-sig') as f:
                 fields = next(csv.reader(f))
                 header = set(fields)
+                missing = expected_header - header - {'exposure', 'country'}
                 if len(header) < len(fields):
                     raise InvalidFile(
                         '%s: The header %s contains a duplicated field' %
                         (fname, header))
-                elif expected_header - header - {'exposure', 'country'}:
-                    raise InvalidFile(
-                        'Unexpected header in %s\nExpected: %s\nGot: %s' %
-                        (fname, sorted(expected_header), sorted(header)))
+                elif missing:
+                    msg = ('Unexpected header in %s\nExpected: %s\nGot: %s\n'
+                           'Missing: %s')
+                    raise InvalidFile(msg % (fname, sorted(expected_header),
+                                             sorted(header), missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
                 'retrofitted': float, None: object}
         rename = {}
@@ -890,6 +974,8 @@ class Exposure(object):
             rename[field] = 'occupants_' + field
         for fname in self.datafiles:
             array = hdf5.read_csv(fname, conv, rename).array
+            array['lon'] = numpy.round(array['lon'], 5)
+            array['lat'] = numpy.round(array['lat'], 5)
             yield from array
 
     def _populate_from(self, asset_array, param, check_dupl):
@@ -913,7 +999,6 @@ class Exposure(object):
         prefix = param['asset_prefix']
         # FIXME: in case of an exposure split in CSV files the line number
         # is None because param['fname'] points to the .xml file :-(
-        self.asset_refs.append(prefix + asset_id)
         taxonomy = asset['taxonomy']
         number = asset['number']
         location = asset['lon'], asset['lat']
@@ -925,7 +1010,6 @@ class Exposure(object):
                if tagname not in ('country', 'exposure') and
                asset[tagname] != '?'}
         dic['taxonomy'] = taxonomy
-        dic['id'] = prefix + asset_id
         idxs = self.tagcol.add_tags(dic, prefix)
         tot_occupants = 0
         num_occupancies = 0
@@ -938,7 +1022,7 @@ class Exposure(object):
                 num_occupancies += 1
         if num_occupancies:
             # store average occupants
-            values['occupants_None'] = tot_occupants / num_occupancies
+            values['occupants'] = tot_occupants / num_occupancies
 
         # check we are not missing a cost type
         missing = param['relevant_cost_types'] - set(values)
@@ -957,8 +1041,8 @@ class Exposure(object):
             area = asset['area']
         except ValueError:
             area = 1
-        ass = Asset(idx, idxs, number, location, values, area,
-                    retrofitted, self.cost_calculator)
+        ass = Asset(prefix + asset_id, idx, idxs, number, location, values,
+                    area, retrofitted, self.cost_calculator)
         self.assets.append(ass)
 
     def get_mesh_assets_by_site(self):

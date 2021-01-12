@@ -1,13 +1,13 @@
 Scenario Risk Test
 ==================
 
-============== ===================
-checksum32     4,057,024,737      
-date           2019-05-10T05:07:15
-engine_version 3.5.0-gitbaeb4c1e35
-============== ===================
+============== ====================
+checksum32     648_091_558         
+date           2020-11-02T09:35:34 
+engine_version 3.11.0-git82b78631ac
+============== ====================
 
-num_sites = 27, num_levels = 8, num_rlzs = 1
+num_sites = 27, num_levels = 1, num_rlzs = 1
 
 Parameters
 ----------
@@ -18,10 +18,11 @@ maximum_distance                None
 investigation_time              None           
 ses_per_logic_tree_path         1              
 truncation_level                None           
-rupture_mesh_spacing            None           
-complex_fault_mesh_spacing      None           
+rupture_mesh_spacing            5.0            
+complex_fault_mesh_spacing      5.0            
 width_of_mfd_bin                None           
 area_source_discretization      None           
+pointsource_distance            None           
 ground_motion_correlation_model None           
 minimum_intensity               {}             
 random_seed                     42             
@@ -43,51 +44,45 @@ structural_vulnerability `vulnerability_model_test1.xml <vulnerability_model_tes
 
 Composite source model
 ----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b_1       1.00000 trivial(1)      1               
-========= ======= =============== ================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[FromFile]': [0]>
-
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
+====== ============ ====
+grp_id gsim         rlzs
+====== ============ ====
+0      '[FromFile]' [0] 
+====== ============ ====
 
 Exposure model
 --------------
-=============== ========
-#assets         27      
-#taxonomies     4       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== ==
+#assets     27
+#taxonomies 4 
+=========== ==
 
-======== ======= ====== === === ========= ==========
-taxonomy mean    stddev min max num_sites num_assets
-2        1.00000 0.0    1   1   4         4         
-4        1.00000 0.0    1   1   16        16        
-3        1.00000 0.0    1   1   5         5         
-1        1.00000 0.0    1   1   2         2         
-*ALL*    1.00000 0.0    1   1   27        27        
-======== ======= ====== === === ========= ==========
+======== ========== ======= ====== === === =========
+taxonomy num_assets mean    stddev min max num_sites
+2        4          1.00000 0%     1   1   4        
+4        16         1.00000 0%     1   1   16       
+3        5          1.00000 0%     1   1   5        
+1        2          1.00000 0%     1   1   2        
+*ALL*    27         1.00000 0%     1   1   27       
+======== ========== ======= ====== === === =========
+
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
 =================== ========= ========= ======
-operation           time_sec  memory_mb counts
+calc_47237          time_sec  memory_mb counts
 =================== ========= ========= ======
-building riskinputs 0.03059   0.0       1     
-reading exposure    5.817E-04 0.0       1     
+building riskinputs 0.02834   0.99219   1     
+importing inputs    0.02251   0.0       1     
+reading GMFs        0.00972   0.92969   1     
+reading exposure    6.976E-04 0.0       1     
 =================== ========= ========= ======

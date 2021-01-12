@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -56,6 +56,10 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
     Model implemented by laurentiu.danciu@gmail.com
     """
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+
+    #: Vs30 value representing typical rock conditions in Switzerland.
+    #: confirmed by the Swiss GMPE group
+    DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
 

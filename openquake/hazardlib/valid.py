@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,18 +20,20 @@
 Validation library for the engine, the desktop tools, and anything else
 """
 
+import os
 import re
 import ast
-import logging
+import json
 import toml
+import logging
 import numpy
 
 from openquake.baselib.general import distinct
 from openquake.baselib import hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site
-from openquake.hazardlib.gsim import registry
+from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.calc.filters import IntegrationDistance
+from openquake.hazardlib.calc.filters import MagDepDistance, floatdict  # needed
 
 PRECISION = pmf.PRECISION
 
@@ -63,6 +65,8 @@ class FromFile(object):
     """
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_SITES_PARAMETERS = set()
+    REQUIRES_DISTANCES = set()
+    DEFINED_FOR_REFERENCE_VELOCITY = None
     kwargs = {}
 
     def init(self):
@@ -72,17 +76,54 @@ class FromFile(object):
         return '[FromFile]'
 
 
-# more tests are in tests/valid_test.py
-def gsim(value):
+def to_toml(uncertainty):
     """
-    Convert a string in TOML format into a GSIM instance
+    Converts an uncertainty node into a TOML string
+    """
+    if hasattr(uncertainty, 'attrib'):  # is a node
+        text = uncertainty.text.strip()
+        kvs = uncertainty.attrib.items()
+    else:  # is a string
+        text = uncertainty.strip()
+        kvs = []
+    text = gsim_aliases.get(text, text)  # use the gsim alias if any
+    if not text.startswith('['):  # a bare GSIM name was passed
+        text = '[%s]' % text
+    for k, v in kvs:
+        try:
+            v = ast.literal_eval(v)
+        except (SyntaxError, ValueError):
+            v = repr(v)
+        text += '\n%s = %s' % (k, v)
+    return text
 
-    >>> gsim('[BooreAtkinson2011]')
+
+def _fix_toml(v):
+    # horrible hack to remove a pickle error with
+    # TomlDecoder.get_empty_inline_table.<locals>.DynamicInlineTableDict
+    # using toml.loads(s, _dict=dict) would be the right way, but it does
+    # not work :-(
+    if isinstance(v, numpy.ndarray):
+        return list(v)
+    elif hasattr(v, 'items'):
+        return {k1: _fix_toml(v1) for k1, v1 in v.items()}
+    return v
+
+
+# more tests are in tests/valid_test.py
+def gsim(value, basedir=''):
+    """
+    Convert a string into a GSIM instance
+
+    >>> gsim('BooreAtkinson2011')
     [BooreAtkinson2011]
     """
-    if not value.startswith('['):  # assume the GSIM name
-        value = '[%s]' % value
+    value = to_toml(value)  # convert to TOML
     [(gsim_name, kwargs)] = toml.loads(value).items()
+    kwargs = _fix_toml(kwargs)
+    for k, v in kwargs.items():
+        if k.endswith(('_file', '_table')):
+            kwargs[k] = os.path.normpath(os.path.join(basedir, v))
     minimum_distance = float(kwargs.pop('minimum_distance', 0))
     if gsim_name == 'FromFile':
         return FromFile()
@@ -90,7 +131,11 @@ def gsim(value):
         gsim_class = registry[gsim_name]
     except KeyError:
         raise ValueError('Unknown GSIM: %s' % gsim_name)
-    gs = gsim_class(**kwargs)
+    if basedir:
+        gs = gsim_class(**kwargs)
+    else:
+        gs = object.__new__(gsim_class)
+        gs.kwargs = kwargs
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     gs.minimum_distance = minimum_distance
     return gs
@@ -191,31 +236,6 @@ class Choices(Choice):
 export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz')
 
 
-def hazard_id(value):
-    """
-    >>> hazard_id('')
-    ()
-    >>> hazard_id('-1')
-    (-1,)
-    >>> hazard_id('42')
-    (42,)
-    >>> hazard_id('42,3')
-    (42, 3)
-    >>> hazard_id('42,3,4')
-    (42, 3, 4)
-    >>> hazard_id('42:3')
-    Traceback (most recent call last):
-       ...
-    ValueError: Invalid hazard_id '42:3'
-    """
-    if not value:
-        return ()
-    try:
-        return tuple(map(int, value.split(',')))
-    except Exception:
-        raise ValueError('Invalid hazard_id %r' % value)
-
-
 class Regex(object):
     """
     Compare the value with the given regex
@@ -263,9 +283,10 @@ class SimpleId(object):
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
-ASSET_ID_LENGTH = 100
+ASSET_ID_LENGTH = 50  # length that makes Murray happy
 
 simple_id = SimpleId(MAX_ID_LENGTH)
+branch_id = SimpleId(MAX_ID_LENGTH, r'^[\w\:\#_\-\.]+$')
 asset_id = SimpleId(ASSET_ID_LENGTH)
 source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\-_]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
@@ -341,14 +362,12 @@ def namelist(value):
     ['a1', 'b_2', '_c']
 
     >>> namelist('a1 b_2 1c')
-    Traceback (most recent call last):
-        ...
-    ValueError: List of names containing an invalid name: 1c
+    ['a1', 'b_2', '1c']
     """
     names = value.replace(',', ' ').split()
     for n in names:
         try:
-            name(n)
+            source_id(n)
         except ValueError:
             raise ValueError('List of names containing an invalid name:'
                              ' %s' % n)
@@ -480,6 +499,8 @@ def coordinates(value):
     ...
     ValueError: Found overlapping site #2,  0 0 -1
     """
+    if isinstance(value, list):  # assume list of lists/tuples
+        return [point(' '.join(map(str, v))) for v in value]
     if not value.strip():
         raise ValueError('Empty list of coordinates: %r' % value)
     points = []
@@ -509,7 +530,12 @@ def positiveint(value):
     :param value: input string
     :returns: positive integer
     """
-    i = int(not_empty(value))
+    val = str(value).lower()
+    if val == 'true':
+        return 1
+    elif val == 'false':
+        return 0
+    i = int(not_empty(val))
     if i < 0:
         raise ValueError('integer %d < 0' % i)
     return i
@@ -538,14 +564,14 @@ def positivefloats(value):
     return floats
 
 
-def floats32(value):
+def floats(value):
     """
     :param value:
         string of whitespace separated floats
     :returns:
-        an array of 32 bit floats
+        a list of floats
     """
-    return numpy.float32(value.split())
+    return list(map(float, value.split()))
 
 
 _BOOL_DICT = {
@@ -573,16 +599,26 @@ def boolean(value):
         ...
     ValueError: Not a boolean: t
     """
-    value = value.strip().lower()
+    value = str(value).strip().lower()
     try:
         return _BOOL_DICT[value]
     except KeyError:
         raise ValueError('Not a boolean: %s' % value)
 
 
-range01 = FloatRange(0, 1)
+def range01(value):
+    """
+    :param value: a string convertible to a float in the range 0..1
+    """
+    val = value.lower()
+    if val == 'true':
+        return 1.
+    elif val == 'false':
+        return 0.
+    return FloatRange(0, 1)(val)
+
+
 probability = FloatRange(0, 1)
-probability.__name__ = 'probability'
 
 
 def probabilities(value, rows=0, cols=0):
@@ -653,7 +689,7 @@ def intensity_measure_type(value):
 def intensity_measure_types(value):
     """
     :param value: input string
-    :returns: non-empty list of Intensity Measure Type objects
+    :returns: non-empty list of ordered Intensity Measure Type objects
 
     >>> intensity_measure_types('')
     []
@@ -665,10 +701,8 @@ def intensity_measure_types(value):
     Traceback (most recent call last):
       ...
     ValueError: Duplicated IMTs in SA(0.1), SA(0.10)
-    >>> intensity_measure_types('SA(1), PGA')
-    Traceback (most recent call last):
-    ...
-    ValueError: The IMTs are not sorted by period: SA(1), PGA
+    >>> intensity_measure_types('PGV, SA(1), PGA')
+    ['PGA', 'PGV', 'SA(1.0)']
     """
     if not value:
         return []
@@ -678,9 +712,7 @@ def intensity_measure_types(value):
     sorted_imts = sorted(imts, key=lambda im: getattr(im, 'period', 1))
     if len(distinct(imts)) < len(imts):
         raise ValueError('Duplicated IMTs in %s' % value)
-    if sorted_imts != imts:
-        raise ValueError('The IMTs are not sorted by period: %s' % value)
-    return [str(imt) for imt in imts]
+    return [str(imt) for imt in sorted_imts]
 
 
 def check_levels(imls, imt, min_iml=1E-10):
@@ -727,7 +759,7 @@ def intensity_measure_types_and_levels(value):
     {'SA(0.1)': [0.1, 0.2]}
     """
     dic = dictionary(value)
-    for imt_str, imls in dic.items():
+    for imt_str, imls in list(dic.items()):
         norm_imt = str(imt.from_string(imt_str))
         if norm_imt != imt_str:
             dic[norm_imt] = imls
@@ -772,6 +804,24 @@ def logscale(x_min, x_max, n):
     return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
 
 
+def sqrscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max in a quadratic scale
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min < 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    delta = numpy.sqrt(x_max - x_min) / (n - 1)
+    return x_min + (delta * numpy.arange(n))**2
+
+
 def dictionary(value):
     """
     :param value:
@@ -809,45 +859,6 @@ def dictionary(value):
     return dic
 
 
-# used for the maximum distance parameter in the job.ini file
-def floatdict(value):
-    """
-    :param value:
-        input string corresponding to a literal Python number or dictionary
-    :returns:
-        a Python dictionary key -> number
-
-    >>> floatdict("200")
-    {'default': 200}
-
-    >>> text = "{'active shallow crust': 250., 'default': 200}"
-    >>> sorted(floatdict(text).items())
-    [('active shallow crust', 250.0), ('default', 200)]
-    """
-    value = ast.literal_eval(value)
-    if isinstance(value, (int, float, list)):
-        return {'default': value}
-    dic = {'default': value[next(iter(value))]}
-    dic.update(value)
-    return dic
-
-
-def maximum_distance(value):
-    """
-    :param value:
-        input string corresponding to a valid maximum distance
-    :returns:
-        a IntegrationDistance mapping
-    """
-    dic = floatdict(value)
-    for trt, magdists in dic.items():
-        if isinstance(magdists, list):  # could be a scalar otherwise
-            magdists.sort()  # make sure the list is sorted by magnitude
-            for mag, dist in magdists:  # validate the magnitudes
-                magnitude(mag)
-    return IntegrationDistance(dic)
-
-
 # ########################### SOURCES/RUPTURES ############################# #
 
 def mag_scale_rel(value):
@@ -877,7 +888,8 @@ def pmf(value):
     [(0.157, 0), (0.843, 1)]
     """
     probs = probabilities(value)
-    if abs(1.-sum(map(float, value.split()))) > 1e-12:
+    if sum(probs) != 1:
+        # avoid https://github.com/gem/oq-engine/issues/5901
         raise ValueError('The probabilities %s do not sum up to 1!' % value)
     return [(p, i) for i, p in enumerate(probs)]
 
@@ -1038,6 +1050,15 @@ def simple_slice(value):
     return (start, stop)
 
 
+def uncertainty_model(value):
+    """
+    Format whitespace in XML nodes of kind uncertaintyModel
+    """
+    if value.lstrip().startswith('['):  # TOML, do not mess with newlines
+        return value.strip()
+    return ' '.join(value.split())  # remove newlines too
+
+
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
                    'business_interruption')
@@ -1149,23 +1170,26 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     <MyParams a='2', b=7.2>
     """
     params = {}
+    KNOWN_INPUTS = {}
 
     @classmethod
     def check(cls, dic):
         """
-        Convert a dictionary name->string into a dictionary name->value
-        by converting the string. If the name does not correspond to a
-        known parameter, just ignore it and print a warning.
+        Check if a dictionary name->string can be converted into a dictionary
+        name->value. If the name does not correspond to a known parameter,
+        print a warning.
+
+        :returns: a dictionary of converted parameters
         """
-        res = {}
+        out = {}
         for name, text in dic.items():
             try:
                 p = getattr(cls, name)
             except AttributeError:
                 logging.warning('Ignored unknown parameter %s', name)
             else:
-                res[name] = p.validator(text)
-        return res
+                out[name] = p.validator(text)
+        return out
 
     @classmethod
     def from_(cls, dic):
@@ -1196,7 +1220,9 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
             try:
                 convert = getattr(self.__class__, name).validator
             except AttributeError:
-                logging.warning("The parameter '%s' is unknown, ignoring" % name)
+                if name not in self.KNOWN_INPUTS:
+                    logging.warning(
+                        "The parameter '%s' is unknown, ignoring" % name)
                 continue
             try:
                 value = convert(val)
@@ -1219,6 +1245,14 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
                     line.strip() for line in is_valid.__doc__.splitlines())
                 doc = docstring.format(**vars(self))
                 raise ValueError(doc)
+
+    def json(self):
+        """
+        :returns: the parameters as a JSON string
+        """
+        dic = {k: _fix_toml(v)
+               for k, v in self.__dict__.items() if not k.startswith('_')}
+        return json.dumps(dic)
 
     def __iter__(self):
         for item in sorted(vars(self).items()):

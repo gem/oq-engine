@@ -1,0 +1,4 @@
+#,,,,,"kind='mean', risk_investigation_time=50.0"
+asset_id,loss_type,loss_value,loss_ratio,return_period,annual_frequency_of_exceedence
+a1,structural,0.00000E+00,0.00000E+00,1,1.00000E+00
+a1,structural,3.36103E+01,3.36103E-03,2,5.00000E-01

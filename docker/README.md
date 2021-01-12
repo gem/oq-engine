@@ -7,37 +7,45 @@
 The main documentation, intended for end users, is available under the [documentation area](../doc/installing/docker.md)
 
 
-## Container customization
-
-### Python3 base image (required by all images)
-
-```bash
-$ docker build -t openquake/base -f Dockerfile.base .
-```
-
 ### OpenQuake Engine (single node)
 
 ```bash
 $ docker build -t openquake/engine -f Dockerfile.engine .
 ```
 
-### OpenQuake Engine master node container (cluster)
-
-```bash
-$ docker build -t openquake/engine-master -f Dockerfile.master .
-```
-
-### OpenQuake Engine worker node container (cluster)
-
-```bash
-$ docker build -t openquake/engine-worker -f Dockerfile.worker .
-```
-
 ### Custom build args
 
 ```bash
 --build-arg oq_branch=master      ## oq-engine branch
---build-arg tools_branch=mater    ## oq standalone tools branch
+```
+
+
+## Master/worker images (clustered setup)
+
+### OpenQuake Engine master node container (zmq)
+
+```bash
+$ docker build -t openquake/engine-master-zmq -f zmq/Dockerfile.master .
+```
+
+### OpenQuake Engine worker node container (zmq)
+
+```bash
+$ docker build -t openquake/engine-worker-zmq -f zmq/Dockerfile.worker .
+```
+
+## Master/worker images (clustered setup) via 'docker-compose'
+
+### ZMQ
+
+```bash
+$ docker-compose -f docker-compose.yml <build,up,down...> 
+```
+
+If you want more to scale the worker service start with follow:
+```bash
+$ docker-compose -f docker-compose.yml <build,up,down...> --scale worker=NUM
+
 ```
 
 ### Debug
@@ -45,5 +53,5 @@ $ docker build -t openquake/engine-worker -f Dockerfile.worker .
 It's possible to enter a container as `root`, for debug purposes, running
 
 ```bash
-$ docker exec -u 0 -t -i oq-cluster-master /bin/bash
+$ docker exec -u 0 -t -i engine-master /bin/bash
 ```

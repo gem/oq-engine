@@ -3,7 +3,6 @@
       xmlns="http://openquake.org/xmlns/nrml/0.5">
     <logicTree logicTreeID='lt1'>
 
-        <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                     applyToTectonicRegionType="DeepSeismicity">
                 <logicTreeBranch branchID="YoungsEtAl1997SSlab">
@@ -16,10 +15,7 @@
                     <uncertaintyWeight imt="SA(0.1)">1.0</uncertaintyWeight>
                     </logicTreeBranch>
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
 
-
-        <logicTreeBranchingLevel branchingLevelID="bl2">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
                     applyToTectonicRegionType="Volcanic">
                 <logicTreeBranch branchID="BooreEtAl1997GeometricMean">
@@ -59,10 +55,7 @@
                     <uncertaintyWeight imt="SA(0.1)">0.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
         
-
-        <logicTreeBranchingLevel branchingLevelID="bl3">
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3"
                     applyToTectonicRegionType="Volcanic_Large">
                 <logicTreeBranch branchID="SadighEtAl1997">
@@ -84,7 +77,6 @@
                     <uncertaintyWeight imt="SA(0.1)">0.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
     </logicTree>
 </nrml>
 

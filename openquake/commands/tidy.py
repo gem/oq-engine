@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,13 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap
 from openquake.hazardlib import nrml
 from openquake.commonlib import writers
 
 
-@sap.script
-def tidy(fnames):
+def main(fnames):
     """
     Reformat a NRML file in a canonical form. That also means reducing the
     precision of the floats to a standard value. If the file is invalid,
@@ -40,4 +38,5 @@ def tidy(fnames):
             nrml.write(node.nodes, f, writers.FIVEDIGITS, xmlns=node['xmlns'])
         print('Reformatted %s, original left in %s.bak' % (fname, fname))
 
-tidy.arg('fnames', 'NRML file name', nargs='+')
+
+main.fnames = dict(help='NRML file name', nargs='+')

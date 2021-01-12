@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,16 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
 import os
+import json
 import logging
-import numpy
 
-from openquake.baselib import sap
-from openquake.hazardlib import stats
-from openquake.baselib import datastore
+from openquake.baselib import datastore, hdf5
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib import util
-from openquake.calculators import getters
-from openquake.calculators.views import view
+from openquake.calculators.views import view, rst_table
 from openquake.calculators.extract import extract
 
 
@@ -37,8 +34,27 @@ def str_or_int(calc_id):
         return calc_id
 
 
-@sap.script
-def show(what='contents', calc_id=-1, extra=()):
+def print_(aw):
+    if hasattr(aw, 'json'):
+        try:
+            attrs = hdf5.get_shape_descr(aw.json)
+        except KeyError:  # no shape_descr, for instance for oqparam
+            print(json.dumps(json.loads(aw.json), indent=2))
+            return
+        vars(aw).update(attrs)
+    if hasattr(aw, 'shape_descr'):
+        print(rst_table(aw.to_dframe()))
+    elif hasattr(aw, 'array') and aw.dtype.names:
+        sio = io.StringIO()
+        write_csv(sio, aw.array)
+        print(sio.getvalue())
+    elif hasattr(aw, 'array'):
+        print(aw.array)
+    else:
+        print(aw)
+
+
+def main(what='contents', calc_id: str_or_int = -1, extra=()):
     """
     Show the content of a datastore (by default the last one).
     """
@@ -70,19 +86,26 @@ def show(what='contents', calc_id=-1, extra=()):
     if view.keyfunc(what) in view:
         print(view(what, ds))
     elif what.split('/', 1)[0] in extract:
-        print(extract(ds, what, *extra))
-    elif what in ds:
-        obj = ds[what]
-        if hasattr(obj, 'value'):  # an array
-            print(write_csv(io.BytesIO(), obj.value).decode('utf8'))
+        obj = extract(ds, what, *extra)
+        if isinstance(obj, hdf5.ArrayWrapper):
+            print_(obj)
+        elif hasattr(obj, 'dtype') and obj.dtype.names:
+            print(write_csv(io.StringIO(), obj))
         else:
             print(obj)
+    elif what in ds:
+        obj = ds.getitem(what)
+        if hasattr(obj, 'items'):  # is a group of datasets
+            print(obj)
+        else:  # is a single dataset
+            obj.refresh()  # for SWMR mode
+            print_(hdf5.ArrayWrapper.from_(obj))
     else:
         print('%s not found' % what)
 
     ds.close()
 
 
-show.arg('what', 'key or view of the datastore')
-show.arg('calc_id', 'calculation ID or datastore path', type=str_or_int)
-show.arg('extra', 'extra arguments', nargs='*')
+main.what = 'key or view of the datastore'
+main.calc_id = 'calculation ID or datastore path'
+main.extra = dict(help='extra arguments', nargs='*')

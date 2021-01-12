@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,12 +20,16 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
+from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib.general import split_in_blocks, not_equal
-from openquake.hazardlib.geo.utils import fix_lon, cross_idl
+from openquake.baselib.general import (
+    split_in_blocks, not_equal, get_duplicates)
+from openquake.hazardlib.geo.utils import (
+    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
+ampcode_dt = (numpy.string_, 4)
 
 
 class Site(object):
@@ -117,20 +121,42 @@ site_param_dt = {
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'siteclass': (numpy.string_, 1),
+    'z1pt4': numpy.float64,
     'backarc': numpy.bool,
+    'xvf': numpy.float64,
 
-    # parameters for geotechnic hazard
-    'liquefaction_susceptibility': numpy.int16,
-    'landsliding_susceptibility': numpy.int16,
+    # Parameters for site amplification
+    'ampcode': ampcode_dt,
+    'ec8': (numpy.string_, 1),
+    'ec8_p18': (numpy.string_, 2),
+    'h800': numpy.float64,
+    'geology': (numpy.string_, 20),
+    'amplfactor': numpy.float64,
+
+    # parameters for secondary perils
+    'friction_mid': numpy.float64,
+    'cohesion_mid': numpy.float64,
+    'saturation': numpy.float64,
+    'dry_density': numpy.float64,
+    'Fs': numpy.float64,
+    'crit_accel': numpy.float64,
+    'unit': (numpy.string_, 5),
+    'liq_susc_cat': (numpy.string_, 2),
     'dw': numpy.float64,
     'yield_acceleration': numpy.float64,
     'slope': numpy.float64,
+    'gwd': numpy.float64,
     'cti': numpy.float64,
     'dc': numpy.float64,
     'dr': numpy.float64,
     'dwb': numpy.float64,
     'hwater': numpy.float64,
-    'precip': numpy.float64
+    'precip': numpy.float64,
+    'fpeak': numpy.float64,
+
+    # other parameters
+    'custom_site_id': numpy.uint32,
+    'region': numpy.uint32
 }
 
 
@@ -207,8 +233,8 @@ class SiteCollection(object):
             par for par in req_site_params if par not in ('lon', 'lat'))
         if 'vs30' in req and 'vs30measured' not in req:
             req.append('vs30measured')
-        self.dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
-        self.array = arr = numpy.zeros(len(lons), self.dtype)
+        dtype = numpy.dtype([(p, site_param_dt[p]) for p in req])
+        self.array = arr = numpy.zeros(len(lons), dtype)
         arr['sids'] = numpy.arange(len(lons), dtype=numpy.uint32)
         arr['lon'] = fix_lon(numpy.array(lons))
         arr['lat'] = numpy.array(lats)
@@ -228,13 +254,21 @@ class SiteCollection(object):
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
                     self._set(name, sitemodel[name])
+        dupl = get_duplicates(self.array, 'lon', 'lat')
+        if dupl:
+            # raise a decent error message displaying only the first 9
+            # duplicates (there could be millions)
+            n = len(dupl)
+            dots = ' ...' if n > 9 else ''
+            items = list(dupl.items())[:9]
+            raise ValueError('There are %d duplicate sites %s%s' %
+                             (n, items, dots))
         return self
 
     def _set(self, param, value):
-        # param comes from the file site_model.xml file which usually contains
-        # a lot of parameters; the parameters that are not required are ignored
-        if param in self.array.dtype.names:  # is required
-            self.array[param] = value
+        if param not in self.array.dtype.names:
+            self.add_col(param, site_param_dt[param])
+        self.array[param] = value
 
     xyz = Mesh.xyz
 
@@ -249,10 +283,35 @@ class SiteCollection(object):
         if indices is None or len(indices) == len(self):
             return self
         new = object.__new__(self.__class__)
-        indices = numpy.uint32(sorted(indices))
+        indices = numpy.uint32(indices)
         new.array = self.array[indices]
         new.complete = self.complete
         return new
+
+    def reduce(self, nsites):
+        """
+        :returns: a filtered SiteCollection with around nsites (if nsites<=N)
+        """
+        N = len(self.complete)
+        n = N // nsites + 1
+        if n == 1:
+            return self
+        sids, = numpy.where(self.complete.sids % n == 0)
+        return self.filtered(sids)
+
+    def add_col(self, colname, dtype, values=None):
+        """
+        Add a column to the underlying array
+        """
+        names = self.array.dtype.names
+        dtlist = [(name, self.array.dtype[name]) for name in names]
+        dtlist.append((colname, dtype))
+        arr = numpy.zeros(len(self), dtlist)
+        for name in names:
+            arr[name] = self.array[name]
+        if values is not None:
+            arr[colname] = values
+        self.array = arr
 
     def make_complete(self):
         """
@@ -261,6 +320,29 @@ class SiteCollection(object):
         # reset the site indices from 0 to N-1 and set self.complete to self
         self.array['sids'] = numpy.arange(len(self), dtype=numpy.uint32)
         self.complete = self
+
+    def one(self):
+        """
+        :returns: a SiteCollection with a site of the minimal vs30
+        """
+        if 'vs30' in self.array.dtype.names:
+            idx = self.array['vs30'].argmin()
+        else:
+            idx = 0
+        return self.filtered([self.sids[idx]])
+
+    # used for debugging purposes
+    def get_cdist(self, rec_or_loc):
+        """
+        :param rec_or_loc: a record with field 'hypo' or a Point instance
+        :returns: array of N euclidean distances from rec['hypo']
+        """
+        try:
+            lon, lat, dep = rec_or_loc['hypo']
+        except TypeError:
+            lon, lat, dep = rec_or_loc.x, rec_or_loc.y, rec_or_loc.z
+        xyz = spherical_to_cartesian(lon, lat, dep).reshape(1, 3)
+        return distance.cdist(self.xyz, xyz)[:, 0]
 
     def __init__(self, sites):
         """
@@ -288,6 +370,10 @@ class SiteCollection(object):
         # being changed by calling itemset()
         arr.flags.writeable = False
 
+        # NB: in test_correlation.py we define a SiteCollection with
+        # non-unique sites, so we cannot do an
+        # assert len(numpy.unique(self[['lon', 'lat']])) == len(self)
+
     def __eq__(self, other):
         return not self.__ne__(other)
 
@@ -304,7 +390,7 @@ class SiteCollection(object):
     @property
     def mesh(self):
         """Return a mesh with the given lons, lats, and depths"""
-        return Mesh(self.lons, self.lats, self.depths)
+        return Mesh(self['lon'], self['lat'], self['depth'])
 
     def at_sea_level(self):
         """True if all depths are zero"""
@@ -321,17 +407,15 @@ class SiteCollection(object):
         for seq in split_in_blocks(range(len(self)), hint or 1):
             sc = SiteCollection.__new__(SiteCollection)
             sc.array = self.array[numpy.array(seq, int)]
+            sc.complete = self
             tiles.append(sc)
         return tiles
 
-    def split(self, location, distance):
+    def count_close(self, location, distance):
         """
-        :returns: (close_sites, far_sites)
+        :returns: the number of sites within the distance from the location
         """
-        if distance is None:  # all close
-            return self, None
-        close = location.distance_to_mesh(self) < distance
-        return self.filter(close), self.filter(~close)
+        return (self.get_cdist(location) < distance).sum()
 
     def __iter__(self):
         """
@@ -339,9 +423,12 @@ class SiteCollection(object):
         one at a time.
         """
         params = self.array.dtype.names[4:]  # except sids, lons, lats, depths
+        sids = self.sids
         for i, location in enumerate(self.mesh):
             kw = {p: self.array[i][p] for p in params}
-            yield Site(location, **kw)
+            s = Site(location, **kw)
+            s.id = sids[i]
+            yield s
 
     def filter(self, mask):
         """
@@ -370,6 +457,29 @@ class SiteCollection(object):
         indices, = mask.nonzero()
         return self.filtered(indices)
 
+    def assoc(self, site_model, assoc_dist, ignore=()):
+        """
+        Associate the `site_model` parameters to the sites.
+        Log a warning if the site parameters are more distant than
+        `assoc_dist`.
+
+        :returns: the site model array reduced to the hazard sites
+        """
+        m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
+        if len(m1) != len(m2) or (m1 != m2).any():  # associate
+            _sitecol, site_model, _discarded = _GeographicObjects(
+                site_model).assoc(self, assoc_dist, 'warn')
+        ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
+            ignore) - {'lon', 'lat', 'depth'}
+        for name in ok:
+            self._set(name, site_model[name])
+        for name in set(self.array.dtype.names) - set(site_model.dtype.names):
+            if name in ('vs30measured', 'backarc'):
+                self._set(name, 0)  # default
+                # NB: by default reference_vs30_type == 'measured' is 1
+                # but vs30measured is 0 (the opposite!!)
+        return site_model
+
     def within(self, region):
         """
         :param region: a shapely polygon
@@ -388,13 +498,29 @@ class SiteCollection(object):
             site IDs within the bounding box
         """
         min_lon, min_lat, max_lon, max_lat = bbox
-        lons, lats = self.array['lon'], self.array['lat']
-        if cross_idl(lons.min(), lons.max()) or cross_idl(min_lon, max_lon):
+        lons, lats = self['lon'], self['lat']
+        if cross_idl(lons.min(), lons.max(), min_lon, max_lon):
             lons = lons % 360
             min_lon, max_lon = min_lon % 360, max_lon % 360
         mask = (min_lon < lons) * (lons < max_lon) * \
                (min_lat < lats) * (lats < max_lat)
         return mask.nonzero()[0]
+
+    def geohash(self, length):
+        """
+        :param length: length of the geohash in the range 1..8
+        :returns: an array of N geohashes, one per site
+        """
+        lst = [geohash(lon, lat, length)
+               for lon, lat in zip(self['lon'], self['lat'])]
+        return numpy.array(lst, (numpy.string_, length))
+
+    def num_geohashes(self, length):
+        """
+        :param length: length of the geohash in the range 1..8
+        :returns: number of distinct geohashes in the site collection
+        """
+        return len(numpy.unique(self.geohash(length)))
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)

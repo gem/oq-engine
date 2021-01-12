@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -61,14 +61,17 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
             corma = self.get_lower_triangle_correlation_matrix(
                 sites.complete, imt)
             self.cache[imt] = corma
-        if len(sites.complete) == len(sites):
-            return numpy.dot(corma, residuals)
-        # it is important to allocate little memory, this is why I am
-        # accumulating below; if S is the length of the complete sites
-        # the correlation matrix has shape (S, S) and the residuals (N, s),
+        # if N is the length of the complete site collection, then the
+        # correlation matrix has shape (N, N) and the residuals (N, s),
         # where s is the number of samples
-        return sum(corma[sites.sids, sid] * res
-                   for sid, res in zip(sites.sids, residuals))
+        N = len(sites.complete)
+        n = len(sites)
+        if n < N:  # filtered site collection
+            res = numpy.zeros((N, residuals.shape[1]))
+            res[sites.sids] = residuals
+            return (corma @ res)[sites.sids, :]  # shape (n, s)
+        else:  # complete site collection
+            return corma @ residuals  # shape (N, s)
 
 
 class JB2009CorrelationModel(BaseCorrelationModel):
@@ -114,35 +117,35 @@ class JB2009CorrelationModel(BaseCorrelationModel):
 
 
 def jbcorrelation(sites_or_distances, imt, vs30_clustering=False):
-        """
-        Returns the Jayaram-Baker correlation model.
+    """
+     Returns the Jayaram-Baker correlation model.
 
-        :param sites_or_distances:
-            SiteCollection instance o ristance matrix
-        :param imt:
-            Intensity Measure Type (PGA or SA)
-        :param vs30_clustering:
-            flag, defalt false
-        """
-        if hasattr(sites_or_distances, 'mesh'):
-            distances = sites_or_distances.mesh.get_distance_matrix()
+     :param sites_or_distances:
+         SiteCollection instance o ristance matrix
+     :param imt:
+         Intensity Measure Type (PGA or SA)
+     :param vs30_clustering:
+         flag, defalt false
+    """
+    if hasattr(sites_or_distances, 'mesh'):
+        distances = sites_or_distances.mesh.get_distance_matrix()
+    else:
+        distances = sites_or_distances
+
+    # formulae are from page 1700
+    if imt.period < 1:
+        if not vs30_clustering:
+            # case 1, eq. (17)
+            b = 8.5 + 17.2 * imt.period
         else:
-            distances = sites_or_distances
+            # case 2, eq. (18)
+            b = 40.7 - 15.0 * imt.period
+    else:
+        # both cases, eq. (19)
+        b = 22.0 + 3.7 * imt.period
 
-        # formulae are from page 1700
-        if imt.period < 1:
-            if not vs30_clustering:
-                # case 1, eq. (17)
-                b = 8.5 + 17.2 * imt.period
-            else:
-                # case 2, eq. (18)
-                b = 40.7 - 15.0 * imt.period
-        else:
-            # both cases, eq. (19)
-            b = 22.0 + 3.7 * imt.period
-
-        # eq. (20)
-        return numpy.exp((- 3.0 / b) * distances)
+    # eq. (20)
+    return numpy.exp((- 3.0 / b) * distances)
 
 
 class HM2018CorrelationModel(BaseCorrelationModel):

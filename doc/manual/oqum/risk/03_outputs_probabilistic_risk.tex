@@ -29,7 +29,7 @@ Calculator, it is also possible to calculate the following types of outputs:
     probabilities for a set of loss values for the entire portfolio of 
     \glspl{asset} defined in the \gls{exposuremodel}.
 
-  \item \Verb+event_loss_table+: an event loss table contains the aggregate 
+  \item \Verb+losses_by_event+: an event loss table contains the aggregate 
     loss across all \glspl{asset} in the \gls{exposuremodel} for each of the
     simulated \glspl{rupture} in the \glsdesc{acr:ses}.
 
@@ -80,7 +80,7 @@ Risk Calculator and the Stochastic Event-Based Probabilistic Risk Calculator
 (if the parameter ``loss\_ratios'' is defined in the configuration file). The
 quantiles for which loss curves will be calculated should have been defined in
 the job configuration file for the calculation using the parameter
-\Verb+quantile_loss_curves+. The structure of the file is identical to that of
+\Verb+quantiles+. The structure of the file is identical to that of
 the individual asset loss exceedance curve output file.
 
 \subsubsection{Aggregate loss exceedance curves}

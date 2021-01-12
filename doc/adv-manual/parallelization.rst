@@ -4,24 +4,23 @@ How the parallelization works in the engine
 The engine builds on top of existing parallelization libraries.
 Specifically, on a single machine it is based on multiprocessing,
 which is part of the Python standard library, while on a cluster
-it is based on the combination celery/rabbitmq, which are well known
+it is based on the combination celery/rabbitmq, which are well-known
 and maintained tools.
 
 While the parallelization used by the engine may look trivial in theory
 (it only addresses embarrassingly parallel problems, not true concurrency)
 in practice it is far from being so. For instance a crucial feature that
 the GEM staff requires is the ability to kill (revoke) a running calculation
-without affecting other calculations that may be running concurrently,
-because
+without affecting other calculations that may be running concurrently.
 
-Because of this requirement we abandoned `concurrent.futures`, which is also
+Because of this requirement, we abandoned `concurrent.futures`, which is also
 in the standard library, but is lacking the ability to kill the pool of
 processes, which is instead available in multiprocessing with the
 `Pool.shutdown` method. For the same reason, we discarded `dask`, which
 is a lot more powerful than `celery` but lacks the revoke functionality.
 
 Using a real cluster scheduling mechanism (like SLURM) would be of course
-better, but we do not want to impose to our users a specific cluster
+better, but we do not want to impose on our users a specific cluster
 architecture. celery/rabbitmq have the advantage of being simple to install
 and manage. Still, the architecture of the engine parallelization library
 is such that it is very simple to replace celery/rabbitmq with other
@@ -44,7 +43,7 @@ To this aim the OpenQuake engine offers a ``Monitor`` class
 integrated with the parallelization framework, so much that every
 task gets a ``Monitor`` object, a context manager that can be used
 to measure time and memory of specific parts of a task. Moreover,
-the monitor automatically measure time and memory for the whole task,
+the monitor automatically measures time and memory for the whole task,
 as well as the size of the returned output (or outputs). Such information
 is stored in an HDF5 file that you must pass to the monitor when instantiating
 it. The engine automatically does that for you by passing the pathname of the
@@ -105,16 +104,16 @@ this functionality is invaluable for debugging.
 Another tricky bit of real life parallelism in Python is that forking
 does not play well with the HDF5 library: so in the engine we are
 using multiprocessing in the ``spawn`` mode, not in ``fork`` mode:
-fortunaly this feature has become available to us in Python 3 and it
-made our life a lot happier.  Before it was extremely easy to incurr
-in unspecified behavior, meaning that reading an HDF5 file from a
+fortunately this feature has become available to us in Python 3 and it
+made our life a lot happier.  Before it was extremely easy to incur
+unspecified behavior, meaning that reading an HDF5 file from a
 forked process could
 
 1. work perfectly well
 2. read bogus numbers
 3. cause a segmentation fault
 
-and all of the three things could happen impredictably at any moment, depending
+and all of the three things could happen unpredictably at any moment, depending
 on the machine where the calculation was running, the load on the machine, and
 any kind of environmental circumstances.
 
@@ -123,7 +122,7 @@ possible to use a SWMR architecture (Single Writer Multiple Reader) we
 were not able to get this working in the engine. Instead, we are using
 a two files approach which is simple and works very well: we read from
 one file (with multiple readers) and we write on the other file
-(with a single writer), insteading or reading/writing
+(with a single writer), instead of reading/writing
 on the same file. This bypasses all the limitations of the SWMR mode
 in HDF5 and did not require a large refactoring of our existing code.
 
@@ -132,7 +131,7 @@ at transferring gigabytes of data: it was meant to manage lots of small
 messages, but here we are perverting it to manage huge messages, i.e.
 the large arrays coming from a scientific calculations.
 
-Hence, since recent versions of the engine we are no more returning
+Hence, since recent versions of the engine we are no longer returning
 data from the tasks via celery/rabbitmq: instead, we use zeromq.  This
 is hidden from the user, but internally the engine keeps track of all
 tasks that were submitted and waits until they send the message that
@@ -214,4 +213,4 @@ shutdown the underlying pool.
 
 The idea is to submit the text of each file - here I am considering .rst files,
 like the ones composing this manual - and then loop over the results of the
-``Starmap``. This is very similar to how ``concurrent.futures`` works,
+``Starmap``. This is very similar to how ``concurrent.futures`` works.

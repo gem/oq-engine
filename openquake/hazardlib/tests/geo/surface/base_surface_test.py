@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -400,3 +400,18 @@ class GetAzimuthTestCase(unittest.TestCase):
         azimuths = surface.get_azimuth(mesh)
         expected = numpy.array([270., 90., 225.])
         numpy.testing.assert_almost_equal(expected, azimuths, 2)
+
+
+class GetAzimuthClosestPointTestCase(unittest.TestCase):
+
+    def test_01(self):
+        corners = [[(0.0, 0.0, 0.0), (0.0, 0.1, 0.0)],
+                   [(0.0, 0.0, 10.0), (0.0, 0.1, 10.0)]]
+        surface = FakeSurface(corners)
+        mesh = Mesh.from_points_list([Point(0.0, 0.2),
+                                      Point(0.1, 0.1),
+                                      Point(0.0, -0.2)])
+        azimuths = surface.get_azimuth_of_closest_point(mesh)
+        expected = numpy.array([180, -90, 0])
+        azimuths[azimuths > 180] = azimuths[azimuths > 180] - 360
+        numpy.testing.assert_almost_equal(expected, azimuths, 1)

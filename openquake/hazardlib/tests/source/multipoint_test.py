@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,7 @@ from openquake.hazardlib.pmf import PMF
 
 
 class MultiPointTestCase(unittest.TestCase):
+
     def test(self):
         npd = PMF([(0.5, NodalPlane(1, 20, 3)),
                    (0.5, NodalPlane(2, 2, 4))])
@@ -46,12 +47,12 @@ class MultiPointTestCase(unittest.TestCase):
         splits = list(mps)
         self.assertEqual(len(splits), 2)
         for split in splits:
-            self.assertEqual(split.src_group_id, mps.src_group_id)
+            self.assertEqual(split.et_id, mps.et_id)
 
         got = obj_to_node(mps).to_str()
         print(got)
         exp = '''\
-multiPointSource{id='mp1', name='multi point source', tectonicRegion='Active Shallow Crust'}
+multiPointSource{id='mp1', name='multi point source'}
   multiPointGeometry
     gml:posList [0.0, 0.5, 1.0, 1.0]
     upperSeismoDepth 10

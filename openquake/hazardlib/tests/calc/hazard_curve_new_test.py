@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -106,7 +106,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.gsim_by_trt,
                                     truncation_level=None)
         crv = curves[0][0]
-        self.assertAlmostEqual(0.3, crv[0])
+        npt.assert_almost_equal([0.30000, 0.2646, 0.0625], crv, decimal=4)
 
     def test_hazard_curve_A(self):
         # Test back-compatibility
@@ -116,8 +116,8 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.imtls,
                                     self.gsim_by_trt,
                                     truncation_level=None)
-        crv = curves[0][0]
-        npt.assert_almost_equal(numpy.array([0.30000, 0.2646, 0.0625]),
+        crv = list(curves[0][0])
+        npt.assert_almost_equal([0.30000, 0.2646, 0.0625],
                                 crv, decimal=4)
 
     def test_hazard_curve_B(self):
@@ -143,23 +143,23 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         rupture = _create_rupture(10., 6.)
         data = [(rupture, PMF([(0.7, 0), (0.3, 1)])),
                 (rupture, PMF([(0.6, 0), (0.4, 1)]))]
-        print(data[0][0])
         data[0][0].weight = 0.5
         data[1][0].weight = 0.5
-        print(data[0][0].weight)
         src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
                                          data)
-        src.src_group_id = 0
+        src.id = 0
+        src.grp_id = 0
+        src.et_id = 0
         src.mutex_weight = 1
         group = SourceGroup(
             src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
-        param = dict(imtls=self.imtls, filter_distance='rjb',
+        param = dict(imtls=self.imtls,
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)
         crv = classical(group, self.sites, gsim_by_trt, param)['pmap'][0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
-                                crv[0].array[:, 0], decimal=4)
+                                crv.array[:, 0], decimal=4)
 
     def test_raise_error_non_uniform_group(self):
         # Test that the uniformity of a group (in terms of tectonic region)
@@ -222,12 +222,12 @@ class MultiPointTestCase(unittest.TestCase):
         imtls = DictArray({'PGA': [0.01, 0.02, 0.04, 0.08, 0.16]})
         gsim_by_trt = {'Stable Continental Crust': Campbell2003()}
         hcurves = calc_hazard_curves(groups, sitecol, imtls, gsim_by_trt)
-        expected = [0.99999778, 0.9084039, 0.148975348,
-                    0.0036909656, 2.76326e-05]
-        npt.assert_almost_equal(hcurves['PGA'][0], expected)
+        expected = [9.999978e-01, 9.084040e-01, 1.489753e-01, 3.690966e-03,
+                    2.763261e-05]
+        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=3E-4)
 
         # splitting in point sources
         [[mps1, mps2]] = groups
         psources = list(mps1) + list(mps2)
         hcurves = calc_hazard_curves(psources, sitecol, imtls, gsim_by_trt)
-        npt.assert_almost_equal(hcurves['PGA'][0], expected)
+        npt.assert_allclose(hcurves['PGA'][0], expected, rtol=3E-4)

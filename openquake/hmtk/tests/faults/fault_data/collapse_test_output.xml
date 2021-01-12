@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Template Simple Fault"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultSource
+            id="1_1"
+            name="A Simple Fault"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            30.0 30.0 30.0 31.0
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        30.0
+                    </dip>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        20.0
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.5
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.05"
+                minMag="4.5"
+                >
+                    <occurRates>
+                        0.09701824738362441 0.08848169322917848 0.08069626330957536 0.07359586683385133 0.06712022828426645 0.061214375735294355 0.05582817419499374 0.05091590000728428 0.04643585270220507 0.04235000099914531 0.03862365995795423 0.03522519653725092 0.032125761060415294 0.029299042309656756 0.02672104416915446 0.024369881921176846 0.0222255964659369 0.02026998488808484 0.01848644593151391 0.016859839070707653 0.015376355982281726 0.01402340332563597 0.01278949583763972 0.011664158833824717 0.010637839288417121 0.009701824738362601 0.00884816932291802 0.0080696263309577 0.007359586683385259 0.006712022828426775 0.0061214375735295316 0.005582817419499494 0.005091590000728505 0.004643585270220573 0.004235000099914619 0.0038623659957954825 0.0035225196537251734 0.0032125761060415817 0.0029299042309657254 0.00267210441691548 0.0024369881921177255 0.0022225596465937263 0.0020269984888085218 0.0018486445931514212 0.0016859839070707907 0.0015376355982281882 0.0014023403325636177 0.001278949583763988 0.0011664158833824892 0.0010637839288417292 0.011026158980652363
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    -90.0
+                </rake>
+            </simpleFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

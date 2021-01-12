@@ -17,7 +17,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
         <assets>
             <asset
             id="a8"
-            number="1.9695000E+04"
+            number="19695"
             taxonomy="W"
             >
                 <location lat="2.7101800E+01" lon="8.5066700E+01"/>
@@ -27,7 +27,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a10"
-            number="1.2444000E+04"
+            number="12444"
             taxonomy="W"
             >
                 <location lat="2.7657600E+01" lon="8.5438500E+01"/>
@@ -37,7 +37,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a13"
-            number="4.9030000E+03"
+            number="4903"
             taxonomy="W"
             >
                 <location lat="2.9227500E+01" lon="8.0484400E+01"/>
@@ -47,7 +47,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a42"
-            number="2.6900000E+02"
+            number="269"
             taxonomy="W"
             >
                 <location lat="2.8669100E+01" lon="8.4229100E+01"/>
@@ -57,7 +57,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a68"
-            number="4.3120000E+03"
+            number="4312"
             taxonomy="W"
             >
                 <location lat="2.7700500E+01" lon="8.6725900E+01"/>
@@ -67,7 +67,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a89"
-            number="1.9122000E+04"
+            number="19122"
             taxonomy="A"
             >
                 <location lat="2.8877600E+01" lon="8.1687700E+01"/>
@@ -77,7 +77,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a95"
-            number="1.7859000E+04"
+            number="17859"
             taxonomy="A"
             >
                 <location lat="2.7779500E+01" lon="8.6211700E+01"/>
@@ -87,7 +87,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a101"
-            number="2.5214000E+04"
+            number="25214"
             taxonomy="A"
             >
                 <location lat="2.6862900E+01" lon="8.7912500E+01"/>
@@ -97,7 +97,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a132"
-            number="4.1697000E+04"
+            number="41697"
             taxonomy="A"
             >
                 <location lat="2.6996200E+01" lon="8.5303200E+01"/>
@@ -107,7 +107,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a161"
-            number="7.2850000E+03"
+            number="7285"
             taxonomy="DS"
             >
                 <location lat="2.7164800E+01" lon="8.7080900E+01"/>
@@ -117,7 +117,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a198"
-            number="1.0943000E+04"
+            number="10943"
             taxonomy="DS"
             >
                 <location lat="2.7164800E+01" lon="8.7080900E+01"/>
@@ -127,7 +127,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a231"
-            number="5.9680000E+03"
+            number="5968"
             taxonomy="UFB"
             >
                 <location lat="2.9564200E+01" lon="8.1568500E+01"/>
@@ -137,7 +137,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
             </asset>
             <asset
             id="a253"
-            number="4.4218000E+04"
+            number="44218"
             taxonomy="UFB"
             >
                 <location lat="2.6571400E+01" lon="8.7911500E+01"/>

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,15 +20,12 @@
 import os
 import sys
 import logging
-import importlib
 
 from openquake.baselib import sap
-from openquake.commonlib import __version__
 from openquake import commands
 
-PY_VER = sys.version_info[:3]
-
 # check for Python version
+PY_VER = sys.version_info[:3]
 if PY_VER < (3, 6):
     sys.exit('Python 3.6+ is required, you are using %s', sys.executable)
 
@@ -39,15 +36,12 @@ if os.environ['OQ_DISTRIBUTE'] == 'celery' and 'run' in sys.argv:
 
 
 def oq():
-    logging.basicConfig(level=logging.INFO)
-    modnames = ['openquake.commands.%s' % mod[:-3]
-                for mod in os.listdir(commands.__path__[0])
-                if mod.endswith('.py') and not mod.startswith('_')]
-    for modname in modnames:
-        importlib.import_module(modname)
-    parser = sap.compose(sap.registry.values(),
-                         prog='oq', version=__version__)
-    parser.callfunc()
+    args = set(sys.argv[1:])
+    if 'engine' not in args and 'dbserver' not in args:
+        # oq engine and oq dbserver define their own log levels
+        level = logging.DEBUG if 'debug' in args else logging.INFO
+        logging.basicConfig(level=level)
+    sap.run(commands, prog='oq')
 
 
 if __name__ == '__main__':

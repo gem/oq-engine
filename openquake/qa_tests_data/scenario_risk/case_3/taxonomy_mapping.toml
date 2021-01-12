@@ -1,8 +1,0 @@
-[RC]
-vulnerability = "vf1"
-
-[W]
-vulnerability = "vf2"
-
-[RM]
-vulnerability = "vf3"

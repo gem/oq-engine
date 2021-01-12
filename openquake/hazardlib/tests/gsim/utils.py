@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,6 @@ class BaseGSIMTestCase(unittest.TestCase):
 
     def check(self, filename, max_discrep_percentage, **kwargs):
         gsim = self.GSIM_CLASS(**kwargs)
-        gsim.init()
         filename = os.path.join(self.BASE_DATA_PATH, filename)
         errors, stats, sctx, rctx, dctx = check_gsim(
             gsim, open(filename), max_discrep_percentage)
@@ -40,7 +39,7 @@ class BaseGSIMTestCase(unittest.TestCase):
         if hasattr(gsim, 'DO_NOT_CHECK_DISTANCES'):
             d_att = d_att.difference(gsim.DO_NOT_CHECK_DISTANCES)
         self.assertEqual(gsim.REQUIRES_SITES_PARAMETERS, s_att)
-        self.assertEqual(gsim.REQUIRES_RUPTURE_PARAMETERS, r_att)
+        self.assertGreaterEqual(r_att, gsim.REQUIRES_RUPTURE_PARAMETERS)
         self.assertEqual(gsim.REQUIRES_DISTANCES, d_att)
         if errors:
             raise AssertionError(stats)

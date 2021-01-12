@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -109,6 +109,5 @@ class StdDev(ConstantContainer):
     #: of inter- and intra-event squared standard deviations, represents
     #: the total ground shaking variability, and is the only one that
     #: is used for calculating a probability of intensity exceedance
-    #: (see
-    #: :meth:`openquake.hazardlib.gsim.base.GroundShakingIntensityModel.get_poes`).
+    #: (see :func:`openquake.hazardlib.gsim.base.get_poes`).
     TOTAL = 'Total'

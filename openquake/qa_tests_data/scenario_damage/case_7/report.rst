@@ -1,33 +1,34 @@
 scenario hazard
 ===============
 
-============== ===================
-checksum32     3,204,585,490      
-date           2019-05-10T05:07:25
-engine_version 3.5.0-gitbaeb4c1e35
-============== ===================
+============== ====================
+checksum32     3_986_303_243       
+date           2020-11-02T09:35:49 
+engine_version 3.11.0-git82b78631ac
+============== ====================
 
-num_sites = 1, num_levels = 1, num_rlzs = 1
+num_sites = 1, num_levels = 1, num_rlzs = ?
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'scenario'        
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 200.0}
-investigation_time              None              
-ses_per_logic_tree_path         1                 
-truncation_level                3.0               
-rupture_mesh_spacing            2.0               
-complex_fault_mesh_spacing      2.0               
-width_of_mfd_bin                None              
-area_source_discretization      None              
-ground_motion_correlation_model 'JB2009'          
-minimum_intensity               {}                
-random_seed                     42                
-master_seed                     0                 
-ses_seed                        42                
-=============================== ==================
+=============================== ==========================================
+calculation_mode                'scenario'                                
+number_of_logic_tree_samples    0                                         
+maximum_distance                {'default': [(1.0, 200.0), (10.0, 200.0)]}
+investigation_time              None                                      
+ses_per_logic_tree_path         1                                         
+truncation_level                3.0                                       
+rupture_mesh_spacing            2.0                                       
+complex_fault_mesh_spacing      2.0                                       
+width_of_mfd_bin                None                                      
+area_source_discretization      None                                      
+pointsource_distance            None                                      
+ground_motion_correlation_model 'JB2009'                                  
+minimum_intensity               {}                                        
+random_seed                     42                                        
+master_seed                     0                                         
+ses_seed                        42                                        
+=============================== ==========================================
 
 Input files
 -----------
@@ -39,48 +40,33 @@ job_ini       `job_h.ini <job_h.ini>`_
 rupture_model `rupture_model.xml <rupture_model.xml>`_  
 ============= ==========================================
 
-Composite source model
-----------------------
-========= ======= =============== ================
-smlt_path weight  gsim_logic_tree num_realizations
-========= ======= =============== ================
-b_1       1.00000 trivial(1)      1               
-========= ======= =============== ================
-
-Realizations per (GRP, GSIM)
-----------------------------
-
-::
-
-  <RlzsAssoc(size=1, rlzs=1)
-  0,'[BooreAtkinson2008]': [0]>
-
-Number of ruptures per tectonic region type
--------------------------------------------
-============ ====== === ============ ============
-source_model grp_id trt eff_ruptures tot_ruptures
-============ ====== === ============ ============
-scenario     0      *   1            0           
-============ ====== === ============ ============
-
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
-======== ======= ====== === === ========= ==========
-taxonomy mean    stddev min max num_sites num_assets
-tax1     1.00000 NaN    1   1   1         1         
-======== ======= ====== === === ========= ==========
+======== ========== ======= ====== === === =========
+taxonomy num_assets mean    stddev min max num_sites
+tax1     1          1.00000 nan    1   1   1        
+======== ========== ======= ====== === === =========
+
+Information about the tasks
+---------------------------
+Not available
+
+Data transfer
+-------------
+==== ==== ========
+task sent received
+==== ==== ========
 
 Slowest operations
 ------------------
 ================ ========= ========= ======
-operation        time_sec  memory_mb counts
+calc_47256       time_sec  memory_mb counts
 ================ ========= ========= ======
-reading exposure 5.214E-04 0.0       1     
+importing inputs 0.01198   0.0       1     
+reading exposure 5.329E-04 0.0       1     
 ================ ========= ========= ======

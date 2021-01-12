@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+	<exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
+		<description>Ejemplo Tijuana 20191115</description>
+		<conversions>
+			<costTypes>
+				<costType name="structural" type="aggregated" unit="USD"/>
+			</costTypes>
+		</conversions>
+		<tagNames>N_FRACC FRACCIONAMIENTO DELEGACION USOSUELO MATERIAL</tagNames>
+		<occupancyPeriods>night </occupancyPeriods>
+		<assets>
+			Exposicion_Res_Tijuana.csv
+		</assets>
+	</exposureModel>
+</nrml>

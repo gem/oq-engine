@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <disaggMatrices
+    IMT="SA"
+    distBinEdges="0.000000E+00, 1.000000E+01, 2.000000E+01, 3.000000E+01, 4.000000E+01, 5.000000E+01, 6.000000E+01, 7.000000E+01, 8.000000E+01"
+    epsBinEdges="-3.000000E+00, 3.000000E+00"
+    gsimTreePath="ChiouYoungs2008_YoungsEtAl1997SSlab"
+    investigationTime="1.0"
+    lat="-3.0"
+    latBinEdges="-3.719456E+00, -3.629524E+00, -3.539592E+00, -3.449660E+00, -3.359728E+00, -3.269796E+00, -3.179864E+00, -3.089932E+00, -3.000000E+00, -2.910068E+00, -2.820136E+00, -2.730204E+00, -2.640272E+00, -2.550340E+00, -2.460408E+00, -2.370476E+00, -2.280544E+00"
+    lon="-3.0"
+    lonBinEdges="-3.720443E+00, -3.630388E+00, -3.540333E+00, -3.450277E+00, -3.360222E+00, -3.270166E+00, -3.180111E+00, -3.090055E+00, -3.000000E+00, -2.909945E+00, -2.819889E+00, -2.729834E+00, -2.639778E+00, -2.549723E+00, -2.459667E+00, -2.369612E+00, -2.279557E+00"
+    magBinEdges="5.500000E+00, 5.600000E+00, 5.700000E+00, 5.800000E+00, 5.900000E+00, 6.000000E+00, 6.100000E+00, 6.200000E+00, 6.300000E+00, 6.400000E+00, 6.500000E+00"
+    saDamping="5.0"
+    saPeriod="0.1"
+    sourceModelTreePath="source_model_2"
+    tectonicRegionTypes="Active Shallow Crust, Subduction IntraSlab"
+    >
+        <disaggMatrix
+        dims="10"
+        iml="1.000000E-01"
+        poE="5.083865E-03"
+        type="Mag"
+        >
+            <prob index="0" value="0.000000E+00"/>
+            <prob index="1" value="0.000000E+00"/>
+            <prob index="2" value="0.000000E+00"/>
+            <prob index="3" value="0.000000E+00"/>
+            <prob index="4" value="0.000000E+00"/>
+            <prob index="5" value="0.000000E+00"/>
+            <prob index="6" value="0.000000E+00"/>
+            <prob index="7" value="0.000000E+00"/>
+            <prob index="8" value="0.000000E+00"/>
+            <prob index="9" value="5.083865E-03"/>
+        </disaggMatrix>
+    </disaggMatrices>
+</nrml>

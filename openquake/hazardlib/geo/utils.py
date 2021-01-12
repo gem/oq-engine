@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,6 @@ from scipy.spatial import cKDTree
 import shapely.geometry
 
 from openquake.baselib.hdf5 import vstr
-from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo import geodetic
 
 U32 = numpy.uint32
@@ -41,9 +40,14 @@ EARTH_RADIUS = geodetic.EARTH_RADIUS
 spherical_to_cartesian = geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
+BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 
 
-def angular_distance(km, lat, lat2=None):
+class BBoxError(ValueError):
+    """Bounding box too large"""
+
+
+def angular_distance(km, lat=0, lat2=None):
     """
     Return the angular distance of two points at the given latitude.
 
@@ -128,11 +132,11 @@ class _GeographicObjects(object):
         if not dic:
             raise SiteAssociationError(
                 'No sites could be associated within %s km' % assoc_dist)
-        return (sitecol.filtered(dic),
-                numpy.array([dic[sid] for sid in sorted(dic)]),
+        sids = sorted(dic)
+        return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
                 discarded)
 
-    def assoc2(self, assets_by_site, assoc_dist, mode, asset_refs):
+    def assoc2(self, assets_by_site, assoc_dist, mode):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
@@ -140,7 +144,6 @@ class _GeographicObjects(object):
         :param assets_by_sites: a list of lists of assets
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
-        :param asset_ref: ID of the assets are a list of strings
         :returns: filtered site collection, filtered assets by site, discarded
         """
         assert mode in 'strict filter', mode
@@ -169,13 +172,12 @@ class _GeographicObjects(object):
         assets_by_site = [
             sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
             for sid in sids]
-        data = [(asset_refs[asset.ordinal],) + asset.location
-                for asset in discarded]
+        data = [(asset.asset_id,) + asset.location for asset in discarded]
         discarded = numpy.array(data, asset_dt)
         return self.objects.filtered(sids), assets_by_site, discarded
 
 
-def assoc(objects, sitecol, assoc_dist, mode, asset_refs=()):
+def assoc(objects, sitecol, assoc_dist, mode):
     """
     Associate geographic objects to a site collection.
 
@@ -190,11 +192,11 @@ def assoc(objects, sitecol, assoc_dist, mode, asset_refs=()):
     :returns: (filtered site collection, filtered objects)
     """
     if isinstance(objects, numpy.ndarray) or hasattr(objects, 'lons'):
-        # objects is a geo array with lon, lat fields or a mesh-like instance
+        # objects is a geo array with lon, lat fields; used for ShakeMaps
         return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
     else:  # objects is the list assets_by_site
         return _GeographicObjects(sitecol).assoc2(
-            objects, assoc_dist, mode, asset_refs)
+            objects, assoc_dist, mode)
 
 
 def clean_points(points):
@@ -316,7 +318,12 @@ def get_bounding_box(obj, maxdist):
             lons %= 360
         bbox = lons.min(), lats.min(), lons.max(), lats.max()
     a1 = min(maxdist * KM_TO_DEGREES, 90)
-    a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
+    a2 = angular_distance(maxdist, bbox[1], bbox[3])
+    delta = bbox[2] - bbox[0] + 2 * a2
+    if delta > 180:
+        raise BBoxError('The buffer of %d km is too large, the bounding '
+                        'box is larger than half the globe: %d degrees' %
+                        (maxdist, delta))
     return bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
 
 
@@ -357,7 +364,6 @@ def get_spherical_bounding_box(lons, lats):
     return SphericalBB(west, east, north, south)
 
 
-@with_slots
 class OrthographicProjection(object):
     """
     Callable OrthographicProjection object that can perform both forward
@@ -395,9 +401,6 @@ class OrthographicProjection(object):
     can be also used for measuring distance to an extent of around 700
     kilometers (error doesn't exceed 1 km up until then).
     """
-    _slots_ = ('west east north south lambda0 phi0 '
-               'cos_phi0 sin_phi0 sin_pi_over_4').split()
-
     @classmethod
     def from_lons_lats(cls, lons, lats):
         return cls(*get_spherical_bounding_box(lons, lats))
@@ -620,3 +623,56 @@ def plane_fit(points):
     x = points - ctr[:, None]
     M = numpy.dot(x, x.T)
     return ctr, numpy.linalg.svd(M)[0][:, -1]
+
+
+def bbox2poly(bbox):
+    """
+    :param bbox: a geographic bounding box West-East-North-South
+    :returns: a list of pairs corrisponding to the bbox polygon
+    """
+    x1, x2, y2, y1 = bbox  # west, east, north, south
+    return (x1, y1), (x2, y1), (x2, y2), (x1, y2), (x1, y1)
+
+
+# geohash code adapted from Leonard Norrgard's implementation
+# https://github.com/vinsci/geohash/blob/master/Geohash/geohash.py
+# see also https://en.wikipedia.org/wiki/Geohash
+# length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
+# length 4 = 20 km, length 3 = 78 km
+# it may turn useful in the future (with SiteCollection.geohash)
+def geohash(lon, lat, length):
+    """
+    Encode a position given in lon, lat into a geohash of the given lenght
+
+    >>> geohash(lon=10, lat=45, length=5)
+    b'spzpg'
+    """
+    lat_interval, lon_interval = (-90.0, 90.0), (-180.0, 180.0)
+    chars = b''
+    bits = [16, 8, 4, 2, 1]
+    bit = 0
+    ch = 0
+    even = True
+    while len(chars) < length:
+        if even:
+            mid = (lon_interval[0] + lon_interval[1]) / 2
+            if lon > mid:
+                ch |= bits[bit]
+                lon_interval = (mid, lon_interval[1])
+            else:
+                lon_interval = (lon_interval[0], mid)
+        else:
+            mid = (lat_interval[0] + lat_interval[1]) / 2
+            if lat > mid:
+                ch |= bits[bit]
+                lat_interval = (mid, lat_interval[1])
+            else:
+                lat_interval = (lat_interval[0], mid)
+        even = not even
+        if bit < 4:
+            bit += 1
+        else:
+            chars += BASE32[ch]
+            bit = 0
+            ch = 0
+    return chars

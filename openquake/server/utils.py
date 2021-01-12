@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,16 @@ from openquake.engine import __version__ as oqversion
 if settings.LOCKDOWN:
     django.setup()
     from django.contrib.auth.models import User
+
+
+def is_superuser(request):
+    """
+    Without authentication (settings.LOCKDOW is false) every user is considered
+    a superuser, otherwise look at the attribute `request.user.is_superuser`.
+    """
+    if not settings.LOCKDOWN:
+        return True
+    return request.user.is_superuser if hasattr(request, 'user') else False
 
 
 def get_user(request):
@@ -70,10 +80,10 @@ def get_acl_on(request):
     Returns `True` if ACL should be honorated, returns otherwise `False`.
     """
     acl_on = settings.ACL_ON
-    if settings.LOCKDOWN and hasattr(request, 'user'):
+    if is_superuser(request):
         # ACL is always disabled for superusers
-        if request.user.is_superuser:
-            acl_on = False
+        acl_on = False
+
     return acl_on
 
 
@@ -116,12 +126,12 @@ def check_webserver_running(url="http://localhost:8800", max_retries=30):
         try:
             response = requests.head(url, allow_redirects=True).status_code
             success = True
-        except:
+        except Exception:
             sleep(1)
 
         retry += 1
 
     if not success:
         logging.warning('Unable to connect to %s within %s retries'
-                     % (url, max_retries))
+                        % (url, max_retries))
     return success

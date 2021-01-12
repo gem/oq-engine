@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,15 +29,10 @@ and 5.13
 For delta_s2s: Table 5.15
 """
 import os
-import inspect
 import unittest
-import numpy as np
 from openquake.hazardlib.tests.gsim.check_gsim import check_gsim
-from openquake.hazardlib.gsim.nga_east import DarraghEtAl2015NGAEast1CCSP
-
-# Use a reference GMPE, it doesn't matter which as the mean is not being tested
-DUMMY_GSIM = DarraghEtAl2015NGAEast1CCSP
-
+from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
+from openquake.hazardlib.gsim import nga_east as ne
 
 # From Al Atik (2015) three branches are defined that correspond to epistemic
 # quantile: low (0.05), central (0.5) and high (0.95)
@@ -539,7 +534,7 @@ NGA_EAST_SIGMA_FILES = [
 
 
 @unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
-class NGAEastUncertaintyTestCase(unittest.TestCase):
+class NGAEastUncertaintyTestCase(BaseGSIMTestCase):
     """
     Variant of the :class:
     `openquake.hazardlib.tests.gsim.utils.BaseGSIMTestCase` object in which
@@ -606,11 +601,12 @@ class NGAEastUncertaintyTestCase(unittest.TestCase):
                 phi_s2ss_model = None
             phi_s2ss_quantile = QUANTILE[phi_s2ss_branch]
             # Instantiate GSIM
-            gsim = DUMMY_GSIM(tau_model=tau_model, phi_model=phi_model,
-                              phi_s2ss_model=phi_s2ss_model,
-                              tau_quantile=tau_quantile,
-                              phi_ss_quantile=phi_quantile,
-                              phi_s2ss_quantile=phi_s2ss_quantile)
-            gsim.init()
+            gsim = ne.NGAEastGMPE(
+                gmpe_table="NGAEast_DARRAGH_1CCSP.hdf5",
+                tau_model=tau_model, phi_model=phi_model,
+                phi_s2ss_model=phi_s2ss_model,
+                tau_quantile=tau_quantile,
+                phi_ss_quantile=phi_quantile,
+                phi_s2ss_quantile=phi_s2ss_quantile)
             # Run Checks
             self._test_uncertainty_model(gsim, filestem, MAX_DISC)

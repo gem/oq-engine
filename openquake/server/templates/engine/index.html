@@ -45,6 +45,7 @@
       </thead>
       <tbody>
         <% _.each(calculations, function(calc) { %>
+        <% if (calc.get('status') == 'deleted') { return 0; } %>
         <tr class="<%= (calc.get('status') == 'created' || calc.get('is_running') == true) ? 'warning' : (calc.get('status') == 'complete' ? 'success' : 'error') %>">
           <td><%= calc.get('id') || 'New' %></td>
           <td><%= calc.get('owner') %></td>

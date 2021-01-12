@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,29 +15,38 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import io
 import os
 import re
 import math
 
 import numpy.testing
 
-from openquake.baselib.general import group_array, gettemp
+from openquake.baselib.hdf5 import read_csv
+from openquake.baselib.general import countby, gettemp
 from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter
+from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import max_rel_diff_index
+from openquake.commonlib.calc import gmvs_to_poes
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.calculators.getters import get_gmfgetter
 from openquake.calculators.event_based import get_mean_curves
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import case_18 as gmpe_tables
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
-    case_17,  case_18, case_19, case_20, case_21, case_22, mutex)
+    case_17,  case_18, case_19, case_20, case_21, case_22, case_23, case_24,
+    case_25, case_26, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
+
+aae = numpy.testing.assert_almost_equal
 
 
 def strip_calc_id(fname):
@@ -92,9 +101,9 @@ class EventBasedTestCase(CalculatorTestCase):
             oq = self.calc.oqparam
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
-            gmf = group_array(dstore['gmf_data/data'], 'sid')
-            gmvs_site_0 = gmf[0]['gmv']
-            gmvs_site_1 = gmf[1]['gmv']
+            gmf = dstore.read_df('gmf_data', 'sid')
+            gmvs_site_0 = gmf.loc[0]['gmv_0']
+            gmvs_site_1 = gmf.loc[1]['gmv_0']
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_0, gmvs_site_1, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
@@ -103,18 +112,16 @@ class EventBasedTestCase(CalculatorTestCase):
                 oq.ses_per_logic_tree_path)
 
             p05, p10 = expected[case]
-            numpy.testing.assert_almost_equal(joint_prob_0_5, p05, decimal=1)
-            numpy.testing.assert_almost_equal(joint_prob_1_0, p10, decimal=1)
+            aae(joint_prob_0_5, p05, decimal=1)
+            aae(joint_prob_1_0, p10, decimal=1)
 
     def test_blocksize(self):
-        # here the <AreaSource 1> is light and not split
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='3', exports='csv')
         [fname, _, sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname)
         self.assertEqualFiles('expected/sites.csv', sitefile)
 
-        # here the <AreaSource 1> is heavy and split
         out = self.run_calc(blocksize.__file__, 'job.ini',
                             concurrent_tasks='4', exports='csv')
         [fname, sig_eps, _] = out['gmf_data', 'csv']
@@ -124,25 +131,33 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
 
-        [fname, _, _] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/gmf-data.csv', fname)
+        # make sure ses_id >= 65536 is valid
+        high_ses = (self.calc.datastore['events']['ses_id'] >= 65536).sum()
+        self.assertGreater(high_ses, 1000)
+
+        [fname] = out['ruptures', 'xml']  # just check that it exists
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        # test that the .npz export runs
-        export(('gmf_data', 'npz'), self.calc.datastore)
-
-        export(('hcurves', 'xml'), self.calc.datastore)
+        export(('hcurves', 'xml'), self.calc.datastore)  # check it works
 
         [fname] = out['hcurves', 'xml']
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
+        # compute hcurves in postprocessing and compare with inprocessing
+        # take advantage of the fact that there is a single site
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
+        oq = self.calc.datastore['oqparam']
+        poes = gmvs_to_poes(df, oq.imtls, oq.ses_per_logic_tree_path)
+        hcurve = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L)
+        aae(poes, hcurve)
+
         # test gsim_by_imt
         out = self.run_calc(case_1.__file__, 'job.ini',
-                            ses_per_logic_tree_path='20',
+                            ses_per_logic_tree_path='30',
                             gsim_logic_tree_file='gsim_by_imt_logic_tree.xml',
                             exports='csv')
 
@@ -152,21 +167,23 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(einfo['rupture_class'],
                          'ParametricProbabilisticRupture')
         self.assertEqual(einfo['surface_class'], 'PlanarSurface')
-        self.assertEqual(einfo['serial'], 1066)
+        self.assertEqual(einfo['seed'], 73073755)
         self.assertEqual(str(einfo['gsim']),
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
         self.assertEqual(einfo['rlzi'], 0)
-        self.assertEqual(einfo['grp_id'], 0)
-        self.assertEqual(einfo['occurrence_rate'], 1.0)
-        self.assertEqual(list(einfo['hypo']), [0., 0., 4.])
+        self.assertEqual(einfo['et_id'], 0)
+        aae(einfo['occurrence_rate'], 0.6)
+        aae(einfo['hypo'], [0., 0., 4.])
 
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gsim_by_imt.csv', fname)
 
     def test_case_1_ruptures(self):
         self.run_calc(case_1.__file__, 'job_ruptures.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 2)
+        [fname] = export(('events', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/events.csv', fname)
 
     def test_minimum_intensity(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
@@ -177,6 +194,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
+
         [gmfs, sig_eps, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', gmfs)
         # this is a case with truncation_level=0: sig-eps.csv must be empty
@@ -195,9 +213,16 @@ class EventBasedTestCase(CalculatorTestCase):
                                   delta=1E-6)
 
     def test_case_3(self):  # 1 site, 1 rupture, 2 GSIMs
-        out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
-        [f, _, _] = out['gmf_data', 'csv']
+        self.run_calc(case_3.__file__, 'job.ini')
+        [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', f)
+
+        # check the rupture multiplicity
+        [f] = export(('ruptures', 'xml'), self.calc.datastore)
+        self.assertEqualFiles('expected/ses.xml', f)
+
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', f)
 
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
@@ -218,6 +243,16 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
+        tmp = gettemp(extract(self.calc.datastore, 'ruptures').array)
+        self.assertEqualFiles('expected/ruptures_full.csv', tmp, delta=1E-6)
+
+        # check MFD
+        aw = extract(self.calc.datastore, 'event_based_mfd?kind=mean')
+        self.assertEqual(aw.duration, 30)  # 30 years
+        aae(aw.magnitudes, [4.6, 4.7, 4.8, 4.9, 5.1, 5.3, 5.9], decimal=6)
+        aae(aw.mean_frequency, [0.02, 0.013333, 0.01, 0.053333, 0.006667,
+                                0.006667, 0.006667], decimal=6)
+
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
         expected = [
@@ -233,30 +268,48 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/realizations.csv', fname)
 
     def test_case_7(self):
-        # 2 models x 3 GMPEs, 100 samples * 20 SES
+        # 2 models x 3 GMPEs, 1000 samples * 10 SES
         expected = [
             'hazard_curve-mean.csv',
         ]
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
+        aw = extract(self.calc.datastore, 'realizations')
+        dic = countby(aw.array, 'branch_path')
+        self.assertEqual({b'0~0': 308,  # w = .6 * .5 = .30
+                          b'0~1': 173,  # w = .6 * .3 = .18
+                          b'0~2': 119,  # w = .6 * .2 = .12
+                          b'1~0': 192,  # w = .4 * .5 = .20
+                          b'1~1': 127,  # w = .4 * .3 = .12
+                          b'1~2': 81},  # w = .4 * .2 = .08
+                         dic)
+
         fnames = out['hcurves', 'csv']
-        mean_eb = get_mean_curves(self.calc.datastore)
+        mean_eb = get_mean_curves(self.calc.datastore, 'PGA')
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
-        mean_cl = get_mean_curves(self.calc.cl.datastore)
+        mean_cl = get_mean_curves(self.calc.cl.datastore, 'PGA')
         reldiff, _index = max_rel_diff_index(
             mean_cl, mean_eb, min_value=0.1)
-        self.assertLess(reldiff, 0.10)
+        self.assertLess(reldiff, 0.05)
 
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
-        self.assertEqualFiles('expected/rup_data.csv', fname)
+        self.assertEqualFiles('expected/rup_data.csv', fname, delta=1E-5)
+
+        # test get_gmfgetter
+        gg = get_gmfgetter(self.calc.datastore, rup_id=0)
+        self.assertEqual(str(gg.get_hazard()), '''\
+   sid  eid  rlz     gmv_0
+0    0    0    0  0.611368
+1    1    0    0  1.556242
+2    2    0    0  1.226484''')
 
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
-        self.assertEqual(len(self.calc.datastore['gmf_data/data']), 51)
+        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 39)
 
     def test_case_10(self):
         # this is a case with multiple files in the smlt uncertaintyModel
@@ -296,15 +349,15 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_16(self):
         # an example with site model raising warnings and autogridded exposure
-        self.run_calc(case_16.__file__, 'job.ini',
-                      ground_motion_fields='false')
+        # and GMF amplification too
+        self.run_calc(case_16.__file__, 'job.ini')
         hid = str(self.calc.datastore.calc_id)
         self.run_calc(case_16.__file__, 'job.ini', hazard_calculation_id=hid)
         tmp = gettemp(view('global_gmfs', self.calc.datastore))
         self.assertEqualFiles('expected/global_gmfs.txt', tmp)
 
-    def test_case_17(self):  # oversampling and save_ruptures
-        # also, the grp-00 does not produce ruptures
+    def test_case_17(self):  # oversampling
+        # also, grp-00 does not produce ruptures
         expected = [
             'hazard_curve-mean.csv',
             'hazard_curve-rlz-001.csv',
@@ -326,7 +379,11 @@ class EventBasedTestCase(CalculatorTestCase):
         # check that the exported file is parseable
         rupcoll = nrml.to_python(fname, RuptureConverter(1))
         self.assertEqual(list(rupcoll), [1])  # one group
-        self.assertEqual(len(rupcoll[1]), 3)  # three EBRuptures
+        self.assertEqual(len(rupcoll[1]), 2)  # two EBRuptures
+
+        # check that GMFs are not stored
+        with self.assertRaises(KeyError):
+            self.calc.datastore['gmf_data']
 
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
@@ -341,7 +398,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # a test with grid and site model
         self.run_calc(case_19.__file__, 'job_grid.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 2)
 
         # error for missing intensity_measure_types
         with self.assertRaises(InvalidFile) as ctx:
@@ -357,6 +414,11 @@ class EventBasedTestCase(CalculatorTestCase):
         [gmf, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', gmf)
 
+        # check the relevant_events
+        E = extract(self.calc.datastore, 'num_events')['num_events']
+        e = len(extract(self.calc.datastore, 'events'))
+        self.assertAlmostEqual(e/E, 0.1440677966)
+
         # run again the GMF calculation, but this time from stored ruptures
         hid = str(self.calc.datastore.calc_id)
         self.run_calc(case_20.__file__, 'job.ini', hazard_calculation_id=hid)
@@ -366,7 +428,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_21(self):
         self.run_calc(case_21.__file__, 'job.ini', exports='csv,xml')
         self.run_calc(case_21.__file__, 'job.ini',
-                      ses_per_logic_tree_path='10',
+                      ses_per_logic_tree_path='100',
                       number_of_logic_tree_samples='0')
 
     def test_case_22(self):
@@ -374,6 +436,64 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
+
+    def test_case_23(self):
+        # case with implicit grid and site model on a larger grid
+        out = self.run_calc(case_23.__file__, 'job.ini', exports='csv')
+        [fname] = out['ruptures', 'csv']
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-4)
+        sio = io.StringIO()
+        write_csv(sio, self.calc.datastore.getitem('sitecol'))
+        tmp = gettemp(sio.getvalue())
+        self.assertEqualFiles('expected/sitecol.csv', tmp)
+
+    def test_case_24(self):
+        # This is a test for shift_hypo = true - The expected results are the
+        # same ones defined for the case_44 of the classical methodology
+        self.run_calc(case_24.__file__, 'job.ini')
+        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', fname)
+
+    def test_case_25(self):
+        # logic tree common + extra
+        # common1.xml contains "5" "6"
+        # common2.xml contains "1" "2"
+        # extra1.xml contains "3"
+        # extra2.xml contains "4"
+        self.run_calc(case_25.__file__, 'job.ini')
+        mean, *others = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
+
+        self.run_calc(case_25.__file__, 'job2.ini')
+        mean, *others = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-PGA.csv', mean)
+
+        # test with common1.xml present into branchs and sampling
+        self.run_calc(case_25.__file__, 'job_common.ini')
+        mean, *others = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', mean)
+
+    def test_case_26_land(self):
+        # cali landslide simplified
+        self.run_calc(case_26.__file__, 'job_land.ini')
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
+        pd_mean = df[df.DispProb > 0].DispProb.mean()
+        nd_mean = df[df.Disp > 0].Disp.mean()
+        self.assertGreater(pd_mean, 0)
+        self.assertGreater(nd_mean, 0)
+        [fname, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
+        arr = read_csv(fname)[:2]
+        self.assertEqual(arr.dtype.names,
+                         ('site_id', 'event_id', 'gmv_PGA',
+                          'Disp', 'DispProb'))
+
+    def test_case_26_liq(self):
+        # cali liquefaction simplified
+        self.run_calc(case_26.__file__, 'job_liq.ini')
+        df = self.calc.datastore.read_df('avg_gmf')
+        aae(df.LiqProb.max(), 0.27772662)
+        aae(df.PGDGeomMean.max(), 0.55390346)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
@@ -383,7 +503,7 @@ class EventBasedTestCase(CalculatorTestCase):
                 case_2.__file__, 'job.ini',
                 intensity_measure_types_and_levels=str(too_many_imts))
         self.assertEqual(str(ctx.exception),
-                         'The event based calculator is restricted '
+                         'The event_based calculator is restricted '
                          'to 256 imts, got 900')
 
     def test_mutex(self):

@@ -25,7 +25,6 @@ from openquake.hazardlib import nrml
 from openquake.commonlib import readinput
 
 
-@sap.Script
 def expo2csv(job_ini):
     """
     Convert an exposure in XML format into CSV format
@@ -46,8 +45,8 @@ def expo2csv(job_ini):
     occupancy_periods = exposure.occupancy_periods.split()
     header.extend(occupancy_periods)
     header.extend(exposure.tagcol.tagnames)
-    for asset, asset_ref in zip(exposure.assets, exposure.asset_refs):
-        row = [asset_ref.decode('utf8'), asset.location[0], asset.location[1],
+    for asset in exposure.assets:
+        row = [asset.asset_id, asset.location[0], asset.location[1],
                asset.number]
         if area:
             row.append(asset.area)
@@ -89,8 +88,8 @@ def expo2csv(job_ini):
     print(mon)
 
 
-expo2csv.arg('job_ini', 'path to the job.ini file')
+expo2csv.job_ini = 'path to the job.ini file'
 
 
 if __name__ == '__main__':
-    expo2csv.callfunc()
+    sap.run(expo2csv)

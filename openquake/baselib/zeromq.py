@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import re
 import zmq
+import time
 import logging
 
 context = zmq.Context()
@@ -95,8 +96,15 @@ class Socket(object):
             p1, p2 = map(int, port_range.groups())
             end_point = self.end_point.rsplit(':', 1)[0]  # strip port range
             self.zsocket = context.socket(self.socket_type)
-            port = self.zsocket.bind_to_random_port(end_point, p1, p2)
-            # NB: will raise a ZMQBindError if no port is available
+            while True:
+                try:
+                    # NB: will raise a ZMQBindError if no port is available
+                    port = self.zsocket.bind_to_random_port(end_point, p1, p2)
+                except zmq.error.ZMQBindError:
+                    logging.info('Waiting for a zmq port')
+                    time.sleep(30)
+                else:
+                    break
             self.port = port
         elif self.mode == 'bind':
             self.zsocket = bind(self.end_point, self.socket_type)
@@ -125,16 +133,12 @@ class Socket(object):
         while self.running:
             try:
                 if self.zsocket.poll(self.timeout):
-                    args = self.zsocket.recv_pyobj()
-                else:
-                    # wait a bit more; print a warning for PULL sockets
-                    if self.socket_type == 'PULL':
-                        logging.warning('Timeout in %s', self)
-                    continue
+                    yield self.zsocket.recv_pyobj()
+                elif self.socket_type == zmq.PULL:
+                    logging.debug('Waiting on %s:%d', self, self.port)
             except zmq.ZMQError:
                 # sending SIGTERM raises ZMQError
                 break
-            yield args
 
     def send(self, obj):
         """
@@ -144,7 +148,11 @@ class Socket(object):
         :param obj:
             the Python object to send
         """
-        self.zsocket.send_pyobj(obj)
+        try:
+            self.zsocket.send_pyobj(obj)
+        except Exception as exc:
+            # usual for objects bigger than 4 GB
+            raise exc.__class__('%s: %r' % (exc, obj))
         self.num_sent += 1
         if self.socket_type == zmq.REQ:
             return self.zsocket.recv_pyobj()

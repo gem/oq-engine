@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?><nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+        <logicTreeBranchingLevel branchingLevelID="asc">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1" applyToTectonicRegionType="Shallow Crust">
+
+                <logicTreeBranch branchID="ECOS09"> 
+					<uncertaintyModel>
+				        [ModifiableGMPE]
+                        gmpe.ECOS2009 = {}
+                        apply_swiss_amplification = {}
+					</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="BindiEtAl2011RepiFixedH"> 
+					<uncertaintyModel>
+				        [ModifiableGMPE]
+                        gmpe.BindiEtAl2011RepiFixedH = {}
+                        apply_swiss_amplification = {}
+					</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="BaumontEtAl2018High2210IAVGDC30n7"> 
+					<uncertaintyModel>
+				        [ModifiableGMPE]
+                        gmpe.BaumontEtAl2018High2210IAVGDC30n7 = {}
+                        apply_swiss_amplification = {}
+					</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="FaccioliCauzzi2006"> 
+					<uncertaintyModel>
+				        [ModifiableGMPE]
+                        gmpe.FaccioliCauzzi2006 = {}
+                        apply_swiss_amplification = {}
+					</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="ECOS2009Highest"> 
+					<uncertaintyModel>
+				        [ModifiableGMPE]
+                        gmpe.ECOS2009Highest = {}
+                        apply_swiss_amplification = {}
+					</uncertaintyModel>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+				</logicTreeBranch>	
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+    </logicTree>
+</nrml>

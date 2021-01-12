@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,10 +21,8 @@ Module :mod:`openquake.hazardlib.scalerel.ceus2011` implements
 :class:`CEUS2011`.
 """
 from openquake.hazardlib.scalerel.base import BaseMSR
-from openquake.baselib.slots import with_slots
 
 
-@with_slots
 class CEUS2011(BaseMSR):
     """
     Magnitude-Scaling Relationship used for calculations in the CEUS SSC
@@ -33,10 +31,7 @@ class CEUS2011(BaseMSR):
     References:
         - CEUS SSC Hazard Input Document - Appendix H, page H-3
         - CEUS SSC Final Report - Chapter 5, page 5-57
-
     """
-    _slots_ = []
-
     def get_median_area(self, mag, rake):
         """
         Calculates median area as ``10 ** (mag - 4.366)``. Rake is ignored.

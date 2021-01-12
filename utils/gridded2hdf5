@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# 
+# Copyright (C) 2020, GEM Foundation
+# 
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+from openquake.baselib import sap, general, parallel
+from openquake.hazardlib import nrml, sourcewriter
+
+
+def convert_gridded(fname):
+    before = os.path.getsize(fname)
+    smodel = nrml.to_python(fname)
+    out = sourcewriter.write_source_model(fname, smodel)
+    if len(out) == 1:  # non-gridded
+        after = os.path.getsize(fname)
+    else:  # gridded, returns fname + hdf5 fname
+        after = os.path.getsize(fname) + os.path.getsize(out[1])
+    return dict(before=before, after=after)
+
+
+def gridded2hdf5(fnames):
+    """
+    Convert gridded sources from XML to HDF5 format
+    """
+    try:
+        acc = parallel.Starmap(convert_gridded, [(f,) for f in fnames],
+                               distribute='processpool').reduce()
+    finally:
+        parallel.Starmap.shutdown()
+    before = general.humansize(acc['before'])
+    after = general.humansize(acc['after'])
+    factor = acc['before'] / acc['after']
+    print('Reduced size %s -> %s, %dx' % (before, after, factor))
+    
+
+gridded2hdf5.fnames = dict(help='source model file in XML format', nargs='+')
+
+
+if __name__ == '__main__':
+    sap.run(gridded2hdf5)

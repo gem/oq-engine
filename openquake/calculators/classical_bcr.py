@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,14 +28,12 @@ bcr_dt = numpy.dtype([('annual_loss_orig', F32), ('annual_loss_retro', F32),
                       ('bcr', F32)])
 
 
-def classical_bcr(riskinputs, riskmodel, param, monitor):
+def classical_bcr(riskinputs, param, monitor):
     """
     Compute and return the average losses for each asset.
 
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param riskmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         dictionary of extra parameters
     :param monitor:
@@ -43,8 +41,9 @@ def classical_bcr(riskinputs, riskmodel, param, monitor):
     """
     R = riskinputs[0].hazard_getter.num_rlzs
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
+    crmodel = monitor.read('crmodel')
     for ri in riskinputs:
-        for out in riskmodel.gen_outputs(ri, monitor):
+        for out in ri.gen_outputs(crmodel, monitor):
             for asset, (eal_orig, eal_retro, bcr) in zip(
                     ri.assets, out['structural']):
                 aval = asset['value-structural']
@@ -76,4 +75,5 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
             bcr_data[aid]['annual_loss_orig'] = data[:, 0]
             bcr_data[aid]['annual_loss_retro'] = data[:, 1]
             bcr_data[aid]['bcr'] = data[:, 2]
-        stats.set_rlzs_stats(self.datastore, 'bcr', bcr_data)
+        self.datastore['bcr-rlzs'] = bcr_data
+        stats.set_rlzs_stats(self.datastore, 'bcr', assets=self.assetcol['id'])

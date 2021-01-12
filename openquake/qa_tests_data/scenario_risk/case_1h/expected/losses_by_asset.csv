@@ -1,3 +1,4 @@
-id,taxonomy,lon,lat,structural~mean,structural~stddev
-"a2","tax1",-122.00000,38.00300,3.59500E+01,1.19837E+02
-"a1","tax1",-122.00000,38.11300,3.59500E+02,1.19837E+03
+#,,,,"generated_by='OpenQuake engine 3.11.0-git61080b4098', start_date='2020-12-23T07:48:39', checksum=913251004, investigation_time=None, risk_investigation_time=None"
+asset_id,taxonomy,lon,lat,structural
+a2,tax1,-122.00000,38.00300,4.22500E+01
+a1,tax1,-122.00000,38.11300,4.22500E+02

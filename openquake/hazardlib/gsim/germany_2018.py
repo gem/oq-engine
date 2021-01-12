@@ -61,18 +61,23 @@ class CauzziEtAl2014RhypoGermany(CauzziEtAl2014):
     Implements the Cauzzi et al. (2015) GMPE applying the rhypo to rrup
     adjustment factor adopted for Germany
     """
-    REQUIRES_DISTANCES = set(("rhypo", ))
+    REQUIRES_DISTANCES = {"rhypo", "rrup"}
+    REQUIRES_RUPTURE_PARAMETERS = {"rake", "mag", "width"}
 
-    def __init__(self, adjustment_factor=1.0):
-        super().__init__()
+    def __init__(self, adjustment_factor=1.0, **kwargs):
+        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(adjustment_factor)
 
     def _compute_mean(self, C, rup, dists, sites, imt):
         """
         Returns the mean ground motion acceleration and velocity
         """
-        # Convert rhypo to rrup
-        rrup = rhypo_to_rrup(dists.rhypo, rup.mag)
+        if rup.width > 1.0E-3:
+            # Finite rupture source used
+            rrup = np.copy(dists.rrup)
+        else:
+            # Point source MSR used - convert rhypo to rrup
+            rrup = rhypo_to_rrup(dists.rhypo, rup.mag)
         mean = (self._get_magnitude_scaling_term(C, rup.mag) +
                 self._get_distance_scaling_term(C, rup.mag, rrup) +
                 self._get_style_of_faulting_term(C, rup.rake) +
@@ -98,10 +103,11 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
     distance as an input and converting to Rjb
     """
     #: The required distance parameter is hypocentral distance
-    REQUIRES_DISTANCES = set(('rhypo', ))
+    REQUIRES_DISTANCES = {'rjb', 'rhypo'}
+    REQUIRES_RUPTURE_PARAMETERS = {"rake", "mag", "hypo_depth", "width"}
 
-    def __init__(self, adjustment_factor=1.0):
-        super().__init__()
+    def __init__(self, adjustment_factor=1.0, **kwargs):
+        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(adjustment_factor)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -158,7 +164,10 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
         p_n = []
         # Rjb
         # Note that Rjb must be clipped at 0.1 km
-        rjb = rhypo_to_rjb(dists.rhypo, rup.mag)
+        if rup.width > 1.0E-3:
+            rjb = np.copy(dists.rjb)
+        else:
+            rjb = rhypo_to_rjb(dists.rhypo, rup.mag)
         rjb[rjb < 0.1] = 0.1
         p_n.append(self._get_normalised_term(np.log10(rjb),
                                              self.CONSTANTS["logMaxR"],

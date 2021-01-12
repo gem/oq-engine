@@ -1,0 +1,84 @@
+Fault_Model_ID = 1
+Fault_Model_Name = "Nepal MBT Sections"
+[[tectonic_regionalisation]]
+Name = "Active Shallow Crust"
+Code = 1
+
+[tectonic_regionalisation.Magnitude_Scaling_Relation]
+Value = [ "WC1994",]
+Weight = [ 1.0,]
+[tectonic_regionalisation.Shear_Modulus]
+Value = [ 30.0,]
+Weight = [ 1.0,]
+[tectonic_regionalisation.Displacement_Length_Ratio]
+Value = [ 1.25e-5,]
+Weight = [ 1.0,]
+[[Fault_Model]]
+ID = 1
+Tectonic_Region = "Active Shallow Crust"
+Fault_Name = "Nepal MBT East"
+Rake = -90
+Slip_Type = "Thrust"
+Slip_Completeness_Factor = 1
+Aseismic = 0.0
+Aspect_Ratio = 1.5
+[[Fault_Model.MFD_Model]]
+Model_Name = "Characteristic"
+MFD_spacing = 0.1
+Model_Weight = 0.2
+Sigma = 0.12
+Lower_Bound = -3.0
+Upper_Bound = 3.0
+
+[[Fault_Model.MFD_Model]]
+Model_Name = "AndersonLucoArbitrary"
+Model_Type = "First"
+MFD_spacing = 0.1
+Model_Weight = 0.1
+Minimum_Magnitude = 4.5
+b_value = [ 0.8, 0.05,]
+
+[[Fault_Model.MFD_Model]]
+Model_Name = "AndersonLucoAreaMmax"
+Model_Type = "Second"
+MFD_spacing = 0.1
+Model_Weight = 0.1
+Minimum_Magnitude = 4.5
+b_value = [ 0.8, 0.05,]
+
+[[Fault_Model.MFD_Model]]
+Model_Name = "YoungsCoppersmithExponential"
+MFD_spacing = 0.1
+Model_Weight = 0.3
+Minimum_Magnitude = 5.0
+b_value = [ 0.8, 0.05,]
+
+[[Fault_Model.MFD_Model]]
+Model_Name = "YoungsCoppersmithCharacteristic"
+Model_Weight = 0.3
+Minimum_Magnitude = 5.0
+MFD_spacing = 0.1
+b_value = [ 0.8, "None",]
+
+
+[Fault_Model.Fault_Geometry]
+Fault_Typology = "Simple"
+Fault_Trace = [ 89.29900000000001, 26.768, 89.196, 26.742, 89.047, 26.875, 88.95999999999999, 26.922, 88.785, 26.917, 88.657, 26.901, 88.45099999999999, 26.86, 88.18899999999999, 26.778, 87.999, 26.716, 87.79900000000001, 26.691, 87.67, 26.742, 87.496, 26.742, 87.23399999999999, 26.804, 87.033, 26.804, 86.979, 26.773, 86.902, 26.675, 86.789, 26.67, 86.532, 26.696,]
+Upper_Depth = 0.0
+Lower_Depth = 25.0
+Dip = 20.0
+[Fault_Model.Slip]
+Value = [ 18.0, 20.0, 23.0,]
+Weight = [ 0.3, 0.5, 0.2,]
+[Fault_Model.Shear_Modulus]
+Value = [ 30.0, 35.0,]
+Weight = [ 0.8, 0.2,]
+[Fault_Model.Magnitude_Scaling_Relation]
+Value = [ "WC1994",]
+Weight = [ 1.0,]
+[Fault_Model.Scaling_Relation_Sigma]
+Value = [ -1.5, 0.0, 1.5,]
+Weight = [ 0.15, 0.7, 0.15,]
+[Fault_Model.Displacement_Length_Ratio]
+Value = [ 1.25e-5, 1.5e-5,]
+Weight = [ 0.5, 0.5,]

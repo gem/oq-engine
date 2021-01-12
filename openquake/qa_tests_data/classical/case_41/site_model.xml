@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <siteModel>
+        <site ec8="C" ec8_p18="D" h800="255.0" lat="-0.15738" lon="-64.98651" geology="CENOZOIC" slope="0.04" vs30="355.0" vs30Type="measured" z1pt0="408.4698342980704" region="0"/>
+        <site ec8="C" ec8_p18="D" h800="233.0" lat="-0.45686" lon="-64.77466" geology="PLEISTOCENE" slope="0.025" vs30="355.0" vs30Type="inferred" z1pt0="411.608194920163" region="0"/>
+    </siteModel>
+</nrml>

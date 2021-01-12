@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -77,14 +77,21 @@ class AbrahamsonEtAl2015SInter(GMPE):
     #: containing True for a backarc site or False for a forearc or
     #: unknown site.
 
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
 
     #: Required rupture parameters are magnitude for the interface model
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is closest distance to rupture, for
     #: interface events
-    REQUIRES_DISTANCES = set(('rrup',))
+    REQUIRES_DISTANCES = {'rrup'}
+
+    #: Reference soil conditions (bottom of page 29)
+    DEFINED_FOR_REFERENCE_VELOCITY = 1000
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.ergodic = kwargs.get('ergodic', True)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -205,12 +212,17 @@ class AbrahamsonEtAl2015SInter(GMPE):
         for stddev_type in stddev_types:
             assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
+                sigma = C["sigma"] if self.ergodic else C["sigma_ss"]
+                stddevs.append(sigma + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTER_EVENT:
                 stddevs.append(C['tau'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['phi'] + np.zeros(num_sites))
-
+                if self.ergodic:
+                    phi = C["phi"]
+                else:
+                    # Get single station phi
+                    phi = np.sqrt(C["sigma_ss"] ** 2. - C["tau"] ** 2.)
+                stddevs.append(phi + np.zeros(num_sites))
         return stddevs
 
     # Period-dependent coefficients (Table 3)
@@ -320,10 +332,10 @@ class AbrahamsonEtAl2015SSlab(AbrahamsonEtAl2015SInter):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Required distance measure is hypocentral for in-slab events
-    REQUIRES_DISTANCES = set(('rhypo',))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     #: In-slab events require constraint of hypocentral depth and magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     def _get_delta_c1(self, imt):
         """

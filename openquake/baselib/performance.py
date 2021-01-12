@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,10 @@
 
 import os
 import time
+import pickle
 import getpass
+import operator
+import itertools
 from datetime import datetime
 import psutil
 import numpy
@@ -26,8 +29,67 @@ import numpy
 from openquake.baselib.general import humansize
 from openquake.baselib import hdf5
 
-perf_dt = numpy.dtype([('operation', (bytes, 50)), ('time_sec', float),
-                       ('memory_mb', float), ('counts', int)])
+# NB: one can use vstr fields in extensible datasets, but then reading
+# them on-the-fly in SWMR mode will fail with an OSError:
+# Can't read data (address of object past end of allocation)
+# this is why below I am using '<S50' byte strings
+perf_dt = numpy.dtype([('operation', '<S50'), ('time_sec', float),
+                       ('memory_mb', float), ('counts', int),
+                       ('task_no', numpy.int16)])
+task_info_dt = numpy.dtype(
+    [('taskname', '<S50'), ('task_no', numpy.uint32),
+     ('weight', numpy.float32), ('duration', numpy.float32),
+     ('received', numpy.int64), ('mem_gb', numpy.float32)])
+
+
+def init_performance(hdf5file, swmr=False):
+    """
+    :param hdf5file: file name of hdf5.File instance
+    """
+    fname = isinstance(hdf5file, str)
+    h5 = hdf5.File(hdf5file, 'a') if fname else hdf5file
+    if 'performance_data' not in h5:
+        hdf5.create(h5, 'performance_data', perf_dt)
+    if 'task_info' not in h5:
+        hdf5.create(h5, 'task_info', task_info_dt)
+    if 'task_sent' not in h5:
+        h5['task_sent'] = '{}'
+    if swmr:
+        try:
+            h5.swmr_mode = True
+        except ValueError as exc:
+            raise ValueError('%s: %s' % (hdf5file, exc))
+    if fname:
+        h5.close()
+
+
+def performance_view(dstore):
+    """
+    Returns the performance view as a numpy array.
+    """
+    pdata = dstore['performance_data']
+    pdata.refresh()
+    data = sorted(pdata[()], key=operator.itemgetter(0))
+    out = []
+    for operation, group in itertools.groupby(data, operator.itemgetter(0)):
+        counts = 0
+        time = 0
+        mem = 0
+        for rec in group:
+            counts += rec['counts']
+            time += rec['time_sec']
+            mem = max(mem, rec['memory_mb'])
+        out.append((operation, time, mem, counts))
+    out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
+    mems = dstore['task_info']['mem_gb']
+    maxmem = ', maxmem=%.1f GB' % mems.max() if len(mems) else ''
+    if hasattr(dstore, 'calc_id'):
+        operation = 'calc_%d%s' % (dstore.calc_id, maxmem)
+    else:
+        operation = 'operation'
+    dtlist = [(operation, perf_dt['operation'])]
+    dtlist.extend((n, perf_dt[n]) for n in perf_dt.names[1:-1])
+    return numpy.array(out, dtlist)
 
 
 def _pairs(items):
@@ -79,21 +141,20 @@ class Monitor(object):
     authkey = None
     calc_id = None
 
-    def __init__(self, operation='', hdf5=None,
-                 autoflush=False, measuremem=False, inner_loop=False):
+    def __init__(self, operation='', measuremem=False, inner_loop=False,
+                 h5=None):
         self.operation = operation
-        self.hdf5 = hdf5
-        self.autoflush = autoflush
         self.measuremem = measuremem
         self.inner_loop = inner_loop
+        self.h5 = h5
         self.mem = 0
         self.duration = 0
         self._start_time = self._stop_time = time.time()
         self.children = []
         self.counts = 0
         self.address = None
-        self._flush = True
         self.username = getpass.getuser()
+        self.task_no = -1  # overridden in parallel
 
     @property
     def dt(self):
@@ -126,7 +187,8 @@ class Monitor(object):
         if self.counts:
             time_sec = self.duration
             memory_mb = self.mem / 1024. / 1024. if self.measuremem else 0
-            data.append((self.operation, time_sec, memory_mb, self.counts))
+            data.append((self.operation, time_sec, memory_mb, self.counts,
+                         self.task_no))
         return numpy.array(data, perf_dt)
 
     def __enter__(self):
@@ -144,35 +206,49 @@ class Monitor(object):
         self._stop_time = time.time()
         self.duration += self._stop_time - self._start_time
         self.counts += 1
-        self.on_exit()
+        if self.h5:
+            self.flush(self.h5)
 
-    def on_exit(self):
-        "To be overridden in subclasses"
-        if self.autoflush:
-            self.flush()
-
-    def flush(self):
+    def save_task_info(self, h5, res, name, mem_gb=0):
         """
-        Save the measurements on the performance file (or on stdout)
-        """
-        if not self._flush:
-            raise RuntimeError(
-                'Monitor(%r).flush() must not be called in a worker' %
-                self.operation)
-        for child in self.children:
-            child.hdf5 = self.hdf5
-            child.flush()
-        data = self.get_data()
-        if len(data) == 0:  # no information
-            return []
-        elif self.hdf5:
-            hdf5.extend(self.hdf5['performance_data'], data)
+        Called by parallel.IterResult.
 
-        # reset monitor
+        :param h5: where to save the info
+        :param res: a :class:`Result` object
+        :param name: name of the task function
+        :param mem_gb: memory consumption at the saving time (optional)
+        """
+        t = (name, self.task_no, self.weight, self.duration, len(res.pik),
+             mem_gb)
+        data = numpy.array([t], task_info_dt)
+        hdf5.extend(h5['task_info'], data)
+        h5['task_info'].flush()  # notify the reader
+
+    def reset(self):
+        """
+        Reset duration, mem, counts
+        """
         self.duration = 0
         self.mem = 0
         self.counts = 0
-        return data
+
+    def flush(self, h5):
+        """
+        Save the measurements on the performance file
+        """
+        if not self.children:
+            data = self.get_data()
+        else:
+            lst = [self.get_data()]
+            for child in self.children:
+                lst.append(child.get_data())
+                child.reset()
+            data = numpy.concatenate(lst)
+        if len(data) == 0:  # no information
+            return
+        hdf5.extend(h5['performance_data'], data)
+        h5['performance_data'].flush()  # notify the reader
+        self.reset()
 
     # TODO: rename this as spawn; see what will break
     def __call__(self, operation='no operation', **kw):
@@ -187,15 +263,36 @@ class Monitor(object):
         """
         Return a copy of the monitor usable for a different operation.
         """
-        self_vars = vars(self).copy()
-        del self_vars['operation']
-        del self_vars['children']
-        del self_vars['counts']
-        del self_vars['_flush']
-        new = self.__class__(operation)
-        vars(new).update(self_vars)
+        new = object.__new__(self.__class__)
+        vars(new).update(vars(self), operation=operation, children=[],
+                         counts=0, mem=0, duration=0)
         vars(new).update(kw)
         return new
+
+    def save(self, key, obj):
+        """
+        :param key: key in the _tmp.hdf5 file
+        :param obj: big object to store in pickle format
+        """
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        f = hdf5.File(tmp, 'a') if os.path.exists(tmp) else hdf5.File(tmp, 'w')
+        with f:
+            if isinstance(obj, numpy.ndarray):
+                f[key] = obj
+            else:
+                f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def read(self, key):
+        """
+        :param key: key in the _tmp.hdf5 file
+        :return: unpickled object
+        """
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        with hdf5.File(tmp, 'r') as f:
+            data = f[key][()]
+            if data.shape:
+                return data
+            return pickle.loads(data)
 
     def __repr__(self):
         calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -77,11 +77,11 @@ class NathEtAl2012Lower(GMPE):
 
     #: Sole required rupture parameter is magnitude, since faulting
     #: style is not addressed.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: It is noted that "r_rup is the fault-rupture distance in kilometers"
     #: following equation (11) on p. 484.
-    REQUIRES_DISTANCES = set(('rrup',))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: no site parameters are defined, the GMPE is calibrated for rock sites
     #: m/s (provisionally set to 800 for compatibility with SiteTerm class)

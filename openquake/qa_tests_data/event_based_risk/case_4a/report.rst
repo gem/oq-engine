@@ -1,33 +1,34 @@
 Event Based Hazard
 ==================
 
-============== ===================
-checksum32     2,621,435,700      
-date           2019-05-10T05:07:32
-engine_version 3.5.0-gitbaeb4c1e35
-============== ===================
+============== ====================
+checksum32     3_998_936_114       
+date           2020-11-02T09:36:36 
+engine_version 3.11.0-git82b78631ac
+============== ====================
 
-num_sites = 1, num_levels = 11, num_rlzs = ?
+num_sites = 1, num_levels = 1, num_rlzs = 1
 
 Parameters
 ----------
-=============================== ==================
-calculation_mode                'event_based'     
-number_of_logic_tree_samples    0                 
-maximum_distance                {'default': 200.0}
-investigation_time              1.0               
-ses_per_logic_tree_path         100               
-truncation_level                3.0               
-rupture_mesh_spacing            2.0               
-complex_fault_mesh_spacing      2.0               
-width_of_mfd_bin                0.1               
-area_source_discretization      20.0              
-ground_motion_correlation_model None              
-minimum_intensity               {}                
-random_seed                     24                
-master_seed                     0                 
-ses_seed                        42                
-=============================== ==================
+=============================== ==========================================
+calculation_mode                'preclassical'                            
+number_of_logic_tree_samples    0                                         
+maximum_distance                {'default': [(1.0, 200.0), (10.0, 200.0)]}
+investigation_time              1.0                                       
+ses_per_logic_tree_path         100                                       
+truncation_level                3.0                                       
+rupture_mesh_spacing            2.0                                       
+complex_fault_mesh_spacing      2.0                                       
+width_of_mfd_bin                0.1                                       
+area_source_discretization      20.0                                      
+pointsource_distance            None                                      
+ground_motion_correlation_model None                                      
+minimum_intensity               {}                                        
+random_seed                     24                                        
+master_seed                     0                                         
+ses_seed                        42                                        
+=============================== ==========================================
 
 Input files
 -----------
@@ -42,57 +43,76 @@ source_model_logic_tree  `source_model_logic_tree.xml <source_model_logic_tree.x
 structural_vulnerability `structural_vulnerability_model.xml <structural_vulnerability_model.xml>`_
 ======================== ==========================================================================
 
+Composite source model
+----------------------
+====== ================== ====
+grp_id gsim               rlzs
+====== ================== ====
+0      '[SadighEtAl1997]' [0] 
+====== ================== ====
+
+Required parameters per tectonic region type
+--------------------------------------------
+===== ================== ========= ========== ==========
+et_id gsims              distances siteparams ruptparams
+===== ================== ========= ========== ==========
+0     '[SadighEtAl1997]' rrup      vs30       mag rake  
+===== ================== ========= ========== ==========
+
 Exposure model
 --------------
-=============== ========
-#assets         1       
-#taxonomies     1       
-deductibile     absolute
-insurance_limit absolute
-=============== ========
+=========== =
+#assets     1
+#taxonomies 1
+=========== =
 
-======== ======= ====== === === ========= ==========
-taxonomy mean    stddev min max num_sites num_assets
-Wood     1.00000 NaN    1   1   1         1         
-======== ======= ====== === === ========= ==========
+======== ========== ======= ====== === === =========
+taxonomy num_assets mean    stddev min max num_sites
+Wood     1          1.00000 nan    1   1   1        
+======== ========== ======= ====== === === =========
 
 Slowest sources
 ---------------
-====== ========= ==== ===== ===== ============ ========= ========= ======
-grp_id source_id code gidx1 gidx2 num_ruptures calc_time num_sites weight
-====== ========= ==== ===== ===== ============ ========= ========= ======
-0      3         S    396   398   482          0.0       0.0       0.0   
-0      1         X    0     396   1            0.0       0.0       0.0   
-====== ========= ==== ===== ===== ============ ========= ========= ======
+========= ==== ========= ========= ============
+source_id code calc_time num_sites eff_ruptures
+========= ==== ========= ========= ============
+3         S    0.00264   1         482         
+1         X    1.874E-04 1         1           
+========= ==== ========= ========= ============
 
 Computation times by source typology
 ------------------------------------
-==== ========= ======
-code calc_time counts
-==== ========= ======
-S    0.0       1     
-X    0.0       1     
-==== ========= ======
+==== =========
+code calc_time
+==== =========
+S    0.00264  
+X    1.874E-04
+==== =========
 
 Information about the tasks
 ---------------------------
-================== ======= ====== ======= ======= =======
-operation-duration mean    stddev min     max     outputs
-read_source_models 0.01810 NaN    0.01810 0.01810 1      
-================== ======= ====== ======= ======= =======
+================== ====== ======= ====== ========= =======
+operation-duration counts mean    stddev min       max    
+preclassical       2      0.00192 63%    6.957E-04 0.00314
+read_source_model  1      0.01221 nan    0.01221   0.01221
+================== ====== ======= ====== ========= =======
 
 Data transfer
 -------------
-================== ============================ ========
-task               sent                         received
-read_source_models converter=313 B fnames=114 B 11.82 KB
-================== ============================ ========
+================= =============================== ========
+task              sent                            received
+read_source_model                                 11.7 KB 
+preclassical      srcs=13.15 KB srcfilter=2.33 KB 478 B   
+================= =============================== ========
 
 Slowest operations
 ------------------
-======================== ========= ========= ======
-operation                time_sec  memory_mb counts
-======================== ========= ========= ======
-total read_source_models 0.01810   0.0       1     
-reading exposure         8.543E-04 0.0       1     
-======================== ========= ========= ======
+========================= ========= ========= ======
+calc_47308, maxmem=1.0 GB time_sec  memory_mb counts
+========================= ========= ========= ======
+importing inputs          0.13372   0.0       1     
+composite source model    0.11182   0.0       1     
+total read_source_model   0.01221   0.0       1     
+total preclassical        0.00384   0.43750   2     
+reading exposure          7.372E-04 0.0       1     
+========================= ========= ========= ======

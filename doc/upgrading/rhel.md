@@ -1,4 +1,4 @@
-# Upgrading the OpenQuake Engine on RedHat Linux 7 and its clones
+# Upgrading the OpenQuake Engine on RedHat Linux and its clones
 
 To upgrade the OpenQuake Engine and its libraries run
 
@@ -34,5 +34,5 @@ sudo yum install yum-plugin-remove-with-leaves
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
   * Contact us on IRC: irc.freenode.net, channel #openquake

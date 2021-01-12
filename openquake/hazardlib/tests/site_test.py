@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -147,6 +147,18 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         tiles = cll.split_in_tiles(2)
         self.assertEqual(len(tiles), 2)
 
+        # test geohash
+        assert_eq(cll.geohash(4), numpy.array([b's5x1', b'7zrh']))
+
+        # test duplicate points
+        lons = numpy.arange(10, 20, .1)
+        lons[40:50] = lons[30:40]  # add 10 duplicates
+        lats = [0] * 100
+        req_params = 'vs30 vs30measured z1pt0 z2pt5 backarc'.split()
+        with self.assertRaises(ValueError):
+            SiteCollection.from_points(
+                lons, lats, None, SiteModelParam(), req_params)
+
 
 class SiteCollectionFilterTestCase(unittest.TestCase):
     SITES = [
@@ -224,19 +236,11 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         # is on the boundary i.e. out, (1, 1) is in
         self.assertEqual(len(reducedcol), 1)
 
-    def test_split(self):
+    def test_reduce(self):
         col = SiteCollection(self.SITES)
-        close_sites, far_sites = col.split(Point(10, 19), distance=200)
-        self.assertEqual(len(close_sites), 1)
-        self.assertEqual(len(far_sites), 3)
-
-        close_sites, far_sites = col.split(Point(10, 19), distance=0)
-        self.assertIsNone(close_sites)
-        self.assertEqual(len(far_sites), 4)
-
-        close_sites, far_sites = col.split(Point(10, 19), distance=None)
-        self.assertEqual(len(close_sites), 4)
-        self.assertIsNone(far_sites)
+        self.assertEqual(len(col.reduce(1)), 1)
+        self.assertEqual(len(col.reduce(2)), 2)
+        self.assertEqual(len(col.reduce(3)), 2)
 
 
 class WithinBBoxTestCase(unittest.TestCase):

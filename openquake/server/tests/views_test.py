@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,11 +29,13 @@ import time
 import unittest
 import numpy
 import zlib
+import gzip
 import tempfile
 import string
 import random
 from django.test import Client
 from openquake.baselib.general import gettemp
+from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
@@ -42,7 +44,7 @@ from openquake.commands import engine
 
 def loadnpz(lines):
     bio = io.BytesIO(b''.join(ln for ln in lines))
-    return numpy.load(bio, allow_pickle=True)
+    return numpy.load(bio)
 
 
 class EngineServerTestCase(unittest.TestCase):
@@ -62,11 +64,19 @@ class EngineServerTestCase(unittest.TestCase):
     def get(cls, path, **data):
         resp = cls.c.get('/v1/calc/%s' % path, data,
                          HTTP_HOST='127.0.0.1')
-        assert resp.content, 'No content from /v1/calc/%s' % path
+        if hasattr(resp, 'content'):
+            assert resp.content, (
+                'No content from http://localhost:8800/v1/calc/%s' % path)
+            js = resp.content.decode('utf8')
+        else:
+            js = bytes(loadnpz(resp.streaming_content)['json'])
+        if not js:
+            print('Empty json from ')
+            return {}
         try:
-            return json.loads(resp.content.decode('utf8'))
+            return json.loads(js)
         except Exception:
-            print('Invalid JSON, see %s' % gettemp(resp.content),
+            print('Invalid JSON, see %s' % gettemp(resp.content, remove=False),
                   file=sys.stderr)
             return {}
 
@@ -80,11 +90,13 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def wait(cls):
         # wait until all calculations stop
-        while True:
+        for i in range(30):  # 30 seconds of timeout
+            time.sleep(1)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
-                break
-            time.sleep(0.5)
+                return
+        # to avoid issues on Jenkins
+        raise unittest.SkipTest('Timeout waiting for %s' % running_calcs)
 
     def postzip(self, archive):
         with open(os.path.join(self.datadir, archive), 'rb') as a:
@@ -94,10 +106,7 @@ class EngineServerTestCase(unittest.TestCase):
         except Exception:
             raise ValueError(b'Invalid JSON response: %r' % resp.content)
         if resp.status_code == 200:  # ok case
-            job_id = js['job_id']
-            self.job_ids.append(job_id)
-            time.sleep(1)  # wait a bit for the calc to start
-            return job_id
+            return js['job_id']
         else:  # error case
             return ''.join(js)  # traceback string
 
@@ -116,6 +125,8 @@ class EngineServerTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
+        assert c > 0, 'There are no jobs??'
         cls.wait()
 
     # tests
@@ -134,8 +145,6 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertGreater(len(results), 0)
         for res in results:
             for etype in res['outtypes']:  # test all export types
-                if etype == 'xml' and res['type'] == 'gmf_data':
-                    continue  # do not export GMFs in XML for event based
                 text = self.get_text(
                     'result/%s' % res['id'], export_type=etype)
                 print('downloading result/%s' % res['id'], res['type'], etype)
@@ -146,6 +155,11 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertGreater(len(all_jobs), 0)
 
         extract_url = '/v1/calc/%s/extract/' % job_id
+
+        # check eids_by_gsim
+        resp = self.c.get(extract_url + 'eids_by_gsim')
+        dic = dict(loadnpz(resp.streaming_content))
+        self.assertEqual(len(dic['[AtkinsonBoore2003SInter]']), 8)
 
         # check extract/composite_risk_model.attrs
         url = extract_url + 'composite_risk_model.attrs'
@@ -158,17 +172,27 @@ class EngineServerTestCase(unittest.TestCase):
 
         # check exposure_metadata
         resp = self.c.get(extract_url + 'exposure_metadata')
-        got = loadnpz(resp.streaming_content)
-        self.assertEqual(sorted(got['tagnames']), ['id', 'taxonomy'])
-        self.assertEqual(sorted(got['array']), ['number', 'value-structural'])
+        got = loadnpz(resp.streaming_content)['json']
+        dic = json.loads(bytes(got))
+        self.assertEqual(sorted(dic['tagnames']), ['taxonomy'])
+        self.assertEqual(sorted(dic['names']), ['number', 'value-structural'])
 
         # check assets
         resp = self.c.get(
             extract_url + 'assets?taxonomy=MC-RLSB-2&taxonomy=W-SLFB-1')
+        if resp.status_code == 500:  # should never happen
+            raise RuntimeError(resp.content.decode('utf8'))
         got = loadnpz(resp.streaming_content)
         self.assertEqual(len(got['array']), 25)
 
-        # check avg_losses-rlzs
+        # check losses_by_asset
+        resp = self.c.get(extract_url + 'losses_by_asset')
+        if resp.status_code == 500:  # should never happen
+            raise RuntimeError(resp.content.decode('utf8'))
+        got = loadnpz(resp.streaming_content)
+        self.assertEqual(len(got['rlz-000']), 95)
+
+        # check agg_losses
         resp = self.c.get(
             extract_url + 'agg_losses/structural?taxonomy=W-SLFB-1')
         got = loadnpz(resp.streaming_content)
@@ -192,17 +216,45 @@ class EngineServerTestCase(unittest.TestCase):
         self.assertIn('Could not export XXX in csv', str(ctx.exception))
 
         # check MFD distribution
-        extract_url = '/v1/calc/%s/extract/event_based_mfd' % job_id
+        extract_url = '/v1/calc/%s/extract/event_based_mfd?kind=mean' % job_id
         got = loadnpz(self.c.get(extract_url))
-        self.assertGreater(len(got['array']['mag']), 1)
-        self.assertGreater(len(got['array']['freq']), 1)
+        self.assertGreater(len(got['magnitudes']), 1)
+        self.assertGreater(len(got['mean_frequency']), 1)
+
+        # check rupture_info
+        extract_url = '/v1/calc/%s/extract/rupture_info' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        boundaries = gzip.decompress(got['boundaries']).split(b'\n')
+        self.assertEqual(len(boundaries), 30)
+        self.assertEqual(boundaries[0], b'POLYGON((-77.25716 18.84483, -77.26435 18.75948, -77.34079 18.76274, -77.33288 18.84898, -77.25716 18.84483))')
+        self.assertEqual(boundaries[-1], b'POLYGON((-77.10000 18.92000, -77.10575 18.83643, -77.11150 18.75286, -77.11723 18.66929, -77.12297 18.58572, -77.12869 18.50215, -77.13442 18.41858, -77.14014 18.33500, -77.14584 18.25143, -77.15155 18.16786, -77.15725 18.08429, -77.16295 18.00072, -77.16864 17.91714, -77.17432 17.83357, -77.18000 17.75000, -77.26502 17.74263, -77.35004 17.73522, -77.43505 17.72777, -77.52006 17.72029, -77.60506 17.71277, -77.69004 17.70522, -77.77502 17.69763, -77.86000 17.69000, -77.84865 17.78072, -77.83729 17.87144, -77.82591 17.96215, -77.81452 18.05287, -77.80312 18.14359, -77.79172 18.23430, -77.78030 18.32502, -77.76886 18.41573, -77.75742 18.50644, -77.74596 18.59716, -77.73448 18.68787, -77.72300 18.77858, -77.71151 18.86929, -77.70000 18.96000, -77.62498 18.95510, -77.54997 18.95018, -77.47497 18.94523, -77.39996 18.94024, -77.32497 18.93523, -77.24997 18.93018, -77.17499 18.92511, -77.10000 18.92000))')
+
+        # check num_events
+        extract_url = '/v1/calc/%s/extract/num_events' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(got['num_events'], 31)
+
+        # check gmf_data
+        extract_url = '/v1/calc/%s/extract/gmf_data?event_id=28' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(len(got['rlz-000']), 3)
+
+        # check gmf_data with no data
+        extract_url = '/v1/calc/%s/extract/gmf_data?event_id=0' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(len(got['rlz-000']), 0)
+
+        # check extract_sources
+        extract_url = '/v1/calc/%s/extract/sources?' % job_id
+        got = loadnpz(self.c.get(extract_url))
+        self.assertEqual(list(got), ['wkt_gz', 'src_gz', 'array'])
+        self.assertGreater(len(got['array']), 0)
 
     def test_classical(self):
         job_id = self.postzip('classical.zip')
         self.wait()
-
         # check that we get at least the following 6 outputs
-        # fullreport, input, hcurves, hmaps, realizations, sourcegroups
+        # fullreport, input, hcurves, hmaps, realizations, events
         # we can add more outputs in the future
         results = self.get('%s/results' % job_id)
         self.assertGreaterEqual(len(results), 5)
@@ -216,8 +268,8 @@ class EngineServerTestCase(unittest.TestCase):
             cd, 'attachment; filename=output--hazard_map-mean_.csv')
 
         # check oqparam
-        resp = self.get('%s/oqparam' % job_id)  # dictionary of parameters
-        self.assertEqual(resp['calculation_mode'], 'classical')
+        dic = self.get('%s/extract/oqparam' % job_id)  # parameters
+        self.assertEqual(dic['calculation_mode'], 'classical')
 
         # check extract hcurves
         url = '/v1/calc/%s/extract/hcurves?kind=stats&imt=PGA' % job_id
@@ -245,8 +297,8 @@ class EngineServerTestCase(unittest.TestCase):
             sys.stderr.write('Empty traceback, please check!\n')
 
         self.post('%s/remove' % job_id)
-        # make sure job_id is no more in the list of relevant jobs
-        job_ids = [job['id'] for job in self.get('list', relevant=True)]
+        # make sure job_id is no more in the list of jobs
+        job_ids = [job['id'] for job in self.get('list')]
         self.assertFalse(job_id in job_ids)
 
     def test_err_2(self):
@@ -262,6 +314,16 @@ class EngineServerTestCase(unittest.TestCase):
     def test_available_gsims(self):
         resp = self.c.get('/v1/available_gsims')
         self.assertIn(b'ChiouYoungs2014PEER', resp.content)
+
+    def test_ini_defaults(self):
+        resp = self.c.get('/v1/ini_defaults')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_validate_zip(self):
+        with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
+            resp = self.post('validate_zip', dict(archive=a))
+        err = json.loads(resp.content.decode('utf8'))['error_msg']
+        self.assertIn('Could not convert insuranceLimit->positivefloat', err)
 
     # tests for nrml validation
 

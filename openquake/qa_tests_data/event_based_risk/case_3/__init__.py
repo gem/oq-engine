@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,7 @@
 """
 A nontrivial test case with 8 realizations:
 
-<CompositionInfo
+<FullLogicTree
 b1, SA_RA_CATAL1_00.xml, trt=[0, 1]: 4 realization(s)
 b2, SA_RA_CATAL2_00.xml, trt=[2, 3]: 4 realization(s)>
 <RlzsAssoc

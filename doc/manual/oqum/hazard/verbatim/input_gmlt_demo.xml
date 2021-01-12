@@ -2,7 +2,6 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.5">
     <logicTree logicTreeID="lt1">
-        <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="gmpeModel"
                     branchSetID="bs1"
                     applyToTectonicRegionType="Active Shallow Crust">
@@ -15,6 +14,5 @@
                 </logicTreeBranch>
 
             </logicTreeBranchSet>
-        </logicTreeBranchingLevel>
     </logicTree>
 </nrml>

@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2020 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -201,8 +201,8 @@ def plot_magnitude_depth_density(
     else:
         normaliser = Normalize(vmin=0, vmax=np.max(mag_depth_dist))
 
-    im = ax.pcolor(mag_bins[:-1],
-                   depth_bins[:-1],
+    im = ax.pcolor(mag_bins,
+                   depth_bins,
                    mag_depth_dist.T,
                    norm=normaliser)
     ax.set_xlabel('Magnitude')
@@ -315,8 +315,8 @@ def plot_magnitude_time_density(
         else:
             norm_data = Normalize(vmin=1.0, vmax=np.max(mag_time_dist))
 
-    im = ax.pcolor(time_bins[:-1],
-                   mag_bins[:-1],
+    im = ax.pcolor(time_bins,
+                   mag_bins,
                    mag_time_dist.T,
                    norm=norm_data)
     ax.set_xlabel('Time (year)')

@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2020 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -92,7 +92,7 @@ class mtkActiveFaultModel(object):
         return len(self.faults)
 
     def build_fault_model(self, collapse=False, rendered_msr=WC1994(),
-                          mfd_config=None):
+                          bin_width=0.1, mfd_config=None):
         '''
         Constructs a full fault model with epistemic uncertainty by
         enumerating all the possible recurrence models of each fault as
@@ -112,6 +112,7 @@ class mtkActiveFaultModel(object):
         self.source_model = mtkSourceModel(self.id, self.name)
         for fault in self.faults:
             fault.generate_recurrence_models(collapse,
+                                             bin_width=bin_width,
                                              config=mfd_config,
                                              rendered_msr=rendered_msr)
             src_model, src_weight = fault.generate_fault_source_model()

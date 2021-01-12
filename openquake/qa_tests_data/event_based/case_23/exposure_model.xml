@@ -1,0 +1,1467 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="ex1"
+    taxonomySource="GEM taxonomy"
+    >
+        <description />
+        <conversions>
+            <costTypes>
+                <costType name="structural" type="per_asset" unit="USD"/>
+                <costType name="nonstructural" type="per_asset" unit="USD"/>
+            </costTypes>
+        </conversions>
+        <tagNames>
+            NAME_1 NAME_2 NAME_3 NAME_4
+        </tagNames>
+        <occupancyPeriods>
+            night
+        </occupancyPeriods>
+        <assets>
+            <asset
+            id="a20"
+            number="1"
+            taxonomy="Wood"
+            >
+                <location lat="2.9161170E+01" lon="8.3088820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.0000000E+00" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Dolpa" NAME_4="Phoksundo"/>
+            </asset>
+            <asset
+            id="a130"
+            number="4"
+            taxonomy="Wood"
+            >
+                <location lat="2.9161170E+01" lon="8.2638820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.0000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Dolpa" NAME_4="Kaigaun"/>
+            </asset>
+            <asset
+            id="a275"
+            number="11"
+            taxonomy="Wood"
+            >
+                <location lat="2.8636170E+01" lon="8.1363820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.4000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Bheri" NAME_3="Surkhet" NAME_4="Taranga"/>
+            </asset>
+            <asset
+            id="a296"
+            number="12"
+            taxonomy="Wood"
+            >
+                <location lat="2.8936170E+01" lon="8.0763820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.9000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Seti" NAME_3="Kailali" NAME_4="Nigali"/>
+            </asset>
+            <asset
+            id="a303"
+            number="12"
+            taxonomy="Wood"
+            >
+                <location lat="2.9911170E+01" lon="8.2113820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.9000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Humla" NAME_4="Shreemastha"/>
+            </asset>
+            <asset
+            id="a374"
+            number="16"
+            taxonomy="Wood"
+            >
+                <location lat="2.9836170E+01" lon="8.1513820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="7.8000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Seti" NAME_3="Bajhang" NAME_4="Kanda"/>
+            </asset>
+            <asset
+            id="a400"
+            number="19"
+            taxonomy="Wood"
+            >
+                <location lat="2.7811170E+01" lon="8.7438820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="9.3000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Koshi" NAME_3="Sankhuwasabha" NAME_4="Chepuwa"/>
+            </asset>
+            <asset
+            id="a434"
+            number="22"
+            taxonomy="Wood"
+            >
+                <location lat="2.9761170E+01" lon="8.1663820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.0700000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Seti" NAME_3="Bajura" NAME_4="Bichhaiyan"/>
+            </asset>
+            <asset
+            id="a488"
+            number="27"
+            taxonomy="Wood"
+            >
+                <location lat="2.7736170E+01" lon="8.2788820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.3200000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Lumbini" NAME_3="Kapilbastu" NAME_4="Shivagadhi"/>
+            </asset>
+            <asset
+            id="a691"
+            number="58"
+            taxonomy="Wood"
+            >
+                <location lat="2.8561170E+01" lon="8.4363820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.8300000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Gandaki" NAME_3="Manang" NAME_4="TachiBagarchhap"/>
+            </asset>
+            <asset
+            id="a889"
+            number="114"
+            taxonomy="Wood"
+            >
+                <location lat="2.6911170E+01" lon="8.6763820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.5600000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Sagarmatha" NAME_3="Udayapur" NAME_4="Khanbu"/>
+            </asset>
+            <asset
+            id="a1033"
+            number="166"
+            taxonomy="Wood"
+            >
+                <location lat="2.7736170E+01" lon="8.3313820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="8.1000000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Lumbini" NAME_3="Rupandehi" NAME_4="Dudharakchhe"/>
+            </asset>
+            <asset
+            id="a1141"
+            number="202"
+            taxonomy="Wood"
+            >
+                <location lat="2.6986170E+01" lon="8.6913820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="9.8600000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Sagarmatha" NAME_3="Khotang" NAME_4="Kahule"/>
+            </asset>
+            <asset
+            id="a1176"
+            number="214"
+            taxonomy="Wood"
+            >
+                <location lat="2.7886170E+01" lon="8.4363820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.0440000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Gandaki" NAME_3="Tanahu" NAME_4="Dharampani"/>
+            </asset>
+            <asset
+            id="a1182"
+            number="218"
+            taxonomy="Wood"
+            >
+                <location lat="2.8561170E+01" lon="8.2188820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.0640000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Salyan" NAME_4="Suikot"/>
+            </asset>
+            <asset
+            id="a1402"
+            number="348"
+            taxonomy="Wood"
+            >
+                <location lat="2.7811170E+01" lon="8.3988820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.6980000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Lumbini" NAME_3="Palpa" NAME_4="Gadakot"/>
+            </asset>
+            <asset
+            id="a1823"
+            number="776"
+            taxonomy="Wood"
+            >
+                <location lat="2.7586170E+01" lon="8.3313820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.7870000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Lumbini" NAME_3="Rupandehi" NAME_4="Suryapura"/>
+            </asset>
+            <asset
+            id="a1853"
+            number="815"
+            taxonomy="Wood"
+            >
+                <location lat="2.8786170E+01" lon="8.1663820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.9770000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Bheri" NAME_3="Dailekh" NAME_4="Gauri"/>
+            </asset>
+            <asset
+            id="a1979"
+            number="1102"
+            taxonomy="Wood"
+            >
+                <location lat="2.7961170E+01" lon="8.4438820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.3780000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Gandaki" NAME_3="Gorkha" NAME_4="Chyngli"/>
+            </asset>
+            <asset
+            id="a2132"
+            number="1720"
+            taxonomy="Wood"
+            >
+                <location lat="2.6536170E+01" lon="8.6613820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="8.3940000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Sagarmatha" NAME_3="Saptari" NAME_4="Ko.Madhepura"/>
+            </asset>
+            <asset
+            id="a2140"
+            number="1777"
+            taxonomy="Wood"
+            >
+                <location lat="2.8036170E+01" lon="8.4438820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="8.6720000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Gandaki" NAME_3="Tanahu" NAME_4="Bhanu"/>
+            </asset>
+            <asset
+            id="a2173"
+            number="2065"
+            taxonomy="Wood"
+            >
+                <location lat="2.6536170E+01" lon="8.8038820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.0077000E+04" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Mechi" NAME_3="Jhapa" NAME_4="Jalthal"/>
+            </asset>
+            <asset
+            id="a2241"
+            number="3"
+            taxonomy="Adobe"
+            >
+                <location lat="2.9161170E+01" lon="8.3088820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.5000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Dolpa" NAME_4="Phoksundo"/>
+            </asset>
+            <asset
+            id="a2451"
+            number="18"
+            taxonomy="Adobe"
+            >
+                <location lat="2.9461170E+01" lon="8.2413820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="8.8000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Mugu" NAME_4="Kimari"/>
+            </asset>
+            <asset
+            id="a2541"
+            number="29"
+            taxonomy="Adobe"
+            >
+                <location lat="2.8111170E+01" lon="8.2038820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.4200000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Dang" NAME_4="Panchakule"/>
+            </asset>
+            <asset
+            id="a2568"
+            number="32"
+            taxonomy="Adobe"
+            >
+                <location lat="2.8411170E+01" lon="8.1513820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.5600000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Bheri" NAME_3="Bardiya" NAME_4="Royal Bardiya Nation"/>
+            </asset>
+            <asset
+            id="a2588"
+            number="35"
+            taxonomy="Adobe"
+            >
+                <location lat="2.9911170E+01" lon="8.1213820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.7100000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Seti" NAME_3="Bajhang" NAME_4="Kanda"/>
+            </asset>
+            <asset
+            id="a2593"
+            number="35"
+            taxonomy="Adobe"
+            >
+                <location lat="2.8486170E+01" lon="8.1513820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.7100000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Bheri" NAME_3="Bardiya" NAME_4="Royal Bardiya Nation"/>
+            </asset>
+            <asset
+            id="a2612"
+            number="37"
+            taxonomy="Adobe"
+            >
+                <location lat="2.7811170E+01" lon="8.7288820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.8100000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Koshi" NAME_3="Sankhuwasabha" NAME_4="Hatiya"/>
+            </asset>
+            <asset
+            id="a2761"
+            number="7"
+            taxonomy="Adobe"
+            >
+                <location lat="2.8036170E+01" lon="8.2563820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.4200000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Dang" NAME_4="Laxmipur"/>
+            </asset>
+            <asset
+            id="a2774"
+            number="73"
+            taxonomy="Adobe"
+            >
+                <location lat="3.0061170E+01" lon="8.0838820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.5600000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Mahakali" NAME_3="Darchula" NAME_4="Byash"/>
+            </asset>
+            <asset
+            id="a2781"
+            number="75"
+            taxonomy="Adobe"
+            >
+                <location lat="2.9836170E+01" lon="8.1663820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.6600000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Seti" NAME_3="Bajura" NAME_4="Bichhaiyan"/>
+            </asset>
+            <asset
+            id="a2950"
+            number="142"
+            taxonomy="Adobe"
+            >
+                <location lat="2.9611170E+01" lon="8.1888820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="6.9300000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Mugu" NAME_4="Dhainakot"/>
+            </asset>
+            <asset
+            id="a3016"
+            number="176"
+            taxonomy="Adobe"
+            >
+                <location lat="2.9161170E+01" lon="8.2113820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="8.5900000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Jumla" NAME_4="Tamti"/>
+            </asset>
+            <asset
+            id="a3233"
+            number="341"
+            taxonomy="Adobe"
+            >
+                <location lat="2.9536170E+01" lon="8.2113820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.6640000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Mugu" NAME_4="Rara(Gilas)"/>
+            </asset>
+            <asset
+            id="a3237"
+            number="344"
+            taxonomy="Adobe"
+            >
+                <location lat="2.8336170E+01" lon="8.2713820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.6790000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Rolpa" NAME_4="Gajul"/>
+            </asset>
+            <asset
+            id="a3340"
+            number="417"
+            taxonomy="Adobe"
+            >
+                <location lat="2.9536170E+01" lon="8.2038820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.0350000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Mugu" NAME_4="Rara(Gilas)"/>
+            </asset>
+            <asset
+            id="a3433"
+            number="503"
+            taxonomy="Adobe"
+            >
+                <location lat="2.6911170E+01" lon="8.6388820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.4550000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Sagarmatha" NAME_3="Udayapur" NAME_4="Katari"/>
+            </asset>
+            <asset
+            id="a3546"
+            number="625"
+            taxonomy="Adobe"
+            >
+                <location lat="2.7961170E+01" lon="8.2938820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.0500000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Pyuthan" NAME_4="Baraula"/>
+            </asset>
+            <asset
+            id="a3745"
+            number="942"
+            taxonomy="Adobe"
+            >
+                <location lat="2.6986170E+01" lon="8.7438820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="4.5970000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Koshi" NAME_3="Dhankuta" NAME_4="Telia"/>
+            </asset>
+            <asset
+            id="a3772"
+            number="987"
+            taxonomy="Adobe"
+            >
+                <location lat="2.8411170E+01" lon="8.2113820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="4.8170000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Salyan" NAME_4="Kubhindedaha"/>
+            </asset>
+            <asset
+            id="a3835"
+            number="1105"
+            taxonomy="Adobe"
+            >
+                <location lat="2.9611170E+01" lon="8.0463820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.3920000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Mahakali" NAME_3="Baitadi" NAME_4="Nwali"/>
+            </asset>
+            <asset
+            id="a3878"
+            number="1207"
+            taxonomy="Adobe"
+            >
+                <location lat="2.7886170E+01" lon="8.1888820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.8900000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Bheri" NAME_3="Banke" NAME_4="Laxmanpur"/>
+            </asset>
+            <asset
+            id="a4068"
+            number="1729"
+            taxonomy="Adobe"
+            >
+                <location lat="2.7661170E+01" lon="8.3013820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="8.4380000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Lumbini" NAME_3="Kapilbastu" NAME_4="Budhi"/>
+            </asset>
+            <asset
+            id="a4107"
+            number="1894"
+            taxonomy="Adobe"
+            >
+                <location lat="2.6536170E+01" lon="8.6988820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="9.2430000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Koshi" NAME_3="Sunsari" NAME_4="Haripur"/>
+            </asset>
+            <asset
+            id="a4137"
+            number="2052"
+            taxonomy="Adobe"
+            >
+                <location lat="2.8486170E+01" lon="8.0913820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.0014000E+04" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Seti" NAME_3="Kailali" NAME_4="Lalbojhi"/>
+            </asset>
+            <asset
+            id="a4188"
+            number="2323"
+            taxonomy="Adobe"
+            >
+                <location lat="2.7061170E+01" lon="8.4663820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.1336000E+04" period="night"/>
+                </occupancies>
+                <tags NAME_1="Central" NAME_2="Narayani" NAME_3="Parsa" NAME_4="Samjhauta"/>
+            </asset>
+            <asset
+            id="a4389"
+            number="4331"
+            taxonomy="Adobe"
+            >
+                <location lat="2.8186170E+01" lon="8.3688820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.1135000E+04" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Dhaualagiri" NAME_3="Parbat" NAME_4="ShankarPokhari"/>
+            </asset>
+            <asset
+            id="a4394"
+            number="4439"
+            taxonomy="Adobe"
+            >
+                <location lat="2.6536170E+01" lon="8.8038820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.1662000E+04" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Mechi" NAME_3="Jhapa" NAME_4="Jalthal"/>
+            </asset>
+            <asset
+            id="a4398"
+            number="4479"
+            taxonomy="Adobe"
+            >
+                <location lat="2.6986170E+01" lon="8.5188820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.1858000E+04" period="night"/>
+                </occupancies>
+                <tags NAME_1="Central" NAME_2="Narayani" NAME_3="Rautahat" NAME_4="Tengraha"/>
+            </asset>
+            <asset
+            id="a4402"
+            number="4556"
+            taxonomy="Adobe"
+            >
+                <location lat="2.7361170E+01" lon="8.6088820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.2233000E+04" period="night"/>
+                </occupancies>
+                <tags NAME_1="Central" NAME_2="Janakpur" NAME_3="Ramechhap" NAME_4="Sunarpani"/>
+            </asset>
+            <asset
+            id="a4493"
+            number="1"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.9086170E+01" lon="8.3463820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.0000000E+00" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Dolpa" NAME_4="Chharka"/>
+            </asset>
+            <asset
+            id="a4540"
+            number="2"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="3.0286170E+01" lon="8.1513820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.0000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Humla" NAME_4="Limi"/>
+            </asset>
+            <asset
+            id="a4774"
+            number="8"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.9911170E+01" lon="8.2038820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.9000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Humla" NAME_4="Kharpunath"/>
+            </asset>
+            <asset
+            id="a4982"
+            number="18"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.8036170E+01" lon="8.2563820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="8.8000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Dang" NAME_4="Laxmipur"/>
+            </asset>
+            <asset
+            id="a5054"
+            number="24"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.7736170E+01" lon="8.7738820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.1700000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Mechi" NAME_3="Taplejung" NAME_4="Olangchunggola"/>
+            </asset>
+            <asset
+            id="a5072"
+            number="25"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.9236170E+01" lon="8.3988820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.2200000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Dhaualagiri" NAME_3="Mustang" NAME_4="Chhoser"/>
+            </asset>
+            <asset
+            id="a5147"
+            number="34"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.9236170E+01" lon="8.0688820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.6600000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Mahakali" NAME_3="Dadeldhura" NAME_4="Kailapalamandau"/>
+            </asset>
+            <asset
+            id="a5273"
+            number="50"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.8861170E+01" lon="8.1213820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.4400000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Bheri" NAME_3="Surkhet" NAME_4="Bijaura"/>
+            </asset>
+            <asset
+            id="a5290"
+            number="53"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.7661170E+01" lon="8.6388820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.5900000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Central" NAME_2="Janakpur" NAME_3="Ramechhap" NAME_4="Gumdel"/>
+            </asset>
+            <asset
+            id="a5546"
+            number="104"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.6911170E+01" lon="8.7213820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.0800000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Koshi" NAME_3="Dhankuta" NAME_4="Chhintang"/>
+            </asset>
+            <asset
+            id="a5648"
+            number="128"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.9086170E+01" lon="8.0313820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="6.2500000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Mahakali" NAME_3="Dadeldhura" NAME_4="Jogbuda"/>
+            </asset>
+            <asset
+            id="a5670"
+            number="132"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.9611170E+01" lon="8.0913820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="6.4400000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Seti" NAME_3="Bajhang" NAME_4="Dahabagar"/>
+            </asset>
+            <asset
+            id="a5763"
+            number="159"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.8336170E+01" lon="8.3688820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="7.7600000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Dhaualagiri" NAME_3="Parbat" NAME_4="Kyang"/>
+            </asset>
+            <asset
+            id="a5930"
+            number="223"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.9161170E+01" lon="8.1213820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.0880000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Seti" NAME_3="Achham" NAME_4="Chandika"/>
+            </asset>
+            <asset
+            id="a6020"
+            number="266"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.7286170E+01" lon="8.6388820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.2980000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Sagarmatha" NAME_3="Okhaldhunga" NAME_4="Mulkharka"/>
+            </asset>
+            <asset
+            id="a6692"
+            number="2"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.9236170E+01" lon="8.3013820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.0000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Dolpa" NAME_4="Phoksundo"/>
+            </asset>
+            <asset
+            id="a6798"
+            number="5"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.7811170E+01" lon="8.6838820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.4000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Sagarmatha" NAME_3="Solukhumbu" NAME_4="Chaurikharka"/>
+            </asset>
+            <asset
+            id="a6842"
+            number="8"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.9236170E+01" lon="8.2938820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.9000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Dolpa" NAME_4="Phoksundo"/>
+            </asset>
+            <asset
+            id="a6977"
+            number="17"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="3.0211170E+01" lon="8.1438820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="8.3000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Humla" NAME_4="Limi"/>
+            </asset>
+            <asset
+            id="a7001"
+            number="19"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.7586170E+01" lon="8.7588820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="9.3000000E+01" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Mechi" NAME_3="Taplejung" NAME_4="Papung"/>
+            </asset>
+            <asset
+            id="a7238"
+            number="47"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.8636170E+01" lon="8.3013820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.2900000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Rukum" NAME_4="Ranmamaikot"/>
+            </asset>
+            <asset
+            id="a7243"
+            number="49"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="3.0361170E+01" lon="8.1663820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.3900000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Humla" NAME_4="Limi"/>
+            </asset>
+            <asset
+            id="a7279"
+            number="58"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.9836170E+01" lon="8.1963820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.8300000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Karnali" NAME_3="Humla" NAME_4="Rodikot"/>
+            </asset>
+            <asset
+            id="a7302"
+            number="63"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.7361170E+01" lon="8.6988820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.0700000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Koshi" NAME_3="Bhojpur" NAME_4="Dobhane"/>
+            </asset>
+            <asset
+            id="a7366"
+            number="78"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.8561170E+01" lon="8.3388820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.8100000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Dhaualagiri" NAME_3="Myagdi" NAME_4="Mudi"/>
+            </asset>
+            <asset
+            id="a7455"
+            number="106"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.8636170E+01" lon="8.2863820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.1700000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Rukum" NAME_4="Hukam"/>
+            </asset>
+            <asset
+            id="a7482"
+            number="112"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.8486170E+01" lon="8.1888820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.4700000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Bheri" NAME_3="Surkhet" NAME_4="Ghumkhahare"/>
+            </asset>
+            <asset
+            id="a7621"
+            number="183"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.7511170E+01" lon="8.5038820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="8.9300000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Central" NAME_2="Narayani" NAME_3="Makwanpur" NAME_4="Bhaise"/>
+            </asset>
+            <asset
+            id="a7654"
+            number="199"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.9161170E+01" lon="8.1438820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="9.7100000E+02" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Seti" NAME_3="Achham" NAME_4="Batulasen"/>
+            </asset>
+            <asset
+            id="a7719"
+            number="225"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.8561170E+01" lon="8.2488820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.0980000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Rukum" NAME_4="Rugha"/>
+            </asset>
+            <asset
+            id="a7814"
+            number="267"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.8186170E+01" lon="8.2788820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.3030000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Rolpa" NAME_4="Aresh"/>
+            </asset>
+            <asset
+            id="a7923"
+            number="325"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.7211170E+01" lon="8.5788820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.5860000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Central" NAME_2="Janakpur" NAME_3="Sindhuli" NAME_4="Mahadevsthan"/>
+            </asset>
+            <asset
+            id="a8050"
+            number="441"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.9761170E+01" lon="8.0463820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.1520000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Mahakali" NAME_3="Darchula" NAME_4="Bhagawati"/>
+            </asset>
+            <asset
+            id="a8085"
+            number="464"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.9386170E+01" lon="8.1213820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.2640000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Far-Western" NAME_2="Seti" NAME_3="Bajura" NAME_4="Kanda"/>
+            </asset>
+            <asset
+            id="a8090"
+            number="468"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.7886170E+01" lon="8.2788820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.2840000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Dang" NAME_4="Lalmatiya"/>
+            </asset>
+            <asset
+            id="a8211"
+            number="590"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.6911170E+01" lon="8.7438820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.8790000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Koshi" NAME_3="Dhankuta" NAME_4="Mounabudhuk"/>
+            </asset>
+            <asset
+            id="a8291"
+            number="687"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.8561170E+01" lon="8.2338820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.3530000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Salyan" NAME_4="Dhakadam"/>
+            </asset>
+            <asset
+            id="a8381"
+            number="803"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.6836170E+01" lon="8.6313820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.9190000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Sagarmatha" NAME_3="Siraha" NAME_4="Chandrodayapur"/>
+            </asset>
+            <asset
+            id="a8443"
+            number="923"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.7361170E+01" lon="8.5188820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="4.5040000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Central" NAME_2="Narayani" NAME_3="Makwanpur" NAME_4="Hurnamadi"/>
+            </asset>
+            <asset
+            id="a8471"
+            number="971"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.7961170E+01" lon="8.4213820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="4.7380000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="West" NAME_2="Gandaki" NAME_3="Tanahu" NAME_4="JamuneBhanjyang"/>
+            </asset>
+            <asset
+            id="a8569"
+            number="1209"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.8186170E+01" lon="8.2713820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="5.9000000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Rapti" NAME_3="Pyuthan" NAME_4="Sari"/>
+            </asset>
+            <asset
+            id="a8780"
+            number="217"
+            taxonomy="Unreinforced-Brick-Masonry"
+            >
+                <location lat="2.6911170E+01" lon="8.5413820E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.0590000E+04" period="night"/>
+                </occupancies>
+                <tags NAME_1="Central" NAME_2="Janakpur" NAME_3="Sarlahi" NAME_4="Harakthawa"/>
+            </asset>
+            <asset
+            id="a8916"
+            number="696"
+            taxonomy="Wood"
+            >
+                <location lat="2.6712500E+01" lon="8.5979170E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="3.3960000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="Central" NAME_2="Janakpur" NAME_3="Dhanusa" NAME_4="Mahuwa(Pra.Ko)"/>
+            </asset>
+            <asset
+            id="a8955"
+            number="235"
+            taxonomy="Concrete"
+            >
+                <location lat="2.6562500E+01" lon="8.7254170E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="1.1470000E+03" period="night"/>
+                </occupancies>
+                <tags NAME_1="East" NAME_2="Koshi" NAME_3="Sunsari" NAME_4="Bhaluwa"/>
+            </asset>
+            <asset
+            id="a9063"
+            number="5414"
+            taxonomy="Stone-Masonry"
+            >
+                <location lat="2.8212500E+01" lon="8.1329170E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1340000E+04"/>
+                    <cost type="nonstructural" value="1.9845000E+04"/>
+                </costs>
+                <occupancies>
+                    <occupancy occupants="2.6420000E+04" period="night"/>
+                </occupancies>
+                <tags NAME_1="Mid-Western" NAME_2="Bheri" NAME_3="Bardiya" NAME_4="GulariyaN.P."/>
+            </asset>
+        </assets>
+    </exposureModel>
+</nrml>

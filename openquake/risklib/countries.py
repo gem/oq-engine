@@ -248,7 +248,7 @@ REGEX = '|'.join('(%s)' % country.replace('(', r'\(').replace(')', r'\)')
 
 def get_country_code(longname):
     """
-    :returns: the code of the country contained in `longname`, or a ValuError
+    :returns: the code of the country contained in `longname`, or a ValueError
 
     >>> for country, code in country2code.items():
     ...     assert get_country_code('Exp_' + country) == code, (country, code)

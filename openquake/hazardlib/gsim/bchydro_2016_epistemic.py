@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
+from scipy.special import erf
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SInter, AbrahamsonEtAl2015SInterLow,
@@ -24,55 +25,253 @@ from openquake.hazardlib.gsim.abrahamson_2015 import (
     AbrahamsonEtAl2015SSlabLow, AbrahamsonEtAl2015SSlabHigh)
 
 
-def get_sigma_statistical(mag):
-    """
-    Based on interpretation of the sigma_mu suggested for the GMPE in the
-    Hanford Site PSHA Project, alongside observation of trends in sigma_mu
-    for other models. The sigma_mu is determine by interpolation of this
-    multi-segment linear model dependent only on magnitude (not distance or
-    period)
+# Total epistemic uncertainty factors from Abrahamson et al. (2018)
+BCHYDRO_SIGMA_MU = CoeffsTable(sa_damping=5, table="""
+    imt     SIGMA_MU_SINTER    SIGMA_MU_SSLAB
+    pga                 0.3              0.50
+    0.010               0.3              0.50
+    0.020               0.3              0.50
+    0.030               0.3              0.50
+    0.050               0.3              0.50
+    0.075               0.3              0.50
+    0.100               0.3              0.50
+    0.150               0.3              0.50
+    0.200               0.3              0.50
+    0.250               0.3              0.46
+    0.300               0.3              0.42
+    0.400               0.3              0.38
+    0.500               0.3              0.34
+    0.600               0.3              0.30
+    0.750               0.3              0.30
+    1.000               0.3              0.30
+    1.500               0.3              0.30
+    2.000               0.3              0.30
+    2.500               0.3              0.30
+    3.000               0.3              0.30
+    4.000               0.3              0.30
+    5.000               0.3              0.30
+    6.000               0.3              0.30
+    7.500               0.3              0.30
+    10.00               0.3              0.30
+    """)
 
-    <= 5.5 = 0.15
-       6.5 = 0.1
-       7.5 = 0.1
-       8.0 = 0.15
-    >= 9.0 = 0.3
+
+def get_stress_factor(imt, slab=False):
     """
-    if mag <= 5.5:
-        return 0.15
-    elif (mag > 5.5) and (mag <= 6.5):
-        return 0.15 - 0.05 * (mag - 5.5)
-    elif (mag > 6.5) and (mag <= 7.5):
-        return 0.1
-    elif (mag > 7.5) and (mag <= 8.0):
-        return 0.1 + (mag - 7.5) * (0.05 / 0.5)
-    elif (mag > 8.0) and (mag <= 9.0):
-        return 0.15 + (mag - 8.0) * 0.15
+    Returns the stress adjustment factor for the BC Hydro GMPE according to
+    Abrahamson et al. (2018)
+    """
+    if slab:
+        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SSLAB"]
     else:
-        return 0.3
+        sigma_mu = BCHYDRO_SIGMA_MU[imt]["SIGMA_MU_SINTER"]
+    return sigma_mu / 1.65
 
 
-class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
+class FABATaperStep(object):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction interface events with
+    General class for a tapering function, in this case
+    a step function such that the backarc scaling term takes 0 for
+    forearc sites (negative backarc distance), and 1 for backarc sites
+    (positive backarc distance)
+    """
+    def __init__(self, **kwargs):
+        """
+        Instantiates the class with any required arguments controlling the
+        shape of the taper (none in the case of the current step taper). As
+        the range of possible parameters take different meanings and default
+        values in the subclasses of the function an indefinite set of inputs
+        (**kwargs) is used rather than an explicit parameter list. The
+        definition of parameters used within each subclass can be found in the
+        respective subclass documentation strings.
+        """
+        pass
+
+    def __call__(self, x):
+        """
+        :param numpy.ndarray x:
+            Independent variable.
+
+        Returns
+        -------
+        :param numpy.ndarray y:
+            Backarc scaling term
+        """
+        y = np.zeros(x.shape)
+        y[x > 0.0] = 1.
+        return y
+
+
+class FABATaperSFunc(FABATaperStep):
+    """
+    Implements tapering of x according to a S-function
+    (Named such because of its S-like shape.)
+
+    :param float a:
+        'ceiling', where the function begins falling from 1.
+    :param float b:
+        'floor', where the function reaches zero.
+    """
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.a = kwargs.get("a", 0.0)
+        self.b = kwargs.get("b", 0.0)
+        # a must be less than or equal to b
+        assert self.a <= self.b
+
+    def __call__(self, x):
+        """
+        Returns
+        -------
+        :param numpy.ndarray y:
+            Backarc scaling term
+        """
+        y = np.ones(x.shape)
+        idx = x <= self.a
+        y[idx] = 0
+
+        idx = np.logical_and(self.a <= x, x <= (self.a + self.b) / 2.)
+        y[idx] = 2. * ((x[idx] - self.a) / (self.b - self.a)) ** 2.
+
+        idx = np.logical_and((self.a + self.b) / 2. <= x, x <= self.b)
+        y[idx] = 1 - 2. * ((x[idx] - self.b) / (self.b - self.a)) ** 2.
+        return y
+
+
+class FABATaperLinear(FABATaperStep):
+    """
+    Implements a tapering of x according to a linear function
+    with a fixed distance and a midpoint (y = 0.5) at x = 0
+
+    :param float width:
+        Distance (km) across which x tapers to 0
+    """
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.width = kwargs.get("width", 1.0)
+        # width must be greater than 0
+        assert self.width > 0.0
+
+    def __call__(self, x):
+        """
+        Returns
+        -------
+        :param numpy.ndarray y:
+            Backarc scaling term
+        """
+        upper = self.width / 2.
+        lower = -self.width / 2.
+        y = (x - lower) / (upper - lower)
+        y[x > upper] = 1.
+        y[x < lower] = 0.
+        return y
+
+
+class FABATaperSigmoid(FABATaperStep):
+    """
+    Implements tapering of x according to a sigmoid function
+    (Note that this only tends to 1, 0 it does not reach it)
+
+    :param float c: Bandwidth in km of the sigmoid function
+    """
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.c = kwargs.get("c", 1.0)
+        # sigmoid function bandwidth must be greater than zero
+        assert self.c > 0.
+
+    def __call__(self, x):
+        """
+        Returns
+        -------
+        :param numpy.ndarray y:
+            Backarc scaling term
+        """
+        return 1. / (1. + np.exp(-(1. / self.c) * x))
+
+
+# Get Gaussian cdf of a standard normal distribution
+phix = lambda x: 0.5 * (1.0 + erf(x / np.sqrt(2.)))
+
+
+class FABATaperGaussian(FABATaperStep):
+    """
+    Implements tapering of x according to a truncated Gaussian function
+
+    :param float sigma:
+        Bandwidth of function (according to a Gaussian standard deviation)
+    :param float a:
+        Initiation point of tapering (km)
+    :param float b:
+        Termination point of tapering (km)
+    """
+    def __init__(self, **kwargs):
+
+        super().__init__()
+        self.sigma = kwargs.get("sigma", 1.0)
+        a = kwargs.get("a", -np.inf)
+        b = kwargs.get("b", np.inf)
+        # Gaussian sigma must be positive non-zero and upper bound must be
+        # greater than or equal to the lower bound
+        assert self.sigma > 0
+        assert b >= a
+        self.phi_a = phix(a / self.sigma)
+        self.phi_diff = phix(b / self.sigma) - self.phi_a
+
+    def __call__(self, x):
+        """
+        Returns
+        -------
+        :param numpy.ndarray y:
+            Backarc scaling term
+        """
+        y = (phix(x / self.sigma) - self.phi_a) / self.phi_diff
+        y[y < 0.] = 0.
+        y[y > 1.] = 1.
+        return y
+
+
+FABA_ALL_MODELS = {
+    "Step": FABATaperStep,
+    "Linear": FABATaperLinear,
+    "SFunc": FABATaperSFunc,
+    "Sigmoid": FABATaperSigmoid,
+    "Gaussian": FABATaperGaussian
+}
+
+
+class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
+    """
+    ESHM20 adjustment of the BC Hydro GMPE for subduction interface events with
     theta6 calibrated to Mediterranean data.
 
-    Introduces two configurable parameters:
+    Introduces several configurable parameters:
 
     :param float theta6_adjustment:
-    The amount to increase or decrease the theta6 - should be +0.0015 (for
-    slower attenuation) and -0.0015 (for faster attenuation)
+        The amount to increase or decrease the theta6 - should be +0.0015 (for
+        slower attenuation) and -0.0015 (for faster attenuation)
 
     :param float sigma_mu_epsilon:
-    The number of standard deviations above or below the mean to apply the
-    statistical uncertainty sigma_mu term.
+        The number of standard deviations above or below the mean to apply the
+        statistical uncertainty sigma_mu term.
+
+    :param faba_model:
+        Choice of model for the forearc/backarc tapering function, choice of
+        {"Step", "Linear", "SFunc", "Sigmoid", "Gaussian"}
+
+    Depending on the choice of taper model, additional parameters may be passed
     """
     experimental = True
 
-    def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
-        self.theta6_adj = theta6_adjustment
-        self.sigma_mu_epsilon = sigma_mu_epsilon
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
+
+    def __init__(self, **kwargs):
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
+        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
+        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
+        faba_type = kwargs.get("faba_taper_model", "Step")
+        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -82,7 +281,7 @@ class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=False)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
@@ -95,6 +294,15 @@ class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
             np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
                    self.CONSTS['theta9'])) +\
             ((self.theta6_adj + C['theta6']) * dists.rrup)
+
+    def _compute_forearc_backarc_term(self, C, sites, dists):
+        """
+        Computes the forearc/backarc scaling term given by equation (4)
+        """
+        max_dist = np.copy(dists.rrup)
+        max_dist[max_dist < 100.0] = 100.0
+        f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -124,18 +332,22 @@ class BCHydroSERASInter(AbrahamsonEtAl2015SInter):
     """)
 
 
-class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
+class BCHydroESHM20SInterLow(AbrahamsonEtAl2015SInterLow):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction interface events
+    ESHM20 Adjustment of the BC Hydro GMPE for subduction interface events
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
     experimental = True
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
 
-    def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
-        self.theta6_adj = theta6_adjustment
-        self.sigma_mu_epsilon = sigma_mu_epsilon
+    def __init__(self, **kwargs):
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
+        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
+        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
+        faba_type = kwargs.get("faba_taper_model", "Step")
+        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -145,7 +357,7 @@ class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=False)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
@@ -158,6 +370,15 @@ class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
             np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
                    self.CONSTS['theta9'])) +\
             ((self.theta6_adj + C['theta6']) * dists.rrup)
+
+    def _compute_forearc_backarc_term(self, C, sites, dists):
+        """
+        Computes the forearc/backarc scaling term given by equation (4)
+        """
+        max_dist = np.copy(dists.rrup)
+        max_dist[max_dist < 100.0] = 100.0
+        f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -187,19 +408,24 @@ class BCHydroSERASInterLow(AbrahamsonEtAl2015SInterLow):
     """)
 
 
-class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
+class BCHydroESHM20SInterHigh(AbrahamsonEtAl2015SInterHigh):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction interface events
+    ESHM20 adjustment of the BC Hydro GMPE for subduction interface events
     with theta6 calibrated to Mediterranean data, for the high
     magnitude scaling branch.
     """
 
     experimental = True
 
-    def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
-        self.theta6_adj = theta6_adjustment
-        self.sigma_mu_epsilon = sigma_mu_epsilon
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
+
+    def __init__(self, **kwargs):
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
+        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
+        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
+        faba_type = kwargs.get("faba_taper_model", "Step")
+        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -209,7 +435,7 @@ class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=False)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
@@ -222,6 +448,15 @@ class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
             np.log(dists.rrup + self.CONSTS['c4'] * np.exp((mag - 6.) *
                    self.CONSTS['theta9'])) +\
             ((self.theta6_adj + C['theta6']) * dists.rrup)
+
+    def _compute_forearc_backarc_term(self, C, sites, dists):
+        """
+        Computes the forearc/backarc scaling term given by equation (4)
+        """
+        max_dist = np.copy(dists.rrup)
+        max_dist[max_dist < 100.0] = 100.0
+        f_faba = C['theta15'] + (C['theta16'] * np.log(max_dist / 40.0))
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -251,9 +486,9 @@ class BCHydroSERASInterHigh(AbrahamsonEtAl2015SInterHigh):
     """)
 
 
-class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
+class BCHydroESHM20SSlab(AbrahamsonEtAl2015SSlab):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction in-slab events with
+    ESHM20 adjustment of the BC Hydro GMPE for subduction in-slab events with
     theta6 calibrated to Mediterranean data.
 
     Introduces two configurable parameters:
@@ -267,10 +502,15 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
 
     experimental = True
 
-    def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
-        self.theta6_adj = theta6_adjustment
-        self.sigma_mu_epsilon = sigma_mu_epsilon
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
+
+    def __init__(self, **kwargs):
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
+        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
+        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
+        faba_type = kwargs.get("faba_taper_model", "Step")
+        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -280,7 +520,7 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=True)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
@@ -293,6 +533,15 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
                 (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
                 np.exp((mag - 6.) * self.CONSTS['theta9'])) +
                 ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
+
+    def _compute_forearc_backarc_term(self, C, sites, dists):
+        """
+        Computes the forearc/backarc scaling term given by equation (4).
+        """
+        max_dist = np.copy(dists.rhypo)
+        max_dist[max_dist < 85.0] = 85.0
+        f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -322,19 +571,24 @@ class BCHydroSERASSlab(AbrahamsonEtAl2015SSlab):
     """)
 
 
-class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
+class BCHydroESHM20SSlabLow(AbrahamsonEtAl2015SSlabLow):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction in-slab events
+    ESHM20 adjustment of the BC Hydro GMPE for subduction in-slab events
     with theta6 calibrated to Mediterranean data, for the low magnitude
     scaling branch.
     """
 
     experimental = True
 
-    def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
-        self.theta6_adj = theta6_adjustment
-        self.sigma_mu_epsilon = sigma_mu_epsilon
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
+
+    def __init__(self, **kwargs):
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
+        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
+        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
+        faba_type = kwargs.get("faba_taper_model", "Step")
+        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -344,7 +598,7 @@ class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=True)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
@@ -357,6 +611,15 @@ class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
                 (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
                 np.exp((mag - 6.) * self.CONSTS['theta9'])) +
                 ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
+
+    def _compute_forearc_backarc_term(self, C, sites, dists):
+        """
+        Computes the forearc/backarc scaling term given by equation (4).
+        """
+        max_dist = np.copy(dists.rhypo)
+        max_dist[max_dist < 85.0] = 85.0
+        f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss
@@ -386,19 +649,24 @@ class BCHydroSERASSlabLow(AbrahamsonEtAl2015SSlabLow):
     """)
 
 
-class BCHydroSERASSlabHigh(AbrahamsonEtAl2015SSlabHigh):
+class BCHydroESHM20SSlabHigh(AbrahamsonEtAl2015SSlabHigh):
     """
-    SERA Adjustment of the BC Hydro GMPE for subduction interface events
+    ESHM20 adjustment of the BC Hydro GMPE for subduction interface events
     with theta6 calibrated to Mediterranean data, for the high magnitude
     scaling branch.
     """
 
     experimental = True
 
-    def __init__(self, theta6_adjustment=0.0, sigma_mu_epsilon=0.0):
-        super().__init__()
-        self.theta6_adj = theta6_adjustment
-        self.sigma_mu_epsilon = sigma_mu_epsilon
+    # Requires Vs30 and distance to the volcanic front
+    REQUIRES_SITES_PARAMETERS = set(('vs30', 'xvf'))
+
+    def __init__(self, **kwargs):
+        super().__init__(ergodic=kwargs.get("ergodic", True), **kwargs)
+        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
+        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
+        faba_type = kwargs.get("faba_taper_model", "Step")
+        self.faba_model = FABA_ALL_MODELS[faba_type](**kwargs)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -408,7 +676,7 @@ class BCHydroSERASSlabHigh(AbrahamsonEtAl2015SSlabHigh):
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
         if self.sigma_mu_epsilon:
-            sigma_mu = get_sigma_statistical(rup.mag)
+            sigma_mu = get_stress_factor(imt, slab=True)
             return mean + (sigma_mu * self.sigma_mu_epsilon), stddevs
         else:
             return mean, stddevs
@@ -421,6 +689,15 @@ class BCHydroSERASSlabHigh(AbrahamsonEtAl2015SSlabHigh):
                 (mag - 7.8)) * np.log(dists.rhypo + self.CONSTS['c4'] *
                 np.exp((mag - 6.) * self.CONSTS['theta9'])) +
                 ((self.theta6_adj + C['theta6']) * dists.rhypo)) + C["theta10"]
+
+    def _compute_forearc_backarc_term(self, C, sites, dists):
+        """
+        Computes the forearc/backarc scaling term given by equation (4).
+        """
+        max_dist = np.copy(dists.rhypo)
+        max_dist[max_dist < 85.0] = 85.0
+        f_faba = C['theta7'] + (C['theta8'] * np.log(max_dist / 40.0))
+        return f_faba * self.faba_model(-sites.xvf)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          vlin        b   theta1    theta2        theta6    theta7    theta8  theta10  theta11   theta12   theta13   theta14  theta15   theta16      phi     tau   sigma  sigma_ss

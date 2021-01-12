@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,15 +19,15 @@ import os
 import sys
 import time
 import signal
-from openquake.baselib import sap, config
+import getpass
+from openquake.baselib import config
 from openquake.commonlib import logs
 from openquake.engine.utils import confirm
 from openquake.server import dbserver
-from openquake.commands.purge import purge_all
+from openquake.commands.purge import purge_one, purge_all
 
 
-@sap.script
-def reset(yes):
+def main(yes=False):
     """
     Remove all the datastores and the database of the current user
     """
@@ -36,27 +36,24 @@ def reset(yes):
         return
 
     dbpath = os.path.realpath(os.path.expanduser(config.dbserver.file))
-
-    # user must be able to access and write the databse file to remove it
-    if os.path.isfile(dbpath) and os.access(dbpath, os.W_OK):
-        if dbserver.get_status() == 'running':
-            if config.dbserver.multi_user:
-                sys.exit('The oq dbserver must be stopped '
-                         'before proceeding')
-            else:
-                pid = logs.dbcmd('getpid')
-                os.kill(pid, signal.SIGTERM)
-                time.sleep(.5)  # give time to stop
-                assert dbserver.get_status() == 'not-running'
-                print('dbserver stopped')
-        try:
+    if not os.path.isfile(dbpath):
+        sys.exit('%s does not exist' % dbpath)
+    else:
+        dbserver.ensure_on()  # start the dbserver in a subprocess
+        user = getpass.getuser()
+        for calc_id in logs.dbcmd('get_calc_ids', user):
+            purge_one(calc_id, user, force=True)
+        if os.access(dbpath, os.W_OK):   # single user mode
+            purge_all(user)  # calculations in oqdata not in the db
+            # stop the dbserver first
+            pid = logs.dbcmd('getpid')
+            os.kill(pid, signal.SIGTERM)
+            time.sleep(.5)  # give time to stop
+            assert dbserver.get_status() == 'not-running'
+            print('dbserver stopped')
+            # remove the database
             os.remove(dbpath)
             print('Removed %s' % dbpath)
-        except OSError as exc:
-            print(exc, file=sys.stderr)
-
-    # fast way of removing everything
-    purge_all(fast=True)  # datastore of the current user
 
 
-reset.flg('yes', 'confirmation')
+main.yes = 'confirmation'

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2010-2019 GEM Foundation
+# Copyright (C) 2010-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,11 +21,13 @@ Test related to code in openquake/utils/general.py
 """
 import unittest.mock as mock
 import unittest
+import numpy
 from operator import attrgetter
 from collections import namedtuple
 from openquake.baselib.general import (
-    block_splitter, split_in_blocks, search_module, assert_close,
-    deprecated, DeprecationWarning, cached_property)
+    block_splitter, split_in_blocks, assert_close,
+    deprecated, DeprecationWarning, cached_property, start_many,
+    compress, decompress)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -126,20 +128,6 @@ class BlockSplitterTestCase(unittest.TestCase):
         self.assertEqual([b.weight for b in blocks], [2, 4, 4, 2])
 
 
-class SearchModuleTestCase(unittest.TestCase):
-    def test_existing_module_simple(self):
-        self.assertIsNotNone(search_module('os'))
-
-    def test_non_existing_module_simple(self):
-        self.assertIsNone(search_module('do_not_exist'))
-
-    def test_non_existing_module_in_package(self):
-        self.assertIsNone(search_module('openquake.do_not_exist'))
-
-    def test_existing_module_in_package(self):
-        self.assertIsNotNone(search_module('openquake.baselib.general'))
-
-
 class AssertCloseTestCase(unittest.TestCase):
     def test_different(self):
         a = [1, 2]
@@ -206,3 +194,19 @@ class CachedPropertyTestCase(unittest.TestCase):
         self.__dict__['one'] = 2
         self.assertEqual(self.one, 2)
         self.assertEqual(self.ncalls, 1)
+
+
+def double(calc_id, val):
+    print((calc_id, val * 2))
+
+
+class StartManyTestCase(unittest.TestCase):
+    def test(self):
+        with start_many(double, [(1, 1), (2, 2), (3, 3)]):
+            pass
+
+
+class CompressTestCase(unittest.TestCase):
+    def test(self):
+        a = dict(a=numpy.array([9999.]))
+        self.assertEqual(a, decompress(compress(a)))

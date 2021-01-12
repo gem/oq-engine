@@ -1,0 +1,3 @@
+#,,,"generated_by='OpenQuake engine 3.10.0-gitace1f5250e', start_date='2020-09-21T08:53:51', checksum=2241161351, investigation_time=50.0, risk_investigation_time=50.0"
+loss_type,loss_value,exposed_value,loss_ratio
+structural,1.52836E+04,1.10000E+04,1.38941E+00

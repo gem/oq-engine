@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,31 +25,30 @@ from openquake.calculators import base
 F32 = numpy.float32
 
 
-def classical_risk(riskinputs, riskmodel, param, monitor):
+def classical_risk(riskinputs, param, monitor):
     """
     Compute and return the average losses for each asset.
 
     :param riskinputs:
         :class:`openquake.risklib.riskinput.RiskInput` objects
-    :param riskmodel:
-        a :class:`openquake.risklib.riskinput.CompositeRiskModel` instance
     :param param:
         dictionary of extra parameters
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
+    crmodel = monitor.read('crmodel')
     result = dict(loss_curves=[], stat_curves=[])
     weights = [w['default'] for w in param['weights']]
     statnames, stats = zip(*param['stats'])
     for ri in riskinputs:
         A = len(ri.assets)
-        L = len(riskmodel.lti)
+        L = len(crmodel.lti)
         R = ri.hazard_getter.num_rlzs
         loss_curves = numpy.zeros((R, L, A), object)
         avg_losses = numpy.zeros((R, L, A))
-        for out in riskmodel.gen_outputs(ri, monitor):
+        for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
-            for l, loss_type in enumerate(riskmodel.loss_types):
+            for l, loss_type in enumerate(crmodel.loss_types):
                 # loss_curves has shape (A, C)
                 for i, asset in enumerate(ri.assets):
                     loss_curves[out.rlzi, l, i] = lc = out[loss_type][i]
@@ -60,7 +59,7 @@ def classical_risk(riskinputs, riskmodel, param, monitor):
                     result['loss_curves'].append((l, r, aid, lcurve))
 
         # compute statistics
-        for l, loss_type in enumerate(riskmodel.loss_types):
+        for l, loss_type in enumerate(crmodel.loss_types):
             for i, asset in enumerate(ri.assets):
                 avg_stats = compute_stats(avg_losses[:, l, i], stats, weights)
                 losses = loss_curves[0, l, i]['loss']
@@ -89,14 +88,16 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         super().pre_execute()
-        if 'poes' not in self.datastore:  # when building short report
+        if '_poes' not in self.datastore:  # when building short report
             return
-        weights = [rlz.weight for rlz in self.rlzs_assoc.realizations]
+        full_lt = self.datastore['full_lt']
+        self.realizations = full_lt.get_realizations()
+        weights = [rlz.weight for rlz in self.realizations]
         stats = list(oq.hazard_stats().items())
         self.param = dict(stats=stats, weights=weights)
         self.riskinputs = self.build_riskinputs('poe')
         self.A = len(self.assetcol)
-        self.L = len(self.riskmodel.loss_types)
+        self.L = len(self.crmodel.loss_types)
         self.S = len(oq.hazard_stats())
 
     def post_execute(self, result):
@@ -106,14 +107,14 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         :param result: aggregated result of the task classical_risk
         """
         curve_res = {cp.loss_type: cp.curve_resolution
-                     for cp in self.riskmodel.curve_params
+                     for cp in self.crmodel.curve_params
                      if cp.user_provided}
         self.loss_curve_dt = scientific.build_loss_curve_dt(
             curve_res, insured_losses=False)
-        ltypes = self.riskmodel.loss_types
+        ltypes = self.crmodel.loss_types
 
         # loss curves stats are generated always
-        stats = encode(list(self.oqparam.hazard_stats()))
+        stats = list(self.oqparam.hazard_stats())
         stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
         avg_losses = numpy.zeros((self.A, self.S, self.L), F32)
         for l, a, losses, statpoes, statloss in result['stat_curves']:
@@ -123,9 +124,11 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 base.set_array(stat_curves_lt['poes'][a, s], statpoes[s])
                 base.set_array(stat_curves_lt['losses'][a, s], losses)
         self.datastore['avg_losses-stats'] = avg_losses
-        self.datastore.set_attrs('avg_losses-stats', stats=stats)
+        self.datastore.set_shape_descr(
+            'avg_losses-stats', asset_id=self.assetcol['id'],
+            stat=stats, loss_type=self.oqparam.loss_names)
         self.datastore['loss_curves-stats'] = stat_curves
-        self.datastore.set_attrs('loss_curves-stats', stats=stats)
+        self.datastore.set_attrs('loss_curves-stats', stat=stats)
 
         if self.R > 1:  # individual realizations saved only if many
             loss_curves = numpy.zeros((self.A, self.R), self.loss_curve_dt)
@@ -136,4 +139,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 base.set_array(lc['losses'], losses)
                 base.set_array(lc['poes'], poes)
             self.datastore['avg_losses-rlzs'] = avg_losses
+            self.datastore.set_shape_descr(
+                'avg_losses-rlzs', asset_id=self.assetcol['id'],
+                rlz=numpy.arange(self.R), loss_type=self.oqparam.loss_names)
             self.datastore['loss_curves-rlzs'] = loss_curves

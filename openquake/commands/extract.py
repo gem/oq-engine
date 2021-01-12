@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,33 +15,47 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import performance, sap
+import os
+from openquake.baselib import performance, hdf5
+from openquake.commonlib import logs
 from openquake.calculators.extract import Extractor, WebExtractor
 
 
 # `oq extract` is tested in the demos
-@sap.script
-def extract(what, calc_id, webapi=True, local=False):
+def main(what,
+         calc_id: int = -1,
+         webapi=False,
+         local=False,
+         *,
+         extract_dir='.'):
     """
     Extract an output from the datastore and save it into an .hdf5 file.
     By default uses the WebAPI, otherwise the extraction is done locally.
     """
     with performance.Monitor('extract', measuremem=True) as mon:
         if local:
-            obj = WebExtractor(calc_id, 'http://localhost:8800', '').get(what)
+            if calc_id == -1:
+                calc_id = logs.dbcmd('get_job', calc_id).id
+            aw = WebExtractor(calc_id, 'http://localhost:8800', '').get(what)
         elif webapi:
-            obj = WebExtractor(calc_id).get(what)
+            aw = WebExtractor(calc_id).get(what)
         else:
-            obj = Extractor(calc_id).get(what)
-        fname = '%s_%d.hdf5' % (what.replace('/', '-').replace('?', '-'),
-                                calc_id)
-        obj.save(fname)
+            aw = Extractor(calc_id).get(what)
+        w = what.replace('/', '-').replace('?', '-')
+        if hasattr(aw, 'array') and isinstance(aw.array, str):  # CSV string
+            fname = os.path.join(extract_dir, '%s_%d.csv' % (w, calc_id))
+            with open(fname, 'w', encoding='utf-8') as f:
+                f.write(aw.array)
+        else:  # save as npz
+            fname = os.path.join(extract_dir, '%s_%d.npz' % (w, calc_id))
+            hdf5.save_npz(aw, fname)
         print('Saved', fname)
     if mon.duration > 1:
         print(mon)
 
 
-extract.arg('what', 'string specifying what to export')
-extract.arg('calc_id', 'number of the calculation', type=int)
-extract.flg('webapi', 'if passed, use the (possibly remote) WebAPI')
-extract.flg('local', 'if passed, use the local WebAPI')
+main.what = 'string specifying what to extract'
+main.calc_id = 'number of the calculation'
+main.webapi = 'if passed, use the (possibly remote) WebAPI'
+main.local = 'if passed, use the local WebAPI'
+main.extract_dir = 'directory where to extract'

@@ -1,0 +1,3 @@
+#,,,,"kind='mean', risk_investigation_time=50.0"
+asset_id,loss_type,loss_value,loss_ratio,poe
+a5,structural,0.00000E+00,0.00000E+00,2.46188E-02

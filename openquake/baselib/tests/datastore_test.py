@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,6 +35,7 @@ class DataStoreTestCase(unittest.TestCase):
     def test_hdf5(self):
         # store numpy arrays as hdf5 files
         self.assertEqual(len(self.dstore), 0)
+        # performance_data, task_info, task_sent
         self.dstore['/key1'] = value1 = numpy.array(['a', 'b'], dtype=bytes)
         self.dstore['/key2'] = numpy.array([1, 2])
         self.assertEqual(list(self.dstore), ['key1', 'key2'])
@@ -85,3 +86,67 @@ class DataStoreTestCase(unittest.TestCase):
             read(42, datadir=tmp)
         self.assertIn('permission denied', str(ctx.exception).lower())
         os.remove(fname)
+
+    def test_store_retrieve_files(self):
+        fnames = []
+        for cwd, dirs, files in os.walk(os.path.dirname(__file__)):
+            for f in files:
+                if f.endswith('.py'):
+                    fnames.append(os.path.join(cwd, f))
+        self.dstore.store_files(fnames)
+        for name, data in self.dstore.retrieve_files():
+            print(name)
+        print(self.dstore.get_file(name))
+
+    def test_hdf5_to_npz(self):
+        # test a metadata bug with h5py 2.10.0
+        # https://github.com/numpy/numpy/issues/14142#issuecomment-620980980
+        dt = [('id', '<S20'), ('ordinal', numpy.uint32)]
+        arr0 = numpy.array([(b'a11', 1), (b'a12', 2)], dt)
+        self.dstore['assets'] = arr0
+        arr1 = self.dstore['assets'][()]
+        arr1.dtype = [(n, str(arr1.dtype[n])) for n in arr1.dtype.names]
+        fd, fname = tempfile.mkstemp(suffix='.npz')
+        os.close(fd)
+        numpy.savez(fname, array=arr1)
+        print('Saved %s' % fname)
+        arr2 = numpy.load(fname)['array']
+        self.assertEqual(arr2.dtype, dt)
+        os.remove(fname)
+
+    def test_sel(self):
+        # test dstore.sel
+        N, M, L = 1, 2, 3
+        imts = 'PGA', 'SA(1.0)'
+        self.dstore['hcurves'] = numpy.zeros((N, M, L))
+        self.dstore.set_shape_descr('hcurves', sid=[0], imt=imts, lvl=L)
+        arr = self.dstore.sel('hcurves', imt='PGA', lvl=2)
+        self.assertEqual(arr.shape, (1, 1, 1))
+
+    def test_pandas(self):
+        sids = numpy.arange(3)
+        eids = [2, 2, 0]
+        vals = [.1, .2, .3]
+        self.dstore['df/sid'] = sids
+        self.dstore['df/eid'] = eids
+        self.dstore['df/val'] = vals
+        self.dstore.getitem('df').attrs['__pdcolumns__'] = 'sid eid val'
+
+        # testing slice
+        df = self.dstore.read_df('df', 'sid', slc=slice(1, 3))
+        print(df)
+
+        # testing selection
+        df = self.dstore.read_df('df', 'eid', sel={'eid': 2, 'sid': 0})
+        self.assertEqual(list(df.index), [2])
+        self.assertEqual(list(df.sid), [0])
+        self.assertEqual(list(df.val), [.1])
+
+    def test_pandas_vlen(self):
+        self.dstore['test/val'] = [.2, .3]
+        self.dstore.hdf5.save_vlen(
+            'test/val_', [numpy.array([1]), numpy.array([2, 3])])
+        self.dstore.getitem('test').attrs['__pdcolumns__'] = 'val val_'
+        df = self.dstore.read_df('test')
+        numpy.testing.assert_equal(df['val_'].loc[0], [1])
+        numpy.testing.assert_equal(df['val_'].loc[1], [2, 3])

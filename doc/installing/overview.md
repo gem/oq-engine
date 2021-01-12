@@ -4,16 +4,14 @@ The OpenQuake Engine can be installed in several different ways. This page will 
 
 ## Power users
 
-Scientists wanting to develop new GMPEs or new features for the engine should look at the **[Installing the OpenQuake Engine for development](development.md)** guide.
-
-A pre-configured VirtualBox appliance may be also [downloaded](https://downloads.openquake.org/ova/stable/). It contains all the OpenQuake software pre-installed and pre-configured.
+Scientists wanting to develop new GMPEs or new features for the engine should look at the **[Installing the OpenQuake Engine for development on Linux and macOS](development.md)**  and the **[Installing the OpenQuake Engine for development on Windows](development-windows.md)** guides.
 
 ## Single user
 
 ### Linux
 
 If you are the only user using OpenQuake on the target system the best choice is using **binary packages for [Ubuntu](ubuntu.md)** or **[RedHat (and clones)](rhel.md)**.
-If you don't have root permissions (i.e. no `sudo`) to install new software or you have to use an unsupported distribution (see [FAQ](faq.md#unsupported-operating-systems)) you can try with the **[self-installable binary distribution for Linux without 'sudo'](linux-generic.md)**.
+If you don't have root permissions (i.e. no `sudo`) to install new software or you have to use an unsupported distribution (see [FAQ](../faq.md#unsupported-operating-systems)) you can try with the **[self-installable binary distribution for Linux without 'sudo'](linux-generic.md)**.
 
 ### macOS
 
@@ -29,6 +27,50 @@ The OpenQuake Engine is also available on **[PyPI](https://pypi.python.org/pypi/
 
 ```
 $ pip install openquake.engine
+```
+
+If the installation fails the problem could be that some dependency needs compilation environment to be installed, in these cases you can install our already compiled dependencies from our repository with the command:
+
+#### For Linux
+
+##### For Python 3.8
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-linux64.txt openquake.engine
+```
+
+##### For Python 3.6
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py36-linux64.txt openquake.engine
+```
+
+#### For Windows
+
+##### For Python 3.8
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-win64.txt openquake.engine
+```
+
+##### For Python 3.6
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py36-win64.txt openquake.engine
+```
+
+#### For Mac
+
+##### For Python 3.8
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-macos.txt openquake.engine
+```
+
+##### For Python 3.6
+
+```
+$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py36-macos.txt openquake.engine
 ```
 
 ## Multi users

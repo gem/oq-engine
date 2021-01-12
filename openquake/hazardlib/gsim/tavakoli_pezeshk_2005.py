@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,18 +45,13 @@ class TavakoliPezeshk2005(GMPE):
 
     #: Supported intensity measure types are peak ground acceleration
     #: and spectral acceleration, see abstract
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure horizontal.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
     #: Supported standard deviation type is total, see equation 23, pag 2291.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: This GMPE doesn't require site parameters since it has been developed
     #: for hard rock sites (see page 2290)
@@ -64,11 +59,11 @@ class TavakoliPezeshk2005(GMPE):
 
     #: Required rupture parameters is magnitude
     #: See equation 18 page page 2291
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is Rrup.
     #: See equation 18 page page 2291
-    REQUIRES_DISTANCES = set(('rrup',))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -133,7 +128,8 @@ class TavakoliPezeshk2005(GMPE):
         Compute magnitude scaling term as defined in equation 19, page 2291
         (Tavakoli and Pezeshk, 2005)
         """
-        assert mag <= 8.5
+        if mag > 8.5:
+            raise ValueError('Magnitude %s > 8.5' % mag)
         return C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2.5
 
     def _compute_geometrical_spreading_term(self, C, rrup):

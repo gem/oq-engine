@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import psutil
+import getpass
 import operator
 from datetime import datetime
 
@@ -69,9 +70,9 @@ def set_status(db, job_id, status):
     :param status: status string
     """
     assert status in (
-        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed'
-    ), status
-    if status in ('created', 'complete', 'failed', 'aborted'):
+        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed',
+        'deleted'), status
+    if status in ('created', 'complete', 'failed', 'aborted', 'deleted'):
         is_running = 0
     else:  # 'executing'
         is_running = 1
@@ -97,8 +98,10 @@ def create_job(db, datadir):
         the job ID
     """
     calc_id = get_calc_id(db, datadir) + 1
+    # HACK: just created jobs should not have is_running=1, but we
+    # need that to make views_test.py happy on Jenkins :-(
     job = dict(id=calc_id, is_running=1, description='just created',
-               user_name='openquake', calculation_mode='to be set',
+               user_name=getpass.getuser(), calculation_mode='to be set',
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     return db('INSERT INTO job (?S) VALUES (?X)',
               job.keys(), job.values()).lastrowid
@@ -127,7 +130,8 @@ def delete_uncompleted_calculations(db, user):
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param user: user name
     """
-    db("DELETE FROM job WHERE user_name=?x AND status != 'complete'", user)
+    db("UPDATE job SET status = 'deleted' "
+       "WHERE user_name=?x AND status != 'complete'", user)
 
 
 def get_job(db, job_id, username=None):
@@ -154,9 +158,11 @@ def get_job(db, job_id, username=None):
     # else negative job_id
     if username:
         joblist = db('SELECT * FROM job WHERE user_name=?x '
-                     'ORDER BY id DESC LIMIT ?x', username, -job_id)
+                     "AND status != 'deleted' ORDER BY id DESC LIMIT ?x",
+                     username, -job_id)
     else:
-        joblist = db('SELECT * FROM job ORDER BY id DESC LIMIT ?x', -job_id)
+        joblist = db("SELECT * FROM job WHERE status != 'deleted' "
+                     'ORDER BY id DESC LIMIT ?x', -job_id)
     if not joblist:  # no jobs
         return
     else:
@@ -192,8 +198,8 @@ def list_calculations(db, job_type, user_name):
     :param user_name: an user name
     """
     jobs = db('SELECT *, %s FROM job WHERE user_name=?x '
-              'AND job_type=?x ORDER BY start_time' % JOB_TYPE,
-              user_name, job_type)
+              "AND job_type=?x AND status != 'deleted' ORDER BY start_time"
+              % JOB_TYPE, user_name, job_type)
     out = []
     if len(jobs) == 0:
         out.append('None')
@@ -233,8 +239,9 @@ def list_outputs(db, job_id, full=True):
                 break
             out.append('%4d | %s' % (o.id, o.display_name))
         if truncated:
-            out.append('Some outputs where not shown. You can see the full '
-                       'list with the command\n`oq engine --list-outputs`')
+            out.append(
+                'Some outputs were not shown. You can see the full list '
+                f'with the command\n`oq engine --list-outputs {job_id}`')
     return out
 
 
@@ -253,37 +260,32 @@ def get_outputs(db, job_id):
 DISPLAY_NAME = {
     'asset_risk': 'Exposure + Risk',
     'gmf_data': 'Ground Motion Fields',
-    'dmg_by_asset': 'Average Asset Damages',
-    'dmg_by_event': 'Aggregate Event Damages',
-    'losses_by_asset': 'Average Asset Losses',
-    'losses_by_event': 'Aggregate Event Losses',
-    'damages-rlzs': 'Asset Damage Distribution',
+    'damages-rlzs': 'Asset Damage Distributions',
     'damages-stats': 'Asset Damage Statistics',
     'dmg_by_event': 'Aggregate Event Damages',
-    'avg_losses': 'Average Asset Losses',
+    'losses_by_event': 'Aggregate Event Losses',
+    'events': 'Events',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
     'loss_curves-rlzs': 'Asset Loss Curves',
     'loss_curves-stats': 'Asset Loss Curves Statistics',
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
-    'agg_maps-rlzs': 'Aggregate Loss Maps',
-    'agg_maps-stats': 'Aggregate Loss Maps Statistics',
     'agg_curves-rlzs': 'Aggregate Loss Curves',
     'agg_curves-stats': 'Aggregate Loss Curves Statistics',
-    'agg_losses-rlzs': 'Aggregate Asset Losses',
+    'agg_losses-rlzs': 'Aggregate Losses',
+    'agg_losses-stats': 'Aggregate Losses Statistics',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
-    'sourcegroups': 'Seismic Source Groups',
     'ruptures': 'Earthquake Ruptures',
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
     'disagg': 'Disaggregation Outputs',
-    'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
+    'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
     'input': 'Input Files'
 }
@@ -326,19 +328,32 @@ def finish(db, job_id, status):
        job_id)
 
 
-def del_calc(db, job_id, user):
+def del_calc(db, job_id, user, force=False):
     """
     Delete a calculation and all associated outputs, if possible.
 
     :param db: a :class:`openquake.server.dbapi.Db` instance
     :param job_id: job ID, can be an integer or a string
     :param user: username
+    :param force: delete even if there are dependent calculations
     :returns: None if everything went fine or an error message
     """
     job_id = int(job_id)
     dependent = db(
-        'SELECT id FROM job WHERE hazard_calculation_id=?x', job_id)
-    if dependent:
+        "SELECT id FROM job WHERE hazard_calculation_id=?x "
+        "AND status != 'deleted'", job_id)
+    job_ids = [dep.id for dep in dependent]
+    if not force and job_id in job_ids:  # jobarray
+        err = []
+        for jid in job_ids:
+            res = del_calc(db, jid, user, force=True)
+            if "error" in res:
+                err.append(res["error"])
+        if err:
+            return {"error": ' '.join(err)}
+        else:
+            return {"success": 'children_of_%s' % job_id}
+    elif not force and dependent:
         return {"error": 'Cannot delete calculation %d: there '
                 'are calculations '
                 'dependent from it: %s' % (job_id, [j.id for j in dependent])}
@@ -349,14 +364,12 @@ def del_calc(db, job_id, user):
         return {"error": 'Cannot delete calculation %d:'
                 ' ID does not exist' % job_id}
 
-    deleted = db('DELETE FROM job WHERE id=?x AND user_name=?x',
-                 job_id, user).rowcount
+    deleted = db("UPDATE job SET status='deleted' WHERE id=?x AND "
+                 "user_name=?x", job_id, user).rowcount
     if not deleted:
         return {"error": 'Cannot delete calculation %d: it belongs to '
                 '%s and you are %s' % (job_id, owner, user)}
 
-    # try to delete datastore and associated file
-    # path has typically the form /home/user/oqdata/calc_XXX
     fname = path + ".hdf5"
     try:
         os.remove(fname)
@@ -410,22 +423,6 @@ def get_output(db, output_id):
     out = db('SELECT output.*, ds_calc_dir FROM output, job '
              'WHERE oq_job_id=job.id AND output.id=?x', output_id, one=True)
     return out.ds_key, out.oq_job_id, os.path.dirname(out.ds_calc_dir)
-
-
-def save_performance(db, job_id, records):
-    """
-    Save in the database the performance information about the given job.
-
-    :param db: a :class:`openquake.server.dbapi.Db` instance
-    :param job_id: a job ID
-    :param records: a list of performance records
-    """
-    # NB: rec['counts'] is a numpy.uint64 which is not automatically converted
-    # into an int in Ubuntu 12.04, so we convert it manually below
-    rows = [(job_id, rec['operation'], rec['time_sec'], rec['memory_mb'],
-             int(rec['counts'])) for rec in records]
-    db.insert('performance',
-              'job_id operation time_sec memory_mb counts'.split(), rows)
 
 
 # used in make_report
@@ -533,10 +530,6 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         is_running = request_get_dict.get('is_running')
         filterdict['is_running'] = valid.boolean(is_running)
 
-    if 'relevant' in request_get_dict:
-        relevant = request_get_dict.get('relevant')
-        filterdict['relevant'] = valid.boolean(relevant)
-
     if 'limit' in request_get_dict:
         limit = int(request_get_dict.get('limit'))
     else:
@@ -553,8 +546,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         users_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s'
-              ' ORDER BY id DESC LIMIT %d'
+    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s '
+              "AND status != 'deleted' ORDER BY id DESC LIMIT %d"
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
@@ -694,6 +687,13 @@ SELECT %s FROM job WHERE status='executing' ORDER BY id desc''' % fields)
         if r.pid and psutil.pid_exists(r.pid):
             running.append(r)
     return running
+
+
+def get_calc_ids(db, user):
+    """
+    :returns: calculation IDs of the given user
+    """
+    return [r.id for r in db('SELECT id FROM job WHERE user_name=?x', user)]
 
 
 def get_longest_jobs(db):

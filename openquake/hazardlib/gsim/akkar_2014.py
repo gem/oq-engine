@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -63,18 +63,18 @@ class AkkarEtAlRjb2014(GMPE):
     ])
 
     #: The required site parameter is vs30, see equation 1, page 20.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: The required rupture parameters are rake and magnitude, see equation 1,
     #: page 20.
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: The required distance parameter is 'Joyner-Boore' distance, because
     #: coefficients in table 4.a, pages 22-23, are used.
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
-    def __init__(self, adjustment_factor=1.0):
-        super().__init__()
+    def __init__(self, adjustment_factor=1.0, **kwargs):
+        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(adjustment_factor)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):

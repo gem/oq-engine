@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2020 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,22 +15,23 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
+
+import ast
 import sys
-import time
 import operator
-import collections.abc
 from contextlib import contextmanager
 import numpy
-from scipy.interpolate import interp1d
+from scipy.spatial import cKDTree
 
-from openquake.baselib import hdf5
 from openquake.baselib.python3compat import raise_
+from openquake.hazardlib import site
 from openquake.hazardlib.geo.utils import (
-    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box)
+    KM_TO_DEGREES, angular_distance, fix_lon, get_bounding_box,
+    get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
+U32 = numpy.uint32
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
-src_group_id = operator.attrgetter('src_group_id')
+et_id = operator.attrgetter('et_id')
 
 
 @contextmanager
@@ -65,73 +66,109 @@ def getdefault(dic_with_default, key):
         return dic_with_default['default']
 
 
-class Piecewise(object):
+def unique_sorted(items):
     """
-    Given two arrays x and y of non-decreasing values, build a piecewise
-    function associating to each x the corresponding y. If x is smaller
-    then the minimum x, the minimum y is returned; if x is larger than the
-    maximum x, the maximum y is returned.
+    Check that the items are unique and sorted
     """
-    def __init__(self, x, y):
-        self.y = numpy.array(y)
-        # interpolating from x values to indices in the range [0: len(x)]
-        self.piecewise = interp1d(x, range(len(x)), bounds_error=False,
-                                  fill_value=(0, len(x) - 1))
-
-    def __call__(self, x):
-        idx = numpy.int64(numpy.ceil(self.piecewise(x)))
-        return self.y[idx]
+    if len(set(items)) < len(items):
+        raise ValueError('Found duplicates in %s' % items)
+    elif items != sorted(items):
+        raise ValueError('%s is not ordered' % items)
+    return items
 
 
-class IntegrationDistance(collections.abc.Mapping):
+# used for the maximum distance parameter in the job.ini file
+def floatdict(value):
     """
-    Pickleable object wrapping a dictionary of integration distances per
-    tectonic region type. The integration distances can be scalars or
-    list of pairs (magnitude, distance). Here is an example using 'default'
-    as tectonic region type, so that the same values will be used for all
-    tectonic region types:
+    :param value:
+        input string corresponding to a literal Python number or dictionary
+    :returns:
+        a Python dictionary key -> number
 
-    >>> maxdist = IntegrationDistance({'default': [
-    ...          (3, 30), (4, 40), (5, 100), (6, 200), (7, 300), (8, 400)]})
-    >>> maxdist('Some TRT', mag=2.5)
-    30
-    >>> maxdist('Some TRT', mag=3)
-    30
-    >>> maxdist('Some TRT', mag=3.1)
-    40
-    >>> maxdist('Some TRT', mag=8)
-    400
-    >>> maxdist('Some TRT', mag=8.5)  # 2000 km are used above the maximum
-    2000
+    >>> floatdict("200")
+    {'default': 200}
+
+    >>> text = "{'active shallow crust': 250., 'default': 200}"
+    >>> sorted(floatdict(text).items())
+    [('active shallow crust', 250.0), ('default', 200)]
     """
-    def __init__(self, dic):
-        self.dic = dic or {}  # TRT -> float or list of pairs
-        self.magdist = {}  # TRT -> (magnitudes, distances)
-        for trt, value in self.dic.items():
-            if isinstance(value, list):  # assume a list of pairs (mag, dist)
-                self.magdist[trt] = value
+    value = ast.literal_eval(value)
+    if isinstance(value, (int, float, list)):
+        return {'default': value}
+    dic = {'default': max(value.values())}
+    dic.update(value)
+    return dic
+
+
+class MagDepDistance(dict):
+    """
+    A dictionary trt -> [(mag, dist), ...]
+    """
+    @classmethod
+    def new(cls, value):
+        """
+        :param value: string to be converted
+        :returns: MagDepDistance dictionary
+
+        >>> md = MagDepDistance.new('50')
+        >>> md
+        {'default': [(1.0, 50), (10.0, 50)]}
+        >>> md.max()
+        {'default': 50}
+        >>> md.interp(dict(default=[5.0, 5.1, 5.2])); md.ddic
+        {'default': {'5.00': 50.0, '5.10': 50.0, '5.20': 50.0}}
+        """
+        items_by_trt = floatdict(value.replace('?', '-1'))
+        self = cls()
+        for trt, items in items_by_trt.items():
+            if isinstance(items, list):
+                self[trt] = unique_sorted(items)
+                for mag, dist in self[trt]:
+                    if mag < 1 or mag > 10:
+                        raise ValueError('Invalid magnitude %s' % mag)
+            else:  # assume scalar distance
+                assert items == -1 or items >= 0, items
+                self[trt] = [(1., items), (10., items)]
+        return self
+
+    def interp(self, mags_by_trt):
+        """
+        :param mags_by_trt: a dictionary trt -> magnitudes as strings
+        :returns: a dictionary trt->mag->dist
+        """
+        ddic = {}
+        for trt, mags in mags_by_trt.items():
+            xs, ys = zip(*getdefault(self, trt))
+            if len(mags) == 1:
+                ms = [numpy.float64(mags)]
             else:
-                self.dic[trt] = float(value)
+                ms = numpy.float64(mags)
+            dists = numpy.interp(ms, xs, ys)
+            ddic[trt] = {'%.2f' % mag: dist for mag, dist in zip(ms, dists)}
+        self.ddic = ddic
 
     def __call__(self, trt, mag=None):
-        if not self.dic:
+        if not self:
             return MAX_DISTANCE
-        value = getdefault(self.dic, trt)
-        if isinstance(value, float):  # scalar maximum distance
-            return value
-        elif mag is None:  # get the maximum distance
-            return MAX_DISTANCE
-        elif not hasattr(self, 'piecewise'):
-            self.piecewise = {}  # function cache
-        try:
-            md = self.piecewise[trt]  # retrieve from the cache
-        except KeyError:  # fill the cache
-            mags, dists = zip(*getdefault(self.magdist, trt))
-            if mags[-1] < 11:  # use 2000 km for mag > mags[-1]
-                mags = numpy.concatenate([mags, [11]])
-                dists = numpy.concatenate([dists, [MAX_DISTANCE]])
-            md = self.piecewise[trt] = Piecewise(mags, dists)
-        return md(mag)
+        elif mag is None:
+            return getdefault(self, trt)[-1][1]
+        elif hasattr(self, 'ddic'):
+            return self.ddic[trt]['%.2f' % mag]
+        else:
+            xs, ys = zip(*getdefault(self, trt))
+            return numpy.interp(mag, xs, ys)
+
+    def max(self):
+        """
+        :returns: a dictionary trt -> maxdist
+        """
+        return {trt: self[trt][-1][1] for trt in self}
+
+    def suggested(self):
+        """
+        :returns: True if there is a ? for any TRT
+        """
+        return any(self[trt][-1][1] == -1 for trt in self)
 
     def get_bounding_box(self, lon, lat, trt=None, mag=None):
         """
@@ -145,158 +182,133 @@ class IntegrationDistance(collections.abc.Mapping):
         :returns: min_lon, min_lat, max_lon, max_lat
         """
         if trt is None:  # take the greatest integration distance
-            maxdist = max(self(trt, mag) for trt in self.dic)
+            maxdist = max(self(trt, mag) for trt in self)
         else:  # get the integration distance for the given TRT
             maxdist = self(trt, mag)
         a1 = min(maxdist * KM_TO_DEGREES, 90)
         a2 = min(angular_distance(maxdist, lat), 180)
         return lon - a2, lat - a1, lon + a2, lat + a1
 
-    def get_affected_box(self, src):
+    def get_dist_bins(self, trt, nbins=51):
         """
-        Get the enlarged bounding box of a source.
-
-        :param src: a source object
-        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
+        :returns: an array of distance bins, from 10m to maxdist
         """
-        mag = src.get_min_max_mag()[1]
-        maxdist = self(src.tectonic_region_type, mag)
-        bbox = get_bounding_box(src, maxdist)
-        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
-
-    def __getstate__(self):
-        # otherwise is not pickleable due to .piecewise
-        return dict(dic=self.dic, magdist=self.magdist)
-
-    def __getitem__(self, trt):
-        return self(trt)
-
-    def __iter__(self):
-        return iter(self.dic)
-
-    def __len__(self):
-        return len(self.dic)
-
-    def __repr__(self):
-        return repr(self.dic)
+        return .01 + numpy.arange(nbins) * self(trt) / (nbins - 1)
 
 
-def split_sources(srcs):
+def split_source(src):
     """
-    :param srcs: sources
-    :returns: a pair (split sources, split time) or just the split_sources
+    :param src: a splittable (or not splittable) source
+    :returns: the underlying sources (or the source itself)
     """
-    from openquake.hazardlib.source import splittable
-    sources = []
-    split_time = {}  # src.id -> time
-    for src in srcs:
-        t0 = time.time()
-        mag_a, mag_b = src.get_min_max_mag()
-        min_mag = src.min_mag
-        if mag_b < min_mag:  # discard the source completely
-            continue
-        has_serial = hasattr(src, 'serial')
-        if has_serial:
-            src.serial = numpy.arange(
-                src.serial, src.serial + src.num_ruptures)
-        if not splittable(src):
-            sources.append(src)
-            split_time[src.id] = time.time() - t0
-            continue
-        if min_mag:
-            splits = []
-            for s in src:
-                s.min_mag = min_mag
-                mag_a, mag_b = s.get_min_max_mag()
-                if mag_b < min_mag:
-                    continue
-                s.num_ruptures = s.count_ruptures()
-                if s.num_ruptures:
-                    splits.append(s)
-        else:
-            splits = list(src)
-        split_time[src.id] = time.time() - t0
-        sources.extend(splits)
-        has_samples = hasattr(src, 'samples')
-        if len(splits) > 1:
-            start = 0
-            for i, split in enumerate(splits):
-                split.source_id = '%s:%s' % (src.source_id, i)
-                split.src_group_id = src.src_group_id
-                split.id = src.id
-                if has_serial:
-                    nr = split.num_ruptures
-                    split.serial = src.serial[start:start + nr]
-                    start += nr
-                if has_samples:
-                    split.samples = src.samples
-        elif splits:  # single source
-            splits[0].id = src.id
-            if has_serial:
-                splits[0].serial = src.serial
+    from openquake.hazardlib.source import splittable  # avoid circular import
+    if not splittable(src):
+        return [src]
+    mag_a, mag_b = src.get_min_max_mag()
+    min_mag = src.min_mag
+    if mag_b < min_mag:  # discard the source completely
+        return [src]
+    if min_mag:
+        splits = []
+        for s in src:
+            s.min_mag = min_mag
+            mag_a, mag_b = s.get_min_max_mag()
+            if mag_b >= min_mag:
+                splits.append(s)
+    else:
+        splits = list(src)
+    has_samples = hasattr(src, 'samples')
+    has_scaling_rate = hasattr(src, 'scaling_rate')
+    grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
+    if len(splits) > 1:
+        for i, split in enumerate(splits):
+            split.source_id = '%s:%s' % (src.source_id, i)
+            split.et_id = src.et_id
+            split.grp_id = grp_id
+            split.id = src.id
             if has_samples:
-                splits[0].samples = src.samples
-    return sources, split_time
+                split.samples = src.samples
+            if has_scaling_rate:
+                s.scaling_rate = src.scaling_rate
+    elif splits:  # single source
+        [s] = splits
+        s.source_id = src.source_id
+        s.et_id = src.et_id
+        s.grp_id = grp_id
+        s.id = src.id
+        if has_samples:
+            s.samples = src.samples
+        if has_scaling_rate:
+            s.scaling_rate = src.scaling_rate
+    for split in splits:
+        if not split.num_ruptures:
+            split.num_ruptures = split.count_ruptures()
+    return splits
 
 
 class SourceFilter(object):
     """
-    Filter objects have a .filter method yielding filtered sources,
-    i.e. sources with an attribute .indices, containg the IDs of the sites
-    within the given maximum distance. There is also a .new method
-    that filters the sources in parallel and returns a dictionary
-    src_group_id -> filtered sources.
+    Filter objects have a .filter method yielding filtered sources
+    and the IDs of the sites within the given maximum distance.
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
-    def __init__(self, sitecol, integration_distance, filename=None):
-        if sitecol is not None and len(sitecol) < len(sitecol.complete):
-            raise ValueError('%s is not complete!' % sitecol)
-        elif sitecol is None:
+    def __init__(self, sitecol, integration_distance):
+        if sitecol is None:
             integration_distance = {}
-        self.filename = filename
+        self.sitecol = sitecol
         self.integration_distance = (
-            IntegrationDistance(integration_distance)
-            if isinstance(integration_distance, dict)
-            else integration_distance)
-        if filename and not os.path.exists(filename):  # store the sitecol
-            with hdf5.File(filename, 'w') as h5:
-                h5['sitecol'] = sitecol if sitecol else ()
-        else:  # keep the sitecol in memory
-            self.__dict__['sitecol'] = sitecol
+            integration_distance
+            if isinstance(integration_distance, MagDepDistance)
+            else MagDepDistance(integration_distance))
+        self.slc = slice(None)
 
-    def __getstate__(self):
-        if self.filename:
-            # in the engine self.filename is the .hdf5 cache file
-            return dict(filename=self.filename,
-                        integration_distance=self.integration_distance)
-        else:
-            # when using calc_hazard_curves without an .hdf5 cache file
-            return dict(filename=None, sitecol=self.sitecol,
-                        integration_distance=self.integration_distance)
+    def split_in_tiles(self, hint):
+        """
+        Split the SourceFilter by splitting the site collection in tiles
+        """
+        if hint == 1:
+            return [self]
+        out = []
+        for tile in self.sitecol.split_in_tiles(hint):
+            sf = self.__class__(tile, self.integration_distance)
+            sf.slc = slice(tile.sids[0], tile.sids[-1] + 1)
+            out.append(sf)
+        return out
 
-    @property
-    def sitecol(self):
+    # not used right now
+    def reduce(self, factor=100):
         """
-        Read the site collection from .filename and cache it
+        Reduce the SourceFilter to a subset of sites
         """
-        if 'sitecol' in vars(self):
-            return self.__dict__['sitecol']
-        if self.filename is None:
-            return
-        elif not os.path.exists(self.filename):
-            raise FileNotFoundError('%s: shared_dir issue?' % self.filename)
-        with hdf5.File(self.filename, 'r') as h5:
-            self.__dict__['sitecol'] = sc = h5.get('sitecol')
-        return sc
+        idxs = numpy.arange(0, len(self.sitecol), factor)
+        sc = object.__new__(site.SiteCollection)
+        sc.array = self.sitecol[idxs]
+        sc.complete = self.sitecol.complete
+        return self.__class__(sc, self.integration_distance)
+
+    def get_enlarged_box(self, src, maxdist=None):
+        """
+        Get the enlarged bounding box of a source.
+
+        :param src: a source object
+        :param maxdist: a scalar maximum distance (or None)
+        :returns: a bounding box (min_lon, min_lat, max_lon, max_lat)
+        """
+        if maxdist is None:
+            maxdist = self.integration_distance(src.tectonic_region_type)
+        try:
+            bbox = get_bounding_box(src, maxdist)
+        except Exception as exc:
+            raise exc.__class__('source %s: %s' % (src.source_id, exc))
+        return (fix_lon(bbox[0]), bbox[1], fix_lon(bbox[2]), bbox[3])
 
     def get_rectangle(self, src):
         """
         :param src: a source object
         :returns: ((min_lon, min_lat), width, height), useful for plotting
         """
-        min_lon, min_lat, max_lon, max_lat = (
-            self.integration_distance.get_affected_box(src))
+        min_lon, min_lat, max_lon, max_lat = self.get_enlarged_box(src)
         return (min_lon, min_lat), (max_lon - min_lon) % 360, max_lat - min_lat
 
     def get_close_sites(self, source):
@@ -304,75 +316,82 @@ class SourceFilter(object):
         Returns the sites within the integration distance from the source,
         or None.
         """
-        source_sites = list(self([source]))
-        if source_sites:
-            return source_sites[0][1]
+        source_indices = list(self.filter([source]))
+        if source_indices:
+            return self.sitecol.filtered(source_indices[0][1])
 
-    def __call__(self, sources):
+    def split(self, sources):
         """
-        :yields: pairs (src, sites)
+        :yields: pairs (split, sites)
         """
-        if not self.integration_distance:  # do not filter
-            for src in sources:
-                yield src, self.sitecol
-            return
-        for src in self.filter(sources):
-            yield src, self.sitecol.filtered(src.indices)
+        for src, _indices in self.filter(sources):
+            for s in split_source(src):
+                sites = self.get_close_sites(s)
+                if sites is not None:
+                    yield s, sites
 
-    # used in the disaggregation calculator
-    def get_bounding_boxes(self, trt=None, mag=None):
+    # used in source and rupture prefiltering: it should not discard too much
+    def close_sids(self, src_or_rec, trt=None, maxdist=None):
         """
-        :param trt: a tectonic region type (used for the integration distance)
-        :param mag: a magnitude (used for the integration distance)
-        :returns: a list of bounding boxes, one per site
-        """
-        bbs = []
-        for site in self.sitecol:
-            bb = self.integration_distance.get_bounding_box(
-                site.location.longitude, site.location.latitude, trt, mag)
-            bbs.append(bb)
-        return bbs
-
-    def close_sids(self, rec, trt, mag):
-        """
-        :param rec:
-           a record with fields minlon, minlat, maxlon, maxlat
-        :param trt:
-           tectonic region type string
-        :param mag:
-           magnitude
+        :param src_or_rec: a source or a rupture record
+        :param trt: passed only if src_or_rec is a rupture record
         :returns:
-           the site indices within the bounding box enlarged by the integration
-           distance for the given TRT and magnitude
+           the site indices within the maximum_distance of the hypocenter,
+           plus the maximum size of the bounding box
         """
         if self.sitecol is None:
             return []
         elif not self.integration_distance:  # do not filter
             return self.sitecol.sids
-        if hasattr(rec, 'dtype'):
-            bbox = rec['minlon'], rec['minlat'], rec['maxlon'], rec['maxlat']
-        else:
-            bbox = rec  # assume it is a 4-tuple
-        maxdist = self.integration_distance(trt, mag)
-        a1 = min(maxdist * KM_TO_DEGREES, 90)
-        a2 = min(angular_distance(maxdist, bbox[1], bbox[3]), 180)
-        bb = bbox[0] - a2, bbox[1] - a1, bbox[2] + a2, bbox[3] + a1
-        return self.sitecol.within_bbox(bb)
+        if trt:  # rupture, called by GmfGetter.gen_computers
+            dlon = get_longitudinal_extent(
+                src_or_rec['minlon'], src_or_rec['maxlon']) / 2.
+            dlat = (src_or_rec['maxlat'] - src_or_rec['minlat']) / 2.
+            lon, lat, dep = src_or_rec['hypo']
+            dist = self.integration_distance(trt) + numpy.sqrt(
+                dlon**2 + dlat**2) / KM_TO_DEGREES
+            dist += 10  # added 10 km of buffer to guard against numeric errors
+            # the test most sensitive to the buffer effect is in oq-risk-tests,
+            # case_ucerf/job_eb.ini; without buffer, sites can be discarded
+            # even if within the maximum_distance
+            return self._close_sids(lon, lat, dep, dist)
+        else:  # source
+            trt = src_or_rec.tectonic_region_type
+            try:
+                bbox = self.get_enlarged_box(src_or_rec, maxdist)
+            except BBoxError:  # do not filter
+                return self.sitecol.sids
+            return self.sitecol.within_bbox(bbox)
+
+    def _close_sids(self, lon, lat, dep, dist):
+        if not hasattr(self, 'kdt'):
+            self.kdt = cKDTree(self.sitecol.xyz)
+        xyz = spherical_to_cartesian(lon, lat, dep)
+        sids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
+        sids.sort()
+        return sids
 
     def filter(self, sources):
         """
         :param sources: a sequence of sources
-        :yields: sources with .indices
+        :yields: sources with indices
         """
+        if self.sitecol is None:  # nofilter
+            for src in sources:
+                yield src, None
+            return
         for src in sources:
-            if hasattr(src, 'indices'):   # already filtered
-                yield src
-                continue
-            box = self.integration_distance.get_affected_box(src)
-            indices = self.sitecol.within_bbox(box)
-            if len(indices):
-                src.indices = indices
-                yield src
+            sids = self.close_sids(src)
+            if len(sids):
+                yield src, sids
+
+    def __getitem__(self, slc):
+        if slc.start is None and slc.stop is None:
+            return self
+        sitecol = object.__new__(self.sitecol.__class__)
+        sitecol.array = self.sitecol[slc]
+        sitecol.complete = self.sitecol.complete
+        return self.__class__(sitecol, self.integration_distance)
 
 
 nofilter = SourceFilter(None, {})

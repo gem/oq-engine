@@ -6,6 +6,9 @@
 OpenQuake for Advanced Users
 ============================
 
+Latest (master) PDF version:
+https://docs.openquake.org/oq-engine/advanced/OpenQuakeforAdvancedUsers.pdf
+
 Contents:
 
 .. toctree::
@@ -15,10 +18,20 @@ Contents:
    common-mistakes
    hazard
    risk
-   effective-realizations       
+   effective-realizations
+   sampling
+   rupture-sampling
    event-based-with-large-logic-tree
+   site-specific
    extract-api
+   pandas
    parametric-gmpes
-   parallelization
-   equivalent_distance_approximation
    multipoint
+   parallelization
+   special-features
+   asset-site-association
+   risk-features
+   developing
+   architecture
+   oq-commands
+   addition-is-non-associative

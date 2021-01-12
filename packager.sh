@@ -402,16 +402,16 @@ _devtest_innervm_run () {
                  export PYTHONPATH=\"\$PWD/oq-engine:$OPT_LIBS_PATH\"
                  cd oq-engine
 
-                 /opt/openquake/bin/pytest --doctest-module -v openquake/baselib
-                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-hmtk.xml -v openquake/hmtk
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-engine.xml -v openquake/engine
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-server.xml -v openquake/server
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-calculators.xml -v openquake/calculators
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-risklib.xml -v openquake/risklib
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-commonlib.xml -v openquake/commonlib
-                 /opt/openquake/bin/pytest --doctest-module --junitxml=xunit-commands.xml -v openquake/commands 
+                 /opt/openquake/bin/pytest --doctest-modules -v openquake/baselib
+                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-hmtk.xml -v openquake/hmtk
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-engine.xml -v openquake/engine
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-server.xml -v openquake/server
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-calculators.xml -v openquake/calculators
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-risklib.xml -v openquake/risklib
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-commonlib.xml -v openquake/commonlib
+                 /opt/openquake/bin/pytest --doctest-modules --junitxml=xunit-commands.xml -v openquake/commands
 
-                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest -n 4 --doctest-module -v openquake/hazardlib
+                 export MPLBACKEND=Agg; /opt/openquake/bin/pytest -n 4 --doctest-modules -v openquake/hazardlib
                  /opt/openquake/bin/python3 bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/" || true
@@ -452,10 +452,6 @@ _builddoc_innervm_run () {
 
     # install sources of this package
     git archive --prefix ${GEM_GIT_PACKAGE}/ HEAD | ssh "$lxc_ip" "tar xv"
-
-    ssh "$lxc_ip" "set -e ; sudo /opt/openquake/bin/pip install sphinx ; cd oq-engine; export PATH=/opt/openquake/bin:\$PATH ; export PYTHONPATH=\$PWD ; cd doc/sphinx ; MPLBACKEND=Agg make html"
-
-    scp -r "${lxc_ip}:oq-engine/doc/sphinx/build/html" "out_${BUILD_UBUVER}/" || true
 
     # TODO: version check
     trap ERR
@@ -560,7 +556,7 @@ _pkgtest_innervm_run () {
 
         sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
         # Switch to celery mode
-        sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/; s/multi_node = false/multi_node = true/;' /etc/openquake/openquake.cfg
+        sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/;' /etc/openquake/openquake.cfg
 
 export PYTHONPATH=\"$OPT_LIBS_PATH\"
 celery_wait() {
@@ -616,7 +612,6 @@ celery_wait $GEM_MAXLOOP
         ssh "$lxc_ip" "oq engine --make-html-report today
         oq engine --show-log -1
         oq reset --yes"
-        scp "${lxc_ip}:jobs-*.html" "out_${BUILD_UBUVER}/"
 
         # WebUI command check
         ssh "$lxc_ip" "webui_fail_msg=\"This command must be run by the proper user: see the documentation for details\"
@@ -822,7 +817,7 @@ devtest_run () {
             deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
         fi
         pushd "_jenkins_deps/$dep"
-        commit="$(git log --pretty='format:%h' -1)"
+        commit="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
         popd
         echo "dependency: $dep"
         echo "repo:       $repo"
@@ -929,7 +924,7 @@ builddoc_run () {
             deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur"
         fi
         pushd "_jenkins_deps/$dep"
-        commit="$(git log --pretty='format:%h' -1)"
+        commit="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
         popd
         echo "dependency: $dep"
         echo "repo:       $repo"
@@ -986,7 +981,7 @@ builddoc_run () {
 pkgtest_run () {
     local i e branch="$1" commit
 
-    commit="$(git log --pretty='format:%h' -1)"
+    commit="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
 
     if [ ! -d "out_${BUILD_UBUVER}" ]; then
         mkdir "out_${BUILD_UBUVER}"
@@ -1081,7 +1076,7 @@ EOF
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary"
                 cp ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.buildinfo \
                     "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/binary" || true
-                PKG_COMMIT="$(git log --pretty='format:%h' -1)"
+                PKG_COMMIT="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
                 egrep '_COMMIT=|_PKG=' _jenkins_deps_info \
                   | sed 's/\(^.*=[0-9a-f]\{7\}\).*/\1/g' \
                   > "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/${GEM_DEB_PACKAGE}_${PKG_COMMIT}_deps.txt"
@@ -1254,7 +1249,7 @@ pkg_suf="$(echo "$pkg_vers" | sed -n 's/^[0-9]\+\.[0-9]\+\.[0-9]\+-[^+]\+\(+.*\)
 # echo "pkg [$pkg_vers] [$pkg_maj] [$pkg_min] [$pkg_bfx] [$pkg_deb] [$pkg_suf]"
 
 if [ $BUILD_DEVEL -eq 1 ]; then
-    hash="$(git log --pretty='format:%h' -1)"
+    hash="$(git log --pretty='format:%H' -1 | cut -c 1-7)"
     mv debian/changelog debian/changelog.orig
     cp debian/control debian/control.orig
     for dep_item in $GEM_DEPENDS; do
