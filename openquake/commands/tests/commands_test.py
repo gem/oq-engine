@@ -26,29 +26,12 @@ import numpy
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
-from openquake.baselib import parallel
+from openquake.baselib import parallel, sap
 from openquake.baselib.datastore import read
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.engine.engine import run_jobs
-from openquake.commands.info import main as info
-from openquake.commands.tidy import main as tidy
-from openquake.commands.show import main as show
-from openquake.commands.show_attrs import main as show_attrs
-from openquake.commands.export import main as export
-from openquake.commands.extract import main as extract
-from openquake.commands.sample import main as sample
-from openquake.commands.reduce_sm import main as reduce_sm
-from openquake.commands.db import main as db
-from openquake.commands.to_shapefile import main as to_shapefile
-from openquake.commands.from_shapefile import main as from_shapefile
-from openquake.commands.zip import main as zip_cmd
-from openquake.commands.check_input import main as check_input
-from openquake.commands.prepare_site_model import main as prepare_site_model
-from openquake.commands.nrml_to import main as nrml_to, fiona
-from openquake.commands import run
-from openquake.commands.upgrade_nrml import main as upgrade_nrml
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
@@ -88,7 +71,7 @@ class InfoTestCase(unittest.TestCase):
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
         with Print.patch() as p:
-            info(path)
+            sap.runline(f'openquake.commands info {path}')
         self.assertIn('hazard_imtls', str(p))
 
     # poor man tests: checking that the flags produce a few characters
@@ -96,62 +79,62 @@ class InfoTestCase(unittest.TestCase):
 
     def test_calculators(self):
         with Print.patch() as p:
-            info('calculators')
+            sap.runline('openquake.commands info calculators')
         self.assertGreater(len(str(p)), 10)
 
     def test_gsims(self):
         with Print.patch() as p:
-            info('gsims')
+            sap.runline('openquake.commands info gsims')
         self.assertGreater(len(str(p)), 10)
 
     def test_imts(self):
         with Print.patch() as p:
-            info('imts')
+            sap.runline('openquake.commands info imts')
         self.assertGreaterEqual(len(str(p)), 18)
 
     def test_views(self):
         with Print.patch() as p:
-            info('views')
+            sap.runline('openquake.commands info views')
         self.assertGreater(len(str(p)), 10)
 
     def test_exports(self):
         with Print.patch() as p:
-            info('exports')
+            sap.runline('openquake.commands info exports')
         self.assertGreater(len(str(p)), 10)
 
     def test_extracts(self):
         with Print.patch() as p:
-            info('extracts')
+            sap.runline('openquake.commands info extracts')
         self.assertGreater(len(str(p)), 10)
 
     def test_parameters(self):
         with Print.patch() as p:
-            info('parameters')
+            sap.runline('openquake.commands info parameters')
         self.assertGreater(len(str(p)), 10)
 
     def test_mfds(self):
         with Print.patch() as p:
-            info('mfds')
+            sap.runline('openquake.commands info mfds')
         lines = str(p).split()
         self.assertGreaterEqual(len(lines), 5)
 
     def test_sources(self):
         with Print.patch() as p:
-            info('sources')
+            sap.runline('openquake.commands info sources')
         lines = str(p).split()
         self.assertGreaterEqual(len(lines), 9)
 
     def test_job_ini(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         with Print.patch() as p:
-            info(path)
+            sap.runline('openquake.commands info ' + path)
         self.assertIn('Classical Hazard QA Test, Case 9', str(p))
 
     def test_logictree(self):
         path = os.path.join(os.path.dirname(case_9.__file__),
                             'source_model_logic_tree.xml')
         with Print.patch() as p:
-            info(path)
+            sap.runline('openquake.commands info ' + path)
         self.assertEqual(str(p), """\
 ==================== ===========
 TRT                  pointSource
@@ -164,14 +147,14 @@ Total                1
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
-            info(path, True)
+            sap.runline('openquake.commands info --report ' + path)
         self.assertIn('report.rst', str(p))
 
     def test_report_ebr(self):
         path = os.path.join(os.path.dirname(case_16.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
-            info(path, True)
+            sap.runline('openquake.commands info -r ' + path)
         self.assertIn('report.rst', str(p))
 
 
@@ -191,7 +174,7 @@ class TidyTestCase(unittest.TestCase):
 </gmfCollection>
 </nrml>''', suffix='.xml')
         with Print.patch() as p:
-            tidy([fname])
+            sap.runline('openquake.commands tidy ' + fname)
         self.assertIn('Reformatted', str(p))
         self.assertEqual(open(fname).read(), '''\
 <?xml version="1.0" encoding="utf-8"?>
@@ -233,7 +216,7 @@ xmlns:gml="http://www.opengis.net/gml"
 </gmfCollection>
 </nrml>''', suffix='.xml')
         with Print.patch() as p:
-            tidy([fname])
+            sap.runline('openquake.commands tidy ' + fname)
         self.assertIn('Could not convert gmv->positivefloat: '
                       'float -0.012492 < 0, line 8', str(p))
 
@@ -246,8 +229,7 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
         with Print.patch() as cls.p:
-            calc = run._run([job_ini], 0, 'nojob', False,
-                            False, 'info', '', {})
+            calc = sap.runline(f'openquake.commands run {job_ini} -c 0')
         cls.calc_id = calc.datastore.calc_id
 
     def test_run_calc(self):
@@ -255,32 +237,34 @@ class RunShowExportTestCase(unittest.TestCase):
 
     def test_show_calc(self):
         with Print.patch() as p:
-            show('contents', self.calc_id)
+            sap.runline('openquake.commands show contents %d' % self.calc_id)
         self.assertIn('sitecol', str(p))
 
         with Print.patch() as p:
-            show('sitecol', self.calc_id)
+            sap.runline('openquake.commands show sitecol %d' % self.calc_id)
         self.assertIn('sids,lon,lat,depth,vs30,vs30measured', str(p))
 
         with Print.patch() as p:
-            show('slow_sources', self.calc_id)
+            sap.runline(f'openquake.commands show slow_sources {self.calc_id}')
         self.assertIn('source_id code calc_time num_sites', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
-            show_attrs('sitecol', self.calc_id)
+            sap.runline(
+                f'openquake.commands show_attrs sitecol {self.calc_id}')
         self.assertEqual('__pyclass__ openquake.hazardlib.site.SiteCollection',
                          str(p))
 
     def test_show_oqparam(self):
         with Print.patch() as p:
-            show('oqparam', self.calc_id)
+            sap.runline(f'openquake.commands show oqparam {self.calc_id}')
         self.assertIn('"inputs": {', str(p))
 
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            export('hcurves', self.calc_id, exports='csv', export_dir=tempdir)
+            sap.runline('openquake.commands export hcurves -e csv '
+                        f'--export-dir={tempdir}')
         fnames = os.listdir(tempdir)
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
@@ -288,7 +272,8 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_extract_sitecol(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            extract('sitecol', self.calc_id, extract_dir=tempdir)
+            sap.runline("openquake.commands extract sitecol "
+                        f"{self.calc_id} --extract-dir={tempdir}")
         fnames = os.listdir(tempdir)
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
@@ -302,7 +287,7 @@ class SampleSmTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'exposure_model.xml')
         shutil.copy(os.path.join(self.TESTDIR, 'exposure_model.xml'), dest)
         with Print.patch() as p:
-            sample(dest, 0.5)
+            sap.runline(f'openquake.commands sample {dest} 0.5')
         self.assertIn('Extracted 8 nodes out of 13', str(p))
         shutil.rmtree(tempdir)
 
@@ -311,7 +296,7 @@ class SampleSmTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'source_model.xml')
         shutil.copy(os.path.join(self.TESTDIR, 'source_model.xml'), tempdir)
         with Print.patch() as p:
-            sample(dest, 0.5)
+            sap.runline(f'openquake.commands sample {dest} 0.5')
         self.assertIn('Extracted 9 nodes out of 15', str(p))
         shutil.rmtree(tempdir)
 
@@ -321,7 +306,7 @@ class SampleSmTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'site_model.xml')
         shutil.copy(os.path.join(testdir, 'site_model.xml'), tempdir)
         with Print.patch() as p:
-            sample(dest, 0.5)
+            sap.runline(f'openquake.commands sample {dest} 0.5')
         self.assertIn('Extracted 2 nodes out of 3', str(p))
         shutil.rmtree(tempdir)
 
@@ -331,7 +316,7 @@ class SampleSmTestCase(unittest.TestCase):
         dest = os.path.join(tempdir, 'sites.csv')
         shutil.copy(os.path.join(testdir, 'sites.csv'), tempdir)
         with Print.patch() as p:
-            sample(dest, 0.5)
+            sap.runline(f'openquake.commands sample {dest} 0.5')
         self.assertIn('Extracted 50 lines out of 99', str(p))
         shutil.rmtree(tempdir)
 
@@ -354,7 +339,7 @@ class UpgradeNRMLTestCase(unittest.TestCase):
         </discreteVulnerabilitySet>
     </vulnerabilityModel>
 </nrml>''')
-        upgrade_nrml(tmpdir, False, False)
+        sap.runline(f'openquake.commands upgrade_nrml {tmpdir}')
         shutil.rmtree(tmpdir)
 
 
@@ -367,7 +352,7 @@ class ZipTestCase(unittest.TestCase):
         ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
-        zip_cmd(ini, xzip)
+        sap.runline(f'openquake.commands zip {ini} {xzip}')
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(['Wcrust_high_rhypo.hdf5',
                           'Wcrust_low_rhypo.hdf5',
@@ -384,7 +369,7 @@ class ZipTestCase(unittest.TestCase):
         ini = os.path.join(os.path.dirname(ebrisk.__file__), 'job_risk.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
-        zip_cmd(ini, xzip)
+        sap.runline(f'openquake.commands zip {ini} {xzip}')
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(['exposure_model.xml', 'gmf_scenario.csv',
                           'job_risk.ini', 'sites.csv', 'vulnerability.xml'],
@@ -396,7 +381,7 @@ class ZipTestCase(unittest.TestCase):
         ini = os.path.join(os.path.dirname(case_eb.__file__), 'job_eb.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
-        zip_cmd(ini, xzip)
+        sap.runline(f'openquake.commands zip {ini} {xzip}')
         names = sorted(zipfile.ZipFile(xzip).namelist())
         self.assertEqual(
             ['exposure.csv', 'exposure1.xml', 'gmpe_logic_tree.xml',
@@ -411,7 +396,7 @@ class ZipTestCase(unittest.TestCase):
         # zipping a directory containing a ssmLT.xml file
         dtemp = os.path.join(tempfile.mkdtemp(), 'inp')
         shutil.copytree(os.path.dirname(case_21.__file__), dtemp)
-        zip_cmd(dtemp)
+        sap.runline(f'openquake.commands zip {dtemp}')
         shutil.rmtree(dtemp)
 
 
@@ -428,14 +413,18 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         # test the conversion to shapefile and back for an invalid file
         smc = os.path.join(os.path.dirname(__file__),
                            "data", "source_model_complete.xml")
-        to_shapefile(smc, validate=False, output=self.out)
-        shpfiles = [os.path.join(self.OUTDIR, f)
-                    for f in os.listdir(self.OUTDIR)]
-        from_shapefile(shpfiles, validate=False, output=self.out)
+
+        sap.runline(
+            f'openquake.commands to_shapefile {smc} --output={self.out}')
+        shpfiles = ' '.join(os.path.join(self.OUTDIR, f)
+                            for f in os.listdir(self.OUTDIR))
+        sap.runline(
+            f'openquake.commands from_shapefile {shpfiles} -o{self.out}')
 
         # test invalid file
         with self.assertRaises(Exception) as ctx:
-            to_shapefile(smc, validate=True, output=self.out)
+            sap.runline(
+                f'openquake.commands to_shapefile -v {smc} -o{self.out}')
         self.assertIn('Edges points are not in the right order',
                       str(ctx.exception))
 
@@ -443,19 +432,21 @@ class SourceModelShapefileConverterTestCase(unittest.TestCase):
         # test the conversion to shapefile and back for a valid file NRML 0.4
         ssm = os.path.join(os.path.dirname(__file__),
                            "data", "sample_source_model.xml")
-        to_shapefile(ssm, validate=True, output=self.out)
-        shpfiles = [os.path.join(self.OUTDIR, f)
-                    for f in os.listdir(self.OUTDIR)]
-        from_shapefile(shpfiles, validate=True, output=self.out)
+        sap.runline(f'openquake.commands to_shapefile -v {ssm} -o{self.out}')
+        shpfiles = ' '.join(os.path.join(self.OUTDIR, f)
+                            for f in os.listdir(self.OUTDIR))
+        sap.runline(
+            f'openquake.commands from_shapefile -v {shpfiles} -o{self.out}')
 
     def test_roundtrip_valid_05(self):
         # test the conversion to shapefile and back for a valid file NRML 0.5
         ssm = os.path.join(os.path.dirname(__file__),
                            "data", "sample_source_model_05.xml")
-        to_shapefile(ssm, validate=True, output=self.out)
-        shpfiles = [os.path.join(self.OUTDIR, f)
-                    for f in os.listdir(self.OUTDIR)]
-        from_shapefile(shpfiles, validate=True, output=self.out)
+        sap.runline(f'openquake.commands to_shapefile -v {ssm} -o{self.out}')
+        shpfiles = ' '.join(os.path.join(self.OUTDIR, f)
+                            for f in os.listdir(self.OUTDIR))
+        sap.runline(
+            f'openquake.commands from_shapefile -v {shpfiles} -o{self.out}')
 
     def tearDown(self):
         # comment out the line below if you need to debug the test
@@ -467,9 +458,9 @@ class DbTestCase(unittest.TestCase):
         # the some db commands bypassing the dbserver
         with Print.patch(), mock.patch(
                 'openquake.commonlib.logs.dbcmd', manage.fakedbcmd):
-            db('db_version')
+            sap.runline('openquake.commands db db_version')
             try:
-                db('calc_info', (1,))
+                sap.runline('openquake.commands db calc_info 1')
             except dbapi.NotFound:  # happens on an empty db
                 pass
 
@@ -528,7 +519,8 @@ sensitivity_analysis = {
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)
         with Print.patch() as p:
-            export('ruptures', job_id, exports='csv', export_dir=tempdir)
+            sap.runline(f'openquake.commands export ruptures {job_id} -e csv'
+                        f' --export-dir={tempdir}')
         self.assertIn('Exported', str(p))
         shutil.rmtree(tempdir)
 
@@ -538,12 +530,12 @@ class CheckInputTestCase(unittest.TestCase):
         job_zip = os.path.join(list(test_data.__path__)[0],
                                'archive_err_1.zip')
         with self.assertRaises(ValueError):
-            check_input([job_zip])
+            sap.runline(f'openquake.commands check_input {job_zip}')
 
     def test_valid(self):
         job_ini = os.path.join(list(test_data.__path__)[0],
                                'event_based_hazard/job.ini')
-        check_input([job_ini])
+        sap.runline(f'openquake.commands check_input {job_ini}')
 
 
 class PrepareSiteModelTestCase(unittest.TestCase):
@@ -553,36 +545,27 @@ class PrepareSiteModelTestCase(unittest.TestCase):
         grid_spacing = 50
         exposure_xml = os.path.join(inputdir, 'exposure.xml')
         vs30_csv = os.path.join(inputdir, 'vs30.csv')
-        sitecol = prepare_site_model(
-            exposure_xml=[exposure_xml],
-            vs30_csv=[vs30_csv],
-            z1pt0=True, z2pt5=True, vs30measured=True,
-            grid_spacing=grid_spacing,
-            assoc_distance=5,
-            output=output)
+        sitecol = sap.runline('openquake.commands prepare_site_model '
+                              f'-123 {vs30_csv} -e {exposure_xml} '
+                              f'-g {grid_spacing} --assoc-distance=5 '
+                              f'-o {output}')
         sm = read_csv(output, {None: float, 'vs30measured': numpy.uint8})
         self.assertEqual(sm['vs30measured'].sum(), 0)
         self.assertEqual(len(sitecol), 84)  # 84 non-empty grid points
         self.assertEqual(len(sitecol), len(sm))
 
         # test no grid
-        sc = prepare_site_model(
-            exposure_xml=[exposure_xml], vs30_csv=[vs30_csv],
-            z1pt0=True, z2pt5=True,
-            grid_spacing=0, assoc_distance=5, output=output)
+        sc = sap.runline('openquake.commands prepare_site_model '
+                         f'{vs30_csv} -e {exposure_xml}')
         self.assertEqual(len(sc), 148)  # 148 sites within 5 km from the params
 
-        # test sites_csv == vs30_csv
-        sc = prepare_site_model(
-            vs30_csv=[vs30_csv], sites_csv=[vs30_csv],
-            z1pt0=True, z2pt5=True,
-            grid_spacing=0, assoc_distance=5, output=output)
+        # test sites_csv == vs30_csv and no grid
+        sc = sap.runline('openquake.commands prepare_site_model '
+                         f'{vs30_csv} -s{vs30_csv} -12 -a5 -o {output}')
 
         # test sites_csv == vs30_csv and grid spacing
-        sc = prepare_site_model(
-            vs30_csv=[vs30_csv], sites_csv=[vs30_csv],
-            z1pt0=True, z2pt5=True,
-            grid_spacing=0, assoc_distance=5, output=output)
+        sc = sap.runline('openquake.commands prepare_site_model '
+                         f'{vs30_csv} -s{vs30_csv} -12 -g10 -a5 -o {output}')
 
 
 class ReduceSourceModelTestCase(unittest.TestCase):
@@ -595,11 +578,10 @@ class ReduceSourceModelTestCase(unittest.TestCase):
         shutil.copytree(calc_dir, os.path.join(temp_dir, 'data'))
         job_ini = os.path.join(temp_dir, 'data', 'job.ini')
         with Print.patch():
-            calc = run._run([job_ini], 0, 'nojob', False, False,
-                            'info', '', {})
+            calc = sap.runline(f'openquake.commands run {job_ini}')
         calc_id = calc.datastore.calc_id
         with mock.patch('logging.info') as info:
-            reduce_sm(calc_id)
+            sap.runline(f'openquake.commands reduce_sm {calc_id}')
         self.assertIn('Removed %d/%d sources', info.call_args[0][0])
         shutil.rmtree(temp_dir)
 
@@ -609,7 +591,8 @@ class NRML2CSVTestCase(unittest.TestCase):
     def test_nrml_to_csv(self):
         temp_dir = tempfile.mkdtemp()
         with Print.patch() as p:
-            nrml_to('csv', [MIXED_SRC_MODEL], outdir=temp_dir, chatty=True)
+            sap.runline(f'openquake.commands nrml_to csv {MIXED_SRC_MODEL} '
+                        f'--outdir={temp_dir} --chatty')
         out = str(p)
         self.assertIn('3D MultiPolygon', out)
         self.assertIn('3D MultiLineString', out)
@@ -617,11 +600,14 @@ class NRML2CSVTestCase(unittest.TestCase):
         shutil.rmtree(temp_dir)
 
     def test_nrml_to_gpkg(self):
-        if not fiona:
+        try:
+            import fiona
+        except ImportError:
             raise unittest.SkipTest('fiona is missing')
         temp_dir = tempfile.mkdtemp()
         with Print.patch() as p:
-            nrml_to('gpkg', [MIXED_SRC_MODEL], outdir=temp_dir, chatty=True)
+            sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL} '
+                        f'--outdir={temp_dir} --chatty')
         out = str(p)
         self.assertIn('3D MultiPolygon', out)
         self.assertIn('3D MultiLineString', out)
