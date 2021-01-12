@@ -1,12 +1,10 @@
 import math
 
-from openquake.baselib.slots import with_slots
 from openquake.baselib.python3compat import round
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 
 
-@with_slots
 class TaperedGRMFD(BaseMFD):
     """
     Tapered Gutenberg-Richter MFD is defined as a typical Truncated
@@ -31,7 +29,6 @@ class TaperedGRMFD(BaseMFD):
     to a histogram. See :meth:`_get_min_mag_and_num_bins`.
     """
 
-    _slots_ = 'min_mag max_mag corner_mag bin_width a_val b_val'.split()
     MODIFICATIONS = set(())
 
     def __init__(self, min_mag: float, max_mag: float, corner_mag: float,
