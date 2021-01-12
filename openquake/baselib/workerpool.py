@@ -105,11 +105,11 @@ class WorkerMaster(object):
             if self.status(host)[0][1] == 'running':
                 print('%s:%s already running' % (host, self.ctrl_port))
                 continue
-            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            ctrl_url = 'tcp://%s:%s' % (0.0.0.0, self.ctrl_port)
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
-                args = ['ssh', host, self.remote_python]
+                args = ['ssh -f -T', host, self.remote_python]
             args += ['-m', 'openquake.baselib.workerpool', ctrl_url,
                      '-n', cores]
             if host != '127.0.0.1':
