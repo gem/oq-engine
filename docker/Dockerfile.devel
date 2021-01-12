@@ -15,7 +15,7 @@
 FROM python:3.8-slim AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
-RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev
+RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh
 ARG oq_branch=master
 # Setup the virtualenv
 RUN python -m venv /opt/openquake
@@ -29,7 +29,7 @@ FROM python:3.8-slim AS build-image
 COPY --from=compile-image /opt/ /opt/
 ENV PATH="/opt/openquake/bin:$PATH"
 ENV LANG en_US.UTF-8
-RUN apt-get update &&  apt-get install -y --no-install-recommends git && useradd -m -u 1000 -s /bin/bash openquake 
+RUN apt-get update &&  apt-get install -y --no-install-recommends git ssh sudo && useradd -m -u 1000 -s /bin/bash openquake 
 USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}

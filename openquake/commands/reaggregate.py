@@ -17,16 +17,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import getpass
 import logging
-from openquake.baselib import sap, parallel
+from openquake.baselib import parallel
 from openquake.commonlib import logs, util
 from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.engine import engine
 
 
-@sap.Script
-def reaggregate(calc_id, aggregate_by):
-    """Re-run the postprocessing after an event based risk calculation"""
+def main(calc_id: int, aggregate_by):
+    """
+    Re-run the postprocessing after an event based risk calculation
+    """
     parent = util.read(calc_id)
     oqp = parent['oqparam']
     aggby = aggregate_by.split(',')
@@ -34,21 +36,27 @@ def reaggregate(calc_id, aggregate_by):
         if tagname not in oqp.aggregate_by:
             raise ValueError('%r not in %s' % (tagname, oqp.aggregate_by))
     job_id = logs.init('job', level=logging.INFO)
+    dic = dict(
+        calculation_mode='reaggregate',
+        description=oqp.description + '[aggregate_by=%s]' % aggregate_by,
+        user_name=getpass.getuser(), is_running=1, status='executing',
+        pid=os.getpid(), hazard_calculation_id=job_id)
+    logs.dbcmd('update_job', job_id, dic)
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     with logs.handle(job_id, logging.INFO):
-        oqp.hazard_calculation_id = calc_id
+        oqp.hazard_calculation_id = parent.calc_id
         parallel.Starmap.init()
         prc = PostRiskCalculator(oqp, job_id)
         try:
             prc.run(aggregate_by=aggby)
             engine.expose_outputs(prc.datastore)
+            logs.dbcmd('finish', job_id, 'complete')
+        except Exception:
+            logs.dbcmd('finish', job_id, 'failed')
         finally:
             parallel.Starmap.shutdown()
 
 
-reaggregate.arg('calc_id', 'ID of the risk calculation', type=int)
-reaggregate.arg('aggregate_by', 'comma-separated list of tag names')
-
-if __name__ == '__main__':
-    reaggregate.callfunc()
+main.calc_id = 'ID of the risk calculation'
+main.aggregate_by = 'comma-separated list of tag names'

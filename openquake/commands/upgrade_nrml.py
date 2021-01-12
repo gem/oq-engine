@@ -20,7 +20,6 @@ import shutil
 import operator
 from xml.etree.ElementTree import iterparse
 
-from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib.nrml import NRML05
@@ -113,8 +112,7 @@ def upgrade_file(path, multipoint):
 # NB: this works only for migrations from NRML version 0.4 to 0.5
 # we will implement a more general solution when we will need to pass
 # to version 0.6
-@sap.Script
-def upgrade_nrml(directory, dry_run, multipoint):
+def main(directory, dry_run=False, multipoint=False):
     """
     Upgrade all the NRML files contained in the given directory to the latest
     NRML version. Works by walking all subdirectories.
@@ -152,6 +150,6 @@ def upgrade_nrml(directory, dry_run, multipoint):
                         print('Not upgrading', path)
 
 
-upgrade_nrml.arg('directory', 'directory to consider')
-upgrade_nrml.flg('dry_run', 'test the upgrade without replacing the files')
-upgrade_nrml.flg('multipoint', 'replace PointSources with MultiPointSources')
+main.directory = 'directory to consider'
+main.dry_run = 'test the upgrade without replacing the files'
+main.multipoint = 'replace PointSources with MultiPointSources'

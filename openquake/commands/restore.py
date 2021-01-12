@@ -24,13 +24,11 @@ import os.path
 import zipfile
 import sqlite3
 import requests
-from openquake.baselib import sap
 from openquake.baselib.general import safeprint
 from openquake.server.dbapi import Db
 
 
-@sap.Script
-def restore(archive, oqdata):
+def main(archive, oqdata):
     """
     Build a new oqdata directory from the data contained in the zip archive
     """
@@ -68,5 +66,5 @@ def restore(archive, oqdata):
               % (n, oqdata, dt))
 
 
-restore.arg('archive', 'path to a zip file')
-restore.arg('oqdata', 'path to an oqdata directory')
+main.archive = 'path to a zip file'
+main.oqdata = 'path to an oqdata directory'

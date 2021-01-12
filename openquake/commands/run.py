@@ -22,7 +22,7 @@ import os.path
 import cProfile
 import pstats
 
-from openquake.baselib import performance, general, sap, datastore, parallel
+from openquake.baselib import performance, general, datastore, parallel
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators import base, views
@@ -135,10 +135,17 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
     return calc
 
 
-@sap.Script
-def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
-        exports='', loglevel='info', calc_id='nojob', pdb=None,
-        reuse_input=None):
+def main(job_ini,
+         pdb=False,
+         reuse_input=False,
+         *,
+         slowest: int = None,
+         hc: int = None,
+         param='',
+         concurrent_tasks: int = None,
+         exports: valid.export_formats = '',
+         loglevel='info',
+         calc_id='nojob'):
     """
     Run a calculation bypassing the database layer
     """
@@ -166,17 +173,15 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
         parallel.Starmap.shutdown()
 
 
-run.arg('job_ini', 'calculation configuration file '
-        '(or files, space-separated)', nargs='+')
-run.opt('slowest', 'profile and show the slowest operations', type=int)
-run.opt('hc', 'previous calculation ID', type=int)
-run.opt('param', 'override parameter with the syntax NAME=VALUE,...')
-run.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
-        type=int)
-run.opt('exports', 'export formats as a comma-separated string',
-        type=valid.export_formats)
-run.opt('loglevel', 'logging level',
-        choices='debug info warn error critical'.split())
-run.opt('calc_id', 'calculation ID (if "nojob" infer it)')
-run.flg('pdb', 'enable post mortem debugging', '-d')
-run.flg('reuse_input', 'reuse source model and exposure')
+main.job_ini = dict(help='calculation configuration file '
+                    '(or files, space-separated)', nargs='+')
+main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
+main.reuse_input = dict(help='reuse source model and exposure')
+main.slowest = dict(help='profile and show the slowest operations')
+main.hc = dict(help='previous calculation ID')
+main.param = dict(help='override parameter with the syntax NAME=VALUE,...')
+main.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
+main.exports = dict(help='export formats as a comma-separated string')
+main.loglevel = dict(help='logging level',
+                     choices='debug info warn error critical'.split())
+main.calc_id = dict(help='calculation ID (if "nojob" infer it)')

@@ -15,25 +15,30 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
 import sys
 import getpass
 from pprint import pprint
-from openquake.baselib import sap, config
-from openquake.commonlib import logs
+from openquake.baselib import config, workerpool as w
 
 ro_commands = ('status', 'inspect')
+oqdist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
 
 
-@sap.Script
-def workers(cmd):
+def main(cmd):
     """
     start/stop/restart the workers, or return their status
     """
     if (cmd not in ro_commands and config.dbserver.multi_user and
             getpass.getuser() not in 'openquake michele'):
         sys.exit('oq workers only works in single user mode')
-    pprint(logs.dbcmd('zmq_' + cmd))
+    if oqdist == 'zmq':
+        zmaster = w.WorkerMaster(**config.zworkers)
+        pprint(getattr(zmaster, cmd)())
+    else:
+        print('Nothing to do: oq_distribute=%s' % oqdist)
 
 
-workers.arg('cmd', 'command',
-            choices='start stop status restart inspect wait'.split())
+main.cmd = dict(help='command',
+                choices='start stop status restart inspect wait'.split())

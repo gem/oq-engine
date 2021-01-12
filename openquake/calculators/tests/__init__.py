@@ -133,7 +133,8 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc = self.get_calc(testfile, inis[0], **kw)
         self.edir = tempfile.mkdtemp()
         with self.calc._monitor:
-            result = self.calc.run(export_dir=self.edir)
+            result = self.calc.run(export_dir=self.edir,
+                                   exports=kw.get('exports', ''))
         self.calc.datastore.close()
         duration = {inis[0]: self.calc._monitor.duration}
         if len(inis) == 2:
@@ -141,7 +142,8 @@ class CalculatorTestCase(unittest.TestCase):
             calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
             with calc._monitor:
-                exported = calc.run(export_dir=self.edir)
+                exported = calc.run(export_dir=self.edir,
+                                    exports=kw.get('exports', ''))
                 result.update(exported)
             duration[inis[1]] = calc._monitor.duration
             self.calc = calc

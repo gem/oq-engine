@@ -550,24 +550,22 @@ class ClassicalCalculator(base.HazardCalculator):
 
         :param acc: ignored
         :param pmap_by_kind: a dictionary of ProbabilityMaps
-
-        kind can be ('hcurves', 'mean'), ('hmaps', 'mean'),  ...
         """
-        with self.monitor('saving statistics'):
-            for kind in pmap_by_kind:  # i.e. kind == 'hcurves-stats'
+        with self.monitor('collecting hazard'):
+            for kind in pmap_by_kind:  # hmaps-XXX, hcurves-XXX
                 pmaps = pmap_by_kind[kind]
-                if kind in ('hmaps-rlzs', 'hmaps-stats'):
-                    # pmaps is a list of R pmaps
+                if kind in self.hazard:
+                    array = self.hazard[kind]
+                else:
                     dset = self.datastore.getitem(kind)
-                    for r, pmap in enumerate(pmaps):
-                        for s in pmap:
-                            dset[s, r] = pmap[s].array  # shape (M, P)
-                elif kind in ('hcurves-rlzs', 'hcurves-stats'):
-                    dset = self.datastore.getitem(kind)
-                    for r, pmap in enumerate(pmaps):
-                        for s in pmap:
-                            dset[s, r] = pmap[s].array.reshape(self.M, self.L1)
-            self.datastore.flush()
+                    array = self.hazard[kind] = numpy.zeros(
+                        dset.shape, dset.dtype)
+                for r, pmap in enumerate(pmaps):
+                    for s in pmap:
+                        if kind.startswith('hmaps'):
+                            array[s, r] = pmap[s].array  # shape (M, P)
+                        else:
+                            array[s, r] = pmap[s].array.reshape(-1, self.L1)
 
     def post_execute(self, pmap_by_key):
         """
@@ -665,9 +663,13 @@ class ClassicalCalculator(base.HazardCalculator):
             dist = None  # parallelize as usual
         if oq.hazard_calculation_id is None:  # essential before Starmap
             self.datastore.swmr_on()
+        self.hazard = {}  # kind -> array
         parallel.Starmap(
             build_hazard, allargs, distribute=dist, h5=self.datastore.hdf5
         ).reduce(self.save_hazard)
+        for kind in sorted(self.hazard):
+            logging.info('Saving %s', kind)
+            self.datastore[kind][:] = self.hazard.pop(kind)
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
             dur = task_info.loc[b'classical'].duration

@@ -114,7 +114,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         ltypes = self.crmodel.loss_types
 
         # loss curves stats are generated always
-        stats = encode(list(self.oqparam.hazard_stats()))
+        stats = list(self.oqparam.hazard_stats())
         stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
         avg_losses = numpy.zeros((self.A, self.S, self.L), F32)
         for l, a, losses, statpoes, statloss in result['stat_curves']:
@@ -124,7 +124,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 base.set_array(stat_curves_lt['poes'][a, s], statpoes[s])
                 base.set_array(stat_curves_lt['losses'][a, s], losses)
         self.datastore['avg_losses-stats'] = avg_losses
-        self.datastore.set_attrs('avg_losses-stats', stat=stats)
+        self.datastore.set_shape_descr(
+            'avg_losses-stats', asset_id=self.assetcol['id'],
+            stat=stats, loss_type=self.oqparam.loss_names)
         self.datastore['loss_curves-stats'] = stat_curves
         self.datastore.set_attrs('loss_curves-stats', stat=stats)
 
@@ -137,4 +139,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
                 base.set_array(lc['losses'], losses)
                 base.set_array(lc['poes'], poes)
             self.datastore['avg_losses-rlzs'] = avg_losses
+            self.datastore.set_shape_descr(
+                'avg_losses-rlzs', asset_id=self.assetcol['id'],
+                rlz=numpy.arange(self.R), loss_type=self.oqparam.loss_names)
             self.datastore['loss_curves-rlzs'] = loss_curves

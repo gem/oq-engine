@@ -15,13 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.baselib import sap
 from openquake.hazardlib import nrml
 from openquake.commonlib import writers
 
 
-@sap.Script
-def tidy(fnames):
+def main(fnames):
     """
     Reformat a NRML file in a canonical form. That also means reducing the
     precision of the floats to a standard value. If the file is invalid,
@@ -40,4 +38,5 @@ def tidy(fnames):
             nrml.write(node.nodes, f, writers.FIVEDIGITS, xmlns=node['xmlns'])
         print('Reformatted %s, original left in %s.bak' % (fname, fname))
 
-tidy.arg('fnames', 'NRML file name', nargs='+')
+
+main.fnames = dict(help='NRML file name', nargs='+')

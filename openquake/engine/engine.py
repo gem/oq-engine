@@ -162,9 +162,10 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if 'avg_losses-stats' in dstore or (
-            'avg_losses-rlzs' in dstore and len(rlzs)):
-        dskeys.add('avg_losses-stats')
+    if len(rlzs) > 1 and not oq.individual_curves:
+        for out in ['avg_losses-rlzs', 'agg_losses-rlzs', 'agg_curves-rlzs']:
+            if out in dskeys:
+                dskeys.remove(out)
     if 'curves-rlzs' in dstore and len(rlzs) == 1:
         dskeys.add('loss_curves-rlzs')
     if 'curves-stats' in dstore and len(rlzs) > 1:
@@ -172,12 +173,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
-    if 'all_loss_ratios' in dskeys:
-        dskeys.remove('all_loss_ratios')  # export only specific IDs
     if 'ruptures' in dskeys and 'scenario' in calcmode:
         exportable.remove('ruptures')  # do not export, as requested by Vitor
-    if 'rup_loss_table' in dskeys:  # keep it hidden for the moment
-        dskeys.remove('rup_loss_table')
     if 'hmaps' in dskeys and not oq.hazard_maps:
         dskeys.remove('hmaps')  # do not export the hazard maps
     if logs.dbcmd('get_job', dstore.calc_id) is None:
@@ -188,11 +185,11 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     keysize = []
     for key in sorted(dskeys & exportable):
         try:
-            size_mb = dstore.get_attr(key, 'nbytes') / MB
+            size_mb = dstore.getsize(key) / MB
         except (KeyError, AttributeError):
             size_mb = None
         keysize.append((key, size_mb))
-    ds_size = os.path.getsize(dstore.filename) / MB
+    ds_size = dstore.getsize() / MB
     logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
 
 
@@ -331,6 +328,9 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
             raise
         finally:
             parallel.Starmap.shutdown()
+    # sanity check to make sure that the logging on file is working
+    if log_file and log_file != os.devnull and os.path.getsize(log_file) == 0:
+        logging.warning('The log file %s is empty!?' % log_file)
     return calc
 
 
@@ -402,6 +402,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         hc_id = None
     for job in jobs:
         job_id = job['_job_id']
+        job['hazard_calculation_id'] = hc_id
         with logs.handle(job_id, log_level, log_file):
             oqparam = readinput.get_oqparam(job)
         dic = dict(calculation_mode=oqparam.calculation_mode,

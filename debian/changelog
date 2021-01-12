@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Added a command `oq plot avg_gmf?imt=IMT`
+  * Internal: stored `avg_gmf` as a DataFrame
+  * Honored the `individual_curves` parameter in avg_losses, agg_losses and
+    and agg_curves (i.e. by default only expose the statistical results)
+  * Refactored the `oq commands` and removed the redundant `oq help` since
+    there is `oq --help` instead
+  * Support for input URLs associated to an input archive
   * Introduced `deformation_component` parameter in the secondary perils
   * Optimized the storage of the risk model with a speedup of 60x
     for a calculation with ~50,000 fragility functions (2 minutes->2seconds)

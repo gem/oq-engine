@@ -20,13 +20,12 @@
 import json
 import logging
 import requests
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.commonlib import oqzip
 from openquake.calculators.extract import WebAPIError
 
 
-@sap.Script
-def postzip(zipfile):
+def main(zipfile):
     """Post a zipfile to the WebUI"""
     sess = requests.Session()
     if config.webapi.username:
@@ -46,7 +45,4 @@ def postzip(zipfile):
     print(json.loads(resp.text))
 
 
-postzip.arg('zipfile', 'archive with the files of the computation')
-
-if __name__ == '__main__':
-    postzip.callfunc()
+main.zipfile = 'archive with the files of the computation'

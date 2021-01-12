@@ -166,6 +166,15 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving ruptures and events'):
             imp.import_rups(self.datastore.getitem('ruptures')[()])
 
+    def save_avg_gmf(self, gmf_df):
+        """
+        Compute and save the GMF averaged on the events
+        """
+        for sid, df in gmf_df.groupby(gmf_df.sid):
+            weights = self.weights[self.rlzs[df.eid.to_numpy()]]
+            for col in self.avg_gmf:
+                self.avg_gmf[col][sid] += df[col] @ weights
+
     def agg_dicts(self, acc, result):
         """
         :param acc: accumulator dictionary
@@ -176,22 +185,23 @@ class EventBasedCalculator(base.HazardCalculator):
         primary = self.oqparam.get_primary_imtls()
         sec_imts = self.oqparam.get_sec_imts()
         with sav_mon:
-            data = result.pop('gmfdata')
-            if len(data):
+            df = result.pop('gmfdata')
+            if len(df):
                 times = result.pop('times')
                 rupids = list(times['rup_id'])
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
-                hdf5.extend(self.datastore['gmf_data/sid'], data['sid'])
-                hdf5.extend(self.datastore['gmf_data/eid'], data['eid'])
+                hdf5.extend(self.datastore['gmf_data/sid'], df.sid.to_numpy())
+                hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
+                self.save_avg_gmf(df)
                 for m in range(len(primary)):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
-                                data[f'gmv_{m}'])
+                                df[f'gmv_{m}'])
                 for sec_imt in sec_imts:
                     hdf5.extend(self.datastore[f'gmf_data/{sec_imt}'],
-                                data[sec_imt])
+                                df[sec_imt])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
-                self.offset += len(data)
+                self.offset += len(df)
         if self.offset >= TWO32:
             raise RuntimeError(
                 'The gmf_data table has more than %d rows' % TWO32)
@@ -310,10 +320,14 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.srcfilter)
+        self.weights = self.datastore['weights'][:]
+        self.rlzs = self.datastore['events']['rlz_id']
+        self.avg_gmf = {imt: numpy.zeros(self.N, F32) for imt in oq.all_imts()}
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in self.datastore:
             return acc
         if oq.ground_motion_fields:
+            self.datastore.create_dframe('avg_gmf', self.avg_gmf.items())
             eids = self.datastore['gmf_data/eid'][:]
             rel_events = numpy.unique(eids)
             e = len(rel_events)

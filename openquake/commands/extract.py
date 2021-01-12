@@ -16,14 +16,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-from openquake.baselib import performance, sap, hdf5
+from openquake.baselib import performance, hdf5
 from openquake.commonlib import logs
 from openquake.calculators.extract import Extractor, WebExtractor
 
 
 # `oq extract` is tested in the demos
-@sap.Script
-def extract(what, calc_id=-1, webapi=False, local=False, extract_dir='.'):
+def main(what,
+         calc_id: int = -1,
+         webapi=False,
+         local=False,
+         *,
+         extract_dir='.'):
     """
     Extract an output from the datastore and save it into an .hdf5 file.
     By default uses the WebAPI, otherwise the extraction is done locally.
@@ -50,7 +54,8 @@ def extract(what, calc_id=-1, webapi=False, local=False, extract_dir='.'):
         print(mon)
 
 
-extract.arg('what', 'string specifying what to export')
-extract.arg('calc_id', 'number of the calculation', type=int)
-extract.flg('webapi', 'if passed, use the (possibly remote) WebAPI')
-extract.flg('local', 'if passed, use the local WebAPI')
+main.what = 'string specifying what to extract'
+main.calc_id = 'number of the calculation'
+main.webapi = 'if passed, use the (possibly remote) WebAPI'
+main.local = 'if passed, use the local WebAPI'
+main.extract_dir = 'directory where to extract'

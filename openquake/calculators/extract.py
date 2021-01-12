@@ -821,10 +821,9 @@ def extract_losses_by_asset(dstore, what):
             data = util.compose_arrays(assets, losses)
             yield 'rlz-%03d' % rlz.ordinal, data
     elif 'avg_losses-stats' in dstore:
-        avg_losses = dstore['avg_losses-stats'][()]
-        stats = list(dstore['oqparam'].hazard_stats())
-        for s, stat in enumerate(stats):
-            losses = cast(avg_losses[:, s], loss_dt)
+        aw = hdf5.ArrayWrapper.from_(dstore['avg_losses-stats'])
+        for s, stat in enumerate(aw.stat):
+            losses = cast(aw[:, s], loss_dt)
             data = util.compose_arrays(assets, losses)
             yield stat, data
     elif 'avg_losses-rlzs' in dstore:  # there is only one realization
@@ -866,6 +865,18 @@ def extract_gmf_npz(dstore, what):
     else:
         gmfa = _gmf(df, n, oq.imtls)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
+
+
+@extract.add('avg_gmf')
+def extract_avg_gmf(dstore, what):
+    qdict = parse(what)
+    [imt] = qdict['imt']
+    sitecol = dstore['sitecol']
+    avg_gmf = dstore.read_df('avg_gmf')
+    yield imt, avg_gmf[imt].to_numpy()[sitecol.sids]
+    yield 'sids', sitecol.sids
+    yield 'lons', sitecol.lons
+    yield 'lats', sitecol.lats
 
 
 @extract.add('num_events')

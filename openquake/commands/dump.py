@@ -20,7 +20,6 @@ import shutil
 import sqlite3
 import os.path
 import tempfile
-from openquake.baselib import sap
 from openquake.baselib.general import safeprint, zipfiles
 from openquake.server.dbserver import db
 
@@ -38,15 +37,14 @@ def smart_save(dbpath, archive, calc_id):
             conn.execute('DELETE FROM job WHERE status != "complete"')
             if calc_id:
                 conn.execute('DELETE FROM job WHERE id != %d' % calc_id)
-    except:
+    except Exception:
         safeprint('Please check the copy of the db in %s' % newdb)
         raise
     zipfiles([newdb], archive, 'a', safeprint)
     shutil.rmtree(tmpdir)
 
 
-@sap.Script
-def dump(archive, calc_id=0, user=None):
+def main(archive, calc_id: int = 0, *, user=None):
     """
     Dump the openquake database and all the complete calculations into a zip
     file. In a multiuser installation must be run as administrator.
@@ -77,7 +75,6 @@ def dump(archive, calc_id=0, user=None):
               % (len(fnames), archive, dt))
 
 
-dump.arg('archive', 'path to the zip file where to dump the calculations')
-dump.arg('calc_id', 'calculation ID; if missing, dump all calculations',
-         type=int)
-dump.opt('user', 'if missing, dump all calculations')
+main.archive = 'path to the zip file where to dump the calculations'
+main.calc_id = 'calculation ID; if missing, dump all calculations'
+main.user = 'if missing, dump all calculations'
