@@ -45,7 +45,7 @@ def main(calc_id: int, aggregate_by):
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     with logs.handle(job_id, logging.INFO):
-        oqp.hazard_calculation_id = calc_id
+        oqp.hazard_calculation_id = parent.calc_id
         parallel.Starmap.init()
         prc = PostRiskCalculator(oqp, job_id)
         try:
