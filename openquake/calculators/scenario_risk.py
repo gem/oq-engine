@@ -194,8 +194,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
-            logging.warning('Due to numeric errors the agg_losses are not the '
-                            'sum of the avg_losses:\n%s != %s\nsee %s',
+            logging.warning('Due to rounding errors inherent in floating-point arithmetic,'
+                            'agg_losses ≢ Σ(avg_losses):\n%s != %s\nsee %s',
                             agglosses, sumlosses, url)
 
         return  # temporarily disabled
