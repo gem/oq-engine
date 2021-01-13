@@ -19,9 +19,10 @@
 import os.path
 import logging
 import numpy
+import psutil
 
 from openquake.baselib import hdf5, parallel
-from openquake.baselib.general import AccumDict, copyobj
+from openquake.baselib.general import AccumDict, copyobj, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -170,14 +171,24 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Compute and save the GMF averaged on the events
 
-        :returns: the events
+        :returns: the relevant events
         """
+        size = self.datastore.getsize('gmf_data')
+        logging.info(f'Stored {humansize(size)} of GMFs')
+        avail = psutil.virtual_memory().available
+        if avail < size:
+            logging.warning(
+                f'There is not enough free RAM ({humansize(avail)}) to read '
+                f'the GMFs, not computing avg_gmf')
+            return numpy.unique(self.datastore['gmf_data/eid'][:])
+
+        logging.info('Computing avg_gmf')
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         for sid, df in gmf_df.groupby(gmf_df.index):
             weights = self.weights[self.rlzs[df.eid.to_numpy()]]
             for col in avg_gmf:
                 avg_gmf[col][sid] += df[col] @ weights
-        return gmf_df.index.to_numpy()
+        return gmf_df.eid.unique()
 
     def agg_dicts(self, acc, result):
         """
@@ -332,9 +343,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.rlzs = self.datastore['events']['rlz_id']
                 avg_gmf = {imt: numpy.zeros(self.N, F32)
                            for imt in oq.all_imts()}
-                eids = self.save_avg_gmf(avg_gmf)
+                rel_events = self.save_avg_gmf(avg_gmf)
                 self.datastore.create_dframe('avg_gmf', avg_gmf.items())
-            rel_events = numpy.unique(eids)
             e = len(rel_events)
             if e == 0:
                 raise RuntimeError(
