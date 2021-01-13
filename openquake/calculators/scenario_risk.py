@@ -196,7 +196,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                    'addition-is-non-associative.html')
             logging.warning(
                 'Due to rounding errors inherent in floating-point arithmetic,'
-                ' agg_losses ≢ Σ(avg_losses):\n%s != %s\nsee %s',
+                ' agg_losses != sum(avg_losses):\n%s != %s\nsee %s',
                 agglosses, sumlosses, url)
         try:
             self.check_losses(oq)
