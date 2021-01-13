@@ -194,11 +194,11 @@ class NonParametricSeismicSource(BaseSeismicSource):
             for surf in surfs:
                 lons.extend(surf.mesh.lons.flat)
                 lats.extend(surf.mesh.lats.flat)
-        points = numpy.zeros((len(lons), 2), F32)
-        points[:, 0] = numpy.round(lons, 5)
-        points[:, 1] = numpy.round(lats, 5)
-        points = numpy.unique(points, axis=0)
-        mesh = Mesh(points[:, 0], points[:, 1])
+        points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
+        points['lon'] = numpy.round(lons, 5)
+        points['lat'] = numpy.round(lats, 5)
+        points = numpy.unique(points)
+        mesh = Mesh(points['lon'], points['lat'])
         return mesh.get_convex_hull()
 
     def wkt(self):
