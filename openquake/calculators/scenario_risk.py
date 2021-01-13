@@ -171,14 +171,23 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         if oq.investigation_time is None:  # scenario, compute agg_losses
             alt['rlz_id'] = self.rlzs[alt.event_id.to_numpy()]
-            dset = self.datastore.create_dset(
-                'agg_losses-rlzs', F32, (K, self.R, L))
+            agglosses = numpy.zeros((K, self.R, L), F32)
             for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
-                agglosses = numpy.array(
-                    [df[ln].sum() for ln in oq.loss_names])
-                dset[agg_id, rlz_id] = agglosses * self.avg_ratio[rlz_id]
+                agglosses[agg_id, rlz_id] = numpy.array(
+                    [df[ln].sum() for ln in oq.loss_names]
+                ) * self.avg_ratio[rlz_id]
+            self.datastore['agg_losses-rlzs'] = agglosses
             set_rlzs_stats(self.datastore, 'agg_losses',
                            agg_id=K, loss_types=oq.loss_names, units=units)
         else:  # event_based_risk, run post_risk
             prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
             prc.run(exports='')
+
+        # sanity check on the agg_losses
+        sumlosses = self.avglosses.sum(axis=0)
+        if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
+            url = ('https://docs.openquake.org/oq-engine/advanced/'
+                   'addition-is-non-associative.html')
+            logging.warning('Due to numeric errors the agg_losses are not the '
+                            'sum of the avg_losses:\n%s != %s\nsee %s',
+                            agglosses, sumlosses, url)
