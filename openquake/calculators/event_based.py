@@ -166,14 +166,18 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving ruptures and events'):
             imp.import_rups(self.datastore.getitem('ruptures')[()])
 
-    def save_avg_gmf(self, gmf_df):
+    def save_avg_gmf(self, avg_gmf):
         """
         Compute and save the GMF averaged on the events
+
+        :returns: the events
         """
-        for sid, df in gmf_df.groupby(gmf_df.sid):
+        gmf_df = self.datastore.read_df('gmf_data', 'sid')
+        for sid, df in gmf_df.groupby(gmf_df.index):
             weights = self.weights[self.rlzs[df.eid.to_numpy()]]
-            for col in self.avg_gmf:
-                self.avg_gmf[col][sid] += df[col] @ weights
+            for col in avg_gmf:
+                avg_gmf[col][sid] += df[col] @ weights
+        return gmf_df.index.to_numpy()
 
     def agg_dicts(self, acc, result):
         """
@@ -192,7 +196,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
                 hdf5.extend(self.datastore['gmf_data/sid'], df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
-                self.save_avg_gmf(df)
                 for m in range(len(primary)):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
                                 df[f'gmv_{m}'])
@@ -320,15 +323,17 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.srcfilter)
-        self.weights = self.datastore['weights'][:]
-        self.rlzs = self.datastore['events']['rlz_id']
-        self.avg_gmf = {imt: numpy.zeros(self.N, F32) for imt in oq.all_imts()}
         acc = smap.reduce(self.agg_dicts, self.acc0())
         if 'gmf_data' not in self.datastore:
             return acc
         if oq.ground_motion_fields:
-            self.datastore.create_dframe('avg_gmf', self.avg_gmf.items())
-            eids = self.datastore['gmf_data/eid'][:]
+            with self.monitor('saving avg_gmf', measuremem=True):
+                self.weights = self.datastore['weights'][:]
+                self.rlzs = self.datastore['events']['rlz_id']
+                avg_gmf = {imt: numpy.zeros(self.N, F32)
+                           for imt in oq.all_imts()}
+                eids = self.save_avg_gmf(avg_gmf)
+                self.datastore.create_dframe('avg_gmf', avg_gmf.items())
             rel_events = numpy.unique(eids)
             e = len(rel_events)
             if e == 0:
