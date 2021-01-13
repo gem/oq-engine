@@ -267,6 +267,9 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
+        avg_gmf = self.calc.datastore.read_df('avg_gmf')
+        aae(avg_gmf.to_numpy(), 0.00996806)
+
     def test_case_7(self):
         # 2 models x 3 GMPEs, 1000 samples * 10 SES
         expected = [
@@ -492,8 +495,8 @@ class EventBasedTestCase(CalculatorTestCase):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
         df = self.calc.datastore.read_df('avg_gmf')
-        aae(df.LiqProb.max(), 0.27772662)
-        aae(df.PGDGeomMean.max(), 0.55390346)
+        aae(df.LiqProb.max(), 0.03110679)
+        aae(df.PGDGeomMean.max(), 0.06230812)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
