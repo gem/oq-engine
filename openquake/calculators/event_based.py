@@ -185,9 +185,10 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Computing avg_gmf')
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         for sid, df in gmf_df.groupby(gmf_df.index):
-            weights = self.weights[self.rlzs[df.eid.to_numpy()]]
+            rlzs = self.rlzs[df.eid.to_numpy()]
+            ws = 1 / self.num_events[rlzs] / self.R
             for col in avg_gmf:
-                avg_gmf[col][sid] += df[col] @ weights
+                avg_gmf[col][sid] += df[col].to_numpy() @ ws
         return gmf_df.eid.unique()
 
     def agg_dicts(self, acc, result):
@@ -341,6 +342,7 @@ class EventBasedCalculator(base.HazardCalculator):
             with self.monitor('saving avg_gmf', measuremem=True):
                 self.weights = self.datastore['weights'][:]
                 self.rlzs = self.datastore['events']['rlz_id']
+                self.num_events = numpy.bincount(self.rlzs)  # events by rlz
                 avg_gmf = {imt: numpy.zeros(self.N, F32)
                            for imt in oq.all_imts()}
                 rel_events = self.save_avg_gmf(avg_gmf)

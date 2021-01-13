@@ -19,6 +19,7 @@
 import copy
 import logging
 import numpy
+import pandas
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base, post_risk
@@ -74,14 +75,14 @@ def event_based_risk(riskinputs, param, monitor):
                              param['master_seed'])
             alt.aggregate(
                 out, param['minimum_asset_loss'], param['aggregate_by'])
-            for l, loss_type in enumerate(crmodel.loss_types):
+            for lti, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
                     lba = losses[a].sum()
                     if lba:
                         result['losses_by_asset'].append(
-                            (l, out.rlzi, aid, lba))
+                            (lti, out.rlzi, aid, lba))
     return result
 
 
@@ -182,8 +183,13 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         else:  # event_based_risk, run post_risk
             prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
             prc.run(exports='')
+            try:
+                agglosses = self.datastore['agg_losses-rlzs'][K - 1]
+            except KeyError:  # not enough events in post_risk
+                logging.error('No agg_losses-rlzs')
+                return
 
-        # sanity check on the agg_losses
+        # sanity check on the agg_losses and sum_losses
         sumlosses = self.avglosses.sum(axis=0)
         if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
             url = ('https://docs.openquake.org/oq-engine/advanced/'
@@ -191,3 +197,27 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             logging.warning('Due to numeric errors the agg_losses are not the '
                             'sum of the avg_losses:\n%s != %s\nsee %s',
                             agglosses, sumlosses, url)
+
+        # sanity check on the avg_losses and avg_gmf
+        if oq.hazard_calculation_id:
+            self.datastore.parent.open('r')
+        try:
+            gmf_df = self.datastore.read_df('avg_gmf')
+        except KeyError:
+            return
+        if not hasattr(self, 'sitecol'):  # FIXME: remove this
+            self.sitecol = self.datastore['sitecol']
+        if self.sitecol is not self.sitecol.complete:
+            gmf_df = gmf_df.loc[self.sitecol.sids]
+        avglosses = self.avglosses.sum(axis=1) / self.R  # shape (A, L)
+        dic = dict(site_id=self.assetcol['site_id'])
+        for lti, lname in enumerate(oq.loss_names):
+            dic[lname] = avglosses[:, lti]
+        losses_df = pandas.DataFrame(dic).groupby('site_id').sum()
+        nonzero_gmf = (gmf_df > 0).to_numpy().any(axis=1)
+        nonzero_losses = (losses_df > 0).to_numpy().any(axis=1)
+        bad, = numpy.where(nonzero_gmf != nonzero_losses)
+        for sid in bad:
+            logging.warning('Site #%d is suspicious:\navg_gmf=%s\navg_loss=%s',
+                            sid, gmf_df.loc[sid].to_dict(),
+                            losses_df.loc[sid].to_dict())
