@@ -205,6 +205,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             gmf_df = self.datastore.read_df('avg_gmf')
         except KeyError:
             return
+        if not hasattr(self, 'sitecol'):  # FIXME: remove this
+            self.sitecol = self.datastore['sitecol']
         if self.sitecol is not self.sitecol.complete:
             gmf_df = gmf_df.loc[self.sitecol.sids]
         avglosses = self.avglosses.sum(axis=1) / self.R  # shape (A, L)
