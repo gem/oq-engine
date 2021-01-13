@@ -37,7 +37,7 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
         """
-        assert rake is None or -180 <= rake <= 180
+        assert rake is None or -180 <= rake <= 180, rake
         if rake is None:
             # their "All" case
             return 10.0 ** (-3.49 + 0.91 * mag)
