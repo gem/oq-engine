@@ -75,14 +75,14 @@ def event_based_risk(riskinputs, param, monitor):
                              param['master_seed'])
             alt.aggregate(
                 out, param['minimum_asset_loss'], param['aggregate_by'])
-            for l, loss_type in enumerate(crmodel.loss_types):
+            for lti, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
                     lba = losses[a].sum()
                     if lba:
                         result['losses_by_asset'].append(
-                            (l, out.rlzi, aid, lba))
+                            (lti, out.rlzi, aid, lba))
     return result
 
 
@@ -183,7 +183,11 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         else:  # event_based_risk, run post_risk
             prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
             prc.run(exports='')
-            agglosses = self.datastore['agg_losses-rlzs'][K - 1]
+            try:
+                agglosses = self.datastore['agg_losses-rlzs'][K - 1]
+            except KeyError:  # not enough events in post_risk
+                logging.error('No agg_losses-rlzs')
+                return
 
         # sanity check on the agg_losses and sum_losses
         sumlosses = self.avglosses.sum(axis=0)
