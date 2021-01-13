@@ -12,6 +12,9 @@ platforms:
     privileged: true
 provisioner:
   name: ansible
+  config_options:
+    defaults:
+      stdout_callback = yaml
   lint:
     ansible-lint
 scenario:
