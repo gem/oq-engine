@@ -194,10 +194,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
-            logging.warning('Due to rounding errors inherent in floating-point arithmetic,'
-                            'agg_losses ≢ Σ(avg_losses):\n%s != %s\nsee %s',
-                            agglosses, sumlosses, url)
-
+            logging.warning(
+                'Due to rounding errors inherent in floating-point arithmetic,'
+                ' agg_losses ≢ Σ(avg_losses):\n%s != %s\nsee %s',
+                agglosses, sumlosses, url)
         try:
             self.check_losses(oq)
         except Exception as exc:
@@ -208,8 +208,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         Sanity check on avg_losses and avg_gmf
         """
         gmf_df = self.datastore.read_df('avg_gmf')
+        sids = self.sitecol.sids
         if self.sitecol is not self.sitecol.complete:
-            gmf_df = gmf_df.loc[self.sitecol.sids]
+            gmf_df = gmf_df.loc[sids]
         avglosses = self.avglosses.sum(axis=1) / self.R  # shape (A, L)
         dic = dict(site_id=self.assetcol['site_id'])
         for lti, lname in enumerate(oq.loss_names):
@@ -218,7 +219,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         nonzero_gmf = (gmf_df > 0).to_numpy().any(axis=1)
         nonzero_losses = (losses_df > 0).to_numpy().any(axis=1)
         bad, = numpy.where(nonzero_gmf != nonzero_losses)
-        for sid in bad:
+        gmf_df.reset_index(inplace=True)
+        losses_df.reset_index(inplace=True)
+        for idx in bad:
             logging.warning('Site #%d is suspicious:\navg_gmf=%s\navg_loss=%s',
-                            sid, gmf_df.loc[sid].to_dict(),
-                            losses_df.loc[sid].to_dict())
+                            sids[idx], gmf_df.loc[idx].to_dict(),
+                            losses_df.loc[idx].to_dict())
