@@ -13,6 +13,10 @@ platforms:
     privileged: true
 provisioner:
   name: ansible
+  config_options:
+    defaults:
+      stdout_callback: yaml
+      ansible_verbosity: 1
   lint:
     ansible-lint
 verifier:
