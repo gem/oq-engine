@@ -186,7 +186,7 @@ class EventBasedCalculator(base.HazardCalculator):
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         for sid, df in gmf_df.groupby(gmf_df.index):
             rlzs = self.rlzs[df.eid.to_numpy()]
-            ws = self.weights[rlzs] / self.num_events[rlzs]
+            ws = 1 / self.num_events[rlzs] / self.R
             for col in avg_gmf:
                 avg_gmf[col][sid] += df[col].to_numpy() @ ws
         return gmf_df.eid.unique()

@@ -183,6 +183,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         else:  # event_based_risk, run post_risk
             prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
             prc.run(exports='')
+            agglosses = self.datastore['agg_losses-rlzs'][K - 1]
 
         # sanity check on the agg_losses and sum_losses
         sumlosses = self.avglosses.sum(axis=0)
