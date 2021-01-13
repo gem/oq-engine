@@ -19,9 +19,10 @@
 import os.path
 import logging
 import numpy
+import psutil
 
 from openquake.baselib import hdf5, parallel
-from openquake.baselib.general import AccumDict, copyobj
+from openquake.baselib.general import AccumDict, copyobj, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -166,6 +167,30 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving ruptures and events'):
             imp.import_rups(self.datastore.getitem('ruptures')[()])
 
+    def save_avg_gmf(self, avg_gmf):
+        """
+        Compute and save the GMF averaged on the events
+
+        :returns: the relevant events
+        """
+        size = self.datastore.getsize('gmf_data')
+        logging.info(f'Stored {humansize(size)} of GMFs')
+        avail = psutil.virtual_memory().available
+        if avail < size:
+            logging.warning(
+                f'There is not enough free RAM ({humansize(avail)}) to read '
+                f'the GMFs, not computing avg_gmf')
+            return numpy.unique(self.datastore['gmf_data/eid'][:])
+
+        logging.info('Computing avg_gmf')
+        gmf_df = self.datastore.read_df('gmf_data', 'sid')
+        for sid, df in gmf_df.groupby(gmf_df.index):
+            rlzs = self.rlzs[df.eid.to_numpy()]
+            ws = 1 / self.num_events[rlzs] / self.R
+            for col in avg_gmf:
+                avg_gmf[col][sid] += df[col].to_numpy() @ ws
+        return gmf_df.eid.unique()
+
     def agg_dicts(self, acc, result):
         """
         :param acc: accumulator dictionary
@@ -176,22 +201,22 @@ class EventBasedCalculator(base.HazardCalculator):
         primary = self.oqparam.get_primary_imtls()
         sec_imts = self.oqparam.get_sec_imts()
         with sav_mon:
-            data = result.pop('gmfdata')
-            if len(data):
+            df = result.pop('gmfdata')
+            if len(df):
                 times = result.pop('times')
                 rupids = list(times['rup_id'])
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
-                hdf5.extend(self.datastore['gmf_data/sid'], data['sid'])
-                hdf5.extend(self.datastore['gmf_data/eid'], data['eid'])
+                hdf5.extend(self.datastore['gmf_data/sid'], df.sid.to_numpy())
+                hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
                 for m in range(len(primary)):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
-                                data[f'gmv_{m}'])
+                                df[f'gmv_{m}'])
                 for sec_imt in sec_imts:
                     hdf5.extend(self.datastore[f'gmf_data/{sec_imt}'],
-                                data[sec_imt])
+                                df[sec_imt])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
-                self.offset += len(data)
+                self.offset += len(df)
         if self.offset >= TWO32:
             raise RuntimeError(
                 'The gmf_data table has more than %d rows' % TWO32)
@@ -314,8 +339,14 @@ class EventBasedCalculator(base.HazardCalculator):
         if 'gmf_data' not in self.datastore:
             return acc
         if oq.ground_motion_fields:
-            eids = self.datastore['gmf_data/eid'][:]
-            rel_events = numpy.unique(eids)
+            with self.monitor('saving avg_gmf', measuremem=True):
+                self.weights = self.datastore['weights'][:]
+                self.rlzs = self.datastore['events']['rlz_id']
+                self.num_events = numpy.bincount(self.rlzs)  # events by rlz
+                avg_gmf = {imt: numpy.zeros(self.N, F32)
+                           for imt in oq.all_imts()}
+                rel_events = self.save_avg_gmf(avg_gmf)
+                self.datastore.create_dframe('avg_gmf', avg_gmf.items())
             e = len(rel_events)
             if e == 0:
                 raise RuntimeError(

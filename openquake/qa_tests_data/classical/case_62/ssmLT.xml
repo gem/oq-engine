@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID="lt1">
+      <logicTreeBranchSet uncertaintyType="sourceModel"
+                          branchSetID="zoning">
+
+        <logicTreeBranch branchID="b_01">
+            <uncertaintyModel> Source_model_1_bis.xml </uncertaintyModel>
+          <uncertaintyWeight>1.</uncertaintyWeight>
+        </logicTreeBranch>
+
+      </logicTreeBranchSet>
+  </logicTree>
+</nrml>

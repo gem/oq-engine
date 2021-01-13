@@ -105,8 +105,9 @@ def _populate(parser, func):
             kw = dict(help=descr)
         else:  # assume a dictionary
             kw = descr.copy()
-        if kw.get('type') is None and type in func.__annotations__:
-            kw.setdefault('type', func.__annotations__['type'])
+        if (kind != 'flg' and kw.get('type') is None and
+                name in func.__annotations__):
+            kw.setdefault('type', func.__annotations__[name])
         abbrev = kw.get('abbrev')
         choices = kw.get('choices')
         default = argdef[name]
@@ -152,23 +153,20 @@ def _rec_populate(parser, funcdict):
             _populate(subp, func)
 
 
-def find_main(pkg):
+def pkg2dic(pkg):
     """
     :param pkg: a python module or package
     :returns: a dictionary name -> func_or_dic_of_funcs
-
-    If `pkg` is actually a module, then the main function of the module
-    is returned or an AttributeError is raised, if missing.
     """
     if not hasattr(pkg, '__path__'):  # is a module, not a package
-        return pkg.main
+        return {pkg.__name__: pkg.main}
     dic = {}
     for path in pkg.__path__:
         for name in os.listdir(path):
             fname = os.path.join(path, name)
             dotname = pkg.__name__ + '.' + name
             if os.path.isdir(fname) and '__init__.py' in os.listdir(fname):
-                subdic = find_main(importlib.import_module(dotname))
+                subdic = pkg2dic(importlib.import_module(dotname))
                 if subdic:
                     dic[name] = subdic
             elif name.endswith('.py') and name not in (
@@ -194,7 +192,7 @@ def parser(funcdict, **kw):
         parser.add_argument(
             '-v', '--version', action='version', version=version)
     if inspect.ismodule(funcdict):  # passed a module or package
-        funcdict = find_main(funcdict)
+        funcdict = pkg2dic(funcdict)
     if callable(funcdict):
         _populate(parser, funcdict)
     else:
@@ -224,4 +222,12 @@ def run(funcdict, argv=None, **parserkw):
     :param argv: a list of command-line arguments (if None, use sys.argv[1:])
     :param parserkw: arguments accepted by argparse.ArgumentParser
     """
-    _run(parser(funcdict, **parserkw), argv)
+    return _run(parser(funcdict, **parserkw), argv)
+
+
+def runline(line, **parserkw):
+    """
+    Run a command-line. Useful in the tests.
+    """
+    pkg, *args = line.split()
+    return run(importlib.import_module(pkg), args, **parserkw)

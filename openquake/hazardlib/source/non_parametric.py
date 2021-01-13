@@ -187,14 +187,16 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         The convex hull of the underlying mesh of points
         """
-        lons = []
-        lats = []
+        lons, lats = [], []
         for rup, pmf in self.data:
-            lons.extend(rup.surface.mesh.lons.flat)
-            lats.extend(rup.surface.mesh.lats.flat)
+            surf = rup.surface
+            surfs = surf.surfaces if hasattr(surf, 'surfaces') else [surf]
+            for surf in surfs:
+                lons.extend(surf.mesh.lons.flat)
+                lats.extend(surf.mesh.lats.flat)
         points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
-        numpy.around(lons, 5, points['lon'])
-        numpy.around(lats, 5, points['lat'])
+        points['lon'] = numpy.round(lons, 5)
+        points['lat'] = numpy.round(lats, 5)
         points = numpy.unique(points)
         mesh = Mesh(points['lon'], points['lat'])
         return mesh.get_convex_hull()

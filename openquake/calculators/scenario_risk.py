@@ -19,6 +19,7 @@
 import copy
 import logging
 import numpy
+import pandas
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base, post_risk
@@ -47,7 +48,7 @@ def run_sec_sims(out, loss_types, sec_sims, seed):
         out[lt][:] = numpy.mean(affected * out[lt], axis=0)  # shape E
 
 
-def scenario_risk(riskinputs, param, monitor):
+def event_based_risk(riskinputs, param, monitor):
     """
     Core function for a scenario_risk/event_based_risk computation.
 
@@ -74,26 +75,26 @@ def scenario_risk(riskinputs, param, monitor):
                              param['master_seed'])
             alt.aggregate(
                 out, param['minimum_asset_loss'], param['aggregate_by'])
-            for l, loss_type in enumerate(crmodel.loss_types):
+            for lti, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
                     lba = losses[a].sum()
                     if lba:
                         result['losses_by_asset'].append(
-                            (l, out.rlzi, aid, lba))
+                            (lti, out.rlzi, aid, lba))
     return result
 
 
-@base.calculators.add('scenario_risk')
-class ScenarioRiskCalculator(base.RiskCalculator):
+@base.calculators.add('scenario_risk', 'event_based_risk')
+class EventBasedRiskCalculator(base.RiskCalculator):
     """
-    Run a scenario risk calculation
+    Run a scenario/event_based risk calculation
     """
-    core_task = scenario_risk
+    core_task = event_based_risk
     is_stochastic = True
-    precalc = 'scenario'
-    accept_precalc = ['scenario']
+    precalc = 'event_based'
+    accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
 
     def pre_execute(self):
         """
@@ -101,6 +102,23 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         with the unit of measure, used in the export phase.
         """
         oq = self.oqparam
+        if not oq.ground_motion_fields:
+            return  # this happens in the reportwriter
+
+        parent = self.datastore.parent
+        if parent:
+            self.datastore['full_lt'] = parent['full_lt']
+            ne = len(parent['events'])
+            logging.info('There are %d ruptures and %d events',
+                         len(parent['ruptures']), ne)
+
+        if oq.investigation_time and oq.return_periods != [0]:
+            # setting return_periods = 0 disable loss curves
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+            if eff_time < 2:
+                logging.warning(
+                    'eff_time=%s is too small to compute loss curves',
+                    eff_time)
         super().pre_execute()
         self.assetcol = self.datastore['assetcol']
         self.riskinputs = self.build_riskinputs('gmf')
@@ -154,44 +172,52 @@ class ScenarioRiskCalculator(base.RiskCalculator):
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         if oq.investigation_time is None:  # scenario, compute agg_losses
             alt['rlz_id'] = self.rlzs[alt.event_id.to_numpy()]
-            dset = self.datastore.create_dset(
-                'agg_losses-rlzs', F32, (K, self.R, L))
+            agglosses = numpy.zeros((K, self.R, L), F32)
             for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
-                agglosses = numpy.array(
-                    [df[ln].sum() for ln in oq.loss_names])
-                dset[agg_id, rlz_id] = agglosses * self.avg_ratio[rlz_id]
+                agglosses[agg_id, rlz_id] = numpy.array(
+                    [df[ln].sum() for ln in oq.loss_names]
+                ) * self.avg_ratio[rlz_id]
+            self.datastore['agg_losses-rlzs'] = agglosses
             set_rlzs_stats(self.datastore, 'agg_losses',
                            agg_id=K, loss_types=oq.loss_names, units=units)
         else:  # event_based_risk, run post_risk
             prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
             prc.run(exports='')
+            try:
+                agglosses = self.datastore['agg_losses-rlzs'][K - 1]
+            except KeyError:  # not enough events in post_risk
+                logging.error('No agg_losses-rlzs')
+                return
 
+        # sanity check on the agg_losses and sum_losses
+        sumlosses = self.avglosses.sum(axis=0)
+        if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
+            url = ('https://docs.openquake.org/oq-engine/advanced/'
+                   'addition-is-non-associative.html')
+            logging.warning('Due to numeric errors the agg_losses are not the '
+                            'sum of the avg_losses:\n%s != %s\nsee %s',
+                            agglosses, sumlosses, url)
 
-@base.calculators.add('event_based_risk')
-class EbrCalculator(ScenarioRiskCalculator):
-    """
-    Event based risk calculator
-    """
-    precalc = 'event_based'
-    accept_precalc = ['event_based', 'event_based_risk', 'ebrisk']
-
-    def pre_execute(self):
-        oq = self.oqparam
-        if not oq.ground_motion_fields:
-            return  # this happens in the reportwriter
-
-        parent = self.datastore.parent
-        if parent:
-            self.datastore['full_lt'] = parent['full_lt']
-            ne = len(parent['events'])
-            logging.info('There are %d ruptures and %d events',
-                         len(parent['ruptures']), ne)
-
-        if oq.investigation_time and oq.return_periods != [0]:
-            # setting return_periods = 0 disable loss curves
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-            if eff_time < 2:
-                logging.warning(
-                    'eff_time=%s is too small to compute loss curves',
-                    eff_time)
-        super().pre_execute()
+        # sanity check on the avg_losses and avg_gmf
+        if oq.hazard_calculation_id:
+            self.datastore.parent.open('r')
+        try:
+            gmf_df = self.datastore.read_df('avg_gmf')
+        except KeyError:
+            return
+        if not hasattr(self, 'sitecol'):  # FIXME: remove this
+            self.sitecol = self.datastore['sitecol']
+        if self.sitecol is not self.sitecol.complete:
+            gmf_df = gmf_df.loc[self.sitecol.sids]
+        avglosses = self.avglosses.sum(axis=1) / self.R  # shape (A, L)
+        dic = dict(site_id=self.assetcol['site_id'])
+        for lti, lname in enumerate(oq.loss_names):
+            dic[lname] = avglosses[:, lti]
+        losses_df = pandas.DataFrame(dic).groupby('site_id').sum()
+        nonzero_gmf = (gmf_df > 0).to_numpy().any(axis=1)
+        nonzero_losses = (losses_df > 0).to_numpy().any(axis=1)
+        bad, = numpy.where(nonzero_gmf != nonzero_losses)
+        for sid in bad:
+            logging.warning('Site #%d is suspicious:\navg_gmf=%s\navg_loss=%s',
+                            sid, gmf_df.loc[sid].to_dict(),
+                            losses_df.loc[sid].to_dict())

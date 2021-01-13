@@ -867,6 +867,18 @@ def extract_gmf_npz(dstore, what):
         yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
 
 
+@extract.add('avg_gmf')
+def extract_avg_gmf(dstore, what):
+    qdict = parse(what)
+    [imt] = qdict['imt']
+    sitecol = dstore['sitecol']
+    avg_gmf = dstore.read_df('avg_gmf')
+    yield imt, avg_gmf[imt].to_numpy()[sitecol.sids]
+    yield 'sids', sitecol.sids
+    yield 'lons', sitecol.lons
+    yield 'lats', sitecol.lats
+
+
 @extract.add('num_events')
 def extract_num_events(dstore, what):
     """

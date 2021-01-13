@@ -402,6 +402,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         hc_id = None
     for job in jobs:
         job_id = job['_job_id']
+        job['hazard_calculation_id'] = hc_id
         with logs.handle(job_id, log_level, log_file):
             oqparam = readinput.get_oqparam(job)
         dic = dict(calculation_mode=oqparam.calculation_mode,

@@ -46,7 +46,7 @@ from openquake.qa_tests_data.event_based import (
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
-aae = numpy.testing.assert_almost_equal
+aac = numpy.testing.assert_allclose
 
 
 def strip_calc_id(fname):
@@ -112,8 +112,8 @@ class EventBasedTestCase(CalculatorTestCase):
                 oq.ses_per_logic_tree_path)
 
             p05, p10 = expected[case]
-            aae(joint_prob_0_5, p05, decimal=1)
-            aae(joint_prob_1_0, p10, decimal=1)
+            aac(joint_prob_0_5, p05, atol=.1)
+            aac(joint_prob_1_0, p10, atol=.1)
 
     def test_blocksize(self):
         out = self.run_calc(blocksize.__file__, 'job.ini',
@@ -153,7 +153,7 @@ class EventBasedTestCase(CalculatorTestCase):
         oq = self.calc.datastore['oqparam']
         poes = gmvs_to_poes(df, oq.imtls, oq.ses_per_logic_tree_path)
         hcurve = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L)
-        aae(poes, hcurve)
+        aac(poes, hcurve)
 
         # test gsim_by_imt
         out = self.run_calc(case_1.__file__, 'job.ini',
@@ -173,8 +173,8 @@ class EventBasedTestCase(CalculatorTestCase):
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
         self.assertEqual(einfo['rlzi'], 0)
         self.assertEqual(einfo['et_id'], 0)
-        aae(einfo['occurrence_rate'], 0.6)
-        aae(einfo['hypo'], [0., 0., 4.])
+        aac(einfo['occurrence_rate'], 0.6)
+        aac(einfo['hypo'], [0., 0., 4.])
 
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gsim_by_imt.csv', fname)
@@ -249,9 +249,9 @@ class EventBasedTestCase(CalculatorTestCase):
         # check MFD
         aw = extract(self.calc.datastore, 'event_based_mfd?kind=mean')
         self.assertEqual(aw.duration, 30)  # 30 years
-        aae(aw.magnitudes, [4.6, 4.7, 4.8, 4.9, 5.1, 5.3, 5.9], decimal=6)
-        aae(aw.mean_frequency, [0.02, 0.013333, 0.01, 0.053333, 0.006667,
-                                0.006667, 0.006667], decimal=6)
+        aac(aw.magnitudes, [4.6, 4.7, 4.8, 4.9, 5.1, 5.3, 5.9], atol=1E-6)
+        aac(aw.mean_frequency, [0.02, 0.013333, 0.01, 0.053333, 0.006667,
+                                0.006667, 0.006667], atol=1E-6)
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
@@ -266,6 +266,9 @@ class EventBasedTestCase(CalculatorTestCase):
 
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
+
+        avg_gmf = self.calc.datastore.read_df('avg_gmf')
+        aac(avg_gmf.to_numpy(), 0.010628, atol=1E-5)
 
     def test_case_7(self):
         # 2 models x 3 GMPEs, 1000 samples * 10 SES
@@ -491,9 +494,9 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_26_liq(self):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
-        df = view('avg_gmf', self.calc.datastore)
-        aae(df.LiqProb.max(), 0.27772662)
-        aae(df.PGDGeomMean.max(), 0.55390346)
+        df = self.calc.datastore.read_df('avg_gmf')
+        aac(df.LiqProb.max(), 0.031107, rtol=1E-2)
+        aac(df.PGDGeomMean.max(), 0.062308, rtol=1E-2)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

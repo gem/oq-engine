@@ -679,6 +679,17 @@ class OqParam(valid.ParamSet):
             lst.append((out, F32))
         return numpy.dtype(lst)
 
+    def all_imts(self):
+        """
+        :returns: gmv_0, ... gmv_M, sec_imt...
+        """
+        lst = []
+        for m, imt in enumerate(self.get_primary_imtls()):
+            lst.append(f'gmv_{m}')
+        for out in self.get_sec_imts():
+            lst.append(out)
+        return lst
+
     def get_sec_perils(self):
         """
         :returns: a list of secondary perils
