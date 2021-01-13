@@ -201,7 +201,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         try:
             self.check_losses(oq)
         except Exception as exc:
-            logging.error('Could not run the sanity check: %s' % exc)
+            logging.error('Could not run the sanity check: %s' % exc,
+                          exc_info=True)
 
     def check_losses(self, oq):
         """
@@ -212,7 +213,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if self.sitecol is not self.sitecol.complete:
             gmf_df = gmf_df.loc[sids]
         asset_df = self.datastore.read_df('assetcol/array', 'site_id')
-        values_df = asset_df.groupby(asset_df.index).sum().reset_index()
+        for col in asset_df.columns:
+            if not col.startswith('value-'):
+                del asset_df[col]
+        values_df = asset_df.groupby(asset_df.index).sum()
         avglosses = self.avglosses.sum(axis=1) / self.R  # shape (A, L)
         dic = dict(site_id=self.assetcol['site_id'])
         for lti, lname in enumerate(oq.loss_names):
@@ -221,15 +225,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         nonzero_gmf = (gmf_df > 0).to_numpy().any(axis=1)
         nonzero_losses = (losses_df > 0).to_numpy().any(axis=1)
         bad, = numpy.where(nonzero_gmf != nonzero_losses)
-        gmf_df.reset_index(inplace=True)
-        losses_df.reset_index(inplace=True)
         msg = 'Site #%d is suspicious:\navg_gmf=%s\navg_loss=%s\nvalues=%s'
         for idx in bad:
-            logging.warning(msg, sids[idx], _get(gmf_df, idx),
-                            _get(losses_df, idx), _get(values_df, idx))
+            sid = sids[idx]
+            logging.warning(msg, sid, _get(gmf_df, sid),
+                            _get(losses_df, sid), _get(values_df, sid))
 
 
-def _get(df, idx):
-    dic = df.loc[idx].to_dict()
-    del dic['index']
-    return dic
+def _get(df, sid):
+    return df.loc[sid].to_dict()
