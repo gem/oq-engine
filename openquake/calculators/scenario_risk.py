@@ -198,6 +198,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             'sum of the avg_losses:\n%s != %s\nsee %s',
                             agglosses, sumlosses, url)
 
+        return  # temporarily disabled
         # sanity check on the avg_losses and avg_gmf
         if oq.hazard_calculation_id:
             self.datastore.parent.open('r')
