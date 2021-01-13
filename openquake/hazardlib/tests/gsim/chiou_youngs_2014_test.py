@@ -65,6 +65,17 @@ class ChiouYoungs2014TestCase(BaseGSIMTestCase):
         self.check('NGA/CY14/CY14_TOTAL_EVENT_SIGMA.csv',
                    max_discrep_percentage=0.05)
 
+    def test_mean_refactor(self):
+        # Test for backward compatibility - and extended test table
+        self.check('NGA/CY14/cy14_extended_table_mean.csv',
+                   max_discrep_percentage=0.001)
+
+    def test_total_stddev_refactor(self):
+        # Test for backward compatibility - and extended test table
+        self.check('NGA/CY14/cy14_extended_table_total_stddev.csv',
+                   max_discrep_percentage=0.001)
+        
+
 
 # Note that in the regionalisation cases the discrepancy percentage is raised
 # to 1 % to allow for a different interpretation of the deltaZ1.0 when Z1.0 = 0

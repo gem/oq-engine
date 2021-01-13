@@ -81,6 +81,7 @@ def fix(fname, outname=None):
     with open(outname or fname, 'wb') as out:
         nrml.write([root.sourceModel], out, xmlns=xmlns)
 
+
 if __name__ == '__main__':
     fname = sys.argv[1]
     fix(fname)
