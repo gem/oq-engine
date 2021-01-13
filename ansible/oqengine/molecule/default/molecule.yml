@@ -13,6 +13,10 @@ platforms:
     privileged: true
 provisioner:
   name: ansible
+  config_options:
+    defaults:
+      fact_caching: jsonfile
+      stdout_callback: yaml
   lint:
     ansible-lint
 verifier:
