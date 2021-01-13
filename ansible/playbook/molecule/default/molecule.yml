@@ -14,7 +14,8 @@ provisioner:
   name: ansible
   config_options:
     defaults:
-      stdout_callback = yaml
+      fact_caching: jsonfile
+      stdout_callback: yaml
   lint:
     ansible-lint
 scenario:
