@@ -198,16 +198,16 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                             'sum of the avg_losses:\n%s != %s\nsee %s',
                             agglosses, sumlosses, url)
 
-        return  # temporarily disabled
-        # sanity check on the avg_losses and avg_gmf
-        if oq.hazard_calculation_id:
-            self.datastore.parent.open('r')
         try:
-            gmf_df = self.datastore.read_df('avg_gmf')
-        except KeyError:
-            return
-        if not hasattr(self, 'sitecol'):  # FIXME: remove this
-            self.sitecol = self.datastore['sitecol']
+            self.check_losses(oq)
+        except Exception as exc:
+            logging.error('Could not run the sanity check: %s' % exc)
+
+    def check_losses(self, oq):
+        """
+        Sanity check on avg_losses and avg_gmf
+        """
+        gmf_df = self.datastore.read_df('avg_gmf')
         if self.sitecol is not self.sitecol.complete:
             gmf_df = gmf_df.loc[self.sitecol.sids]
         avglosses = self.avglosses.sum(axis=1) / self.R  # shape (A, L)
