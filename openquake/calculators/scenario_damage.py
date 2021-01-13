@@ -282,5 +282,5 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             numdic = dict(expected=expected)
             for lt, num in zip(self.oqparam.loss_names, num_assets):
                 numdic[lt] = num
-            logging.info('Due to numeric errors the total number of assets'
-                         ' is imprecise: %s', numdic)
+            logging.info('Due to rounding errors inherent in floating-point arithmetic,
+                         'the total number of assets is not exact: %s', numdic)
