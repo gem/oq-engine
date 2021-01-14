@@ -196,8 +196,8 @@ class PostRiskCalculator(base.RiskCalculator):
         # NB: in the future we may use multiprocessing.shared_memory
         for (k, r), df in gb:
             arr = numpy.zeros((self.L, len(df)), F32)
-            for l, ln in enumerate(oq.loss_names):
-                arr[l] = df[ln].to_numpy()
+            for lni, ln in enumerate(oq.loss_names):
+                arr[lni] = df[ln].to_numpy()
             agg_losses[k, r] = arr.sum(axis=1)
             kr_losses.append((k, r, arr))
             if len(kr_losses) >= blocksize:

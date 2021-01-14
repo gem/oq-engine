@@ -210,7 +210,7 @@ def install(inst, version):
     elif version is None:  # install the stable version
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
                                '--upgrade', 'openquake.engine'])
-    if '.' in version:  # install an official version
+    elif '.' in version:  # install an official version
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
                                '--upgrade', 'openquake.engine==' + version])
     else:  # install a branch from github
