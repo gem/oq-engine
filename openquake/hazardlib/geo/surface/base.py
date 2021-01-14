@@ -33,7 +33,6 @@ def _get_finite_mesh(mesh):
 
 def _get_finite_top_rupture(mesh):
     idx = numpy.isfinite(mesh.lons)
-    import pdb; pdb.set_trace()
     return Mesh(mesh.lons(idx), mesh.lats(idx), mesh.depths(idx))
 
 def _find_turning_points(mesh, tol=1.0):
