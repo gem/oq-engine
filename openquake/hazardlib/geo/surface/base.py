@@ -308,7 +308,7 @@ class BaseSurface:
         if top_edge.depths is None:
             return 0
         else:
-            dep = numpy.array(top_edge.depths)
+            dep = numpy.min(top_edge.depths)
             return dep
 
     def _get_top_edge_centroid(self):
