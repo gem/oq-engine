@@ -570,12 +570,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 # save the number of nonzero coefficients of variation
                 if hasattr(rf, 'covs') and rf.covs.any():
                     self.covs += 1
-            missing = set(self.loss_types) - set(
-                lt for lt, kind in rm.risk_functions)
-            if missing:
-                raise ValidationError(
-                    'Missing vulnerability function for taxonomy %s and loss'
-                    ' type %s' % (riskid, ', '.join(missing)))
             rm.imt_by_lt = {}  # dictionary loss_type -> imt
             for lt, kind in rm.risk_functions:
                 if kind in 'vulnerability fragility':

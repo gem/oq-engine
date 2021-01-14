@@ -502,17 +502,6 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
             error.call_args[0][0], 'source SFLT2: too large: 84 km')
 
 
-class GetCompositeRiskModelTestCase(unittest.TestCase):
-    def tearDown(self):
-        # cleanup evil global
-        readinput.exposure = None
-
-    def test_missing_vulnerability_function(self):
-        oq = readinput.get_oqparam('job.ini', case_caracas)
-        with self.assertRaises(ValidationError):
-            readinput.get_crmodel(oq)
-
-
 class SitecolAssetcolTestCase(unittest.TestCase):
 
     def tearDown(self):
