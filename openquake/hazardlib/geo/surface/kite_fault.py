@@ -78,7 +78,6 @@ class KiteSurface(BaseSurface):
         self._fix_right_hand()
         self.strike = self.dip = None
         self.width = None
-        self.finite = numpy.isfinite(self.mesh.lons)
 
     @property
     def surface_nodes(self):
