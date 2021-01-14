@@ -415,3 +415,24 @@ class GetAzimuthClosestPointTestCase(unittest.TestCase):
         expected = numpy.array([180, -90, 0])
         azimuths[azimuths > 180] = azimuths[azimuths > 180] - 360
         numpy.testing.assert_almost_equal(expected, azimuths, 1)
+
+
+class GetFiniteTopOfRupture(unittest.TestCase):
+
+
+    def test_rupture_with_nan(self):
+
+        profiles = []
+        tmp = [Point(0.0, 0.000, 0.0),
+               Point(0.0, 0.001, 15.0)]
+        profiles.append(Line(tmp))
+        tmp = [Point(0.5, 0.000, 0.0),
+               Point(0.5, 0.001, 15.0)]
+        profiles.append(Line(tmp))
+        
+        # Build the fault surface
+        p_sd = 2.0
+        e_sd = 5.0
+        from openquake.hazardlib.geo.surface import KiteSurface
+        msh = KiteSurface.from_profiles(profiles, p_sd, e_sd)
+

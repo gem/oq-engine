@@ -31,9 +31,14 @@ def _get_finite_mesh(mesh):
     idx = numpy.isfinite(mesh.lons)
     return Mesh(mesh.lons[idx], mesh.lats[idx], mesh.depths[idx])
 
+
 def _get_finite_top_rupture(mesh):
-    idx = numpy.isfinite(mesh.lons)
-    return Mesh(mesh.lons(idx), mesh.lats(idx), mesh.depths(idx))
+    import pdb; pdb.set_trace()
+    print(mesh.lons)
+    idx = numpy.isfinite(mesh.lons[0, :])
+    return RectangularMesh(mesh.lons[0, idx], mesh.lats[0, idx],
+                           mesh.depths[0, idx])
+
 
 def _find_turning_points(mesh, tol=1.0):
     """
@@ -212,7 +217,6 @@ class BaseSurface:
             Numpy array of distances in km.
         """
         top_edge = self.mesh[0:1]
-
         xxx = _get_finite_top_rupture(mesh)
 
         dists = []
