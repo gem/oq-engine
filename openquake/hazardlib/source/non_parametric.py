@@ -213,6 +213,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         numpy.around(lats, 5, points['lat'])
         points = numpy.unique(points)
         mesh = Mesh(points['lon'], points['lat'])
+
         return mesh.get_convex_hull()
 
     def wkt(self):

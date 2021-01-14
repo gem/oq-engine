@@ -28,12 +28,12 @@ from openquake.hazardlib.geo import geodetic, utils, Point, Line,\
 
 
 def _get_finite_mesh(mesh):
-    import pdb; pdb.set_trace()
     idx = numpy.isfinite(mesh.lons)
-    return Mesh(mesh.lons(idx), mesh.lats(idx), mesh.depths(idx))
+    return Mesh(mesh.lons[idx], mesh.lats[idx], mesh.depths[idx])
 
 def _get_finite_top_rupture(mesh):
-    idx = numpy.isfinite(mesh.lons[0, :])
+    idx = numpy.isfinite(mesh.lons)
+    import pdb; pdb.set_trace()
     return Mesh(mesh.lons(idx), mesh.lats(idx), mesh.depths(idx))
 
 def _find_turning_points(mesh, tol=1.0):
@@ -322,7 +322,7 @@ class BaseSurface:
             northern and southern borders of the bounding box respectively.
             Values are floats in decimal degrees.
         """
-        mesh = self.mesh
+        mesh = _get_finite_mesh(self.mesh)
         return utils.get_spherical_bounding_box(mesh.lons, mesh.lats)
 
     def get_middle_point(self):
