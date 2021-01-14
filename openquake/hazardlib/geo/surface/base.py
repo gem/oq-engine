@@ -178,10 +178,14 @@ class BaseSurface:
         :returns:
             Numpy array of distances in km.
         """
+
         # This computes ry0 by using an average strike direction
         top_edge = self.mesh[0:1]
         mean_strike = self.get_strike()
 
+        # Computing the distances between the sites and the two lines 
+        # perpendicular to the strike passing trough the two extremes 
+        # of the top of the rupture
         dst1 = geodetic.distance_to_arc(top_edge.lons[0, 0],
                                         top_edge.lats[0, 0],
                                         (mean_strike + 90.) % 360,
@@ -191,12 +195,14 @@ class BaseSurface:
                                         top_edge.lats[0, -1],
                                         (mean_strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
-        # Find the points on the rupture
 
         # Get the shortest distance from the two lines
         idx = numpy.sign(dst1) == numpy.sign(dst2)
         dst = numpy.zeros_like(dst1)
         dst[idx] = numpy.fmin(numpy.abs(dst1[idx]), numpy.abs(dst2[idx]))
+
+        if numpy.any(isnan(dst)):
+            raise ValueError('NaN in Ry0')
 
         return dst
 
@@ -285,6 +291,9 @@ class BaseSurface:
         iii = abs(dists).argmin(axis=0)
         dst = dists[iii, list(range(dists.shape[1]))]
 
+        if numpy.any(isnan(dst)):
+            raise ValueError('NaN in Ry0')
+
         return dst
 
     def get_top_edge_depth(self):
@@ -299,7 +308,8 @@ class BaseSurface:
         if top_edge.depths is None:
             return 0
         else:
-            return numpy.min(top_edge.depths)
+            dep = numpy.array(top_edge.depths)
+            return dep
 
     def _get_top_edge_centroid(self):
         """
@@ -313,9 +323,12 @@ class BaseSurface:
         """
         Compute area as the sum of the mesh cells area values.
         """
-        mesh = self.mesh
-        _, _, _, area = mesh.get_cell_dimensions()
-
+        from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
+        if isinstance(self, KiteSurface):
+            _, _, _, area = self.get_cell_dimensions()
+        else:
+            mesh = self.mesh
+            _, _, _, area = mesh.get_cell_dimensions()
         return numpy.sum(area)
 
     def get_bounding_box(self):
