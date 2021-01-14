@@ -16,7 +16,6 @@
 import unittest
 
 import pytest
-import numpy
 
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
