@@ -15,7 +15,7 @@
 FROM python:3.8.6 AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
-RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh dnsutils telnet && \
+RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh dnsutils telnet sudo && \
     useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
 ARG oq_branch=master
 # Setup the virtualenv
