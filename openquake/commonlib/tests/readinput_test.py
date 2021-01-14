@@ -25,7 +25,6 @@ from io import BytesIO
 from openquake.baselib import general, datastore
 from openquake.hazardlib import InvalidFile, site_amplification
 from openquake.risklib import asset
-from openquake.risklib.riskmodels import ValidationError
 from openquake.commonlib import readinput, logictree
 from openquake.qa_tests_data.classical import case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
@@ -504,7 +503,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 
 class SitecolAssetcolTestCase(unittest.TestCase):
 
-    def tearDown(self):
+    def setUp(self):
         # cleanup evil global
         readinput.exposure = None
 
