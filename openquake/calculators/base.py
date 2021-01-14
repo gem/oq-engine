@@ -713,7 +713,7 @@ class HazardCalculator(BaseCalculator):
                                          'gzip', **attrs)
 
     def _read_risk_data(self):
-        # read the exposure (if any), the risk model (if any) and then the
+        # read the risk model (if any), the exposure (if any) and then the
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
