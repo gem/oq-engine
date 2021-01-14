@@ -349,21 +349,6 @@ class KiteSurface(BaseSurface):
 
         return plos, plas
 
-    def get_min_distance(self, mesh):
-        """
-        Compute and return the minimum distance from the surface to each point
-        of ``mesh``. This distance is sometimes called ``Rrup``.
-
-        :param mesh:
-            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
-            minimum distance to.
-        :returns:
-            A numpy array of distances in km.
-        """
-        i = self.finite
-        fmesh = Mesh(mesh.lons[i], mesh.lats[i], mesh.depths[i])
-        return fmesh.get_min_distance(mesh)
-
 
 def get_profiles_from_simple_fault_data(fault_trace, upper_seismogenic_depth,
         lower_seismogenic_depth, dip, rupture_mesh_spacing):
