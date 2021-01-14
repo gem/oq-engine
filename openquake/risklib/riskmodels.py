@@ -494,7 +494,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             if len(coeffs):
                 cname, tagname = byname.split('_by_')
                 func = scientific.consequence[cname]
-                coeffs = coeffs[asset[tagname] - 1][loss_type]
+                coeffs = coeffs[asset[tagname]][loss_type]
                 csq[cname] = func(coeffs, asset, fractions[:, 1:], loss_type)
         return csq
 
@@ -609,17 +609,18 @@ class CompositeRiskModel(collections.abc.Mapping):
             dtlist.append((dmg, dt))
         return dtlist
 
-    def vectorize_cons_model(self, tagcol):
+    def reduce_cons_model(self, tagcol):
         """
         Convert the dictionaries tag -> coeffs in the consequence model
-        into vectors tag index -> coeffs (one per cname)
+        into dictionaries tag index -> coeffs (one per cname)
         """
         for cname_by_tagname, dic in self.consdict.items():
+            # for instance losses_by_taxonomy
             cname, tagname = cname_by_tagname.split('_by_')
             tagidx = tagcol.get_tagidx(tagname)
-            items = sorted((tagidx[tag], cf) for tag, cf in dic.items())
-            self.consdict[cname_by_tagname] = numpy.array(
-                [it[1] for it in items])
+            newdic = {tagidx[tag]: cf for tag, cf in dic.items()
+                      if tag in tagidx}  # tag in the exposure
+            self.consdict[cname_by_tagname] = newdic
 
     @cached_property
     def taxonomy_dict(self):
@@ -644,7 +645,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too
         cps = []
-        for l, loss_type in enumerate(self.loss_types):
+        for lti, loss_type in enumerate(self.loss_types):
             if self.oqparam.calculation_mode in (
                     'classical', 'classical_risk'):
                 curve_resolutions = set()
@@ -667,13 +668,13 @@ class CompositeRiskModel(collections.abc.Mapping):
                             rm.loss_ratios[loss_type] = allratios[-1]
                             # logging.debug(f'Redefining loss ratios for {rm}')
                 cp = scientific.CurveParams(
-                    l, loss_type, max(curve_resolutions), allratios[-1], True
+                    lti, loss_type, max(curve_resolutions), allratios[-1], True
                 ) if curve_resolutions else scientific.CurveParams(
-                    l, loss_type, 0, [], False)
+                    lti, loss_type, 0, [], False)
             else:  # used only to store the association l -> loss_type
-                cp = scientific.CurveParams(l, loss_type, 0, [], False)
+                cp = scientific.CurveParams(lti, loss_type, 0, [], False)
             cps.append(cp)
-            self.lti[loss_type] = l
+            self.lti[loss_type] = lti
         return cps
 
     def get_loss_ratios(self):

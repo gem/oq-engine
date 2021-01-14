@@ -61,8 +61,8 @@ def _check_dupl_ids(src_groups):
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
             if first:
-                logging.warning('There are multiple different sources with'
-                                ' the same ID %s', srcs)
+                logging.info('There are multiple different sources with '
+                             'the same ID %s', srcs)
                 first = False
 
 
