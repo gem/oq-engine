@@ -18,6 +18,9 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
 import numpy
+
+from openquake.hazardlib.geo.surface.base import _get_finite_mesh
+
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -189,9 +192,22 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         lons = []
         lats = []
+
+        # This creates a list of flat iterators
         for rup, pmf in self.data:
-            lons.extend(rup.surface.mesh.lons.flat)
-            lats.extend(rup.surface.mesh.lats.flat)
+
+            if isinstance(rup.surface, MultiSurface):
+                for sfc in rup.surface.surfaces:
+                    lons.extend(sfc.mesh.lons.flat)
+                    lats.extend(sfc.mesh.lats.flat)
+            else:
+                lons.extend(rup.surface.mesh.lons.flat)
+                lats.extend(rup.surface.mesh.lats.flat)
+
+        condition = numpy.isfinite(lons).astype(int)
+        lons = numpy.extract(condition, lons)
+        lats = numpy.extract(condition, lats)
+
         points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
         numpy.around(lons, 5, points['lon'])
         numpy.around(lats, 5, points['lat'])

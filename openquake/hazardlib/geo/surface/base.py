@@ -22,9 +22,19 @@ Module :mod:`openquake.hazardlib.geo.surface.base` implements
 """
 import numpy
 import math
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic, utils, Point, Line,\
     RectangularMesh
 
+
+def _get_finite_mesh(mesh):
+    import pdb; pdb.set_trace()
+    idx = numpy.isfinite(mesh.lons)
+    return Mesh(mesh.lons(idx), mesh.lats(idx), mesh.depths(idx))
+
+def _get_finite_top_rupture(mesh):
+    idx = numpy.isfinite(mesh.lons[0, :])
+    return Mesh(mesh.lons(idx), mesh.lats(idx), mesh.depths(idx))
 
 def _find_turning_points(mesh, tol=1.0):
     """
@@ -116,7 +126,8 @@ class BaseSurface:
         :returns:
             A numpy array of distances in km.
         """
-        return self.mesh.get_min_distance(mesh)
+        fmesh = _get_finite_mesh(self.mesh)
+        return fmesh.get_min_distance(mesh)
 
     def get_closest_points(self, mesh):
         """
@@ -129,7 +140,8 @@ class BaseSurface:
             :class:`~openquake.hazardlib.geo.mesh.Mesh` of the same shape as
             ``mesh`` with closest surface's points on respective indices.
         """
-        return self.mesh.get_closest_points(mesh)
+        fmesh = _get_finite_mesh(self.mesh)
+        return fmesh.get_closest_points(mesh)
 
     def get_joyner_boore_distance(self, mesh):
         """
@@ -143,7 +155,8 @@ class BaseSurface:
             Numpy array of closest distances between the projections of surface
             and each point of the ``mesh`` to the earth surface.
         """
-        return self.mesh.get_joyner_boore_distance(mesh)
+        fmesh = _get_finite_mesh(self.mesh)
+        return fmesh.get_joyner_boore_distance(mesh)
 
     def get_ry0_distance(self, mesh):
         """
@@ -200,6 +213,8 @@ class BaseSurface:
             Numpy array of distances in km.
         """
         top_edge = self.mesh[0:1]
+
+        xxx = _get_finite_top_rupture(mesh)
 
         dists = []
         if top_edge.lons.shape[1] < 3:
