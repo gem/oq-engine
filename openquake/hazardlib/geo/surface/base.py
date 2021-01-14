@@ -31,6 +31,7 @@ def _get_finite_mesh(mesh):
     idx = numpy.isfinite(mesh.lons.flat)
     if numpy.all(idx):
         return mesh
+    idx = numpy.reshape(idx, mesh.lons.shape)
     return Mesh(mesh.lons[idx], mesh.lats[idx], mesh.depths[idx])
 
 
@@ -38,6 +39,7 @@ def _get_finite_top_rupture(mesh):
     idx = numpy.isfinite(mesh.lons.flat)
     if numpy.all(idx):
         return mesh[0:1]
+    idx = numpy.isfinite(mesh.lons[0, :])
     return RectangularMesh(mesh.lons[0, idx], mesh.lats[0, idx],
                            mesh.depths[0, idx])
 
