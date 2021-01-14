@@ -12,25 +12,21 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-FROM python:3.8 AS compile-image
+FROM python:3.8.6 AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
-RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh
+RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh dnsutils telnet && \
+    useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
 ARG oq_branch=master
 # Setup the virtualenv
 RUN python -m venv /opt/openquake
 ENV PATH="/opt/openquake/bin:$PATH"
+ENV LANG en_US.UTF-8
 WORKDIR /opt
 #clone repository and install engine
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
     pip --disable-pip-version-check install -e .[cluster,osgeo] -r requirements-py38-linux64.txt --no-warn-script-location
 #
-FROM python:3.8 AS build-image
-COPY --from=compile-image /opt/ /opt/
-ENV PATH="/opt/openquake/bin:$PATH"
-ENV LANG en_US.UTF-8
-RUN apt-get update &&  apt-get install -y --no-install-recommends git ssh sudo host dnsutils telnet && \
-    useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
 ADD zmq/openquake.cfg /opt/openquake/openquake.cfg
 USER openquake
 ENV HOME /home/openquake
