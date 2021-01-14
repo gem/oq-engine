@@ -118,27 +118,27 @@ def _get_base_url(request):
     return base_url
 
 
-def _prepare_job(request, candidates):
+def _prepare_job(request, ini):
     """
     Creates a temporary directory, move uploaded files there and
-    select the job file by looking at the candidate names.
+    select the job file by looking at the .ini extension.
 
     :returns: full path of the job_file
     """
     temp_dir = tempfile.mkdtemp()
-    inifiles = []
     arch = request.FILES.get('archive')
     if arch is None:
         # move each file to a new temp dir, using the upload file names,
         # not the temporary ones
+        inifiles = []
         for each_file in request.FILES.values():
             new_path = os.path.join(temp_dir, each_file.name)
             shutil.move(each_file.temporary_file_path(), new_path)
-            if each_file.name in candidates:
+            if each_file.name.endswith(ini):
                 inifiles.append(new_path)
-        return inifiles
-    # else extract the files from the archive into temp_dir
-    return readinput.extract_from_zip(arch, candidates)
+    else:  # extract the files from the archive into temp_dir
+        inifiles = readinput.extract_from_zip(arch, ini)
+    return inifiles
 
 
 @csrf_exempt
@@ -521,22 +521,18 @@ def calc_run(request):
         calculation. They can be uploaded as separate files, or zipped
         together.
     """
-    hazard_job_id = request.POST.get('hazard_job_id')
     job_ini = request.POST.get('job_ini')
-
+    hazard_job_id = request.POST.get('hazard_job_id')
     if hazard_job_id:
         hazard_job_id = int(hazard_job_id)
-        candidates = [job_ini] if job_ini else ("job_risk.ini", "job.ini")
-    else:
-        candidates = [job_ini] if job_ini else (
-            "job_hazard.ini", "job_haz.ini", "job.ini")
-    result = safely_call(_prepare_job, (request, candidates))
+    ini = job_ini if job_ini else ".ini"
+    result = safely_call(_prepare_job, (request, ini))
     if result.tb_str:
         return HttpResponse(json.dumps(result.tb_str.splitlines()),
                             content_type=JSON, status=500)
     inifiles = result.get()
     if not inifiles:
-        msg = 'Could not find any file of the form %s' % str(candidates)
+        msg = 'Could not find any file of the form *%s' % ini
         logging.error(msg)
         return HttpResponse(content=json.dumps([msg]), content_type=JSON,
                             status=500)

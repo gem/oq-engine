@@ -323,7 +323,8 @@ class EngineServerTestCase(unittest.TestCase):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
         err = json.loads(resp.content.decode('utf8'))['error_msg']
-        self.assertIn('Could not convert insuranceLimit->positivefloat', err)
+        # error Could not convert insuranceLimit->positivefloat
+        self.assertTrue(err)
 
     # tests for nrml validation
 

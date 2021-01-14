@@ -100,7 +100,7 @@ def collect_files(dirpath, cond=lambda fullname: True):
     return files
 
 
-def extract_from_zip(path, candidates):
+def extract_from_zip(path, ext='.ini'):
     """
     Given a zip archive and a function to detect the presence of a given
     filename, unzip the archive into a temporary directory and return the
@@ -108,13 +108,13 @@ def extract_from_zip(path, candidates):
     within the archive.
 
     :param path: pathname of the archive
-    :param candidates: list of names to search for
+    :param ext: file extension to search for
     """
     temp_dir = tempfile.mkdtemp()
     with zipfile.ZipFile(path) as archive:
         archive.extractall(temp_dir)
     return [f for f in collect_files(temp_dir)
-            if os.path.basename(f) in candidates]
+            if os.path.basename(f).endswith(ext)]
 
 
 def unzip_rename(zpath, name):
@@ -231,9 +231,7 @@ def get_params(job_ini, kw={}):
     input_zip = None
     if job_ini.endswith('.zip'):
         input_zip = job_ini
-        job_inis = extract_from_zip(
-            job_ini, ['job_hazard.ini', 'job_haz.ini',
-                      'job.ini', 'job_risk.ini'])
+        job_inis = extract_from_zip(job_ini)
         if not job_inis:
             raise NameError('Could not find job.ini inside %s' % input_zip)
         job_ini = job_inis[0]
