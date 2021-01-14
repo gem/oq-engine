@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Consequence functions associated to a taxonomy missing in the exposure
+    are now simply discarded, instead of raising an error
+  * Added a warning when there are zero losses for nonzero GMFs
   * Added a command `oq plot avg_gmf?imt=IMT`
   * Internal: stored `avg_gmf` as a DataFrame
   * Honored the `individual_curves` parameter in avg_losses, agg_losses and

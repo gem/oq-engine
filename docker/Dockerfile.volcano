@@ -29,16 +29,15 @@ FROM python:3.8-slim AS build-image
 COPY --from=compile-image /opt/ /opt/
 ENV PATH="/opt/openquake/bin:$PATH"
 ENV LANG en_US.UTF-8
-RUN apt-get update &&  apt-get install -y --no-install-recommends git ssh sudo && useradd -m -u 1000 -s /bin/bash openquake 
+RUN apt-get update &&  apt-get install -y --no-install-recommends git ssh sudo && \
+    useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
+ADD zmq/openquake.cfg /opt/openquake/openquake.cfg
 USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
-#
-ADD scripts/oq-start.sh ${HOME}
 RUN mkdir oqdata 
+#
+ADD scripts/oq-db_start.sh ${HOME}
 # if want to copy engine src to home
 #ADD oq-engine-master ${HOME}
-EXPOSE 8800:8800
-STOPSIGNAL SIGINT
-ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["./oq-start.sh"]  
+ENTRYPOINT ["/bin/bash"]

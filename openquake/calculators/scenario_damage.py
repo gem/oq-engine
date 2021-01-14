@@ -19,7 +19,7 @@
 import logging
 import numpy
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, get_nbytes_msg
+from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.calculators import base, views
 
@@ -205,10 +205,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         E = len(self.datastore['events'])
 
         # reduction factor
-        _, msg1 = get_nbytes_msg(dict(A=A, E=E, L=L))
-        _, msg2 = get_nbytes_msg(dict(nrows=len(self.datastore['dd_data/eid']),
-                                      ncols=D+2))
-        logging.info('Using %s\ninstead of %s', msg2, msg1)
+        matrixsize = A * E * L * 4
+        realsize = self.datastore.getsize('dd_data')
+        logging.info('Saving %s in dd_data (instead of %s)',
+                     humansize(realsize), humansize(matrixsize))
 
         # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
@@ -282,5 +282,5 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             numdic = dict(expected=expected)
             for lt, num in zip(self.oqparam.loss_names, num_assets):
                 numdic[lt] = num
-            logging.info('Due to numeric errors the total number of assets'
-                         ' is imprecise: %s', numdic)
+            logging.info('Due to rounding errors inherent in floating-point arithmetic,'
+                         'the total number of assets is not exact: %s', numdic)

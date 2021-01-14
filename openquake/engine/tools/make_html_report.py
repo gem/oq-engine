@@ -105,9 +105,14 @@ PAGE_TEMPLATE = '''\
 <html>
 <head>
 <meta charset="UTF-8">
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
-<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js">
+</script>
+<link rel="stylesheet"
+ href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css"
+/>
+<script
+ src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js">
+</script>
 <script>
 $(function() {
 $("#tabs").tabs();

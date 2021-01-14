@@ -19,6 +19,7 @@
 import copy
 import logging
 import numpy
+import pandas
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base, post_risk
@@ -74,14 +75,14 @@ def event_based_risk(riskinputs, param, monitor):
                              param['master_seed'])
             alt.aggregate(
                 out, param['minimum_asset_loss'], param['aggregate_by'])
-            for l, loss_type in enumerate(crmodel.loss_types):
+            for lti, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
                 for a, asset in enumerate(ri.assets):
                     aid = asset['ordinal']
                     lba = losses[a].sum()
                     if lba:
                         result['losses_by_asset'].append(
-                            (l, out.rlzi, aid, lba))
+                            (lti, out.rlzi, aid, lba))
     return result
 
 
@@ -171,14 +172,65 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         if oq.investigation_time is None:  # scenario, compute agg_losses
             alt['rlz_id'] = self.rlzs[alt.event_id.to_numpy()]
-            dset = self.datastore.create_dset(
-                'agg_losses-rlzs', F32, (K, self.R, L))
+            agglosses = numpy.zeros((K, self.R, L), F32)
             for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
-                agglosses = numpy.array(
-                    [df[ln].sum() for ln in oq.loss_names])
-                dset[agg_id, rlz_id] = agglosses * self.avg_ratio[rlz_id]
+                agglosses[agg_id, rlz_id] = numpy.array(
+                    [df[ln].sum() for ln in oq.loss_names]
+                ) * self.avg_ratio[rlz_id]
+            self.datastore['agg_losses-rlzs'] = agglosses
             set_rlzs_stats(self.datastore, 'agg_losses',
                            agg_id=K, loss_types=oq.loss_names, units=units)
         else:  # event_based_risk, run post_risk
             prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
             prc.run(exports='')
+            try:
+                agglosses = self.datastore['agg_losses-rlzs'][K - 1]
+            except KeyError:  # not enough events in post_risk
+                logging.error('No agg_losses-rlzs')
+                return
+
+        # sanity check on the agg_losses and sum_losses
+        sumlosses = self.avglosses.sum(axis=0)
+        if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
+            url = ('https://docs.openquake.org/oq-engine/advanced/'
+                   'addition-is-non-associative.html')
+            logging.warning(
+                'Due to rounding errors inherent in floating-point arithmetic,'
+                ' agg_losses != sum(avg_losses):\n%s != %s\nsee %s',
+                agglosses, sumlosses, url)
+        try:
+            self.check_losses(oq)
+        except Exception as exc:
+            logging.error('Could not run the sanity check: %s' % exc,
+                          exc_info=True)
+
+    def check_losses(self, oq):
+        """
+        Sanity check on avg_losses and avg_gmf
+        """
+        gmf_df = self.datastore.read_df('avg_gmf')
+        sids = self.sitecol.sids
+        if self.sitecol is not self.sitecol.complete:
+            gmf_df = gmf_df.loc[sids]
+        asset_df = self.datastore.read_df('assetcol/array', 'site_id')
+        for col in asset_df.columns:
+            if not col.startswith('value-'):
+                del asset_df[col]
+        values_df = asset_df.groupby(asset_df.index).sum()
+        avglosses = self.avglosses.sum(axis=1) / self.R  # shape (A, L)
+        dic = dict(site_id=self.assetcol['site_id'])
+        for lti, lname in enumerate(oq.loss_names):
+            dic[lname] = avglosses[:, lti]
+        losses_df = pandas.DataFrame(dic).groupby('site_id').sum()
+        nonzero_gmf = (gmf_df > 0).to_numpy().any(axis=1)
+        nonzero_losses = (losses_df > 0).to_numpy().any(axis=1)
+        bad, = numpy.where(nonzero_gmf != nonzero_losses)
+        msg = 'Site #%d is suspicious:\navg_gmf=%s\navg_loss=%s\nvalues=%s'
+        for idx in bad:
+            sid = sids[idx]
+            logging.warning(msg, sid, _get(gmf_df, sid),
+                            _get(losses_df, sid), _get(values_df, sid))
+
+
+def _get(df, sid):
+    return df.loc[sid].to_dict()

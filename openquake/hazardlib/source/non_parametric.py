@@ -190,10 +190,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         The convex hull of the underlying mesh of points
         """
-        lons = []
-        lats = []
-
-        # This creates a list of flat iterators
+        lons, lats = [], []
         for rup, pmf in self.data:
 
             if isinstance(rup.surface, MultiSurface):
@@ -209,8 +206,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
         lats = numpy.extract(condition, lats)
 
         points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
-        numpy.around(lons, 5, points['lon'])
-        numpy.around(lats, 5, points['lat'])
+        points['lon'] = numpy.round(lons, 5)
+        points['lat'] = numpy.round(lats, 5)
         points = numpy.unique(points)
         mesh = Mesh(points['lon'], points['lat'])
 
