@@ -33,6 +33,7 @@ from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
 from openquake.hazardlib.mfd.tapered_gr_mfd import TaperedGRMFD
 from openquake.hazardlib.mfd import multi_mfd
 
+
 def from_toml(string, bin_width):
     """
     Convert a TOML string into an MFD instance

@@ -18,7 +18,6 @@
 
 import math
 
-from openquake.baselib.python3compat import round
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 
