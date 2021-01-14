@@ -200,6 +200,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 agglosses, sumlosses, url)
         try:
             self.check_losses(oq)
+        except KeyError as exc:
+            logging.warning(str(exc)[1:-1])
         except Exception as exc:
             logging.error('Could not run the sanity check: %s' % exc,
                           exc_info=True)
