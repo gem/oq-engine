@@ -28,14 +28,16 @@ from openquake.hazardlib.geo import geodetic, utils, Point, Line,\
 
 
 def _get_finite_mesh(mesh):
-    idx = numpy.isfinite(mesh.lons)
+    idx = numpy.isfinite(mesh.lons.flat)
+    if numpy.all(idx):
+        return mesh
     return Mesh(mesh.lons[idx], mesh.lats[idx], mesh.depths[idx])
 
 
 def _get_finite_top_rupture(mesh):
-    import pdb; pdb.set_trace()
-    print(mesh.lons)
-    idx = numpy.isfinite(mesh.lons[0, :])
+    idx = numpy.isfinite(mesh.lons.flat)
+    if numpy.all(idx):
+        return mesh[0:1]
     return RectangularMesh(mesh.lons[0, idx], mesh.lats[0, idx],
                            mesh.depths[0, idx])
 

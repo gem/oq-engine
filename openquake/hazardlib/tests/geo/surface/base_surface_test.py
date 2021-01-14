@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
+import pytest
 import numpy
 
 from openquake.hazardlib.geo.point import Point
