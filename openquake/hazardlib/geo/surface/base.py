@@ -201,7 +201,7 @@ class BaseSurface:
         dst = numpy.zeros_like(dst1)
         dst[idx] = numpy.fmin(numpy.abs(dst1[idx]), numpy.abs(dst2[idx]))
 
-        if numpy.any(isnan(dst)):
+        if numpy.any(numpy.isnan(dst)):
             raise ValueError('NaN in Ry0')
 
         return dst
@@ -291,8 +291,8 @@ class BaseSurface:
         iii = abs(dists).argmin(axis=0)
         dst = dists[iii, list(range(dists.shape[1]))]
 
-        if numpy.any(isnan(dst)):
-            raise ValueError('NaN in Ry0')
+        if numpy.any(numpy.isnan(dst)):
+            raise ValueError('NaN in Rx')
 
         return dst
 
