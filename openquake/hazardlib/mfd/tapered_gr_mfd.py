@@ -26,8 +26,10 @@ class TaperedGRMFD(BaseMFD):
     """
     Tapered Gutenberg-Richter MFD is defined as a typical Truncated
     Gutenberg-Richter MFD up to a ``corner_mag`` above which an exponential
-    taper is applied; see [ref] for details. This implementation is based on
-    the United States National Seismic Hazard Map Project code [url].
+    taper is applied; see Kagan (2002a, Geophysical Journal International)
+    for details. This implementation is based on
+    the United States National Seismic Hazard Map Project code 
+    (https://github.com/usgs/nshmp-haz).
 
     :param min_mag:
         The lowest possible magnitude for this MFD. The first bin in the
@@ -37,6 +39,10 @@ class TaperedGRMFD(BaseMFD):
         The highest possible magnitude. The same as for ``min_mag``: the last
         bin in the histogram will correspond to the magnitude value equal to
         ``max_mag - bin_width / 2``.
+    :param corner_mag:
+        The magnitude above which the exponential tapering of the earthquake
+        frequency (rate) occurs. Rates below this magnitude are identical to 
+        a Gutenberg-Richter with the same ``a`` and ``b`` values.
     :param bin_width:
         A positive float value -- the width of a single histogram bin.
 
