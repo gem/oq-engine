@@ -24,23 +24,24 @@ XENIAL_DEP = oq-python3.8-distutils
 XENIAL_REC =
 
 ifeq ($(shell lsb_release --codename --short),bionic)
-	echo "BIONIC DETECTED"
+	INFO_SER=BIONIC_DETECTED
 	BUILD_DEPENDS=
 	DEPENDS = -Vdist:Depends="$(BIONIC_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(BIONIC_REC)"
 else ifeq ($(shell lsb_release --codename --short),xenial)
-	echo "XENIAL DETECTED"
+	INFO_SER=XENIAL_DETECTED
 	BUILD_DEPENDS=, oq-python3.8-distutils
 	DEPENDS = -Vdist:Depends="$(XENIAL_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(XENIAL_REC)"
 else
-	echo "DEFAULT DETECTED"
+	INFO_SER=DEFAULT_DETECTED
 	BUILD_DEPENDS=
 	DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
 endif
 
 control-file:
+	echo "$(INFO_SER)"
 	sed -e "s/@BUILD_DEPENDS@/$(BUILD_DEPENDS)/g" \
 	        debian/control.in \
 	      > debian/control.tmp
