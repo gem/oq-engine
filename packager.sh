@@ -1526,6 +1526,7 @@ if [ $BUILD_ON_LXC -eq 1 ]; then
 
     set +e
     _pkgbuild_innervm_run "$lxc_ip" "$branch" "$DPBP_FLAG"
+    sleep 200000 || true
     inner_ret=$?
     sudo $LXC_TERM -n "$lxc_name"
     set -e
