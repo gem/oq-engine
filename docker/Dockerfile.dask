@@ -27,7 +27,7 @@ WORKDIR /opt
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
     pip --disable-pip-version-check install -e .[cluster,osgeo] -r requirements-py38-linux64.txt --no-warn-script-location
 #
-ADD zmq/openquake.cfg /opt/openquake/openquake.cfg
+ADD dask/openquake.cfg /opt/openquake/openquake.cfg
 USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
