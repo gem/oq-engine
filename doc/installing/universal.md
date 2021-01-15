@@ -46,8 +46,10 @@ without activating the virtualenv. Calculation data will be stored in `$HOME/oqd
 If you are on linux and you have root permissions the recommended installation method is `server`: in that case, the engine will work
 with multiple users and two system V services will be automatically installed and started: `openquake-dbserver` and `openquake-webui`.
 
+```
 $ wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
-$ sudo -H /usr/bin/python3 install.py user
+$ sudo -H /usr/bin/python3 install.py server
+```
 
 The installation script will automatically create a user called `openquake` and will install the engine in the directory `/opt/openquake`.
 Calculation data will be stored in `/var/lib/openquake/oqdata`.
