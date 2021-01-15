@@ -67,7 +67,15 @@ def get_zmq_ports():
     return numpy.arange(int(start), int(stop))
 
 
-if OQ_DISTRIBUTE == 'zmq':
+if OQ_DISTRIBUTE == 'dask':
+
+    def set_concurrent_tasks_default(calc):
+        num_workers = 320
+        parallel.CT = num_workers * 2
+        OqParam.concurrent_tasks.default = num_workers * 2
+        logging.warning('Hard-code 320 dask workers(!)', num_workers)
+
+elif OQ_DISTRIBUTE == 'zmq':
 
     def set_concurrent_tasks_default(calc):
         """
