@@ -523,9 +523,11 @@ def calc_run(request):
     """
     job_ini = request.POST.get('job_ini')
     hazard_job_id = request.POST.get('hazard_job_id')
-    if hazard_job_id:
+    if hazard_job_id:  # "continue" button
         hazard_job_id = int(hazard_job_id)
-    ini = job_ini if job_ini else ".ini"
+        ini = job_ini if job_ini else "risk.ini"
+    else:
+        ini = job_ini if job_ini else ".ini"
     result = safely_call(_prepare_job, (request, ini))
     if result.tb_str:
         return HttpResponse(json.dumps(result.tb_str.splitlines()),
