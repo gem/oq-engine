@@ -73,7 +73,7 @@ if OQ_DISTRIBUTE == 'dask':
         num_workers = 320
         parallel.CT = num_workers * 2
         OqParam.concurrent_tasks.default = num_workers * 2
-        logging.warning('Hard-code 320 dask workers(!)', num_workers)
+        logging.warning('Hard-code %d dask workers(!)', num_workers)
 
 elif OQ_DISTRIBUTE == 'zmq':
 
