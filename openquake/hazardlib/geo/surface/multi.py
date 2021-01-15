@@ -277,9 +277,11 @@ class MultiSurface(BaseSurface):
         average value (in km).
         """
         areas = self._get_areas()
-        depths = numpy.array(
-            [surf.get_top_edge_depth() for surf in self.surfaces])
-        return numpy.sum(areas * depths) / numpy.sum(areas)
+        depths = numpy.array([numpy.mean(surf.get_top_edge_depth()) for surf
+                              in self.surfaces])
+        ted = numpy.sum(areas * depths) / numpy.sum(areas)
+        assert numpy.isfinite(ted).all()
+        return ted
 
     def get_strike(self):
         """
@@ -292,12 +294,10 @@ class MultiSurface(BaseSurface):
         """
         areas = self._get_areas()
         strikes = numpy.array([surf.get_strike() for surf in self.surfaces])
-
         v1 = (numpy.sum(areas * numpy.sin(numpy.radians(strikes))) /
               numpy.sum(areas))
         v2 = (numpy.sum(areas * numpy.cos(numpy.radians(strikes))) /
               numpy.sum(areas))
-
         return numpy.degrees(numpy.arctan2(v1, v2)) % 360
 
     def get_dip(self):
@@ -309,9 +309,11 @@ class MultiSurface(BaseSurface):
         formula for weighted mean is used.
         """
         areas = self._get_areas()
-        dips = numpy.array([surf.get_dip() for surf in self.surfaces])
-
-        return numpy.sum(areas * dips) / numpy.sum(areas)
+        dips = numpy.array([numpy.mean(surf.get_dip()) for surf in
+                            self.surfaces])
+        dip = numpy.sum(areas * dips) / numpy.sum(areas)
+        assert numpy.isfinite(dip).all()
+        return dip
 
     def get_width(self):
         """
@@ -408,7 +410,6 @@ class MultiSurface(BaseSurface):
             for surf in self.surfaces:
                 self.areas.append(surf.get_area())
             self.areas = numpy.array(self.areas)
-
         return self.areas
 
     def _get_cartesian_edge_set(self):

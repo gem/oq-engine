@@ -22,8 +22,26 @@ Module :mod:`openquake.hazardlib.geo.surface.base` implements
 """
 import numpy
 import math
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic, utils, Point, Line,\
     RectangularMesh
+
+
+def _get_finite_mesh(mesh):
+    ok = numpy.isfinite(mesh.lons.flat)
+    if numpy.all(ok):
+        return mesh
+    ok = numpy.reshape(ok, mesh.lons.shape)
+    return Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
+
+
+def _get_finite_top_rupture(mesh):
+    ok = numpy.isfinite(mesh.lons.flat)
+    if numpy.all(ok):
+        return mesh[0:1]
+    ok = numpy.isfinite(mesh.lons[0, :])
+    return RectangularMesh(mesh.lons[0, ok], mesh.lats[0, ok],
+                           mesh.depths[0, ok])
 
 
 def _find_turning_points(mesh, tol=1.0):
@@ -116,7 +134,8 @@ class BaseSurface:
         :returns:
             A numpy array of distances in km.
         """
-        return self.mesh.get_min_distance(mesh)
+        fmesh = _get_finite_mesh(self.mesh)
+        return fmesh.get_min_distance(mesh)
 
     def get_closest_points(self, mesh):
         """
@@ -129,7 +148,8 @@ class BaseSurface:
             :class:`~openquake.hazardlib.geo.mesh.Mesh` of the same shape as
             ``mesh`` with closest surface's points on respective indices.
         """
-        return self.mesh.get_closest_points(mesh)
+        fmesh = _get_finite_mesh(self.mesh)
+        return fmesh.get_closest_points(mesh)
 
     def get_joyner_boore_distance(self, mesh):
         """
@@ -143,7 +163,8 @@ class BaseSurface:
             Numpy array of closest distances between the projections of surface
             and each point of the ``mesh`` to the earth surface.
         """
-        return self.mesh.get_joyner_boore_distance(mesh)
+        fmesh = _get_finite_mesh(self.mesh)
+        return fmesh.get_joyner_boore_distance(mesh)
 
     def get_ry0_distance(self, mesh):
         """
@@ -157,10 +178,14 @@ class BaseSurface:
         :returns:
             Numpy array of distances in km.
         """
+
         # This computes ry0 by using an average strike direction
         top_edge = self.mesh[0:1]
         mean_strike = self.get_strike()
 
+        # Computing the distances between the sites and the two lines 
+        # perpendicular to the strike passing trough the two extremes 
+        # of the top of the rupture
         dst1 = geodetic.distance_to_arc(top_edge.lons[0, 0],
                                         top_edge.lats[0, 0],
                                         (mean_strike + 90.) % 360,
@@ -170,12 +195,14 @@ class BaseSurface:
                                         top_edge.lats[0, -1],
                                         (mean_strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
-        # Find the points on the rupture
 
         # Get the shortest distance from the two lines
         idx = numpy.sign(dst1) == numpy.sign(dst2)
         dst = numpy.zeros_like(dst1)
         dst[idx] = numpy.fmin(numpy.abs(dst1[idx]), numpy.abs(dst2[idx]))
+
+        if numpy.any(numpy.isnan(dst)):
+            raise ValueError('NaN in Ry0')
 
         return dst
 
@@ -200,6 +227,7 @@ class BaseSurface:
             Numpy array of distances in km.
         """
         top_edge = self.mesh[0:1]
+        xxx = _get_finite_top_rupture(mesh)
 
         dists = []
         if top_edge.lons.shape[1] < 3:
@@ -263,6 +291,9 @@ class BaseSurface:
         iii = abs(dists).argmin(axis=0)
         dst = dists[iii, list(range(dists.shape[1]))]
 
+        if numpy.any(numpy.isnan(dst)):
+            raise ValueError('NaN in Rx')
+
         return dst
 
     def get_top_edge_depth(self):
@@ -277,7 +308,8 @@ class BaseSurface:
         if top_edge.depths is None:
             return 0
         else:
-            return numpy.min(top_edge.depths)
+            dep = numpy.min(top_edge.depths)
+            return dep
 
     def _get_top_edge_centroid(self):
         """
@@ -291,9 +323,12 @@ class BaseSurface:
         """
         Compute area as the sum of the mesh cells area values.
         """
-        mesh = self.mesh
-        _, _, _, area = mesh.get_cell_dimensions()
-
+        from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
+        if isinstance(self, KiteSurface):
+            _, _, _, area = self.get_cell_dimensions()
+        else:
+            mesh = self.mesh
+            _, _, _, area = mesh.get_cell_dimensions()
         return numpy.sum(area)
 
     def get_bounding_box(self):
@@ -307,7 +342,7 @@ class BaseSurface:
             northern and southern borders of the bounding box respectively.
             Values are floats in decimal degrees.
         """
-        mesh = self.mesh
+        mesh = _get_finite_mesh(self.mesh)
         return utils.get_spherical_bounding_box(mesh.lons, mesh.lats)
 
     def get_middle_point(self):
