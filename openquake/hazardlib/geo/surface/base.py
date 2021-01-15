@@ -28,20 +28,20 @@ from openquake.hazardlib.geo import geodetic, utils, Point, Line,\
 
 
 def _get_finite_mesh(mesh):
-    idx = numpy.isfinite(mesh.lons.flat)
-    if numpy.all(idx):
+    ok = numpy.isfinite(mesh.lons.flat)
+    if numpy.all(ok):
         return mesh
-    idx = numpy.reshape(idx, mesh.lons.shape)
-    return Mesh(mesh.lons[idx], mesh.lats[idx], mesh.depths[idx])
+    ok = numpy.reshape(ok, mesh.lons.shape)
+    return Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
 
 
 def _get_finite_top_rupture(mesh):
-    idx = numpy.isfinite(mesh.lons.flat)
-    if numpy.all(idx):
+    ok = numpy.isfinite(mesh.lons.flat)
+    if numpy.all(ok):
         return mesh[0:1]
-    idx = numpy.isfinite(mesh.lons[0, :])
-    return RectangularMesh(mesh.lons[0, idx], mesh.lats[0, idx],
-                           mesh.depths[0, idx])
+    ok = numpy.isfinite(mesh.lons[0, :])
+    return RectangularMesh(mesh.lons[0, ok], mesh.lats[0, ok],
+                           mesh.depths[0, ok])
 
 
 def _find_turning_points(mesh, tol=1.0):

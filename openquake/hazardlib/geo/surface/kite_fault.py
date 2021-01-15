@@ -163,9 +163,10 @@ class KiteSurface(BaseSurface):
                 vdists = (self.mesh.depths[1:, col_idx] -
                           self.mesh.depths[:-1, col_idx])
 
-                idx = np.logical_and(np.isfinite(hdists), np.isfinite(vdists))
-                hdists = hdists[idx]
-                vdists = vdists[idx]
+                ok = np.logical_and(np.isfinite(hdists), np.isfinite(vdists))
+                hdists = hdists[ok]
+                vdists = vdists[ok]
+
                 dips.append(np.mean(np.degrees(np.arctan(vdists/hdists))))
                 lens.append(np.sum((hdists**2 + vdists**2)**0.5))
             lens = np.array(lens)
@@ -195,8 +196,8 @@ class KiteSurface(BaseSurface):
             Float value, the vertical distance between the earth surface
             and the shallowest point in surface's top edge in km.
         """
-        idx = np.isfinite(self.mesh.lons[0, :])
-        return self.mesh.depths[0, idx]
+        ok = np.isfinite(self.mesh.lons[0, :])
+        return self.mesh.depths[0, ok]
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
@@ -369,6 +370,11 @@ class KiteSurface(BaseSurface):
         """
         Calculate centroid, width, length and area of each mesh cell.
 
+        NOTE: The original verison of this method is in the class
+        :class:`openquake.hazardlib.geo.mesh.Mesh`. It is duplicated here
+        because it required ad-hoc modifications to support kite fault
+        surfaces
+
         :returns:
             Tuple of four elements, each being 2d numpy array.
             Each array has both dimensions less by one the dimensions
@@ -393,7 +399,7 @@ class KiteSurface(BaseSurface):
         bottom_length = np.sqrt(np.sum(bottom * bottom, axis=-1))
         right_length = np.sqrt(np.sum(right * right, axis=-1))
 
-        # Remove cells without a fiinite area
+        # Remove cells without a finite area
         np.nan_to_num(tl_area, nan=0.0, copy=False)
         np.nan_to_num(br_area, nan=0.0, copy=False)
         cell_area = tl_area + br_area

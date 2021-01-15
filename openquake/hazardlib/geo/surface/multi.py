@@ -280,7 +280,7 @@ class MultiSurface(BaseSurface):
         depths = numpy.array([numpy.mean(surf.get_top_edge_depth()) for surf
                               in self.surfaces])
         ted = numpy.sum(areas * depths) / numpy.sum(areas)
-        assert numpy.isfinite(ted)
+        assert numpy.isfinite(ted).all()
         return ted
 
     def get_strike(self):
@@ -309,9 +309,10 @@ class MultiSurface(BaseSurface):
         formula for weighted mean is used.
         """
         areas = self._get_areas()
-        dips = numpy.array([numpy.mean(surf.get_dip()) for surf in self.surfaces])
+        dips = numpy.array([numpy.mean(surf.get_dip()) for surf in
+                            self.surfaces])
         dip = numpy.sum(areas * dips) / numpy.sum(areas)
-        assert numpy.isfinite(dip)
+        assert numpy.isfinite(dip).all()
         return dip
 
     def get_width(self):
