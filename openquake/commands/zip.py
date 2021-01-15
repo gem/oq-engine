@@ -20,7 +20,7 @@ import os.path
 from openquake.commonlib import oqzip
 
 
-def main(what, archive_zip='', risk_file=''):
+def main(what, archive_zip='', *, risk_file=''):
     """
     Zip into an archive one or two job.ini files with all related files
     """

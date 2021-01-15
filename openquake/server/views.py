@@ -138,6 +138,7 @@ def _prepare_job(request, ini):
                 inifiles.append(new_path)
     else:  # extract the files from the archive into temp_dir
         inifiles = readinput.extract_from_zip(arch, ini)
+    inifiles.sort()
     return inifiles
 
 
@@ -524,7 +525,6 @@ def calc_run(request):
     job_ini = request.POST.get('job_ini')
     hazard_job_id = request.POST.get('hazard_job_id')
     if hazard_job_id:  # "continue" button
-        hazard_job_id = int(hazard_job_id)
         ini = job_ini if job_ini else "risk.ini"
     else:
         ini = job_ini if job_ini else ".ini"
@@ -541,7 +541,8 @@ def calc_run(request):
 
     user = utils.get_user(request)
     try:
-        job_id = submit_job(inifiles[0], user, hazard_job_id)
+        job_id = submit_job(
+            inifiles[0], user, hazard_calculation_id=hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -555,7 +556,7 @@ def calc_run(request):
                         status=status)
 
 
-def submit_job(job_ini, username, hazard_calculation_id=None):
+def submit_job(job_ini, username, **kw):
     """
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns a PID.
@@ -564,11 +565,9 @@ def submit_job(job_ini, username, hazard_calculation_id=None):
     params = readinput.get_params(job_ini)
     job_id = logs.init('job')
     params['_job_id'] = job_id
-    if hazard_calculation_id:
-        params['hazard_calculation_id'] = hazard_calculation_id
     proc = Process(target=engine.run_jobs,
                    args=([params], config.distribution.log_level, None,
-                         '', username))
+                         '', username), kwargs=kw)
     proc.start()
     return job_id
 
