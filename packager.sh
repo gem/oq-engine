@@ -284,6 +284,7 @@ build_dependencies_file () {
     fi
     
     if [ ! -d ${je_deps_base}_jenkins_deps ]; then
+        pwd
         mkdir ${je_deps_base}_jenkins_deps
     fi
 
