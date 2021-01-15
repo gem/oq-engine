@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2020 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,7 @@ import os.path
 from openquake.commonlib import oqzip
 
 
-def main(what, archive_zip='', risk_file=''):
+def main(what, archive_zip='', *, risk_file=''):
     """
     Zip into an archive one or two job.ini files with all related files
     """

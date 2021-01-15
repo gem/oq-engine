@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,6 @@ import copy
 import operator
 import functools
 import collections
-from urllib.parse import unquote_plus
 import numpy
 import pandas
 
@@ -571,12 +570,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 # save the number of nonzero coefficients of variation
                 if hasattr(rf, 'covs') and rf.covs.any():
                     self.covs += 1
-            missing = set(self.loss_types) - set(
-                lt for lt, kind in rm.risk_functions)
-            if missing:
-                raise ValidationError(
-                    'Missing vulnerability function for taxonomy %s and loss'
-                    ' type %s' % (riskid, ', '.join(missing)))
             rm.imt_by_lt = {}  # dictionary loss_type -> imt
             for lt, kind in rm.risk_functions:
                 if kind in 'vulnerability fragility':

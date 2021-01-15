@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,6 @@ from io import BytesIO
 from openquake.baselib import general, datastore
 from openquake.hazardlib import InvalidFile, site_amplification
 from openquake.risklib import asset
-from openquake.risklib.riskmodels import ValidationError
 from openquake.commonlib import readinput, logictree
 from openquake.qa_tests_data.classical import case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
@@ -502,20 +501,9 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
             error.call_args[0][0], 'source SFLT2: too large: 84 km')
 
 
-class GetCompositeRiskModelTestCase(unittest.TestCase):
-    def tearDown(self):
-        # cleanup evil global
-        readinput.exposure = None
-
-    def test_missing_vulnerability_function(self):
-        oq = readinput.get_oqparam('job.ini', case_caracas)
-        with self.assertRaises(ValidationError):
-            readinput.get_crmodel(oq)
-
-
 class SitecolAssetcolTestCase(unittest.TestCase):
 
-    def tearDown(self):
+    def setUp(self):
         # cleanup evil global
         readinput.exposure = None
 

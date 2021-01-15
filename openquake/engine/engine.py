@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2020 GEM Foundation
+# Copyright (C) 2010-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -67,7 +67,15 @@ def get_zmq_ports():
     return numpy.arange(int(start), int(stop))
 
 
-if OQ_DISTRIBUTE == 'zmq':
+if OQ_DISTRIBUTE == 'dask':
+
+    def set_concurrent_tasks_default(calc):
+        num_workers = 320
+        parallel.CT = num_workers * 2
+        OqParam.concurrent_tasks.default = num_workers * 2
+        logging.warning('Hard-code %d dask workers(!)', num_workers)
+
+elif OQ_DISTRIBUTE == 'zmq':
 
     def set_concurrent_tasks_default(calc):
         """

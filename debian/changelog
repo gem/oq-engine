@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Fixed a wrong check failing in the case of multi-exposures with multiple
+    cost types
+  * Removed a check causing a false error "Missing vulnerability function
+    for taxonomy"
   * Consequence functions associated to a taxonomy missing in the exposure
     are now simply discarded, instead of raising an error
   * Added a warning when there are zero losses for nonzero GMFs

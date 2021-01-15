@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2020 GEM Foundation
+# Copyright (C) 2010-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -257,7 +257,8 @@ def zmq_submit(self, func, args, monitor):
 
 @submit.add('dask')
 def dask_submit(self, func, args, monitor):
-    return self.dask_client.submit(safely_call, func, args, self.task_no)
+    return self.dask_client.submit(
+        safely_call, func, args, self.task_no, monitor)
 
 
 def oq_distribute(task=None):

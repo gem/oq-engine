@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,6 +18,9 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
 import numpy
+
+from openquake.hazardlib.geo.surface.base import _get_finite_mesh
+
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -189,16 +192,25 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         lons, lats = [], []
         for rup, pmf in self.data:
-            surf = rup.surface
-            surfs = surf.surfaces if hasattr(surf, 'surfaces') else [surf]
-            for surf in surfs:
-                lons.extend(surf.mesh.lons.flat)
-                lats.extend(surf.mesh.lats.flat)
+
+            if isinstance(rup.surface, MultiSurface):
+                for sfc in rup.surface.surfaces:
+                    lons.extend(sfc.mesh.lons.flat)
+                    lats.extend(sfc.mesh.lats.flat)
+            else:
+                lons.extend(rup.surface.mesh.lons.flat)
+                lats.extend(rup.surface.mesh.lats.flat)
+
+        condition = numpy.isfinite(lons).astype(int)
+        lons = numpy.extract(condition, lons)
+        lats = numpy.extract(condition, lats)
+
         points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
         points['lon'] = numpy.round(lons, 5)
         points['lat'] = numpy.round(lats, 5)
         points = numpy.unique(points)
         mesh = Mesh(points['lon'], points['lat'])
+
         return mesh.get_convex_hull()
 
     def wkt(self):

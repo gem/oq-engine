@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,6 +37,7 @@ U64 = numpy.uint64
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 by_taxonomy = operator.attrgetter('taxonomy')
+ae = numpy.testing.assert_equal
 
 
 def get_case_similar(names):
@@ -862,10 +863,10 @@ class Exposure(object):
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)
             else:
-                assert exposure.cost_types == exp.cost_types
-                assert exposure.occupancy_periods == exp.occupancy_periods
-                assert exposure.retrofitted == exp.retrofitted
-                assert exposure.area == exp.area
+                ae(exposure.cost_types, exp.cost_types)
+                ae(exposure.occupancy_periods, exp.occupancy_periods)
+                ae(exposure.retrofitted, exp.retrofitted)
+                ae(exposure.area, exp.area)
                 exp.assets.extend(exposure.assets)
                 exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]

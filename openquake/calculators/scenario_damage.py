@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -106,7 +106,7 @@ def scenario_damage(riskinputs, param, monitor):
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
             ne = num_events[r]  # total number of events
-            for l, loss_type in enumerate(crmodel.loss_types):
+            for lti, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     aid = asset['ordinal']
                     if continuous_dd:
@@ -122,20 +122,20 @@ def scenario_damage(riskinputs, param, monitor):
                         dmg = ddd[1:]
                         if dmg.sum():
                             eid = out.eids[e]  # (aid, eid, l) is unique
-                            acc.append((aid, eid, l) + tuple(dmg))
-                            d_event[eid][l] += ddd[1:]
+                            acc.append((aid, eid, lti) + tuple(dmg))
+                            d_event[eid][lti] += ddd[1:]
                     tot = damages.sum(axis=0)  # (E', D) -> D
                     nodamage = asset['number'] * (ne - len(damages))
                     tot[0] += nodamage
-                    res['d_asset'].append((l, r, aid, tot))
+                    res['d_asset'].append((lti, r, aid, tot))
                     # TODO: use the ddd, not the fractions in compute_csq
                     csq = crmodel.compute_csq(asset, fractions, loss_type)
                     for name, values in csq.items():
                         res['avg_%s' % name].append(
-                            (l, r, asset['ordinal'], values.sum(axis=0)))
+                            (lti, r, asset['ordinal'], values.sum(axis=0)))
                         by_event = res[name + '_by_event']
                         for eid, value in zip(out.eids, values):
-                            by_event[eid][l] += value
+                            by_event[eid][lti] += value
     res['aed'] = numpy.array(acc, param['asset_damage_dt'])
     return res
 

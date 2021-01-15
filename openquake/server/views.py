@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -118,27 +118,28 @@ def _get_base_url(request):
     return base_url
 
 
-def _prepare_job(request, candidates):
+def _prepare_job(request, ini):
     """
     Creates a temporary directory, move uploaded files there and
-    select the job file by looking at the candidate names.
+    select the job file by looking at the .ini extension.
 
     :returns: full path of the job_file
     """
     temp_dir = tempfile.mkdtemp()
-    inifiles = []
     arch = request.FILES.get('archive')
     if arch is None:
         # move each file to a new temp dir, using the upload file names,
         # not the temporary ones
+        inifiles = []
         for each_file in request.FILES.values():
             new_path = os.path.join(temp_dir, each_file.name)
             shutil.move(each_file.temporary_file_path(), new_path)
-            if each_file.name in candidates:
+            if each_file.name.endswith(ini):
                 inifiles.append(new_path)
-        return inifiles
-    # else extract the files from the archive into temp_dir
-    return readinput.extract_from_zip(arch, candidates)
+    else:  # extract the files from the archive into temp_dir
+        inifiles = readinput.extract_from_zip(arch, ini)
+    inifiles.sort()
+    return inifiles
 
 
 @csrf_exempt
@@ -521,29 +522,27 @@ def calc_run(request):
         calculation. They can be uploaded as separate files, or zipped
         together.
     """
-    hazard_job_id = request.POST.get('hazard_job_id')
     job_ini = request.POST.get('job_ini')
-
-    if hazard_job_id:
-        hazard_job_id = int(hazard_job_id)
-        candidates = [job_ini] if job_ini else ("job_risk.ini", "job.ini")
+    hazard_job_id = request.POST.get('hazard_job_id')
+    if hazard_job_id:  # "continue" button
+        ini = job_ini if job_ini else "risk.ini"
     else:
-        candidates = [job_ini] if job_ini else (
-            "job_hazard.ini", "job_haz.ini", "job.ini")
-    result = safely_call(_prepare_job, (request, candidates))
+        ini = job_ini if job_ini else ".ini"
+    result = safely_call(_prepare_job, (request, ini))
     if result.tb_str:
         return HttpResponse(json.dumps(result.tb_str.splitlines()),
                             content_type=JSON, status=500)
     inifiles = result.get()
     if not inifiles:
-        msg = 'Could not find any file of the form %s' % str(candidates)
+        msg = 'Could not find any file of the form *%s' % ini
         logging.error(msg)
         return HttpResponse(content=json.dumps([msg]), content_type=JSON,
                             status=500)
 
     user = utils.get_user(request)
     try:
-        job_id = submit_job(inifiles[0], user, hazard_job_id)
+        job_id = submit_job(
+            inifiles[0], user, hazard_calculation_id=hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -557,7 +556,7 @@ def calc_run(request):
                         status=status)
 
 
-def submit_job(job_ini, username, hazard_calculation_id=None):
+def submit_job(job_ini, username, **kw):
     """
     Create a job object from the given job.ini file in the job directory
     and run it in a new process. Returns a PID.
@@ -566,11 +565,9 @@ def submit_job(job_ini, username, hazard_calculation_id=None):
     params = readinput.get_params(job_ini)
     job_id = logs.init('job')
     params['_job_id'] = job_id
-    if hazard_calculation_id:
-        params['hazard_calculation_id'] = hazard_calculation_id
     proc = Process(target=engine.run_jobs,
                    args=([params], config.distribution.log_level, None,
-                         '', username))
+                         '', username), kwargs=kw)
     proc.start()
     return job_id
 
