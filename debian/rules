@@ -24,17 +24,17 @@ XENIAL_DEP = oq-python3.8-distutils
 XENIAL_REC =
 
 ifeq ($(shell lsb_release --codename --short),bionic)
-        echo "BIONIC DETECTED"
+	echo "BIONIC DETECTED"
 	BUILD_DEPENDS=
 	DEPENDS = -Vdist:Depends="$(BIONIC_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(BIONIC_REC)"
 else ifeq ($(shell lsb_release --codename --short),xenial)
-        echo "XENIAL DETECTED"
+	echo "XENIAL DETECTED"
 	BUILD_DEPENDS=, oq-python3.8-distutils
 	DEPENDS = -Vdist:Depends="$(XENIAL_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(XENIAL_REC)"
 else
-        echo "DEFAULT DETECTED"
+	echo "DEFAULT DETECTED"
 	BUILD_DEPENDS=
 	DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
 	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
