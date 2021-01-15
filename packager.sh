@@ -1051,7 +1051,7 @@ deps_check_or_clone () {
         popd
     else
         pwd
-        git clone --depth=1 -b "$branch" "$repo" "_jenkins_deps/$dep"
+        git clone --depth=1 -b "$branch" "$repo" "../../_jenkins_deps/$dep"
     fi
 }
 
