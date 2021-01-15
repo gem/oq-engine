@@ -34,6 +34,7 @@ WORKDIR ${HOME}
 RUN mkdir oqdata 
 #
 ADD scripts/oq-db_start.sh ${HOME}
+ADD scripts/oq-start.sh ${HOME}
 # if want to copy engine src to home
 #ADD oq-engine-master ${HOME}
 ENTRYPOINT ["/bin/bash"]
