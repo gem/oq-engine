@@ -257,7 +257,8 @@ def zmq_submit(self, func, args, monitor):
 
 @submit.add('dask')
 def dask_submit(self, func, args, monitor):
-    return self.dask_client.submit(safely_call, func, args, self.task_no)
+    return self.dask_client.submit(
+        safely_call, func, args, self.task_no, monitor)
 
 
 def oq_distribute(task=None):
