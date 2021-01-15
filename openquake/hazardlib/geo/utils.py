@@ -344,6 +344,11 @@ def get_spherical_bounding_box(lons, lats):
         180 degrees (it is impossible to define a single hemisphere
         bound to poles that would contain the whole collection).
     """
+    ok = numpy.isfinite(lons)
+    if not ok.all():
+        lons = lons[ok]
+        lats = lats[ok]
+
     north, south = numpy.max(lats), numpy.min(lats)
     west, east = numpy.min(lons), numpy.max(lons)
     assert (-180 <= west <= 180) and (-180 <= east <= 180), (west, east)
