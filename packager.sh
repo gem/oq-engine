@@ -277,6 +277,7 @@ add_local_pkg_repo () {
 
 build_dependencies_file () {
     local je_deps_base="$1"
+    local branch_id="$2"
 
     if [ -e ${je_deps_base}_jenkins_deps_info ]; then
         return
@@ -618,7 +619,7 @@ _pkgbuild_innervm_run () {
     ssh "$lxc_ip" sudo apt-get update
     ssh "$lxc_ip" sudo apt-get -y upgrade
 
-    build_dependencies_file "../../"
+    build_dependencies_file "../../" "$branch"
     add_custom_pkg_repo
 
     ssh "$lxc_ip" "sudo apt-get upgrade -y"
