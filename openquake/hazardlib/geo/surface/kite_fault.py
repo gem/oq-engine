@@ -422,7 +422,8 @@ class KiteSurface(BaseSurface):
         return cell_center, cell_length, cell_width, cell_area
 
 
-def get_profiles_from_simple_fault_data(fault_trace, upper_seismogenic_depth,
+def get_profiles_from_simple_fault_data(
+        fault_trace, upper_seismogenic_depth,
         lower_seismogenic_depth, dip, rupture_mesh_spacing):
     """
     Using the same information used for the construction of a simple fault
