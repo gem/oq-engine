@@ -75,7 +75,7 @@ class WorkerMaster(object):
         for _ in range(seconds):
             time.sleep(1)
             status = self.status()
-            if all(running for host, running, total in status):
+            if all(total for host, running, total in status):
                 break
         else:
             raise TimeoutError(status)
