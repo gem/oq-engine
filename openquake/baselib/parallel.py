@@ -210,7 +210,7 @@ from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp)
+    gettemp, socket_ready)
 
 sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
@@ -936,13 +936,16 @@ def start_workers():
         if OQDIST == 'dask':
             args += ['distributed.cli.dask_worker', sched, '--nprocs', cores]
         elif OQDIST == 'celery':
-            args += ['celery', 'worker', '-c', cores]
+            args += ['celery', 'worker']
+            if cores != '-1':
+                args += ['-c', cores]
         elif OQDIST == 'zmq':
             args += ['openquake.baselib.workerpool', '-n', cores]
         subprocess.Popen(args)
+        logging.info(args)
     if OQDIST == 'dask':
         host, port = sched.split(':')
-        subprocess.Popen([
+        subprocess.check_output([
             sys.executable, '-m', 'distributed.cli.dask_scheduler',
             '--host', host, '--port', port])
 
@@ -954,23 +957,47 @@ def stop_workers():
     if OQDIST == 'dask':
         Starmap.dask_client.shutdown()
     elif OQDIST == 'celery':
-        app.control.broadcast('shutdown')
+        app.control.shutdown()
     elif OQDIST == 'zmq':
         workerpool.WorkerMaster().kill()
 
 
+def wait_workers(self, seconds=30):
+    """
+    Wait until all workers are active
+    """
+    for _ in range(seconds):
+        time.sleep(1)
+        status = status_workers()
+        if all(st == 'running' for host, st in status):
+            break
+    else:
+        raise TimeoutError(status)
+    return status
+
+
 def status_workers():
     """
-    :returns: the total number of active workers
+    :returns: a list of pairs [(host name, number of workers), ...]
     """
     if OQDIST == 'dask':
         return len(Starmap.dask_client.scheduler_info()['workers'])
     elif OQDIST == 'celery':
         stats = control.inspect(timeout=1).stats()
-        ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        return ncores
+        if stats:
+            return [(k, stats[k]['pool']['max-concurrency']) for k in stats]
+        return []
     elif OQDIST == 'zmq':
-        return workerpool.WorkerMaster().status()
+        out = []
+        for hostcores in config.zworkers.host_cores.split(','):
+            host, cores = hostcores.split()
+            url = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
+            with Socket(url, zmq.REQ, 'connect') as sock:
+                if not socket_ready(url):
+                    logging.warning('%s is not running', host)
+                    continue
+                out.append((host, sock.send('get_num_workers')))
+        return out
 
 
 def inspect_workers():

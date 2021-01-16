@@ -121,26 +121,6 @@ elif OQ_DISTRIBUTE.startswith('celery'):
         OqParam.concurrent_tasks.default = ncores * 2
         logging.warning('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
 
-    def celery_cleanup(terminate):
-        """
-        Release the resources used by an openquake job.
-        In particular revoke the running tasks (if any).
-
-        :param bool terminate: the celery revoke command terminate flag
-        :param tasks: celery tasks
-        """
-        # Using the celery API, terminate and revoke and terminate any running
-        # tasks associated with the current job.
-        tasks = parallel.Starmap.running_tasks
-        if tasks:
-            logging.warning('Revoking %d tasks', len(tasks))
-        else:  # this is normal when OQ_DISTRIBUTE=no
-            logging.debug('No task to revoke')
-        while tasks:
-            task = tasks.pop()
-            tid = task.task_id
-            celery.task.control.revoke(tid, terminate=terminate)
-            logging.debug('Revoked task %s', tid)
 else:
 
     def set_concurrent_tasks_default(calc):
@@ -442,6 +422,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         if config.zworkers['host_cores']:
             logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('start_workers')  # start the zworkers
+            logs.dbcmd('wait_workers')  # wait for them to start
         allargs = [(job_id, oqparam, exports, log_level, log_file)
                    for job_id, oqparam in jobparams]
         if jobarray:
@@ -454,8 +435,6 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         if config.zworkers['host_cores']:
             logging.info('Stopping the zworkers')
             logs.dbcmd('stop_workers')
-        elif dist.startswith('celery'):
-            celery_cleanup(config.distribution.terminate_workers_on_revoke)
     return jobparams
 
 
