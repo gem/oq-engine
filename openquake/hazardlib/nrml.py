@@ -241,6 +241,7 @@ validators = {
     'a_val': valid.floats,
     'bValue': valid.positivefloat,
     'b_val': valid.positivefloats,
+    'cornerMag': valid.positivefloat,
     'magScaleRel': valid.mag_scale_rel,
     'tectonicRegion': str,
     'ruptAspectRatio': valid.positivefloat,

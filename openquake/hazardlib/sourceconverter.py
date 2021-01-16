@@ -37,7 +37,8 @@ EPSILON = 1E-12
 source_dt = numpy.dtype([('source_id', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 KNOWN_MFDS = ('incrementalMFD', 'truncGutenbergRichterMFD',
-              'arbitraryMFD', 'YoungsCoppersmithMFD', 'multiMFD')
+              'arbitraryMFD', 'YoungsCoppersmithMFD', 'multiMFD',
+              'taperedGutenbergRichterMFD')
 
 
 def extract_dupl(values):
@@ -732,6 +733,11 @@ class SourceConverter(RuptureConverter):
             elif mfd_node.tag.endswith('multiMFD'):
                 return mfd.multi_mfd.MultiMFD.from_node(
                     mfd_node, self.width_of_mfd_bin)
+            elif mfd_node.tag.endswith('taperedGutenbergRichterMFD'):
+                return mfd.TaperedGRMFD(
+                    mfd_node['minMag'], mfd_node['maxMag'],
+                    mfd_node['cornerMag'], self.width_of_mfd_bin,
+                    mfd_node['aValue'], mfd_node['bValue'])
 
     def convert_npdist(self, node):
         """

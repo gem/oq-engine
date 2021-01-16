@@ -1,3 +1,6 @@
+  [Richard Styron]
+  * Added TaperedGRMFD to hazardlib
+
   [Michele Simionato]
   * Fixed a wrong check failing in the case of multi-exposures with multiple
     cost types

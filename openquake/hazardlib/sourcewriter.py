@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Source model XML Writer
 """
@@ -192,6 +191,27 @@ def build_truncated_gr_mfd(mfd):
     return Node("truncGutenbergRichterMFD",
                 {"aValue": mfd.a_val, "bValue": mfd.b_val,
                  "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
+
+
+@obj_to_node.add('TaperedGRMFD')
+def build_tapered_gr_mfd(mfd):
+    """
+    Parses the truncated Gutenberg Richter MFD as a Node
+
+    :param mfd:
+        MFD as instance of :class:
+        `openquake.hazardlib.mfd.tapered_gr_mfd.TaperedGRMFD`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    return Node(
+        "taperedGutenbergRichterMFD", {
+            "aValue": mfd.a_val,
+            "bValue": mfd.b_val,
+            "cornerMag": mfd.corner_mag,
+            "minMag": mfd.min_mag,
+            "maxMag": mfd.max_mag
+        })
 
 
 @obj_to_node.add('ArbitraryMFD')
