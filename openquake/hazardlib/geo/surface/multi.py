@@ -311,6 +311,11 @@ class MultiSurface(BaseSurface):
         areas = self._get_areas()
         dips = numpy.array([numpy.mean(surf.get_dip()) for surf in
                             self.surfaces])
+
+        ok = numpy.logical_and(numpy.isfinite(dips), numpy.isfinite(areas))
+        dips = dips[ok]
+        areas = areas[ok]
+
         dip = numpy.sum(areas * dips) / numpy.sum(areas)
         assert numpy.isfinite(dip).all()
         return dip
@@ -567,6 +572,13 @@ class MultiSurface(BaseSurface):
         on_segment = numpy.zeros_like(lons, dtype=bool)
         # Loop over the traces
         for j, edges in enumerate(self.cartesian_edges):
+
+            # import pdb; pdb.set_trace()
+            ok = numpy.isfinite(edges)
+            if not ok.all():
+                edges = edges[ok]
+                edges = edges.reshape((-1, 3))
+
             # Loop over segments in trace
             for i in range(edges.shape[0] - 1):
                 # Get u_i and t_i
