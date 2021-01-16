@@ -70,7 +70,7 @@ def get_zmq_ports():
 if OQ_DISTRIBUTE == 'dask':
 
     def set_concurrent_tasks_default(calc):
-        num_workers = 320
+        num_workers = parallel.status_workers()
         parallel.CT = num_workers * 2
         OqParam.concurrent_tasks.default = num_workers * 2
         logging.warning('Hard-code %d dask workers(!)', num_workers)
@@ -439,10 +439,9 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
                 dic['hazard_calculation_id'] = jobparams[0][0]
             logs.dbcmd('update_job', job_id, dic)
     try:
-        if dist == 'zmq' and config.zworkers['host_cores']:
+        if config.zworkers['host_cores']:
             logging.info('Asking the DbServer to start the workers')
-            logs.dbcmd('zmq_start')  # start the zworkers
-            logs.dbcmd('zmq_wait')  # wait for them to go up
+            logs.dbcmd('start_workers')  # start the zworkers
         allargs = [(job_id, oqparam, exports, log_level, log_file)
                    for job_id, oqparam in jobparams]
         if jobarray:
@@ -452,9 +451,9 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
             for args in allargs:
                 run_calc(*args)
     finally:
-        if dist == 'zmq' and config.zworkers['host_cores']:
+        if config.zworkers['host_cores']:
             logging.info('Stopping the zworkers')
-            logs.dbcmd('zmq_stop')
+            logs.dbcmd('stop_workers')
         elif dist.startswith('celery'):
             celery_cleanup(config.distribution.terminate_workers_on_revoke)
     return jobparams

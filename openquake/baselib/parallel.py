@@ -195,6 +195,7 @@ import traceback
 import collections
 from unittest import mock
 import multiprocessing.dummy
+import subprocess
 import psutil
 import numpy
 try:
@@ -502,7 +503,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
 
 if oq_distribute().startswith('celery'):
     from celery import Celery
-    from celery.task import task
+    from celery.task import task, control
 
     app = Celery('openquake')
     app.config_from_object('openquake.engine.celeryconfig')
@@ -916,3 +917,71 @@ def split_task(func, *args, duration=1000,
     for block in blocks[:-1]:
         yield (func, block) + args[1:-1]
     yield func(*(blocks[-1],) + args[1:])
+
+#                             start/stop workers                             #
+
+
+OQDIST = os.environ.get('OQ_DISTRIBUTE') or config.distribute.oq_distribute
+
+
+def start_workers():
+    """
+    Start the remote workers with ssh
+    """
+    remote_python = config.zworkers.remote_python or sys.executable
+    sched = config.distribution.dask_scheduler
+    for hostcores in config.zworkers.host_cores.split(','):
+        host, cores = hostcores.split()
+        args = ['ssh', '-f', '-T', host, remote_python, '-m']
+        if OQDIST == 'dask':
+            args += ['distributed.cli.dask_worker', sched, '--nprocs', cores]
+        elif OQDIST == 'celery':
+            args += ['celery', 'worker', '-c', cores]
+        elif OQDIST == 'zmq':
+            args += ['openquake.baselib.workerpool', '-n', cores]
+        subprocess.Popen(args)
+    if OQDIST == 'dask':
+        host, port = sched.split(':')
+        subprocess.Popen([
+            sys.executable, '-m', 'distributed.cli.dask_scheduler',
+            '--host', host, '--port', port])
+
+
+def stop_workers():
+    """
+    Stop all the workers with a shutdown
+    """
+    if OQDIST == 'dask':
+        Starmap.dask_client.shutdown()
+    elif OQDIST == 'celery':
+        app.control.broadcast('shutdown')
+    elif OQDIST == 'zmq':
+        workerpool.WorkerMaster().kill()
+
+
+def status_workers():
+    """
+    :returns: the total number of active workers
+    """
+    if OQDIST == 'dask':
+        return len(Starmap.dask_client.scheduler_info()['workers'])
+    elif OQDIST == 'celery':
+        stats = control.inspect(timeout=1).stats()
+        ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+        return ncores
+    elif OQDIST == 'zmq':
+        return workerpool.WorkerMaster().status()
+
+
+def inspect_workers():
+    """
+    :returns: the active workers
+    """
+    if OQDIST == 'dask':
+        return Starmap.dask_client.scheduler_info()['workers']
+    elif OQDIST == 'celery':
+        stats = control.inspect(timeout=1).stats()
+        ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
+        return ncores
+    elif OQDIST == 'zmq':
+        return workerpool.WorkerMaster().inspect()

@@ -24,9 +24,9 @@ import logging
 import threading
 import subprocess
 
-from openquake.baselib import config, zeromq as z, workerpool as w
+from openquake.baselib import (
+    config, zeromq as z, workerpool as w, parallel as p)
 from openquake.baselib.general import socket_ready, detach_process
-from openquake.baselib.parallel import safely_call
 from openquake.commonlib import logs
 from openquake.engine import __version__
 from openquake.server.db import actions
@@ -41,9 +41,6 @@ db.cmd = lambda action, *args: getattr(actions, action)(db, *args)
 # NB: I am increasing the timeout from 5 to 20 seconds to see if the random
 # OperationalError: "database is locked" disappear in the WebUI tests
 
-ZMQ = os.environ.get(
-    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
-
 DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
 
 
@@ -57,7 +54,7 @@ class DbServer(object):
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
-        if ZMQ:
+        if p.OQDIST == 'zmq':
             self.zmaster = w.WorkerMaster(**config.zworkers)
         else:
             self.zmaster = None
@@ -70,18 +67,18 @@ class DbServer(object):
                 if cmd == 'getpid':
                     sock.send(self.pid)
                     continue
-                elif cmd.startswith('zmq_') and self.zmaster:
-                    # engine.run_jobs calls logs.dbcmd('zmq_start')
-                    msg = getattr(self.zmaster, cmd[4:])()
+                elif cmd in 'start_workers stop_workers status_workers':
+                    # engine.run_jobs calls logs.dbcmd(cmd)
+                    msg = getattr(p, cmd)()
                     logging.info(msg)
                     sock.send(msg)
                     continue
                 try:
                     func = getattr(actions, cmd)
                 except AttributeError:  # SQL string
-                    sock.send(safely_call(self.db, (cmd,) + args))
+                    sock.send(p.safely_call(self.db, (cmd,) + args))
                 else:  # action
-                    sock.send(safely_call(func, (self.db,) + args))
+                    sock.send(p.safely_call(func, (self.db,) + args))
 
     def start(self):
         """
@@ -97,7 +94,7 @@ class DbServer(object):
             dworkers.append(sock)
         logging.warning('DB server started with %s on %s, pid %d',
                         sys.executable, self.frontend, self.pid)
-        if ZMQ:
+        if p.OQDIST == 'zmq':
             # start task_in->task_server streamer thread
             threading.Thread(target=w._streamer, daemon=True).start()
             logging.warning('Task streamer started on port %d',
@@ -119,7 +116,7 @@ class DbServer(object):
 
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
-        if ZMQ:
+        if p.OQDIST == 'zmq':
             self.zmaster.stop()
             z.context.term()
         self.db.close()

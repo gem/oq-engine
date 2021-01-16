@@ -55,8 +55,10 @@ class WorkerMaster(object):
     :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, ctrl_port=config.zworkers.ctrl_port, host_cores=None,
-                 remote_python=None, receiver_ports=None):
+    def __init__(self, ctrl_port=config.zworkers.ctrl_port,
+                 host_cores=config.zworkers.host_cores,
+                 remote_python=config.zworkers.remote_python,
+                 receiver_ports=None):
         # NB: receiver_ports is not used but needed for compliance
         self.ctrl_port = int(ctrl_port)
         self.host_cores = ([hc.split() for hc in host_cores.split(',')]
@@ -105,7 +107,7 @@ class WorkerMaster(object):
             if self.status(host)[0][1] == 'running':
                 print('%s:%s already running' % (host, self.ctrl_port))
                 continue
-            ctrl_url = 'tcp://0.0.0.0:%s' % (self.ctrl_port)
+            ctrl_url = 'tcp://0.0.0.0:' + self.ctrl_port
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
