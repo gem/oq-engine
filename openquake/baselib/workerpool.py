@@ -43,8 +43,8 @@ def check_status(**kw):
     errors = []
     if not general.socket_ready(hostport):
         errors.append('The task streamer on %s:%s is down' % hostport)
-    for host, status in WorkerMaster(**c).status():
-        if status != 'running':
+    for host, running in WorkerMaster(**c).status():
+        if not running:
             errors.append('The workerpool on %s is down' % host)
     return '\n'.join(errors)
 
@@ -75,25 +75,11 @@ class WorkerMaster(object):
         for _ in range(seconds):
             time.sleep(1)
             status = self.status()
-            if all(st == 'running' for host, st in status):
+            if all(running for host, running in status):
                 break
         else:
             raise TimeoutError(status)
         return status
-
-    def status(self, host=None):
-        """
-        :returns: a list of pairs (hostname, 'running'|'not-running')
-        """
-        if host is None:
-            host_cores = self.host_cores
-        else:
-            host_cores = [hc for hc in self.host_cores if hc[0] == host]
-        lst = []
-        for host, _ in host_cores:
-            ready = general.socket_ready((host, self.ctrl_port))
-            lst.append((host, 'running' if ready else 'not-running'))
-        return lst
 
     def start(self):
         """
@@ -102,7 +88,7 @@ class WorkerMaster(object):
         """
         starting = []
         for host, cores in self.host_cores:
-            if self.status(host)[0][1] == 'running':
+            if general.socket_ready((host, self.ctrl_port)):
                 print('%s:%s already running' % (host, self.ctrl_port))
                 continue
             ctrl_url = 'tcp://0.0.0.0:%s' % (self.ctrl_port)
@@ -125,7 +111,7 @@ class WorkerMaster(object):
         """
         stopped = []
         for host, _ in self.host_cores:
-            if self.status(host)[0][1] == 'not-running':
+            if not general.socket_ready((host, self.ctrl_port)):
                 print('%s not running' % host)
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
@@ -148,7 +134,7 @@ class WorkerMaster(object):
         """
         killed = []
         for host, _ in self.host_cores:
-            if self.status(host)[0][1] == 'not-running':
+            if not general.socket_ready((host, self.ctrl_port)):
                 print('%s not running' % host)
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
@@ -160,16 +146,20 @@ class WorkerMaster(object):
         self.popens = []
         return 'killed %s' % killed
 
-    def inspect(self):
+    def status(self):
+        """
+        :returns: a list of pairs [(host, running, total), ...]
+        """
         executing = []
-        for host, _ in self.host_cores:
-            if self.status(host)[0][1] == 'not-running':
+        for host, _cores in self.host_cores:
+            if not general.socket_ready((host, self.ctrl_port)):
                 print('%s not running' % host)
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                tasks = sock.send('get_executing')
-                executing.append((host, tasks))
+                running = len(sock.send('get_executing').split())
+                total = sock.send('get_num_workers')
+                executing.append((host, running, total))
         return executing
 
     def restart(self):
