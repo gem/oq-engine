@@ -1033,6 +1033,7 @@ _lxc_name_and_ip_get()
 
 deps_check_or_clone () {
     local dep="$1" repo="$2" branch="$3"
+    local je_deps_base="$4"
     local local_repo local_branch
 
     if [ -d "_jenkins_deps/$dep" ]; then
@@ -1051,7 +1052,7 @@ deps_check_or_clone () {
         popd
     else
         pwd
-        git clone --depth=1 -b "$branch" "$repo" "../../_jenkins_deps/$dep"
+        git clone --depth=1 -b "$branch" "$repo" "${je_deps_base}/_jenkins_deps/$dep"
     fi
 }
 
