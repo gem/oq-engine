@@ -963,14 +963,14 @@ def stop_workers():
     return 'stopped'
 
 
-def wait_workers(self, seconds=30):
+def wait_workers(seconds=30):
     """
     Wait until all workers are active
     """
     for _ in range(seconds):
         time.sleep(1)
         status = status_workers()
-        if all(st == 'running' for host, st in status):
+        if all(total for host, running, total in status):
             break
     else:
         raise TimeoutError(status)
@@ -979,54 +979,25 @@ def wait_workers(self, seconds=30):
 
 def status_workers():
     """
-    :returns: a list of pairs [(host name, number of workers), ...]
+    :returns: a list [(host name, running, total), ...]
     """
     if OQDIST == 'dask':
-        client = Client(config.distribution.dask_scheduler)
-        workers_by_host = AccumDict(accum=0)  # IP -> num_workers
-        for uri in client.scheduler_info()['workers']:
+        with Client(config.distribution.dask_scheduler) as c:
+            info = c.scheduler_info()
+        acc = AccumDict(accum=numpy.zeros(2, int))  # IP -> (running, total)
+        for uri, worker in info['workers'].items():
             ip = uri.split(':')[1]  # 'tcp://192.168.2.2:3429' => //192.168.2.2
-            workers_by_host[ip[2:]] += 1
-        client.close()
-        return list(workers_by_host.items())
+            ex = bool(worker['metrics']['executing'])
+            acc[ip[2:]] += numpy.array([ex, 1])
+        return [(host, arr[0], arr[1]) for host, arr in acc.items()]
 
     elif OQDIST == 'celery':
-        stats = control.inspect(timeout=1).stats()
-        if stats:
-            return [(k, stats[k]['pool']['max-concurrency']) for k in stats]
-        return []
-
-    elif OQDIST == 'zmq':
+        stats = control.inspect(timeout=1).stats() or []
         out = []
-        for hostcores in config.zworkers.host_cores.split(','):
-            host, cores = hostcores.split()
-            url = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
-            with Socket(url, zmq.REQ, 'connect') as sock:
-                if not socket_ready(url):
-                    logging.warning('%s is not running', host)
-                    continue
-                out.append((host, sock.send('get_num_workers')))
+        for host, worker in stats.items():
+            total = worker['pool']['max-concurrency']
+            out.append((host, total, total))
         return out
 
-
-def inspect_workers():
-    """
-    :returns: the active workers
-    """
-    if OQDIST == 'dask':
-        client = Client(config.distribution.dask_scheduler)
-        workers_by_host = AccumDict(accum=0)  # IP -> num_workers
-        for uri, worker in client.scheduler_info()['workers'].items():
-            ip = uri.split(':')[1]  # 'tcp://192.168.2.2:3429' => //192.168.2.2
-            if worker['metrics']['executing']:
-                workers_by_host[ip[2:]] += 1
-        client.close()
-        return list(workers_by_host.items())
-
-    elif OQDIST == 'celery':
-        stats = control.inspect(timeout=1).stats()
-        ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        return ncores
-
     elif OQDIST == 'zmq':
-        return workerpool.WorkerMaster().inspect()
+        return workerpool.WorkerMaster().status()

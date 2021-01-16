@@ -36,5 +36,4 @@ def main(cmd):
         print('Nothing to do: oq_distribute=%s' % p.OQDIST)
 
 
-main.cmd = dict(help='command',
-                choices='start stop status inspect'.split())
+main.cmd = dict(help='command', choices='start stop status wait'.split())

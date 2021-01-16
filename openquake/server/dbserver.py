@@ -67,7 +67,7 @@ class DbServer(object):
                 if cmd == 'getpid':
                     sock.send(self.pid)
                     continue
-                elif cmd in 'start_workers stop_workers status_workers':
+                elif cmd.endswith('_workers'):
                     # engine.run_jobs calls logs.dbcmd(cmd)
                     msg = getattr(p, cmd)()
                     logging.info(msg)
@@ -109,7 +109,8 @@ class DbServer(object):
         except (KeyboardInterrupt, z.zmq.ContextTerminated):
             for sock in dworkers:
                 sock.running = False
-                sock.zsocket.close()
+                if hasattr(sock, 'zsocket'):  # actually used
+                    sock.zsocket.close()
             logging.warning('DB server stopped')
         finally:
             self.stop()
