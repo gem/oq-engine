@@ -317,7 +317,7 @@ build_dependencies_file () {
         for repo in $repos; do
             # search of same branch in same repo or in GEM_GIT_REPO repo
             if git ls-remote --heads "$repo/${dep}.git" | grep -q "refs/heads/$branch_cur" ; then
-                deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur" "$je_deps_base"
+                deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur" "${je_deps_base}/"
                 found=1
                 break
             fi
@@ -325,7 +325,7 @@ build_dependencies_file () {
         # if not found it fallback in master branch of GEM_GIT_REPO repo
         if [ $found -eq 0 ]; then
             branch_cur="master"
-            deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur" "$je_deps_base"
+            deps_check_or_clone "$dep" "$repo/${dep}.git" "$branch_cur" "${je_deps_base}/"
         fi
         pushd "${je_deps_base}_jenkins_deps/$dep"
         dep_commit="$(git log -1 | grep '^commit' | sed 's/^commit //g')"
@@ -1052,7 +1052,7 @@ deps_check_or_clone () {
         popd
     else
         pwd
-        git clone --depth=1 -b "$branch" "$repo" "${je_deps_base}/_jenkins_deps/$dep"
+        git clone --depth=1 -b "$branch" "$repo" "${je_deps_base}_jenkins_deps/$dep"
     fi
 }
 
