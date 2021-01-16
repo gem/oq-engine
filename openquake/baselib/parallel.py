@@ -955,11 +955,12 @@ def stop_workers():
     Stop all the workers with a shutdown
     """
     if OQDIST == 'dask':
-        Starmap.dask_client.shutdown()
+        Client(config.distribution.dask_scheduler).shutdown()
     elif OQDIST == 'celery':
         app.control.shutdown()
     elif OQDIST == 'zmq':
         workerpool.WorkerMaster().kill()
+    return 'stopped'
 
 
 def wait_workers(self, seconds=30):
@@ -981,12 +982,20 @@ def status_workers():
     :returns: a list of pairs [(host name, number of workers), ...]
     """
     if OQDIST == 'dask':
-        return len(Starmap.dask_client.scheduler_info()['workers'])
+        client = Client(config.distribution.dask_scheduler)
+        workers_by_host = AccumDict(accum=0)  # IP -> num_workers
+        for uri in client.scheduler_info()['workers']:
+            ip = uri.split(':')[1]  # 'tcp://192.168.2.2:3429' => //192.168.2.2
+            workers_by_host[ip[2:]] += 1
+        client.close()
+        return list(workers_by_host.items())
+
     elif OQDIST == 'celery':
         stats = control.inspect(timeout=1).stats()
         if stats:
             return [(k, stats[k]['pool']['max-concurrency']) for k in stats]
         return []
+
     elif OQDIST == 'zmq':
         out = []
         for hostcores in config.zworkers.host_cores.split(','):
@@ -1005,10 +1014,19 @@ def inspect_workers():
     :returns: the active workers
     """
     if OQDIST == 'dask':
-        return Starmap.dask_client.scheduler_info()['workers']
+        client = Client(config.distribution.dask_scheduler)
+        workers_by_host = AccumDict(accum=0)  # IP -> num_workers
+        for uri, worker in client.scheduler_info()['workers'].items():
+            ip = uri.split(':')[1]  # 'tcp://192.168.2.2:3429' => //192.168.2.2
+            if worker['metrics']['executing']:
+                workers_by_host[ip[2:]] += 1
+        client.close()
+        return list(workers_by_host.items())
+
     elif OQDIST == 'celery':
         stats = control.inspect(timeout=1).stats()
         ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
         return ncores
+
     elif OQDIST == 'zmq':
         return workerpool.WorkerMaster().inspect()
