@@ -279,6 +279,7 @@ build_dependencies_file () {
     local je_deps_base="$1"
     local branch_id="$2"
 
+    pwd
     if [ -e ${je_deps_base}_jenkins_deps_info ]; then
         return
     fi
@@ -336,6 +337,7 @@ build_dependencies_file () {
         echo "commit:     $dep_commit"
         echo
         var_pfx="$(dep2var "$dep")"
+        pwd
         if [ ! -f ${je_deps_base}_jenkins_deps_info ]; then
             touch ${je_deps_base}_jenkins_deps_info
         fi
@@ -363,6 +365,7 @@ _depends_resolver () {
     local deps_action="$1" je_deps_base="$2"
     local old_ifs dep_item dep dep_pkg dep_type
 
+    pwd
     if [ -f "${je_deps_base}_jenkins_deps_info" ]; then
         source "${je_deps_base}_jenkins_deps_info"
     fi
@@ -416,6 +419,7 @@ _buildfromsrc_innervm_run () {
 #    add_custom_pkg_repo
     ssh "$lxc_ip" "sudo apt-get upgrade -y"
 
+    pwd
     if [ -f _jenkins_deps_info ]; then
         source _jenkins_deps_info
     fi
@@ -787,6 +791,7 @@ _pkgtest_innervm_run () {
     scp "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.buildinfo "$lxc_ip:repo/${GEM_DEB_PACKAGE}" || true
     ssh "$lxc_ip" sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\"
 
+    pwd
     if [ -f _jenkins_deps_info ]; then
         source _jenkins_deps_info
     fi
@@ -1119,6 +1124,7 @@ devtest_run () {
         echo "commit:     $commit"
         echo
         var_pfx="$(dep2var "$dep")"
+        pwd
         if [ ! -f _jenkins_deps_info ]; then
             touch _jenkins_deps_info
         fi
@@ -1226,6 +1232,7 @@ builddoc_run () {
         echo "commit:     $commit"
         echo
         var_pfx="$(dep2var "$dep")"
+        pwd
         if [ ! -f _jenkins_deps_info ]; then
             touch _jenkins_deps_info
         fi
