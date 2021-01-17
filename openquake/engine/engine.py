@@ -79,7 +79,7 @@ def set_concurrent_tasks_default(calc):
         return
 
     num_workers = sum(total for host, running, total
-                      in parallel.status_workers())
+                      in parallel.workers_status())
     if num_workers == 0:
         logging.critical("No live compute nodes, aborting calculation")
         logs.dbcmd('finish', calc.datastore.calc_id, 'failed')

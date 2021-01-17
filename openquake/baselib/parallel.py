@@ -945,9 +945,10 @@ def workers_start():
         logging.info(args)
     if OQDIST == 'dask':
         host, port = sched.split(':')
-        subprocess.check_output([
-            sys.executable, '-m', 'distributed.cli.dask_scheduler',
-            '--host', host, '--port', port])
+        with open(os.path.expanduser('~/dask.log'), 'a') as log:
+            subprocess.Popen([
+                sys.executable, '-m', 'distributed.cli.dask_scheduler',
+                '--host', host, '--port', port], stdout=log, stderr=log)
 
 
 def workers_stop():
