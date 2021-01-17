@@ -397,7 +397,8 @@ class ClassicalCalculator(base.HazardCalculator):
             return
 
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
-        smap = parallel.Starmap(classical, self.get_args(acc0),
+        grp_ids = numpy.arange(len(self.csm.src_groups))
+        smap = parallel.Starmap(classical, self.get_args(grp_ids, acc0),
                                 h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.src_filter())
         self.datastore.swmr_on()
@@ -488,7 +489,7 @@ class ClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def get_args(self, acc0):
+    def get_args(self, grp_ids, acc0):
         """
         :returns: the outputs to pass to the Starmap, ordered by weight
         """
@@ -500,10 +501,10 @@ class ClassicalCalculator(base.HazardCalculator):
         tot_weight = 0
         et_ids = self.datastore['et_ids'][:]
         rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(et_ids)
-        grp_id = 0
-        for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
+        for grp_id in grp_ids:
+            rlzs_by_gsim = rlzs_by_gsim_list[grp_id]
+            sg = src_groups[grp_id]
             acc0[grp_id] = ProbabilityMap.build(L, len(rlzs_by_gsim), sids)
-            grp_id += 1
             for src in sg:
                 src.ngsims = len(rlzs_by_gsim)
                 tot_weight += src.weight
