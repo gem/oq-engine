@@ -18,26 +18,26 @@ export DH_OPTIONS
 
 bd=openquake/bin
 
-BIONIC_DEP =
-BIONIC_REC =
-XENIAL_DEP = oq-python3.8-distutils
-XENIAL_REC =
+BIONIC_DEP=
+BIONIC_REC=
+XENIAL_DEP= oq-python3.8-distutils
+XENIAL_REC=
 
 ifeq ($(shell lsb_release --codename --short),bionic)
 	INFO_SER=BIONIC_DETECTED
 	BUILD_DEPENDS=
-	DEPENDS = -Vdist:Depends="$(BIONIC_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(BIONIC_REC)"
+	export DEPENDS= -Vdist:Depends="$(BIONIC_DEP)"
+	export RECOMMENDS= -Vdist:Recommends="$(BIONIC_REC)"
 else ifeq ($(shell lsb_release --codename --short),xenial)
 	INFO_SER=XENIAL_DETECTED
 	BUILD_DEPENDS=, oq-python3.8-distutils
-	DEPENDS = -Vdist:Depends="$(XENIAL_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(XENIAL_REC)"
+	export DEPENDS= -Vdist:Depends="$(XENIAL_DEP)"
+	export RECOMMENDS= -Vdist:Recommends="$(XENIAL_REC)"
 else
 	INFO_SER=DEFAULT_DETECTED
 	BUILD_DEPENDS=
-	DEPENDS = -Vdist:Depends="$(DEFAULT_DEP)"
-	RECOMMENDS = -Vdist:Recommends="$(DEFAULT_REC)"
+	export DEPENDS= -Vdist:Depends="$(DEFAULT_DEP)"
+	export RECOMMENDS= -Vdist:Recommends="$(DEFAULT_REC)"
 endif
 
 control-file:
