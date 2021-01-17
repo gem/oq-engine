@@ -67,7 +67,7 @@ class DbServer(object):
                 if cmd == 'getpid':
                     sock.send(self.pid)
                     continue
-                elif cmd.endswith('_workers'):
+                elif cmd.startswith('workers_'):
                     # engine.run_jobs calls logs.dbcmd(cmd)
                     msg = getattr(p, cmd)()
                     logging.info(msg)

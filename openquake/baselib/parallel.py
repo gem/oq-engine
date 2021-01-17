@@ -924,7 +924,7 @@ def split_task(func, *args, duration=1000,
 OQDIST = os.environ.get('OQ_DISTRIBUTE') or config.distribute.oq_distribute
 
 
-def start_workers():
+def workers_start():
     """
     Start the remote workers with ssh
     """
@@ -945,12 +945,13 @@ def start_workers():
         logging.info(args)
     if OQDIST == 'dask':
         host, port = sched.split(':')
-        subprocess.check_output([
-            sys.executable, '-m', 'distributed.cli.dask_scheduler',
-            '--host', host, '--port', port])
+        with open(os.path.expanduser('~/dask.log'), 'a') as log:
+            subprocess.Popen([
+                sys.executable, '-m', 'distributed.cli.dask_scheduler',
+                '--host', host, '--port', port], stdout=log, stderr=log)
 
 
-def stop_workers():
+def workers_stop():
     """
     Stop all the workers with a shutdown
     """
@@ -963,21 +964,7 @@ def stop_workers():
     return 'stopped'
 
 
-def wait_workers(seconds=30):
-    """
-    Wait until all workers are active
-    """
-    for _ in range(seconds):
-        time.sleep(1)
-        status = status_workers()
-        if all(total for host, running, total in status):
-            break
-    else:
-        raise TimeoutError(status)
-    return status
-
-
-def status_workers():
+def workers_status():
     """
     :returns: a list [(host name, running, total), ...]
     """
@@ -1001,3 +988,17 @@ def status_workers():
 
     elif OQDIST == 'zmq':
         return workerpool.WorkerMaster().status()
+
+
+def workers_wait(seconds=30):
+    """
+    Wait until all workers are active
+    """
+    for _ in range(seconds):
+        time.sleep(1)
+        status = workers_status()
+        if all(total for host, running, total in status):
+            break
+    else:
+        raise TimeoutError(status)
+    return status
