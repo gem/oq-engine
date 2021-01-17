@@ -31,7 +31,7 @@ def main(cmd):
             getpass.getuser() not in 'openquake'):
         sys.exit('oq workers only works in single user mode')
     if p.OQDIST in ('dask', 'celery', 'zmq'):
-        print(getattr(p, cmd + '_workers')())
+        print(getattr(p, 'workers_' + cmd)())
     else:
         print('Nothing to do: oq_distribute=%s' % p.OQDIST)
 
