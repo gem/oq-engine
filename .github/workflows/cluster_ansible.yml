@@ -1,13 +1,13 @@
-name: playbook_ansible
+name: cluster_ansible
 'on':
-  #  schedule:
-  #  - cron: "0 2 * * *"
+  #schedule:
+  #- cron: "0 2 * * *"
   push:
     branches: [ molecule ]
 
 jobs:
 
-  molecule:
+  install:
     name: Molecule
     runs-on: ubuntu-18.04
     strategy:
