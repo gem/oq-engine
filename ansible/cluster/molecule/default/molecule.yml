@@ -36,16 +36,16 @@ provisioner:
       ansible_verbosity: 1
   inventory:
     host_vars:
-        etc_dir= /etc/openquake
-        venv_dir= /opt/openquake
-        venv_bin= "{{ venv_dir }}/bin"
-        shared_nfs= /mnt/shared
-        workdir_services= /var/lib/openquake
-        webuidir_services= /var/lib/openquake/webui
-        nfs_mount_opts= "ro,rsize=1048576,wsize=1048576,bg,soft,intr,noauto,tcp"
-        nfs_serv_opts= "(ro,fsid=0,no_root_squash,nohide,insecure,no_subtree_check,async)"
-        worker_nodes_zmq= "{{ groups['worker'] | map('extract', hostvars, ['ansible_ssh_host']) | join(' -1,') }} -1"
-        worker_nodes_dask= "{{ groups['worker'] | map('extract', hostvars, ['ansible_ssh_host']) | join(' -1,') }} -1"
+      etc_dir: /etc/openquake
+      venv_dir: /opt/openquake
+      venv_bin: "{{ venv_dir }}/bin"
+      shared_nfs: /mnt/shared
+      workdir_services: /var/lib/openquake
+      webuidir_services: /var/lib/openquake/webui
+      nfs_mount_opts: "ro,rsize=1048576,wsize=1048576,bg,soft,intr,noauto,tcp"
+      nfs_serv_opts: "(ro,fsid=0,no_root_squash,nohide,insecure,no_subtree_check,async)"
+      worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_ssh_host']) | join(' -1,') }} -1"
+      worker_nodes_dask: "{{ groups['worker'] | map('extract', hostvars, ['ansible_ssh_host']) | join(' -1,') }} -1"
   lint:
     ansible-lint
 scenario:
