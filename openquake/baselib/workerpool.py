@@ -44,7 +44,7 @@ def check_status(**kw):
     if not general.socket_ready(hostport):
         errors.append('The task streamer on %s:%s is down' % hostport)
     for host, running, total in WorkerMaster(**c).status():
-        if not running:
+        if not total:
             errors.append('The workerpool on %s is down' % host)
     return '\n'.join(errors)
 
@@ -77,7 +77,7 @@ class WorkerMaster(object):
         for _ in range(seconds):
             time.sleep(1)
             status = self.status()
-            if all(running for host, running, total in status):
+            if all(total for host, running, total in status):
                 break
         else:
             raise TimeoutError(status)
@@ -150,7 +150,7 @@ class WorkerMaster(object):
 
     def status(self):
         """
-        :returns: a list of pairs [(host, running, total), ...]
+        :returns: a list [(host, running, total), ...]
         """
         executing = []
         for host, _cores in self.host_cores:
