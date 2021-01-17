@@ -740,10 +740,11 @@ class Starmap(object):
         self.tasks = []  # populated by .submit
         self.task_no = 0
         self.t0 = time.time()
-        if self.distribute == 'zmq':  # add a check
-            err = workerpool.check_status()
-            if err:
-                raise RuntimeError(err)
+        if self.distribute in 'zmq dask celery':  # add a check
+            errors = ['The workerpool on %s is down' % host
+                      for host, run, tot in workers_status() if tot == 0]
+            if errors:
+                raise RuntimeError('\n'.join(errors))
 
     def log_percent(self):
         """

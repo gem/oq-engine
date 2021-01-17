@@ -33,22 +33,6 @@ def _streamer():
         pass  # killed cleanly by SIGINT/SIGTERM
 
 
-def check_status(**kw):
-    """
-    :returns: a non-empty error string if the streamer or worker pools are down
-    """
-    c = config.zworkers.copy()
-    c.update(kw)
-    hostport = config.dbserver.listen, int(c['ctrl_port']) + 1
-    errors = []
-    if not general.socket_ready(hostport):
-        errors.append('The task streamer on %s:%s is down' % hostport)
-    for host, running, total in WorkerMaster(**c).status():
-        if not total:
-            errors.append('The workerpool on %s is down' % host)
-    return '\n'.join(errors)
-
-
 class WorkerMaster(object):
     """
     :param ctrl_port: port on which the worker pools listen
