@@ -406,25 +406,29 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         try:
             acc = smap.reduce(self.agg_dicts, acc0)
-            self.store_rlz_info(acc.eff_ruptures)
         finally:
-            source_ids = self.store_source_info(self.calc_times)
-            if self.by_task:
-                logging.info('Storing by_task information')
-                num_tasks = max(self.by_task) + 1,
-                er = self.datastore.create_dset('by_task/eff_ruptures',
-                                                U32, num_tasks)
-                es = self.datastore.create_dset('by_task/eff_sites',
-                                                U32, num_tasks)
-                si = self.datastore.create_dset('by_task/srcids',
-                                                hdf5.vstr, num_tasks,
-                                                fillvalue=None)
-                for task_no, rec in self.by_task.items():
-                    effrups, effsites, srcids = rec
-                    er[task_no] = effrups
-                    es[task_no] = effsites
-                    si[task_no] = ' '.join(source_ids[s] for s in srcids)
-                self.by_task.clear()
+            self.store_info(psd, acc)
+        return acc
+
+    def store_info(self, psd, acc):
+        self.store_rlz_info(acc.eff_ruptures)
+        source_ids = self.store_source_info(self.calc_times)
+        if self.by_task:
+            logging.info('Storing by_task information')
+            num_tasks = max(self.by_task) + 1,
+            er = self.datastore.create_dset('by_task/eff_ruptures',
+                                            U32, num_tasks)
+            es = self.datastore.create_dset('by_task/eff_sites',
+                                            U32, num_tasks)
+            si = self.datastore.create_dset('by_task/srcids',
+                                            hdf5.vstr, num_tasks,
+                                            fillvalue=None)
+            for task_no, rec in self.by_task.items():
+                effrups, effsites, srcids = rec
+                er[task_no] = effrups
+                es[task_no] = effsites
+                si[task_no] = ' '.join(source_ids[s] for s in srcids)
+            self.by_task.clear()
         if self.calc_times:  # can be empty in case of errors
             self.numctxs = sum(arr[0] for arr in self.calc_times.values())
             numsites = sum(arr[1] for arr in self.calc_times.values())
@@ -439,8 +443,7 @@ class ClassicalCalculator(base.HazardCalculator):
                                 'small compared to a maxradius of %d km',
                                 psdist, self.maxradius)
         self.calc_times.clear()  # save a bit of memory
-        return acc
-
+        
     def set_psd(self):
         """
         Set the pointsource_distance
