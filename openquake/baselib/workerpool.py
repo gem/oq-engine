@@ -126,7 +126,7 @@ class WorkerMaster(object):
         executing = []
         for host, _cores in self.host_cores:
             if wait is False:
-                if not not general.socket_ready((host, self.ctrl_port)):
+                if not general.socket_ready((host, self.ctrl_port)):
                     print('%s not running' % host)
                     continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
