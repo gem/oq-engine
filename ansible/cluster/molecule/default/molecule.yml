@@ -51,7 +51,7 @@ provisioner:
         etc_dir: /etc/openquake
         venv_dir: /opt/openquake
         venv_bin: "{{ venv_dir }}/bin"
-        shared_nfs: /mnt/shared
+        shared_nfs: /exports/shared
         workdir_services: /var/lib/openquake
         webuidir_services: /var/lib/openquake/webui
         nfs_mount_opts: "ro,rsize=1048576,wsize=1048576,bg,soft,intr,noauto,tcp"
@@ -62,7 +62,7 @@ provisioner:
         etc_dir: /etc/openquake
         venv_dir: /opt/openquake
         venv_bin: "{{ venv_dir }}/bin"
-        shared_nfs: /mnt/shared
+        shared_nfs: /exports/shared
         workdir_services: /var/lib/openquake
         webuidir_services: /var/lib/openquake/webui
         nfs_mount_opts: "ro,rsize=1048576,wsize=1048576,bg,soft,intr,noauto,tcp"
@@ -72,7 +72,7 @@ provisioner:
         etc_dir: /etc/openquake
         venv_dir: /opt/openquake
         venv_bin: "{{ venv_dir }}/bin"
-        shared_nfs: /mnt/shared
+        shared_nfs: /exports/shared
         workdir_services: /var/lib/openquake
         webuidir_services: /var/lib/openquake/webui
         nfs_mount_opts: "ro,rsize=1048576,wsize=1048576,bg,soft,intr,noauto,tcp"
