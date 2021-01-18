@@ -935,7 +935,10 @@ def workers_start():
     sched = config.distribution.dask_scheduler
     for hostcores in config.zworkers.host_cores.split(','):
         host, cores = hostcores.split()
-        args = ['ssh', '-f', '-T', host, remote_python, '-m']
+        if host == '127.0.0.1':  # localhost
+            args = [sys.executable, '-m']
+        else:
+            args = ['ssh', '-f', '-T', host, remote_python, '-m']
         if OQDIST == 'dask':
             args += ['distributed.cli.dask_worker', sched, '--nprocs', cores]
         elif OQDIST == 'celery':
