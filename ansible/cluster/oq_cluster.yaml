@@ -48,8 +48,8 @@
         #import_playbook: inst_nfs.yaml
         #when: "'master' in group_names"
 
-- import_playbook: check_py_ver.yaml
+- import_playbook: inst_nfs.yaml
   when: "'master' in group_names" 
 
-- import_playbook: check_py_ver.yaml
+- import_playbook: inst_nfs.yaml
   when: "'worker' in group_names" 
