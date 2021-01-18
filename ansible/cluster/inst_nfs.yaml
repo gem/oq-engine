@@ -98,10 +98,15 @@
     notify: reload nfs   
     when: "'master' in group_names"
 
-  - name: "Set Mountpoints {{ shared_nfs }} for Openquake on Worker Cluster"
+  - name: Get the master node IP
+    debug: var=hostvars[master]['ansible_default_ipv4']['address']
+    register: master_node_ip
+
+
+  - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
     mount:
       path: "{{ shared_nfs }}"
-      src: "{{ master_node_ip }}:{{ shared_nfs }}"
+      src: "{{ master_node_ip.stdout }}:{{ shared_nfs }}"
       fstype: nfs
       opts: "{{ nfs_mount_opts }}"
       state: mounted
