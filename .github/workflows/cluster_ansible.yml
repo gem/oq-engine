@@ -7,7 +7,7 @@ name: cluster_ansible
 
 jobs:
 
-  install:
+  setup_cluster:
     name: Molecule
     runs-on: ubuntu-18.04
     strategy:
