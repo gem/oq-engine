@@ -401,8 +401,7 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
         elif avail < size:
-            logging.warning('You have only %s of free RAM, splitting in blocks'
-                            % humansize(avail))
+            logging.warning('Splitting in bunches to save RAM')
             self.groups_per_block = avail // bytes_per_grp
             self.ct = self.oqparam.concurrent_tasks or 1
             logging.info('Requiring %s for ProbabilityMap',
