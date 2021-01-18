@@ -39,8 +39,7 @@ except ImportError:
         "Do nothing"
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
-from openquake.baselib import (
-    parallel, general, config, __version__, zeromq as z)
+from openquake.baselib import parallel, general, config, __version__
 from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput

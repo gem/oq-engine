@@ -988,7 +988,7 @@ def workers_status(wait=False):
         return out
 
     elif OQDIST == 'zmq':
-        return workerpool.WorkerMaster().status()
+        return workerpool.WorkerMaster().status(wait)
 
 
 def workers_wait(seconds=30):
