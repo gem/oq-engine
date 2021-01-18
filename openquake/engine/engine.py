@@ -79,7 +79,7 @@ def set_concurrent_tasks_default(calc):
         return
 
     num_workers = sum(total for host, running, total
-                      in parallel.workers_status())
+                      in parallel.workers_wait())
     if num_workers == 0:
         logging.critical("No live compute nodes, aborting calculation")
         logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
@@ -382,7 +382,6 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         if config.zworkers['host_cores']:
             logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the zworkers
-            parallel.workers_wait()  # wait for them to start
         allargs = [(job_id, oqparam, exports, log_level, log_file)
                    for job_id, oqparam in jobparams]
         if jobarray:

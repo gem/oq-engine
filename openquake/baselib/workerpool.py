@@ -54,19 +54,6 @@ class WorkerMaster(object):
         self.remote_python = remote_python or sys.executable
         self.popens = []
 
-    def wait(self, seconds=30):
-        """
-        Wait until all workerpools start
-        """
-        for _ in range(seconds):
-            time.sleep(1)
-            status = self.status()
-            if all(total for host, running, total in status):
-                break
-        else:
-            raise TimeoutError(status)
-        return status
-
     def start(self):
         """
         Start multiple workerpools, possibly on remote servers via ssh,
