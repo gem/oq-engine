@@ -394,12 +394,23 @@ class ClassicalCalculator(base.HazardCalculator):
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
         poes_shape = (self.N, self.oqparam.imtls.size, len(rlzs_by_g))
         size = numpy.prod(poes_shape) * 8
-        logging.info('Requiring %s for ProbabilityMap of shape %s',
-                     humansize(size), poes_shape)
+        bytes_per_grp = size / len(self.grp_ids)
         avail = psutil.virtual_memory().available
-        if avail < 1.25 * size:
+        if avail < 1.25 * bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
+        elif avail < 1.25 * size:
+            logging.warning('You have only %s of free RAM, splitting in blocks'
+                            % humansize(avail))
+            self.groups_per_block = int(.8 * avail) // bytes_per_grp
+            self.ct = self.oqparam.concurrent_tasks or 1
+            logging.info('Requiring %s for ProbabilityMap',
+                         humansize(self.groups_per_block * bytes_per_grp))
+        else:
+            logging.info('Requiring %s for ProbabilityMap of shape %s',
+                         humansize(size), poes_shape)
+            self.groups_per_block = len(self.grp_ids)
+            self.ct = (self.oqparam.concurrent_tasks or 1) * 2.5
         self.datastore.create_dset('_poes', F64, poes_shape)
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
@@ -440,10 +451,12 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {rec[0]: i for i, rec in enumerate(
             self.csm.source_info.values())}
         hazard = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
-        for b, block in enumerate(block_splitter(grp_ids, 10), 1):
-            allargs, pmaps = self.get_args_acc(block, hazard)
-            logging.info('Sending bunch %d of %d tasks', b, len(allargs))
-            smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
+        blocks = list(block_splitter(grp_ids, self.groups_per_block))
+        for b, block in enumerate(blocks, 1):
+            args, pmaps = self.get_args_pmaps(block, hazard)
+            logging.info('Computing bunch #%d of %d, %d tasks',
+                         b, len(blocks), len(args))
+            smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
             smap.monitor.save('srcfilter', self.src_filter())
             self.datastore.swmr_on()
             smap.h5 = self.datastore.hdf5
@@ -537,7 +550,7 @@ class ClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def get_args_acc(self, grp_ids, hazard):
+    def get_args_pmaps(self, grp_ids, hazard):
         """
         :returns: (Starmap arguments, Pmap dictionary)
         """
@@ -561,8 +574,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     spc = oq.complex_fault_mesh_spacing
                     logging.info(msg.format(src, src.num_ruptures, spc))
         assert tot_weight
-        C = oq.concurrent_tasks or 1
-        max_weight = max(tot_weight / (2.5 * C), oq.min_weight)
+        max_weight = max(tot_weight / self.ct, oq.min_weight)
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
