@@ -246,6 +246,7 @@ class Hazard:
                 # avoid saving PoEs == 1
                 base.fix_ones(pmap)
                 arr = numpy.array([pmap[sid].array for sid in pmap])
+                logging.info('Storing _poes for source group #%d', key)
                 self.datastore['_poes'][:, :, self.slice_by_g[key]] = arr
                 extreme = max(
                     get_extreme_poe(pmap[sid].array, imtls)
@@ -454,14 +455,13 @@ class ClassicalCalculator(base.HazardCalculator):
         blocks = list(block_splitter(grp_ids, self.groups_per_block))
         for b, block in enumerate(blocks, 1):
             args, pmaps = self.get_args_pmaps(block, hazard)
-            logging.info('Computing bunch #%d of %d, %d tasks',
+            logging.info('Sending bunch #%d of %d, %d tasks',
                          b, len(blocks), len(args))
             smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
             smap.monitor.save('srcfilter', self.src_filter())
             self.datastore.swmr_on()
             smap.h5 = self.datastore.hdf5
             smap.reduce(self.agg_dicts, pmaps)
-            logging.info('Storing _poes')
             with self.monitor('saving probability maps'):
                 hazard.store(oq.imtls, pmaps)
         if not oq.hazard_calculation_id:
