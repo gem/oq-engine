@@ -73,10 +73,10 @@ class Sgobba2020Test(unittest.TestCase):
 
         expected_ref = df.gmm_PGA.to_numpy()
         computed_ref = np.exp(mr)
-        np.testing.assert_allclose(computed_ref, expected_ref)
+        np.testing.assert_allclose(computed_ref, expected_ref, rtol=1e-5)
 
-        expected = df.PGA.to_numpy()
-        computed = np.exp(mean)
+        #expected = df.PGA.to_numpy()
+        #computed = np.exp(mean)
         #np.testing.assert_allclose(computed, expected)
 
     def test_cluster(self):
