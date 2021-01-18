@@ -220,6 +220,15 @@ def classical(srcs, rlzs_by_gsim, params, monitor):
     return hazclassical(srcs, srcfilter, rlzs_by_gsim, params, monitor)
 
 
+class Hazard:
+    def __init__(self, et_ids, rlzs_by_gsim_list, pgetter, srcidx):
+        self.et_ids = et_ids
+        self.rlzs_by_gsim_list = rlzs_by_gsim_list
+        self.slice_by_g = getters.get_slice_by_g(rlzs_by_gsim_list)
+        self.pgetter = pgetter
+        self.srcidx = srcidx
+
+
 @base.calculators.add('classical', 'preclassical', 'ucerf_classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
@@ -406,37 +415,35 @@ class ClassicalCalculator(base.HazardCalculator):
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         et_ids = self.datastore['et_ids'][:]
         rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(et_ids)
-        slice_by_g = getters.get_slice_by_g(rlzs_by_gsim_list)
         weights = [rlz.weight for rlz in self.realizations]
         pgetter = getters.PmapGetter(
             self.datastore, weights, self.sitecol.sids, oq.imtls)
         srcidx = {rec[0]: i for i, rec in enumerate(
             self.csm.source_info.values())}
+        h = Hazard(et_ids, rlzs_by_gsim_list, pgetter, srcidx)
         try:
             acc = smap.reduce(self.agg_dicts, acc0)
-            self.store_data(
-                acc, et_ids, rlzs_by_gsim_list, slice_by_g, pgetter, srcidx)
+            self.store_data(acc, h)
         finally:
             self.store_info(psd, acc)
         return True
 
-    def store_data(self, pmap_by_key, et_ids, rlzs_by_gsim_list, slice_by_g,
-                   pgetter, srcidx, data=[]):
+    def store_data(self, pmap_by_key, h, data=[]):
         oq = self.oqparam
         logging.info('Saving _poes for grp_ids=%s', list(pmap_by_key))
         with self.monitor('saving probability maps'):
             for key, pmap in pmap_by_key.items():
                 if isinstance(key, str):  # disagg_by_src
-                    rlzs_by_gsim = rlzs_by_gsim_list[pmap.grp_id]
-                    self.datastore['disagg_by_src'][..., srcidx[key]] = (
-                        pgetter.get_hcurves(pmap, rlzs_by_gsim))
+                    rlzs_by_gsim = h.rlzs_by_gsim_list[pmap.grp_id]
+                    self.datastore['disagg_by_src'][..., h.srcidx[key]] = (
+                        h.pgetter.get_hcurves(pmap, rlzs_by_gsim))
                 else:
                     # key is the group ID
-                    trt = self.full_lt.trt_by_et[et_ids[key][0]]
+                    trt = self.full_lt.trt_by_et[h.et_ids[key][0]]
                     # avoid saving PoEs == 1
                     base.fix_ones(pmap)
                     arr = numpy.array([pmap[sid].array for sid in pmap])
-                    self.datastore['_poes'][:, :, slice_by_g[key]] = arr
+                    self.datastore['_poes'][:, :, h.slice_by_g[key]] = arr
                     extreme = max(
                         get_extreme_poe(pmap[sid].array, oq.imtls)
                         for sid in pmap)
