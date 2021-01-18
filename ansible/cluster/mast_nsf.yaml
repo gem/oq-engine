@@ -65,19 +65,19 @@
 
 # Create Shared for NFS
 #
-  - name: Check "{{shared_nfs}}"  folder exists
+  - name: Check "{{ shared_nfs }}"  folder exists
     stat:
-     path: "{{shared_nfs}}"
+     path: "{{ shared_nfs }}"
     register: workdir
  
   - name: "echo if directory already existed"
     debug:
-      msg: "Shared  {{shared_nfs}}  folder  is already existed"
+      msg: "Shared  {{ shared_nfs }}  folder  is already existed"
     when: workdir.stat.exists
  
-  - name: "Ansible Create directory {{shared_nfs}} if not exists"
+  - name: "Ansible Create directory {{ shared_nfs }} if not exists"
     file:
-      path: "{{shared_nfs}}"
+      path: "{{ shared_nfs }}"
       state: directory
       mode: "2770"
       group: openquake
