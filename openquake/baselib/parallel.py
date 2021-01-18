@@ -965,7 +965,7 @@ def workers_stop():
     return 'stopped'
 
 
-def workers_status():
+def workers_status(wait=False):
     """
     :returns: a list [(host name, running, total), ...]
     """
@@ -998,7 +998,7 @@ def workers_wait(seconds=30):
     if OQDIST in 'dask celery zmq':
         for _ in range(seconds):
             time.sleep(1)
-            status = workers_status()
+            status = workers_status(wait=True)
             if all(total for host, running, total in status):
                 break
         else:
