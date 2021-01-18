@@ -87,7 +87,7 @@
   - name: "Add export line for NFS server"
     lineinfile:
       path: /etc/exports
-      line: "{{ shared_nfs }}     {{ cluster_net }}{{ nfs_serv_opts }}"
+      line: "{{ shared_nfs }}     {{ ansible_default_ipv4.network }}/{{ansible_default_ipv4.netmask}}{{ nfs_serv_opts }}"
     notify: reload nfs   
     when: "'master' in group_names"
 
