@@ -461,6 +461,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
             smap.h5 = self.datastore.hdf5
             smap.reduce(self.agg_dicts, pmaps)
+            logging.info('Storing _poes')
             with self.monitor('saving probability maps'):
                 hazard.store(oq.imtls, pmaps)
         if not oq.hazard_calculation_id:
