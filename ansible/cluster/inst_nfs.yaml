@@ -22,6 +22,8 @@
   - name: check IP
     debug: msg={{ ansible_default_ipv4.network }}-{{ansible_default_ipv4.netmask}}
 
+  - name: Test hosts list
+    debug: msg: "{{ hostvars[master]['ansible_default_ipv4']['address'] }}"
 
 #### Setup NFS server on master and worker
 #
@@ -103,6 +105,8 @@
     debug: var=hostvars['master']['ansible_default_ipv4']['address']
     register: master_node_ip
     when: "'master' in group_names"
+
+
 
   - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
     mount:
