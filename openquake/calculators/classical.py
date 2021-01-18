@@ -433,11 +433,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
         acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
-        smap = parallel.Starmap(classical, self.get_args(grp_ids, acc0),
-                                h5=self.datastore.hdf5)
-        smap.monitor.save('srcfilter', self.src_filter())
-        self.datastore.swmr_on()
-        smap.h5 = self.datastore.hdf5
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         weights = [rlz.weight for rlz in self.realizations]
         pgetter = getters.PmapGetter(
@@ -445,14 +440,17 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {rec[0]: i for i, rec in enumerate(
             self.csm.source_info.values())}
         hazard = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
-        try:
-            acc = smap.reduce(self.agg_dicts, acc0)
-            with self.monitor('saving probability maps'):
-                hazard.store(oq, acc)
-        finally:
-            if not oq.hazard_calculation_id:
-                hazard.store_disagg()
-            self.store_info(psd, acc)
+        smap = parallel.Starmap(classical, self.get_args(grp_ids, acc0),
+                                h5=self.datastore.hdf5)
+        smap.monitor.save('srcfilter', self.src_filter())
+        self.datastore.swmr_on()
+        smap.h5 = self.datastore.hdf5
+        acc = smap.reduce(self.agg_dicts, acc0)
+        with self.monitor('saving probability maps'):
+            hazard.store(oq, acc)
+        if not oq.hazard_calculation_id:
+            hazard.store_disagg()
+        self.store_info(psd, acc)
         return True
 
     def store_info(self, psd, acc):
