@@ -925,28 +925,33 @@ def split_task(func, *args, duration=1000,
 OQDIST = os.environ.get('OQ_DISTRIBUTE') or config.distribute.oq_distribute
 
 
+def ssh_args():
+    remote_python = config.zworkers.remote_python or sys.executable
+    for hostcores in config.zworkers.host_cores.split(','):
+        host, cores = hostcores.split()
+        if host == '127.0.0.1':  # localhost
+            yield host, cores, [sys.executable]
+        else:
+            yield host, cores, ['ssh', '-f', '-T', host, remote_python]
+
+
 def workers_start():
     """
     Start the remote workers with ssh
     """
     if OQDIST in 'no processpool':
         return
-    remote_python = config.zworkers.remote_python or sys.executable
     sched = config.distribution.dask_scheduler
-    for hostcores in config.zworkers.host_cores.split(','):
-        host, cores = hostcores.split()
-        if host == '127.0.0.1':  # localhost
-            args = [sys.executable, '-m']
-        else:
-            args = ['ssh', '-f', '-T', host, remote_python, '-m']
+    for host, cores, args in ssh_args():
         if OQDIST == 'dask':
-            args += ['distributed.cli.dask_worker', sched, '--nprocs', cores]
+            args += ['-m', 'distributed.cli.dask_worker', sched,
+                     '--nprocs', cores]
         elif OQDIST == 'celery':
-            args += ['celery', 'worker']
+            args += ['-m', 'celery', 'worker']
             if cores != '-1':
                 args += ['-c', cores]
         elif OQDIST == 'zmq':
-            args += ['openquake.baselib.workerpool', '-n', cores]
+            args += ['-m', 'openquake.baselib.workerpool', '-n', cores]
         subprocess.Popen(args)
         logging.info(args)
     if OQDIST == 'dask':
@@ -1009,3 +1014,19 @@ def workers_wait(seconds=30):
         else:
             raise TimeoutError(status)
         return status
+
+
+def workers_kill():
+    code = '''import psutil
+for proc in psutil.process_iter(['name', 'username']):
+    if proc.username() == 'openquake':
+        name = proc.name()
+        if 'oq-zworker' in name or 'dask' in name or 'celery' in name:
+            print('killing %s' % proc)
+            proc.kill()
+'''
+    hosts = []
+    for host, cores, args in ssh_args():
+        out = subprocess.check_output(args + ['-c', code]).decode('utf8')
+        hosts.append('%s: %s' % (host, out))
+    return '\n'.join(hosts)
