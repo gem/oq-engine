@@ -18,6 +18,9 @@
   - name: check OS
     debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_python_version}}
 
+  - name: check IP
+    debug: msg={{ ansible_default_ipv4.network }}-{{ansible_default_ipv4.netmask}}
+
   - name: Ensure user openquake exist and generate ssh key
     user:
       name: openquake
