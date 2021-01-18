@@ -352,6 +352,7 @@ build_dependencies_file () {
             fi
         else
             ( echo "${var_pfx}_COMMIT=$dep_commit"
+              echo "${var_pfx}_PKG=$dep_pkg"
               echo "${var_pfx}_REPO=$repo"
               echo "${var_pfx}_BRANCH=$branch_cur"
               echo "${var_pfx}_TYPE=$dep_type" ) >> ${je_deps_base}_jenkins_deps_info
@@ -591,7 +592,7 @@ EOF
                 PKG_COMMIT="$(git rev-parse HEAD | cut -c 1-7)"
                 cat _jenkins_deps_info
                 egrep '_COMMIT=|_PKG=' _jenkins_deps_info \
-                  | sed 's/\(^.*=[0-9a-f]\{7\}\).*/\1/g' \
+                  | sed 's/\(^.*_COMMIT=[0-9a-f]\{7\}\).*/\1/g' \
                   > "${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/${GEM_DEB_PACKAGE}_${PKG_COMMIT}_deps.txt"
             fi
         fi
