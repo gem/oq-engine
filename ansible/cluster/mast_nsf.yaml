@@ -19,6 +19,9 @@
     setup:
       filter: ansible_default_ipv4.address
 
+  - name: check IP
+    debug: msg={{ ansible_default_ipv4.network }}-{{ansible_default_ipv4.netmask}}
+
 
 #### Setup NFS server on master and worker
 #
@@ -84,12 +87,14 @@
       owner: openquake
     when: workdir.stat.exists == false 
 
-  - debug:  net_mask = "{{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}"
+  - name: Check "{{ shared_nfs }}"  folder exists
+    debug:
+     msg: "{{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}"
 
   - name: "Add export line for NFS server"
     lineinfile:
       path: /etc/exports
-      line: "{{ shared_nfs }}     {{ net_mask }}{{ nfs_serv_opts }}'"
+      line: "{{ shared_nfs }}     {{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}{{ nfs_serv_opts }}"
     notify: reload nfs   
     when: "'master' in group_names"
 
