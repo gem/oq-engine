@@ -426,7 +426,7 @@ _buildfromsrc_innervm_run () {
 
     dt="$(cat gem_date_file)"
 
-    _depends_resolver build "../../"
+    _depends_resolver build ""
     if [ $BUILD_DEVEL -eq 1 ]; then
         PKG_COMMIT="$(git rev-parse HEAD | cut -c 1-7)"
         pkg_dsc="$(ls ${GEM_DEB_MONOTONE}/${BUILD_UBUVER}/source/${GEM_DEB_PACKAGE}_*~dev${dt}+${PKG_COMMIT}.dsc)"
