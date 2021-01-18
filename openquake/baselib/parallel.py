@@ -929,6 +929,8 @@ def workers_start():
     """
     Start the remote workers with ssh
     """
+    if OQDIST in 'no processpool':
+        return
     remote_python = config.zworkers.remote_python or sys.executable
     sched = config.distribution.dask_scheduler
     for hostcores in config.zworkers.host_cores.split(','):
