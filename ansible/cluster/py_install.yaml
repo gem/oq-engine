@@ -41,4 +41,7 @@
       #become_user: openquake
     changed_when: false
     register: oq_install
-    
+   
+  - name: Setup NFS on master first
+    import_playbook: mast_nsf.yaml
+    when: "'master' in group_names"
