@@ -26,7 +26,7 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel, hdf5, config
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
@@ -395,14 +395,14 @@ class ClassicalCalculator(base.HazardCalculator):
         poes_shape = (self.N, self.oqparam.imtls.size, len(rlzs_by_g))
         size = numpy.prod(poes_shape) * 8
         bytes_per_grp = size / len(self.grp_ids)
-        avail = psutil.virtual_memory().available
-        if avail < 1.25 * bytes_per_grp:
+        avail = min(psutil.virtual_memory().available, config.memory.limit)
+        if avail < bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
-        elif avail < 1.25 * size:
+        elif avail < size:
             logging.warning('You have only %s of free RAM, splitting in blocks'
                             % humansize(avail))
-            self.groups_per_block = int(.8 * avail) // bytes_per_grp
+            self.groups_per_block = avail // bytes_per_grp
             self.ct = self.oqparam.concurrent_tasks or 1
             logging.info('Requiring %s for ProbabilityMap',
                          humansize(self.groups_per_block * bytes_per_grp))
