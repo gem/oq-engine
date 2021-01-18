@@ -288,7 +288,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 eff_sites += rec[1] / rec[0]
         self.by_task[extra['task_no']] = (
             eff_rups, eff_sites, sorted(srcids))
-        acc.eff_ruptures[extra.pop('trt')] += eff_rups
+        self.eff_ruptures[extra.pop('trt')] += eff_rups
         if not pmap:
             return acc
         grp_id = extra['grp_id']
@@ -306,11 +306,10 @@ class ClassicalCalculator(base.HazardCalculator):
 
         return acc
 
-    def acc0(self):
+    def create_dsets(self):
         """
-        Initial accumulator, a dict grp_id -> ProbabilityMap(L, G)
+        Store some empty datasets in the datastore
         """
-        zd = AccumDict()  # populated in get_args
         params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
                   'nsites', 'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
@@ -319,7 +318,6 @@ class ClassicalCalculator(base.HazardCalculator):
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             for dparam in cm.REQUIRES_DISTANCES:
                 params.add(dparam + '_')
-        zd.eff_ruptures = AccumDict(accum=0)  # trt -> eff_ruptures
         mags = set()
         for trt, dset in self.datastore['source_mags'].items():
             mags.update(dset[:])
@@ -344,6 +342,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.by_task = {}  # task_no => src_ids
         self.maxradius = 0
         self.Ns = len(self.csm.source_info)
+        self.eff_ruptures = AccumDict(accum=0)  # trt -> eff_ruptures
         if self.oqparam.disagg_by_src:
             sources = self.get_source_ids()
             self.datastore.create_dset(
@@ -352,7 +351,6 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.set_shape_descr(
                 'disagg_by_src', site_id=self.N, rlz_id=self.R,
                 imt=list(self.oqparam.imtls), lvl=self.L1, src_id=sources)
-        return zd
 
     def get_source_ids(self):
         """
@@ -431,7 +429,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()  # fixes HDF5 error in build_hazard
             return
 
-        acc0 = self.acc0()  # create the rup/ datasets BEFORE swmr_on()
+        self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
         grp_ids = numpy.arange(len(self.csm.src_groups))
         self.calc_times = AccumDict(accum=numpy.zeros(3, F32))
         weights = [rlz.weight for rlz in self.realizations]
@@ -440,8 +438,8 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {rec[0]: i for i, rec in enumerate(
             self.csm.source_info.values())}
         hazard = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
-        smap = parallel.Starmap(classical, self.get_args(grp_ids, acc0),
-                                h5=self.datastore.hdf5)
+        allargs, acc0 = self.get_args_acc(grp_ids, hazard)
+        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.src_filter())
         self.datastore.swmr_on()
         smap.h5 = self.datastore.hdf5
@@ -454,7 +452,7 @@ class ClassicalCalculator(base.HazardCalculator):
         return True
 
     def store_info(self, psd, acc):
-        self.store_rlz_info(acc.eff_ruptures)
+        self.store_rlz_info(self.eff_ruptures)
         source_ids = self.store_source_info(self.calc_times)
         if self.by_task:
             logging.info('Storing by_task information')
@@ -535,9 +533,9 @@ class ClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def get_args(self, grp_ids, acc0):
+    def get_args_acc(self, grp_ids, hazard):
         """
-        :returns: the outputs to pass to the Starmap, ordered by weight
+        :returns: (Starmap arguments, Pmap dictionary)
         """
         oq = self.oqparam
         L = oq.imtls.size
@@ -545,12 +543,11 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         src_groups = self.csm.src_groups
         tot_weight = 0
-        et_ids = self.datastore['et_ids'][:]
-        rlzs_by_gsim_list = self.full_lt.get_rlzs_by_gsim_list(et_ids)
+        pmapdic = {}
         for grp_id in grp_ids:
-            rlzs_by_gsim = rlzs_by_gsim_list[grp_id]
+            rlzs_by_gsim = hazard.rlzs_by_gsim_list[grp_id]
             sg = src_groups[grp_id]
-            acc0[grp_id] = ProbabilityMap.build(L, len(rlzs_by_gsim), sids)
+            pmapdic[grp_id] = ProbabilityMap.build(L, len(rlzs_by_gsim), sids)
             for src in sg:
                 src.ngsims = len(rlzs_by_gsim)
                 tot_weight += src.weight
@@ -565,7 +562,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
-        for rlzs_by_gsim, sg in zip(rlzs_by_gsim_list, src_groups):
+        for grp_id in grp_ids:
+            rlzs_by_gsim = hazard.rlzs_by_gsim_list[grp_id]
+            sg = src_groups[grp_id]
             nb = 0
             if sg.atomic:
                 # do not split atomic groups
@@ -583,7 +582,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     allargs.append((block, rlzs_by_gsim, self.params))
         allargs.sort(key=lambda args: sum(src.weight for src in args[0]),
                      reverse=True)
-        return allargs
+        return allargs, pmapdic
 
     def save_hazard(self, acc, pmap_by_kind):
         """
