@@ -1017,13 +1017,13 @@ def workers_wait(seconds=30):
 
 
 def workers_kill():
-    code = '''import psutil
+    code = '''"import psutil
 for proc in psutil.process_iter(['name', 'username']):
     if proc.username() == 'openquake':
         name = proc.name()
         if 'oq-zworker' in name or 'dask' in name or 'celery' in name:
             print('killing %s' % proc)
-            proc.kill()
+            proc.kill()"
 '''
     hosts = []
     for host, cores, args in ssh_args():
