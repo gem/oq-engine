@@ -221,6 +221,9 @@ def classical(srcs, rlzs_by_gsim, params, monitor):
 
 
 class Hazard:
+    """
+    Helper class for storing the PoEs
+    """
     def __init__(self, dstore, full_lt, pgetter, srcidx):
         self.datastore = dstore
         self.full_lt = full_lt
@@ -231,8 +234,7 @@ class Hazard:
         self.srcidx = srcidx
         self.data = []
 
-    def store(self, oq, pmap_by_key):
-        logging.info('Saving _poes for grp_ids=%s', list(pmap_by_key))
+    def store(self, imtls, pmap_by_key):
         for key, pmap in pmap_by_key.items():
             if isinstance(key, str):  # disagg_by_src
                 rlzs_by_gsim = self.rlzs_by_gsim_list[pmap.grp_id]
@@ -246,7 +248,7 @@ class Hazard:
                 arr = numpy.array([pmap[sid].array for sid in pmap])
                 self.datastore['_poes'][:, :, self.slice_by_g[key]] = arr
                 extreme = max(
-                    get_extreme_poe(pmap[sid].array, oq.imtls)
+                    get_extreme_poe(pmap[sid].array, imtls)
                     for sid in pmap)
                 self.data.append((key, trt, extreme))
 
@@ -438,20 +440,22 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {rec[0]: i for i, rec in enumerate(
             self.csm.source_info.values())}
         hazard = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
-        allargs, acc0 = self.get_args_acc(grp_ids, hazard)
-        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-        smap.monitor.save('srcfilter', self.src_filter())
-        self.datastore.swmr_on()
-        smap.h5 = self.datastore.hdf5
-        acc = smap.reduce(self.agg_dicts, acc0)
-        with self.monitor('saving probability maps'):
-            hazard.store(oq, acc)
+        for b, block in enumerate(block_splitter(grp_ids, 10), 1):
+            allargs, pmaps = self.get_args_acc(block, hazard)
+            logging.info('Sending bunch %d of %d tasks', b, len(allargs))
+            smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
+            smap.monitor.save('srcfilter', self.src_filter())
+            self.datastore.swmr_on()
+            smap.h5 = self.datastore.hdf5
+            smap.reduce(self.agg_dicts, pmaps)
+            with self.monitor('saving probability maps'):
+                hazard.store(oq.imtls, pmaps)
         if not oq.hazard_calculation_id:
             hazard.store_disagg()
-        self.store_info(psd, acc)
+        self.store_info(psd)
         return True
 
-    def store_info(self, psd, acc):
+    def store_info(self, psd):
         self.store_rlz_info(self.eff_ruptures)
         source_ids = self.store_source_info(self.calc_times)
         if self.by_task:
