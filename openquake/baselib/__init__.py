@@ -124,7 +124,7 @@ def positiveint(flag):
     return i
 
 
-config.read(soft_mem_limit=int, hard_mem_limit=int, port=int,
+config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
             multi_user=positiveint, serialize_jobs=positiveint,
             strict=positiveint, code=exec)
 
