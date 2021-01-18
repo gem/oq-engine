@@ -46,5 +46,9 @@
     register: oq_install
    
   - name: Setup NFS on master first
-    import_playbook: mast_nsf.yaml
+    import_playbook: inst_nsf.yaml
     when: "'master' in group_names"
+
+  - name: Setup NFS on worker
+    import_playbook: inst_nsf.yaml
+    when: "'worker' in group_names"
