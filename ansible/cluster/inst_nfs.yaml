@@ -23,7 +23,7 @@
     debug: msg={{ ansible_default_ipv4.network }}-{{ansible_default_ipv4.netmask}}
 
   - name: Test hosts list
-    debug: msg: "{{ hostvars[master]['ansible_default_ipv4']['address'] }}"
+    debug: msg={{ hostvars[master]['ansible_default_ipv4']['address'] }}
 
 #### Setup NFS server on master and worker
 #
