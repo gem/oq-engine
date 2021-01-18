@@ -99,9 +99,9 @@
     when: "'master' in group_names"
 
   - name: Get the master node IP
-    debug: var=hostvars[master]['ansible_default_ipv4']['address']
+    debug: var={{ ansible_default_ipv4.address }
     register: master_node_ip
-
+    when: "'master' in group_names"
 
   - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
     mount:
