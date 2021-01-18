@@ -30,7 +30,6 @@
 
   tasks:
 
-
   - name: Download installation scripts
     get_url:
       url: https://raw.githubusercontent.com/gem/oq-engine/master/install.py

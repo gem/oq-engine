@@ -28,6 +28,17 @@ platforms:
     privileged: true
     groups:
       - worker
+scenario:
+  test_sequence:
+    - cleanup 
+    - destroy
+    - create
+    - converge
+    - verify
+    - cleanup
+    - destroy
+verifier:
+  name: ansible
 provisioner:
   name: ansible
   config_options:
@@ -48,15 +59,3 @@ provisioner:
       worker_nodes_dask: "{{ groups['worker'] | map('extract', hostvars, ['ansible_ssh_host']) | join(' -1,') }} -1"
   lint:
     ansible-lint
-scenario:
-  cluster:
-    - cleanup 
-    - destroy
-    - create
-    - converge
-    - verify
-    - cleanup
-    - destroy
-verifier:
-  name: ansible
-
