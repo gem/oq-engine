@@ -39,8 +39,7 @@ except ImportError:
         "Do nothing"
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
-from openquake.baselib import (
-    parallel, general, config, __version__, zeromq as z)
+from openquake.baselib import parallel, general, config, __version__
 from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
@@ -67,84 +66,27 @@ def get_zmq_ports():
     return numpy.arange(int(start), int(stop))
 
 
-if OQ_DISTRIBUTE == 'dask':
+def set_concurrent_tasks_default(calc):
+    """
+    Look at the number of available workers and update the parameter
+    OqParam.concurrent_tasks.default. Abort the calculations if no
+    workers are available. Do nothing for trivial distributions.
+    """
+    if OQ_DISTRIBUTE in 'no processpool':  # do nothing
+        num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.CT // 2
+        logging.warning('Using %d workers on %s', num_workers, platform.node())
+        return
 
-    def set_concurrent_tasks_default(calc):
-        num_workers = 320
-        parallel.CT = num_workers * 2
-        OqParam.concurrent_tasks.default = num_workers * 2
-        logging.warning('Hard-code %d dask workers(!)', num_workers)
+    num_workers = sum(total for host, running, total
+                      in parallel.workers_wait())
+    if num_workers == 0:
+        logging.critical("No live compute nodes, aborting calculation")
+        logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
+        sys.exit(1)
 
-elif OQ_DISTRIBUTE == 'zmq':
-
-    def set_concurrent_tasks_default(calc):
-        """
-        Set the default for concurrent_tasks based on the available
-        worker pools .
-        """
-        num_workers = 0
-        w = config.zworkers
-        if w.host_cores:
-            host_cores = [hc.split() for hc in w.host_cores.split(',')]
-        else:
-            host_cores = []
-        for host, _cores in host_cores:
-            url = 'tcp://%s:%s' % (host, w.ctrl_port)
-            with z.Socket(url, z.zmq.REQ, 'connect') as sock:
-                if not general.socket_ready(url):
-                    logging.warning('%s is not running', host)
-                    continue
-                num_workers += sock.send('get_num_workers')
-        if num_workers == 0:
-            num_workers = os.cpu_count()
-            logging.warning('Missing host_cores, no idea about how many cores '
-                            'are available, using %d', num_workers)
-        parallel.CT = num_workers * 2
-        OqParam.concurrent_tasks.default = num_workers * 2
-        logging.warning('Using %d zmq workers', num_workers)
-
-elif OQ_DISTRIBUTE.startswith('celery'):
-    import celery.task.control  # noqa: E402
-
-    def set_concurrent_tasks_default(calc):
-        """
-        Set the default for concurrent_tasks based on the number of available
-        celery workers.
-        """
-        stats = celery.task.control.inspect(timeout=1).stats()
-        if not stats:
-            logging.critical("No live compute nodes, aborting calculation")
-            logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
-            sys.exit(1)
-        ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        parallel.CT = ncores * 2
-        OqParam.concurrent_tasks.default = ncores * 2
-        logging.warning('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
-
-    def celery_cleanup(terminate):
-        """
-        Release the resources used by an openquake job.
-        In particular revoke the running tasks (if any).
-
-        :param bool terminate: the celery revoke command terminate flag
-        :param tasks: celery tasks
-        """
-        # Using the celery API, terminate and revoke and terminate any running
-        # tasks associated with the current job.
-        tasks = parallel.Starmap.running_tasks
-        if tasks:
-            logging.warning('Revoking %d tasks', len(tasks))
-        else:  # this is normal when OQ_DISTRIBUTE=no
-            logging.debug('No task to revoke')
-        while tasks:
-            task = tasks.pop()
-            tid = task.task_id
-            celery.task.control.revoke(tid, terminate=terminate)
-            logging.debug('Revoked task %s', tid)
-else:
-
-    def set_concurrent_tasks_default(calc):
-        pass
+    parallel.CT = num_workers * 2
+    OqParam.concurrent_tasks.default = num_workers * 2
+    logging.warning('Using %d %s workers', num_workers, OQ_DISTRIBUTE)
 
 
 def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
@@ -306,9 +248,6 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
         calc.from_engine = True
         tb = 'None\n'
         try:
-            if OQ_DISTRIBUTE.endswith('pool'):
-                logging.warning('Using %d cores on %s',
-                                parallel.CT // 2, platform.node())
             set_concurrent_tasks_default(calc)
             t0 = time.time()
             calc.run(exports=exports, **kw)
@@ -439,10 +378,9 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
                 dic['hazard_calculation_id'] = jobparams[0][0]
             logs.dbcmd('update_job', job_id, dic)
     try:
-        if dist == 'zmq' and config.zworkers['host_cores']:
+        if config.zworkers['host_cores']:
             logging.info('Asking the DbServer to start the workers')
-            logs.dbcmd('zmq_start')  # start the zworkers
-            logs.dbcmd('zmq_wait')  # wait for them to go up
+            logs.dbcmd('workers_start')  # start the zworkers
         allargs = [(job_id, oqparam, exports, log_level, log_file)
                    for job_id, oqparam in jobparams]
         if jobarray:
@@ -452,11 +390,9 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
             for args in allargs:
                 run_calc(*args)
     finally:
-        if dist == 'zmq' and config.zworkers['host_cores']:
+        if config.zworkers['host_cores']:
             logging.info('Stopping the zworkers')
-            logs.dbcmd('zmq_stop')
-        elif dist.startswith('celery'):
-            celery_cleanup(config.distribution.terminate_workers_on_revoke)
+            logs.dbcmd('workers_stop')
     return jobparams
 
 

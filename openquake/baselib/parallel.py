@@ -195,6 +195,7 @@ import traceback
 import collections
 from unittest import mock
 import multiprocessing.dummy
+import subprocess
 import psutil
 import numpy
 try:
@@ -209,7 +210,7 @@ from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp)
+    gettemp, socket_ready)
 
 sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
@@ -502,7 +503,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
 
 if oq_distribute().startswith('celery'):
     from celery import Celery
-    from celery.task import task
+    from celery.task import task, control
 
     app = Celery('openquake')
     app.config_from_object('openquake.engine.celeryconfig')
@@ -739,10 +740,11 @@ class Starmap(object):
         self.tasks = []  # populated by .submit
         self.task_no = 0
         self.t0 = time.time()
-        if self.distribute == 'zmq':  # add a check
-            err = workerpool.check_status()
-            if err:
-                raise RuntimeError(err)
+        if self.distribute in 'zmq dask celery':  # add a check
+            errors = ['The workerpool on %s is down' % host
+                      for host, run, tot in workers_status() if tot == 0]
+            if errors:
+                raise RuntimeError('\n'.join(errors))
 
     def log_percent(self):
         """
@@ -916,3 +918,91 @@ def split_task(func, *args, duration=1000,
     for block in blocks[:-1]:
         yield (func, block) + args[1:-1]
     yield func(*(blocks[-1],) + args[1:])
+
+#                             start/stop workers                             #
+
+
+OQDIST = os.environ.get('OQ_DISTRIBUTE') or config.distribute.oq_distribute
+
+
+def workers_start():
+    """
+    Start the remote workers with ssh
+    """
+    if OQDIST in 'no processpool':
+        return
+    remote_python = config.zworkers.remote_python or sys.executable
+    sched = config.distribution.dask_scheduler
+    for hostcores in config.zworkers.host_cores.split(','):
+        host, cores = hostcores.split()
+        args = ['ssh', '-f', '-T', host, remote_python, '-m']
+        if OQDIST == 'dask':
+            args += ['distributed.cli.dask_worker', sched, '--nprocs', cores]
+        elif OQDIST == 'celery':
+            args += ['celery', 'worker']
+            if cores != '-1':
+                args += ['-c', cores]
+        elif OQDIST == 'zmq':
+            args += ['openquake.baselib.workerpool', '-n', cores]
+        subprocess.Popen(args)
+        logging.info(args)
+    if OQDIST == 'dask':
+        host, port = sched.split(':')
+        with open(os.path.expanduser('~/dask.log'), 'a') as log:
+            subprocess.Popen([
+                sys.executable, '-m', 'distributed.cli.dask_scheduler',
+                '--host', host, '--port', port], stdout=log, stderr=log)
+
+
+def workers_stop():
+    """
+    Stop all the workers with a shutdown
+    """
+    if OQDIST == 'dask':
+        Client(config.distribution.dask_scheduler).shutdown()
+    elif OQDIST == 'celery':
+        app.control.shutdown()
+    elif OQDIST == 'zmq':
+        workerpool.WorkerMaster().kill()
+    return 'stopped'
+
+
+def workers_status(wait=False):
+    """
+    :returns: a list [(host name, running, total), ...]
+    """
+    if OQDIST == 'dask':
+        with Client(config.distribution.dask_scheduler) as c:
+            info = c.scheduler_info()
+        acc = AccumDict(accum=numpy.zeros(2, int))  # IP -> (running, total)
+        for uri, worker in info['workers'].items():
+            ip = uri.split(':')[1]  # 'tcp://192.168.2.2:3429' => //192.168.2.2
+            ex = bool(worker['metrics']['executing'])
+            acc[ip[2:]] += numpy.array([ex, 1])
+        return [(host, arr[0], arr[1]) for host, arr in acc.items()]
+
+    elif OQDIST == 'celery':
+        stats = control.inspect(timeout=1).stats() or []
+        out = []
+        for host, worker in stats.items():
+            total = worker['pool']['max-concurrency']
+            out.append((host, total, total))
+        return out
+
+    elif OQDIST == 'zmq':
+        return workerpool.WorkerMaster().status(wait)
+
+
+def workers_wait(seconds=30):
+    """
+    Wait until all workers are active
+    """
+    if OQDIST in 'dask celery zmq':
+        for _ in range(seconds):
+            time.sleep(1)
+            status = workers_status(wait=True)
+            if all(total for host, running, total in status):
+                break
+        else:
+            raise TimeoutError(status)
+        return status
