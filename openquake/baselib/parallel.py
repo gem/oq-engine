@@ -995,11 +995,12 @@ def workers_wait(seconds=30):
     """
     Wait until all workers are active
     """
-    for _ in range(seconds):
-        time.sleep(1)
-        status = workers_status()
-        if all(total for host, running, total in status):
-            break
-    else:
-        raise TimeoutError(status)
-    return status
+    if OQDIST in 'dask celery zmq':
+        for _ in range(seconds):
+            time.sleep(1)
+            status = workers_status()
+            if all(total for host, running, total in status):
+                break
+        else:
+            raise TimeoutError(status)
+        return status
