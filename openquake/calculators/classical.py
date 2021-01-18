@@ -397,18 +397,18 @@ class ClassicalCalculator(base.HazardCalculator):
         size = numpy.prod(poes_shape) * 8
         bytes_per_grp = size / len(self.grp_ids)
         avail = min(psutil.virtual_memory().available, config.memory.limit)
+        logging.info('Requiring %s for ProbabilityMap of shape %s',
+                     humansize(size), poes_shape)
         if avail < bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
         elif avail < size:
-            logging.warning('Splitting in bunches to save RAM')
+            logging.warning('Splitting in bunches of tasks to save RAM')
             self.groups_per_block = avail // bytes_per_grp
             self.ct = self.oqparam.concurrent_tasks or 1
             logging.info('Requiring %s for ProbabilityMap',
                          humansize(self.groups_per_block * bytes_per_grp))
         else:
-            logging.info('Requiring %s for ProbabilityMap of shape %s',
-                         humansize(size), poes_shape)
             self.groups_per_block = len(self.grp_ids)
             self.ct = (self.oqparam.concurrent_tasks or 1) * 2.5
         self.datastore.create_dset('_poes', F64, poes_shape)
