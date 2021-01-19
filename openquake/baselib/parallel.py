@@ -503,7 +503,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
 
 if oq_distribute().startswith('celery'):
     from celery import Celery
-    from celery.task import task, control
+    from celery.task import task
 
     app = Celery('openquake')
     app.config_from_object('openquake.engine.celeryconfig')
@@ -948,7 +948,8 @@ def workers_start():
             args += ['-m', 'distributed.cli.dask_worker', sched,
                      '--nprocs', cores]
         elif OQDIST == 'celery':
-            args += ['-m', 'celery', 'worker']
+            args += ['-m', 'celery', 'worker', '--purge', '-O', 'fair',
+                     '--config', 'openquake.engine.celeryconfig']
             if cores != '-1':
                 args += ['-c', cores]
         elif OQDIST == 'zmq':
@@ -991,7 +992,7 @@ def workers_status(wait=False):
         return [(host, arr[0], arr[1]) for host, arr in acc.items()]
 
     elif OQDIST == 'celery':
-        stats = control.inspect(timeout=1).stats() or {}
+        stats = app.control.inspect(timeout=1).stats() or {}
         out = []
         for host, worker in stats.items():
             total = worker['pool']['max-concurrency']
@@ -1010,7 +1011,7 @@ def workers_wait(seconds=30):
         for _ in range(seconds):
             time.sleep(1)
             status = workers_status(wait=True)
-            if all(total for host, running, total in status):
+            if status and all(total for host, running, total in status):
                 break
         else:
             raise TimeoutError(status)
@@ -1024,7 +1025,8 @@ for proc in psutil.process_iter(['name', 'username']):
     if proc.username() == user:
         cmdline = proc.cmdline()
         if ('workerpool' in cmdline or 'celery' in cmdline or
-            'distributed.cli.dask_worker' in cmdline):
+            'distributed.cli.dask_worker' in cmdline or
+            'distributed.cli.dask_scheduler' in cmdline):
             print('killing %s' % ' '.join(cmdline))
             proc.kill()
 '''
