@@ -1,0 +1,223 @@
+---
+# run with ansible-playbook -v -i host.linux  oqengine/oq_work.yaml --limit 
+#
+- hosts: all
+  order: sorted
+  gather_facts: yes
+  #
+  become: yes
+  vars:
+
+  tasks:
+  ##### Check OS for update system
+  - name: ping hosts
+    ping:
+
+  - name: check OS and get variable
+    debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_host}}
+  
+  - name: Set hostname and IP address of host
+    setup:
+      filter: ansible_default_ipv4.address
+
+#
+  - block:
+# Create etc and work directory for services  
+#
+    - name: Check "{{workdir_services}}"  folder exists
+      stat:
+       path: "{{workdir_services}}"
+      register: servicedir
+ 
+    - name: "echo if directory already existed"
+      debug:
+        msg: "Shared  {{workdir_services}}  folder  is already existed"
+      when: servicedir.stat.exists 
+ 
+    - name: "Ansible Create directory {{workdir_services}} if not exists"
+      file:
+        path: "{{workdir_services}}"
+        state: directory
+        mode: "2770"
+        group: openquake
+        owner: openquake
+      when: servicedir.stat.exists == false 
+
+    - name: Check "{{webuidir_services}}"  folder exists
+      stat:
+       path: "{{webuidir_services}}"
+      register: servicedir
+ 
+    - name: "echo if directory already existed"
+      debug:
+        msg: "Shared  {{webuidir_services}}  folder  is already existed"
+      when: servicedir.stat.exists 
+ 
+    - name: "Ansible Create directory {{webuidir_services}} if not exists"
+      file:
+        path: "{{webuidir_services}}"
+        state: directory
+        mode: "2770"
+        group: openquake
+        owner: openquake
+      when: servicedir.stat.exists == false 
+
+    - name: Check "{{etc_dir}}"  folder exists
+      stat:
+       path: "{{etc_dir}}"
+      register: servicedir
+ 
+    - name: "echo if directory already existed"
+      debug:
+        msg: "Shared  {{etc_dir}}  folder  is already existed"
+      when: servicedir.stat.exists 
+ 
+    - name: "Ansible Create directory {{etc_dir}} if not exists"
+      file:
+        path: "{{etc_dir}}"
+        state: directory
+        mode: "2770"
+        group: openquake
+        owner: openquake
+      when: servicedir.stat.exists == false 
+
+#### OpenQuake configuration files 
+    - name: Set openquake.cfg files on master node
+      template:
+        src: templates/openquake.cfg.j2
+        dest: "{{ etc_dir }}/openquake.cfg"
+        owner: openquake
+        group: openquake
+        mode: 0644
+        validate: ls -l %s
+      register: set_openquake_cfg
+    
+    - name: Set workers IP on cfg files
+      lineinfile:
+        path: /etc/openquake/openquake.cfg
+        regexp: '^host_cores ='
+        line: "host_cores = {{ worker_nodes_zmq }}"
+
+    - name: Set symbolic link for venv
+      file:
+        src: "{{ etc_dir }}/openquake.cfg"
+        dest: "{{ venv_dir }}/openquake.cfg"
+        state: link
+
+    - name: Set System condfiguration for db server on master node
+      template:
+        src: templates/oq-dbserver.service.j2
+        dest: "{{ etc_dir }}/oq-dbserver.service"
+        owner: openquake
+        group: openquake
+        mode: 0644
+        validate: ls -l %s
+      register: set_openquake_db
+
+    - name: Set System condfiguration for webui  on master node
+      template:
+        src: templates/oq-webui.service.j2
+        dest: "{{ etc_dir }}/oq-webui.service"
+        owner: openquake
+        mode: 0644
+        validate: ls -l %s
+      register: set_openquake_webui
+
+#### Enable the system services at boot for all OS
+
+    - name:
+      file:
+        src: "{{ etc_dir }}/{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        state: link
+      loop: [ 'oq-webui.service', 'oq-dbserver.service']
+
+    - name: enable system service for openquake and ensure it is started
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+      loop: [ 'oq-dbserver', 'oq-webui']
+
+    - name: ensure nfs server is started on master node
+      systemd:
+        name: nfs-server
+        enabled: yes
+        state: started
+      when: ansible_distribution == "CentOS"
+
+    - name: ensure nfs server is started on master node
+      systemd:
+        name: nfs-kernel-server
+        enabled: yes
+        state: started
+      when: ansible_distribution == "Ubuntu"
+        #
+    when: "'master' in group_names"
+    
+  - block:
+## workers configuration 
+
+    - name: Check "{{etc_dir}}"  folder exists
+      stat:
+       path: "{{etc_dir}}"
+      register: servicedir
+ 
+    - name: "echo if directory already existed"
+      debug:
+        msg: "Shared  {{etc_dir}}  folder  is already existed"
+      when: servicedir.stat.exists 
+ 
+    - name: "Ansible Create directory {{etc_dir}} if not exists"
+      file:
+        path: "{{etc_dir}}"
+        state: directory
+        mode: "2770"
+        group: openquake
+        owner: openquake
+      when: servicedir.stat.exists == false 
+
+#### OpenQuake configuration files 
+    - name: Set openquake.cfg files on worker node
+      template:
+        src: templates/openquake.cfg.j2
+        dest: "{{ etc_dir }}/openquake.cfg"
+        owner: openquake
+        group: openquake
+        mode: 0644
+        validate: ls -l %s
+      register: set_openquake_cfg
+    
+    - name: Set workers IP on cfg files
+      lineinfile:
+        path: /etc/openquake/openquake.cfg
+        regexp: '^host_cores ='
+        line: "host_cores = {{ worker_nodes_zmq }}"
+
+    - name: Set symbolic link for venv
+      file:
+        src: "{{ etc_dir }}/openquake.cfg"
+        dest: "{{ venv_dir }}/openquake.cfg"
+        state: link
+
+    when: "'worker' in group_names"
+
+- hosts: master
+  order: sorted
+  gather_facts: yes
+  #
+  become: yes
+  tasks:
+    - name: fetch all public ssh keys
+      shell: cat ~openquake/.ssh/id_rsa.pub
+      register: ssh_keys
+
+    - name: check keys
+      debug: msg="{{ ssh_keys.stdout }}"
+
+    - name: deploy keys on all servers
+      authorized_key: user=openquake key="{{ item[0] }}"
+      delegate_to: "{{ item[1] }}"
+      with_nested:
+        - "{{ ssh_keys.stdout }}"
+        - "{{groups['worker']}}"
