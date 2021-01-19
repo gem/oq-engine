@@ -380,7 +380,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     try:
         if config.zworkers['host_cores']:
             logging.info('Asking the DbServer to start the workers')
-            logs.dbcmd('workers_start')  # start the zworkers
+            logs.dbcmd('workers_start')  # start the workers
         allargs = [(job_id, oqparam, exports, log_level, log_file)
                    for job_id, oqparam in jobparams]
         if jobarray:
@@ -391,7 +391,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
                 run_calc(*args)
     finally:
         if config.zworkers['host_cores']:
-            logging.info('Stopping the zworkers')
+            logging.info('Stopping the workers')
             logs.dbcmd('workers_stop')
     return jobparams
 

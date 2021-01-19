@@ -1018,16 +1018,19 @@ def workers_wait(seconds=30):
 
 
 def workers_kill():
-    code = '''"import psutil
+    code = '''import getpass, psutil
+user = getpass.getuser()
 for proc in psutil.process_iter(['name', 'username']):
-    if proc.username() == 'openquake':
-        name = proc.name()
-        if 'oq-zworker' in name or 'dask' in name or 'celery' in name:
-            print('killing %s' % proc)
-            proc.kill()"
+    if proc.username() == user:
+        cmdline = proc.cmdline()
+        if ('workerpool' in cmdline or 'celery' in cmdline or
+            'distributed.cli.dask_worker' in cmdline):
+            print('killing %s' % ' '.join(cmdline))
+            proc.kill()
 '''
     hosts = []
     for host, cores, args in ssh_args():
-        out = subprocess.check_output(args + ['-c', code]).decode('utf8')
+        c = '"%s"' % code if 'ssh' in args else code
+        out = subprocess.check_output(args + ['-c', c]).decode('utf8')
         hosts.append('%s: %s' % (host, out))
     return '\n'.join(hosts)
