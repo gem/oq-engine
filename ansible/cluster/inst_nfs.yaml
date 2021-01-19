@@ -11,7 +11,7 @@
     workdir_services: /var/lib/openquake
     webuidir_services: /var/lib/openquake/webui
     nfs_mount_opts: "ro,rsize=1048576,wsize=1048576,bg,soft,intr,noauto,tcp"
-    nfs_serv_opts: "(ro,fsid=0,no_root_squash,nohide,insecure,no_subtree_check,async)"
+    nfs_serv_opts: "(ro,no_root_squash,nohide,insecure,no_subtree_check,async)"
     server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
 
   tasks:
@@ -104,8 +104,6 @@
       line: "{{ shared_nfs }}     {{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}{{ nfs_serv_opts }}"
     notify: reload nfs   
     when: "'master' in group_names"
-
-
 
   - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
     mount:
