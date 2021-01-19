@@ -927,12 +927,13 @@ OQDIST = os.environ.get('OQ_DISTRIBUTE') or config.distribute.oq_distribute
 
 def ssh_args():
     remote_python = config.zworkers.remote_python or sys.executable
-    for hostcores in config.zworkers.host_cores.split(','):
-        host, cores = hostcores.split()
-        if host == '127.0.0.1':  # localhost
-            yield host, cores, [sys.executable]
-        else:
-            yield host, cores, ['ssh', '-f', '-T', host, remote_python]
+    if config.zworkers.host_cores.strip():
+        for hostcores in config.zworkers.host_cores.split(','):
+            host, cores = hostcores.split()
+            if host == '127.0.0.1':  # localhost
+                yield host, cores, [sys.executable]
+            else:
+                yield host, cores, ['ssh', '-f', '-T', host, remote_python]
 
 
 def workers_start():
