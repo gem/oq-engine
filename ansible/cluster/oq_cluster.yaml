@@ -11,6 +11,7 @@
     venv_dir: /opt/openquake
     venv_bin: "{{ venv_dir }}/bin"
     server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
+    worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | join(' -1,') }} -1"
 
   pre_tasks:
     - name: ping hosts
@@ -19,8 +20,11 @@
     - name: check OS
       debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_python_version}}
 
-    - name: check IP
-      debug: msg={{ ansible_default_ipv4.network }}-{{ansible_default_ipv4.netmask}}
+    - name: check server host IP
+      debug: msg={{ server_host }}
+
+    - name: check workers host_cores
+      debug: msg={{ worker_nodes_zmq }}
 
     - name: Ensure user openquake exist and generate ssh key
       user:
