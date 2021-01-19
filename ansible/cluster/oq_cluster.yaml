@@ -53,3 +53,5 @@
 
 - import_playbook: inst_nfs.yaml
   when: "'worker' in group_names" 
+
+- import_playbook: oq_zmq.yaml
