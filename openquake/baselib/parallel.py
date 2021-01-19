@@ -946,7 +946,7 @@ def workers_start():
     for host, cores, args in ssh_args():
         if OQDIST == 'dask':
             args += ['-m', 'distributed.cli.dask_worker', sched,
-                     '--nprocs', cores]
+                     '--nprocs', cores, '--memory-limit', '1e10']
         elif OQDIST == 'celery':
             args += ['-m', 'celery', 'worker', '--purge', '-O', 'fair',
                      '--config', 'openquake.engine.celeryconfig']
@@ -956,12 +956,12 @@ def workers_start():
             args += ['-m', 'openquake.baselib.workerpool', '-n', cores]
         subprocess.Popen(args)
         logging.info(args)
-    if OQDIST == 'dask':
-        host, port = sched.split(':')
-        with open(os.path.expanduser('~/dask.log'), 'a') as log:
-            subprocess.Popen([
-                sys.executable, '-m', 'distributed.cli.dask_scheduler',
-                '--host', host, '--port', port], stdout=log, stderr=log)
+    #if OQDIST == 'dask':
+    #    host, port = sched.split(':')
+    #    with open(os.path.expanduser('~/dask.log'), 'a') as log:
+    #        subprocess.Popen([
+    #            sys.executable, '-m', 'distributed.cli.dask_scheduler',
+    #            '--host', host, '--port', port], stdout=log, stderr=log)
 
 
 def workers_stop():
