@@ -210,7 +210,7 @@ from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp, socket_ready)
+    gettemp)
 
 sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
@@ -264,9 +264,9 @@ def dask_submit(self, func, args, monitor):
 
 def oq_distribute(task=None):
     """
-    :returns: the value of OQ_DISTRIBUTE or 'processpool'
+    :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
-    dist = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+    dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
     if dist not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
                     'dask'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
@@ -991,7 +991,7 @@ def workers_status(wait=False):
         return [(host, arr[0], arr[1]) for host, arr in acc.items()]
 
     elif OQDIST == 'celery':
-        stats = control.inspect(timeout=1).stats() or []
+        stats = control.inspect(timeout=1).stats() or {}
         out = []
         for host, worker in stats.items():
             total = worker['pool']['max-concurrency']
