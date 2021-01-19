@@ -74,7 +74,7 @@ def set_concurrent_tasks_default(calc):
     """
     if OQ_DISTRIBUTE in 'no processpool':  # do nothing
         num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.CT // 2
-        logging.warning('Using %d workers on %s', num_workers, platform.node())
+        logging.warning('Using %d cores on %s', num_workers, platform.node())
         return
 
     num_workers = sum(total for host, running, total
