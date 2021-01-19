@@ -284,6 +284,7 @@ class CompositeSourceModel:
                 srcs.extend(src_group)
         return srcs
 
+    # used only in calc_by_rlz.py
     def get_groups(self, eri):
         """
         :param eri: effective source model realization ID
