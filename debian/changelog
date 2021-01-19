@@ -1,3 +1,9 @@
+  [Michele Simionato]
+  * Extended the zmq distribution logic to celery, by setting the parameter
+    host_cores in openquake.cfg
+  * Implemented a memory-saving logic in the classical calculator based on
+    the memory.limit parameter in openquake.cfg
+
   [Richard Styron]
   * Added TaperedGRMFD to hazardlib
 
