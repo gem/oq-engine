@@ -4,7 +4,7 @@ dependency:
 driver:
   name: docker
 platforms:
-  - name: master
+  - name: server
     image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu1804}-ansible:latest"
     command: /sbin/init 
     volumes:
