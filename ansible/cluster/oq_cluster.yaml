@@ -10,6 +10,7 @@
   vars:
     venv_dir: /opt/openquake
     venv_bin: "{{ venv_dir }}/bin"
+    server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
 
   pre_tasks:
     - name: ping hosts
