@@ -338,7 +338,6 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     :param kw:
         Extra parameters like hazard_calculation_id and calculation_mode
     """
-    dist = parallel.oq_distribute()
     jobparams = []
     multi = kw.pop('multi', None)
     loglvl = getattr(logging, log_level.upper())
@@ -378,7 +377,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
                 dic['hazard_calculation_id'] = jobparams[0][0]
             logs.dbcmd('update_job', job_id, dic)
     try:
-        if config.zworkers['host_cores']:
+        if config.zworkers['host_cores'] and parallel.workers_status() == []:
             logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
         allargs = [(job_id, oqparam, exports, log_level, log_file)
