@@ -7,6 +7,8 @@
   #
   become: yes
   vars:
+    workdir_services: /var/lib/openquake
+    webuidir_services: /var/lib/openquake/webui
     etc_dir: /etc/openquake
     venv_dir: /opt/openquake
     venv_bin: "{{ venv_dir }}/bin"
@@ -184,7 +186,7 @@
 #### OpenQuake configuration files 
     - name: Set openquake.cfg files on worker node
       template:
-        src: templates/openquake.cfg.j2
+        src: templates/openquake.zmq.cfg.j2
         dest: "{{ etc_dir }}/openquake.cfg"
         owner: openquake
         group: openquake
