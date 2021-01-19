@@ -29,6 +29,10 @@
   - name: check IP
     debug: msg={{ ansible_default_ipv4.network }}-{{ansible_default_ipv4.netmask}}-{{ansible_default_ipv4.address}}
 
+  - name: Check status server variable
+    debug:
+     msg: "{{ server_host }}:{{ shared_nfs }}-{{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}"
+
 #### Setup NFS server on master and worker
 #
   - name: Ensure NFS utilities are installed on Ubuntu master
@@ -93,9 +97,6 @@
       owner: openquake
     when: workdir.stat.exists == false 
 
-  - name: Check "{{ shared_nfs }}"  folder exists
-    debug:
-     msg: "{{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}"
 
   - name: "Add export line for NFS server"
     lineinfile:
@@ -103,6 +104,8 @@
       line: "{{ shared_nfs }}     {{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}{{ nfs_serv_opts }}"
     notify: reload nfs   
     when: "'master' in group_names"
+
+
 
   - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
     mount:
