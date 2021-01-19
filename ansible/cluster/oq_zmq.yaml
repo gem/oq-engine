@@ -10,7 +10,6 @@
     shared_nfs: /exports/shared
     workdir_services: /var/lib/openquake
     webuidir_services: /var/lib/openquake/webui
-    etc_dir: /etc/openquake
     venv_dir: /opt/openquake
     venv_bin: "{{ venv_dir }}/bin"
     server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
@@ -70,30 +69,11 @@
         owner: openquake
       when: servicedir.stat.exists == false 
 
-    - name: Check "{{etc_dir}}"  folder exists
-      stat:
-       path: "{{etc_dir}}"
-      register: servicedir
- 
-    - name: "echo if directory already existed"
-      debug:
-        msg: "Shared  {{etc_dir}}  folder  is already existed"
-      when: servicedir.stat.exists 
- 
-    - name: "Ansible Create directory {{etc_dir}} if not exists"
-      file:
-        path: "{{etc_dir}}"
-        state: directory
-        mode: "2770"
-        group: openquake
-        owner: openquake
-      when: servicedir.stat.exists == false 
-
 #### OpenQuake configuration files 
     - name: Set openquake.cfg files on master node
       template:
         src: templates/openquake.zmq.cfg.j2
-        dest: "{{ etc_dir }}/openquake.cfg"
+        dest: "{{ venv_dir }}/openquake.cfg"
         owner: openquake
         group: openquake
         mode: 0644
@@ -102,20 +82,15 @@
     
     - name: Set workers IP on cfg files
       lineinfile:
-        path: /etc/openquake/openquake.cfg
+        #path: /etc/openquake/openquake.cfg
+        path: "{{ venv_dir }}/openquake.cfg"
         regexp: '^host_cores ='
         line: "host_cores = {{ worker_nodes_zmq }}"
-
-    - name: Set symbolic link for venv
-      file:
-        src: "{{ etc_dir }}/openquake.cfg"
-        dest: "{{ venv_dir }}/openquake.cfg"
-        state: link
 
     - name: Set System condfiguration for db server on master node
       template:
         src: templates/oq-dbserver.service.j2
-        dest: "{{ etc_dir }}/oq-dbserver.service"
+        dest: "{{ venv_dir }}/oq-dbserver.service"
         owner: openquake
         group: openquake
         mode: 0644
@@ -125,7 +100,7 @@
     - name: Set System condfiguration for webui  on master node
       template:
         src: templates/oq-webui.service.j2
-        dest: "{{ etc_dir }}/oq-webui.service"
+        dest: "{{ venv_dir }}/oq-webui.service"
         owner: openquake
         mode: 0644
         validate: ls -l %s
@@ -135,7 +110,7 @@
 
     - name:
       file:
-        src: "{{ etc_dir }}/{{ item }}"
+        src: "{{ venv_dir }}/{{ item }}"
         dest: "/etc/systemd/system/{{ item }}"
         state: link
       loop: [ 'oq-webui.service', 'oq-dbserver.service']
@@ -166,19 +141,19 @@
   - block:
 ## workers configuration 
 
-    - name: Check "{{etc_dir}}"  folder exists
+    - name: Check "{{ venv_dir }}"  folder exists
       stat:
-       path: "{{etc_dir}}"
+       path: "{{ etc_dir }}"
       register: servicedir
  
     - name: "echo if directory already existed"
       debug:
-        msg: "Shared  {{etc_dir}}  folder  is already existed"
+        msg: "Shared  {{ venv_dir }}  folder  is already existed"
       when: servicedir.stat.exists 
  
-    - name: "Ansible Create directory {{etc_dir}} if not exists"
+    - name: "Ansible Create directory {{ venv_dir }} if not exists"
       file:
-        path: "{{etc_dir}}"
+        path: "{{ venv_dir }}"
         state: directory
         mode: "2770"
         group: openquake
@@ -189,7 +164,7 @@
     - name: Set openquake.cfg files on worker node
       template:
         src: templates/openquake.zmq.cfg.j2
-        dest: "{{ etc_dir }}/openquake.cfg"
+        dest: "{{ venv_dir }}/openquake.cfg"
         owner: openquake
         group: openquake
         mode: 0644
@@ -198,15 +173,10 @@
     
     - name: Set workers IP on cfg files
       lineinfile:
-        path: /etc/openquake/openquake.cfg
+        #path: /etc/openquake/openquake.cfg
+        path: "{{ venv_dir }}/openquake.cfg"
         regexp: '^host_cores ='
         line: "host_cores = {{ worker_nodes_zmq }}"
-
-    - name: Set symbolic link for venv
-      file:
-        src: "{{ etc_dir }}/openquake.cfg"
-        dest: "{{ venv_dir }}/openquake.cfg"
-        state: link
 
     when: "'worker' in group_names"
 
