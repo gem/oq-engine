@@ -308,6 +308,8 @@ class DataStore(collections.abc.MutableMapping):
             return h5py.File.__getitem__(self.hdf5, name)
         except KeyError:
             if self.parent != ():
+                if not self.parent.hdf5:
+                    self.parent.open('r')
                 return self.parent.getitem(name)
             else:
                 raise
