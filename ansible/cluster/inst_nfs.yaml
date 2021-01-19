@@ -39,7 +39,7 @@
     apt:
       name: "{{ item }}"
       state: latest
-    loop:  [nfs-kernel-server]
+    loop:  [nfs-kernel-server, netbase]
     when: "'master' in group_names and ansible_distribution == 'Ubuntu' "
   
   - name: Enable NFS server service on Ubuntu master
@@ -54,8 +54,9 @@
 
   - name: Ensure NFS utilities are installed on Ubuntu worker
     apt:
-      name: nfs-common
+      name: "{{ item }}"
       state: latest
+    loop:  [nfs-common, netbase]
     when: "'worker' in group_names and ansible_distribution == 'Ubuntu' "
 
 ### Centos
