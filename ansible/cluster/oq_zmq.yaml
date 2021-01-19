@@ -143,7 +143,7 @@
 
     - name: Check "{{ venv_dir }}"  folder exists
       stat:
-       path: "{{ etc_dir }}"
+       path: "{{ venv_dir }}"
       register: servicedir
  
     - name: "echo if directory already existed"

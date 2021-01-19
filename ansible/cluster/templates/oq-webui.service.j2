@@ -8,7 +8,7 @@ User=openquake
 Group=openquake
 Environment=
 WorkingDirectory={{ webuidir_services }}
-ExecStart=/opt/openquake/bin/python3 -m openquake.server.manage runserver {{ master_node_ip }}:8800 --noreload
+ExecStart=/opt/openquake/bin/python3 -m openquake.server.manage runserver {{ server_host }}:8800 --noreload
 # Using gunicorn (Nginx or another webserver is needed for static content)
 # ExecStart=/opt/openquake/bin/gunicorn -w 2 openquake.server.wsgi:application
 # ExecStart=/opt/openquake/bin/gunicorn --bind localhost:8001 --workers 16 --timeout 1200 wsgi:application
