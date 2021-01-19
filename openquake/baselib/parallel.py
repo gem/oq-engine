@@ -210,7 +210,7 @@ from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp, socket_ready)
+    gettemp)
 
 sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
@@ -264,9 +264,9 @@ def dask_submit(self, func, args, monitor):
 
 def oq_distribute(task=None):
     """
-    :returns: the value of OQ_DISTRIBUTE or 'processpool'
+    :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
-    dist = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+    dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
     if dist not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
                     'dask'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
@@ -503,7 +503,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
 
 if oq_distribute().startswith('celery'):
     from celery import Celery
-    from celery.task import task, control
+    from celery.task import task
 
     app = Celery('openquake')
     app.config_from_object('openquake.engine.celeryconfig')
@@ -922,7 +922,7 @@ def split_task(func, *args, duration=1000,
 #                             start/stop workers                             #
 
 
-OQDIST = os.environ.get('OQ_DISTRIBUTE') or config.distribute.oq_distribute
+OQDIST = oq_distribute()
 
 
 def ssh_args():
@@ -946,21 +946,22 @@ def workers_start():
     for host, cores, args in ssh_args():
         if OQDIST == 'dask':
             args += ['-m', 'distributed.cli.dask_worker', sched,
-                     '--nprocs', cores]
+                     '--nprocs', cores, '--memory-limit', '1e10']
         elif OQDIST == 'celery':
-            args += ['-m', 'celery', 'worker']
+            args += ['-m', 'celery', 'worker', '--purge', '-O', 'fair',
+                     '--config', 'openquake.engine.celeryconfig']
             if cores != '-1':
                 args += ['-c', cores]
         elif OQDIST == 'zmq':
             args += ['-m', 'openquake.baselib.workerpool', '-n', cores]
         subprocess.Popen(args)
         logging.info(args)
-    if OQDIST == 'dask':
-        host, port = sched.split(':')
-        with open(os.path.expanduser('~/dask.log'), 'a') as log:
-            subprocess.Popen([
-                sys.executable, '-m', 'distributed.cli.dask_scheduler',
-                '--host', host, '--port', port], stdout=log, stderr=log)
+    #if OQDIST == 'dask':
+    #    host, port = sched.split(':')
+    #    with open(os.path.expanduser('~/dask.log'), 'a') as log:
+    #        subprocess.Popen([
+    #            sys.executable, '-m', 'distributed.cli.dask_scheduler',
+    #            '--host', host, '--port', port], stdout=log, stderr=log)
 
 
 def workers_stop():
@@ -991,7 +992,7 @@ def workers_status(wait=False):
         return [(host, arr[0], arr[1]) for host, arr in acc.items()]
 
     elif OQDIST == 'celery':
-        stats = control.inspect(timeout=1).stats() or []
+        stats = app.control.inspect(timeout=1).stats() or {}
         out = []
         for host, worker in stats.items():
             total = worker['pool']['max-concurrency']
@@ -1010,7 +1011,7 @@ def workers_wait(seconds=30):
         for _ in range(seconds):
             time.sleep(1)
             status = workers_status(wait=True)
-            if all(total for host, running, total in status):
+            if status and all(total for host, running, total in status):
                 break
         else:
             raise TimeoutError(status)
@@ -1018,16 +1019,20 @@ def workers_wait(seconds=30):
 
 
 def workers_kill():
-    code = '''"import psutil
+    code = '''import getpass, psutil
+user = getpass.getuser()
 for proc in psutil.process_iter(['name', 'username']):
-    if proc.username() == 'openquake':
-        name = proc.name()
-        if 'oq-zworker' in name or 'dask' in name or 'celery' in name:
-            print('killing %s' % proc)
-            proc.kill()"
+    if proc.username() == user:
+        cmdline = proc.cmdline()
+        if ('workerpool' in cmdline or 'celery' in cmdline or
+            'distributed.cli.dask_worker' in cmdline or
+            'distributed.cli.dask_scheduler' in cmdline):
+            print('killing %s' % ' '.join(cmdline))
+            proc.kill()
 '''
     hosts = []
     for host, cores, args in ssh_args():
-        out = subprocess.check_output(args + ['-c', code]).decode('utf8')
+        c = '"%s"' % code if 'ssh' in args else code
+        out = subprocess.check_output(args + ['-c', c]).decode('utf8')
         hosts.append('%s: %s' % (host, out))
     return '\n'.join(hosts)
