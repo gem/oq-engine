@@ -922,7 +922,7 @@ def split_task(func, *args, duration=1000,
 #                             start/stop workers                             #
 
 
-OQDIST = os.environ.get('OQ_DISTRIBUTE') or config.distribute.oq_distribute
+OQDIST = oq_distribute()
 
 
 def ssh_args():
