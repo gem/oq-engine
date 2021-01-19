@@ -1,13 +1,13 @@
 name: cluster_ansible
 'on':
-  #schedule:
-  #- cron: "0 2 * * *"
-  #push:
-  #  branches: [ molecule ]
+  schedule:
+  - cron: "0 2 * * *"
+  push:
+    branches: [ molecule ]
 
 jobs:
 
-  setup_cluster:
+  zmq_cluster:
     name: Molecule
     runs-on: ubuntu-18.04
     strategy:
