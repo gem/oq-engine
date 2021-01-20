@@ -946,7 +946,8 @@ def workers_start():
     for host, cores, args in ssh_args():
         if OQDIST == 'dask':
             args += ['-m', 'distributed.cli.dask_worker', sched,
-                     '--nprocs', cores, '--memory-limit', '1e11']
+                     '--nprocs', cores, '--nthreads', '1',
+                     '--memory-limit', '1e11']
         elif OQDIST == 'celery':
             args += ['-m', 'celery', 'worker', '--purge', '-O', 'fair',
                      '--config', 'openquake.engine.celeryconfig']
