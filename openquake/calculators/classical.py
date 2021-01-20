@@ -243,7 +243,6 @@ class Hazard:
         # avoid saving PoEs == 1
         base.fix_ones(pmap)
         arr = numpy.array([pmap[sid].array for sid in pmap])
-        logging.info('Storing _poes for source group #%d', grp_id)
         self.datastore['_poes'][:, :, self.slice_by_g[grp_id]] = arr
         extreme = max(
             get_extreme_poe(pmap[sid].array, self.imtls)
