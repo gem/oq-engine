@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Raised an early error for zero probabilities in the hypocenter distribution
+    or the nodal plane distribution
   * Extended the autostart zmq distribution logic to celery and dask
   * Stored the _poes during the classical phase and not after, to save time
   * Implemented a memory-saving logic in the classical calculator based on

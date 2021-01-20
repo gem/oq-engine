@@ -68,6 +68,8 @@ def fix_dupl(dist, fname=None, lineno=None):
     # (strike, dip, rake) for a nodal plane distribution
     got = []
     for prob, value in dist:
+        if prob == 0:
+            raise ValueError('Zero probability in subnode %s' % value)
         values[value] += prob
         got.append(value)
     if len(values) < n:
