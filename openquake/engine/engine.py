@@ -391,7 +391,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     finally:
         if config.zworkers['host_cores']:
             logging.info('Stopping the workers')
-            logs.dbcmd('workers_stop')
+            parallel.workers_stop()
     return jobparams
 
 
