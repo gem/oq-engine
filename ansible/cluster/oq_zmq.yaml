@@ -199,3 +199,9 @@
       with_nested:
         - "{{ ssh_keys.stdout }}"
         - "{{groups['worker']}}"
+
+    - name: execute ssh for first time with openquake user
+      command: ssh -o "StrictHostKeyChecking no" "{{ item }}"
+      become: true
+      become_user: openquake
+      loop: [ " {{  groups['worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address'])  }} " ]
