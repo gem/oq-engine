@@ -237,7 +237,7 @@ class Hazard:
 
     def store_poes(self, grp_id, pmap):
         """
-        Store the pmap fro the given group inside the _poes dataset
+        Store the pmap of the given group inside the _poes dataset
         """
         trt = self.full_lt.trt_by_et[self.et_ids[grp_id][0]]
         # avoid saving PoEs == 1
@@ -252,7 +252,7 @@ class Hazard:
 
     def store_disagg(self, pmaps=None):
         """
-        Store data inside disagg_by_src or disagg_by_grp
+        Store data inside disagg_by_src/disagg_by_grp
         """
         if pmaps:  # called inside a loop
             for key, pmap in pmaps.items():
@@ -310,6 +310,7 @@ class ClassicalCalculator(base.HazardCalculator):
         with self.monitor('aggregate curves'):
             if pmap:
                 acc[grp_id] |= pmap
+
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']['src_id']):
             with self.monitor('saving rup_data'):
@@ -462,7 +463,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore, weights, self.sitecol.sids, oq.imtls)
         srcidx = {rec[0]: i for i, rec in enumerate(
             self.csm.source_info.values())}
-        self.haz = haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
+        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
         blocks = list(block_splitter(grp_ids, self.groups_per_block))
         for b, block in enumerate(blocks, 1):
             args, pmaps = self.get_args_pmaps(block, self.haz)
