@@ -955,7 +955,7 @@ def workers_start():
                 args += ['-c', cores]
         elif OQDIST == 'zmq':
             args += ['-m', 'openquake.baselib.workerpool', '-n', cores]
-        subprocess.Popen(args)
+        subprocess.Popen(args, start_new_session=True)
         logging.info(args)
     #if OQDIST == 'dask':  # does not work
     #    host, port = sched.split(':')
