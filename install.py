@@ -245,8 +245,8 @@ def install(inst, version):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)
                     f.write(srv)
-            subprocess.check_call(['systemctl', 'enable', service_name])
-            subprocess.check_call(['systemctl', 'start', service_name])
+            #subprocess.check_call(['systemctl', 'enable', service_name])
+            #subprocess.check_call(['systemctl', 'start', service_name])
 
     # download and unzip the demos
     try:
