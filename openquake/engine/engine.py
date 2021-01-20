@@ -74,7 +74,7 @@ def set_concurrent_tasks_default(calc):
     """
     if OQ_DISTRIBUTE in 'no processpool':  # do nothing
         num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.CT // 2
-        logging.warning('Using %d workers on %s', num_workers, platform.node())
+        logging.warning('Using %d cores on %s', num_workers, platform.node())
         return
 
     num_workers = sum(total for host, running, total
@@ -338,7 +338,6 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     :param kw:
         Extra parameters like hazard_calculation_id and calculation_mode
     """
-    dist = parallel.oq_distribute()
     jobparams = []
     multi = kw.pop('multi', None)
     loglvl = getattr(logging, log_level.upper())
@@ -378,9 +377,9 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
                 dic['hazard_calculation_id'] = jobparams[0][0]
             logs.dbcmd('update_job', job_id, dic)
     try:
-        if config.zworkers['host_cores']:
+        if config.zworkers['host_cores'] and parallel.workers_status() == []:
             logging.info('Asking the DbServer to start the workers')
-            logs.dbcmd('workers_start')  # start the zworkers
+            logs.dbcmd('workers_start')  # start the workers
         allargs = [(job_id, oqparam, exports, log_level, log_file)
                    for job_id, oqparam in jobparams]
         if jobarray:
@@ -391,7 +390,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
                 run_calc(*args)
     finally:
         if config.zworkers['host_cores']:
-            logging.info('Stopping the zworkers')
+            logging.info('Stopping the workers')
             logs.dbcmd('workers_stop')
     return jobparams
 

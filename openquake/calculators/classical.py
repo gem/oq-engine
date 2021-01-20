@@ -231,31 +231,38 @@ class Hazard:
         self.rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(self.et_ids)
         self.slice_by_g = getters.get_slice_by_g(self.rlzs_by_gsim_list)
         self.get_hcurves = pgetter.get_hcurves
+        self.imtls = pgetter.imtls
         self.srcidx = srcidx
         self.data = []
 
-    def store(self, imtls, pmap_by_key):
-        for key, pmap in pmap_by_key.items():
-            if isinstance(key, str):  # disagg_by_src
+    def store_poes(self, grp_id, pmap):
+        """
+        Store the pmap of the given group inside the _poes dataset
+        """
+        trt = self.full_lt.trt_by_et[self.et_ids[grp_id][0]]
+        # avoid saving PoEs == 1
+        base.fix_ones(pmap)
+        arr = numpy.array([pmap[sid].array for sid in pmap])
+        logging.info('Storing _poes for source group #%d', grp_id)
+        self.datastore['_poes'][:, :, self.slice_by_g[grp_id]] = arr
+        extreme = max(
+            get_extreme_poe(pmap[sid].array, self.imtls)
+            for sid in pmap)
+        self.data.append((grp_id, trt, extreme))
+
+    def store_disagg(self, pmaps=None):
+        """
+        Store data inside disagg_by_src/disagg_by_grp
+        """
+        if pmaps:  # called inside a loop
+            for key, pmap in pmaps.items():
+                # contains only string keys in case of disaggregation
                 rlzs_by_gsim = self.rlzs_by_gsim_list[pmap.grp_id]
                 self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
                     self.get_hcurves(pmap, rlzs_by_gsim))
-            else:
-                # key is the group ID
-                trt = self.full_lt.trt_by_et[self.et_ids[key][0]]
-                # avoid saving PoEs == 1
-                base.fix_ones(pmap)
-                arr = numpy.array([pmap[sid].array for sid in pmap])
-                logging.info('Storing _poes for source group #%d', key)
-                self.datastore['_poes'][:, :, self.slice_by_g[key]] = arr
-                extreme = max(
-                    get_extreme_poe(pmap[sid].array, imtls)
-                    for sid in pmap)
-                self.data.append((key, trt, extreme))
-
-    def store_disagg(self):
-        self.datastore['disagg_by_grp'] = numpy.array(
-            sorted(self.data), grp_extreme_dt)
+        else:  # called at the end of the loop
+            self.datastore['disagg_by_grp'] = numpy.array(
+                sorted(self.data), grp_extreme_dt)
 
 
 @base.calculators.add('classical', 'preclassical', 'ucerf_classical')
@@ -292,20 +299,26 @@ class ClassicalCalculator(base.HazardCalculator):
         self.by_task[extra['task_no']] = (
             eff_rups, eff_sites, sorted(srcids))
         self.eff_ruptures[extra.pop('trt')] += eff_rups
-        if not pmap:
-            return acc
         grp_id = extra['grp_id']
+        self.counts[grp_id] -= 1
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
             pmap.grp_id = grp_id
             acc[extra['source_id'].split(':')[0]] = pmap
+
         self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
             if pmap:
                 acc[grp_id] |= pmap
-            # store rup_data if there are few sites
-            if self.few_sites:
+
+        # store rup_data if there are few sites
+        if self.few_sites and len(dic['rup_data']['src_id']):
+            with self.monitor('saving rup_data'):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
+
+        if self.counts[grp_id] == 0:
+            with self.monitor('saving probability maps'):
+                self.haz.store_poes(grp_id, acc.pop(grp_id))
 
         return acc
 
@@ -450,10 +463,10 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore, weights, self.sitecol.sids, oq.imtls)
         srcidx = {rec[0]: i for i, rec in enumerate(
             self.csm.source_info.values())}
-        hazard = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
+        self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
         blocks = list(block_splitter(grp_ids, self.groups_per_block))
         for b, block in enumerate(blocks, 1):
-            args, pmaps = self.get_args_pmaps(block, hazard)
+            args, pmaps = self.get_args_pmaps(block, self.haz)
             logging.info('Sending bunch #%d of %d, %d tasks',
                          b, len(blocks), len(args))
             smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
@@ -461,10 +474,9 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
             smap.h5 = self.datastore.hdf5
             smap.reduce(self.agg_dicts, pmaps)
-            with self.monitor('saving probability maps'):
-                hazard.store(oq.imtls, pmaps)
+            self.haz.store_disagg(pmaps)
         if not oq.hazard_calculation_id:
-            hazard.store_disagg()
+            self.haz.store_disagg()
         self.store_info(psd)
         return True
 
@@ -578,20 +590,20 @@ class ClassicalCalculator(base.HazardCalculator):
         self.params['max_weight'] = max_weight
         logging.info('tot_weight={:_d}, max_weight={:_d}'.format(
             int(tot_weight), int(max_weight)))
+        self.counts = AccumDict(accum=0)
         for grp_id in grp_ids:
             rlzs_by_gsim = hazard.rlzs_by_gsim_list[grp_id]
             sg = src_groups[grp_id]
-            nb = 0
             if sg.atomic:
                 # do not split atomic groups
-                nb += 1
+                self.counts[grp_id] += 1
                 allargs.append((sg, rlzs_by_gsim, self.params))
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values() if oq.disagg_by_src
                         else block_splitter(
                                 sg, max_weight, get_weight, sort=True))
                 blocks = list(blks)
-                nb += len(blocks)
+                self.counts[grp_id] += len(blocks)
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
