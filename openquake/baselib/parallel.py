@@ -946,7 +946,7 @@ def workers_start():
     for host, cores, args in ssh_args():
         if OQDIST == 'dask':
             args += ['-m', 'distributed.cli.dask_worker', sched,
-                     '--nprocs', cores, '--memory-limit', '1e10']
+                     '--nprocs', cores, '--memory-limit', '1e11']
         elif OQDIST == 'celery':
             args += ['-m', 'celery', 'worker', '--purge', '-O', 'fair',
                      '--config', 'openquake.engine.celeryconfig']
@@ -956,7 +956,7 @@ def workers_start():
             args += ['-m', 'openquake.baselib.workerpool', '-n', cores]
         subprocess.Popen(args)
         logging.info(args)
-    #if OQDIST == 'dask':
+    #if OQDIST == 'dask':  # does not work
     #    host, port = sched.split(':')
     #    with open(os.path.expanduser('~/dask.log'), 'a') as log:
     #        subprocess.Popen([
@@ -969,7 +969,7 @@ def workers_stop():
     Stop all the workers with a shutdown
     """
     if OQDIST == 'dask':
-        Client(config.distribution.dask_scheduler).shutdown()
+        Client(config.distribution.dask_scheduler).retire_workers()
     elif OQDIST == 'celery':
         app.control.shutdown()
     elif OQDIST == 'zmq':
