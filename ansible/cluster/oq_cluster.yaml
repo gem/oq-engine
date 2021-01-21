@@ -38,17 +38,19 @@
 
   tasks:
 
-    - name: Download installation scripts
+    - name: Download installation scripts only on master node
       get_url:
         #url: https://raw.githubusercontent.com/gem/oq-engine/master/install.py
         url: https://raw.githubusercontent.com/gem/oq-engine/molecule/install.py
         dest: /tmp/install.py
         mode: '0644'
+      when: "'master' in group_names" 
 
-    - name: Run install script from github repo 
+    - name: Run install script from github repo  only on master node
       shell: python3.8 /tmp/install.py server
       changed_when: false
       register: oq_install
+      when: "'master' in group_names" 
    
 - import_playbook: inst_nfs.yaml
   when: "'master' in group_names" 
@@ -56,4 +58,4 @@
 - import_playbook: inst_nfs.yaml
   when: "'worker' in group_names" 
 
-- import_playbook: oq_zmq.yaml
+    #- import_playbook: oq_zmq.yaml
