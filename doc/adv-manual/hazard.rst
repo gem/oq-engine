@@ -40,7 +40,7 @@ Classical PSHA for Europe
 Suppose you want to run a classical PSHA calculation for the latest
 model for Europe and that it turns out to be too slow to run on your
 infrastructure. Let's say it takes 4 days to run. How do you proceed
-to reduce it?
+to reduce the computation time?
 
 The first thing that comes to mind is to tune the
 ``area_source_discretization`` parameter, since the calculation (as
