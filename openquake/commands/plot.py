@@ -623,7 +623,7 @@ def plot_wkt(wkt_string):
 
 def main(what,
          calc_id: int = -1,
-         other_id: int = None,
+         others: int = [],
          webapi=False,
          local=False):
     """
@@ -652,15 +652,15 @@ def main(what,
         what += '&poe_id=0'
     if local:
         xs = [WebExtractor(calc_id, 'http://localhost:8800', '')]
-        if other_id:
+        for other_id in others:
             xs.append(WebExtractor(other_id), 'http://localhost:8800', '')
     elif webapi:
         xs = [WebExtractor(calc_id)]
-        if other_id:
+        for other_id in others:
             xs.append(WebExtractor(other_id))
     else:
         xs = [Extractor(calc_id)]
-        if other_id:
+        for other_id in others:
             xs.append(Extractor(other_id))
     make_figure = globals()['make_figure_' + prefix]
     plt = make_figure(xs, what)
@@ -669,6 +669,6 @@ def main(what,
 
 main.what = 'what to extract (try examples)'
 main.calc_id = 'computation ID'
-main.other_id = 'ID of another computation'
+main.others = dict(help='IDs of other computations', nargs='*')
 main.webapi = 'if given, pass through the WebAPI'
 main.local = 'if passed, use the local WebAPI'
