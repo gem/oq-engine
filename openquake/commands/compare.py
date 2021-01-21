@@ -45,7 +45,7 @@ def getdata(what, calc_ids, sitecol, sids):
     return imtls, poes, numpy.array(arrays)  # shape (C, N, L)
 
 
-def get_diff_idxs(array, rtol, atol, threshold):
+def get_diff_idxs(array, rtol, atol):
     """
     Given an array with (C, N, L) values, being the first the reference value,
     compute the relative differences and discard the one below the tolerance.
@@ -54,8 +54,6 @@ def get_diff_idxs(array, rtol, atol, threshold):
     C, N, L = array.shape
     diff_idxs = set()  # indices of the sites with differences
     for n in range(N):
-        if (array[:, n, 0] < threshold).all():
-            continue
         for c in range(1, C):
             if not numpy.allclose(array[c, n], array[0, n], rtol, atol):
                 diff_idxs.add(n)
@@ -98,8 +96,7 @@ def main(what, imt, calc_ids: int,
          *,
          samplesites='',
          rtol: float = 0,
-         atol: float = 1E-3,
-         threshold: float = 1E-2):
+         atol: float = 1E-3):
     """
     Compare the hazard curves or maps of two or more calculations.
     Also used to compare the times with `oq compare cumtime of -1 -2`.
@@ -142,11 +139,10 @@ def main(what, imt, calc_ids: int,
         array_imt = arrays[:, :, imt2idx[imt]]
         header = head + [str(poe) for poe in poes]
     rows = collections.defaultdict(list)
-    diff_idxs = get_diff_idxs(array_imt, rtol, atol, threshold)
+    diff_idxs = get_diff_idxs(array_imt, rtol, atol)
     if len(diff_idxs) == 0:
         print('There are no differences within the tolerances '
-              'atol=%s, rtol=%d%%, threshold=%s, sids=%s' %
-              (atol, rtol * 100, threshold, sids))
+              'atol=%s, rtol=%d%%, sids=%s' % (atol, rtol * 100, sids))
         return
     arr = array_imt.transpose(1, 0, 2)  # shape (N, C, L)
     for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
@@ -177,4 +173,3 @@ main.files = 'write the results in multiple files'
 main.samplesites = 'sites to sample (or fname with site IDs)'
 main.rtol = 'relative tolerance'
 main.atol = 'absolute tolerance'
-main.threshold = 'ignore the hazard curves below it'
