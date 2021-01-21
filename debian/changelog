@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended `oq plot` to draw more than 2 plots
   * Raised an early error for zero probabilities in the hypocenter distribution
     or the nodal plane distribution
   * Extended the autostart zmq distribution logic to celery and dask
