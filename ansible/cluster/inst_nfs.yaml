@@ -8,8 +8,9 @@
   become: yes
   vars:
     shared_nfs: /exports/shared
-    nfs_mount_opts: "ro,rsize=1048576,wsize=1048576,bg,soft,intr,noauto,tcp"
-    nfs_serv_opts: "(ro,fsid=0,no_root_squash,nohide,insecure,no_subtree_check,async)"
+    inst_nfs: /opt/openquake
+    nfs_mount_opts: "ro,proto=tcp,soft,intr,noauto"
+    nfs_serv_opts: "(rw,fsid=0,crossmnt,insecure,no_subtree_check,async)
     server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
 
   tasks:
@@ -20,16 +21,8 @@
   - name: check OS and get variable
     debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_host}}-{{inventory_hostname}}-{{group_names}}
   
-  - name: Set hostname and IP address of host
-    setup:
-      filter: ansible_default_ipv4.address
-
   - name: check IP
     debug: msg={{ ansible_default_ipv4.network }}-{{ansible_default_ipv4.netmask}}-{{ansible_default_ipv4.address}}
-
-  - name: Check status server variable
-    debug:
-     msg: "{{ server_host }}:{{ shared_nfs }}-{{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}"
 
 #### Setup NFS server on master and worker
 #
@@ -97,10 +90,16 @@
     when: workdir.stat.exists == false 
 
 
-  - name: "Add export line for NFS server"
+  - name: "Add export line for NFS server for shared folder"
     lineinfile:
       path: /etc/exports
       line: "{{ shared_nfs }}     {{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}{{ nfs_serv_opts }}"
+    when: "'master' in group_names"
+
+  - name: "Add export line for NFS server for installation folder"
+    lineinfile:
+      path: /etc/exports
+      line: "{{ inst_nfs }}     {{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}{{ nfs_serv_opts }}"
     notify: reload nfs   
     when: "'master' in group_names"
 
@@ -108,7 +107,16 @@
     mount:
       path: "{{ shared_nfs }}"
       src: "{{ server_host }}:{{ shared_nfs }}"
-      fstype: nfs
+      fstype: nfs4
+      opts: "{{ nfs_mount_opts }}"
+      state: mounted
+    when: "'worker' in group_names"
+
+  - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
+    mount:
+      path: "{{ inst_nfs }}"
+      src: "{{ server_host }}:{{ shared_nfs }}"
+      fstype: nfs4
       opts: "{{ nfs_mount_opts }}"
       state: mounted
     when: "'worker' in group_names"
