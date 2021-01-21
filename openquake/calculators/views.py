@@ -209,7 +209,7 @@ def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
     del df['grp_id'], df['trti'], df['task_no']
-    return df
+    return rst_table(df)
 
 
 @view.add('short_source_info')
