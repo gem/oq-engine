@@ -345,6 +345,15 @@ class CompositeSourceModel:
                 row[EFF_RUPTURES] += arr[0]
                 row[NUM_SITES] += arr[1]
 
+    def count_ruptures(self):
+        """
+        Call src.count_ruptures() on each source. Slow.
+        """
+        n = 0
+        for src in self.get_sources():
+            n += src.count_ruptures()
+        return n
+
     def __repr__(self):
         """
         Return a string representation of the composite model

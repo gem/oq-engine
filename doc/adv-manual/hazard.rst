@@ -5,13 +5,13 @@ Running large hazard calculations, especially ones with large logic
 trees, is an art, and there are various techniques that can be used to
 reduce an impossible calculation to a feasible one.
 
-The first thing to do
-----------------------
+Reducing a calculation
+-------------------------------------------
 
 The first thing to do when you have a large calculation is to reduce it
-so that it can run in a reasonable amount of time. The simplest way to do
-that is to reduce the number of sites, for instance by considering a small
-geographics portion of the region interested, of by increasing the grid
+so that it can run in a reasonable amount of time. For instance you
+could reduce the number of sites, by considering a small
+geographic portion of the region interested, of by increasing the grid
 spacing. Once the calculation has been reduced, you can run
 it and determine what are the factors dominating the run time.
 
@@ -32,9 +32,127 @@ full computation will take a lot less than 100 times the time of the reduced
 calculation (fortunately). Still, the full calculation can be impossible because
 of the memory/data transfer requirements, especially in the case of event based
 calculations. Sometimes it is necessary to reduce your expectations. The
-example below will discuss a concrete case.
+examples below will discuss a few concrete cases. But first of all, we
+must stress an important point::
 
-Case study: GMFs for California
+ Our experience tells us that **THE PERFORMANCE BOTTLENECKS OF THE REDUCED
+ CALCULATION ARE TOTALLY DIFFERENT FROM THE BOTTLENECKS OF THE FULL
+ CALCULATION**. Do not trust your performance intuition. You have been warned.
+
+
+Classical PSHA for Europe
+--------------------------------------------
+
+Suppose you want to run a classical PSHA calculation for the latest
+model for Europe and that it turns out to be too slow to run on your
+infrastructure. Let's say it takes 4 days to run. How do you proceed
+to reduce the computation time?
+
+The first thing that comes to mind is to tune the
+``area_source_discretization`` parameter, since the calculation (as
+most calculations) is dominated by area sources. For instance, by
+doubling it (say from 10 km to 20 km) we would expect to reduce the
+calculation time from 4 days to just 1 day, a definite improvement.
+
+But how do we check if the results are still acceptable? Also, how we
+check that in less than 4+1=5 days? As we said before we have to reduce
+the calculation and the engine provides several ways to do that.
+
+If you want to reduce the number of sites, IMTs and realizations you can:
+
+- manually change the ``sites.csv`` or ``site_model.csv`` files
+- manually change the ``region_grid_spacing``
+- manually change the ``intensity_measure_types_and_levels`` variable
+- manually change the GMPE logic tree file by commenting out branches
+- manually change the source logic tree file by commenting out branches
+- use the environment variable ``OQ_SAMPLE_SITES``
+- use the environment variable ``OQ_REDUCE``
+
+Starting from engine 3.11 the simplest approach is to use the ``OQ_REDUCE``
+environment variable than not only reduce reduces the number of sites,
+but also reduces the number of intensity measure types (it takes the
+first one only) and the number of realizations to just 1 (it sets
+``number_of_logic_tree_samples=1``) and if you are in an event based
+calculation reduces the parameter ``ses_per_logic_tree_path`` too.
+For instance the command::
+
+  $ OQ_REDUCE=.01 oq engine --run job.ini
+
+will reduce the number of sites by 100 times by random sampling, as well
+a reducing to 1 the number of IMTs and realizations. As a result the
+calculation will be very fast (say 1 hour instead of 4 days) and it
+will possible to re-run it multiple times with different parameters.
+For instance, you can test the impact of the area source discretization
+parameter by running::
+  
+  $ OQ_REDUCE=.01 oq engine --run job.ini --param area_source_discretization=20
+
+Then the engine provides a command `oq compare` to compare calculations;
+for instance::
+
+  $ oq compare hmaps PGA -2 -1 --atol .01
+
+will compare the hazard maps for PGA for the original
+(ID=-2, area_source_discretization=10 km) and the new calculation
+(ID=-2, area_source_discretization=20 km) on all sites, printing out
+the sites where the hazard values are different more than .01 g
+(``--atol`` means absolute tolerence). You can use ``oq compare --help``
+to see what other options are available.
+
+If the call to ``oq compare`` gives a result::
+  
+  There are no differences within the tolerances atol=0.01, rtol=0%, sids=[...]
+
+it means that within the specified tolerance the hazard is the same
+on all the sites, so you can safely use the area discretization of 20
+km. Of course, the complete calculation will contain 100 times more
+sites, so it could be that in the complete calculation some sites
+will have different hazard. But that's life. If you want absolute
+certitude you will need to run the full calculation and to wait.
+Still, the reduced calculation is useful, because if you see that
+are already big differences there, you can immediately assess that
+doubling the ``area_source_discretization`` parameter is a no go and
+you can try other strategies, like for instance doubling the
+``width_of_mfd_bin`` parameter.
+
+As of version 3.11, the ``oq compare hmaps`` command will give an output like
+the following, in case of differences::
+
+   site_id calc_id 0.5     0.1     0.05    0.02    0.01    0.005
+   ======= ======= ======= ======= ======= ======= ======= =======
+   767     -2      0.10593 0.28307 0.37808 0.51918 0.63259 0.76299
+   767     -1      0.10390 0.27636 0.36955 0.50503 0.61676 0.74079
+   ======= ======= ======= ======= ======= ======= ======= =======
+   ===== =========
+   poe   rms-diff
+   ===== =========
+   0.5   1.871E-04
+   0.1   4.253E-04
+   0.05  5.307E-04
+   0.02  7.410E-04
+   0.01  8.856E-04
+   0.005 0.00106  
+   ===== =========
+
+This is an example with 6 hazard maps, for poe = .5, .1, .05, .02, .01
+and .005 respectively. Here the only site that shows some discrepancy
+if the site number 767. If that site is in Greenland where nobody lives
+one can decide that the approximation is good anyway ;-)
+The engine also report the RMS-differences by considering all the sites,
+i.e.
+
+   rms-diff = sqrt<(hmap1 - hmap2)^2>  # mediating on all the sites
+
+As to be expected, the differences are larger for maps with a smaller poe,
+i.e. a larger return period. But even in the worst case the RMS difference
+is only of 1E-3 g, which is not much. The complete calculation will have
+more sites, so the RMS difference will likely be even smaller.
+If you can check the few outlier sites and convince yourself that
+they are not important, you have succeeded in doubling the speed
+on your computation. And then you can start to work on the other
+quadratic and linear parameter and to get an ever bigger speedup!
+
+GMFs for California
 -----------------------------------------
 
 We had an user asking for the GMFs of California on 707,920 hazard sites,
@@ -98,14 +216,5 @@ a good estimate for the total loss.
 
 In short, risk calculations for the mean field UCERF model are routines
 now, in spite of what the naive expectations could be.
-
-Disaggregation
-----------------------------------------
-
-Disaggregation calculations can be quite large and are rather
-difficult to reduce, because they usually involve a single site, so
-there is nothing to reduce there. What can be reduced are the
-quadratic parameters.
-
 
 .. _common mistakes: common-mistakes.rst

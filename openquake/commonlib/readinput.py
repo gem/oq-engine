@@ -290,11 +290,11 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
         # reduce the sites by a factor of `re`
         # reduce the ses by a factor of `re`
         # set save_disk_space = true
-        os.environ['OQ_SAMPLE_SITES'] = str(1 / float(re))
+        os.environ['OQ_SAMPLE_SITES'] = re
         job_ini['number_of_logic_tree_samples'] = '1'
         ses = job_ini.get('ses_per_logic_tree_path')
         if ses:
-            ses = str(int(numpy.ceil(int(ses) / float(re))))
+            ses = str(int(numpy.ceil(int(ses) * float(re))))
             job_ini['ses_per_logic_tree_path'] = ses
         imtls = job_ini.get('intensity_measure_types_and_levels')
         if imtls:
