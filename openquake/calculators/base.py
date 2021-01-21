@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -713,7 +713,7 @@ class HazardCalculator(BaseCalculator):
                                          'gzip', **attrs)
 
     def _read_risk_data(self):
-        # read the exposure (if any), the risk model (if any) and then the
+        # read the risk model (if any), the exposure (if any) and then the
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
@@ -809,7 +809,7 @@ class HazardCalculator(BaseCalculator):
                              len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap_lst
-            self.crmodel.vectorize_cons_model(self.assetcol.tagcol)
+            self.crmodel.reduce_cons_model(self.assetcol.tagcol)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs:

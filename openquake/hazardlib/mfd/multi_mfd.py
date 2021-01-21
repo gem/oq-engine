@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2017-2020 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -45,6 +45,7 @@ ALIAS = dict(min_mag='minMag', max_mag='maxMag',
 
 TOML2PY = dict(_minMag='min_mag', _maxMag='max_mag',
                _aValue='a_val', _bValue='b_val',
+               _cornerMag='corner_mag',
                _slipRate='slip_rate',
                _binWidth='bin_width',
                _characteristicMag='char_mag',

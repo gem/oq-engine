@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,7 +37,8 @@ EPSILON = 1E-12
 source_dt = numpy.dtype([('source_id', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
 KNOWN_MFDS = ('incrementalMFD', 'truncGutenbergRichterMFD',
-              'arbitraryMFD', 'YoungsCoppersmithMFD', 'multiMFD')
+              'arbitraryMFD', 'YoungsCoppersmithMFD', 'multiMFD',
+              'taperedGutenbergRichterMFD')
 
 
 def extract_dupl(values):
@@ -67,6 +68,8 @@ def fix_dupl(dist, fname=None, lineno=None):
     # (strike, dip, rake) for a nodal plane distribution
     got = []
     for prob, value in dist:
+        if prob == 0:
+            raise ValueError('Zero probability in subnode %s' % value)
         values[value] += prob
         got.append(value)
     if len(values) < n:
@@ -732,6 +735,11 @@ class SourceConverter(RuptureConverter):
             elif mfd_node.tag.endswith('multiMFD'):
                 return mfd.multi_mfd.MultiMFD.from_node(
                     mfd_node, self.width_of_mfd_bin)
+            elif mfd_node.tag.endswith('taperedGutenbergRichterMFD'):
+                return mfd.TaperedGRMFD(
+                    mfd_node['minMag'], mfd_node['maxMag'],
+                    mfd_node['cornerMag'], self.width_of_mfd_bin,
+                    mfd_node['aValue'], mfd_node['bValue'])
 
     def convert_npdist(self, node):
         """

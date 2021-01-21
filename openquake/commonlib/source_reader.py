@@ -61,8 +61,8 @@ def _check_dupl_ids(src_groups):
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
             if first:
-                logging.warning('There are multiple different sources with'
-                                ' the same ID %s', srcs)
+                logging.info('There are multiple different sources with '
+                             'the same ID %s', srcs)
                 first = False
 
 
@@ -284,6 +284,7 @@ class CompositeSourceModel:
                 srcs.extend(src_group)
         return srcs
 
+    # used only in calc_by_rlz.py
     def get_groups(self, eri):
         """
         :param eri: effective source model realization ID
@@ -343,6 +344,15 @@ class CompositeSourceModel:
             if nsites:
                 row[EFF_RUPTURES] += arr[0]
                 row[NUM_SITES] += arr[1]
+
+    def count_ruptures(self):
+        """
+        Call src.count_ruptures() on each source. Slow.
+        """
+        n = 0
+        for src in self.get_sources():
+            n += src.count_ruptures()
+        return n
 
     def __repr__(self):
         """

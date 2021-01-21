@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -478,7 +478,7 @@ class EngineRunJobTestCase(unittest.TestCase):
         self.assertEqual(r2.hazard_calculation_id, r1.id)
 
     def test_OQ_REDUCE(self):
-        with mock.patch.dict(os.environ, OQ_REDUCE='10'):
+        with mock.patch.dict(os.environ, OQ_REDUCE='.1'):
             job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
             run_jobs([job_ini])
 

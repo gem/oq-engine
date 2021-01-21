@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020 GEM Foundation
+# Copyright (C) 2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,8 +26,9 @@ import numpy as np
 
 from pyproj import Geod
 from openquake.baselib.node import Node
-from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import Point, Line
+from openquake.hazardlib.geo.mesh import RectangularMesh
+from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import npoints_towards
@@ -161,6 +162,11 @@ class KiteSurface(BaseSurface):
                                   np.zeros_like(self.mesh.depths[1:, col_idx]))
                 vdists = (self.mesh.depths[1:, col_idx] -
                           self.mesh.depths[:-1, col_idx])
+
+                ok = np.logical_and(np.isfinite(hdists), np.isfinite(vdists))
+                hdists = hdists[ok]
+                vdists = vdists[ok]
+
                 dips.append(np.mean(np.degrees(np.arctan(vdists/hdists))))
                 lens.append(np.sum((hdists**2 + vdists**2)**0.5))
             lens = np.array(lens)
@@ -181,6 +187,17 @@ class KiteSurface(BaseSurface):
                           self.mesh.lons[1:, :], self.mesh.lats[1:, :])
             self.strike = np.mean(((azi[idx[:-1, :]]+0.001) % 360))
         return self.strike
+
+    def get_top_edge_depth(self):
+        """
+        Return minimum depth of surface's top edge.
+
+        :returns:
+            Float value, the vertical distance between the earth surface
+            and the shallowest point in surface's top edge in km.
+        """
+        ok = np.isfinite(self.mesh.lons[0, :])
+        return self.mesh.depths[0, ok]
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,
@@ -349,12 +366,68 @@ class KiteSurface(BaseSurface):
 
         return plos, plas
 
+    def get_cell_dimensions(self):
+        """
+        Calculate centroid, width, length and area of each mesh cell.
 
-def get_profiles_from_simple_fault_data(fault_trace, upper_seismogenic_depth,
+        NOTE: The original verison of this method is in the class
+        :class:`openquake.hazardlib.geo.mesh.Mesh`. It is duplicated here
+        because it required ad-hoc modifications to support kite fault
+        surfaces
+
+        :returns:
+            Tuple of four elements, each being 2d numpy array.
+            Each array has both dimensions less by one the dimensions
+            of the mesh, since they represent cells, not vertices.
+            Arrays contain the following cell information:
+
+            #. centroids, 3d vectors in a Cartesian space,
+            #. length (size along row of points) in km,
+            #. width (size along column of points) in km,
+            #. area in square km.
+        """
+        points, along_azimuth, updip, diag = self.mesh.triangulate()
+        top = along_azimuth[:-1]
+        left = updip[:, :-1]
+        tl_area = geo_utils.triangle_area(top, left, diag)
+        top_length = np.sqrt(np.sum(top * top, axis=-1))
+        left_length = np.sqrt(np.sum(left * left, axis=-1))
+
+        bottom = along_azimuth[1:]
+        right = updip[:, 1:]
+        br_area = geo_utils.triangle_area(bottom, right, diag)
+        bottom_length = np.sqrt(np.sum(bottom * bottom, axis=-1))
+        right_length = np.sqrt(np.sum(right * right, axis=-1))
+
+        # Remove cells without a finite area
+        np.nan_to_num(tl_area, nan=0.0, copy=False)
+        np.nan_to_num(br_area, nan=0.0, copy=False)
+        cell_area = tl_area + br_area
+
+        tl_center = (points[:-1, :-1] + points[:-1, 1:] + points[1:, :-1]) / 3
+        br_center = (points[:-1, 1:] + points[1:, :-1] + points[1:, 1:]) / 3
+
+        cell_center = ((tl_center * tl_area.reshape(tl_area.shape + (1, ))
+                        + br_center * br_area.reshape(br_area.shape + (1, )))
+                       / cell_area.reshape(cell_area.shape + (1, )))
+
+        cell_length = ((top_length * tl_area + bottom_length * br_area)
+                       / cell_area)
+        cell_width = ((left_length * tl_area + right_length * br_area)
+                      / cell_area)
+
+        np.nan_to_num(cell_length, nan=0.0, copy=False)
+        np.nan_to_num(cell_width, nan=0.0, copy=False)
+
+        return cell_center, cell_length, cell_width, cell_area
+
+
+def get_profiles_from_simple_fault_data(
+        fault_trace, upper_seismogenic_depth,
         lower_seismogenic_depth, dip, rupture_mesh_spacing):
     """
-    Using the same information used for the construction of a simple fault 
-    surface, creates a set of profiles that can be used to instantiate a 
+    Using the same information used for the construction of a simple fault
+    surface, creates a set of profiles that can be used to instantiate a
     kite surface.
 
     :param fault_trace:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -100,7 +100,7 @@ def collect_files(dirpath, cond=lambda fullname: True):
     return files
 
 
-def extract_from_zip(path, candidates):
+def extract_from_zip(path, ext='.ini'):
     """
     Given a zip archive and a function to detect the presence of a given
     filename, unzip the archive into a temporary directory and return the
@@ -108,13 +108,13 @@ def extract_from_zip(path, candidates):
     within the archive.
 
     :param path: pathname of the archive
-    :param candidates: list of names to search for
+    :param ext: file extension to search for
     """
     temp_dir = tempfile.mkdtemp()
     with zipfile.ZipFile(path) as archive:
         archive.extractall(temp_dir)
     return [f for f in collect_files(temp_dir)
-            if os.path.basename(f) in candidates]
+            if os.path.basename(f).endswith(ext)]
 
 
 def unzip_rename(zpath, name):
@@ -231,9 +231,7 @@ def get_params(job_ini, kw={}):
     input_zip = None
     if job_ini.endswith('.zip'):
         input_zip = job_ini
-        job_inis = extract_from_zip(
-            job_ini, ['job_hazard.ini', 'job_haz.ini',
-                      'job.ini', 'job_risk.ini'])
+        job_inis = extract_from_zip(job_ini)
         if not job_inis:
             raise NameError('Could not find job.ini inside %s' % input_zip)
         job_ini = job_inis[0]
@@ -292,11 +290,11 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
         # reduce the sites by a factor of `re`
         # reduce the ses by a factor of `re`
         # set save_disk_space = true
-        os.environ['OQ_SAMPLE_SITES'] = str(1 / float(re))
+        os.environ['OQ_SAMPLE_SITES'] = re
         job_ini['number_of_logic_tree_samples'] = '1'
         ses = job_ini.get('ses_per_logic_tree_path')
         if ses:
-            ses = str(int(numpy.ceil(int(ses) / float(re))))
+            ses = str(int(numpy.ceil(int(ses) * float(re))))
             job_ini['ses_per_logic_tree_path'] = ses
         imtls = job_ini.get('intensity_measure_types_and_levels')
         if imtls:
@@ -706,7 +704,7 @@ def get_full_lt(oqparam):
                 'There are too many potential logic tree paths (%d):'
                 'use sampling instead of full enumeration or reduce the '
                 'source model with oq reduce_sm' % p)
-        logging.info('Potential number of logic tree paths = {:_d}'.format(p))
+        logging.info('Total number of logic tree paths = {:_d}'.format(p))
     if source_model_lt.on_each_source:
         logging.info('There is a logic tree on each source')
     full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)

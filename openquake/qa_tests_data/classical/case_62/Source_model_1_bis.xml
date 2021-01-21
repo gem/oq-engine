@@ -175,6 +175,63 @@
 	  <rake>80.77501402357605</rake>
 	</multiPlanesRupture>
       </nonParametricSeismicSource>
+      <nonParametricSeismicSource id="3278" name="CHN0_scenario_f_1=['859']_f_2=['860']_f_3=['861']" tectonicRegion="ASC">
+	<multiPlanesRupture probs_occur="0.99970892 0.00029108">
+	  <magnitude>7.3999999999999995</magnitude>
+	  <kiteSurface>
+	    <profile>
+	      <gml:LineString>
+		<gml:posList>
+		  84.84901200000003 36.68133400000001 0.0 84.81023646551259 36.85849604924478 20.0
+		</gml:posList>
+	      </gml:LineString>
+	    </profile>
+	    <profile>
+	      <gml:LineString>
+		<gml:posList>
+		  84.54917999999999 36.638827 0.0 84.51042600922024 36.81598905897357 20.0
+		</gml:posList>
+	      </gml:LineString>
+	    </profile>
+	  </kiteSurface>
+	  <kiteSurface>
+	    <profile>
+	      <gml:LineString>
+		<gml:posList>
+		  85.12347699999998 36.755378 0.0 85.0520151920735 36.92590756415533 20.0
+		</gml:posList>
+	      </gml:LineString>
+	    </profile>
+	    <profile>
+	      <gml:LineString>
+		<gml:posList>
+		  84.84901200000003 36.68133400000001 0.0 84.77761946949373 36.85186362169154 20.0
+		</gml:posList>
+	      </gml:LineString>
+	    </profile>
+	  </kiteSurface>
+	  <kiteSurface>
+	    <profile>
+	      <gml:LineString>
+		<gml:posList>
+		  85.67309200000003 36.939116 0.0 85.58675747933971 37.10524811829261 20.0
+		</gml:posList>
+	      </gml:LineString>
+	    </profile>
+	    <profile>
+	      <gml:LineString>
+		<gml:posList>
+		  85.12347699999998 36.755378 0.0 85.03735095807167 36.92151032637812 20.0
+		</gml:posList>
+	      </gml:LineString>
+	    </profile>
+	  </kiteSurface>
+	  <hypocenter depth="10.0" lat="36.847246999999996" lon="85.39828449999999"/>
+	  <magScaleRel>WC1994</magScaleRel>
+	  <ruptAspectRatio>1.0</ruptAspectRatio>
+	  <rake>44.60726968174955</rake>
+	</multiPlanesRupture>
+      </nonParametricSeismicSource>
     </sourceGroup>
   </sourceModel>
 </nrml>

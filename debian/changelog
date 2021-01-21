@@ -1,4 +1,23 @@
   [Michele Simionato]
+  * Extended `oq plot` to draw more than 2 plots
+  * Raised an early error for zero probabilities in the hypocenter distribution
+    or the nodal plane distribution
+  * Extended the autostart zmq distribution logic to celery and dask
+  * Stored the _poes during the classical phase and not after, to save time
+  * Implemented a memory-saving logic in the classical calculator based on
+    the `memory.limit` parameter in openquake.cfg;
+
+  [Richard Styron]
+  * Added TaperedGRMFD to hazardlib
+
+  [Michele Simionato]
+  * Fixed a wrong check failing in the case of multi-exposures with multiple
+    cost types
+  * Removed a check causing a false error "Missing vulnerability function
+    for taxonomy"
+  * Consequence functions associated to a taxonomy missing in the exposure
+    are now simply discarded, instead of raising an error
+  * Added a warning when there are zero losses for nonzero GMFs
   * Added a command `oq plot avg_gmf?imt=IMT`
   * Internal: stored `avg_gmf` as a DataFrame
   * Honored the `individual_curves` parameter in avg_losses, agg_losses and

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -277,9 +277,11 @@ class MultiSurface(BaseSurface):
         average value (in km).
         """
         areas = self._get_areas()
-        depths = numpy.array(
-            [surf.get_top_edge_depth() for surf in self.surfaces])
-        return numpy.sum(areas * depths) / numpy.sum(areas)
+        depths = numpy.array([numpy.mean(surf.get_top_edge_depth()) for surf
+                              in self.surfaces])
+        ted = numpy.sum(areas * depths) / numpy.sum(areas)
+        assert numpy.isfinite(ted).all()
+        return ted
 
     def get_strike(self):
         """
@@ -292,12 +294,10 @@ class MultiSurface(BaseSurface):
         """
         areas = self._get_areas()
         strikes = numpy.array([surf.get_strike() for surf in self.surfaces])
-
         v1 = (numpy.sum(areas * numpy.sin(numpy.radians(strikes))) /
               numpy.sum(areas))
         v2 = (numpy.sum(areas * numpy.cos(numpy.radians(strikes))) /
               numpy.sum(areas))
-
         return numpy.degrees(numpy.arctan2(v1, v2)) % 360
 
     def get_dip(self):
@@ -309,9 +309,16 @@ class MultiSurface(BaseSurface):
         formula for weighted mean is used.
         """
         areas = self._get_areas()
-        dips = numpy.array([surf.get_dip() for surf in self.surfaces])
+        dips = numpy.array([numpy.mean(surf.get_dip()) for surf in
+                            self.surfaces])
 
-        return numpy.sum(areas * dips) / numpy.sum(areas)
+        ok = numpy.logical_and(numpy.isfinite(dips), numpy.isfinite(areas))
+        dips = dips[ok]
+        areas = areas[ok]
+
+        dip = numpy.sum(areas * dips) / numpy.sum(areas)
+        assert numpy.isfinite(dip).all()
+        return dip
 
     def get_width(self):
         """
@@ -408,7 +415,6 @@ class MultiSurface(BaseSurface):
             for surf in self.surfaces:
                 self.areas.append(surf.get_area())
             self.areas = numpy.array(self.areas)
-
         return self.areas
 
     def _get_cartesian_edge_set(self):
@@ -566,6 +572,13 @@ class MultiSurface(BaseSurface):
         on_segment = numpy.zeros_like(lons, dtype=bool)
         # Loop over the traces
         for j, edges in enumerate(self.cartesian_edges):
+
+            # import pdb; pdb.set_trace()
+            ok = numpy.isfinite(edges)
+            if not ok.all():
+                edges = edges[ok]
+                edges = edges.reshape((-1, 3))
+
             # Loop over segments in trace
             for i in range(edges.shape[0] - 1):
                 # Get u_i and t_i

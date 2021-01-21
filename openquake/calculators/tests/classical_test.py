@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,7 @@ import os
 import gzip
 import unittest
 import numpy
-from openquake.baselib import parallel, general
+from openquake.baselib import parallel, general, config
 from openquake.hazardlib import lt
 from openquake.calculators.views import view
 from openquake.calculators.export import export
@@ -282,11 +282,12 @@ hazard_uhs-std.csv
         self.assertEqual('''[<Realization #0 source_model_1.xml, path=SM1, weight=0.5>, <Realization #1 source_model_2.xml, path=SM2~a3pt2b0pt8, weight=0.25>, <Realization #2 source_model_2.xml, path=SM2~a3b1, weight=0.25>]''', exp)
 
     def test_case_16(self):   # sampling
-        self.assert_curves_ok(
-            ['hazard_curve-mean.csv',
-             'quantile_curve-0.1.csv',
-             'quantile_curve-0.9.csv'],
-            case_16.__file__)
+        with unittest.mock.patch.dict(config.memory, limit=240):
+            self.assert_curves_ok(
+                ['hazard_curve-mean.csv',
+                 'quantile_curve-0.1.csv',
+                 'quantile_curve-0.9.csv'],
+                case_16.__file__)
 
         # test that the single realization export fails because
         # individual_curves was false
@@ -863,4 +864,4 @@ hazard_uhs-std.csv
         # multisurface with kite faults
         self.run_calc(case_62.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f)    

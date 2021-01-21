@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -102,8 +102,8 @@ def main(
 
     if config_file:
         config.read(os.path.abspath(os.path.expanduser(config_file)),
-                    soft_mem_limit=int, hard_mem_limit=int, port=int,
-                    multi_user=valid.boolean,
+                    limit=int, soft_mem_limit=int, hard_mem_limit=int,
+                    port=int, multi_user=valid.boolean,
                     serialize_jobs=valid.boolean, strict=valid.boolean,
                     code=exec)
 

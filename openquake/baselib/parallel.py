@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2020 GEM Foundation
+# Copyright (C) 2010-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -195,6 +195,7 @@ import traceback
 import collections
 from unittest import mock
 import multiprocessing.dummy
+import subprocess
 import psutil
 import numpy
 try:
@@ -257,14 +258,15 @@ def zmq_submit(self, func, args, monitor):
 
 @submit.add('dask')
 def dask_submit(self, func, args, monitor):
-    return self.dask_client.submit(safely_call, func, args, self.task_no)
+    return self.dask_client.submit(
+        safely_call, func, args, self.task_no, monitor)
 
 
 def oq_distribute(task=None):
     """
-    :returns: the value of OQ_DISTRIBUTE or 'processpool'
+    :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
-    dist = os.environ.get('OQ_DISTRIBUTE', 'processpool').lower()
+    dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
     if dist not in ('no', 'processpool', 'threadpool', 'celery', 'zmq',
                     'dask'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
@@ -738,10 +740,11 @@ class Starmap(object):
         self.tasks = []  # populated by .submit
         self.task_no = 0
         self.t0 = time.time()
-        if self.distribute == 'zmq':  # add a check
-            err = workerpool.check_status()
-            if err:
-                raise RuntimeError(err)
+        if self.distribute in 'zmq dask celery':  # add a check
+            errors = ['The workerpool on %s is down' % host
+                      for host, run, tot in workers_status() if tot == 0]
+            if errors:
+                raise RuntimeError('\n'.join(errors))
 
     def log_percent(self):
         """
@@ -915,3 +918,124 @@ def split_task(func, *args, duration=1000,
     for block in blocks[:-1]:
         yield (func, block) + args[1:-1]
     yield func(*(blocks[-1],) + args[1:])
+
+#                             start/stop workers                             #
+
+
+OQDIST = oq_distribute()
+
+
+def ssh_args():
+    remote_python = config.zworkers.remote_python or sys.executable
+    if config.zworkers.host_cores.strip():
+        for hostcores in config.zworkers.host_cores.split(','):
+            host, cores = hostcores.split()
+            if host == '127.0.0.1':  # localhost
+                yield host, cores, [sys.executable]
+            else:
+                yield host, cores, ['ssh', '-f', '-T', host, remote_python]
+
+
+def workers_start():
+    """
+    Start the remote workers with ssh
+    """
+    if OQDIST in 'no processpool':
+        return
+    sched = config.distribution.dask_scheduler
+    for host, cores, args in ssh_args():
+        if OQDIST == 'dask':
+            args += ['-m', 'distributed.cli.dask_worker', sched,
+                     '--nprocs', cores, '--nthreads', '1',
+                     '--memory-limit', '1e11']
+        elif OQDIST == 'celery':
+            args += ['-m', 'celery', 'worker', '--purge', '-O', 'fair',
+                     '--config', 'openquake.engine.celeryconfig']
+            if cores != '-1':
+                args += ['-c', cores]
+        elif OQDIST == 'zmq':
+            args += ['-m', 'openquake.baselib.workerpool', '-n', cores]
+        subprocess.Popen(args, start_new_session=True)
+        logging.info(args)
+    #if OQDIST == 'dask':  # does not work
+    #    host, port = sched.split(':')
+    #    with open(os.path.expanduser('~/dask.log'), 'a') as log:
+    #        subprocess.Popen([
+    #            sys.executable, '-m', 'distributed.cli.dask_scheduler',
+    #            '--host', host, '--port', port], stdout=log, stderr=log)
+
+
+def workers_stop():
+    """
+    Stop all the workers with a shutdown
+    """
+    if OQDIST == 'dask':
+        Client(config.distribution.dask_scheduler).retire_workers()
+    elif OQDIST == 'celery':
+        app.control.shutdown()
+    elif OQDIST == 'zmq':
+        workerpool.WorkerMaster().kill()
+    return 'stopped'
+
+
+def workers_status(wait=False):
+    """
+    :returns: a list [(host name, running, total), ...]
+    """
+    if OQDIST == 'dask':
+        with Client(config.distribution.dask_scheduler) as c:
+            info = c.scheduler_info()
+        acc = AccumDict(accum=numpy.zeros(2, int))  # IP -> (running, total)
+        for uri, worker in info['workers'].items():
+            ip = uri.split(':')[1]  # 'tcp://192.168.2.2:3429' => //192.168.2.2
+            ex = bool(worker['metrics']['executing'])
+            acc[ip[2:]] += numpy.array([ex, 1])
+        return [(host, arr[0], arr[1]) for host, arr in acc.items()]
+
+    elif OQDIST == 'celery':
+        stats = app.control.inspect(timeout=1).stats() or {}
+        out = []
+        for host, worker in stats.items():
+            total = worker['pool']['max-concurrency']
+            out.append((host, total, total))
+        return out
+
+    elif OQDIST == 'zmq':
+        return workerpool.WorkerMaster().status(wait)
+
+
+def workers_wait(seconds=30):
+    """
+    Wait until all workers are active
+    """
+    if OQDIST in 'dask celery zmq':
+        num_hosts = len(config.zworkers.host_cores.split(','))
+        for _ in range(seconds):
+            time.sleep(1)
+            status = workers_status()
+            if len(status) == num_hosts and all(
+                    total for host, running, total in status):
+                break
+        else:
+            raise TimeoutError(status)
+        return status
+
+
+def workers_kill():
+    code = '''import getpass, psutil
+user = getpass.getuser()
+for proc in psutil.process_iter(['name', 'username']):
+    if proc.username() == user:
+        cmdline = proc.cmdline()
+        if ('workerpool' in cmdline or 'celery' in cmdline or
+            'distributed.cli.dask_worker' in cmdline or
+            'distributed.cli.dask_scheduler' in cmdline):
+            print('killing %s' % ' '.join(cmdline))
+            proc.kill()
+'''
+    hosts = []
+    for host, cores, args in ssh_args():
+        c = '"%s"' % code if 'ssh' in args else code
+        out = subprocess.check_output(args + ['-c', c]).decode('utf8')
+        hosts.append('%s: %s' % (host, out))
+    return '\n'.join(hosts)

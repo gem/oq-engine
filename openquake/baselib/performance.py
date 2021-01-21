@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -273,14 +273,18 @@ class Monitor(object):
         """
         :param key: key in the _tmp.hdf5 file
         :param obj: big object to store in pickle format
+        :returns: True is saved, False if not because the key was taken
         """
         tmp = self.filename[:-5] + '_tmp.hdf5'
         f = hdf5.File(tmp, 'a') if os.path.exists(tmp) else hdf5.File(tmp, 'w')
         with f:
+            if key in f:  # already saved
+                return False
             if isinstance(obj, numpy.ndarray):
                 f[key] = obj
             else:
                 f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
+        return True
 
     def read(self, key):
         """

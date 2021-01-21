@@ -32,3 +32,11 @@ There are several import points.
    because calculation is taking too long, or the calculations runs out
    of memory or out of disk space, or there is a hardware failure
 6. in any case there must be NO automatic resubmission of a calculation
+
+
+Volcano questions
+-----------------
+
+- we expect a grid-engine-like interface `qsub script.py arg...`
+- we expect a shared filesystem
+- Python API: multiprocessing-like with .submit and (possibly) .kill
