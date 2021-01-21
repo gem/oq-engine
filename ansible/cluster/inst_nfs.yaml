@@ -10,7 +10,7 @@
     shared_nfs: /exports/shared
     inst_nfs: /opt/openquake
     nfs_mount_opts: "ro,proto=tcp,soft,intr,noauto"
-    nfs_serv_opts: "(rw,fsid=0,crossmnt,insecure,no_subtree_check,async)
+    nfs_serv_opts: "(rw,fsid=0,crossmnt,insecure,no_subtree_check,async)"
     server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
 
   tasks:
