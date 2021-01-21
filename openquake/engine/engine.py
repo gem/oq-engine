@@ -248,7 +248,8 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
         calc.from_engine = True
         tb = 'None\n'
         try:
-            set_concurrent_tasks_default(calc)
+            if config.zworkers['host_cores']:
+                set_concurrent_tasks_default(calc)
             t0 = time.time()
             calc.run(exports=exports, **kw)
             logging.info('Exposing the outputs to the database')
