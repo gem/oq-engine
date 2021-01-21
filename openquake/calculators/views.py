@@ -144,16 +144,6 @@ def rst_table(data, header=None, fmt=None):
     return '\n'.join(lines)
 
 
-@view.add('times_by_source_class')
-def view_times_by_source_class(token, dstore):
-    """
-    Returns the calculation times depending on the source typology
-    """
-    totals = fast_agg3(dstore['source_info']['code', 'calc_time'],
-                       'code', ['calc_time'])
-    return rst_table(totals)
-
-
 @view.add('slow_sources')
 def view_slow_sources(token, dstore, maxrows=20):
     """
@@ -216,10 +206,10 @@ def view_full_lt(token, dstore):
 
 @view.add('eff_ruptures')
 def view_eff_ruptures(token, dstore):
-    header = ['num_ruptures', 'eff_ruptures']
-    info = dstore['source_info']['num_ruptures', 'eff_ruptures']
-    return rst_table([[info['num_ruptures'].sum(),
-                       info['eff_ruptures'].sum()]], header)
+    info = dstore.read_df('source_info', 'source_id')
+    df = info.groupby('code').sum()
+    del df['grp_id'], df['trti'], df['task_no']
+    return df
 
 
 @view.add('short_source_info')
