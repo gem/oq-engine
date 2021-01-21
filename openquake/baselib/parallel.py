@@ -1009,10 +1009,12 @@ def workers_wait(seconds=30):
     Wait until all workers are active
     """
     if OQDIST in 'dask celery zmq':
+        num_hosts = len(config.zworkers.host_cores)
         for _ in range(seconds):
             time.sleep(1)
             status = workers_status(wait=True)
-            if status and all(total for host, running, total in status):
+            if len(status) == num_hosts and all(
+                    total for host, running, total in status):
                 break
         else:
             raise TimeoutError(status)
