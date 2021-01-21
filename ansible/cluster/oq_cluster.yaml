@@ -40,7 +40,8 @@
 
     - name: Download installation scripts
       get_url:
-        url: https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+        #url: https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+        url: https://raw.githubusercontent.com/gem/oq-engine/molecule/install.py
         dest: /tmp/install.py
         mode: '0644'
 
@@ -49,10 +50,6 @@
       changed_when: false
       register: oq_install
    
-        #- name: Setup NFS on master first
-        #import_playbook: inst_nfs.yaml
-        #when: "'master' in group_names"
-
 - import_playbook: inst_nfs.yaml
   when: "'master' in group_names" 
 
