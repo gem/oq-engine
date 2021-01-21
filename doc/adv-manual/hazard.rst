@@ -42,11 +42,11 @@ model for Europe and that it turns out to be too slow to run on your
 infrastructure. Let's say it takes 4 days to run. How do you proceed
 to reduce it?
 
-The first thing that comes to mind is to reduce the `area_source_discretization`
-parameter, since the calculation (as most calculations) is dominated by area
-sources. For instance, if we could double it (say from 10 km to 20 km) we
-expect to reduce the calculation time from 4 days to just 1 day, a definite
-improvement.
+The first thing that comes to mind is to tune the
+``area_source_discretization`` parameter, since the calculation (as
+most calculations) is dominated by area sources. For instance, by
+doubling it (say from 10 km to 20 km) we would expect to reduce the
+calculation time from 4 days to just 1 day, a definite improvement.
 
 But how do we check if the results are still acceptable? Also, how we
 check that in less than 4+1=5 days? As we said before we have to reduce
@@ -54,20 +54,20 @@ the calculation and the engine provides several ways to do that.
 
 If you want to reduce the number of sites, IMTs and realizations you can:
 
-- manually change the sites.csv or site_model.csv file
-- manually change the region_grid_spacing
-- manually change the intensity_measure_types_and_levels variable
+- manually change the ``sites.csv`` or ``site_model.csv`` files
+- manually change the ``region_grid_spacing``
+- manually change the ``intensity_measure_types_and_levels`` variable
 - manually change the GMPE logic tree file by commenting out branches
 - manually change the source logic tree file by commenting out branches
-- use the environment variable OQ_SAMPLE_SITES
-- use the environment variable OQ_REDUCE
+- use the environment variable ``OQ_SAMPLE_SITES``
+- use the environment variable ``OQ_REDUCE``
 
-Starting from engine 3.11 the simplest approach is to use the OQ_REDUCE
+Starting from engine 3.11 the simplest approach is to use the ``OQ_REDUCE``
 environment variable than not only reduce reduces the number of sites,
 but also reduces the number of intensity measure types (it takes the
 first one only) and the number of realizations to just 1 (it sets
-`number_of_logic_tree_samples=1`) and if you are in an event based
-calculation reduces the parameter `ses_per_logic_tree_path` too.
+``number_of_logic_tree_samples=1``) and if you are in an event based
+calculation reduces the parameter ``ses_per_logic_tree_path`` too.
 For instance the command::
 
   $ OQ_REDUCE=.01 oq engine --run job.ini
@@ -90,10 +90,10 @@ will compare the hazard maps for PGA for the original
 (ID=-2, area_source_discretization=10 km) and the new calculation
 (ID=-2, area_source_discretization=20 km) on all sites, printing out
 the sites where the hazard values are different more than .01 g
-(``--atol` means absolute tolerence). You can use `oq compare --help`
+(``--atol`` means absolute tolerence). You can use ``oq compare --help``
 to see what other options are available.
 
-If the call to `oq compare` gives a result::
+If the call to ``oq compare`` gives a result::
   
   There are no differences within the tolerances atol=0.01, rtol=0%, sids=[...]
 
@@ -105,11 +105,11 @@ will have different hazard. But that's life. If you want absolute
 certitude you will need to run the full calculation and to wait.
 Still, the reduced calculation is useful, because if you see that
 are already big differences there, you can immediately assess that
-doubling the `area_source_discretization` parameter is a no go and
+doubling the ``area_source_discretization`` parameter is a no go and
 you can try other strategies, like for instance doubling the
-`width_of_mfd_bin` parameter.
+``width_of_mfd_bin`` parameter.
 
-As of version 3.11, the `oq compare hmaps` will give an output like
+As of version 3.11, the ``oq compare hmaps`` command will give an output like
 the following, in case of differences::
 
    site_id calc_id 0.5     0.1     0.05    0.02    0.01    0.005
