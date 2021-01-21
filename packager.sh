@@ -714,10 +714,11 @@ _devtest_innervm_run () {
                  /opt/openquake/bin/python3 bin/oq dbserver stop"
         scp "${lxc_ip}:oq-engine/xunit-*.xml" "out_${BUILD_UBUVER}/" || true
         scp "${lxc_ip}:/tmp/dbserver.log" "out_${BUILD_UBUVER}/" || true
-    else
-        if [ -d "$HOME/fake-data/$GEM_GIT_PACKAGE" ]; then
-            cp "$HOME/fake-data/$GEM_GIT_PACKAGE/"* "out_${BUILD_UBUVER}/"
-        fi
+        # else
+        # -- moved up --
+        #     if [ -d "$HOME/fake-data/$GEM_GIT_PACKAGE" ]; then
+        #         cp "$HOME/fake-data/$GEM_GIT_PACKAGE/"* "out_${BUILD_UBUVER}/"
+        #     fi
     fi
 
     # TODO: version check
@@ -1073,6 +1074,13 @@ devtest_run () {
         mkdir "out_${BUILD_UBUVER}"
     fi
 
+    if [ "$GEM_DEVTEST_SKIP_TESTS" ]; then
+        if [ -d "$HOME/fake-data/$GEM_GIT_PACKAGE" ]; then
+            cp "$HOME/fake-data/$GEM_GIT_PACKAGE/"* "out_${BUILD_UBUVER}/"
+        fi
+
+        return
+    fi
     if [ ! -d _jenkins_deps ]; then
         mkdir _jenkins_deps
     fi
