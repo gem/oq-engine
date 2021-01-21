@@ -1012,7 +1012,8 @@ def workers_wait(seconds=30):
         num_hosts = len(config.zworkers.host_cores)
         for _ in range(seconds):
             time.sleep(1)
-            status = workers_status(wait=True)
+            status = workers_status()
+            print(f'{len(status)=}, {num_hosts=}')
             if len(status) == num_hosts and all(
                     total for host, running, total in status):
                 break
