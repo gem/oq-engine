@@ -5,7 +5,7 @@ Running large hazard calculations, especially ones with large logic
 trees, is an art, and there are various techniques that can be used to
 reduce an impossible calculation to a feasible one.
 
-OQ_REDUCE/oq compare
+Reducing a calculation
 -------------------------------------------
 
 The first thing to do when you have a large calculation is to reduce it
@@ -32,7 +32,13 @@ full computation will take a lot less than 100 times the time of the reduced
 calculation (fortunately). Still, the full calculation can be impossible because
 of the memory/data transfer requirements, especially in the case of event based
 calculations. Sometimes it is necessary to reduce your expectations. The
-examples below will discuss a few concrete cases.
+examples below will discuss a few concrete cases. But first of all, we
+must stress an important point::
+
+ Our experience tells us that **THE PERFORMANCE BOTTLENECKS OF THE REDUCED
+ CALCULATION ARE TOTALLY DIFFERENT FROM THE BOTTLENECKS OF THE FULL
+ CALCULATION**. Do not trust your performance intuition. You have been warned.
+
 
 Classical PSHA for Europe
 --------------------------------------------
