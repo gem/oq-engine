@@ -191,7 +191,7 @@ def install(inst, version):
             subprocess.check_call(['chown', 'openquake', inst.OQDATA])
 
     # create the openquake venv if necessary
-    if not os.path.exists(inst.VENV):
+    if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
         # create venv
         venv.EnvBuilder(with_pip=True).create(inst.VENV)
         print('Created %s' % inst.VENV)
