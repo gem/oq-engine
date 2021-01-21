@@ -14,6 +14,8 @@
     venv_bin: "{{ venv_dir }}/bin"
     server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
     worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | join(' -1,') }} -1"
+  environments:
+    HDF5_USE_FILE_LOCKING: FALSE
 
   tasks:
   ##### Check OS for update system
@@ -22,11 +24,10 @@
 
   - name: check OS and get variable
     debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_host}}
-  
-  - name: Set hostname and IP address of host
-    setup:
-      filter: ansible_default_ipv4.address
 
+  - name: Echo my_env_var again
+    shell: "echo $HDF5_USE_FILE_LOCKING"
+  
 #
   - block:
 # Create etc and work directory for services  
