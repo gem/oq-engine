@@ -380,7 +380,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         if config.zworkers['host_cores'] and parallel.workers_status() == []:
             logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
-            time.sleep(10)  # give some time
+            parallel.workers_wait()  # wait a bit
         allargs = [(job_id, oqparam, exports, log_level, log_file)
                    for job_id, oqparam in jobparams]
         if jobarray:
