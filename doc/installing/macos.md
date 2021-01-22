@@ -3,7 +3,7 @@
 The OpenQuake Engine can be installed on macOS with the universal installer,
 provided your system has a recent enough Python (>= 3.6).
 
-If needed, you can install a recent version of Python (but Python 3.9 is **not** supported)
+If needed, you can install a recent version of Python (but Python 3.9 is **not supported**)
 by using the official installer provided by the Python Foundation (https://www.python.org/downloads/).
 
 Make sure to run the script located under `/Applications/Python 3.X/Install Certificates.command`, after Python has been installed, to update the SSL certificates bundle [see FAQ](../faq.md#certificate-verification-on-macOS).
@@ -19,14 +19,14 @@ Requirements are:
 - 1.2 GB of free disk space
 - [Terminal](https://support.apple.com/guide/terminal/welcome) or [iTerm2](https://www.iterm2.com/) app
 
-*Big Sur* is not officially supported but some people manage to install the engine on it using the system Python (version 3.8).
+*Big Sur* is not officially supported but some people manage to install the engine on it using the system Python (version 3.8). New macs with the M1 CPU are **unsupported**.
 
 ## Install packages from the OpenQuake website
 
 Download the installer script:
 
 ```bash
-$ wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 ```
 
 From the Terminal app (or using iTerm) run:
