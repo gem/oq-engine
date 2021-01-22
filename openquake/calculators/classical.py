@@ -251,14 +251,10 @@ class Hazard:
         """
         trt = self.full_lt.trt_by_et[self.et_ids[grp_id][0]]
         # avoid saving PoEs == 1
-        t0 = time.time()
-        base.fix_ones(pmap)
-        # perhaps the slow part is not the saving, is the line below
-        arr = numpy.array([pmap[sid].array for sid in pmap])
-        t1 = time.time()
-        self.datastore['_poes'][:, :, self.slice_by_g[grp_id]] = arr
-        t2 = time.time()
-        logging.info('grp_id=%d, time=%.1f,%.1f', grp_id,  t1-t0, t2-t1)
+        base.fix_ones(pmap)  # fast
+        arr = numpy.array([pmap[sid].array for sid in pmap])  # fast
+        logging.info('Storing %s', humansize(arr.nbytes))
+        self.datastore['_poes'][:, :, self.slice_by_g[grp_id]] = arr  # slow
         extreme = max(
             get_extreme_poe(pmap[sid].array, self.imtls)
             for sid in pmap)
