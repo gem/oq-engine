@@ -1,12 +1,14 @@
 # Installing the OpenQuake Engine on macOS
-The OpenQuake Engine is available for macOS in the form of **self-installable binary distribution**.
 
-- this distribution requires the Python 3.6 official installer provided by the Python Foundation (https://www.python.org/downloads/release/python-368/) and includes its own distribution of the dependencies needed by the OpenQuake Engine
-    - pip, numpy, scipy, h5py, django, shapely, and few more
-- can be installed without `root` permission (i.e. in the user home)
-- multiple versions can be installed and run on the same machine
-- currently does not support Celery (and will never do)
-- Python from _Anaconda_ **is not supported**
+The OpenQuake Engine can be installed on macOS with the universal installer,
+provided your system has a recent enough Python (>= 3.6).
+
+If needed, you can install a recent version of Python (but Python 3.9 is **not supported**)
+by using the official installer provided by the Python Foundation (https://www.python.org/downloads/).
+
+Make sure to run the script located under `/Applications/Python 3.X/Install Certificates.command`, after Python has been installed, to update the SSL certificates bundle [see FAQ](../faq.md#certificate-verification-on-macOS).
+
+Python from _Anaconda_ **is not supported**.
 
 ## Requirements
 
@@ -16,59 +18,40 @@ Requirements are:
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 - [Terminal](https://support.apple.com/guide/terminal/welcome) or [iTerm2](https://www.iterm2.com/) app
-- Python 3.6 from [python.org](https://python.org)
 
-Before you can start you must have downloaded and installed [Python 3.6](https://www.python.org/ftp/python/3.6.8/python-3.6.8-macosx10.9.pkg).
-Make sure to run the script located under `/Applications/Python 3.6/Install Certificates.command`, after Python has been installed, to update the SSL certificates bundle [see FAQ](../faq.md#certificate-verification-on-macOS).
+*Big Sur* is not officially supported but some people manage to install the engine on it using the system Python (version 3.8). New macs with the M1 CPU are **unsupported**.
 
 ## Install packages from the OpenQuake website
 
-Download the installer from https://downloads.openquake.org/pkgs/macos/oq-engine/openquake-setup-macos-3.10.1-1.run using any browser.
+Download the installer script:
+
+```bash
+wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+```
 
 From the Terminal app (or using iTerm) run:
 
 ```bash
-cd Downloads
-chmod +x openquake-setup-macos-3.10.1-1.run
-./openquake-setup-macos-3.10.1-1.run
-```
-then follow the wizard on screen. By default the code is installed in `~/openquake`.
-
-```bash
-Verifying archive integrity... All good.
-Uncompressing installer for the OpenQuake Engine  100%
-Type the path where you want to install OpenQuake, followed by [ENTER]. Otherwise leave blank, it will be installed in /Users/auser/openquake:
-Creating a new python environment in /Users/auser/openquake. Please wait.
-Installing the files in /Users/auser/openquake. Please wait.
-Do you want to install the OpenQuake Tools (IPT, TaxtWeb, Taxonomy Glossary)? [y/n]: y
-Do you want to make the 'oq' command available by default? [y/n]: y
-Installation completed. To enable it run 'source /Users/auser/openquake/env.sh'
+python3 install.py user
 ```
 
-The demo files are located in `~/openquake/share/demos` for standard installations or `__custom_folder__/share/demos` if a different folder is specified during installation.
+The code is installed in ~/openquake while the calculation data will be stored in ~/oqdata.
 
-The OpenQuake manual is located in `~/openquake/share/doc/OpenQuake manual.pdf` for standard installations or `__custom_folder__/share/doc/OpenQuake manual.pdf` if a different folder is specified during installation.
+### Uninstall the OpenQuake engine
 
-### Upgrade from a previous installation
-
-To upgrade from a previous installation you need to manually remove it first:
+You can just remove the ~/openquake directory
 
 ```bash
-# default is ~/openquake
 rm -Rf ~/openquake
 ```
 
-
 ## Run the OpenQuake Engine
 
-If _make the 'oq' command available by default_ as been set to 'Y' (default) during the installation
-the 'oq' command will be available by default after Terminal has been restarted.
-
-To manually load the OpenQuake Engine environment, or if you answered 'no' to the question during installation, you must run:
+To load the OpenQuake Engine environment you must run:
 
 ```bash
 # default is ~/openquake
-source ~/openquake/env.sh
+source ~/openquake/bin/activate
 ```
 
 before the OpenQuake Engine can be properly used.
