@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib.python3compat import encode
 from openquake.hazardlib.stats import compute_stats
 from openquake.risklib import scientific
 from openquake.calculators import base
@@ -48,26 +47,26 @@ def classical_risk(riskinputs, param, monitor):
         avg_losses = numpy.zeros((R, L, A))
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
-            for l, loss_type in enumerate(crmodel.loss_types):
+            for li, loss_type in enumerate(crmodel.loss_types):
                 # loss_curves has shape (A, C)
                 for i, asset in enumerate(ri.assets):
-                    loss_curves[out.rlzi, l, i] = lc = out[loss_type][i]
+                    loss_curves[out.rlzi, li, i] = lc = out[loss_type][i]
                     aid = asset['ordinal']
                     avg = scientific.average_loss(lc)
-                    avg_losses[r, l, i] = avg
+                    avg_losses[r, li, i] = avg
                     lcurve = (lc['loss'], lc['poe'], avg)
-                    result['loss_curves'].append((l, r, aid, lcurve))
+                    result['loss_curves'].append((li, r, aid, lcurve))
 
         # compute statistics
-        for l, loss_type in enumerate(crmodel.loss_types):
+        for li, loss_type in enumerate(crmodel.loss_types):
             for i, asset in enumerate(ri.assets):
-                avg_stats = compute_stats(avg_losses[:, l, i], stats, weights)
-                losses = loss_curves[0, l, i]['loss']
+                avg_stats = compute_stats(avg_losses[:, li, i], stats, weights)
+                losses = loss_curves[0, li, i]['loss']
                 all_poes = numpy.array(
-                    [loss_curves[r, l, i]['poe'] for r in range(R)])
+                    [loss_curves[r, li, i]['poe'] for r in range(R)])
                 poes_stats = compute_stats(all_poes, stats, weights)
                 result['stat_curves'].append(
-                    (l, asset['ordinal'], losses, poes_stats, avg_stats))
+                    (li, asset['ordinal'], losses, poes_stats, avg_stats))
     if R == 1:  # the realization is the same as the mean
         del result['loss_curves']
     return result
@@ -117,10 +116,10 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         stats = list(self.oqparam.hazard_stats())
         stat_curves = numpy.zeros((self.A, self.S), self.loss_curve_dt)
         avg_losses = numpy.zeros((self.A, self.S, self.L), F32)
-        for l, a, losses, statpoes, statloss in result['stat_curves']:
-            stat_curves_lt = stat_curves[ltypes[l]]
+        for li, a, losses, statpoes, statloss in result['stat_curves']:
+            stat_curves_lt = stat_curves[ltypes[li]]
             for s in range(self.S):
-                avg_losses[a, s, l] = statloss[s]
+                avg_losses[a, s, li] = statloss[s]
                 base.set_array(stat_curves_lt['poes'][a, s], statpoes[s])
                 base.set_array(stat_curves_lt['losses'][a, s], losses)
         self.datastore['avg_losses-stats'] = avg_losses

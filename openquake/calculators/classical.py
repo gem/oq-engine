@@ -414,7 +414,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
-        poes_shape = (len(rlzs_by_g), self.N, self.oqparam.imtls.size)
+        poes_shape = (len(rlzs_by_g), self.N, self.oqparam.imtls.size)  # GNL
         size = numpy.prod(poes_shape) * 8
         bytes_per_grp = size / len(self.grp_ids)
         avail = min(psutil.virtual_memory().available, config.memory.limit)
@@ -432,6 +432,8 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             self.groups_per_block = len(self.grp_ids)
             self.ct = (self.oqparam.concurrent_tasks or 1) * 2.5
+        # NB: it is CRITICAL for performance to have shape GNL and not NLG
+        # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
         self.datastore.create_dset('_poes', F64, poes_shape)
         if not self.oqparam.hazard_calculation_id:
             self.datastore.swmr_on()
