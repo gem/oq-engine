@@ -232,8 +232,17 @@ class Hazard:
         self.slice_by_g = getters.get_slice_by_g(self.rlzs_by_gsim_list)
         self.get_hcurves = pgetter.get_hcurves
         self.imtls = pgetter.imtls
+        self.sids = pgetter.sids
         self.srcidx = srcidx
         self.data = []
+
+    def init(self, pmaps, grp_id):
+        """
+        Initialize the pmaps dictionary with zeros, if needed
+        """
+        if grp_id not in pmaps:
+            L, G = self.imtls.size, len(self.rlzs_by_gsim_list[grp_id])
+            pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
 
     def store_poes(self, grp_id, pmap):
         """
@@ -308,6 +317,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.maxradius = max(self.maxradius, extra.pop('maxradius'))
         with self.monitor('aggregate curves'):
             if pmap:
+                self.haz.init(acc, grp_id)
                 acc[grp_id] |= pmap
 
         # store rup_data if there are few sites
@@ -317,7 +327,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
         if self.counts[grp_id] == 0:
             with self.monitor('saving probability maps'):
-                self.haz.store_poes(grp_id, acc.pop(grp_id))
+                if grp_id in acc:
+                    self.haz.store_poes(grp_id, acc.pop(grp_id))
 
         return acc
 
@@ -465,14 +476,14 @@ class ClassicalCalculator(base.HazardCalculator):
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
         blocks = list(block_splitter(grp_ids, self.groups_per_block))
         for b, block in enumerate(blocks, 1):
-            args, pmaps = self.get_args_pmaps(block, self.haz)
+            args = self.get_args(block, self.haz)
             logging.info('Sending bunch #%d of %d, %d tasks',
                          b, len(blocks), len(args))
             smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
             smap.monitor.save('srcfilter', self.src_filter())
             self.datastore.swmr_on()
             smap.h5 = self.datastore.hdf5
-            smap.reduce(self.agg_dicts, pmaps)
+            pmaps = smap.reduce(self.agg_dicts)
             self.haz.store_disagg(pmaps)
         if not oq.hazard_calculation_id:
             self.haz.store_disagg()
@@ -561,21 +572,17 @@ class ClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def get_args_pmaps(self, grp_ids, hazard):
+    def get_args(self, grp_ids, hazard):
         """
-        :returns: (Starmap arguments, Pmap dictionary)
+        :returns: a list of Starmap arguments
         """
         oq = self.oqparam
-        L = oq.imtls.size
-        sids = self.sitecol.complete.sids
         allargs = []
         src_groups = self.csm.src_groups
         tot_weight = 0
-        pmapdic = {}
         for grp_id in grp_ids:
             rlzs_by_gsim = hazard.rlzs_by_gsim_list[grp_id]
             sg = src_groups[grp_id]
-            pmapdic[grp_id] = ProbabilityMap.build(L, len(rlzs_by_gsim), sids)
             for src in sg:
                 src.ngsims = len(rlzs_by_gsim)
                 tot_weight += src.weight
@@ -609,7 +616,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     allargs.append((block, rlzs_by_gsim, self.params))
         allargs.sort(key=lambda args: sum(src.weight for src in args[0]),
                      reverse=True)
-        return allargs, pmapdic
+        return allargs
 
     def save_hazard(self, acc, pmap_by_kind):
         """
