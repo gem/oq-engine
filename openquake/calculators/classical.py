@@ -250,8 +250,8 @@ class Hazard:
         """
         trt = self.full_lt.trt_by_et[self.et_ids[grp_id][0]]
         base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
-        arr = numpy.array([pmap[sid].array for sid in pmap])  # shape NLG, fast
-        self.datastore['_poes'][:, :, self.slice_by_g[grp_id]] = arr  # slow
+        arr = numpy.array([pmap[sid].array for sid in pmap]).transpose(2, 0, 1)
+        self.datastore['_poes'][self.slice_by_g[grp_id]] = arr  # slow
         extreme = max(
             get_extreme_poe(pmap[sid].array, self.imtls)
             for sid in pmap)
@@ -414,7 +414,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
-        poes_shape = (self.N, self.oqparam.imtls.size, len(rlzs_by_g))
+        poes_shape = (len(rlzs_by_g), self.N, self.oqparam.imtls.size)
         size = numpy.prod(poes_shape) * 8
         bytes_per_grp = size / len(self.grp_ids)
         avail = min(psutil.virtual_memory().available, config.memory.limit)
