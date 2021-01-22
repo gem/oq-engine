@@ -328,8 +328,6 @@ class ClassicalCalculator(base.HazardCalculator):
             with self.monitor('saving probability maps'):
                 if grp_id in acc:
                     self.haz.store_poes(grp_id, acc.pop(grp_id))
-
-        logging.info('Keeping %d pmaps(s) in memory', len(acc))
         return acc
 
     def create_dsets(self):
