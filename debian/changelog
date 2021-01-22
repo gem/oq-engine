@@ -102,7 +102,7 @@
   * Stored the damage distributions in a pandas-friendly way and extended
     `DataStore.read_df` to accept multi-indices
 
- [Viktor Polak]
+  [Viktor Polak]
   * Added the Phung et al. (2020) GMPE
 
   [Michele Simionato]
@@ -152,7 +152,7 @@
     moment
   * Added a method to the modifiable GMPE to add (or subtract) a delta std
   * Added a method to the modifiable GMPE to set the total std as the sum of
-	tau plus a delta
+    tau plus a delta
 
 python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
 

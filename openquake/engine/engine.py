@@ -160,19 +160,22 @@ def manage_signals(signum, _stack):
     :param _stack: the current frame object, ignored
     """
     # Disable further CTRL-C to allow tasks revocation when Celery is used
-    if OQ_DISTRIBUTE.startswith('celery'):
+    if OQ_DISTRIBUTE == 'celery':
         signal.signal(signal.SIGINT, inhibitSigInt)
 
     if signum == signal.SIGINT:
+        parallel.workers_stop()
         raise MasterKilled('The openquake master process was killed manually')
 
     if signum == signal.SIGTERM:
+        parallel.workers_stop()
         raise SystemExit('Terminated')
 
     if hasattr(signal, 'SIGHUP'):  # there is no SIGHUP on Windows
         # kill the calculation only if os.getppid() != _PPID, i.e. the
         # controlling terminal died; in the workers, do nothing
         if signum == signal.SIGHUP and os.getppid() != _PPID:
+            parallel.workers_stop()
             raise MasterKilled(
                 'The openquake master lost its controlling terminal')
 
@@ -248,7 +251,8 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
         calc.from_engine = True
         tb = 'None\n'
         try:
-            set_concurrent_tasks_default(calc)
+            if config.zworkers['host_cores']:
+                set_concurrent_tasks_default(calc)
             t0 = time.time()
             calc.run(exports=exports, **kw)
             logging.info('Exposing the outputs to the database')
