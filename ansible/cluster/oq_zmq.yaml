@@ -88,48 +88,6 @@
         line: "host_cores = {{ worker_nodes_zmq }}"
 
     when: "'master' in group_names"
-    
-  - block:
-## workers configuration 
-
-    - name: Check "{{ venv_dir }}"  folder exists
-      stat:
-       path: "{{ venv_dir }}"
-      register: servicedir
- 
-    - name: "echo if directory already existed"
-      debug:
-        msg: "Shared  {{ venv_dir }}  folder  is already existed"
-      when: servicedir.stat.exists 
- 
-    - name: "Ansible Create directory {{ venv_dir }} if not exists"
-      file:
-        path: "{{ venv_dir }}"
-        state: directory
-        mode: "2770"
-        group: openquake
-        owner: openquake
-      when: servicedir.stat.exists == false 
-
-#### OpenQuake configuration files 
-    - name: Set openquake.cfg files on worker node
-      template:
-        src: templates/openquake.zmq.cfg.j2
-        dest: "{{ venv_dir }}/openquake.cfg"
-        owner: openquake
-        group: openquake
-        mode: 0644
-        validate: ls -l %s
-      register: set_openquake_cfg
-    
-    - name: Set workers IP on cfg files
-      lineinfile:
-        #path: /etc/openquake/openquake.cfg
-        path: "{{ venv_dir }}/openquake.cfg"
-        regexp: '^host_cores ='
-        line: "host_cores = {{ worker_nodes_zmq }}"
-
-    when: "'worker' in group_names"
 
 - hosts: master
   order: sorted
