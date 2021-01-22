@@ -242,7 +242,6 @@ class Hazard:
         Initialize the pmaps dictionary with zeros, if needed
         """
         if grp_id not in pmaps:
-            logging.debug('Initializing pmap#%d', grp_id)
             L, G = self.imtls.size, len(self.rlzs_by_gsim_list[grp_id])
             pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
 
@@ -253,6 +252,7 @@ class Hazard:
         trt = self.full_lt.trt_by_et[self.et_ids[grp_id][0]]
         # avoid saving PoEs == 1
         base.fix_ones(pmap)
+        # perhaps the slow part is not the saving, is the line below
         arr = numpy.array([pmap[sid].array for sid in pmap])
         self.datastore['_poes'][:, :, self.slice_by_g[grp_id]] = arr
         extreme = max(
@@ -333,7 +333,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.haz.store_poes(grp_id, acc.pop(grp_id))
 
         gc.collect()
-        logging.debug('Keeping %d pmaps(s) in memory', len(acc))
+        logging.info('Keeping %d pmaps(s) in memory', len(acc))
         return acc
 
     def create_dsets(self):
@@ -618,8 +618,6 @@ class ClassicalCalculator(base.HazardCalculator):
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
                     allargs.append((block, rlzs_by_gsim, self.params))
-        allargs.sort(key=lambda args: sum(src.weight for src in args[0]),
-                     reverse=True)
         return allargs
 
     def save_hazard(self, acc, pmap_by_kind):
