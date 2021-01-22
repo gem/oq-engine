@@ -31,7 +31,7 @@ jobs:
         run: pip3 install molecule[docker,ansible,lint]
 
       - name: Run Molecule tests.
-        run: molecule test
+        run: molecule test --destroy=never
         working-directory: ${{env.working-directory}}
         env:
           PY_COLORS: '1'
