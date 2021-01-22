@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
+import gc
 import time
 import psutil
 import pprint
@@ -241,6 +242,7 @@ class Hazard:
         Initialize the pmaps dictionary with zeros, if needed
         """
         if grp_id not in pmaps:
+            logging.debug('Initializing pmap#%d', grp_id)
             L, G = self.imtls.size, len(self.rlzs_by_gsim_list[grp_id])
             pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
 
@@ -330,6 +332,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 if grp_id in acc:
                     self.haz.store_poes(grp_id, acc.pop(grp_id))
 
+        gc.collect()
+        logging.debug('Keeping %d pmaps(s) in memory', len(acc))
         return acc
 
     def create_dsets(self):
