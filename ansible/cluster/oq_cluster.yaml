@@ -46,7 +46,7 @@
       when: "'master' in group_names" 
 
     - name: Run install script from github repo  only on master node
-      shell: python3.8 /tmp/install.py server
+      shell: python3.8 /tmp/install.py server --version=master
       changed_when: false
       register: oq_install
       when: "'master' in group_names" 
