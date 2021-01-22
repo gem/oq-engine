@@ -251,7 +251,7 @@ class Hazard:
         trt = self.full_lt.trt_by_et[self.et_ids[grp_id][0]]
         base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
         arr = numpy.array([pmap[sid].array for sid in pmap]).transpose(2, 0, 1)
-        self.datastore['_poes'][self.slice_by_g[grp_id]] = arr  # slow
+        self.datastore['_poes'][self.slice_by_g[grp_id]] = arr  # shape GNL
         extreme = max(
             get_extreme_poe(pmap[sid].array, self.imtls)
             for sid in pmap)
