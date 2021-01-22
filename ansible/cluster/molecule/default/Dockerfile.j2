@@ -22,5 +22,5 @@ RUN if [ $(command -v apt-get) ]; then  apt-get update && apt-get install -y ope
     fi
 RUN mkdir -p /exports
 VOLUME /exports
-RUN mkdir -p /opt/openquake
-VOLUME /opt/openquake
+RUN mkdir -p /opt
+VOLUME /opt

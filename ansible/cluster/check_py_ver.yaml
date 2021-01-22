@@ -62,7 +62,7 @@
           - "deb http://archive.ubuntu.com/ubuntu/ {{ ansible_distribution_release|lower }}-updates universe"
           - "deb http://security.ubuntu.com/ubuntu/ {{ ansible_distribution_release|lower }}-security universe"
 
-      - name: Install python 3.8 on Ubuntu
+      - name: Install python 3.8 on Ubuntu plus venv
         apt:
           name: "{{ item }}"
           state: present 

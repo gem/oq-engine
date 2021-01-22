@@ -7,7 +7,7 @@
   #
   become: yes
   vars:
-    shared_nfs: /exports/shared
+    shared_nfs: /opt/shared
     workdir_services: /var/lib/openquake
     webuidir_services: /var/lib/openquake/webui
     venv_dir: /opt/openquake
@@ -30,7 +30,6 @@
   
 #
   - block:
-# Create etc and work directory for services  
 #
     - name: Check "{{workdir_services}}"  folder exists
       stat:
@@ -88,55 +87,6 @@
         regexp: '^host_cores ='
         line: "host_cores = {{ worker_nodes_zmq }}"
 
-    - name: Set System condfiguration for db server on master node
-      template:
-        src: templates/oq-dbserver.service.j2
-        dest: "{{ venv_dir }}/oq-dbserver.service"
-        owner: openquake
-        group: openquake
-        mode: 0644
-        validate: ls -l %s
-      register: set_openquake_db
-
-    - name: Set System condfiguration for webui  on master node
-      template:
-        src: templates/oq-webui.service.j2
-        dest: "{{ venv_dir }}/oq-webui.service"
-        owner: openquake
-        mode: 0644
-        validate: ls -l %s
-      register: set_openquake_webui
-
-#### Enable the system services at boot for all OS
-
-    - name:
-      file:
-        src: "{{ venv_dir }}/{{ item }}"
-        dest: "/etc/systemd/system/{{ item }}"
-        state: link
-      loop: [ 'oq-webui.service', 'oq-dbserver.service']
-
-    - name: enable system service for openquake and ensure it is started
-      systemd:
-        name: "{{ item }}"
-        enabled: yes
-        state: started
-      loop: [ 'oq-dbserver', 'oq-webui']
-
-    - name: ensure nfs server is started on master node
-      systemd:
-        name: nfs-server
-        enabled: yes
-        state: started
-      when: ansible_distribution == "CentOS"
-
-    - name: ensure nfs server is started on master node
-      systemd:
-        name: nfs-kernel-server
-        enabled: yes
-        state: started
-      when: ansible_distribution == "Ubuntu"
-        #
     when: "'master' in group_names"
     
   - block:
@@ -206,7 +156,3 @@
       become: true
       become_user: openquake
       loop: "{{ groups['worker'] }}"
-        #loop: [ " {{  groups['worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address'])  }} " ]
-
-
-
