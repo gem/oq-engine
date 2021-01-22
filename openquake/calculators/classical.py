@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import io
-import gc
 import time
 import psutil
 import pprint
@@ -250,10 +249,8 @@ class Hazard:
         Store the pmap of the given group inside the _poes dataset
         """
         trt = self.full_lt.trt_by_et[self.et_ids[grp_id][0]]
-        # avoid saving PoEs == 1
-        base.fix_ones(pmap)  # fast
-        arr = numpy.array([pmap[sid].array for sid in pmap])  # fast
-        logging.info('Storing %s', humansize(arr.nbytes))
+        base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
+        arr = numpy.array([pmap[sid].array for sid in pmap])  # shape NLG, fast
         self.datastore['_poes'][:, :, self.slice_by_g[grp_id]] = arr  # slow
         extreme = max(
             get_extreme_poe(pmap[sid].array, self.imtls)
@@ -332,7 +329,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 if grp_id in acc:
                     self.haz.store_poes(grp_id, acc.pop(grp_id))
 
-        gc.collect()
         logging.info('Keeping %d pmaps(s) in memory', len(acc))
         return acc
 
