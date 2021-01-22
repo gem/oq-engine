@@ -87,6 +87,15 @@
         regexp: '^host_cores ='
         line: "host_cores = {{ worker_nodes_zmq }}"
 
+    - name: Restart openquake-db server after set openquake.cfg
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: restarted
+        masked: no
+      with_items:
+         - openquake-dbserver.service
+
     when: "'master' in group_names"
 
 - hosts: master
