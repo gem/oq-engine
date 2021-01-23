@@ -19,6 +19,7 @@ import re
 import zmq
 import time
 import logging
+from random import randint
 
 context = zmq.Context()
 
@@ -76,7 +77,8 @@ class Socket(object):
     :param mode: default 'bind', accepts also 'connect'
     :param timeout: default 15000 ms, used when polling the underlying socket
     """
-    def __init__(self, end_point, socket_type, mode, timeout=15000):
+    def __init__(self, end_point, socket_type, mode, *,
+                 identity=False, timeout=15000):
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
         assert mode in ('bind', 'connect'), mode
         if mode == 'bind':
@@ -84,6 +86,7 @@ class Socket(object):
         self.end_point = end_point
         self.socket_type = socket_type
         self.mode = mode
+        self.identity = identity
         self.timeout = timeout
         self.running = False
 
@@ -96,6 +99,9 @@ class Socket(object):
             p1, p2 = map(int, port_range.groups())
             end_point = self.end_point.rsplit(':', 1)[0]  # strip port range
             self.zsocket = context.socket(self.socket_type)
+            if self.identity:
+                ide = "%04x-%04x" % (randint(0, 0x10000), randint(0, 0x10000))
+                self.zsocket.setsockopt_string(zmq.IDENTITY, ide)
             while True:
                 try:
                     # NB: will raise a ZMQBindError if no port is available
