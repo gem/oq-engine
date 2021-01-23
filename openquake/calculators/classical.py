@@ -484,6 +484,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
             smap.h5 = self.datastore.hdf5
             pmaps = smap.reduce(self.agg_dicts)
+            logging.debug("task_no by PID: %s", smap.pid2no)
             self.haz.store_disagg(pmaps)
         if not oq.hazard_calculation_id:
             self.haz.store_disagg()
