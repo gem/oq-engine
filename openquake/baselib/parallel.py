@@ -252,7 +252,7 @@ def zmq_submit(self, func, args, monitor):
         port = int(config.zworkers.ctrl_port) + 2
         task_input_url = 'tcp://0.0.0.0:%d' % port
         self.sender = Socket(
-            task_input_url, zmq.PUSH, 'connect').__enter__()
+            task_input_url, zmq.DEALER, 'connect').__enter__()
     return self.sender.send((func, args, self.task_no, monitor))
 
 
@@ -477,7 +477,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon.inject:
         args += (mon,)
     sentbytes = 0
-    with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+    with Socket(mon.backurl, zmq.DEALER, 'connect') as zsocket:
         msg = check_mem_usage()  # warn if too much memory is used
         if msg:
             zsocket.send(Result(None, mon, msg=msg))
@@ -772,7 +772,7 @@ class Starmap(object):
         if not hasattr(self, 'socket'):  # first time
             self.t0 = time.time()
             self.__class__.running_tasks = self.tasks
-            self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
+            self.socket = Socket(self.receiver, zmq.DEALER, 'bind').__enter__()
             monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
             monitor.version = version

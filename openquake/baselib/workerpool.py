@@ -26,8 +26,8 @@ def _streamer():
     task_input_url = 'tcp://0.0.0.0:%d' % (port + 2)
     task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, port + 1)
     try:
-        z.zmq.proxy(z.bind(task_input_url, z.zmq.PULL),
-                    z.bind(task_output_url, z.zmq.PUSH))
+        z.zmq.proxy(z.bind(task_input_url, z.zmq.ROUTER),
+                    z.bind(task_output_url, z.zmq.DEALER))
     except (KeyboardInterrupt, z.zmq.ContextTerminated):
         pass  # killed cleanly by SIGINT/SIGTERM
 
@@ -146,7 +146,7 @@ class WorkerMaster(object):
 
 def worker(sock, executing):
     """
-    :param sock: a zeromq.Socket of kind PULL
+    :param sock: a zeromq.Socket of kind DEALER
     :param executing: a path inside /tmp/calc_XXX
     """
     setproctitle('oq-zworker')
@@ -190,7 +190,7 @@ class WorkerPool(object):
         # start workers
         self.workers = []
         for _ in range(self.num_workers):
-            sock = z.Socket(self.task_server_url, z.zmq.PULL, 'connect')
+            sock = z.Socket(self.task_server_url, z.zmq.DEALER, 'connect')
             sock.proc = multiprocessing.Process(
                 target=worker, args=(sock, self.executing))
             sock.proc.start()

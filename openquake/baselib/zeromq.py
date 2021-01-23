@@ -18,6 +18,7 @@
 import re
 import zmq
 import time
+import pickle
 import logging
 from random import randint
 
@@ -79,7 +80,8 @@ class Socket(object):
     """
     def __init__(self, end_point, socket_type, mode, *,
                  identity=False, timeout=15000):
-        assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
+        assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH,
+                               zmq.DEALER)
         assert mode in ('bind', 'connect'), mode
         if mode == 'bind':
             assert 'localhost' not in end_point, 'Use 127.0.0.1 instead'
@@ -139,7 +141,11 @@ class Socket(object):
         while self.running:
             try:
                 if self.zsocket.poll(self.timeout):
-                    yield self.zsocket.recv_pyobj()
+                    mpart = self.zsocket.recv_multipart()
+                    if len(mpart) == 1:
+                        yield pickle.loads(mpart[0])
+                    else:
+                        yield pickle.loads(mpart[1])
                 elif self.socket_type == zmq.PULL:
                     logging.debug('Waiting on %s:%d', self, self.port)
             except zmq.ZMQError:
