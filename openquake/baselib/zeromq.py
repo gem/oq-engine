@@ -79,7 +79,7 @@ class Socket(object):
     :param timeout: default 15000 ms, used when polling the underlying socket
     """
     def __init__(self, end_point, socket_type, mode, *,
-                 identity=b'', timeout=15000):
+                 identity='', timeout=15000):
         assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH,
                                zmq.DEALER)
         assert mode in ('bind', 'connect'), mode
