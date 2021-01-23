@@ -189,8 +189,9 @@ class WorkerPool(object):
         setproctitle(title)
         # start workers
         self.workers = []
-        for _ in range(self.num_workers):
-            sock = z.Socket(self.task_server_url, z.zmq.DEALER, 'connect')
+        for w in range(self.num_workers):
+            sock = z.Socket(self.task_server_url, z.zmq.DEALER, 'connect',
+                            identity='zworker-%d' % w)
             sock.proc = multiprocessing.Process(
                 target=worker, args=(sock, self.executing))
             sock.proc.start()
