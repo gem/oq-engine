@@ -836,7 +836,7 @@ class Starmap(object):
                 self.todo += 1
 
     def _loop(self):
-        self.pid2no = AccumDict(accum=[])  # pid -> task_no
+        self.busytime = AccumDict(accum=[])  # pid -> task_no
         num_cores = self.num_cores or CT // 2
         if self.task_queue:
             first_args = self.task_queue[:num_cores]
@@ -860,7 +860,7 @@ class Starmap(object):
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
-                self.pid2no += {res.pid: [res.mon.task_no]}
+                self.busytime += {res.pid: res.mon.duration}
                 self.todo -= 1
                 self._submit_many(1)
                 logging.debug('%d tasks todo, %d in queue',
