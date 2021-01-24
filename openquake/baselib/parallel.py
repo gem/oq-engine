@@ -386,7 +386,7 @@ class Result(object):
         self.mon = mon
         self.tb_str = tb_str
         self.msg = msg
-        self.pid = (socket.gethostname(), os.getpid())  # PID of the worker
+        self.workerid = (socket.gethostname(), os.getpid())
 
     def get(self):
         """
@@ -860,7 +860,7 @@ class Starmap(object):
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %d', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
-                self.busytime += {res.pid: res.mon.duration}
+                self.busytime += {res.workerid: res.mon.duration}
                 self.todo -= 1
                 self._submit_many(1)
                 logging.debug('%d tasks running, %d in queue',
