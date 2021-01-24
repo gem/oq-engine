@@ -33,7 +33,7 @@ MPLBACKEND=Agg oq plot 'hmaps?kind=mean&imt=PGA' 9
 MPLBACKEND=Agg oq plot 'uhs?kind=stats' 9
 MPLBACKEND=Agg oq plot 'disagg?kind=Mag&imt=PGA&poe_id=1&rlz=0' 14
 MPLBACKEND=Agg oq plot 'task_info?kind=classical_split_filter' 9
-MPLBACKEND=Agg oq plot_sites -1
+MPLBACKEND=Agg oq plot_assets -1
 MPLBACKEND=Agg oq plot memory? -1
 MPLBACKEND=Agg oq plot sources? 9
 
