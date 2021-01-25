@@ -1,9 +1,7 @@
 name: cluster_ansible
 'on':
   schedule:
-  - cron: "0 2 * * *"
-  push:
-    branches: [ molecule ]
+  - cron: "0 5 * * *"
 
 jobs:
 
