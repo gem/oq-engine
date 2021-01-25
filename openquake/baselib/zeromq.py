@@ -18,6 +18,7 @@
 import re
 import zmq
 import time
+import pickle
 import logging
 
 context = zmq.Context()
@@ -76,8 +77,9 @@ class Socket(object):
     :param mode: default 'bind', accepts also 'connect'
     :param timeout: default 15000 ms, used when polling the underlying socket
     """
-    def __init__(self, end_point, socket_type, mode, timeout=15000):
-        assert socket_type in (zmq.REP, zmq.REQ, zmq.PULL, zmq.PUSH)
+    def __init__(self, end_point, socket_type, mode, timeout=15000,
+                 send_identity=False):
+        assert socket_type in SOCKTYPE, socket_type
         assert mode in ('bind', 'connect'), mode
         if mode == 'bind':
             assert 'localhost' not in end_point, 'Use 127.0.0.1 instead'
@@ -85,10 +87,13 @@ class Socket(object):
         self.socket_type = socket_type
         self.mode = mode
         self.timeout = timeout
+        self.send_identity = send_identity
         self.running = False
 
     def __enter__(self):
-        """Instantiate the underlying zmq socket"""
+        """
+        Instantiate the underlying zmq socket
+        """
         # first check if the end_point ends in :<min_port>-<max_port>
         port_range = re.search(r':(\d+)-(\d+)$', self.end_point)
         if port_range:
@@ -114,6 +119,8 @@ class Socket(object):
         if port:
             self.port = int(port.group(1))
         self.zsocket.__enter__()
+        if self.send_identity:
+            self.send_identity()
         self.num_sent = 0
         return self
 
@@ -134,6 +141,8 @@ class Socket(object):
             try:
                 if self.zsocket.poll(self.timeout):
                     yield self.zsocket.recv_pyobj()
+                    if self.send_identity:
+                        self.send_ident()
                 elif self.socket_type == zmq.PULL:
                     logging.debug('Waiting on %s:%d', self, self.port)
             except zmq.ZMQError:
@@ -142,20 +151,35 @@ class Socket(object):
 
     def send(self, obj):
         """
-        Send an object to the remote server; block and return the reply
-        if the socket type is REQ.
+        Send an object to the remote server
+
+        - if the socket type is REQ, block and return the reply
+        - if the socket type is ROUTER, expect an identity first
 
         :param obj:
             the Python object to send
+        :param identity:
+            identifier (in bytes) of the remote socket
         """
         try:
-            self.zsocket.send_pyobj(obj)
+            if self.socket_type == zmq.ROUTER:
+                ident, empty, ready = self.zsocket.recv_multipart()
+                self.zsocket.send_multipart([
+                    ident, b'', pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)])
+            else:
+                self.zsocket.send_pyobj(obj)
         except Exception as exc:
             # usual for objects bigger than 4 GB
             raise exc.__class__('%s: %r' % (exc, obj))
         self.num_sent += 1
         if self.socket_type == zmq.REQ:
             return self.zsocket.recv_pyobj()
+
+    def send_ident(self):
+        """
+        Send a b'ready' message, used to send the identity to routers
+        """
+        self.zsocket.send(b'ready')
 
     def __repr__(self):
         return '<%s %s %s>' % (self.__class__.__name__,
