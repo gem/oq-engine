@@ -251,18 +251,17 @@ def install(inst, version):
         print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
     elif inst is devel:
         print(f'Please activate the venv with {inst.VENV}/bin/activate')
-
-    # create systemd services
-    if inst is server and os.path.exists('/lib/systemd/system'):
-        for service in ['dbserver', 'webui']:
-            service_name = 'openquake-%s.service' % service
-            service_path = '/lib/systemd/system/' + service_name
-            if not os.path.exists(service_path):
-                with open(service_path, 'w') as f:
-                    srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)
-                    f.write(srv)
-            subprocess.check_call(['systemctl', 'enable', service_name])
-            subprocess.check_call(['systemctl', 'start', service_name])
+    # create systemd services                                                   
+     if inst is server and os.path.exists('/lib/systemd/system'):                               
+         for service in ['dbserver', 'webui']:                                   
+             service_name = 'openquake-%s.service' % service                     
+             service_path = '/lib/systemd/system/' + service_name                
+             if not os.path.exists(service_path):                                
+                 with open(service_path, 'w') as f:                              
+                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)   
+                     f.write(srv)                                                
+             subprocess.check_call(['systemctl', 'enable', service_name])        
+             subprocess.check_call(['systemctl', 'start', service_name])         
 
     # download and unzip the demos
     try:

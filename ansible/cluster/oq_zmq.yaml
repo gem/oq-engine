@@ -1,0 +1,125 @@
+---
+# run with ansible-playbook -v -i host.linux  oqengine/oq_work.yaml --limit 
+#
+- hosts: all
+  order: sorted
+  gather_facts: yes
+  #
+  become: yes
+  vars:
+    shared_nfs: /opt/shared
+    workdir_services: /var/lib/openquake
+    webuidir_services: /var/lib/openquake/webui
+    venv_dir: /opt/openquake
+    venv_bin: "{{ venv_dir }}/bin"
+    server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
+    worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | join(' -1,') }} -1"
+  environment:
+    HDF5_USE_FILE_LOCKING: FALSE
+
+  tasks:
+  ##### Check OS for update system
+  - name: ping hosts
+    ping:
+
+  - name: check OS and get variable
+    debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_host}}
+
+  - name: Echo my_env_var again
+    shell: "echo $HDF5_USE_FILE_LOCKING"
+  
+#
+  - block:
+#
+    - name: Check "{{workdir_services}}"  folder exists
+      stat:
+       path: "{{workdir_services}}"
+      register: servicedir
+ 
+    - name: "echo if directory already existed"
+      debug:
+        msg: "Shared  {{workdir_services}}  folder  is already existed"
+      when: servicedir.stat.exists 
+ 
+    - name: "Ansible Create directory {{workdir_services}} if not exists"
+      file:
+        path: "{{workdir_services}}"
+        state: directory
+        mode: "2770"
+        group: openquake
+        owner: openquake
+      when: servicedir.stat.exists == false 
+
+    - name: Check "{{webuidir_services}}"  folder exists
+      stat:
+       path: "{{webuidir_services}}"
+      register: servicedir
+ 
+    - name: "echo if directory already existed"
+      debug:
+        msg: "Shared  {{webuidir_services}}  folder  is already existed"
+      when: servicedir.stat.exists 
+ 
+    - name: "Ansible Create directory {{webuidir_services}} if not exists"
+      file:
+        path: "{{webuidir_services}}"
+        state: directory
+        mode: "2770"
+        group: openquake
+        owner: openquake
+      when: servicedir.stat.exists == false 
+
+#### OpenQuake configuration files 
+    - name: Set openquake.cfg files on master node
+      template:
+        src: templates/openquake.zmq.cfg.j2
+        dest: "{{ venv_dir }}/openquake.cfg"
+        owner: openquake
+        group: openquake
+        mode: 0644
+        validate: ls -l %s
+      register: set_openquake_cfg
+    
+    - name: Set workers IP on cfg files
+      lineinfile:
+        #path: /etc/openquake/openquake.cfg
+        path: "{{ venv_dir }}/openquake.cfg"
+        regexp: '^host_cores ='
+        line: "host_cores = {{ worker_nodes_zmq }}"
+
+    - name: Restart openquake-db server after set openquake.cfg
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: restarted
+        masked: no
+      with_items:
+         - openquake-dbserver.service
+
+    when: "'master' in group_names"
+
+- hosts: master
+  order: sorted
+  gather_facts: yes
+  #
+  become: yes
+  tasks:
+    - name: fetch all public ssh keys
+      shell: cat ~openquake/.ssh/id_rsa.pub
+      register: ssh_keys
+
+    - name: check keys
+      debug: msg="{{ ssh_keys.stdout }}"
+
+    - name: deploy keys on all servers
+      authorized_key: user=openquake key="{{ item[0] }}"
+      delegate_to: "{{ item[1] }}"
+      with_nested:
+        - "{{ ssh_keys.stdout }}"
+        - "{{groups['worker']}}"
+
+    - name: execute ssh for first time with openquake user
+      command: ssh -o "StrictHostKeyChecking no" "{{hostvars[item]['ansible_default_ipv4']['address']}}"
+      become: true
+      become_user: openquake
+      loop: "{{ groups['worker'] }}"
