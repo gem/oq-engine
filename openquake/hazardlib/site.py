@@ -117,12 +117,12 @@ site_param_dt = {
     'lat': numpy.float64,
     'depth': numpy.float64,
     'vs30': numpy.float64,
-    'vs30measured': numpy.bool,
+    'vs30measured': numpy.uint8,  # numpy.bool cast "0" to True
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
     'siteclass': (numpy.string_, 1),
     'z1pt4': numpy.float64,
-    'backarc': numpy.bool,
+    'backarc': numpy.uint8,  # numpy.bool cast "0" to True
     'xvf': numpy.float64,
 
     # Parameters for site amplification
