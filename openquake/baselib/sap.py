@@ -200,7 +200,7 @@ def parser(funcdict, **kw):
     return parser
 
 
-def _run(parser, argv):
+def _run(parser, argv=None):
     namespace = parser.parse_args(argv)
     try:
         func = namespace.__dict__.pop('_func')

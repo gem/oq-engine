@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import sys
 import unittest.mock as mock
 import logging
 import operator
@@ -82,7 +83,7 @@ def do_build_reports(directory):
 
 
 choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
-           'extracts', 'parameters', 'sources', 'mfds']
+           'extracts', 'parameters', 'sources', 'mfds', 'venv']
 
 
 def main(what, report=False):
@@ -132,6 +133,8 @@ def main(what, report=False):
     elif what == 'mfds':
         for cls in gen_subclasses(BaseMFD):
             print(cls.__name__)
+    elif what == 'venv':
+        print(sys.prefix)
     elif what == 'sources':
         for cls in gen_subclasses(BaseSeismicSource):
             print(cls.__name__)
