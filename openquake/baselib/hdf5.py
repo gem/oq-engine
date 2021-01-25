@@ -731,7 +731,11 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                 continue
             break
         header = first.strip().split(sep)
-        dt = build_dt(dtypedict, header)
+        if isinstance(dtypedict, dict):
+            dt = build_dt(dtypedict, header)
+        else:
+            # in test_recompute dt is already a composite dtype
+            dt = dtypedict
         try:
             arr = _read_csv(f, dt)
         except KeyError:
