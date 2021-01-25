@@ -118,6 +118,19 @@ PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'win32': ('win64',)}
 DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
+STANDALONE = 'https://github.com/gem/oq-platform-%s/archive/master.zip'
+
+
+def install_standalone(venv):
+    """
+    Install the standalone Django applications if possible
+    """
+    for app in 'standalone ipt taxtweb taxonomy'.split():
+        try:
+            subprocess.check_call(['%s/bin/pip' % venv, 'install',
+                                   '--upgrade', STANDALONE % app])
+        except Exception as exc:
+            print('%s: could not install %s' % (exc, STANDALONE % app))
 
 
 def before_checks(inst, remove, usage):
@@ -216,6 +229,9 @@ def install(inst, version):
     else:  # install a branch from github
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
                                '--upgrade', GITBRANCH % version])
+
+    install_standalone(inst.VENV)
+
     # create openquake.cfg
     if inst is server:
         if os.path.exists(inst.CFG):
