@@ -1,21 +1,20 @@
-name: playbook_ansible
+name: cluster_ansible
 'on':
   schedule:
-    - cron: "0 2 * * *"
+  - cron: "0 5 * * *"
 
 jobs:
 
-  molecule:
+  zmq_cluster:
     name: Molecule
     runs-on: ubuntu-18.04
     strategy:
       matrix:
         distro:
-          - centos7
           - ubuntu1804
           - ubuntu2004
     env:
-      working-directory: ./ansible/playbook
+      working-directory: ./ansible/cluster
 
     steps:
       - name: Check out the codebase.
@@ -30,7 +29,7 @@ jobs:
         run: pip3 install molecule[docker,ansible,lint]
 
       - name: Run Molecule tests.
-        run: molecule test
+        run: molecule test --destroy=never
         working-directory: ${{env.working-directory}}
         env:
           PY_COLORS: '1'
