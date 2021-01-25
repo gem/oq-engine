@@ -154,6 +154,8 @@ def worker(sock, executing):
     with sock:
         for cmd, args, taskno, mon in sock:
             fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
+            # NB: very hackish way of keeping track of the running tasks,
+            # used in get_executing, could litter the file system
             open(fname, 'w').close()
             parallel.safely_call(cmd, args, taskno, mon)
             os.remove(fname)

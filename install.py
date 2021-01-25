@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020, GEM Foundation
+# Copyright (C) 2020-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,17 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
-Installation script for the OpenQuake engine on linux.
+Universal installation script for the OpenQuake engine.
 Three installation methods are supported:
 
 1. "server" installation, i.e. system-wide installation on /opt/openquake
 2. "user" installation on $HOME/openquake
-3. "devel" installation on $HOME/openquake (from the engine repository)
+3. "devel" installation on $HOME/openquake from the engine repository
 
 To disinstall use the --remove flag, which remove the services and the
 directories /opt/openquake or $HOME/openquake.
 The calculations will NOT be removed since they live in
-/var/lib/openquake/oqdata or $HOME/oqdata respectively.
+/var/lib/openquake/oqdata or $HOME/oqdata.
 You have to remove the data directories manually, if you so wish.
 """
 import os
@@ -298,7 +298,7 @@ if __name__ == '__main__':
     parser.add_argument("--remove",  action="store_true",
                         help="disinstall the engine")
     parser.add_argument("--version",
-                        help="version to install (default latest)")
+                        help="version to install (default stable)")
     args = parser.parse_args()
     inst = globals()[args.inst]
     before_checks(inst, args.remove, parser.format_usage())

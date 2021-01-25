@@ -688,7 +688,9 @@ def build_dt(dtypedict, names):
 
 def _read_csv(fileobj, compositedt):
     itemsize = [0] * len(compositedt)
+    dt = []
     for i, name in enumerate(compositedt.names):
+        dt.append(compositedt[name])
         if compositedt[name].kind == 'S':  # limit of the length of byte-fields
             itemsize[i] = compositedt[name].itemsize
     rows = []
@@ -699,7 +701,10 @@ def _read_csv(fileobj, compositedt):
                 raise ValueError(
                     'line %d: %s=%r has length %d > %d' %
                     (lineno, compositedt.names[i], col, len(col), itemsize[i]))
-            cols.append(col)
+            if dt[i].kind == 'b':  # boolean
+                cols.append(int(col))
+            else:
+                cols.append(col)
         rows.append(tuple(cols))
     return numpy.array(rows, compositedt)
 
@@ -729,6 +734,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
         if isinstance(dtypedict, dict):
             dt = build_dt(dtypedict, header)
         else:
+            # in test_recompute dt is already a composite dtype
             dt = dtypedict
         try:
             arr = _read_csv(f, dt)

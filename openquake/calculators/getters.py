@@ -135,8 +135,9 @@ class PmapGetter(object):
         dset = dstore['_poes']  # GNL
         G, N, L = dset.shape
         self._pmap = probability_map.ProbabilityMap.build(L, G, self.sids)
-        for sid in self.sids:
-            self._pmap[sid].array = dset[:, sid, :].T  # shape (L, G)
+        data = dset[:, self.sids, :]  # shape (G, N, L)
+        for i, sid in enumerate(self.sids):
+            self._pmap[sid].array = data[:, i, :].T  # shape (L, G)
         self.nbytes = self._pmap.nbytes
         dstore.close()
         return self._pmap
