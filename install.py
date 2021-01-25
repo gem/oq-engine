@@ -118,7 +118,7 @@ PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'win32': ('win64',)}
 DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
-STANDALONE = 'https://github.com/gem/oq-platform-%/archive/master.zip'
+STANDALONE = 'https://github.com/gem/oq-platform-%s/archive/master.zip'
 
 
 def install_standalone(venv):
