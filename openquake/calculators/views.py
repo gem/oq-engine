@@ -104,8 +104,9 @@ def rst_table(data, header=None, fmt=None):
     ==== =====
     """
     if isinstance(data, pandas.DataFrame):
-        header = header or list(data.columns)
-        data = numpy.array(data)
+        df = data.reset_index()
+        header = header or list(df.columns)
+        data = numpy.array(df)
     if header is None and hasattr(data, '_fields'):
         header = data._fields
     try:
