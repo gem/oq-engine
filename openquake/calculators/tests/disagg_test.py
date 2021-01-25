@@ -95,6 +95,11 @@ class DisaggregationTestCase(CalculatorTestCase):
         aw = extract(self.calc.datastore, 'sitecol?field=custom_site_id')
         self.assertEqual(list(aw), [100, 200])
 
+        # check the site_model backarc and vs30measured fields
+        sitecol = self.calc.datastore['sitecol']
+        numpy.testing.assert_equal(sitecol.vs30measured, [0, 1])
+        numpy.testing.assert_equal(sitecol.backarc, [0, 1])
+
     def test_case_3(self):
         # a case with poes_disagg too large
         with self.assertRaises(SystemExit) as ctx:
