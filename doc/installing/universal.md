@@ -27,7 +27,7 @@ NB: this approach will work on Windows too, provided you adapt the commands to y
 
 If you do not need to develop with the engine, but only to use it as an application, you want the `user` installation (on windows/mac) or the `server` installation (on linux). The `user` installation is the way to go also on linux, in the case you do not have root permissions on the machine. There is no need to clone the engine repository, you just need to download the installation script:
 ```
-$ wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+$ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 $ /usr/bin/python3 install.py user
 ```
 This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine on it.
@@ -47,7 +47,7 @@ If you are on linux and you have root permissions the recommended installation m
 with multiple users and two system V services will be automatically installed and started: `openquake-dbserver` and `openquake-webui`.
 
 ```
-$ wget https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+$ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 $ sudo -H /usr/bin/python3 install.py server
 ```
 
