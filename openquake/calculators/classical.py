@@ -644,6 +644,15 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Compute the statistical hazard curves
         """
+        task_info = self.datastore.read_df('task_info', 'taskname')
+        try:
+            dur = task_info.loc[b'classical'].duration
+        except KeyError:  # no data
+            pass
+        else:
+            slow_tasks = len(dur[dur > 3 * dur.mean()])
+            if slow_tasks:
+                logging.info('There were %d slow tasks', slow_tasks)
         nr = {name: len(dset['mag']) for name, dset in self.datastore.items()
               if name.startswith('rup_')}
         if nr:  # few sites, log the number of ruptures per magnitude
@@ -711,15 +720,6 @@ class ClassicalCalculator(base.HazardCalculator):
         for kind in sorted(self.hazard):
             logging.info('Saving %s', kind)
             self.datastore[kind][:] = self.hazard.pop(kind)
-        task_info = self.datastore.read_df('task_info', 'taskname')
-        try:
-            dur = task_info.loc[b'classical'].duration
-        except KeyError:  # no data
-            pass
-        else:
-            slow_tasks = len(dur[dur > 3 * dur.mean()])
-            if slow_tasks:
-                logging.info('There were %d slow tasks', slow_tasks)
         if 'hmaps-stats' in self.datastore:
             hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
             maxhaz = hmaps.max(axis=(0, 1, 3))
