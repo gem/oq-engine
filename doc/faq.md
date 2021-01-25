@@ -38,7 +38,7 @@ and one without, and then compare the runtimes.
 
 ### Different installation methods
 
-The OpenQuake Engine has at least three installation methods. To choose the one that best fits your needs take a look at the **[installation overview](installing/README.md)**.
+The OpenQuake Engine has several installation methods. To choose the one that best fits your needs take a look at the **[installation overview](installing/README.md)**.
 
 ******
 
@@ -48,7 +48,7 @@ Binary packages are provided for the following 64bit operating systems:
 - [Windows 10](installing/windows.md)
 - [macOS 10.9+](installing/macos.md)
 - Linux [Ubuntu 16.04+](installing/ubuntu.md) and [RedHat/CentOS 7 and 8 and Fedora 29+](installing/rhel.md) via _deb_ and _rpm_
-- Any other generic Linux distribution via a [self-installable binary distribution](installing/linux-generic.md)
+- Any other generic Linux distribution via the [universal installer](installing/universal.md)
 - [Docker](installing/docker.md) hosts
 
 A 64bit operating system **is required**. Please refer to each OS specific page for details about requirements.
@@ -64,19 +64,11 @@ Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies 
 
 These configurations however are not tested by our [continuous integration system](https://ci.openquake.org) and we cannot guarantee on the quality of the results. Use at your own risk.
 
-Another installation option for unsupported Linux systems is provided by the **[self-installable binary distribution for generic Linux](installing/linux-generic.md)**.
-
 ******
 
 ### 32bit support
 
 The OpenQuake Engine **requires a 64bit operating system**. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
-
-******
-
-### Celery support
-
-Starting with OpenQuake Engine 3.8, Celery is not needed anymore, so if you have trouble with it, you can try using the new zmq mechanism: see the [multiple nodes installation guidelines](installing/cluster.md).
 
 ******
 
