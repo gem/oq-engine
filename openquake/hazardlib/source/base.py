@@ -23,6 +23,8 @@ import numpy
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
+EPS = .01  # used for src.nsites outside the maximum_distance
+
 
 class BaseSeismicSource(metaclass=abc.ABCMeta):
     """
@@ -56,7 +58,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         return self.num_ruptures * self.ngsims * (
-            .1 if self.nsites == .01 else 1)
+            .1 if self.nsites == EPS else 1)
 
     @property
     def et_ids(self):
