@@ -876,8 +876,9 @@ class Starmap(object):
         self.tasks.clear()
         if len(self.busytime) > 1:
             times = numpy.array(list(self.busytime.values()))
-            logging.info('Busy time in the workers: mean=%ds, std=%.1fs',
-                         times.mean(), times.std())
+            logging.info(
+                'Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
+                times.mean(), times.std(), times.min(), times.max())
 
 
 def sequential_apply(task, args, concurrent_tasks=CT,
