@@ -878,7 +878,7 @@ class Starmap(object):
             times = numpy.array(list(self.busytime.values()))
             logging.info(
                 'Mean time per core=%ds, std=%.1fs, min=%ds, max=%ds',
-                times.mean(), times.std(), times.mean(), times.max())
+                times.mean(), times.std(), times.min(), times.max())
 
 
 def sequential_apply(task, args, concurrent_tasks=CT,
