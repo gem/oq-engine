@@ -41,6 +41,10 @@ parallelize by `number_of_ground_motion_fields` if there are more than
 `max_sites_disagg` sites (i.e. 10 sites). This improved a lot the performance
 in cases with many thousands of sites.
 
+The scenario and event_based calculators (including `ebrisk`) now generate
+and store as a pandas-friendly dataset the average GMF, averaged on the events.
+This is useful for plotting and debugging purposes.
+
 We reduced the data transfer due to the GMPEs: in some models (i.e. Europe
 with the Kotha GMPEs) that makes a huge difference (10x in data transfer)
 while for most models you will not see any sensible difference.
@@ -191,6 +195,10 @@ in event based/scenario calculations.
 
 Now we raise an early error if the parameter `soil_intensities` is set with an
 amplification method which is not "convolution".
+
+We added a check on the vulnerability functions
+with the Beta distribution: the mean ratios cannot contain zeros unless the
+corresponding coefficients of variation are zeros too.
 
 # oq commands
 
