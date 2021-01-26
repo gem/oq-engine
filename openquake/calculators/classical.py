@@ -33,6 +33,7 @@ from openquake.baselib.general import (
     get_nbytes_msg)
 from openquake.hazardlib.source.point import (
     PointSource, grid_point_sources, msr_name)
+from openquake.hazardlib.source.base import EPS
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
@@ -47,7 +48,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
-EPS = .01  # used for src.nsites outside the maximum_distance
 BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight
 # with BUFFER = 1 we would have lots of apparently light sources
 # collected together in an extra-slow task, as it happens in SHARE
@@ -161,7 +161,7 @@ def preclassical(srcs, srcfilter, params, monitor):
 
     NB: srcfilter can be on a reduced site collection for performance reasons
     """
-    # nrups, nsites, time, task_no
+    # src.id -> nrups, nsites, time, task_no
     calc_times = AccumDict(accum=numpy.zeros(4, F32))
     sources = []
     grp_id = srcs[0].grp_id
