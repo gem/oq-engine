@@ -70,9 +70,10 @@ source_info_dt = numpy.dtype([
     ('code', (numpy.string_, 1)),      # 2
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
-    ('eff_ruptures', numpy.uint32),    # 5
-    ('trti', numpy.uint8),             # 6
-    ('task_no', numpy.uint16),         # 7
+    ('est_ruptures', numpy.uint32),    # 5
+    ('eff_ruptures', numpy.uint32),    # 6
+    ('trti', numpy.uint8),             # 7
+    ('task_no', numpy.uint16),         # 8
 ])
 
 
@@ -719,7 +720,7 @@ def save_source_info(csm, h5):
         for src in sg:
             lens.append(len(src.et_ids))
             row = [src.source_id, src.grp_id, src.code,
-                   0, 0, 0, csm.full_lt.trti[src.tectonic_region_type], 0]
+                   0, 0, 0, 0, csm.full_lt.trti[src.tectonic_region_type], 0]
             wkts.append(src._wkt)
             data[src.id] = row
     logging.info('There are %d groups and %d sources with len(et_ids)=%.2f',

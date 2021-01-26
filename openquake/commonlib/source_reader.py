@@ -30,7 +30,7 @@ from openquake.hazardlib.lt import apply_uncertainties
 TWO16 = 2 ** 16  # 65,536
 by_id = operator.attrgetter('source_id')
 
-CALC_TIME, NUM_SITES, EFF_RUPTURES, TASK_NO = 3, 4, 5, 7
+CALC_TIME, NUM_SITES, EST_RUPTURES, EFF_RUPTURES, TASK_NO = 3, 4, 5, 6, 8
 
 
 def et_ids(src):
@@ -339,8 +339,10 @@ class CompositeSourceModel:
         for src_id, arr in calc_times.items():
             row = self.source_info[src_id]
             row[CALC_TIME] += arr[2]
-            if len(arr) == 4:  # after preclassical
+            if len(arr) == 4:
+                # after preclassical arr = (nrups, nsites, time, task_no)
                 row[TASK_NO] = arr[3]
+                row[EST_RUPTURES] = arr[0]
             if nsites:
                 row[EFF_RUPTURES] += arr[0]
                 row[NUM_SITES] += arr[1]
