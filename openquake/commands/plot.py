@@ -111,7 +111,9 @@ def make_figure_hmaps(extractors, what):
         itime = oq1.investigation_time
         assert oq2.investigation_time == itime
         sitecol = ex1.get('sitecol')
-        assert (ex2.get('sitecol').array == sitecol.array).all()
+        array2 = ex2.get('sitecol').array
+        for name in ('lon', 'lat'):
+            numpy.testing.assert_equal(array2[name], sitecol.array[name])
         hmaps1 = ex1.get(what)
         hmaps2 = ex2.get(what)
         [imt] = hmaps1.imt
