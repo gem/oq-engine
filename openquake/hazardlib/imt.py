@@ -267,7 +267,7 @@ class PGDMax(IMT):
     Maximum between vert_settlement and lat_spread
     """
     def __call__(self, vert_settlement, lat_spread):
-        return max(vert_settlement, lat_spread)
+        return numpy.maximum(vert_settlement, lat_spread)
 
 
 class PGDGeomMean(IMT):

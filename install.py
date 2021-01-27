@@ -148,8 +148,7 @@ def before_checks(inst, remove, usage):
 
     # check venv
     if sys.prefix != sys.base_prefix:
-        sys.exit('You are inside a virtual environment! '
-                 'Please use the system Python')
+        sys.exit('You are inside a virtual environment! Please deactivate')
 
     # check user
     user = getpass.getuser()

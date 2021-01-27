@@ -978,10 +978,10 @@ class RiskCalculator(HazardCalculator):
             a list of RiskInputs objects, sorted by IMT.
         """
         logging.info('Building risk inputs from %d realization(s)', self.R)
-        imtls = self.oqparam.imtls
-        if not set(self.oqparam.risk_imtls) & set(imtls):
+        imtset = set(self.oqparam.imtls) | set(self.oqparam.get_sec_imts())
+        if not set(self.oqparam.risk_imtls) & imtset:
             rsk = ', '.join(self.oqparam.risk_imtls)
-            haz = ', '.join(imtls)
+            haz = ', '.join(imtset)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         if not hasattr(self.crmodel, 'tmap'):

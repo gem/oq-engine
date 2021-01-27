@@ -41,6 +41,10 @@ parallelize by `number_of_ground_motion_fields` if there are more than
 `max_sites_disagg` sites (i.e. 10 sites). This improved a lot the performance
 in cases with many thousands of sites.
 
+The scenario and event_based calculators (including `ebrisk`) now generate
+and store as a pandas-friendly dataset the average GMF, averaged on the events.
+This is useful for plotting and debugging purposes.
+
 We reduced the data transfer due to the GMPEs: in some models (i.e. Europe
 with the Kotha GMPEs) that makes a huge difference (10x in data transfer)
 while for most models you will not see any sensible difference.
@@ -89,11 +93,23 @@ calculators in engine 3.10 causing an increase of the data transfer
 in hazard curves. That was killing the performance in the case of
 calculations with many thousands of sites. It is fixed now.
 
+The risk model is now stored in a pandas-friendly way; that improves by
+two orders of magnitude the saving time in calculations with many thousands
+of vulnerability/fragility functions.
+
 dd_data is now pandas-friendly.
 
 We fixed a bug in the calculation of averages losses in scenario_risk
 calculations in presence of events with zero losses that were incorrectly
 discarded.
+
+Now `ignore_covs = 0` effectively set all the coefficients of variation
+to zero even when using the Beta distribution.
+
+The CSV exporters have been extend to save pandas DataFrame, thus improving
+the speed of several exporters. Moreover various exporters have
+been changed in order to unify the agg_losses-XXX outputs between ebrisk,
+event_based_risk and scenario_risk.
 
 # Other new features/improvements
 
@@ -191,6 +207,16 @@ in event based/scenario calculations.
 
 Now we raise an early error if the parameter `soil_intensities` is set with an
 amplification method which is not "convolution".
+
+We added a check on the vulnerability functions
+with the Beta distribution: the mean ratios cannot contain zeros unless the
+corresponding coefficients of variation are zeros too.
+
+We perform the disaggregation checks before starting the classical part of
+the calculation, so the user gets an early error in case of wrong parameters.
+
+The engine warns the user if it discover a situation with zero losses
+corresponding to nonzero GMFs.
 
 # oq commands
 
