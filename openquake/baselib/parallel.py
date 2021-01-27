@@ -965,12 +965,6 @@ def workers_start():
             args += ['-m', 'openquake.baselib.workerpool', '-n', cores]
         subprocess.Popen(args, start_new_session=True)
         logging.info(args)
-    #if OQDIST == 'dask':  # does not work
-    #    host, port = sched.split(':')
-    #    with open(os.path.expanduser('~/dask.log'), 'a') as log:
-    #        subprocess.Popen([
-    #            sys.executable, '-m', 'distributed.cli.dask_scheduler',
-    #            '--host', host, '--port', port], stdout=log, stderr=log)
 
 
 def workers_stop():
@@ -986,7 +980,7 @@ def workers_stop():
     return 'stopped'
 
 
-def workers_status(wait=False):
+def workers_status():
     """
     :returns: a list [(host name, running, total), ...]
     """
@@ -1009,7 +1003,7 @@ def workers_status(wait=False):
         return out
 
     elif OQDIST == 'zmq':
-        return workerpool.WorkerMaster().status(wait)
+        return workerpool.WorkerMaster().status()
 
 
 def workers_wait(seconds=30):

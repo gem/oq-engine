@@ -45,7 +45,6 @@
     aggregate loss curves (up to 100x speedup)
   * Removed misleading zero losses in agg_losses.csv
   * Fixed `oq recompute_losses` and renamed it to `oq reaggregate`
-  * Added a limit of 65,536 to the maximum number of aggregation tags
   * Bug fix: ignore_covs=true now sets the coefficient of variations to zero
 
   [Anirudh Rao]

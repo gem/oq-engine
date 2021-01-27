@@ -859,9 +859,11 @@ class HazardCalculator(BaseCalculator):
             save_agg_values(
                 self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 
-    def store_rlz_info(self, eff_ruptures):
+    def store_rlz_info(self, rel_ruptures):
         """
         Save info about the composite source model inside the full_lt dataset
+
+        :param rel_ruptures: dictionary TRT -> number of relevant ruptures
         """
         oq = self.oqparam
         if hasattr(self, 'full_lt'):  # no scenario
@@ -893,7 +895,7 @@ class HazardCalculator(BaseCalculator):
         # check for gsim logic tree reduction
         discard_trts = []
         for trt in self.full_lt.gsim_lt.values:
-            if eff_ruptures.get(trt, 0) == 0:
+            if rel_ruptures.get(trt, 0) == 0:
                 discard_trts.append(trt)
         if (discard_trts and 'scenario' not in oq.calculation_mode
                 and 'event_based' not in oq.calculation_mode
@@ -978,10 +980,10 @@ class RiskCalculator(HazardCalculator):
             a list of RiskInputs objects, sorted by IMT.
         """
         logging.info('Building risk inputs from %d realization(s)', self.R)
-        imtls = self.oqparam.imtls
-        if not set(self.oqparam.risk_imtls) & set(imtls):
+        imtset = set(self.oqparam.imtls) | set(self.oqparam.get_sec_imts())
+        if not set(self.oqparam.risk_imtls) & imtset:
             rsk = ', '.join(self.oqparam.risk_imtls)
-            haz = ', '.join(imtls)
+            haz = ', '.join(imtset)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         if not hasattr(self.crmodel, 'tmap'):

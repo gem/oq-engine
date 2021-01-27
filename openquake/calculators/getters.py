@@ -506,6 +506,7 @@ class RuptureGetter(object):
                 proxies.append(proxy)
         return proxies
 
+    # called in ebrisk calculations
     def split(self, srcfilter, maxw):
         """
         :yields: RuptureProxies with weight < maxw

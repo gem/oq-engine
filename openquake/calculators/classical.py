@@ -305,7 +305,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 eff_sites += rec[1] / rec[0]
         self.by_task[extra['task_no']] = (
             eff_rups, eff_sites, sorted(srcids))
-        self.eff_ruptures[extra.pop('trt')] += eff_rups
+        self.rel_ruptures[extra.pop('trt')] += eff_rups
         grp_id = extra['grp_id']
         self.counts[grp_id] -= 1
         if self.oqparam.disagg_by_src:
@@ -366,7 +366,9 @@ class ClassicalCalculator(base.HazardCalculator):
         self.by_task = {}  # task_no => src_ids
         self.maxradius = 0
         self.Ns = len(self.csm.source_info)
-        self.eff_ruptures = AccumDict(accum=0)  # trt -> eff_ruptures
+        self.rel_ruptures = AccumDict(accum=0)  # trt -> rel_ruptures
+        # NB: the relevant ruptures are less than the effective ruptures,
+        # which are a preclassical concept
         if self.oqparam.disagg_by_src:
             sources = self.get_source_ids()
             self.datastore.create_dset(
@@ -492,7 +494,7 @@ class ClassicalCalculator(base.HazardCalculator):
         return True
 
     def store_info(self, psd):
-        self.store_rlz_info(self.eff_ruptures)
+        self.store_rlz_info(self.rel_ruptures)
         source_ids = self.store_source_info(self.calc_times)
         if self.by_task:
             logging.info('Storing by_task information')

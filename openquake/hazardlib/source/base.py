@@ -55,6 +55,9 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         Determine the source weight from the number of ruptures
         """
+        # NB: for point sources .num_ruptures is preset in preclassical,
+        # and it is less than the real number of ruptures if the
+        # pointsource_distance is set
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
         return self.num_ruptures * self.ngsims * (
