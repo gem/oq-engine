@@ -128,7 +128,8 @@ def install_standalone(venv):
     for app in 'standalone ipt taxtweb taxonomy'.split():
         try:
             subprocess.check_call(['%s/bin/pip' % venv, 'install',
-                                   '--upgrade', STANDALONE % app])
+                                   '--upgrade', STANDALONE % app],
+                                  env={'PYBUILD_NAME': 'oq-taxonomy'})
         except Exception as exc:
             print('%s: could not install %s' % (exc, STANDALONE % app))
 
