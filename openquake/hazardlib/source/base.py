@@ -62,7 +62,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             self.num_ruptures = self.count_ruptures()
         w = self.num_ruptures * self.ngsims * (.1 if self.nsites == EPS else 1)
         if hasattr(self, 'nodal_plane_distribution'):  # pointlike
-            w *= .2  # reduce weight of point sources compared to others
+            w *= .1  # reduce weight of point sources compared to others
         return w
 
     @property
