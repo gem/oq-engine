@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import os.path
 import logging
 import numpy
@@ -327,11 +328,14 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # compute_gmfs in parallel
         nr = len(self.datastore['ruptures'])
-        self.datastore.swmr_on()
         logging.info('Reading {:_d} ruptures'.format(nr))
         iterargs = ((rgetter, self.param)
                     for rgetter in gen_rupture_getters(
                             self.datastore, oq.concurrent_tasks))
+        if sys.platform != 'linux':
+            # avoid the usual damned h5py error, last seen on macos
+            iterargs = list(iterargs)
+        self.datastore.swmr_on()
         smap = parallel.Starmap(
             self.core_task.__func__, iterargs, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.srcfilter)
