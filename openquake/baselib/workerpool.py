@@ -85,7 +85,6 @@ class WorkerMaster(object):
         stopped = []
         for host, _ in self.host_cores:
             if not general.socket_ready((host, self.ctrl_port)):
-                print('%s not running' % host)
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
@@ -108,7 +107,6 @@ class WorkerMaster(object):
         killed = []
         for host, _ in self.host_cores:
             if not general.socket_ready((host, self.ctrl_port)):
-                print('%s not running' % host)
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
