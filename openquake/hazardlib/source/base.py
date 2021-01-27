@@ -60,8 +60,10 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         # pointsource_distance is set
         if not self.num_ruptures:
             self.num_ruptures = self.count_ruptures()
-        return self.num_ruptures * self.ngsims * (
-            .1 if self.nsites == EPS else 1)
+        w = self.num_ruptures * self.ngsims * (.1 if self.nsites == EPS else 1)
+        if hasattr(self, 'nodal_plane_distribution'):  # pointlike
+            w *= .2  # reduce weight of point sources compared to others
+        return w
 
     @property
     def et_ids(self):
