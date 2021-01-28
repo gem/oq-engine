@@ -167,7 +167,7 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving ruptures and events'):
             imp.import_rups(self.datastore.getitem('ruptures')[()])
 
-    def save_avg_gmf(self, avg_gmf):
+    def save_avg_gmf(self, avg_gmf, sig_gmf):
         """
         Compute and save the GMF averaged on the events
 
@@ -188,7 +188,9 @@ class EventBasedCalculator(base.HazardCalculator):
             rlzs = self.rlzs[df.eid.to_numpy()]
             ws = 1 / self.num_events[rlzs] / self.R
             for col in avg_gmf:
-                avg_gmf[col][sid] += df[col].to_numpy() @ ws
+                vals = df[col].to_numpy()
+                avg_gmf[col][sid] += vals @ ws
+                sig_gmf[col][sid] += vals ** 2 @ ws
         return gmf_df.eid.unique()
 
     def agg_dicts(self, acc, result):
@@ -348,8 +350,13 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.num_events = numpy.bincount(self.rlzs)  # events by rlz
                 avg_gmf = {imt: numpy.zeros(self.N, F32)
                            for imt in oq.all_imts()}
-                rel_events = self.save_avg_gmf(avg_gmf)
+                sig2_gmf = {imt: numpy.zeros(self.N, F32)
+                            for imt in oq.all_imts()}
+                rel_events = self.save_avg_gmf(avg_gmf, sig2_gmf)
+                sig_gmf = {imt: numpy.sqrt(sig2_gmf[imt] - avg_gmf[imt]**2)
+                           for imt in oq.all_imts()}
                 self.datastore.create_dframe('avg_gmf', avg_gmf.items())
+                self.datastore.create_dframe('sig_gmf', sig_gmf.items())
             e = len(rel_events)
             if e == 0:
                 raise RuntimeError(
