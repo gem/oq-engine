@@ -68,11 +68,9 @@ def calc_risk(df, param, monitor):
     haz_by_sid = {s: d for s, d in df.groupby('sid')}
     losses_by_A = numpy.zeros((len(assets_df), len(alt.loss_names)), F32)
     acc['avg_gmf'] = avg_gmf = {}
-    acc['sig2_gmf'] = sig2_gmf = {}
     for col in df.columns:
         if col not in 'sid eid rlz':
             avg_gmf[col] = numpy.zeros(param['N'], F32)
-            sig2_gmf[col] = numpy.zeros(param['N'], F32)
 
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
@@ -92,7 +90,6 @@ def calc_risk(df, param, monitor):
             if col not in 'sid eid rlz':
                 vals = haz[col].to_numpy()
                 avg_gmf[col][sid] = vals @ ws
-                sig2_gmf[col][sid] = vals ** 2 @ ws
         if param['avg_losses']:
             with mon_avg:
                 for lni, ln in enumerate(alt.loss_names):
@@ -224,8 +221,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.swmr_on()
         self.avg_gmf = general.AccumDict(
             accum=numpy.zeros(self.N, F32))  # imt -> gmvs
-        self.sig2_gmf = general.AccumDict(
-            accum=numpy.zeros(self.N, F32))  # imt -> gmvs**2
         smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', srcfilter)
         smap.monitor.save('crmodel', self.crmodel)
@@ -258,7 +253,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
         self.events_per_sid.append(dic['events_per_sid'])
         self.avg_gmf += dic['avg_gmf']
-        self.sig2_gmf += dic['sig2_gmf']
 
     def post_execute(self, dummy):
         """
@@ -267,9 +261,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         self.datastore.create_dframe('avg_gmf', self.avg_gmf.items())
-        sig_gmf = {imt: numpy.sqrt(self.sig2_gmf[imt] - self.avg_gmf[imt]**2)
-                   for imt in oq.all_imts()}
-        self.datastore.create_dframe('sig_gmf', sig_gmf.items())
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run(exports='')

@@ -267,8 +267,11 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
+        # checking avg_gmf and sig_gmf
         avg_gmf = self.calc.datastore.read_df('avg_gmf')
         aac(avg_gmf.to_numpy(), 0.010628, atol=1E-5)
+        sig_gmf = self.calc.datastore.read_df('sig_gmf')
+        aac(sig_gmf.to_numpy(), 0.02145, atol=1E-5)
 
     def test_case_7(self):
         # 2 models x 3 GMPEs, 1000 samples * 10 SES
