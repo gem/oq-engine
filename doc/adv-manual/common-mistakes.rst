@@ -100,19 +100,18 @@ in the job.ini; you can determine the distance as follows:
 pointsource_distance
 ----------------------------
 
-PointSources (and MultiPointSources and AreaSources,
-which are split into PointSources and therefore are effectively
-the same thing) are not pointwise for the engine: they actually generate
-ruptures with rectangular surfaces, where size
-is determined by the magnitude scaling relationship. The geometry and
-position of such rectangles depends on the hypocenter distribution and
-the nodal plane distribution of the point source, which are used to model
-the uncertainties on the hypocenter location and on the orientation of the
-underlying ruptures.
+PointSources (and MultiPointSources and AreaSources, which are split
+into PointSources and therefore are effectively the same thing) are
+not pointwise for the engine: they actually generate ruptures with
+rectangular surfaces which size is determined by the magnitude scaling
+relationship. The geometry and position of such rectangles depends on
+the hypocenter distribution and the nodal plane distribution of the
+point source, which are used to model the uncertainties on the
+hypocenter location and on the orientation of the underlying ruptures.
 
 Is the effect of the hypocenter/nodal planes distributions relevant?
 Not always: in particular, if you are interested in points that
-are far from the rupture the effect is minimal. So if you have a nodal
+are far away from the rupture the effect is minimal. So if you have a nodal
 plane distribution with 20 planes and a hypocenter distribution with 5
 hypocenters, the engine will consider 20 x 5 ruptures and perform 100
 times more calculations than needed, since at large distance the hazard
@@ -153,6 +152,11 @@ effect of the nodal plane/hypocenter distribution can be negligible: I
 have seen cases when setting setting ``pointsource_distance = 0``
 changed the result in the hazard maps only by 0.1% and gained an order of
 magnitude of speedup. You have to check on a case by case basis.
+
+The ``pointsource_distance`` is also crucial when using the
+`point source gridding`_ approximation: then it can be used to
+speedup calculations even when the nodal plane and hypocenter
+distributions are trivial and no speedup would be expected.
 
 NB: the ``pointsource_distance`` approximation has changed a lot
 across engine releases and you should not expect it to give always the same
@@ -240,3 +244,4 @@ best not to touch this parameter unless you know what you are doing.
 
 .. _equivalent distance approximation: special-features.html#equivalent-epicenter-distance-approximation
 .. _rupture radius: https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/source/point.py
+.. _point source gridding: point-source-gridding.html

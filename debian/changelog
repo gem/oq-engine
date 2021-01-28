@@ -1,6 +1,6 @@
   [Michele Simionato]
   * The boolean fields `vs30measured` and `backarc` where not cast correctly
-    when read for a CSV field (the engine read them always as True)
+    when read from a CSV field (the engine read them always as True)
   * Extended `oq plot` to draw more than 2 plots
   * Raised an early error for zero probabilities in the hypocenter distribution
     or the nodal plane distribution
