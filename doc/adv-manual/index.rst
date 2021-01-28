@@ -29,6 +29,7 @@ Contents:
    multipoint
    parallelization
    special-features
+   point-source-gridding
    asset-site-association
    risk-features
    developing
