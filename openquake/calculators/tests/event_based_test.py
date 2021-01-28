@@ -267,11 +267,25 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
-        # checking avg_gmf and sig_gmf
+        # checking avg_gmf and sig_gmf for the case of 1 site
         avg_gmf = self.calc.datastore.read_df('avg_gmf')
-        aac(avg_gmf.to_numpy(), 0.010628, atol=1E-5)
+        aac(avg_gmf.to_numpy(), 0.010628, atol=1E-5)  # FIXME
         sig_gmf = self.calc.datastore.read_df('sig_gmf')
-        aac(sig_gmf.to_numpy(), 0.02145, atol=1E-5)
+        aac(sig_gmf.to_numpy(), 0.02145, atol=1E-5)  # FIXME
+
+        # comparing with the full calculation
+        # weights = [0.3 , 0.18, 0.12, 0.2 , 0.12, 0.08] for 6 realizations
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
+        weights = self.calc.datastore['weights'][:]
+        eids = df.eid.to_numpy()
+        evs = self.calc.datastore['events'][:][eids]
+        assert len(df.eid.unique()) == len(evs)  # no missing events
+        ws = weights[evs['rlz_id']]
+        values = df.gmv_0.to_numpy()
+        avg = numpy.average(values, weights=ws)
+        aac(avg, 0.01011, atol=1E-5)
+        sig = numpy.sqrt(numpy.average((values-avg)**2, weights=ws))
+        aac(sig, 0.01876, atol=1E-5)
 
     def test_case_7(self):
         # 2 models x 3 GMPEs, 1000 samples * 10 SES
