@@ -657,11 +657,11 @@ class PmapMaker(object):
             for rup in rupiter:
                 rup.sites = sites
                 yield rup
-        loc = getattr(src, 'location', None)
-        if loc and self.pointsource_distance == 0:
-            # all finite size effects are ignored
+        ok = getattr(src, 'location', None) and src.count_nphc() > 1
+        if ok and self.pointsource_distance == 0:
+            # finite size effects are averaged always
             yield from rups(src.avg_ruptures(), sites)
-        elif loc and self.pointsource_distance and src.count_nphc() > 1:
+        elif ok and self.pointsource_distance:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
             cdist = sites.get_cdist(src.location)
