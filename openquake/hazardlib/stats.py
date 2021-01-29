@@ -46,6 +46,44 @@ def norm_cdf(x, a, s):
         return norm.cdf(x, loc=a, scale=s)
 
 
+class AvgStd(object):
+    """
+    A class to incrementally compute weighted average and standard deviation
+    of an array of values. Works on the first axis.
+
+    >>> avgstd = AvgStd()
+    >>> avgstd.inc(numpy.array([[2, 4, 6], [3, 5, 7]]))
+    >>> avgstd
+    <avg=[2.5 4.5 6.5], std=[0.5 0.5 0.5]>
+    """
+    def __init__(self, values=(), weights=None):
+        # initialize the first three statistical momenta
+        self.mom0 = 0
+        self.mom1 = 0
+        self.mom2 = 0
+        if len(values):
+            self.inc(values, weights)
+
+    def inc(self, values, weights=None):
+        n = len(values)
+        if weights is None:
+            weights = numpy.ones(n)
+        self.mom0 += weights @ numpy.ones(n)
+        self.mom1 += weights @ values
+        self.mom2 += weights @ values ** 2
+
+    @property
+    def avg(self):
+        return self.mom1 / self.mom0
+
+    @property
+    def std(self):
+        return numpy.sqrt(self.mom2 / self.mom0 - self.avg ** 2)
+
+    def __repr__(self):
+        return '<avg=%s, std=%s>' % (self.avg, self.std)
+
+
 def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
