@@ -326,7 +326,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             fmts = self.oqparam.exports
         else:  # is a string
             fmts = self.oqparam.exports.split(',')
-        keys = set(self.datastore)
+        keys = set(self.datastore) | {'fullreport'}
         has_hcurves = ('hcurves-stats' in self.datastore or
                        'hcurves-rlzs' in self.datastore)
         if has_hcurves:
