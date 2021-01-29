@@ -554,6 +554,19 @@ class PmapMaker(object):
         # get_poes can easily become 2-3 times worse!
         self.maxsites = 512000 / len(self.gsims) / self.imtls.size
 
+    def count_bytes(self, ctxs):
+        # # usuful for debugging memory issues
+        rparams = len(self.cmaker.REQUIRES_RUPTURE_PARAMETERS)
+        sparams = len(self.cmaker.REQUIRES_SITES_PARAMETERS) + 1
+        dparams = len(self.cmaker.REQUIRES_DISTANCES)
+        nbytes = 0
+        for ctx in ctxs:
+            nsites = len(ctx.sids)
+            nbytes += 8 * rparams
+            nbytes += 8 * sparams * nsites
+            nbytes += 8 * dparams * nsites
+        return nbytes
+
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
         if pmap is None:  # for src_indep
@@ -657,11 +670,11 @@ class PmapMaker(object):
             for rup in rupiter:
                 rup.sites = sites
                 yield rup
-        loc = getattr(src, 'location', None)
-        if loc and self.pointsource_distance == 0:
-            # all finite size effects are ignored
+        ok = getattr(src, 'location', None) and src.count_nphc() > 1
+        if ok and self.pointsource_distance == 0:
+            # finite size effects are averaged always
             yield from rups(src.avg_ruptures(), sites)
-        elif loc and self.pointsource_distance and src.count_nphc() > 1:
+        elif ok and self.pointsource_distance:
             # finite site effects are averaged for sites over the
             # pointsource_distance from the rupture (if any)
             cdist = sites.get_cdist(src.location)

@@ -88,7 +88,8 @@ def calc_risk(df, param, monitor):
         ws = weights[haz['rlz']]
         for col in df.columns:
             if col not in 'sid eid rlz':
-                avg_gmf[col][sid] = haz[col] @ ws
+                vals = haz[col].to_numpy()
+                avg_gmf[col][sid] = vals @ ws
         if param['avg_losses']:
             with mon_avg:
                 for lni, ln in enumerate(alt.loss_names):

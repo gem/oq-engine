@@ -24,7 +24,7 @@ import psutil
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.stats import compute_pmap_stats
+from openquake.hazardlib.stats import compute_pmap_stats, AvgStd
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import nofilter
@@ -167,12 +167,7 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving ruptures and events'):
             imp.import_rups(self.datastore.getitem('ruptures')[()])
 
-    def save_avg_gmf(self, avg_gmf):
-        """
-        Compute and save the GMF averaged on the events
-
-        :returns: the relevant events
-        """
+    def _inc(self, avgstd):
         size = self.datastore.getsize('gmf_data')
         logging.info(f'Stored {humansize(size)} of GMFs')
         avail = psutil.virtual_memory().available
@@ -185,11 +180,12 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Computing avg_gmf')
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         for sid, df in gmf_df.groupby(gmf_df.index):
-            rlzs = self.rlzs[df.eid.to_numpy()]
-            ws = 1 / self.num_events[rlzs] / self.R
-            for col in avg_gmf:
-                avg_gmf[col][sid] += df[col].to_numpy() @ ws
-        return gmf_df.eid.unique()
+            eid = df.pop('eid')
+            for col in df:
+                gmvs = numpy.zeros_like(self.weights)
+                gmvs[eid.to_numpy()] = df[col].to_numpy()
+                avgstd[sid][col] = AvgStd(gmvs, self.weights)
+        return gmf_df.eid.unique()  # the relevant events
 
     def agg_dicts(self, acc, result):
         """
@@ -343,13 +339,24 @@ class EventBasedCalculator(base.HazardCalculator):
             return acc
         if oq.ground_motion_fields:
             with self.monitor('saving avg_gmf', measuremem=True):
-                self.weights = self.datastore['weights'][:]
-                self.rlzs = self.datastore['events']['rlz_id']
-                self.num_events = numpy.bincount(self.rlzs)  # events by rlz
-                avg_gmf = {imt: numpy.zeros(self.N, F32)
-                           for imt in oq.all_imts()}
-                rel_events = self.save_avg_gmf(avg_gmf)
-                self.datastore.create_dframe('avg_gmf', avg_gmf.items())
+                rlzs = self.datastore['events']['rlz_id']
+                self.weights = self.datastore['weights'][:][rlzs]
+                self.num_events = numpy.bincount(rlzs)  # events by rlz
+                sids = self.sitecol.complete.sids
+                avgstd = [AccumDict() for sid in sids]  # imt->AvgStd
+                rel_events = self._inc(avgstd)
+                items = []
+                for imt in oq.all_imts():
+                    avg = numpy.zeros(self.N, F32)
+                    std = numpy.zeros(self.N, F32)
+                    for sid in sids:
+                        dic = avgstd[sid]
+                        if dic:
+                            avg[sid] = dic[imt].avg
+                            std[sid] = dic[imt].std
+                    items.append((imt, avg))
+                    items.append((imt + '_std', std))
+                self.datastore.create_dframe('avg_gmf', items)
             e = len(rel_events)
             if e == 0:
                 raise RuntimeError(
