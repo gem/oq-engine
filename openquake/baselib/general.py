@@ -664,10 +664,10 @@ class AccumDict(dict):
                     # specialized for speed
                     self[k].extend(v)
                 else:
-                    self[k] = self[k] + v
+                    self[k] += v
         else:  # add other to all elements
             for k in self:
-                self[k] = self[k] + other
+                self[k] += other
         return self
 
     def __add__(self, other):
@@ -681,12 +681,12 @@ class AccumDict(dict):
         if hasattr(other, 'items'):
             for k, v in other.items():
                 try:
-                    self[k] = self[k] - v
+                    self[k] -= self[k]
                 except KeyError:
                     self[k] = v
         else:  # subtract other to all elements
             for k in self:
-                self[k] = self[k] - other
+                self[k] -= other
         return self
 
     def __sub__(self, other):
