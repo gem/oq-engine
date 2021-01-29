@@ -554,6 +554,19 @@ class PmapMaker(object):
         # get_poes can easily become 2-3 times worse!
         self.maxsites = 512000 / len(self.gsims) / self.imtls.size
 
+    def count_bytes(self, ctxs):
+        # # usuful for debugging memory issues
+        rparams = len(self.cmaker.REQUIRES_RUPTURE_PARAMETERS)
+        sparams = len(self.cmaker.REQUIRES_SITES_PARAMETERS) + 1
+        dparams = len(self.cmaker.REQUIRES_DISTANCES)
+        nbytes = 0
+        for ctx in ctxs:
+            nsites = len(ctx.sids)
+            nbytes += 8 * rparams
+            nbytes += 8 * sparams * nsites
+            nbytes += 8 * dparams * nsites
+        return nbytes
+
     def _update_pmap(self, ctxs, pmap=None):
         # compute PoEs and update pmap
         if pmap is None:  # for src_indep
