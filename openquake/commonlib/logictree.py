@@ -1116,10 +1116,10 @@ def taxonomy_mapping(filename, taxonomies):
     """
     :param filename: path to the CSV file containing the taxonomy associations
     :param taxonomies: an array taxonomy string -> taxonomy index
-    :returns: (array, [[(taxonomy, weight), ...], ...])
+    :returns: a list of lists [[(taxonomy, weight), ...], ...]
     """
     if filename is None:  # trivial mapping
-        return (), [[(taxo, 1)] for taxo in taxonomies]
+        return [[(taxo, 1)] for taxo in taxonomies]
     dic = {}  # taxonomy index -> risk taxonomy
     array = hdf5.read_csv(filename, {None: hdf5.vstr, 'weight': float}).array
     arr = add_defaults(array, weight=1.)
@@ -1137,7 +1137,7 @@ def taxonomy_mapping(filename, taxonomies):
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
                               (filename, taxo))
         lst.append([(rec['conversion'], rec['weight']) for rec in recs])
-    return arr, lst
+    return lst
 
 
 def capitalize(words):
