@@ -56,12 +56,6 @@ class AvgStd(object):
     >>> avgstd
     <avg=[2.5 4.5 6.5], std=[0.5 0.5 0.5]>
     """
-    @classmethod
-    def fromdf(cls, df, weights=None):
-        dic = {col: cls(df[col].to_numpy(), weights)
-               for col in df.columns}
-        return dic
-
     def __init__(self, values=(), weights=None):
         # initialize the first three statistical momenta
         self.mom0 = 0
