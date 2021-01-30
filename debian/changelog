@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a CSV exporter for the output `avg_gmf`
   * Made the calculation report exportable with `--exports rst`
   * The boolean fields `vs30measured` and `backarc` where not cast correctly
     when read from a CSV field (the engine read them always as True)

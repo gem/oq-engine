@@ -509,9 +509,8 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_26_liq(self):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
-        avgstd = self.calc.datastore['avg_gmf'][:]
-        aac(avgstd[:, 1, 0].max(), 0.035882, rtol=1E-2)
-        aac(avgstd[:, 2, 0].max(), 0.071564, rtol=1E-2)
+        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('avg_gmf.csv', fname)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

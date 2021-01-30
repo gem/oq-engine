@@ -22,6 +22,7 @@ import sys
 import itertools
 import collections
 import numpy
+import pandas
 
 from openquake.baselib.general import (
     group_array, deprecated, AccumDict, DictArray)
@@ -422,6 +423,27 @@ def export_gmf_data_csv(ekey, dstore):
         return [fname, sig_eps_csv, f]
     else:
         return [fname, f]
+
+
+@export.add(('avg_gmf', 'csv'))
+def export_avg_gmf_csv(ekey, dstore):
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol'].complete
+    data = dstore['avg_gmf'][:]
+    dic = {'site_id': sitecol.sids, 'lon': sitecol.lons, 'lat': sitecol.lats}
+    m = 0
+    for imt in oq.imtls:
+        dic['gmv_' + imt] = data[:, m, 0]
+        dic['std_' + imt] = data[:, m, 1]
+        m += 1
+    for imt in oq.get_sec_imts():
+        dic['sep_' + imt] = data[:, m, 0]
+        dic['std_' + imt] = data[:, m, 1]
+        m += 1
+    fname = dstore.build_fname('avg_gmf', '', 'csv')
+    writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
+        pandas.DataFrame(dic), fname, comment=dstore.metadata)
+    return [fname]
 
 
 def _expand_gmv(array, imts):
