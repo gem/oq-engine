@@ -504,7 +504,7 @@ class EventBasedTestCase(CalculatorTestCase):
         arr = read_csv(fname)[:2]
         self.assertEqual(arr.dtype.names,
                          ('site_id', 'event_id', 'gmv_PGA',
-                          'Disp', 'DispProb'))
+                          'sep_Disp', 'sep_DispProb'))
 
     def test_case_26_liq(self):
         # cali liquefaction simplified
