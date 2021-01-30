@@ -80,6 +80,16 @@ class AvgStd(object):
     def std(self):
         return numpy.sqrt(self.mom2 / self.mom0 - self.avg ** 2)
 
+    @property
+    def array(self):
+        """
+        :returns: an array of shape (M, 2)
+        """
+        arr = numpy.zeros(self.mom1.shape + (2,))
+        arr[:, 0] = avg = self.mom1 / self.mom0
+        arr[:, 1] = numpy.sqrt(self.mom2 / self.mom0 - avg ** 2)
+        return arr
+
     def __repr__(self):
         return '<avg=%s, std=%s>' % (self.avg, self.std)
 

@@ -181,10 +181,10 @@ class EventBasedCalculator(base.HazardCalculator):
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         for sid, df in gmf_df.groupby(gmf_df.index):
             eid = df.pop('eid')
-            for col in df:
-                gmvs = numpy.zeros_like(self.weights)
-                gmvs[eid.to_numpy()] = df[col].to_numpy()
-                avgstd[sid][col] = AvgStd(gmvs, self.weights)
+            arr = df.to_numpy()  # shape (E', M)
+            gmvs = numpy.zeros((self.E, arr.shape[1]))
+            gmvs[eid.to_numpy()] = arr
+            avgstd[sid].inc(gmvs, self.weights)
         return gmf_df.eid.unique()  # the relevant events
 
     def agg_dicts(self, acc, result):
@@ -339,24 +339,17 @@ class EventBasedCalculator(base.HazardCalculator):
             return acc
         if oq.ground_motion_fields:
             with self.monitor('saving avg_gmf', measuremem=True):
+                M = len(oq.all_imts())
                 rlzs = self.datastore['events']['rlz_id']
                 self.weights = self.datastore['weights'][:][rlzs]
                 self.num_events = numpy.bincount(rlzs)  # events by rlz
                 sids = self.sitecol.complete.sids
-                avgstd = [AccumDict() for sid in sids]  # imt->AvgStd
+                avgstd = [AvgStd() for sid in sids]
                 rel_events = self._inc(avgstd)
-                items = []
-                for imt in oq.all_imts():
-                    avg = numpy.zeros(self.N, F32)
-                    std = numpy.zeros(self.N, F32)
-                    for sid in sids:
-                        dic = avgstd[sid]
-                        if dic:
-                            avg[sid] = dic[imt].avg
-                            std[sid] = dic[imt].std
-                    items.append((imt, avg))
-                    items.append((imt + '_std', std))
-                self.datastore.create_dframe('avg_gmf', items)
+                avg_gmf = numpy.zeros((self.N, M, 2), F32)
+                for sid in sids:
+                    avg_gmf[sid] = avgstd[sid].array
+                self.datastore['avg_gmf'] = avg_gmf
             e = len(rel_events)
             if e == 0:
                 raise RuntimeError(
