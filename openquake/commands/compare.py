@@ -163,6 +163,9 @@ def main(what, imt, calc_ids: int,
             ms = numpy.mean((array_imt[0] - array_imt[1])**2, axis=0)  # P
             rows = [(str(poe), m) for poe, m in zip(poes, numpy.sqrt(ms))]
             print(views.rst_table(rows, ['poe', 'rms-diff']))
+            maxdiff = numpy.abs(array_imt[0] - array_imt[1]).max(axis=0)
+            rows = [(str(poe), m) for poe, m in zip(poes, maxdiff)]
+            print(views.rst_table(rows, ['poe', 'max-diff']))
 
 
 main.what = dict(help='"hmaps", "hcurves" or "cumtime of"',
