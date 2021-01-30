@@ -216,12 +216,15 @@ sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
 GB = 1024 ** 3
-# use only the "visible" cores, not the total system cores
-# if the underlying OS supports it (macOS does not)
-try:
-    CT = len(psutil.Process().cpu_affinity()) * 2
-except AttributeError:
-    CT = psutil.cpu_count() * 2
+num_cores = int(config.distribution.get('num_cores', '0'))
+if not num_cores:
+    # use only the "visible" cores, not the total system cores
+    # if the underlying OS supports it (macOS does not)
+    try:
+        num_cores = len(psutil.Process().cpu_affinity())
+    except AttributeError:
+        num_cores = psutil.cpu_count()
+CT = num_cores * 2
 
 
 @submit.add('no')
@@ -636,9 +639,6 @@ def getargnames(task_func):
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
-    # use only the "visible" cores, not the total system cores
-    # if the underlying OS supports it (macOS does not)
-    num_cores = int(config.distribution.get('num_cores', '0'))
 
     @classmethod
     def init(cls, distribute=None):
@@ -651,14 +651,14 @@ class Starmap(object):
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = multiprocessing.get_context('spawn').Pool(
-                cls.num_cores or None, init_workers)
+                num_cores, init_workers)
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
             signal.signal(signal.SIGINT, int_handler)
             cls.pids = [proc.pid for proc in cls.pool._pool]
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.dummy.Pool(cls.num_cores or None)
+            cls.pool = multiprocessing.dummy.Pool(num_cores)
         elif cls.distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
 
@@ -837,7 +837,6 @@ class Starmap(object):
 
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
-        num_cores = self.num_cores or CT // 2
         if self.task_queue:
             first_args = self.task_queue[:num_cores]
             self.task_queue[:] = self.task_queue[num_cores:]
