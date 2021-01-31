@@ -216,15 +216,6 @@ sys.setrecursionlimit(1200)  # raised a bit to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
 submit = CallableDict()
 GB = 1024 ** 3
-num_cores = int(config.distribution.get('num_cores', '0'))
-if not num_cores:
-    # use only the "visible" cores, not the total system cores
-    # if the underlying OS supports it (macOS does not)
-    try:
-        num_cores = len(psutil.Process().cpu_affinity())
-    except AttributeError:
-        num_cores = psutil.cpu_count()
-CT = num_cores * 2
 
 
 @submit.add('no')
@@ -639,6 +630,15 @@ def getargnames(task_func):
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
+    num_cores = int(config.distribution.get('num_cores', '0'))
+    if not num_cores:
+        # use only the "visible" cores, not the total system cores
+        # if the underlying OS supports it (macOS does not)
+        try:
+            num_cores = len(psutil.Process().cpu_affinity())
+        except AttributeError:
+            num_cores = psutil.cpu_count()
+    CT = num_cores * 2
 
     @classmethod
     def init(cls, distribute=None):
@@ -651,14 +651,14 @@ class Starmap(object):
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
             cls.pool = multiprocessing.get_context('spawn').Pool(
-                num_cores, init_workers)
+                cls.num_cores, init_workers)
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
             signal.signal(signal.SIGINT, int_handler)
             cls.pids = [proc.pid for proc in cls.pool._pool]
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.dummy.Pool(num_cores)
+            cls.pool = multiprocessing.dummy.Pool(cls.num_cores)
         elif cls.distribute == 'dask':
             cls.dask_client = Client(config.distribution.dask_scheduler)
 
@@ -703,7 +703,7 @@ class Starmap(object):
                 arg0, maxweight, weight, key))
         else:  # split_in_blocks is eager
             if concurrent_tasks is None:
-                concurrent_tasks = CT
+                concurrent_tasks = cls.CT
             taskargs = [[blk] + args for blk in split_in_blocks(
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(task, taskargs, distribute, progress, h5)
@@ -838,8 +838,8 @@ class Starmap(object):
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
         if self.task_queue:
-            first_args = self.task_queue[:num_cores]
-            self.task_queue[:] = self.task_queue[num_cores:]
+            first_args = self.task_queue[:self.num_cores]
+            self.task_queue[:] = self.task_queue[self.num_cores:]
             for func, args in first_args:
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
@@ -880,7 +880,7 @@ class Starmap(object):
                 times.mean(), times.std(), times.min(), times.max())
 
 
-def sequential_apply(task, args, concurrent_tasks=CT,
+def sequential_apply(task, args, concurrent_tasks=Starmap.CT,
                      maxweight=None, weight=lambda item: 1,
                      key=lambda item: 'Unspecified',
                      progress=logging.info):

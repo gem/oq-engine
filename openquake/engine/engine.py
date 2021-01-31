@@ -73,7 +73,7 @@ def set_concurrent_tasks_default(calc):
     workers are available. Do nothing for trivial distributions.
     """
     if OQ_DISTRIBUTE in 'no processpool':  # do nothing
-        num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.CT // 2
+        num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.Starmap.CT // 2
         logging.warning('Using %d cores on %s', num_workers, platform.node())
         return
 
@@ -84,7 +84,7 @@ def set_concurrent_tasks_default(calc):
         logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
         sys.exit(1)
 
-    parallel.CT = num_workers * 2
+    parallel.Starmap.CT = num_workers * 2
     OqParam.concurrent_tasks.default = num_workers * 2
     logging.warning('Using %d %s workers', num_workers, OQ_DISTRIBUTE)
 
