@@ -1,6 +1,7 @@
 ---
 name: docker
-'on':
+on:
+  pull_request:
   schedule:
     - cron: "0 2 * * *"
 
@@ -15,7 +16,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Build image engine with tag nightly
         id: docker_engine
-        run: docker build -t openquake/engine:nightly -f docker/Dockerfile.engine docker
+        run: docker build -t openquake/engine:nightly -f docker/Dockerfile.dev docker
       - name: List Image
         run: |
           docker image ls
