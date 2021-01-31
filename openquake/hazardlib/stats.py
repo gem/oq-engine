@@ -46,52 +46,34 @@ def norm_cdf(x, a, s):
         return norm.cdf(x, loc=a, scale=s)
 
 
-class AvgStd(object):
+def calc_momenta(array, weights):
     """
-    A class to incrementally compute weighted average and standard deviation
-    of an array of values. Works on the first axis.
-
-    >>> avgstd = AvgStd()
-    >>> avgstd.inc(numpy.array([[2, 4, 6], [3, 5, 7]]))
-    >>> avgstd
-    <avg=[2.5 4.5 6.5], std=[0.5 0.5 0.5]>
+    :param array: an array of shape E, ...
+    :param weights: an array of length E
+    :returnsL an array of shape (2, ...) with the first two statistical moments
     """
-    def __init__(self, values=(), weights=None):
-        # initialize the first three statistical momenta
-        self.mom0 = 0
-        self.mom1 = 0
-        self.mom2 = 0
-        if len(values):
-            self.inc(values, weights)
+    momenta = numpy.zeros((2,) + array.shape[1:])
+    momenta[0] = weights @ array
+    momenta[1] = weights @ array ** 2
+    return momenta
 
-    def inc(self, values, weights=None):
-        n = len(values)
-        if weights is None:
-            weights = numpy.ones(n)
-        self.mom0 += weights @ numpy.ones(n)
-        self.mom1 += weights @ values
-        self.mom2 += weights @ values ** 2
 
-    @property
-    def avg(self):
-        return self.mom1 / self.mom0
+def calc_avg_std(momenta, totweight):
+    """
+    :param momenta: an array of shape (2, ...) obtained via calc_momenta
+    :param totweight: total weight to divide for
+    :returns: an array of shape (2, ...) with average and standard deviation
 
-    @property
-    def std(self):
-        return numpy.sqrt(self.mom2 / self.mom0 - self.avg ** 2)
-
-    @property
-    def array(self):
-        """
-        :returns: an array of shape (M, 2)
-        """
-        arr = numpy.zeros(self.mom1.shape + (2,))
-        arr[:, 0] = avg = self.mom1 / self.mom0
-        arr[:, 1] = numpy.sqrt(self.mom2 / self.mom0 - avg ** 2)
-        return arr
-
-    def __repr__(self):
-        return '<avg=%s, std=%s>' % (self.avg, self.std)
+    >>> arr = numpy.array([[2, 4, 6], [3, 5, 7]])
+    >>> weights = numpy.ones(2)
+    >>> calc_avg_std(calc_momenta(arr, weights), weights.sum())
+    array([[2.5, 4.5, 6.5],
+           [0.5, 0.5, 0.5]])
+    """
+    avgstd = numpy.zeros_like(momenta)
+    avgstd[0] = avg = momenta[0] / totweight
+    avgstd[1] = numpy.sqrt(momenta[1] / totweight - avg ** 2)
+    return avgstd
 
 
 def mean_curve(values, weights=None):

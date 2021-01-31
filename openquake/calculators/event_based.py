@@ -24,7 +24,8 @@ import psutil
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.stats import compute_pmap_stats, AvgStd
+from openquake.hazardlib.stats import (
+    compute_pmap_stats, calc_momenta, calc_avg_std)
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import nofilter
@@ -167,7 +168,8 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving ruptures and events'):
             imp.import_rups(self.datastore.getitem('ruptures')[()])
 
-    def _inc(self, avgstd):
+    def calc_momenta(self):
+        momenta = {}  # sid -> array of shape (2, M)
         size = self.datastore.getsize('gmf_data')
         logging.info(f'Stored {humansize(size)} of GMFs')
         avail = psutil.virtual_memory().available
@@ -175,17 +177,14 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.warning(
                 f'There is not enough free RAM ({humansize(avail)}) to read '
                 f'the GMFs, not computing avg_gmf')
-            return numpy.unique(self.datastore['gmf_data/eid'][:])
+            return momenta, numpy.unique(self.datastore['gmf_data/eid'][:])
 
         logging.info('Computing avg_gmf')
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         for sid, df in gmf_df.groupby(gmf_df.index):
-            eid = df.pop('eid')
-            arr = df.to_numpy()  # shape (E', M)
-            gmvs = numpy.zeros((self.E, arr.shape[1]))
-            gmvs[eid.to_numpy()] = arr
-            avgstd[sid].inc(gmvs, self.weights)
-        return gmf_df.eid.unique()  # the relevant events
+            eids = df.pop('eid').to_numpy()
+            momenta[sid] = calc_momenta(df.to_numpy(), self.weights[eids])
+        return momenta, gmf_df.eid.unique()
 
     def agg_dicts(self, acc, result):
         """
@@ -342,13 +341,13 @@ class EventBasedCalculator(base.HazardCalculator):
                 M = len(oq.all_imts())
                 rlzs = self.datastore['events']['rlz_id']
                 self.weights = self.datastore['weights'][:][rlzs]
+                totweight = self.weights.sum()
                 self.num_events = numpy.bincount(rlzs)  # events by rlz
                 sids = self.sitecol.complete.sids
-                avgstd = [AvgStd() for sid in sids]
-                rel_events = self._inc(avgstd)
+                momenta, rel_events = self.calc_momenta()
                 avg_gmf = numpy.zeros((self.N, M, 2), F32)
                 for sid in sids:
-                    avg_gmf[sid] = avgstd[sid].array
+                    avg_gmf[sid] = calc_avg_std(momenta[sid], totweight).T
                 self.datastore['avg_gmf'] = avg_gmf
             e = len(rel_events)
             if e == 0:

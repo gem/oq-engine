@@ -97,12 +97,12 @@ class EventBasedTestCase(CalculatorTestCase):
         assert len(df.sid.unique()) == 1
         weights = self.calc.datastore['weights'][:]
         rlzs = self.calc.datastore['events']['rlz_id']
+        ws = weights[rlzs]
         gmvs = numpy.zeros(len(rlzs))  # number of events
         gmvs[df.eid.to_numpy()] = df.gmv_0.to_numpy()
-        avgstd = stats.AvgStd(gmvs, weights[rlzs])
+        avgstd = stats.calc_avg_std(stats.calc_momenta(gmvs, ws), ws.sum())
         avg_gmf = self.calc.datastore['avg_gmf'][:]  # N, M, 2
-        aac(avg_gmf[0, 0, 0], avgstd.avg)
-        aac(avg_gmf[0, 0, 1], avgstd.std)
+        aac(avg_gmf[0, 0], avgstd)
 
     def test_spatial_correlation(self):
         expected = {sc1: [0.99, 0.41],
