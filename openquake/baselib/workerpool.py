@@ -1,8 +1,8 @@
 import os
 import sys
-import time
 import signal
 import shutil
+import getpass
 import logging
 import tempfile
 import subprocess
@@ -41,6 +41,7 @@ class WorkerMaster(object):
     """
     def __init__(self, ctrl_port=config.zworkers.ctrl_port,
                  host_cores=config.zworkers.host_cores,
+                 remote_user=config.zworkers.remote_user,
                  remote_python=config.zworkers.remote_python,
                  receiver_ports=None):
         # NB: receiver_ports is not used but needed for compliance
@@ -52,6 +53,7 @@ class WorkerMaster(object):
                 raise InvalidFile('openquake.cfg: found %s %s' %
                                   (host, cores))
         self.remote_python = remote_python or sys.executable
+        self.remote_user = remote_user or getpass.getuser()
         self.popens = []
 
     def start(self):
@@ -68,7 +70,8 @@ class WorkerMaster(object):
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
-                args = ['ssh', '-f', '-T', host, self.remote_python]
+                args = ['ssh', '-f', '-T', f'{self.remote_user}@{host}',
+                        self.remote_python]
             args += ['-m', 'openquake.baselib.workerpool', ctrl_url,
                      '-n', cores]
             if host != '127.0.0.1':
