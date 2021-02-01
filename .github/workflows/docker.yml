@@ -1,7 +1,6 @@
 ---
 name: docker
 on:
-  pull_request:
   schedule:
     - cron: "0 2 * * *"
 
