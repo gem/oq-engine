@@ -26,7 +26,7 @@ import numpy.testing
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import countby, gettemp
 from openquake.baselib.datastore import read
-from openquake.hazardlib import nrml, InvalidFile
+from openquake.hazardlib import nrml, InvalidFile, stats
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import max_rel_diff_index
@@ -91,6 +91,19 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
 
 class EventBasedTestCase(CalculatorTestCase):
 
+    def check_avg_gmf(self):
+        # checking avg_gmf with a single site
+        df = self.calc.datastore.read_df('gmf_data')
+        assert len(df.sid.unique()) == 1
+        weights = self.calc.datastore['weights'][:]
+        rlzs = self.calc.datastore['events']['rlz_id']
+        ws = weights[rlzs]
+        gmvs = numpy.zeros(len(rlzs))  # number of events
+        gmvs[df.eid.to_numpy()] = df.gmv_0.to_numpy()
+        avgstd = stats.calc_avg_std(stats.calc_momenta(gmvs, ws), ws.sum())
+        avg_gmf = self.calc.datastore['avg_gmf'][:]  # 2, N, M
+        aac(avg_gmf[:, 0, 0], avgstd)
+
     def test_spatial_correlation(self):
         expected = {sc1: [0.99, 0.41],
                     sc2: [0.99, 0.64],
@@ -130,6 +143,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
+        self.check_avg_gmf()
 
         # make sure ses_id >= 65536 is valid
         high_ses = (self.calc.datastore['events']['ses_id'] >= 65536).sum()
@@ -267,8 +281,9 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
-        avg_gmf = self.calc.datastore.read_df('avg_gmf')
-        aac(avg_gmf.to_numpy(), 0.010628, atol=1E-5)
+        # comparing with the full calculation
+        # weights = [0.3 , 0.18, 0.12, 0.2 , 0.12, 0.08] for 6 realizations
+        self.check_avg_gmf()
 
     def test_case_7(self):
         # 2 models x 3 GMPEs, 1000 samples * 10 SES
@@ -489,14 +504,13 @@ class EventBasedTestCase(CalculatorTestCase):
         arr = read_csv(fname)[:2]
         self.assertEqual(arr.dtype.names,
                          ('site_id', 'event_id', 'gmv_PGA',
-                          'Disp', 'DispProb'))
+                          'sep_Disp', 'sep_DispProb'))
 
     def test_case_26_liq(self):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
-        df = self.calc.datastore.read_df('avg_gmf')
-        aac(df.LiqProb.max(), 0.031107, rtol=1E-2)
-        aac(df.PGDGeomMean.max(), 0.062308, rtol=1E-2)
+        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('avg_gmf.csv', fname)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

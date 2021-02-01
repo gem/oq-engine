@@ -24,6 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib import datastore, hdf5, parallel, general
+from openquake.hazardlib import stats
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
@@ -67,16 +68,13 @@ def calc_risk(df, param, monitor):
     mal = param['minimum_asset_loss']
     haz_by_sid = {s: d for s, d in df.groupby('sid')}
     losses_by_A = numpy.zeros((len(assets_df), len(alt.loss_names)), F32)
-    acc['avg_gmf'] = avg_gmf = {}
-    for col in df.columns:
-        if col not in 'sid eid rlz':
-            avg_gmf[col] = numpy.zeros(param['N'], F32)
-
+    acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
             haz = haz_by_sid[sid]
         except KeyError:  # no hazard here
             continue
+        gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
         with mon_risk:
             assets = asset_df.to_records()  # fast
             acc['events_per_sid'] += len(haz)
@@ -86,9 +84,7 @@ def calc_risk(df, param, monitor):
             alt.aggregate(out, mal, aggby)
             # NB: after the aggregation out contains losses, not loss_ratios
         ws = weights[haz['rlz']]
-        for col in df.columns:
-            if col not in 'sid eid rlz':
-                avg_gmf[col][sid] = haz[col] @ ws
+        acc['momenta'][:, sid] = stats.calc_momenta(gmvs, ws)  # shape (2, M)
         if param['avg_losses']:
             with mon_avg:
                 for lni, ln in enumerate(alt.loss_names):
@@ -180,6 +176,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.aggkey, oq.loss_dt().names, sec_losses)
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
+        self.param['M'] = len(oq.all_imts())
         ct = oq.concurrent_tasks or 1
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
@@ -218,8 +215,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = []
         self.datastore.swmr_on()
-        self.avg_gmf = general.AccumDict(
-            accum=numpy.zeros(self.N, F32))  # imt -> gmvs
+        M = len(oq.all_imts())
+        self.momenta = numpy.zeros((2, self.N, M))
         smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', srcfilter)
         smap.monitor.save('crmodel', self.crmodel)
@@ -251,7 +248,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
         self.events_per_sid.append(dic['events_per_sid'])
-        self.avg_gmf += dic['avg_gmf']
+        self.momenta += dic['momenta']
 
     def post_execute(self, dummy):
         """
@@ -259,7 +256,9 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
-        self.datastore.create_dframe('avg_gmf', self.avg_gmf.items())
+        rlzs = self.datastore['events']['rlz_id']
+        totw = self.datastore['weights'][:][rlzs].sum()
+        self.datastore['avg_gmf'] = stats.calc_avg_std(self.momenta, totw)
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run(exports='')

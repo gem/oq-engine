@@ -43,7 +43,7 @@
 | case_40 | |
 | case_41 | |
 | case_42 | |
-| case_43 | |
+| case_43 | Test for ps_grid_spacing |
 | case_44 | |
 | case_45 | |
 | case_46 | |

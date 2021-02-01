@@ -20,7 +20,7 @@ from numpy.testing import assert_almost_equal as aae
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
-    case_9, case_10, case_11, case_12, case_13, case_14)
+    case_9, case_10, case_11, case_12, case_13, case_14, case_15)
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
@@ -145,3 +145,10 @@ class ScenarioTestCase(CalculatorTestCase):
         # new Swiss GMPEs
         self.run_calc(case_14.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 1000)
+
+    def test_case_15(self):
+        # choosing invalid GMPE
+        with self.assertRaises(RuntimeError) as ctx:
+            self.run_calc(case_15.__file__, 'job.ini')
+        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id='0')"
+                      " CorrelationButNoInterIntraStdDevs", str(ctx.exception))

@@ -24,7 +24,8 @@ import psutil
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.stats import compute_pmap_stats
+from openquake.hazardlib.stats import (
+    compute_pmap_stats, calc_momenta, calc_avg_std)
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import nofilter
@@ -167,12 +168,8 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('saving ruptures and events'):
             imp.import_rups(self.datastore.getitem('ruptures')[()])
 
-    def save_avg_gmf(self, avg_gmf):
-        """
-        Compute and save the GMF averaged on the events
-
-        :returns: the relevant events
-        """
+    def calc_momenta(self):
+        momenta = {}  # sid -> array of shape (2, M)
         size = self.datastore.getsize('gmf_data')
         logging.info(f'Stored {humansize(size)} of GMFs')
         avail = psutil.virtual_memory().available
@@ -180,16 +177,14 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.warning(
                 f'There is not enough free RAM ({humansize(avail)}) to read '
                 f'the GMFs, not computing avg_gmf')
-            return numpy.unique(self.datastore['gmf_data/eid'][:])
+            return momenta, numpy.unique(self.datastore['gmf_data/eid'][:])
 
         logging.info('Computing avg_gmf')
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         for sid, df in gmf_df.groupby(gmf_df.index):
-            rlzs = self.rlzs[df.eid.to_numpy()]
-            ws = 1 / self.num_events[rlzs] / self.R
-            for col in avg_gmf:
-                avg_gmf[col][sid] += df[col].to_numpy() @ ws
-        return gmf_df.eid.unique()
+            eids = df.pop('eid').to_numpy()
+            momenta[sid] = calc_momenta(df.to_numpy(), self.weights[eids])
+        return momenta, gmf_df.eid.unique()
 
     def agg_dicts(self, acc, result):
         """
@@ -265,6 +260,8 @@ class EventBasedCalculator(base.HazardCalculator):
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]
             aw = get_rup_array(ebrs, self.srcfilter)
+            if len(aw) == 0:
+                raise RuntimeError('The rupture is too far from the sites!')
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
             aw.array['n_occ'] = G
@@ -343,13 +340,16 @@ class EventBasedCalculator(base.HazardCalculator):
             return acc
         if oq.ground_motion_fields:
             with self.monitor('saving avg_gmf', measuremem=True):
-                self.weights = self.datastore['weights'][:]
-                self.rlzs = self.datastore['events']['rlz_id']
-                self.num_events = numpy.bincount(self.rlzs)  # events by rlz
-                avg_gmf = {imt: numpy.zeros(self.N, F32)
-                           for imt in oq.all_imts()}
-                rel_events = self.save_avg_gmf(avg_gmf)
-                self.datastore.create_dframe('avg_gmf', avg_gmf.items())
+                M = len(oq.all_imts())
+                rlzs = self.datastore['events']['rlz_id']
+                self.weights = self.datastore['weights'][:][rlzs]
+                totweight = self.weights.sum()
+                self.num_events = numpy.bincount(rlzs)  # events by rlz
+                momenta, rel_events = self.calc_momenta()
+                avg_gmf = numpy.zeros((2, self.N, M), F32)
+                for sid in momenta:
+                    avg_gmf[:, sid] = calc_avg_std(momenta[sid], totweight)
+                self.datastore['avg_gmf'] = avg_gmf
             e = len(rel_events)
             if e == 0:
                 raise RuntimeError(

@@ -1,6 +1,10 @@
   [Michele Simionato]
+  * Added a CSV exporter for the output `avg_gmf`
+  * Fixed reporting in case of `CorrelationButNoInterIntraStdDevs` errors
+  * Better error message when the rupture is far away from the sitesa
+  * Made the calculation report exportable with `--exports rst`
   * The boolean fields `vs30measured` and `backarc` where not cast correctly
-    when read for a CSV field (the engine read them always as True)
+    when read from a CSV field (the engine read them always as True)
   * Extended `oq plot` to draw more than 2 plots
   * Raised an early error for zero probabilities in the hypocenter distribution
     or the nodal plane distribution
