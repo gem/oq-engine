@@ -70,11 +70,11 @@ def calc_risk(df, param, monitor):
     losses_by_A = numpy.zeros((len(assets_df), len(alt.loss_names)), F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
     for sid, asset_df in assets_df.groupby('site_id'):
-        # skip sid, eid, rlz
-        gmvs = df[df.sid == sid][df.columns[3:]].to_numpy()
-        if len(gmvs) == 0:  # no hazard here
+        try:
+            haz = haz_by_sid[sid]
+        except KeyError:  # no hazard here
             continue
-        haz = haz_by_sid[sid]
+        gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
         with mon_risk:
             assets = asset_df.to_records()  # fast
             acc['events_per_sid'] += len(haz)
