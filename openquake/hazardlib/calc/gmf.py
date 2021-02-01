@@ -212,9 +212,10 @@ class GmfComputer(object):
                 result[imti], sig[imti], eps[imti] = self._compute(
                      gs, num_events, imt)
             except Exception as exc:
-                raise exc.__class__(
-                    '%s for %s, %s, source_id=%s' %
-                    (exc, gs, imt, self.source_id)
+                raise RuntimeError(
+                    '(%s, %s, source_id=%r) %s: %s' %
+                    (gs, imt, self.source_id.decode('utf8'),
+                     exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
