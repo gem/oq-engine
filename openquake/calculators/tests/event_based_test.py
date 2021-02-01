@@ -97,12 +97,12 @@ class EventBasedTestCase(CalculatorTestCase):
         assert len(df.sid.unique()) == 1
         weights = self.calc.datastore['weights'][:]
         rlzs = self.calc.datastore['events']['rlz_id']
+        ws = weights[rlzs]
         gmvs = numpy.zeros(len(rlzs))  # number of events
         gmvs[df.eid.to_numpy()] = df.gmv_0.to_numpy()
-        avgstd = stats.AvgStd(gmvs, weights[rlzs])
-        avg_gmf = self.calc.datastore.read_df('avg_gmf')
-        aac(avg_gmf.gmv_0.to_numpy(), avgstd.avg)
-        aac(avg_gmf.gmv_0_std.to_numpy(), avgstd.std)
+        avgstd = stats.calc_avg_std(stats.calc_momenta(gmvs, ws), ws.sum())
+        avg_gmf = self.calc.datastore['avg_gmf'][:]  # 2, N, M
+        aac(avg_gmf[:, 0, 0], avgstd)
 
     def test_spatial_correlation(self):
         expected = {sc1: [0.99, 0.41],
@@ -504,14 +504,13 @@ class EventBasedTestCase(CalculatorTestCase):
         arr = read_csv(fname)[:2]
         self.assertEqual(arr.dtype.names,
                          ('site_id', 'event_id', 'gmv_PGA',
-                          'Disp', 'DispProb'))
+                          'sep_Disp', 'sep_DispProb'))
 
     def test_case_26_liq(self):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
-        df = self.calc.datastore.read_df('avg_gmf')
-        aac(df.LiqProb.max(), 0.035882, rtol=1E-2)
-        aac(df.PGDGeomMean.max(), 0.071564, rtol=1E-2)
+        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('avg_gmf.csv', fname)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

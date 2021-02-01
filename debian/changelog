@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a CSV exporter for the output `avg_gmf`
   * Fixed reporting in case of `CorrelationButNoInterIntraStdDevs` errors
   * Better error message when the rupture is far away from the sitesa
   * Made the calculation report exportable with `--exports rst`

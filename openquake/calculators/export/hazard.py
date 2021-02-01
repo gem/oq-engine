@@ -22,6 +22,7 @@ import sys
 import itertools
 import collections
 import numpy
+import pandas
 
 from openquake.baselib.general import (
     group_array, deprecated, AccumDict, DictArray)
@@ -399,6 +400,8 @@ def export_gmf_data_csv(ekey, dstore):
     ren = {'sid': 'site_id', 'eid': 'event_id'}
     for m, imt in enumerate(imts):
         ren[f'gmv_{m}'] = 'gmv_' + imt
+    for imt in oq.get_sec_imts():
+        ren[imt] = f'sep_{imt}'
     df.rename(columns=ren, inplace=True)
     event_id = dstore['events']['id']
     f = dstore.build_fname('sitemesh', '', 'csv')
@@ -420,6 +423,27 @@ def export_gmf_data_csv(ekey, dstore):
         return [fname, sig_eps_csv, f]
     else:
         return [fname, f]
+
+
+@export.add(('avg_gmf', 'csv'))
+def export_avg_gmf_csv(ekey, dstore):
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol'].complete
+    data = dstore['avg_gmf'][:]  # shape (2, N, M)
+    dic = {'site_id': sitecol.sids, 'lon': sitecol.lons, 'lat': sitecol.lats}
+    m = 0
+    for imt in oq.imtls:
+        dic['gmv_' + imt] = data[0, :, m]
+        dic['std_' + imt] = data[1, :, m]
+        m += 1
+    for imt in oq.get_sec_imts():
+        dic['sep_' + imt] = data[0, :, m]
+        dic['std_' + imt] = data[1, :, m]
+        m += 1
+    fname = dstore.build_fname('avg_gmf', '', 'csv')
+    writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
+        pandas.DataFrame(dic), fname, comment=dstore.metadata)
+    return [fname]
 
 
 def _expand_gmv(array, imts):
