@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Better error message when the rupture is far away from the sites
+  * Fixed reporting in case of `CorrelationButNoInterIntraStdDevs` errors
+  * Better error message when the rupture is far away from the sitesa
   * Made the calculation report exportable with `--exports rst`
   * The boolean fields `vs30measured` and `backarc` where not cast correctly
     when read from a CSV field (the engine read them always as True)
