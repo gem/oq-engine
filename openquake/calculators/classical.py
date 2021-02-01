@@ -426,14 +426,9 @@ class ClassicalCalculator(base.HazardCalculator):
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
         elif avail < size:
-            self.groups_per_block = avail // bytes_per_grp
-            self.ct = self.oqparam.concurrent_tasks or 1
-            reduced = humansize(self.groups_per_block * bytes_per_grp)
-            logging.warning('Splitting in bunches of tasks to keep the '
-                            'ProbabilityMap under %s', reduced)
-        else:
-            self.groups_per_block = len(self.grp_ids)
-            self.ct = (self.oqparam.concurrent_tasks or 1) * 2.5
+            logging.warning('You have only %s of free RAM' % humansize(avail))
+        self.groups_per_block = len(self.grp_ids)
+        self.ct = (self.oqparam.concurrent_tasks or 1) * 2.5
         # NB: it is CRITICAL for performance to have shape GNL and not NLG
         # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
         self.datastore.create_dset('_poes', F64, poes_shape)
@@ -479,8 +474,7 @@ class ClassicalCalculator(base.HazardCalculator):
         blocks = list(block_splitter(grp_ids, self.groups_per_block))
         for b, block in enumerate(blocks, 1):
             args = self.get_args(block, self.haz)
-            logging.info('Sending bunch #%d of %d, %d tasks',
-                         b, len(blocks), len(args))
+            logging.info('Sending %d tasks', len(args))
             smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
             smap.monitor.save('srcfilter', self.src_filter())
             self.datastore.swmr_on()

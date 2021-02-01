@@ -412,6 +412,8 @@ class ContextMaker(object):
                     ctx.clat = closest.lats[ctx.sids]
             yield ctx
 
+    # this is used with pointsource_distance approximation for close distances,
+    # when there are many ruptures affecting few sites
     def collapse_the_ctxs(self, ctxs):
         """
         Collapse contexts with similar parameters and distances.
