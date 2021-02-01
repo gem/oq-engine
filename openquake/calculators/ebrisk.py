@@ -70,10 +70,11 @@ def calc_risk(df, param, monitor):
     losses_by_A = numpy.zeros((len(assets_df), len(alt.loss_names)), F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
     for sid, asset_df in assets_df.groupby('site_id'):
-        try:
-            haz = haz_by_sid[sid]
-        except KeyError:  # no hazard here
+        # skip sid, eid, rlz
+        gmvs = df[df.sid == sid][df.columns[3:]].to_numpy()
+        if len(gmvs) == 0:  # no hazard here
             continue
+        haz = haz_by_sid[sid]
         with mon_risk:
             assets = asset_df.to_records()  # fast
             acc['events_per_sid'] += len(haz)
@@ -83,7 +84,6 @@ def calc_risk(df, param, monitor):
             alt.aggregate(out, mal, aggby)
             # NB: after the aggregation out contains losses, not loss_ratios
         ws = weights[haz['rlz']]
-        gmvs = df[df.columns[3:]].to_numpy()  # skip sid, eid, rlz
         acc['momenta'][:, sid] = stats.calc_momenta(gmvs, ws)  # shape (2, M)
         if param['avg_losses']:
             with mon_avg:
@@ -258,8 +258,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         rlzs = self.datastore['events']['rlz_id']
         totw = self.datastore['weights'][:][rlzs].sum()
-        self.datastore['avg_gmf'] = stats.calc_avg_std(
-            self.momenta, totw).transpose(1, 2, 0)  # shape 2, N, M -> N, M, 2
+        self.datastore['avg_gmf'] = stats.calc_avg_std(self.momenta, totw)
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run(exports='')

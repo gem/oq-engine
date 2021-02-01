@@ -429,16 +429,16 @@ def export_gmf_data_csv(ekey, dstore):
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol'].complete
-    data = dstore['avg_gmf'][:]
+    data = dstore['avg_gmf'][:]  # shape (2, N, M)
     dic = {'site_id': sitecol.sids, 'lon': sitecol.lons, 'lat': sitecol.lats}
     m = 0
     for imt in oq.imtls:
-        dic['gmv_' + imt] = data[:, m, 0]
-        dic['std_' + imt] = data[:, m, 1]
+        dic['gmv_' + imt] = data[0, :, m]
+        dic['std_' + imt] = data[1, :, m]
         m += 1
     for imt in oq.get_sec_imts():
-        dic['sep_' + imt] = data[:, m, 0]
-        dic['std_' + imt] = data[:, m, 1]
+        dic['sep_' + imt] = data[0, :, m]
+        dic['std_' + imt] = data[1, :, m]
         m += 1
     fname = dstore.build_fname('avg_gmf', '', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(

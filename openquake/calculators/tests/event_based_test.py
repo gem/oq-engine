@@ -101,8 +101,8 @@ class EventBasedTestCase(CalculatorTestCase):
         gmvs = numpy.zeros(len(rlzs))  # number of events
         gmvs[df.eid.to_numpy()] = df.gmv_0.to_numpy()
         avgstd = stats.calc_avg_std(stats.calc_momenta(gmvs, ws), ws.sum())
-        avg_gmf = self.calc.datastore['avg_gmf'][:]  # N, M, 2
-        aac(avg_gmf[0, 0], avgstd)
+        avg_gmf = self.calc.datastore['avg_gmf'][:]  # 2, N, M
+        aac(avg_gmf[:, 0, 0], avgstd)
 
     def test_spatial_correlation(self):
         expected = {sc1: [0.99, 0.41],

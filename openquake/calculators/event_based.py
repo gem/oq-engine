@@ -345,11 +345,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.weights = self.datastore['weights'][:][rlzs]
                 totweight = self.weights.sum()
                 self.num_events = numpy.bincount(rlzs)  # events by rlz
-                sids = self.sitecol.complete.sids
                 momenta, rel_events = self.calc_momenta()
-                avg_gmf = numpy.zeros((self.N, M, 2), F32)
-                for sid in sids:
-                    avg_gmf[sid] = calc_avg_std(momenta[sid], totweight).T
+                avg_gmf = numpy.zeros((2, self.N, M), F32)
+                for sid in momenta:
+                    avg_gmf[:, sid] = calc_avg_std(momenta[sid], totweight)
                 self.datastore['avg_gmf'] = avg_gmf
             e = len(rel_events)
             if e == 0:
