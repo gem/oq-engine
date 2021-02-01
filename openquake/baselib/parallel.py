@@ -197,6 +197,7 @@ from unittest import mock
 import multiprocessing.dummy
 import subprocess
 import psutil
+import getpass
 import numpy
 try:
     from setproctitle import setproctitle
@@ -934,13 +935,15 @@ OQDIST = oq_distribute()
 
 def ssh_args():
     remote_python = config.zworkers.remote_python or sys.executable
+    remote_user = config.zworkers.remote_user or getpass.getuser()
     if config.zworkers.host_cores.strip():
         for hostcores in config.zworkers.host_cores.split(','):
             host, cores = hostcores.split()
             if host == '127.0.0.1':  # localhost
                 yield host, cores, [sys.executable]
             else:
-                yield host, cores, ['ssh', '-f', '-T', host, remote_python]
+                yield host, cores, [
+                    'ssh', '-f', '-T', remote_user + '@' + host, remote_python]
 
 
 def workers_start():
