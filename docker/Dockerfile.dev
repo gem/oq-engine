@@ -33,6 +33,7 @@ ENV HOME /home/openquake
 WORKDIR ${HOME}
 RUN mkdir oqdata 
 #
+ADD openquake.cfg /opt/openquake 
 ADD scripts/oq-db_start.sh ${HOME}
 ADD scripts/oq-start.sh ${HOME}
 # if want to copy engine src to home
