@@ -1144,8 +1144,8 @@ def import_gmfs(dstore, oqparam, sids):
             offset += n
             gmvs = dic[sid]
             gmvlst.append(gmvs)
-            for m in range(len(imts)):
-                avg_gmf[:, sid, m] = stats.avg_std(gmvs[f'gmv_{m}'])
+            for c, col in enumerate(arr.dtype.names[2:]):  # skip sid, eid
+                avg_gmf[:, sid, c] = stats.avg_std(gmvs[col])
     dstore['avg_gmf'] = avg_gmf
     data = numpy.concatenate(gmvlst)
     create_gmf_data(dstore, len(oqparam.get_primary_imtls()),
