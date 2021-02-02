@@ -192,8 +192,8 @@ def export_src_loss_table(ekey, dstore):
 
 
 # this is used by scenario_risk, event_based_risk and ebrisk
-@export.add(('losses_by_event', 'csv'))
-def export_losses_by_event(ekey, dstore):
+@export.add(('agg_loss_table', 'csv'))
+def export_agg_loss_table(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
@@ -210,7 +210,7 @@ def export_losses_by_event(ekey, dstore):
         K = dstore.get_attr('agg_loss_table', 'K', 0)
         df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
     except KeyError:  # scenario_damage + consequences
-        df = dstore.read_df('losses_by_event')
+        df = dstore.read_df('agg_loss_table')
         ren = {'loss_%d' % li: ln for li, ln in enumerate(oq.loss_names)}
         df.rename(columns=ren, inplace=True)
     evs = events[df.event_id.to_numpy()]

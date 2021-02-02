@@ -115,7 +115,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/eb_%s' % strip_calc_id(fname),
                                   fname, delta=1E-5)
 
-        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
+        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
 
@@ -193,7 +193,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_2_correlation(self):
         self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation=1.0)
-        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
+        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname)
 
         # test losses_by_tag with a single realization
@@ -233,7 +233,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
 
-        fnames = export(('losses_by_event', 'csv'), self.calc.datastore)
+        fnames = export(('agg_loss_table', 'csv'), self.calc.datastore)
         assert fnames, 'No agg_losses exported??'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
@@ -258,7 +258,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   delta=1E-4)
 
         # check event loss table
-        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
+        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-4)
 
@@ -300,7 +300,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_losses-mean.csv',
                               fname, delta=1E-4)
 
-        fname = export(('losses_by_event', 'csv'), self.calc.datastore)[0]
+        fname = export(('agg_loss_table', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/elt.csv', fname, delta=1E-4)
 
     def check_multi_tag(self, dstore):
@@ -353,14 +353,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_7a.__file__,  'job_h.ini')
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
-        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
+        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname)
         rup_ids = set(read_csv(fname, {None: '<S50'})['rup_id'])
 
         [fname] = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_curves.csv', fname)
 
-        # check that the IDs in losses_by_event.csv exist in ruptures.csv
+        # check that the IDs in agg_loss_table.csv exist in ruptures.csv
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         rupids = set(read_csv(fname, {None: '<S50'})['rup_id'])
         self.assertTrue(rup_ids <= rupids, 'There are non-existing rupture IDs'
