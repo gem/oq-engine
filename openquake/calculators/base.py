@@ -30,7 +30,7 @@ from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor, init_performance
-from openquake.hazardlib import InvalidFile, site
+from openquake.hazardlib import InvalidFile, site, stats
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
@@ -1137,12 +1137,16 @@ def import_gmfs(dstore, oqparam, sids):
     dic = general.group_array(arr, 'sid')
     offset = 0
     gmvlst = []
+    avg_gmf = numpy.zeros((2, len(sids), len(imts)), F32)
     for sid in sids:
         n = len(dic.get(sid, []))
         if n:
             offset += n
             gmvs = dic[sid]
             gmvlst.append(gmvs)
+            for m in range(len(imts)):
+                avg_gmf[:, sid, m] = stats.avg_std(gmvs[f'gmv_{m}'])
+    dstore['avg_gmf'] = avg_gmf
     data = numpy.concatenate(gmvlst)
     create_gmf_data(dstore, len(oqparam.get_primary_imtls()),
                     oqparam.get_sec_imts(), data=data)
