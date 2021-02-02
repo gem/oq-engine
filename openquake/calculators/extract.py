@@ -71,7 +71,7 @@ def get_info(dstore):
     """
     oq = dstore['oqparam']
     stats = {stat: s for s, stat in enumerate(oq.hazard_stats())}
-    loss_types = {lt: l for l, lt in enumerate(oq.loss_dt().names)}
+    loss_types = {lt: li for li, lt in enumerate(oq.loss_dt().names)}
     imt = {imt: i for i, imt in enumerate(oq.imtls)}
     try:
         num_rlzs = dstore['full_lt'].get_num_rlzs()
@@ -870,10 +870,12 @@ def extract_gmf_npz(dstore, what):
 @extract.add('avg_gmf')
 def extract_avg_gmf(dstore, what):
     qdict = parse(what)
+    info = get_info(dstore)
     [imt] = qdict['imt']
+    imti = info['imt'][imt]
     sitecol = dstore['sitecol']
-    avg_gmf = dstore.read_df('avg_gmf')
-    yield imt, avg_gmf[imt].to_numpy()[sitecol.sids]
+    avg_gmf = dstore['avg_gmf'][0, :, imti]
+    yield imt, avg_gmf[sitecol.sids]
     yield 'sids', sitecol.sids
     yield 'lons', sitecol.lons
     yield 'lats', sitecol.lats
