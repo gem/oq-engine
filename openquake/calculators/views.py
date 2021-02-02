@@ -28,11 +28,12 @@ import pandas
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
-    get_array, group_array, fast_agg, fast_agg3)
+    get_array, group_array, fast_agg)
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib import stats as hstats
 from openquake.commonlib import util
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
@@ -350,12 +351,6 @@ def view_portfolio_losses(token, dstore):
     return rst_table(array, fmt='%.5E')
 
 
-def _indices(N, n):
-    # returns n blocks of indices in the range 0 .. N-1
-    for i in range(n):
-        yield numpy.arange(i, N, n)
-
-
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
     """
@@ -363,16 +358,15 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    G = getattr(oq, 'number_of_ground_motion_fields', 1)
-    R = dstore['full_lt'].get_num_rlzs()
     K = dstore['agg_loss_table'].attrs.get('K', 0)
-    df = dstore.read_df('agg_loss_table', ['agg_id', 'event_id'],
-                        dict(agg_id=K))
-    loss = numpy.array(df)
-    means = loss.sum(axis=0) / R / G
-    sums = [loss[idxs].sum(axis=0) for idxs in _indices(len(loss), 10)]
-    errors = numpy.std(sums, axis=0) / numpy.mean(sums, axis=0) * means
-    rows = [['mean'] + list(means), ['error'] + list(errors)]
+    df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    weights = dstore['weights'][:]
+    rlzs = dstore['events']['rlz_id']
+    ws = weights[rlzs]
+    eids = df.pop('event_id').to_numpy()
+    avg, std = hstats.calc_avg_std(
+        hstats.calc_momenta(df.to_numpy(), ws[eids]), ws.sum())
+    rows = [['avg'] + list(avg), ['std'] + list(std)]
     return(rst_table(rows, ['loss'] + oq.loss_names))
 
 
@@ -391,9 +385,9 @@ def portfolio_damage_error(dstore, avg=None):
     sums = numpy.zeros((10, L, D-1))
     for i in range(10):
         section = df[df.index % 10 == i]
-        for l, grp in section.groupby('lid'):
+        for lid, grp in section.groupby('lid'):
             ser = grp.sum()  # aid, lid, ds...
-            sums[i, l, :] = numpy.array(ser)[2:]
+            sums[i, lid, :] = numpy.array(ser)[2:]
 
     if avg is None:
         if 'damages-stats' in dstore:
