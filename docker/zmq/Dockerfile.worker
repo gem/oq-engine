@@ -17,8 +17,6 @@ FROM openquake/engine:nightly
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
       vendor="GEM Foundation"
 
-ADD ./openquake.cfg /etc/openquake/openquake.cfg
-
 STOPSIGNAL SIGTERM
 ENTRYPOINT ["python3", "-m", "openquake.baselib.workerpool"]
 

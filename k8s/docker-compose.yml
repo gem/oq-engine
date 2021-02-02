@@ -17,13 +17,12 @@ volumes:
 #definizione di un yaml template da usare poi negli altri servizi
 x-op-service-default: &service_default
   restart: unless-stopped
-  init: true
 
 services:
   master:
     <<: *service_default
     container_name: engine-master
-    hostname: engine-master
+    hostname: master
     image: openquake/engine-master-zmq:nightly
     ports:
      - 8800:8800
@@ -32,14 +31,8 @@ services:
     #   - LOCKDOWN=true
     volumes:
      - oqdata:/home/openquake/oqdata
-    # Uncomment to expose demos inside the container
-    # - ../demos:/home/openquake/demos:ro
-    # Uncomment to expose oq-engine inside the container
-     - ../../oq-engine:/home/openquake/oq-engine:ro
-    # Uncomment to use a local copy of the oq-engine
-    #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
-    # uncomment to use different openquake.cfg from the docker image
-    # - ./zmq/openquake.cfg:/opt/openquake/openquake.cfg
+    # Use custom openquake.cfg
+     - ./openquake.cfg:/etc/openquake/openquake.cfg
     networks:
      backend:
       aliases:
@@ -49,12 +42,15 @@ services:
 
   worker:
     <<: *service_default
+    container_name: engine-worker
     # don't use name if want to scale
     # container_name: engine-worker
-    hostname: engine-worker
+    hostname: worker
     image: openquake/engine-worker-zmq:nightly
     volumes:
      - oqdata:/home/openquake/oqdata:ro
+    # Use zmq openquake.cfg
+     - ./openquake.cfg:/etc/openquake/openquake.cfg
     networks:
      backend:
       aliases:

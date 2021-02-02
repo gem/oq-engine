@@ -1,4 +1,4 @@
-# Copyright (C) 2020 GEM Foundation
+# Copyright (C) 2019-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,7 +15,7 @@
 FROM python:3.8.6 AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
-RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh dnsutils telnet sudo && \
+RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh dnsutils telnet sudo netbase && \
     useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
 ARG oq_branch=master
 # Setup the virtualenv
@@ -25,20 +25,16 @@ ENV LANG en_US.UTF-8
 WORKDIR /opt
 #clone repository and install engine
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
-    pip install "dask[complete]" && \
-    pip --disable-pip-version-check install -e .[cluster,osgeo] -r requirements-py38-linux64.txt --no-warn-script-location
+     python3 install.py server --version=master
 #
+ADD ./openquake.cfg /opt/openquake/openquake.cfg
 USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
 RUN mkdir oqdata 
 #
-ADD openquake.cfg /opt/openquake 
 ADD scripts/oq-db_start.sh ${HOME}
 ADD scripts/oq-start.sh ${HOME}
 # if want to copy engine src to home
 #ADD oq-engine-master ${HOME}
-EXPOSE 8800:8800
-STOPSIGNAL SIGINT
-ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["./oq-start.sh"]  
+ENTRYPOINT ["/bin/bash"]
