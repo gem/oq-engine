@@ -210,7 +210,7 @@ def export_agg_loss_table(ekey, dstore):
         K = dstore.get_attr('agg_loss_table', 'K', 0)
         df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
     except KeyError:  # scenario_damage + consequences
-        df = dstore.read_df('agg_loss_table')
+        df = dstore.read_df('losses_by_event')
         ren = {'loss_%d' % li: ln for li, ln in enumerate(oq.loss_names)}
         df.rename(columns=ren, inplace=True)
     evs = events[df.event_id.to_numpy()]
