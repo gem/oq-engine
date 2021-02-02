@@ -15,7 +15,7 @@ Python from _Anaconda_ is **not supported**.
 
 Requirements are:
 
-- Mac OS X 10.10 (Yosemite), Mac OS X 10.11 (El Capitan), macOS 10.12 (Sierra), macOS 10.13 (High Sierra), macOS 10.14 (Mojave), or macOS 10.15 (Catalina)
+- macOS 10.14 (Mojave), or macOS 10.15 (Catalina)
 - 4 GB of RAM (8 GB recommended)
 - 1.2 GB of free disk space
 - [Terminal](https://support.apple.com/guide/terminal/welcome) or [iTerm2](https://www.iterm2.com/) app
