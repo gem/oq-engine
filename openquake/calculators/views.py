@@ -351,12 +351,6 @@ def view_portfolio_losses(token, dstore):
     return rst_table(array, fmt='%.5E')
 
 
-def _indices(N, n):
-    # returns n blocks of indices in the range 0 .. N-1
-    for i in range(n):
-        yield numpy.arange(i, N, n)
-
-
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
     """
