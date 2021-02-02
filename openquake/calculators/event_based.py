@@ -364,6 +364,7 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         if (not result or not oq.ground_motion_fields and not
                 oq.hazard_curves_from_gmfs):
+            self.datastore['weights'] = [1.]
             return
         N = len(self.sitecol.complete)
         M = len(oq.imtls)  # 0 in scenario

@@ -20,7 +20,7 @@ import logging
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, humansize
-from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.hazardlib.stats import set_rlzs_stats, avg_std
 from openquake.calculators import base, views
 
 U16 = numpy.uint16
@@ -230,21 +230,25 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.sanity_check()
 
         # damage by event: make sure the sum of the buildings is consistent
+        rlz = self.datastore['events']['rlz_id']
+        weights = self.datastore['weights'][:][rlz]
         tot = self.assetcol['number'].sum()
         dt = F32 if self.param['continuous_dd'] else U32
         dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
         dbe[:, :, 0] = tot
         for e, dmg_by_lt in result['d_event'].items():
-            for l, dmg in enumerate(dmg_by_lt):
-                dbe[e, l,  0] = tot - dmg.sum()
-                dbe[e, l,  1:] = dmg
+            for li, dmg in enumerate(dmg_by_lt):
+                dbe[e, li,  0] = tot - dmg.sum()
+                dbe[e, li,  1:] = dmg
         self.datastore['dmg_by_event'] = dbe
+        self.datastore['avg_dmg'] = avg_std(dbe, weights)
+        self.datastore.set_shape_descr('avg_dmg', kind=['avg', 'std'],
+                                       loss_type=ltypes, dmg_state=dstates)
 
         # consequence distributions
         del result['d_asset']
         del result['d_event']
         dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
-        rlz = self.datastore['events']['rlz_id']
         for name, csq in result.items():
             if name.startswith('avg_'):
                 c_asset = numpy.zeros((A, R, L), F32)
@@ -271,9 +275,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         avg = arr.sum(axis=(0, 1))  # shape (L, D)
         if not len(self.datastore['dd_data/aid']):
             logging.warning('There is no damage at all!')
-        else:
-            df = views.portfolio_damage_error(self.datastore, avg[:, 1:])
-            rst = views.rst_table(numpy.array(df), list(df.columns))
+        elif 'avg_dmg' in self.datastore:
+            df = views.portfolio_damage_error('avg_dmg', self.datastore)
+            rst = views.rst_table(df.to_numpy(), list(df.columns))
             logging.info('Portfolio damage\n%s' % rst)
         num_assets = avg.sum(axis=1)  # by loss_type
         expected = self.assetcol['number'].sum()
@@ -282,5 +286,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             numdic = dict(expected=expected)
             for lt, num in zip(self.oqparam.loss_names, num_assets):
                 numdic[lt] = num
-            logging.info('Due to rounding errors inherent in floating-point arithmetic,'
-                         'the total number of assets is not exact: %s', numdic)
+            logging.info(
+                'Due to rounding errors inherent in floating-point arithmetic,'
+                ' the total number of assets is not exact: %s', numdic)

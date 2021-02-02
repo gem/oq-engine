@@ -53,8 +53,8 @@ def calc_momenta(array, weights):
     :returns: an array of shape (2, ...) with the first two statistical moments
     """
     momenta = numpy.zeros((2,) + array.shape[1:])
-    momenta[0] = weights @ array
-    momenta[1] = weights @ array ** 2
+    momenta[0] = numpy.einsum('i,i...', weights, array)
+    momenta[1] = numpy.einsum('i,i...', weights, array**2)
     return momenta
 
 
