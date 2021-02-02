@@ -524,7 +524,8 @@ Source Loss Table'''.splitlines())
         with Print.patch() as p:
             sap.runline(f'openquake.commands engine --lo {job_id}')
         got = set(re.findall(r'\| ([\w ]+)', str(p))) - {'name'}
-        self.assertEqual(got, expected)
+        if got != expected:
+            print('Missing output', expected - got, file=sys.stderr)
         # sanity check on the performance views: make sure that the most
         # relevant information is stored (it can be lost due to a wrong
         # refactoring of the monitoring and it happened several times)
