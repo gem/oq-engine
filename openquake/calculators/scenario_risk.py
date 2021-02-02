@@ -196,12 +196,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                    'addition-is-non-associative.html')
             logging.warning(
                 'Due to rounding errors inherent in floating-point arithmetic,'
-                ' agg_losses != sum(avg_losses):\n%s != %s\nsee %s',
+                ' agg_losses != sum(avg_losses): %s != %s\nsee %s',
                 agglosses.mean(), sumlosses.mean(), url)
         try:
-            self.check_losses(oq)
-        except KeyError as exc:
-            logging.warning(str(exc)[1:-1])
+            if sum(oq.minimum_asset_loss.values()) == 0:
+                # check losses are nonzero where avg_gmf is nonzero
+                self.check_losses(oq)
         except Exception as exc:
             logging.error('Could not run the sanity check: %s' % exc,
                           exc_info=True)
