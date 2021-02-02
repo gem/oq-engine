@@ -196,12 +196,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                    'addition-is-non-associative.html')
             logging.warning(
                 'Due to rounding errors inherent in floating-point arithmetic,'
-                ' agg_losses != sum(avg_losses):\n%s != %s\nsee %s',
-                agglosses, sumlosses, url)
+                ' agg_losses != sum(avg_losses): %s != %s\nsee %s',
+                agglosses.mean(), sumlosses.mean(), url)
         try:
-            self.check_losses(oq)
-        except KeyError as exc:
-            logging.warning(str(exc)[1:-1])
+            if sum(oq.minimum_asset_loss.values()) == 0:
+                # check losses are nonzero where avg_gmf is nonzero
+                self.check_losses(oq)
         except Exception as exc:
             logging.error('Could not run the sanity check: %s' % exc,
                           exc_info=True)
@@ -210,10 +210,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         """
         Sanity check on avg_losses and avg_gmf
         """
-        gmf_df = self.datastore.read_df('avg_gmf')
-        sids = self.sitecol.sids
-        if self.sitecol is not self.sitecol.complete:
-            gmf_df = gmf_df.loc[sids]
+        avg_gmf = self.datastore['avg_gmf'][0]
         asset_df = self.datastore.read_df('assetcol/array', 'site_id')
         for col in asset_df.columns:
             if not col.startswith('value-'):
@@ -224,13 +221,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         for lti, lname in enumerate(oq.loss_names):
             dic[lname] = avglosses[:, lti]
         losses_df = pandas.DataFrame(dic).groupby('site_id').sum()
-        nonzero_gmf = (gmf_df > 0).to_numpy().any(axis=1)
+        sids = losses_df.index.to_numpy()
+        avg_gmf = avg_gmf[sids]
+        nonzero_gmf = (avg_gmf > 0).any(axis=1)
         nonzero_losses = (losses_df > 0).to_numpy().any(axis=1)
         bad, = numpy.where(nonzero_gmf != nonzero_losses)
         msg = 'Site #%d is suspicious:\navg_gmf=%s\navg_loss=%s\nvalues=%s'
         for idx in bad:
             sid = sids[idx]
-            logging.warning(msg, sid, _get(gmf_df, sid),
+            logging.warning(msg, sid, dict(zip(oq.all_imts(), avg_gmf[sid])),
                             _get(losses_df, sid), _get(values_df, sid))
 
 

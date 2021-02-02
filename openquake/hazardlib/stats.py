@@ -50,7 +50,7 @@ def calc_momenta(array, weights):
     """
     :param array: an array of shape E, ...
     :param weights: an array of length E
-    :returnsL an array of shape (2, ...) with the first two statistical moments
+    :returns: an array of shape (2, ...) with the first two statistical moments
     """
     momenta = numpy.zeros((2,) + array.shape[1:])
     momenta[0] = weights @ array
@@ -74,6 +74,17 @@ def calc_avg_std(momenta, totweight):
     avgstd[0] = avg = momenta[0] / totweight
     avgstd[1] = numpy.sqrt(momenta[1] / totweight - avg ** 2)
     return avgstd
+
+
+def avg_std(array, weights=None):
+    """
+    :param array: an array of shape E, ...
+    :param weights: an array of length E (or None for equal weights)
+    :returns: an array of shape (2, ...) with average and standard deviation
+    """
+    if weights is None:
+        weights = numpy.ones(len(array))
+    return calc_avg_std(calc_momenta(array, weights), weights.sum())
 
 
 def mean_curve(values, weights=None):
