@@ -1025,7 +1025,7 @@ class Exposure(object):
             # store average occupants
             values['occupants'] = tot_occupants / num_occupancies
 
-        # check we are not missing a cost type
+        # check if we are not missing a cost type
         missing = param['relevant_cost_types'] - set(values)
         if missing and missing <= param['ignore_missing_costs']:
             logging.warning(

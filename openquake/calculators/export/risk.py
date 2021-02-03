@@ -294,8 +294,8 @@ def modal_damage_array(data, damage_dt):
     dmgstate = damage_dt['structural'].names
     arr = numpy.zeros(A, [('modal-ds-' + lt, hdf5.vstr)
                           for lt in damage_dt.names])
-    for l, loss_type in enumerate(damage_dt.names):
-        arr['modal-ds-' + loss_type] = [dmgstate[data[a, l].argmax()]
+    for li, loss_type in enumerate(damage_dt.names):
+        arr['modal-ds-' + loss_type] = [dmgstate[data[a, li].argmax()]
                                         for a in range(A)]
     return arr
 
