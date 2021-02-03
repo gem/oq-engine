@@ -118,7 +118,7 @@ def fix_ones(pmap):
     return pmap
 
 
-def build_weights(realizations, imt_dt):
+def build_weights(realizations):
     """
     :returns: an array with the realization weights of shape R
     """
@@ -876,8 +876,7 @@ class HazardCalculator(BaseCalculator):
         logging.info('There are %d realization(s)', R)
 
         if oq.imtls:
-            self.datastore['weights'] = arr = build_weights(
-                self.realizations, oq.imt_dt())
+            self.datastore['weights'] = arr = build_weights(self.realizations)
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
 
         if ('event_based' in oq.calculation_mode and R >= TWO16

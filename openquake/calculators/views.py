@@ -105,9 +105,10 @@ def rst_table(data, header=None, fmt=None):
     ==== =====
     """
     if isinstance(data, pandas.DataFrame):
-        df = data.reset_index()
-        header = header or list(df.columns)
-        data = numpy.array(df)
+        if data.index.name:
+            data = data.reset_index()
+        header = header or list(data.columns)
+        data = data.to_numpy()
     if header is None and hasattr(data, '_fields'):
         header = data._fields
     try:
@@ -370,51 +371,13 @@ def view_portfolio_loss(token, dstore):
     return(rst_table(rows, ['loss'] + oq.loss_names))
 
 
-def portfolio_damage_error(dstore, avg=None):
-    """
-    The damages and errors for the full portfolio, extracted from
-    the asset damage table.
-    """
-    df = dstore.read_df('dd_data', 'eid')
-    dset = dstore.getitem('damages-rlzs')
-    dic = get_shape_descr(dset.attrs['json'])
-    A, R, L, D = dset.shape
-    dmg_states = dic['dmg_state']
-    loss_types = dic['loss_type']
-
-    sums = numpy.zeros((10, L, D-1))
-    for i in range(10):
-        section = df[df.index % 10 == i]
-        for lid, grp in section.groupby('lid'):
-            ser = grp.sum()  # aid, lid, ds...
-            sums[i, lid, :] = numpy.array(ser)[2:]
-
-    if avg is None:
-        if 'damages-stats' in dstore:
-            arr = dstore.sel('damages-stats', stat='mean')
-        else:
-            arr = dstore.sel('damages-rlzs', rlz=0)  # shape (A, 1, L, D)
-        avg = arr.sum(axis=(0, 1))[:, 1:]  # shape (L, D)
-
-    errors = avg * numpy.std(sums, axis=0) / numpy.mean(sums, axis=0)
-    dic = dict(dmg_state=[], loss_type=[], mean=[], error=[])
-    for l, lt in enumerate(loss_types):
-        for d, dmg in enumerate(dmg_states[1:]):
-            dic['dmg_state'].append(dmg)
-            dic['loss_type'].append(lt)
-            dic['mean'].append(avg[l, d])
-            dic['error'].append(errors[l, d])
-    return pandas.DataFrame(dic)
-
-
 @view.add('portfolio_damage_error')
-def view_portfolio_damage_error(token, dstore):
+def portfolio_damage_error(token, dstore):
     """
     The damages and errors for the full portfolio, extracted from
     the asset damage table.
     """
-    df = portfolio_damage_error(dstore)
-    return rst_table(numpy.array(df), list(df.columns))
+    return dstore.read_df('avg_portfolio_damage')
 
 
 @view.add('portfolio_damage')

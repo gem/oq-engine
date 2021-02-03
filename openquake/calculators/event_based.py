@@ -305,6 +305,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 'import data without performing any calculation')
             fake = logictree.FullLogicTree.fake()
             self.datastore['full_lt'] = fake  # needed to expose the outputs
+            self.datastore['weights'] = [1.]
             return {}
         else:  # scenario
             self._read_scenario_ruptures()

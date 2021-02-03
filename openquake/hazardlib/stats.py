@@ -53,8 +53,8 @@ def calc_momenta(array, weights):
     :returns: an array of shape (2, ...) with the first two statistical moments
     """
     momenta = numpy.zeros((2,) + array.shape[1:])
-    momenta[0] = weights @ array
-    momenta[1] = weights @ array ** 2
+    momenta[0] = numpy.einsum('i,i...', weights, array)
+    momenta[1] = numpy.einsum('i,i...', weights, array**2)
     return momenta
 
 
@@ -81,6 +81,10 @@ def avg_std(array, weights=None):
     :param array: an array of shape E, ...
     :param weights: an array of length E (or None for equal weights)
     :returns: an array of shape (2, ...) with average and standard deviation
+
+    >>> avg_std(numpy.array([[2, 4, 6], [3, 5, 7]]))
+    array([[2.5, 4.5, 6.5],
+           [0.5, 0.5, 0.5]])
     """
     if weights is None:
         weights = numpy.ones(len(array))

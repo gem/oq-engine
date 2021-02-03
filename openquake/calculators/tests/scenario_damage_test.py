@@ -29,7 +29,7 @@ from openquake.qa_tests_data.scenario_damage import (
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
-from openquake.calculators.views import view
+from openquake.calculators.views import view, rst_table
 
 aac = numpy.testing.assert_allclose
 
@@ -123,7 +123,8 @@ RM       4_000
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=5E-6)
 
-        fname = gettemp(view('portfolio_damage_error', self.calc.datastore))
+        df = view('portfolio_damage_error', self.calc.datastore)
+        fname = gettemp(rst_table(df))
         self.assertEqualFiles('expected/portfolio_damage.rst', fname)
 
     def test_wrong_gsim_lt(self):
