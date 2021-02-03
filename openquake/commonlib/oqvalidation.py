@@ -15,7 +15,449 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""
+Full list of configuration parameters
+=====================================
 
+aggregate_by:
+  Used to compute aggregate losses and aggregate loss curves in risk
+  calculations. Takes in input one or more exposure tags.
+  Example: *aggregate_by = region, taxonomy*
+  Default: empty list
+
+amplification_method:
+  Used in classical PSHA calculations to amplify the hazard curves with
+  the convolution or kernel method.
+  Example: *amplification_method = convolution*
+  Default: None
+
+area_source_discretization:
+  Discretization parameters in km for area sources
+  Example: *area_source_discretization = 10*
+  Default: 10
+
+ash_wet_amplification_factor:
+  Used in volcanic risk calculations.
+  Example: *ash_wet_amplification_factor=1.0*
+  Default: 1.0
+
+asset_correlation:
+  Used in risk calculations to take into account asset correlation. Accepts
+  only the values 1 (full correlation) and 0 (no correlation).
+  Example: *asset_correlation=1*
+  Default: no default
+
+asset_hazard_distance:
+  Used in risk calculations to print a warning in case there are assets too
+  distant from the hazard sites.
+  Example: *asset_hazard_distance = 5*
+
+asset_life_expectancy:
+  Used in the classical_bcr calculator.
+  Example: *asset_life_expectancy = 50*
+
+assets_per_site_limit:
+  INTERNAL
+
+avg_losses:
+  Used in risk calculations to compute average losses
+  Example: *asset_life_expectancy=false*
+  Default: True
+
+base_path:
+  INTERNAL
+
+cachedir:
+  INTERNAL
+
+calculation_mode:
+  One of classical, disaggregation, event_based, scenario, scenario_risk,
+  scenario_damage, event_based_risk, classical_risk, classical_bcr
+  Example: *calculation_mode=classical*
+  Default: no default
+
+collapse_gsim_logic_tree:
+  INTERNAL
+
+collapse_level:
+  INTERNAL
+
+compare_with_classical:
+  Used in event based calculation to perform also a classical calculation
+  so the the hazard curves can be compared
+  Example: *compare_with_classical = true*
+  Default: False
+
+complex_fault_mesh_spacing:
+  In km, used to discretize complex faults.
+  Example: complex_fault_mesh_spacing = 15
+  Default: 10
+
+concurrent_tasks:
+  A hint to the engine for the number of tasks to generate. Do not set
+  it unless you know what you are doing.
+
+conditional_loss_poes:
+   Used in classical_risk calculations
+
+continuous_dd:
+ TODO
+
+continuous_fragility_discretization:
+  TODO
+
+coordinate_bin_width:
+  Used in disaggregation calculations.
+
+cross_correlation:
+  TODO
+
+description:
+  A string describing the calculation
+  Example: *description = Test calculation*
+
+disagg_by_src:
+   Disaggregate by source
+   Example: *disagg_by_src = true*
+   Default: False
+
+disagg_outputs:
+   Used in disaggregation calculations to restrict the number of exported
+   outputs.
+   Example: *disagg_outputs = *
+
+discard_assets:
+  Used in risk calculations to discard assets from the exposure.
+
+discard_trts:
+  Used to discard tectonic region types that do not contribute to the hazard
+
+distance_bin_width:
+  Used om disaggregation calculations
+
+ebrisk_maxsize:
+  INTERNAL
+
+export_dir:
+  Set the export directory
+  Example: *export_dir = /tmp*
+  Default: the current directory, "."
+
+exports:
+  Specify what kind of outputs to export by default
+  Example: *exports = csv, rst*
+  Default: empty list
+
+ground_motion_correlation_model:
+  Enable ground motion correlation.
+  Example: * *
+
+ground_motion_correlation_params:
+  To be used together with ground_motion_correlation_model.
+  Example: * *
+
+ground_motion_fields:
+  Flag to turn on/off the calculation of ground motion fields
+
+gsim:
+   Used to specify a GSIM in scenario or event based calculations
+
+hazard_calculation_id:
+  Used to specify a previous calculation from which the hazard is read
+  Example: *hazard_calculation_id = 42*
+  Default: None
+
+hazard_curves_from_gmfs:
+  Used in scenario/event based calculations. If set, generates hazard curves
+  from the ground motion fields
+
+hazard_maps:
+  Set it to true to export the hazard maps.
+  Example: *hazard_maps = true*
+  Default: False
+
+ignore_covs:
+  Used in risk calculations to set all the coefficients of variation of the
+  vulnerability functions to zero.
+  Example *ignore_covs = true*
+  Default: False
+
+ignore_missing_costs:
+  Accepts exposures with missing costs (by ignoring such assets).
+  Example: *ignore_missing_costs = nonstructural, business_interruption*
+  Default: False
+
+iml_disagg:
+  Used in disaggregation calculations to specify an intensity measure type
+  and level.
+  Example: *iml_disagg = {'PGA': 0.02}
+  Default: no default
+
+individual_curves:
+  When set, store the individual hazard curves and/or individual risk curves
+  for each realization.
+  Example: *individual_curves = true*
+  Default: False
+
+inputs:
+  INTERNAL
+
+intensity_measure_types:
+  List of intensity measure types in an event based calculation
+  Example: *intensity_measure_types = PGA SA(0.1)*
+  Default: empty list
+
+intensity_measure_types_and_levels:
+  List of intensity measure types and levels in a classical calculation
+  Default: empty list
+
+
+interest_rate:
+  TODO
+
+investigation_time:
+  TODO
+
+lrem_steps_per_interval:
+  TODO
+
+mag_bin_width:
+  TODO
+
+master_seed:
+  TODO
+
+max:
+  TODO
+
+max_data_transfer:
+  TODO
+max_num_loss_curves:
+  TODO
+max_potential_gmfs:
+  TODO
+max_potential_paths:
+  TODO
+max_sites_disagg:
+  TODO
+
+max_sites_per_gmf:
+  TODO
+
+max_sites_per_tile:
+  TODO
+
+max_weight
+maximum_distance:
+  TODO
+
+maximum_intensity:
+  TODO
+
+mean
+mean:
+  TODO
+
+min_weight:
+  TODO
+
+minimum_asset_loss:
+  TODO
+
+minimum_intensity:
+  TODO
+
+minimum_magnitude:
+  TODO
+
+modal_damage_state:
+  TODO
+
+num_epsilon_bins:
+  TODO
+
+num_rlzs_disagg:
+  Used in disaggregation calculation to specify how many outputs will be
+  generated.
+
+number_of_ground_motion_fields:
+  Used in scenario calculations to specify how many random ground motion
+  fields to generate.
+  Example: *number_of_ground_motion_fields = 100*
+  Default: no default
+
+number_of_logic_tree_samples:
+  Used to specify the number of realizations to generate when using logic tree
+  sampling. If zero, full enumeration is performed.
+  Example: *number_of_logic_tree_samples = 0*
+
+poes:
+  Probabilities of Exceedance used to specify the hazard maps or hazard spectra
+  to compute.
+  Example: *poes = 0.01 0.02*
+  Default: empty list
+
+pointsource_distance:
+  Used in classical calculations to collapse the point sources. Can also be
+  used in conjunction with *ps_grid_spacing*.
+  Example: *pointsource_distance = 50*
+  Default: empty dictionary
+
+ps_grid_spacing:
+  Used in classical calculations to grid the point sources. Requires the
+  *pointsource_distance* to be set too.
+  Example: *ps_grid_spacing = 50*
+  Default: no default
+
+quantiles:
+  List of probabilities used to compute the quantiles across realizations.
+  Example: quantiles = 9.15 0.50 0.85
+  Default: empty list
+
+random_seed:
+  Seed used in the sampling of the logic tree.
+
+reference_backarc:
+  TODO
+
+reference_depth_to_1pt0km_per_sec:
+  TODO
+
+reference_depth_to_2pt5km_per_sec:
+  TODO
+
+reference_siteclass:
+  Used when there is no site model to specify a global site class.
+  The siteclass is a one-character letter used in some GMPEs, like the
+  McVerry (2006), and has values "A", "B", "C" or "D"
+  Example: *reference_siteclass = "A"*
+  Default: "D"
+
+reference_vs30_type:
+  Used when there is no site model to specify a global vs30 type.
+  The choices are "inferred" or "measured"
+  Example: *reference_vs30_type = inferred"
+  Default: "measured"
+
+reference_vs30_value:
+  Used when there is no site model to specify a global vs30 value
+
+region:
+  A list of lon/lat pairs used to specify a region of interest
+  Example: *region = 10.0 43.0, 12.0 43.0, 12.0 46.0, 10.0 46.0*
+
+region_grid_spacing:
+  Used together with the *region* option to generate the hazard sites
+
+return_periods:
+  Used in the computation of the loss curves
+
+risk_imtls:
+  INTERNAL. Automatically set by the engine.
+
+risk_investigation_time:
+  Used in risk calculations. If not specified, the (hazard) investigation_time
+  is used instead.
+  Example: risk_investigation_time = 50
+
+rlz_index:
+  Used in disaggregation calculations to specify the realization from which
+  to start the disaggregation
+
+rupture_mesh_spacing:
+  Set the discretization parameter in km for rupture geometries.
+
+ruptures_per_block:
+  TODO
+
+sampling_method:
+  TODO
+
+save_disk_space:
+  INTERNAL
+
+sec_peril_params:
+  TODO
+
+secondary_perils:
+  TODO
+
+secondary_simulations:
+  TODO
+
+sensitivity_analysis:
+  TODO
+
+ses_per_logic_tree_path:
+  Set the number of stochastic event sets per logic tree realization in
+  event based calculations.
+  Example: *ses_per_logic_tree_path = 100*
+  Default: 1
+
+ses_seed:
+  Seed governing the generation of the ground motion field.
+
+shakemap_id:
+  Used in ShakeMap calculations to download a ShakeMap from the USGS site
+  Default: no default
+
+shift_hypo:
+  Used in classical calculations to shift the rupture hypocenter
+
+site_effects:
+  TODO
+
+sites:
+  Used to specify a list of sites.
+  Example: *sites = 10.1 45, 10.2 45*
+
+sites_slice:
+  INTERNAL
+
+soil_intensities:
+  Used in classical calculations with amplification_method = convolution
+
+source_id:
+   Used for debugging purposes>
+   When gives, restricts the source model to the given source IDs.
+
+spatial_correlation:
+  Used in the ShakeMap calculator. The choics are "yes", "no" and "full".
+  Example: *spatial_correlation = full*
+  Default: "yes"
+
+specific_assets:
+  INTERNAL
+
+split_sources:
+  INTERNAL
+
+std:
+  INTERNAL
+
+steps_per_interval:
+  TODO
+
+taxonomies_from_model:
+  TODO
+
+time_event:
+  TODO
+
+truncation_level:
+  Truncation level used in the GMPEs.
+  Example: *truncation_level = 0* to compute median GMFs
+  Default: no default
+
+uniform_hazard_spectra:
+  Flag used to generated uniform hazard specta for the given poes
+
+vs30_tolerance:
+  Used when amplification_method = convolution
+
+width_of_mfd_bin:
+  Used to specify the width of the Magnitude Frequency Distribution
+"""
 import os
 import logging
 import functools
@@ -101,13 +543,11 @@ class OqParam(valid.ParamSet):
         valid.NoneOr(valid.positivefloat), None)
     asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
-    asset_loss_table = valid.Param(valid.boolean, False)
     assets_per_site_limit = valid.Param(valid.positivefloat, 1000)
     avg_losses = valid.Param(valid.boolean, True)
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
-    collapse_threshold = valid.Param(valid.probability, 0.5)
     collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), 0)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
@@ -127,7 +567,6 @@ class OqParam(valid.ParamSet):
     continuous_dd = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
     export_dir = valid.Param(valid.utf8, '.')
-    export_multi_curves = valid.Param(valid.boolean, False)
     exports = valid.Param(valid.export_formats, ())
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
@@ -136,9 +575,7 @@ class OqParam(valid.ParamSet):
     gsim = valid.Param(valid.utf8, '[FromFile]')
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
-    hazard_output_id = valid.Param(valid.NoneOr(valid.positiveint))
     hazard_maps = valid.Param(valid.boolean, False)
-    hypocenter = valid.Param(valid.point3d)
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
@@ -176,7 +613,6 @@ class OqParam(valid.ParamSet):
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.MagDepDistance.new, None)
-    point_rupture_bins = valid.Param(valid.positiveint, 20)
     ps_grid_spacing = valid.Param(valid.positivefloat, None)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
@@ -215,9 +651,7 @@ class OqParam(valid.ParamSet):
     shift_hypo = valid.Param(valid.boolean, False)
     site_effects = valid.Param(valid.boolean, False)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
-    sites_disagg = valid.Param(valid.NoneOr(valid.coordinates), [])
     sites_slice = valid.Param(valid.simple_slice, (None, None))
-    sm_lt_path = valid.Param(valid.logic_tree_path, None)
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
@@ -913,15 +1347,6 @@ class OqParam(valid.ParamSet):
             return len(self.soil_intensities) > 1
         else:
             return self.soil_intensities is None
-
-    def is_valid_sites_disagg(self):
-        """
-        The option `sites_disagg` (when given) requires `specific_assets` to
-        be set.
-        """
-        if self.sites_disagg:
-            return self.specific_assets or 'specific_assets' in self.inputs
-        return True  # a missing sites_disagg is valid
 
     def is_valid_specific_assets(self):
         """
