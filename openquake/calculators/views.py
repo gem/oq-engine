@@ -377,7 +377,7 @@ def portfolio_damage_error(token, dstore):
     The damages and errors for the full portfolio, extracted from
     the asset damage table.
     """
-    return dstore.read_df('avg_dmg')
+    return dstore.read_df('avg_portfolio_damage')
 
 
 @view.add('portfolio_damage')

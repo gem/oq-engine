@@ -227,7 +227,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
-        self.sanity_check()
 
         # damage by event: make sure the sum of the buildings is consistent
         rlz = self.datastore['events']['rlz_id']
@@ -241,9 +240,13 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 dbe[e, li,  0] = tot - dmg.sum()
                 dbe[e, li,  1:] = dmg
         self.datastore['dmg_by_event'] = dbe
-        self.datastore['avg_dmg'] = avg_std(dbe, weights)
-        self.datastore.set_shape_descr('avg_dmg', kind=['avg', 'std'],
-                                       loss_type=ltypes, dmg_state=dstates)
+        self.datastore['avg_portfolio_damage'] = avg_std(
+            dbe.astype(float), weights)
+        self.datastore.set_shape_descr(
+            'avg_portfolio_damage',
+            kind=['avg', 'std'], loss_type=ltypes, dmg_state=dstates)
+
+        self.sanity_check()
 
         # consequence distributions
         del result['d_asset']
@@ -275,9 +278,10 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         avg = arr.sum(axis=(0, 1))  # shape (L, D)
         if not len(self.datastore['dd_data/aid']):
             logging.warning('There is no damage at all!')
-        elif 'avg_dmg' in self.datastore:
-            df = views.portfolio_damage_error('avg_dmg', self.datastore)
-            rst = views.rst_table(df.to_numpy(), list(df.columns))
+        elif 'avg_portfolio_damage' in self.datastore:
+            df = views.portfolio_damage_error(
+                'avg_portfolio_damage', self.datastore)
+            rst = views.rst_table(df)
             logging.info('Portfolio damage\n%s' % rst)
         num_assets = avg.sum(axis=1)  # by loss_type
         expected = self.assetcol['number'].sum()
