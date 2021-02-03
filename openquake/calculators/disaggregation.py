@@ -366,17 +366,15 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Maximum mean_std per task:\n%s', msg)
 
         s = self.shapedic
-        sd = dict(N=s['N'], M=s['M'], P=s['P'], Z=s['Z'], D=s['dist'],
-                  E=s['eps'], Lo=s['lon'], La=s['lat'])
-        sd['tasks'] = numpy.ceil(len(task_inputs))
-        nbytes, msg = get_nbytes_msg(sd)
-        if nbytes > oq.max_data_transfer:
+        Ta = numpy.ceil(len(task_inputs))
+        nbytes = s['N'] * s['M'] * s['P'] * s['Z'] * Ta * 8
+        data_transfer = (s['dist'] * s['eps'] + s['lon'] * s['lat']) * nbytes
+        if data_transfer > oq.max_data_transfer:
             raise ValueError(
                 'Estimated data transfer too big\n%s > max_data_transfer=%s' %
-                (msg, humansize(oq.max_data_transfer)))
-        logging.info('Estimated data transfer:\n%s', msg)
+                (humansize(data_transfer), humansize(oq.max_data_transfer)))
+        logging.info('Estimated data transfer: %s', humansize(data_transfer))
 
-        sd.pop('tasks')
         dt = numpy.dtype([('trti', U8), ('nrups', U32)])
         self.datastore['disagg_task'] = numpy.array(task_inputs, dt)
         results = smap.reduce(self.agg_result, AccumDict(accum={}))
