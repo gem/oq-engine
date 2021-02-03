@@ -20,7 +20,7 @@ RUN apt-get update &&  apt-get install -y --no-install-recommends build-essentia
 ARG oq_branch=master
 # Setup the virtualenv
 RUN python -m venv /opt/openquake && \ 
-    source /opt/openquake/bin/activate
+    . /opt/openquake/bin/activate
 ENV PATH="/opt/openquake/bin:$PATH"
 ENV LANG en_US.UTF-8
 WORKDIR /opt
