@@ -123,13 +123,15 @@ def main(what, report=False):
                 fm = FunctionMaker(func)
             print('%s(%s)%s' % (fm.name, fm.signature, fm.doc))
     elif what == 'parameters':
-        params = []
+        docs = OqParam.docs()
+        names = set()
         for val in vars(OqParam).values():
             if hasattr(val, 'name'):
-                params.append(val)
-        params.sort(key=lambda x: x.name)
+                names.add(val.name)
+        params = sorted(names)
         for param in params:
-            print(param.name)
+            print(param)
+            print(docs[param])
     elif what == 'mfds':
         for cls in gen_subclasses(BaseMFD):
             print(cls.__name__)

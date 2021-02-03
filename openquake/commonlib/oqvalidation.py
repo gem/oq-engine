@@ -15,9 +15,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-"""
+
+from openquake.baselib import __version__
+
+__doc__ = """\
 Full list of configuration parameters
 =====================================
+
+Engine Version: %s
+
+Some parameters have a default that it is used when the parameter is
+not specified in the job.ini file. Some other parameters have no default,
+which means that not specifying them will raise an error when running
+a calculation for which they are required.
 
 aggregate_by:
   Used to compute aggregate losses and aggregate loss curves in risk
@@ -48,20 +58,22 @@ asset_correlation:
   Default: no default
 
 asset_hazard_distance:
-  Used in risk calculations to print a warning in case there are assets too
-  distant from the hazard sites.
+  In km, used in risk calculations to print a warning when there are assets
+  too distant from the hazard sites.
   Example: *asset_hazard_distance = 5*
+  Default: 15
 
 asset_life_expectancy:
   Used in the classical_bcr calculator.
   Example: *asset_life_expectancy = 50*
+  Default: no default
 
 assets_per_site_limit:
   INTERNAL
 
 avg_losses:
   Used in risk calculations to compute average losses
-  Example: *asset_life_expectancy=false*
+  Example: *avg_losses=false*
   Default: True
 
 base_path:
@@ -100,17 +112,26 @@ concurrent_tasks:
 conditional_loss_poes:
    Used in classical_risk calculations
 
-continuous_dd:
- TODO
+continuous_dmg_dist:
+  Flag used in scenario_damage calculations to specify that the damage
+  distributions should be stored as floating point numbers (float32)
+  and not as integers (uint32).
+  Example: *continuous_dmg_dist = true*
+  Default: False
 
 continuous_fragility_discretization:
-  TODO
+  Used when discretizing continuuos fragility functions
+  Example: *continuous_fragility_discretization = 10*
+  Default: 20
 
 coordinate_bin_width:
   Used in disaggregation calculations.
 
 cross_correlation:
-  TODO
+  Used in ShakeMap calculations. Valid choices are "yes", "no" "full",
+  same as for *spatial_correlation*.
+  Example: *cross_correlation = no*
+  Default: "yes"
 
 description:
   A string describing the calculation
@@ -130,10 +151,14 @@ discard_assets:
   Used in risk calculations to discard assets from the exposure.
 
 discard_trts:
-  Used to discard tectonic region types that do not contribute to the hazard
+  Used to discard tectonic region types that do not contribute to the hazard.
+  Example: discard_trts = Volcanic
+  Default: empty list
 
 distance_bin_width:
-  Used om disaggregation calculations
+  In km, used in disaggregation calculations.
+  Example: distance_bin_width =  20
+  Default: no default
 
 ebrisk_maxsize:
   INTERNAL
@@ -160,7 +185,9 @@ ground_motion_fields:
   Flag to turn on/off the calculation of ground motion fields
 
 gsim:
-   Used to specify a GSIM in scenario or event based calculations
+   Used to specify a GSIM in scenario or event based calculations.
+   Example: *gsim = BooreAtkinson2008*
+   Default: no default
 
 hazard_calculation_id:
   Used to specify a previous calculation from which the hazard is read
@@ -211,70 +238,103 @@ intensity_measure_types_and_levels:
   List of intensity measure types and levels in a classical calculation
   Default: empty list
 
-
 interest_rate:
-  TODO
+  Used in classical_bcr calculations.
+  Example: *interest_rate = 0.05*
+  Default: no default
 
 investigation_time:
-  TODO
+  Hazard investigation time in years, used in classical and event based
+  calculations.
+  Example: *investigation_time = 50*
+  Default: no default
 
 lrem_steps_per_interval:
-  TODO
+  Used in the vulnerability functions.
+  Example: *lrem_steps_per_interval  = 1*
+  Default: 0
 
 mag_bin_width:
-  TODO
+  Width of the magnitude bin used in disaggregation calculations.
+  Example: mag_bin_width = 0.5
+  Default: no default
 
 master_seed:
-  TODO
+  Seed used to control the generation of the epsilons, relevant for risk
+  calculations with vulnerability functions with nonzero coefficients of
+  variation.
+  Example: *master_seed = 1234*
+  Default: 0
 
 max:
-  TODO
+  Compute the maximum across realizations. Akin to mean and quantiles.
+  Example: *max = true*
+  Default: False
 
 max_data_transfer:
-  TODO
-max_num_loss_curves:
-  TODO
+  Restrict the maximum data transfer in disaggregation calculations
+
 max_potential_gmfs:
   TODO
+
 max_potential_paths:
   TODO
+
 max_sites_disagg:
-  TODO
+  Maximum number of sites for which to store rupture information.
+  In disaggregation calculations with many sites you may be forced to raise
+  *max_sites_disagg*, that must be greater or equal to the number of sites.
+  Example: *max_sites_disagg = 100*
+  Default: 10
 
 max_sites_per_gmf:
   TODO
 
 max_sites_per_tile:
-  TODO
+  INTERNAL
 
-max_weight
+max_weight:
+  INTERNAL
+
 maximum_distance:
-  TODO
+  Integration distance. Can be give as a scalar, as a dictionary TRT -> scalar
+  or as dictionary TRT -> [(mag, dist), ...]
+  Example: *maximum_distance = 200*
+  Default: no default
 
-maximum_intensity:
-  TODO
-
-mean
 mean:
-  TODO
+  Flag to enable/disable the calculation of mean curves.
+  Example: *mean = false*
+  Default: True
 
 min_weight:
-  TODO
+  INTERNAL
 
 minimum_asset_loss:
-  TODO
+  Used in risk calculations. If set, losses smaller than the
+  *minimum_asset_loss* are consider zeros.
+  Example: *minimum_asset_loss = {"structural": 1000}*
+  Default: empty dictionary
 
 minimum_intensity:
-  TODO
+  If set, ground motion values below the *minimum_intensity* are
+  considered zeros.
+  Example: *minimum_intensity = {'PGA': .01}
+  Default: empty dictionary
 
 minimum_magnitude:
-  TODO
+  If set, ruptures below the *minimum_magnitude* are discarded.
+  Example: *minimum_magnitude = 5.0*
+  Default: 0
 
 modal_damage_state:
-  TODO
+  Used in scenario_damage calculations to export only the damage state
+  with the highest probability.
+  Example: *modal_damage_state = true*
+  Default: false
 
 num_epsilon_bins:
-  TODO
+  Number of epsilon bins in disaggregation calculations
 
 num_rlzs_disagg:
   Used in disaggregation calculation to specify how many outputs will be
@@ -297,6 +357,9 @@ poes:
   Example: *poes = 0.01 0.02*
   Default: empty list
 
+poes_disagg:
+   Alias for poes
+
 pointsource_distance:
   Used in classical calculations to collapse the point sources. Can also be
   used in conjunction with *ps_grid_spacing*.
@@ -318,18 +381,27 @@ random_seed:
   Seed used in the sampling of the logic tree.
 
 reference_backarc:
-  TODO
+  Used when there is no site model to specify a global backarc parameter,
+  used in some GMPEs. Can be True or False
+  Example: *reference_backarc = true*
+  Default: False
 
 reference_depth_to_1pt0km_per_sec:
-  TODO
+  Used when there is no site model to specify a global z1pt0 parameter,
+  used in some GMPEs.
+  Example: *reference_depth_to_1pt0km_per_sec = 100*
+  Default: no default
 
 reference_depth_to_2pt5km_per_sec:
-  TODO
+  Used when there is no site model to specify a global z2pt5 parameter,
+  used in some GMPEs.
+  Example: *reference_depth_to_2pt5km_per_sec = 5*
+  Default: no default
 
 reference_siteclass:
   Used when there is no site model to specify a global site class.
   The siteclass is a one-character letter used in some GMPEs, like the
-  McVerry (2006), and has values "A", "B", "C" or "D"
+  McVerry (2006), and has values "A", "B", "C" or "D".
   Example: *reference_siteclass = "A"*
   Default: "D"
 
@@ -368,25 +440,27 @@ rupture_mesh_spacing:
   Set the discretization parameter in km for rupture geometries.
 
 ruptures_per_block:
-  TODO
+  INTERNAL
 
 sampling_method:
   TODO
 
 save_disk_space:
-  INTERNAL
+ INTERNAL
 
 sec_peril_params:
-  TODO
+  INTERNAL
 
 secondary_perils:
-  TODO
+  INTERNAL
 
 secondary_simulations:
-  TODO
+  INTERNAL
 
 sensitivity_analysis:
-  TODO
+  Dictionary describing a sensitivity analysis.
+  Example: *sensitivity_analysis = {'maximum_distance': [200, 300]}*
+  Default: empty dictionary
 
 ses_per_logic_tree_path:
   Set the number of stochastic event sets per logic tree realization in
@@ -396,16 +470,22 @@ ses_per_logic_tree_path:
 
 ses_seed:
   Seed governing the generation of the ground motion field.
+  Example: *ses_seed = 123*
+  Default: 42
 
 shakemap_id:
   Used in ShakeMap calculations to download a ShakeMap from the USGS site
   Default: no default
 
 shift_hypo:
-  Used in classical calculations to shift the rupture hypocenter
+  Used in classical calculations to shift the rupture hypocenter.
+  Example: *shift_hypo = true*
+  Default: false
 
 site_effects:
-  TODO
+  Flag used in ShakeMap calculations to turn out GMF amplification
+  Example: *site_effects = true*
+  Default: False
 
 sites:
   Used to specify a list of sites.
@@ -438,11 +518,11 @@ std:
 steps_per_interval:
   TODO
 
-taxonomies_from_model:
-  TODO
-
 time_event:
-  TODO
+  Used in scenario_risk calculations when the occupancy depend on the time.
+  Valid choices are "day", "night", "transit".
+  Example: *time_event = day*
+  Default: None
 
 truncation_level:
   Truncation level used in the GMPEs.
@@ -457,8 +537,9 @@ vs30_tolerance:
 
 width_of_mfd_bin:
   Used to specify the width of the Magnitude Frequency Distribution
-"""
+""" % __version__
 import os
+import re
 import logging
 import functools
 import multiprocessing
@@ -564,7 +645,7 @@ class OqParam(valid.ParamSet):
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     distance_bin_width = valid.Param(valid.positivefloat)
-    continuous_dd = valid.Param(valid.boolean, False)
+    continuous_dmg_dist = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
@@ -594,7 +675,6 @@ class OqParam(valid.ParamSet):
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_num_loss_curves = valid.Param(valid.positiveint, 10_000)
     max_potential_gmfs = valid.Param(valid.positiveint, 2E11)
     max_potential_paths = valid.Param(valid.positiveint, 100)
     max_sites_per_gmf = valid.Param(valid.positiveint, 65536)
@@ -603,7 +683,6 @@ class OqParam(valid.ParamSet):
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
-    maximum_intensity = valid.Param(valid.floatdict, {})  # IMT -> maxIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
@@ -662,7 +741,6 @@ class OqParam(valid.ParamSet):
     # be generated in cases like Ecuador inside full South America
     min_weight = valid.Param(valid.positiveint, 200)  # used in classical
     max_weight = valid.Param(valid.positiveint, 1E6)  # used in classical
-    taxonomies_from_model = valid.Param(valid.boolean, False)
     time_event = valid.Param(str, None)
     truncation_level = valid.Param(valid.NoneOr(valid.positivefloat), None)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
@@ -749,12 +827,6 @@ class OqParam(valid.ParamSet):
         elif 'intensity_measure_types' in names_vals:
             self.hazard_imtls = dict.fromkeys(
                 self.intensity_measure_types, [0])
-            if 'maximum_intensity' in names_vals:
-                minint = self.minimum_intensity or {'default': 1E-2}
-                for imt in self.hazard_imtls:
-                    i1 = calc.filters.getdefault(minint, imt)
-                    i2 = calc.filters.getdefault(self.maximum_intensity, imt)
-                    self.hazard_imtls[imt] = list(valid.logscale(i1, i2, 20))
             delattr(self, 'intensity_measure_types')
         if ('ps_grid_spacing' in names_vals and
                 'pointsource_distance' not in names_vals):
@@ -1446,3 +1518,15 @@ class OqParam(valid.ParamSet):
         if 'gmfs' in self.inputs or 'hazard_curves' in self.inputs:
             return True
         return self.hazard_calculation_id
+
+    @classmethod
+    def docs(cls):
+        """
+        :returns: a dictionary parameter name -> parameter documentation
+        """
+        dic = {}
+        lst = re.split(r'\n([\w_]+):\n', __doc__)
+        for name, doc in zip(lst[1::2], lst[2::2]):
+            name = name.split()[-1]
+            dic[name] = doc
+        return dic
