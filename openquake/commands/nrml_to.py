@@ -123,7 +123,8 @@ def appendrow(row, rows, chatty):
 
 def main(what, fnames, chatty=False, *, outdir='.'):
     """
-    Convert source models into CSV files or a geopackage.
+    Convert source models into CSV files (or geopackages, if fiona is
+    installed).
     """
     t0 = time.time()
     for fname in fnames:

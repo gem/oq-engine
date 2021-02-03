@@ -833,9 +833,9 @@ def extract_losses_by_asset(dstore, what):
         yield 'rlz-000', data
 
 
-@extract.add('losses_by_event')
-def extract_losses_by_event(dstore, what):
-    dic = group_array(dstore['losses_by_event'][()], 'rlzi')
+@extract.add('agg_loss_table')
+def extract_agg_loss_table(dstore, what):
+    dic = group_array(dstore['agg_loss_table'][()], 'rlzi')
     for rlzi in dic:
         yield 'rlz-%03d' % rlzi, dic[rlzi]
 

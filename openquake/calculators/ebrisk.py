@@ -252,7 +252,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
     def post_execute(self, dummy):
         """
-        Compute and store average losses from the losses_by_event dataset,
+        Compute and store average losses from the agg_loss_table dataset,
         and then loss curves and maps.
         """
         oq = self.oqparam

@@ -113,7 +113,7 @@ RM       4_000
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
-        [fname] = export(('losses_by_event', 'csv'), self.calc.datastore)
+        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=5E-6)
 
