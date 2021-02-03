@@ -25,9 +25,8 @@ ENV PATH="/opt/openquake/bin:$PATH"
 ENV LANG en_US.UTF-8
 WORKDIR /opt
 #clone repository and install engine
-RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
-    pip install "dask[complete]" && \
-    pip --disable-pip-version-check install -e .[cluster,osgeo] -r requirements-py38-linux64.txt --no-warn-script-location
+RUN curl -LJO https://raw.githubusercontent.com/gem/oq-engine/$oq_branch/install.py && \
+    python3 install.py server 
 #
 USER openquake
 ENV HOME /home/openquake
