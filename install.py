@@ -163,8 +163,9 @@ def before_checks(inst, remove, usage):
 
     # check if there is a DbServer running
     if not remove:
-        cmd = ('sudo systemctl stop openquake-dbserver' if inst is server
-               else 'oq dbserver stop')
+        # cmd = ('sudo systemctl stop openquake-dbserver' if inst is server
+        #       else 'oq dbserver stop')
+        cmd = ('oq dbserver stop')
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             errcode = sock.connect_ex(('localhost', inst.DBPORT))
