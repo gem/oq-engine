@@ -192,8 +192,8 @@ def export_src_loss_table(ekey, dstore):
 
 
 # this is used by scenario_risk, event_based_risk and ebrisk
-@export.add(('losses_by_event', 'csv'))
-def export_losses_by_event(ekey, dstore):
+@export.add(('agg_loss_table', 'csv'))
+def export_agg_loss_table(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import unittest.mock as mock
 import shutil
@@ -501,6 +502,30 @@ sensitivity_analysis = {
             [(job_id, oqparam)] = run_jobs([job_ini], log_level='error')
         self.assertIn('id | name', str(p))
 
+        # check the exported outputs
+        expected = set('''\
+Aggregate Event Losses
+Aggregate Loss Curves
+Aggregate Loss Curves Statistics
+Aggregate Losses
+Aggregate Losses Statistics
+Average Asset Losses
+Average Asset Losses Statistics
+Average Ground Motion Field
+Earthquake Ruptures
+Events
+Full Report
+Ground Motion Fields
+Hazard Curves
+Hazard Maps
+Input Files
+Realizations
+Source Loss Table'''.splitlines())
+        with Print.patch() as p:
+            sap.runline(f'openquake.commands engine --lo {job_id}')
+        got = set(re.findall(r'\| ([\w ]+)', str(p))) - {'name'}
+        if got != expected:
+            print('Missing output', expected - got, file=sys.stderr)
         # sanity check on the performance views: make sure that the most
         # relevant information is stored (it can be lost due to a wrong
         # refactoring of the monitoring and it happened several times)
