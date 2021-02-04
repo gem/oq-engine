@@ -379,7 +379,7 @@ class EngineServerTestCase(unittest.TestCase):
                 string.ascii_uppercase + string.digits) for _ in range(32)),
                             'utf-8')
             f.write(content)
-            checksum = str(zlib.adler32(content, 0) & 0xffffffff)
+            checksum = str(zlib.crc32(content, 0) & 0xffffffff)
 
             resp = self.c.post('/v1/on_same_fs', {'filename': filename,
                                                   'checksum': checksum})

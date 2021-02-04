@@ -1,12 +1,8 @@
 ============= ===== ====== ======== =====
 return_period kind  policy taxonomy value
 ============= ===== ====== ======== =====
-120           rlz-0 A      RC       82   
-120           rlz-1 A      RC       71   
-240           rlz-0 A      RC       134  
-240           rlz-1 A      RC       112  
-480           rlz-0 A      RC       222  
-480           rlz-1 A      RC       126  
-960           rlz-0 A      RC       1_067
-960           rlz-1 A      RC       436  
+240           rlz-1 A      RC       142  
+480           rlz-1 A      RC       181  
+960           rlz-0 A      RC       78   
+960           rlz-1 A      RC       1_065
 ============= ===== ====== ======== =====

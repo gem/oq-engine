@@ -108,7 +108,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        numpy.testing.assert_allclose(aw.array, [662.6701])
+        numpy.testing.assert_allclose(aw.array, [687.9181])
 
         fnames = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -188,7 +188,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_2_sampling(self):
         self.run_calc(case_2.__file__, 'job_sampling.ini')
-        self.assertEqual(len(self.calc.datastore['events']), 26)
+        self.assertEqual(len(self.calc.datastore['events']), 22)
         # TODO: improve this test
 
     def test_case_2_correlation(self):
@@ -390,7 +390,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_4b(self):
         # case with site collection extracted from site_model.xml
         self.run_calc(case_4a.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['events']), 4)
+        self.assertEqual(len(self.calc.datastore['events']), 3)
 
     def test_case_6c(self):
         # case with asset_correlation=1

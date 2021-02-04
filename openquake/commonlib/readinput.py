@@ -1166,7 +1166,7 @@ def _checksum(fnames, checksum=0):
         else:
             with open(fname, 'rb') as f:
                 data = f.read()
-        checksum = zlib.adler32(data, checksum)
+        checksum = zlib.crc32(data, checksum)
     return checksum
 
 
@@ -1185,7 +1185,7 @@ def get_checksum32(oqparam, h5=None):
                    'minimum_magnitude', 'source_id'):
             hazard_params.append('%s = %s' % (key, val))
     data = '\n'.join(hazard_params).encode('utf8')
-    checksum = zlib.adler32(data, checksum)
+    checksum = zlib.crc32(data, checksum)
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum

@@ -342,7 +342,7 @@ class UCERFSource(BaseSeismicSource):
                     self.usd, self.lsd,
                     Point(locations[i, 0], locations[i, 1]),
                     self.npd, self.hdd)
-                ps.checksum = zlib.adler32(pickle.dumps(vars(ps), protocol=4))
+                ps.checksum = zlib.crc32(pickle.dumps(vars(ps), protocol=4))
                 ps._wkt = ps.wkt()
                 ps.id = self.id
                 ps.et_id = self.et_id
