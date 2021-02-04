@@ -255,7 +255,8 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
             if config.zworkers['host_cores']:
                 set_concurrent_tasks_default(calc)
             else:
-                logging.warning('Using %d workers', parallel.Starmap.num_cores)
+                logging.warning('Assuming %d %s workers',
+                                parallel.Starmap.num_cores, OQ_DISTRIBUTE)
             t0 = time.time()
             calc.run(exports=exports, **kw)
             logging.info('Exposing the outputs to the database')
