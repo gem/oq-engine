@@ -806,7 +806,7 @@ def on_same_fs(request):
     checksum = 0
     try:
         data = open(filename, 'rb').read(32)
-        checksum = zlib.crc32(data, checksum) & 0xffffffff
+        checksum = zlib.adler32(data, checksum) & 0xffffffff
         if checksum == int(checksum_in):
             return HttpResponse(content=json.dumps({'success': True}),
                                 content_type=JSON, status=200)
