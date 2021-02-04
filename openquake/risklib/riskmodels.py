@@ -591,12 +591,12 @@ class CompositeRiskModel(collections.abc.Mapping):
         D = len(self.damage_states)
         return numpy.dtype([('eid', U32), ('dmg', (F32, (L, D)))])
 
-    def asset_damage_dt(self, continuous_dmg_dist):
+    def asset_damage_dt(self, float_dmg_dist):
         """
         :returns: a list [('aid', U32), ('eid', U32), ('lid', U8),
                           ('moderate_0', U32), ...]
         """
-        dt = F32 if continuous_dmg_dist else U32
+        dt = F32 if float_dmg_dist else U32
         dtlist = [('aid', U32), ('eid', U32), ('lid', U8)]
         for dmg in self.damage_states[1:]:
             dtlist.append((dmg, dt))

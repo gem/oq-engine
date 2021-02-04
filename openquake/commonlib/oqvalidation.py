@@ -112,11 +112,11 @@ concurrent_tasks:
 conditional_loss_poes:
    Used in classical_risk calculations
 
-continuous_dmg_dist:
+float_dmg_dist:
   Flag used in scenario_damage calculations to specify that the damage
   distributions should be stored as floating point numbers (float32)
   and not as integers (uint32).
-  Example: *continuous_dmg_dist = true*
+  Example: *float_dmg_dist = true*
   Default: False
 
 continuous_fragility_discretization:
@@ -645,7 +645,7 @@ class OqParam(valid.ParamSet):
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     distance_bin_width = valid.Param(valid.positivefloat)
-    continuous_dmg_dist = valid.Param(valid.boolean, False)
+    float_dmg_dist = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())

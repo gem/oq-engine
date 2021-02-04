@@ -88,8 +88,8 @@ def scenario_damage(riskinputs, param, monitor):
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
     # algorithm used to compute the discrete damage distributions
-    continuous_dmg_dist = param['continuous_dmg_dist']
-    z = numpy.zeros((L, D - 1), F32 if continuous_dmg_dist else U32)
+    float_dmg_dist = param['float_dmg_dist']
+    z = numpy.zeros((L, D - 1), F32 if float_dmg_dist else U32)
     d_event = AccumDict(accum=z)
     res = {'d_event': d_event, 'd_asset': []}
     for name in consequences:
@@ -109,7 +109,7 @@ def scenario_damage(riskinputs, param, monitor):
             for lti, loss_type in enumerate(crmodel.loss_types):
                 for asset, fractions in zip(ri.assets, out[loss_type]):
                     aid = asset['ordinal']
-                    if continuous_dmg_dist:
+                    if float_dmg_dist:
                         damages = fractions * asset['number']
                         if sec_sims:
                             run_sec_sims(
@@ -164,9 +164,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             logging.error("The asset %s has number=%s > 2^32-1!",
                           aref, ass['number'])
         self.param['secondary_simulations'] = oq.secondary_simulations
-        self.param['continuous_dmg_dist'] = oq.continuous_dmg_dist or num_floats
+        self.param['float_dmg_dist'] = oq.float_dmg_dist or num_floats
         self.param['asset_damage_dt'] = self.crmodel.asset_damage_dt(
-            oq.continuous_dmg_dist or num_floats)
+            oq.float_dmg_dist or num_floats)
         self.param['master_seed'] = oq.master_seed
         self.param['num_events'] = numpy.bincount(  # events by rlz
             self.datastore['events']['rlz_id'])
@@ -232,7 +232,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         rlz = self.datastore['events']['rlz_id']
         weights = self.datastore['weights'][:][rlz]
         tot = self.assetcol['number'].sum()
-        dt = F32 if self.param['continuous_dmg_dist'] else U32
+        dt = F32 if self.param['float_dmg_dist'] else U32
         dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
         dbe[:, :, 0] = tot
         for e, dmg_by_lt in result['d_event'].items():
