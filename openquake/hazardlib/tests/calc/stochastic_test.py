@@ -40,7 +40,7 @@ class StochasticEventSetTestCase(unittest.TestCase):
                      gsims=[SiMidorikawa1999SInter()])
         sf = calc.filters.SourceFilter(None, {})
         dic = sum(sample_ruptures(group, sf, param), {})
-        self.assertEqual(len(dic['rup_array']), 7)
+        self.assertEqual(len(dic['rup_array']), 8)
         self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
 
         # test no filtering 1
@@ -49,4 +49,4 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
         # test no filtering 2
         ruptures = sum(sample_ruptures(group, sf, param), {})['rup_array']
-        self.assertEqual(len(ruptures), 7)
+        self.assertEqual(len(ruptures), 8)

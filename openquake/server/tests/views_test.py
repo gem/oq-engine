@@ -380,10 +380,8 @@ class EngineServerTestCase(unittest.TestCase):
                             'utf-8')
             f.write(content)
             checksum = str(zlib.adler32(content, 0) & 0xffffffff)
-
             resp = self.c.post('/v1/on_same_fs', {'filename': filename,
                                                   'checksum': checksum})
-
             self.assertEqual(resp.status_code, 200)
             resp_text_dict = json.loads(resp.content.decode('utf8'))
             self.assertTrue(resp_text_dict['success'])

@@ -181,7 +181,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(einfo['rupture_class'],
                          'ParametricProbabilisticRupture')
         self.assertEqual(einfo['surface_class'], 'PlanarSurface')
-        self.assertEqual(einfo['seed'], 73073755)
+        self.assertEqual(einfo['seed'], 1483155045)
         self.assertEqual(str(einfo['gsim']),
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
@@ -263,9 +263,9 @@ class EventBasedTestCase(CalculatorTestCase):
         # check MFD
         aw = extract(self.calc.datastore, 'event_based_mfd?kind=mean')
         self.assertEqual(aw.duration, 30)  # 30 years
-        aac(aw.magnitudes, [4.6, 4.7, 4.8, 4.9, 5.1, 5.3, 5.9], atol=1E-6)
-        aac(aw.mean_frequency, [0.02, 0.013333, 0.01, 0.053333, 0.006667,
-                                0.006667, 0.006667], atol=1E-6)
+        aac(aw.magnitudes, [4.6, 4.7, 4.9, 5.1, 5.3, 5.7], atol=1E-6)
+        aac(aw.mean_frequency, [0.02, 0.013333, 0.03, 0.016667, 0.006667,
+                                0.006667], atol=1E-4)
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
@@ -319,15 +319,15 @@ class EventBasedTestCase(CalculatorTestCase):
         gg = get_gmfgetter(self.calc.datastore, rup_id=0)
         self.assertEqual(str(gg.get_hazard()), '''\
    sid  eid  rlz     gmv_0
-0    0    0    0  0.611368
-1    1    0    0  1.556242
-2    2    0    0  1.226484''')
+0    0    0    0  0.730127
+1    1    0    0  0.998477
+2    2    0    0  0.876034''')
 
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
-        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 39)
+        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 14)
 
     def test_case_10(self):
         # this is a case with multiple files in the smlt uncertaintyModel
@@ -397,7 +397,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # check that the exported file is parseable
         rupcoll = nrml.to_python(fname, RuptureConverter(1))
         self.assertEqual(list(rupcoll), [1])  # one group
-        self.assertEqual(len(rupcoll[1]), 2)  # two EBRuptures
+        self.assertEqual(len(rupcoll[1]), 3)  # three EBRuptures
 
         # check that GMFs are not stored
         with self.assertRaises(KeyError):
@@ -435,7 +435,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # check the relevant_events
         E = extract(self.calc.datastore, 'num_events')['num_events']
         e = len(extract(self.calc.datastore, 'events'))
-        self.assertAlmostEqual(e/E, 0.1440677966)
+        self.assertAlmostEqual(e/E, 0.22633744856)
 
         # run again the GMF calculation, but this time from stored ruptures
         hid = str(self.calc.datastore.calc_id)
@@ -446,7 +446,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_21(self):
         self.run_calc(case_21.__file__, 'job.ini', exports='csv,xml')
         self.run_calc(case_21.__file__, 'job.ini',
-                      ses_per_logic_tree_path='100',
+                      ses_per_logic_tree_path='900',
                       number_of_logic_tree_samples='0')
 
     def test_case_22(self):
