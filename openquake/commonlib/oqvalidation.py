@@ -949,6 +949,12 @@ class OqParam(valid.ParamSet):
                                           'disaggregation']):
             check_same_levels(self.imtls)
 
+        if ('amplification' in self.inputs and
+            self.amplification_method == 'convolution' and
+            not self.soil_intensities):
+                raise InvalidFile('%s: The soil_intensities must be defined'
+                     % job_ini)
+
     def check_gsims(self, gsims):
         """
         :param gsims: a sequence of GSIM instances

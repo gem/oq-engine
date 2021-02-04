@@ -1,3 +1,6 @@
+  [Robin Gee]
+  * Check soil_intensities in oqvalidation
+
   [Michele Simionato]
   * Documented all the parameters in a job.ini file, and removed some
     obsolete ones
