@@ -1,5 +1,6 @@
   [Robin Gee]
-  * Check soil_intensities in oqvalidation
+  * Added a check for missing `soil_intensities` in classical calculations
+    with site amplification
 
   [Michele Simionato]
   * Documented all the parameters in a job.ini file, and removed some
