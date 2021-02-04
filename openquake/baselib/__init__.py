@@ -103,7 +103,7 @@ def read(*paths, **validators):
             try:
                 sec[k] = validators.get(k, lambda x: x)(v)
             except ValueError as err:
-                raise ValueError('%s for %s in %s' % (err, k, found[0]))
+                raise ValueError('%s for %s in %s' % (err, k, found[-1]))
 
 
 config.read = read
