@@ -23,31 +23,6 @@ from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
 
-def getdata(what, imt, extractors, sitecol, sids):
-    extractor = extractors[0]
-    oq = extractor.oqparam
-    imtls = oq.imtls
-    poes = oq.poes
-    if imt not in imtls:
-        sys.exit('%s not found. The available IMTs are %s' % (imt, list(imtls)))
-    imti = {imt: i for i, imt in enumerate(imtls)}
-    m = imti[imt]
-    what += '?kind=mean&imt=' + imt
-    arrays = [extractor.get(what).mean[sids, m, :]]
-    extractor.close()
-    for extractor in extractors[1:]:
-        oq = extractor.oqparam
-        numpy.testing.assert_array_equal(
-            extractor.get('sitecol')[['lon', 'lat']], sitecol[['lon', 'lat']])
-        if what.startswith('hcurves'):  # array NML
-            numpy.testing.assert_array_equal(oq.imtls[imt], imtls[imt])
-        elif what.startswith('hmaps'):  # array NMP
-            numpy.testing.assert_array_equal(oq.poes, poes)
-        arrays.append(extractor.get(what).mean[sids, m, :])
-        extractor.close()
-    return poes, numpy.array(arrays)  # shape (C, N, L)
-
-
 def get_diff_idxs(array, rtol, atol):
     """
     Given an array with (C, N, L) values, being the first the reference value,
@@ -78,6 +53,7 @@ def _print_diff(a1, a2, idx1, idx2, col):
             print(col, idx2[i], a2[i])
 
 
+# works only locally for the moment
 def compare_rups(calc_1, calc_2):
     """
     Compare the ruptures of two calculations as pandas DataFrames
@@ -94,6 +70,57 @@ def compare_rups(calc_1, calc_2):
         _print_diff(a1, a2, df1.index, df2.index, col)
 
 
+class Comparator(object):
+    def __init__(self, calc_ids):
+        self.extractors = [Extractor(calc_id) for calc_id in calc_ids]
+        self.sitecol = self.extractors[0].get('sitecol')
+        self.oq = self.extractors[0].oqparam
+
+    def cumtime(self):
+        data = []
+        for ex in self.extractors:
+            time = ex.get('performance_data')['time_sec'].sum()
+            data.append((ex.calc_id, time))
+        return views.rst_table(data, ['calc_id', 'time'])
+
+    def getsids(self, samplesites):
+        sids = self.sitecol['sids']
+        if samplesites:
+            try:
+                numsamples = int(samplesites)  # number
+            except ValueError:  # filename
+                sids = [int(sid) for sid in open(samplesites).read().split()]
+            else:
+                if len(self.sitecol) > numsamples:
+                    numpy.random.seed(numsamples)
+                    sids = numpy.random.choice(
+                        len(self.sitecol), numsamples, replace=False)
+        return numpy.sort(sids)
+
+    def getdata(self, what, imt, sids):
+        oq = self.oq
+        extractor = self.extractors[0]
+        imtls = oq.imtls
+        poes = oq.poes
+        if imt not in imtls:
+            sys.exit('%s not found. The available IMTs are %s' %
+                     (imt, list(imtls)))
+        imti = {imt: i for i, imt in enumerate(imtls)}
+        m = imti[imt]
+        what += '?kind=mean&imt=' + imt
+        arrays = [extractor.get(what).mean[sids, m, :]]
+        extractor.close()
+        for extractor in self.extractors[1:]:
+            oq = extractor.oqparam
+            if what.startswith('hcurves'):  # array NML
+                numpy.testing.assert_array_equal(oq.imtls[imt], imtls[imt])
+            elif what.startswith('hmaps'):  # array NMP
+                numpy.testing.assert_array_equal(oq.poes, poes)
+            arrays.append(extractor.get(what).mean[sids, m, :])
+            extractor.close()
+        return numpy.array(arrays)  # shape (C, N, L)
+
+
 def main(what, imt, calc_ids: int,
          files=False,
          *,
@@ -104,36 +131,19 @@ def main(what, imt, calc_ids: int,
     Compare the hazard curves or maps of two or more calculations.
     Also used to compare the times with `oq compare cumtime of -1 -2`.
     """
-    if what == 'cumtime':
-        data = []
-        for calc_id in calc_ids:
-            time = Extractor(calc_id).get('performance_data')['time_sec'].sum()
-            data.append((calc_id, time))
-        print(views.rst_table(data, ['calc_id', 'time']))
-        return
     if what == 'rups':
         return compare_rups(int(imt), calc_ids[0])
-    extractors = [Extractor(calc_id) for calc_id in calc_ids]
-    ex = extractors[0]
-    sitecol = ex.get('sitecol')
-    sids = sitecol['sids']
-    if samplesites:
-        try:
-            numsamples = int(samplesites)  # number
-        except ValueError:  # filename
-            sids = [int(sid) for sid in open(samplesites).read().split()]
-        else:
-            if len(sitecol) > numsamples:
-                numpy.random.seed(numsamples)
-                sids = numpy.random.choice(
-                    len(sitecol), numsamples, replace=False)
-    sids.sort()
-    poes, arrays = getdata(what, imt, extractors, sitecol, sids)
+    c = Comparator(calc_ids)
+    if what == 'cumtime':
+        print(c.cumtime())
+        return
+    sids = c.getsids(samplesites)
+    arrays = c.getdata(what, imt, sids)
     head = ['site_id'] if files else ['site_id', 'calc_id']
     if what == 'hcurves':
-        header = head + ['%.5f' % lvl for lvl in ex.oqparam.imtls[imt]]
+        header = head + ['%.5f' % lvl for lvl in c.oq.imtls[imt]]
     else:  # hmaps
-        header = head + [str(poe) for poe in poes]
+        header = head + [str(poe) for poe in c.oq.poes]
     rows = collections.defaultdict(list)
     diff_idxs = get_diff_idxs(arrays, rtol, atol)
     if len(diff_idxs) == 0:
@@ -159,7 +169,7 @@ def main(what, imt, calc_ids: int,
             ms = numpy.mean((arrays[0] - arrays[1])**2, axis=0)  # P
             maxdiff = numpy.abs(arrays[0] - arrays[1]).max(axis=0)  # P
             rows = [(str(poe), rms, md) for poe, rms, md in zip(
-                poes, numpy.sqrt(ms), maxdiff)]
+                c.oq.poes, numpy.sqrt(ms), maxdiff)]
             print(views.rst_table(rows, ['poe', 'rms-diff', 'max-diff']))
 
 
