@@ -23,26 +23,29 @@ from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
 
-def getdata(what, calc_ids, sitecol, sids):
-    extractors = [Extractor(calc_id) for calc_id in calc_ids]
+def getdata(what, imt, extractors, sitecol, sids):
     extractor = extractors[0]
     oq = extractor.oqparam
     imtls = oq.imtls
     poes = oq.poes
-    arrays = [extractor.get(what + '?kind=mean').mean[sids]]
+    if imt not in imtls:
+        sys.exit('%s not found. The available IMTs are %s' % (imt, list(imtls)))
+    imti = {imt: i for i, imt in enumerate(imtls)}
+    m = imti[imt]
+    what += '?kind=mean&imt=' + imt
+    arrays = [extractor.get(what).mean[sids, m, :]]
     extractor.close()
     for extractor in extractors[1:]:
         oq = extractor.oqparam
         numpy.testing.assert_array_equal(
             extractor.get('sitecol')[['lon', 'lat']], sitecol[['lon', 'lat']])
-        if what == 'hcurves':
-            for imt in imtls:
-                numpy.testing.assert_array_equal(oq.imtls[imt], imtls[imt])
-        elif what == 'hmaps':
+        if what.startswith('hcurves'):  # array NML
+            numpy.testing.assert_array_equal(oq.imtls[imt], imtls[imt])
+        elif what.startswith('hmaps'):  # array NMP
             numpy.testing.assert_array_equal(oq.poes, poes)
-        arrays.append(extractor.get(what + '?kind=mean').mean[sids])
+        arrays.append(extractor.get(what).mean[sids, m, :])
         extractor.close()
-    return imtls, poes, numpy.array(arrays)  # shape (C, N, L)
+    return poes, numpy.array(arrays)  # shape (C, N, L)
 
 
 def get_diff_idxs(array, rtol, atol):
@@ -110,7 +113,9 @@ def main(what, imt, calc_ids: int,
         return
     if what == 'rups':
         return compare_rups(int(imt), calc_ids[0])
-    sitecol = Extractor(calc_ids[0]).get('sitecol')
+    extractors = [Extractor(calc_id) for calc_id in calc_ids]
+    ex = extractors[0]
+    sitecol = ex.get('sitecol')
     sids = sitecol['sids']
     if samplesites:
         try:
@@ -123,28 +128,19 @@ def main(what, imt, calc_ids: int,
                 sids = numpy.random.choice(
                     len(sitecol), numsamples, replace=False)
     sids.sort()
-    imtls, poes, arrays = getdata(what, calc_ids, sitecol, sids)
-    imti = {imt: i for i, imt in enumerate(imtls)}
-    try:
-        levels = imtls[imt]
-    except KeyError:
-        sys.exit(
-            '%s not found. The available IMTs are %s' % (imt, list(imtls)))
-    imt2idx = {imt: i for i, imt in enumerate(imtls)}
+    poes, arrays = getdata(what, imt, extractors, sitecol, sids)
     head = ['site_id'] if files else ['site_id', 'calc_id']
     if what == 'hcurves':
-        array_imt = arrays[:, :, imti[imt], :]  # shape (C, N, L1)
-        header = head + ['%.5f' % lvl for lvl in levels]
+        header = head + ['%.5f' % lvl for lvl in ex.oqparam.imtls[imt]]
     else:  # hmaps
-        array_imt = arrays[:, :, imt2idx[imt]]
         header = head + [str(poe) for poe in poes]
     rows = collections.defaultdict(list)
-    diff_idxs = get_diff_idxs(array_imt, rtol, atol)
+    diff_idxs = get_diff_idxs(arrays, rtol, atol)
     if len(diff_idxs) == 0:
         print('There are no differences within the tolerances '
               'atol=%s, rtol=%d%%, sids=%s' % (atol, rtol * 100, sids))
         return
-    arr = array_imt.transpose(1, 0, 2)  # shape (N, C, L)
+    arr = arrays.transpose(1, 0, 2)  # shape (N, C, L)
     for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
         for calc_id, cols in zip(calc_ids, array):
             if files:
@@ -160,8 +156,8 @@ def main(what, imt, calc_ids: int,
     else:
         print(views.rst_table(rows['all'], header))
         if len(calc_ids) == 2 and what == 'hmaps':
-            ms = numpy.mean((array_imt[0] - array_imt[1])**2, axis=0)  # P
-            maxdiff = numpy.abs(array_imt[0] - array_imt[1]).max(axis=0)  # P
+            ms = numpy.mean((arrays[0] - arrays[1])**2, axis=0)  # P
+            maxdiff = numpy.abs(arrays[0] - arrays[1]).max(axis=0)  # P
             rows = [(str(poe), rms, md) for poe, rms, md in zip(
                 poes, numpy.sqrt(ms), maxdiff)]
             print(views.rst_table(rows, ['poe', 'rms-diff', 'max-diff']))
