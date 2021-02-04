@@ -26,8 +26,7 @@ ENV HOME /home/openquake
 WORKDIR ${HOME}
 RUN mkdir oqdata 
 #clone repository and install engine with script in devel mode
-RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
-    python3 ./install.py devel
+RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && python3 ./install.py devel
 #
 #
 ENV OQ_CONFIG_FILE /home/openquake/openquake.cfg

@@ -18,8 +18,6 @@ FROM openquake/engine:nightly
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
       vendor="GEM Foundation"
 
-ADD ./openquake.cfg /opt/openquake/openquake.cfg
-
 EXPOSE 8800:8800
 ENTRYPOINT ["/bin/bash"]
 CMD ["./oq-start.sh"]
