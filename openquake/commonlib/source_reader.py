@@ -186,7 +186,7 @@ def reduce_sources(sources_with_same_id):
     for src in sources_with_same_id:
         dic = {k: v for k, v in vars(src).items()
                if k not in 'source_id et_id samples'}
-        src.checksum = zlib.crc32(pickle.dumps(dic, protocol=4))
+        src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
         # duplicate sources: same id, same checksum
