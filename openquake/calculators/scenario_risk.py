@@ -22,7 +22,7 @@ import numpy
 import pandas
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
-from openquake.calculators import base, post_risk
+from openquake.calculators import base, post_risk, views
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -180,6 +180,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.datastore['agg_losses-rlzs'] = agglosses
             set_rlzs_stats(self.datastore, 'agg_losses',
                            agg_id=K, loss_types=oq.loss_names, units=units)
+            logging.info('Portfolio loss\n' +
+                         views.view('portfolio_loss', self.datastore))
         else:  # event_based_risk, run post_risk
             prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
             prc.run(exports='')
