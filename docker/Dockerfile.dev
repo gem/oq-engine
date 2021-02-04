@@ -19,18 +19,21 @@ RUN apt-get update &&  apt-get install -y --no-install-recommends build-essentia
     useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
 ARG oq_branch=master
 ENV LANG en_US.UTF-8
-#WORKDIR /opt
+WORKDIR /opt
+RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
+    pip install "dask[complete]" && \
+    pip --disable-pip-version-check install -e . -r requirements-py38-linux64.txt --no-warn-script-location
+#
+#
+ENV OQ_CONFIG_FILE /opt/openquake.cfg
+ADD openquake.cfg /opt/openquake 
+ENV PATH="/opt/openquake/bin:$PATH"
+#
 USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
 RUN mkdir oqdata 
-#clone repository and install engine with script in devel mode
-RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && python3 ./install.py devel
 #
-#
-ENV OQ_CONFIG_FILE /home/openquake/openquake.cfg
-ADD openquake.cfg /opt/openquake 
-ENV PATH="/home/openquake/openquake/bin:$PATH"
 ADD scripts/oq-db_start.sh ${HOME}
 ADD scripts/oq-start.sh ${HOME}
 # if want to copy engine src to home
