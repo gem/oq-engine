@@ -372,7 +372,7 @@ class EventBasedCalculator(base.HazardCalculator):
         L1 = L // (M or 1)
         # check seed dependency
         if 'gmf_data' in self.datastore:
-            logging.info('Checking GMFs')
+            logging.info('Checking seed dependency')
             err = views.view('gmf_error', self.datastore)
             if err > .05:
                 logging.warning('Your results are expected to have a large '
