@@ -19,7 +19,7 @@ RUN apt-get update &&  apt-get install -y --no-install-recommends build-essentia
     useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
 ARG oq_branch=master
 ENV LANG en_US.UTF-8
-WORKDIR /opt
+WORKDIR /usr/src
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
     pip install "dask[complete]" && \
     pip --disable-pip-version-check install -e . -r requirements-py38-linux64.txt --no-warn-script-location
