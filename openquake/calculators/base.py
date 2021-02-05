@@ -1007,7 +1007,7 @@ class RiskCalculator(HazardCalculator):
             dstore.close()
             dstore = self.datastore
         if 'gmf_data' not in dstore:
-            raise InvalidFile('Did you forget gmfs_csv in %s?'
+            raise InvalidFile('No gmf_data: did you forget gmfs_csv in %s?'
                               % self.oqparam.inputs['job_ini'])
         with self.monitor('reading GMFs'):
             rlzs = dstore['events']['rlz_id']
