@@ -38,8 +38,6 @@ services:
     # - ../../oq-engine:/home/openquake/oq-engine:ro
     # Uncomment to use a local copy of the oq-engine
     #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
-    # uncomment to use different openquake.cfg from the docker image
-    # - ./zmq/openquake.cfg:/opt/openquake/openquake.cfg
     networks:
      backend:
       aliases:
