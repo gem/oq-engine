@@ -33,11 +33,9 @@ services:
     volumes:
      - oqdata:/home/openquake/oqdata
     # Uncomment to expose demos inside the container
-    # - ../demos:/home/openquake/demos:ro
-    # Uncomment to expose oq-engine inside the container
-    # - ../../oq-engine:/home/openquake/oq-engine:ro
-    # Uncomment to use a local copy of the oq-engine
-    #   - ../openquake:/opt/openquake/lib/python3.6/site-packages/openquake
+    # - ../../demos:/home/openquake/demos:ro
+    # use different openquake.cfg from the docker image
+     - ./openquake.cfg:/etc/openquake/openquake.cfg
     networks:
      backend:
       aliases:
