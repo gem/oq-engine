@@ -165,7 +165,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # vulnerability function with BT
         self.run_calc(case_1f.__file__, 'job_h.ini,job_r.ini')
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
-        self.assertEqualFiles('portfolio_losses.txt', fname, delta=1E-6)
+        self.assertEqualFiles('portfolio_losses.txt', fname, delta=1E-5)
         os.remove(fname)
 
     def test_case_1g(self):
@@ -348,17 +348,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/portfolio_losses_ampl.txt', fname, delta=1E-5)
 
+    # NB: big difference between Ubuntu 18 and 20
     def test_case_7a(self):
         # case with preimported exposure
         self.run_calc(case_7a.__file__,  'job_h.ini')
         self.run_calc(case_7a.__file__,  'job_r.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_losses.csv', fname)
+        self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-4)
         rup_ids = set(read_csv(fname, {None: '<S50'})['rup_id'])
 
         [fname] = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_curves.csv', fname)
+        self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-4)
 
         # check that the IDs in agg_loss_table.csv exist in ruptures.csv
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
@@ -385,7 +386,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
                             exports='csv')
         [fname, _sigeps, _sitefile] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/gmf-data.csv', fname)
+        self.assertEqualFiles('expected/gmf-data.csv', fname, delta=5E-5)
 
     def test_case_4b(self):
         # case with site collection extracted from site_model.xml
@@ -404,12 +405,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
 
+    # NB: big difference between Ubuntu 18 and 20
     def test_asset_loss_table(self):
         # this is a case with L=1, R=1, T1=2, P=6
         out = self.run_calc(case_6c.__file__, 'job_eb.ini', exports='csv',
                             minimum_asset_loss='100')
         [fname] = out['agg_curves-rlzs', 'csv']
-        self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=5E-5)
+        self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-4)
 
         curves = self.calc.datastore.read_df('agg_curves-rlzs')
         self.assertEqual(len(curves), 18)  # (2 tags + 1 total) x 6 periods
@@ -419,7 +421,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             case_6c.__file__, 'job_eb.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         [fname] = out['agg_curves-rlzs', 'csv']
-        self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=5E-5)
+        self.assertEqualFiles('expected/agg_curves_eb.csv', fname, delta=1E-4)
 
     def test_recompute(self):
         # test recomputing aggregate loss curves with post_risk
