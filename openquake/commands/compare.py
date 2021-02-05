@@ -111,10 +111,10 @@ class Comparator(object):
                      (imt, list(imtls)))
         what += '?imt=' + imt
         aw = extractor.get(what)
-        array = getattr(aw, imt)[sids]
-        arrays = numpy.zeros((len(self.extractors), len(array), 1))
+        arrays = numpy.zeros((len(self.extractors), len(sids), 1))
+        arrays[0] = getattr(aw, imt)[sids]
         extractor.close()
-        for e, extractor in enumerate(self.extractors[1:]):
+        for e, extractor in enumerate(self.extractors[1:], 1):
             arrays[e] = getattr(extractor.get(what), imt)[sids]
             extractor.close()
         return arrays  # shape (C, N, 1)
