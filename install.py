@@ -125,6 +125,8 @@ def install_standalone(venv):
     """
     Install the standalone Django applications if possible
     """
+    print("The standalone applications are not installed yet")
+    return
     for app in 'standalone ipt taxtweb taxonomy'.split():
         env = {'PYBUILD_NAME': 'oq-taxonomy'} if app == 'taxonomy' else {}
         try:
