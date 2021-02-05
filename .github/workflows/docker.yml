@@ -23,10 +23,10 @@ jobs:
           docker image ls
       - name: Build image engine master with tag nightly
         id: docker_master
-        run: docker build -t openquake/engine-master-zmq:nightly -f docker/zmq/Dockerfile.master docker/zmq
+        run: docker build -t openquake/engine-master-zmq:nightly -f docker/zmq/Dockerfile.dev_master docker/zmq
       - name: Builds image engine worker with tags nightly
         id: docker_worker
-        run: docker build -t openquake/engine-worker-zmq:nightly -f docker/zmq/Dockerfile.worker docker/zmq
+        run: docker build -t openquake/engine-worker-zmq:nightly -f docker/zmq/Dockerfile.dev_worker docker/zmq
       - name: List Image
         run: |
           docker image ls
