@@ -180,7 +180,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.datastore['agg_losses-rlzs'] = agglosses
             set_rlzs_stats(self.datastore, 'agg_losses',
                            agg_id=K, loss_types=oq.loss_names, units=units)
-            logging.info('Portfolio loss\n' +
+            logging.info('Mean portfolio loss per event\n' +
                          views.view('portfolio_loss', self.datastore))
         else:  # event_based_risk, run post_risk
             prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
