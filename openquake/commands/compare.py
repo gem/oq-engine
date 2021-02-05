@@ -103,13 +103,35 @@ class Comparator(object):
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, L)
 
+    def getgmf(self, what, imt, sids):
+        extractor = self.extractors[0]
+        imtls = self.oq.imtls
+        if imt not in imtls:
+            sys.exit('%s not found. The available IMTs are %s' %
+                     (imt, list(imtls)))
+        what += '?imt=' + imt
+        aw = extractor.get(what)
+        array = getattr(aw, imt)[sids]
+        arrays = numpy.zeros((len(self.extractors), len(array), 1))
+        extractor.close()
+        for e, extractor in enumerate(self.extractors[1:]):
+            arrays[e] = getattr(extractor.get(what), imt)[sids]
+            extractor.close()
+        return arrays  # shape (C, N, 1)
+
     def compare(self, what, imt, files, samplesites, atol, rtol):
         sids = self.getsids(samplesites)
-        arrays = self.getdata(what, imt, sids)
-        head = ['site_id'] if files else ['site_id', 'calc_id']
-        header = head + (['%.5f' % lvl for lvl in self.oq.imtls[imt]]
-                         if what == 'hcurves' else
-                         [str(poe) for poe in self.oq.poes])
+        if what.startswith('avg_gmf'):
+            arrays = self.getgmf(what, imt, sids)
+        else:
+            arrays = self.getdata(what, imt, sids)
+        header = ['site_id'] if files else ['site_id', 'calc_id']
+        if what == 'hcurves':
+            header += ['%.5f' % lvl for lvl in self.oq.imtls[imt]]
+        elif what == 'hmaps':
+            header += [str(poe) for poe in self.oq.poes]
+        else:  # avg_gmf
+            header += ['gmf']
         rows = collections.defaultdict(list)
         diff_idxs = get_diff_idxs(arrays, rtol, atol)
         if len(diff_idxs) == 0:
@@ -120,11 +142,11 @@ class Comparator(object):
         for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
             for ex, cols in zip(self.extractors, array):
                 if files:
-                    rows[calc_id].append([sid] + list(cols))
+                    rows[ex.calc_id].append([sid] + list(cols))
                 else:
                     rows['all'].append([sid, ex.calc_id] + list(cols))
         if files:
-            fdict = {ex.calc_id: open('%s.txt' % calc_id, 'w')
+            fdict = {ex.calc_id: open('%s.txt' % ex.calc_id, 'w')
                      for ex in self.extractors}
             for calc_id, f in fdict.items():
                 f.write(views.rst_table(rows[calc_id], header))
@@ -132,6 +154,7 @@ class Comparator(object):
         else:
             print(views.rst_table(rows['all'], header))
         return arrays
+
 
 # works only locally for the moment
 def compare_rups(calc_1: int, calc_2: int):
@@ -157,12 +180,8 @@ def compare_cumtime(calc1: int, calc2: int):
     return Comparator([calc1, calc2]).cumtime()
 
 
-def compare_hmaps(imt, calc_ids: int,
-         files=False,
-         *,
-         samplesites='',
-         rtol: float = 0,
-         atol: float = 1E-3):
+def compare_hmaps(imt, calc_ids: int, files=False, *,
+                  samplesites='', rtol: float = 0, atol: float = 1E-3):
     """
     Compare the hazard maps of two or more calculations.
     """
@@ -176,25 +195,31 @@ def compare_hmaps(imt, calc_ids: int,
         print(views.rst_table(rows, ['poe', 'rms-diff', 'max-diff']))
 
 
-def compare_hcurves(imt, calc_ids: int,
-         files=False,
-         *,
-         samplesites='',
-         rtol: float = 0,
-         atol: float = 1E-3):
+def compare_hcurves(imt, calc_ids: int, files=False, *,
+                    samplesites='', rtol: float = 0, atol: float = 1E-3):
     """
-    Compare the hazard curves or maps of two or more calculations.
+    Compare the hazard curves of two or more calculations.
     """
     c = Comparator(calc_ids)
     c.compare('hcurves', imt, files, samplesites, atol, rtol)
 
 
+def compare_avg_gmf(imt, calc_ids: int, files=False, *,
+                    samplesites='', rtol: float = 0, atol: float = 1E-3):
+    """
+    Compare the average GMF of two or more calculations.
+    """
+    c = Comparator(calc_ids)
+    c.compare('avg_gmf', imt, files, samplesites, atol, rtol)
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             hmaps=compare_hmaps,
-            hcurves=compare_hcurves)
+            hcurves=compare_hcurves,
+            avg_gmf=compare_avg_gmf)
 
-for f in (compare_hmaps, compare_hcurves):
+for f in (compare_hmaps, compare_hcurves, compare_avg_gmf):
     f.imt = 'intensity measure type to compare'
     f.calc_ids = dict(help='calculation IDs', nargs='+')
     f.files = 'write the results in multiple files'
