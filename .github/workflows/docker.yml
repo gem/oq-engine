@@ -3,8 +3,6 @@ name: docker
 on:
   schedule:
     - cron: "0 2 * * *"
-  push:
-    branches: nightbuild
 
 jobs:
   docker:
