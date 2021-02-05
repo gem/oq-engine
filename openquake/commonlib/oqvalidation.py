@@ -908,7 +908,11 @@ class OqParam(valid.ParamSet):
         if (self.calculation_mode == 'event_based_risk' and
                 self.asset_correlation not in (0, 1)):
             raise ValueError('asset_correlation != {0, 1} is no longer'
-                             ' supported')
+                             ' supported in %s' % job_inif)
+        elif (self.calculation_mode == 'event_based_risk' and
+              not self.ground_motion_fields):
+            raise ValueError('ground_motion_fields must be set to true in %s'
+                             % job_ini)
 
         # checks for ebrisk
         if self.calculation_mode == 'ebrisk':

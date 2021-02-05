@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * The error was not stored in the database if the calculation failed
+    before starting
+  * Made ground_motion_fields=true mandatory in event_based_risk
+
   [Robin Gee]
   * Added a check for missing `soil_intensities` in classical calculations
     with site amplification

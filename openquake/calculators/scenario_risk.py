@@ -102,9 +102,6 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         with the unit of measure, used in the export phase.
         """
         oq = self.oqparam
-        if not oq.ground_motion_fields:
-            return  # this happens in the reportwriter
-
         parent = self.datastore.parent
         if parent:
             self.datastore['full_lt'] = parent['full_lt']
@@ -120,6 +117,9 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
         super().pre_execute()
+        if not oq.ground_motion_fields:
+            return  # this happens in the reportwriter
+
         self.assetcol = self.datastore['assetcol']
         self.riskinputs = self.build_riskinputs('gmf')
         self.param['tempname'] = riskinput.cache_epsilons(

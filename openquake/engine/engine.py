@@ -358,16 +358,23 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         job_id = job['_job_id']
         job['hazard_calculation_id'] = hc_id
         with logs.handle(job_id, log_level, log_file):
-            oqparam = readinput.get_oqparam(job)
-        dic = dict(calculation_mode=oqparam.calculation_mode,
-                   description=oqparam.description,
-                   user_name=username, is_running=1)
-        if hc_id:
-            dic['hazard_calculation_id'] = hc_id
-        logs.dbcmd('update_job', job_id, dic)
-        if (not jobparams and not multi and 'hazard_calculation_id' not in kw
-                and 'sensitivity_analysis' not in job):
-            hc_id = job_id
+            dic = dict(calculation_mode=job['calculation_mode'],
+                       description=job['description'],
+                       user_name=username, is_running=1)
+            if hc_id:
+                dic['hazard_calculation_id'] = hc_id
+            logs.dbcmd('update_job', job_id, dic)
+            if (not jobparams and not multi and
+                    'hazard_calculation_id' not in kw and
+                    'sensitivity_analysis' not in job):
+                hc_id = job_id
+            try:
+                oqparam = readinput.get_oqparam(job)
+            except BaseException:
+                tb = traceback.format_exc()
+                logging.critical(tb)
+                logs.dbcmd('finish', job_id, 'failed')
+                raise
         jobparams.append((job_id, oqparam))
     jobarray = len(jobparams) > 1 and multi
     try:
