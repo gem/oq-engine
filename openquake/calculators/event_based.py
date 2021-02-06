@@ -299,7 +299,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
-        elif 'rupture_model' not in oq.inputs:  # download ShakeMap
+        elif 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '
                 'import data without performing any calculation')
