@@ -29,7 +29,7 @@ from openquake.risklib.scientific import AggLossTable, InsuredLosses
 from openquake.risklib.riskinput import (
     cache_epsilons, get_assets_by_taxo, get_output)
 from openquake.commonlib import logs
-from openquake.calculators import base, event_based, getters, views
+from openquake.calculators import base, event_based, getters
 from openquake.calculators.post_risk import PostRiskCalculator
 
 U8 = numpy.uint8
@@ -259,8 +259,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         rlzs = self.datastore['events']['rlz_id']
         totw = self.datastore['weights'][:][rlzs].sum()
         self.datastore['avg_gmf'] = stats.calc_avg_std(self.momenta, totw)
-        logging.info('Mean portfolio loss per event\n' +
-                     views.view('portfolio_loss', self.datastore))
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run(exports='')

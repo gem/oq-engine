@@ -224,10 +224,10 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         Sanity check on tot_losses
         """
-        if not self.aggkey:
-            return
         logging.info('Mean portfolio loss per event\n' +
                      views.view('portfolio_loss', self.datastore))
+        if not self.aggkey:
+            return
         logging.info('Sanity check on agg_losses')
         for kind in 'rlzs', 'stats':
             agg = 'agg_losses-' + kind
