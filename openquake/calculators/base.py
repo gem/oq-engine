@@ -1165,7 +1165,7 @@ def create_gmf_data(dstore, M, sec_imts=(), data=None):
     dstore.create_dframe('gmf_data', items, 'gzip')
     if data is not None:
         df = pandas.DataFrame(dict(items))
-        avg_gmf = numpy.zeros((2, n, M), F32)
+        avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)
         for sid, df in df.groupby(df.sid):
             df.pop('eid')
             df.pop('sid')

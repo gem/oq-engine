@@ -228,7 +228,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         nonzero_gmf = (avg_gmf > 0).any(axis=1)
         nonzero_losses = (losses_df > 0).to_numpy().any(axis=1)
         bad, = numpy.where(nonzero_gmf != nonzero_losses)
-        # this happens in scenario_risk/case_shakemap
+        # this happens in scenario_risk/case_shakemap and case_3
         msg = 'Site #%d is suspicious:\navg_gmf=%s\navg_loss=%s\nvalues=%s'
         for idx in bad:
             sid = sids[idx]
