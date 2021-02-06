@@ -711,10 +711,8 @@ def view_gmf_error(token, dstore):
     Display a gmf relative error for seed dependency
     """
     df = get_gmv0(dstore)
-    numpy.random.seed(42)  # default_rng does not work with numpy 1.16
-    eids = numpy.array(df.index)
-    numpy.random.shuffle(eids)
-    res = df.groupby(eids % 10)['gmv_0'].sum()
+    grps = df.index.to_numpy() % 10
+    res = df.groupby(grps)['gmv_0'].sum()
     return res.std() / res.mean()
 
 
