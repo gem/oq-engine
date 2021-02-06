@@ -1053,7 +1053,7 @@ class OqParam(valid.ParamSet):
                         'file is missing the IMT %r' % imt)
         if 'default' in mini:
             del mini['default']
-        return {imt: mini.get(imt, 0) for imt in self.imtls}
+        return numpy.array([mini.get(imt, 0) for imt in self.imtls])
 
     def levels_per_imt(self):
         """
@@ -1087,7 +1087,7 @@ class OqParam(valid.ParamSet):
             suggested.append('  %r: logscale(%s, %s, 20),' %
                              (imt, min(imls), max(imls)))
         suggested[-1] += '}'
-        self.risk_imtls = {imt: [0] for imt in risk_imtls}
+        self.risk_imtls = {imt: [min(ls)] for imt, ls in risk_imtls.items()}
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
         if not self.hazard_imtls:

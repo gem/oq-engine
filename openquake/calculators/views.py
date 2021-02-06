@@ -23,6 +23,7 @@ import numbers
 import operator
 import functools
 import collections
+import logging
 import numpy
 import pandas
 
@@ -33,7 +34,6 @@ from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib import stats as hstats
 from openquake.commonlib import util
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
@@ -913,3 +913,39 @@ def view_extreme(token, dstore):
     sio = io.StringIO()
     write_csv(sio, arr)
     return sio.getvalue()
+
+
+@view.add('zero_losses')
+def view_zero_losses(token, dstore):
+    """
+    Sanity check on avg_losses and avg_gmf
+    """
+    R = len(dstore['weights'])
+    oq = dstore['oqparam']
+    avg_gmf = dstore['avg_gmf'][0]
+    asset_df = dstore.read_df('assetcol/array', 'site_id')
+    for col in asset_df.columns:
+        if not col.startswith('value-'):
+            del asset_df[col]
+    values_df = asset_df.groupby(asset_df.index).sum()
+    avglosses = dstore['avg_losses-rlzs'][:].sum(axis=1) / R  # shape (A, L)
+    dic = dict(site_id=dstore['assetcol']['site_id'])
+    for lti, lname in enumerate(oq.loss_names):
+        dic[lname] = avglosses[:, lti]
+    losses_df = pandas.DataFrame(dic).groupby('site_id').sum()
+    sids = losses_df.index.to_numpy()
+    avg_gmf = avg_gmf[sids]
+    nonzero_gmf = (avg_gmf > oq.min_iml).any(axis=1)
+    nonzero_losses = (losses_df > 0).to_numpy().any(axis=1)
+    bad, = numpy.where(nonzero_gmf != nonzero_losses)
+    # this happens in scenario_risk/case_shakemap and case_3
+    msg = 'Site #%d is suspicious:\navg_gmf=%s\navg_loss=%s\nvalues=%s'
+    for idx in bad:
+        sid = sids[idx]
+        logging.warning(msg, sid, dict(zip(oq.all_imts(), avg_gmf[sid])),
+                        _get(losses_df, sid), _get(values_df, sid))
+    return bad
+
+
+def _get(df, sid):
+    return df.loc[sid].to_dict()

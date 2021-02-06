@@ -577,11 +577,13 @@ class CompositeRiskModel(collections.abc.Mapping):
                     rm.imt_by_lt[lt] = imt
         self.curve_params = self.make_curve_params()
         iml = collections.defaultdict(list)
+        # ._riskmodels is empty if read from the hazard calculation
         for riskid, rm in self._riskmodels.items():
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'imt'):
                     iml[rf.imt].append(rf.imls[0])
-        self.min_iml = {imt: min(iml[imt] or [0]) for imt in self.imtls}
+        if sum(oq.minimum_intensity.values()) == 0 and iml:
+            oq.minimum_intensity = {imt: min(ls) for imt, ls in iml.items()}
 
     def eid_dmg_dt(self):
         """

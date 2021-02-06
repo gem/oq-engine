@@ -82,7 +82,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
                loss_types=crmodel.loss_types, haz=haz)
     if rlzi is not None:
         dic['rlzi'] = rlzi
-    for l, lt in enumerate(crmodel.loss_types):
+    for lt in crmodel.loss_types:
         ls = []
         for taxonomy, assets_ in assets_by_taxo.items():
             if len(assets_by_taxo.eps):
