@@ -355,7 +355,7 @@ def view_portfolio_losses(token, dstore):
 @view.add('portfolio_loss')
 def view_portfolio_loss(token, dstore):
     """
-    The mean portfolio loss per event for each loss type,
+    The mean portfolio loss for each loss type,
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
@@ -366,8 +366,8 @@ def view_portfolio_loss(token, dstore):
     ws = weights[rlzs]
     eids = df.pop('event_id').to_numpy()
     arr = df.to_numpy()
-    L = arr.shape[1]
-    avg = ws[eids] @ arr / ws.sum()
+    E, L = arr.shape
+    avg = ws[eids] @ arr / ws.sum() * E
     err = [avg[li] * binning_error(arr[:, li], eids) for li in range(L)]
     rows = [['avg'] + list(avg), ['err'] + err]
     return(rst_table(rows, ['loss'] + oq.loss_names))

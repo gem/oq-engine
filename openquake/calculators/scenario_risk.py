@@ -180,7 +180,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             self.datastore['agg_losses-rlzs'] = agglosses
             set_rlzs_stats(self.datastore, 'agg_losses',
                            agg_id=K, loss_types=oq.loss_names, units=units)
-            logging.info('Mean portfolio loss per event\n' +
+            logging.info('Total portfolio loss\n' +
                          views.view('portfolio_loss', self.datastore))
         else:  # event_based_risk, run post_risk
             prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
@@ -228,6 +228,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         nonzero_gmf = (avg_gmf > 0).any(axis=1)
         nonzero_losses = (losses_df > 0).to_numpy().any(axis=1)
         bad, = numpy.where(nonzero_gmf != nonzero_losses)
+        # this happens in scenario_risk/case_shakemap and case_3
         msg = 'Site #%d is suspicious:\navg_gmf=%s\navg_loss=%s\nvalues=%s'
         for idx in bad:
             sid = sids[idx]

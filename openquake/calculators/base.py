@@ -25,6 +25,7 @@ import traceback
 from datetime import datetime
 from shapely import wkt
 import numpy
+import pandas
 
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
@@ -1136,16 +1137,12 @@ def import_gmfs(dstore, oqparam, sids):
     dic = general.group_array(arr, 'sid')
     offset = 0
     gmvlst = []
-    avg_gmf = numpy.zeros((2, len(sids), len(imts)), F32)
     for sid in sids:
         n = len(dic.get(sid, []))
         if n:
             offset += n
             gmvs = dic[sid]
             gmvlst.append(gmvs)
-            for c, col in enumerate(arr.dtype.names[2:]):  # skip sid, eid
-                avg_gmf[:, sid, c] = stats.avg_std(gmvs[col])
-    dstore['avg_gmf'] = avg_gmf
     data = numpy.concatenate(gmvlst)
     create_gmf_data(dstore, len(oqparam.get_primary_imtls()),
                     oqparam.get_sec_imts(), data=data)
@@ -1166,6 +1163,14 @@ def create_gmf_data(dstore, M, sec_imts=(), data=None):
     for imt in sec_imts:
         items.append((str(imt), F32 if n == 0 else data[imt]))
     dstore.create_dframe('gmf_data', items, 'gzip')
+    if data is not None:
+        df = pandas.DataFrame(dict(items))
+        avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)
+        for sid, df in df.groupby(df.sid):
+            df.pop('eid')
+            df.pop('sid')
+            avg_gmf[:, sid] = stats.avg_std(df.to_numpy())
+        dstore['avg_gmf'] = avg_gmf
 
 
 def save_agg_values(dstore, assetcol, lossnames, tagnames):
