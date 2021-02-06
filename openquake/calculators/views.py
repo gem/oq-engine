@@ -365,9 +365,11 @@ def view_portfolio_loss(token, dstore):
     rlzs = dstore['events']['rlz_id']
     ws = weights[rlzs]
     eids = df.pop('event_id').to_numpy()
-    avg, std = hstats.calc_avg_std(
-        hstats.calc_momenta(df.to_numpy(), ws[eids]), ws.sum())
-    rows = [['avg'] + list(avg), ['std'] + list(std)]
+    arr = df.to_numpy()
+    L = arr.shape[1]
+    avg = ws[eids] @ arr / ws.sum()
+    err = [avg[li] * binning_error(arr[:, li], eids) for li in range(L)]
+    rows = [['avg'] + list(avg), ['err'] + err]
     return(rst_table(rows, ['loss'] + oq.loss_names))
 
 
@@ -705,15 +707,27 @@ def get_gmv0(dstore):
     return df
 
 
+def binning_error(values, eids, nbins=10):
+    """
+    :param values: E values
+    :param eids: E integer event indices
+    :returns: std/mean for the sums of the values
+
+    Group the values in nbins depending on the eids and returns the
+    variability of the sums relative to the mean.
+    """
+    df = pandas.DataFrame({'val': values}, eids)
+    res = df.groupby(eids % nbins).val.sum()
+    return res.std() / res.mean()
+
+
 @view.add('gmf_error')
 def view_gmf_error(token, dstore):
     """
     Display a gmf relative error for seed dependency
     """
-    df = get_gmv0(dstore)
-    grps = df.index.to_numpy() % 10
-    res = df.groupby(grps)['gmv_0'].sum()
-    return res.std() / res.mean()
+    return binning_error(
+        dstore['gmf_data/gmv_0'][:], dstore['gmf_data/eid'][:])
 
 
 class GmpeExtractor(object):
