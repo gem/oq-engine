@@ -38,6 +38,9 @@ $ docker build -t openquake/engine-worker-zmq -f zmq/Dockerfile.worker .
 
 ### ZMQ
 
+The files that compose the infrastructure for ZMQ are available on zmq subfolder of docker folder and use the latest tag 
+You need to go on that folder to use the follow commands:
+
 ```bash
 $ docker-compose -f docker-compose.yml <build,up,down...> 
 ```
