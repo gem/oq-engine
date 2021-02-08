@@ -37,6 +37,7 @@ import operator
 from collections import namedtuple
 import toml
 import numpy
+import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, Node as N, context
@@ -1114,8 +1115,8 @@ class GsimLogicTree(object):
 
 def taxonomy_mapping(oqparam, taxonomies):
     """
-    :param oqparam: OqParaminstance
-    :param taxonomies: an array taxonomy string -> taxonomy index
+    :param oqparam: OqParam instance
+    :param taxonomies: array of strings tagcol.taxonomy
     :returns: a dictionary loss_type -> [[(taxonomy, weight), ...], ...]
     """
     if 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
@@ -1127,11 +1128,12 @@ def taxonomy_mapping(oqparam, taxonomies):
 
 
 def _taxonomy_mapping(filename, taxonomies):
-    dic = {}  # taxonomy index -> risk taxonomy
-    array = hdf5.read_csv(filename, {None: hdf5.vstr, 'weight': float}).array
-    arr = add_defaults(array, weight=1.)
-    assert arr.dtype.names == ('taxonomy', 'conversion', 'weight')
-    dic = group_array(arr, 'taxonomy')
+    tmap_df = pandas.read_csv(filename)
+    if 'weight' not in tmap_df:
+        tmap_df['weight'] = 1.
+
+    assert set(tmap_df) == {'taxonomy', 'conversion', 'weight'}
+    dic = dict(list(tmap_df.groupby('taxonomy')))
     taxonomies = taxonomies[1:]  # strip '?'
     missing = set(taxonomies) - set(dic)
     if missing:
@@ -1143,7 +1145,8 @@ def _taxonomy_mapping(filename, taxonomies):
         if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
                               (filename, taxo))
-        lst.append([(rec['conversion'], rec['weight']) for rec in recs])
+        lst.append([(rec['conversion'], rec['weight'])
+                    for r, rec in recs.iterrows()])
     return lst
 
 
