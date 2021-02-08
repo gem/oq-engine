@@ -72,7 +72,7 @@ def calc_avg_std(momenta, totweight):
     """
     avgstd = numpy.zeros_like(momenta)
     avgstd[0] = avg = momenta[0] / totweight
-    avgstd[1] = numpy.sqrt(momenta[1] / totweight - avg ** 2)
+    avgstd[1] = numpy.sqrt(numpy.maximum(momenta[1] / totweight - avg ** 2, 0))
     return avgstd
 
 
