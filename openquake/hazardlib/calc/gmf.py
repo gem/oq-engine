@@ -156,7 +156,7 @@ class GmfComputer(object):
             array, sig, eps = self.compute(gs, num_events)
             M = len(array)
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
-            for i, miniml in enumerate(min_iml.values()):  # gmv < minimum
+            for i, miniml in enumerate(min_iml):  # gmv < minimum
                 arr = array[:, i, :]
                 arr[arr < miniml] = 0
             n = 0

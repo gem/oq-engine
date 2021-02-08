@@ -562,10 +562,6 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            if not consistent(oqp.minimum_intensity, oq.minimum_intensity):
-                raise ValueError(
-                    'The parent calculation was using minimum_intensity=%s'
-                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
             hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
             if hstats != rstats:
                 raise ValueError(
