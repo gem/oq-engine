@@ -19,6 +19,12 @@ $ docker build -t openquake/engine -f Dockerfile.engine .
 --build-arg oq_branch=master      ## oq-engine branch
 ```
 
+### Testing image
+To have a development image use the follow Dockerfile to have into the image also the source code and the developer installation of engine.
+
+```bash
+$ docker build -t openquake/engine:dev -f Dockerfile.dev .
+```
 
 ## Master/worker images (clustered setup)
 
