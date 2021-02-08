@@ -1112,14 +1112,21 @@ class GsimLogicTree(object):
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
 
 
-def taxonomy_mapping(filename, taxonomies):
+def taxonomy_mapping(oqparam, taxonomies):
     """
-    :param filename: path to the CSV file containing the taxonomy associations
+    :param oqparam: OqParaminstance
     :param taxonomies: an array taxonomy string -> taxonomy index
-    :returns: a list of lists [[(taxonomy, weight), ...], ...]
+    :returns: a dictionary loss_type -> [[(taxonomy, weight), ...], ...]
     """
-    if filename is None:  # trivial mapping
-        return [[(taxo, 1)] for taxo in taxonomies]
+    if 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
+        lst = [[(taxo, 1)] for taxo in taxonomies]
+        return {lt: lst for lt in oqparam.loss_names}
+    return {lt: _taxonomy_mapping(
+        oqparam.inputs['taxonomy_mapping'], taxonomies)
+            for lt in oqparam.loss_names}
+
+
+def _taxonomy_mapping(filename, taxonomies):
     dic = {}  # taxonomy index -> risk taxonomy
     array = hdf5.read_csv(filename, {None: hdf5.vstr, 'weight': float}).array
     arr = add_defaults(array, weight=1.)
@@ -1131,7 +1138,7 @@ def taxonomy_mapping(filename, taxonomies):
         raise InvalidFile('The taxonomies %s are in the exposure but not in %s'
                           % (missing, filename))
     lst = [[("?", 1)]]
-    for idx, taxo in enumerate(taxonomies, 1):
+    for taxo in taxonomies:
         recs = dic[taxo]
         if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %

@@ -46,15 +46,15 @@ def get_dmg_csq(crm, assets_by_site, gmf):
     for assets, gmv in zip(assets_by_site, gmf):
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
-            for l, loss_type in enumerate(crm.loss_types):
+            for li, loss_type in enumerate(crm.loss_types):
                 # NB: risk logic trees are not yet supported in multi_risk
-                [rm], [w] = crm.get_rmodels_weights(taxonomy)
+                [rm], [w] = crm.get_rmodels_weights(loss_type, taxonomy)
                 fracs = rm.scenario_damage(loss_type, assets, [gmv])
                 for asset, frac in zip(assets, fracs):
                     dmg = asset['number'] * frac  # shape (1, D)
                     csq = crm.compute_csq(asset, frac, loss_type)
-                    out[asset['ordinal'], l, 0, :D] = dmg
-                    out[asset['ordinal'], l, 0, D] = csq['losses']
+                    out[asset['ordinal'], li, 0, :D] = dmg
+                    out[asset['ordinal'], li, 0, D] = csq['losses']
     return out
 
 
