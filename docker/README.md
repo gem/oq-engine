@@ -38,8 +38,9 @@ $ docker build -t openquake/engine-worker-zmq -f zmq/Dockerfile.worker .
 
 ### ZMQ
 
-The files that compose the infrastructure for ZMQ are available on zmq subfolder of docker folder and use the latest tag 
-You need to go on that folder to use the follow commands:
+The files that compose the infrastructure for ZMQ are available on zmq subfolder of docker folder and use the latest tag
+
+You need to be on that folder to use the follow commands:
 
 ```bash
 $ docker-compose -f docker-compose.yml <build,up,down...> 
@@ -50,6 +51,10 @@ If you want more to scale the worker service start with follow:
 $ docker-compose -f docker-compose.yml <build,up,down...> --scale worker=NUM
 
 ```
+### Testing
+If you want to use the nightly build instead of the latest all the files are in the docker folder.
+
+Please note that the nightly image and also the configuration files in that folder are only for testing pourpose and not use in  production environment.
 
 ### Debug
 
