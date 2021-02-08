@@ -72,11 +72,11 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     dtlist.insert(0, ('id', '<S100'))
     if not loss_types:  # missing ASH
         loss_types = ['structural']  # for LAVA, LAHAR, PYRO
-    for l, loss_type in enumerate(loss_types):
+    for li, loss_type in enumerate(loss_types):
         for d, ds in enumerate(damage_states + ['loss']):
             for p, peril in enumerate(perils):
                 field = ds + '-' + loss_type + '-' + peril
-                field2tup[field] = (p, l, 0, d)
+                field2tup[field] = (p, li, 0, d)
                 dtlist.append((field, F32))
         for peril in binary_perils:
             dtlist.append(('loss-' + loss_type + '-' + peril, F32))

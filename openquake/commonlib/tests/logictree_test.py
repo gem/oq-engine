@@ -2299,7 +2299,9 @@ taxo2,taxo2,1
 taxo3,taxo3,1
 '''
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
-            logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+            inp = dict(taxonomy_mapping=gettemp(xml))
+            oq = unittest.mock.Mock(inputs=inp, loss_names=['structural'])
+            logictree.taxonomy_mapping(oq, self.taxonomies)
         self.assertIn("{'taxo4'} are in the exposure but not in",
                       str(ctx.exception))
 
