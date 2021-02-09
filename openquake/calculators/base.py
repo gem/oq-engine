@@ -788,7 +788,7 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            tmap = logictree.taxonomy_mapping(
+            tmap = readinput.taxonomy_mapping(
                 self.oqparam, self.assetcol.tagcol.taxonomy)
             self.crmodel.tmap = tmap
             taxonomies = set()
@@ -984,7 +984,7 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         if not hasattr(self.crmodel, 'tmap'):
-            self.crmodel.tmap = logictree.taxonomy_mapping(
+            self.crmodel.tmap = readinput.taxonomy_mapping(
                 self.oqparam, self.assetcol.tagcol.taxonomy)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:

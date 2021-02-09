@@ -37,12 +37,10 @@ import operator
 from collections import namedtuple
 import toml
 import numpy
-import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, Node as N, context
-from openquake.baselib.general import (groupby, group_array, duplicated,
-                                       add_defaults, AccumDict)
+from openquake.baselib.general import groupby, duplicated, AccumDict
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import from_string
@@ -1111,45 +1109,6 @@ class GsimLogicTree(object):
                  (b.trt, b.id, b.gsim, b.weight['weight'])
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
-
-
-def taxonomy_mapping(oqparam, taxonomies):
-    """
-    :param oqparam: OqParam instance
-    :param taxonomies: array of strings tagcol.taxonomy
-    :returns: a dictionary loss_type -> [[(taxonomy, weight), ...], ...]
-    """
-    if 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
-        lst = [[(taxo, 1)] for taxo in taxonomies]
-        return {lt: lst for lt in oqparam.loss_names}
-    dic = oqparam.inputs['taxonomy_mapping']
-    if isinstance(dic, str):  # filename
-        dic = {lt: dic for lt in oqparam.loss_names}
-    return {lt: _taxonomy_mapping(dic[lt], taxonomies)
-            for lt in oqparam.loss_names}
-
-
-def _taxonomy_mapping(filename, taxonomies):
-    tmap_df = pandas.read_csv(filename)
-    if 'weight' not in tmap_df:
-        tmap_df['weight'] = 1.
-
-    assert set(tmap_df) == {'taxonomy', 'conversion', 'weight'}
-    dic = dict(list(tmap_df.groupby('taxonomy')))
-    taxonomies = taxonomies[1:]  # strip '?'
-    missing = set(taxonomies) - set(dic)
-    if missing:
-        raise InvalidFile('The taxonomies %s are in the exposure but not in %s'
-                          % (missing, filename))
-    lst = [[("?", 1)]]
-    for taxo in taxonomies:
-        recs = dic[taxo]
-        if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
-            raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
-                              (filename, taxo))
-        lst.append([(rec['conversion'], rec['weight'])
-                    for r, rec in recs.iterrows()])
-    return lst
 
 
 def capitalize(words):
