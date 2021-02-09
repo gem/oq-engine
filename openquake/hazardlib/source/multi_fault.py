@@ -18,13 +18,14 @@ Module :mod:`openquake.hazardlib.source.multi_fault`
 defines :class:`MultiFaultSource`.
 """
 
-from openquake.hazardlib.source.rupture import BaseRupture
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.source.rupture import (
+        NonParametricProbabilisticRupture)
 from openquake.hazardlib.geo.surface.multi import MultiSurface
-from openquake.hazardlib.source.non_parametric import (
-        NonParametricSeismicSource)
+from openquake.hazardlib.source.base import BaseSeismicSource
 
 
-class MultiFaultSource(NonParametricSeismicSource):
+class MultiFaultSource(BaseSeismicSource):
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  sections: list, rupture_idxs: list, occurrence_probs: list,
@@ -33,29 +34,54 @@ class MultiFaultSource(NonParametricSeismicSource):
         """
         self.sections = sections
         self.rupture_idxs = rupture_idxs
-        self.prob_occ = occurrence_probs
+        self.poes = occurrence_probs
         self.mags = magnitudes
         self.rakes = rakes
         self.trt = tectonic_region_type
-        data = self._get_data()
-        super().__init__(source_id, name, tectonic_region_type, data)
+        super().__init__(source_id, name, tectonic_region_type)
 
-    def _get_data(self):
+    def iter_ruptures(self, fromidx=0, untilidx=None):
         """
-        Returns the tuple required to instantiate a
-        :class:`openquake.hazardlib.source.nonparametric.NonParametricSeismicSource`
+        :param fromidx:
+        :param untilidx:
+        """
+        untilidx = len(self.mags) if untilidx is None else untilidx
+        for i in range(fromidx, untilidx):
 
-        :param sections:
-        :param rupture_idxs:
-        :param occurrence_probabilities:
-        """
-        data = []
-        for i, idxs in enumerate(self.rupture_idxs):
+            idxs = self.rupture_idxs[i]
             if len(idxs) > 1:
                 sfc = self.sections[idxs[0]]
             else:
                 sfc = MultiSurface([self.sections[j] for j in idxs])
+
+            rake = self.rakes[idxs[0]]
             hypo = self.sections[idxs[0]].get_middle_point()
-            rup = BaseRupture(self.mags[i], self.rakes[i], self.trt, hypo, sfc)
-            data.append([rup, self.prob_occ[i]])
-        return data
+            data = [[self.poes[i][j], j] for j in range(len(self.poes[i]))]
+            pmf = PMF(data=data)
+            print(">>>", data)
+
+            yield NonParametricProbabilisticRupture(self.mags[i], rake,
+                                                    self.trt, hypo, sfc, pmf)
+
+    def count_ruptures(self):
+        return len(self.mags)
+
+    # TODO
+    def sample_ruptures(self, eff_num_ses, ses_seed):
+        """
+        :param eff_num_ses: number of stochastic event sets * number of samples
+        :yields: triples (rupture, et_id, num_occurrences)
+        """
+        pass
+
+    # TODO
+    def MODIFICATIONS(self):
+        pass
+
+    # TODO
+    def get_min_max_mag(self):
+        pass
+
+    # TODO
+    def get_one_rupture(self):
+        pass

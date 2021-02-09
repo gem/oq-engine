@@ -73,4 +73,5 @@ class MultiFaultTestCase(unittest.TestCase):
         """ test instantiation """
         src = MultiFaultSource("01", "test", "Moon Crust", self.sections,
                                self.rup_idxs, self.poes, self.mags, self.rakes)
-        self.assertEqual(7, src.count_ruptures())
+        rups = [r for r in src.iter_ruptures()]
+        self.assertEqual(7, len(rups))
