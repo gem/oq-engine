@@ -39,10 +39,10 @@ late_latin
   then, the hazard curve statistics are computed by taking into account
   the weights.
 
-More precisely, the engine calls something like the function
+More precisely, the engine calls something like the function::
 
-``openquake.hazardlib.lt.random_sample(
-    branchsets, num_samples, seed, sampling_method)``
+  openquake.hazardlib.lt.random_sample(
+    branchsets, num_samples, seed, sampling_method)
 
 You are invited to play with it; in general the latin sampling produces
 samples much closer to the expected weights even with few samples.

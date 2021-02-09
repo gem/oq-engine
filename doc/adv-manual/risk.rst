@@ -317,7 +317,7 @@ multiple return periods it returns the loss curve. The two concepts
 are essentially the same thing, since a loss curve is just an array of
 PMLs, one for each return period. For instance
 
-.. code-block::
+.. code-block:: python
 
    >>> from openquake.risklib.scientific import losses_by_period
    >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13, 0]
