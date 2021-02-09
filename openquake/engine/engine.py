@@ -102,6 +102,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
+    if 'avg_gmf' in dskeys:
+        dskeys.remove('avg_gmf')  # hide
     rlzs = dstore['full_lt'].rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
