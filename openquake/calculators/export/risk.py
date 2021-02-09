@@ -75,7 +75,7 @@ def export_agg_curve_rlzs(ekey, dstore):
     dataf = aw.to_dframe().set_index(suffix[:-1])
     for r, ros in enumerate(rlzs_or_stats):
         md['kind'] = f'{name}-' + (
-            ros if isinstance(ros, str) else 'rlz-%03d' % ros)
+            ros if isinstance(ros, str) else '%03d' % ros)
         try:
             df = dataf[dataf.index == ros]
         except KeyError:
@@ -89,7 +89,7 @@ def export_agg_curve_rlzs(ekey, dstore):
             dic['agg_id'], dic.pop('lti')]
         dic['annual_frequency_of_exceedence'] = 1 / dic['return_period']
         del dic['agg_id']
-        dest = dstore.build_fname(name, ros, 'csv')
+        dest = dstore.build_fname(md['kind'], '', 'csv')
         writer.save(pandas.DataFrame(dic), dest, comment=md)
     return writer.getsaved()
 

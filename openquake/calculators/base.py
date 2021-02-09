@@ -788,12 +788,15 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            tmap_lst = logictree.taxonomy_mapping(
-                self.oqparam.inputs.get('taxonomy_mapping'),
-                self.assetcol.tagcol.taxonomy)
-            self.crmodel.tmap = tmap_lst
-            taxonomies = set(taxo for items in self.crmodel.tmap
-                             for taxo, weight in items if taxo != '?')
+            tmap = readinput.taxonomy_mapping(
+                self.oqparam, self.assetcol.tagcol.taxonomy)
+            self.crmodel.tmap = tmap
+            taxonomies = set()
+            for ln in oq.loss_names:
+                for items in self.crmodel.tmap[ln]:
+                    for taxo, weight in items:
+                        if taxo != '?':
+                            taxonomies.add(taxo)
             # check that we are covering all the taxonomies in the exposure
             missing = taxonomies - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
@@ -803,7 +806,7 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Reducing risk model from %d to %d taxonomies',
                              len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
-                self.crmodel.tmap = tmap_lst
+                self.crmodel.tmap = tmap
             self.crmodel.reduce_cons_model(self.assetcol.tagcol)
 
         if hasattr(self, 'sitecol') and self.sitecol:
@@ -981,9 +984,8 @@ class RiskCalculator(HazardCalculator):
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         if not hasattr(self.crmodel, 'tmap'):
-            self.crmodel.tmap = logictree.taxonomy_mapping(
-                self.oqparam.inputs.get('taxonomy_mapping'),
-                self.assetcol.tagcol.taxonomy)
+            self.crmodel.tmap = readinput.taxonomy_mapping(
+                self.oqparam, self.assetcol.tagcol.taxonomy)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent

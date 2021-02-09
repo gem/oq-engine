@@ -32,6 +32,7 @@ import configparser
 import collections
 
 import numpy
+import pandas
 import requests
 
 from openquake.baselib import hdf5, parallel
@@ -43,7 +44,7 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
-    source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile)
+    source, geo, site, imt, valid, sourceconverter, nrml, InvalidFile, pmf)
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -968,6 +969,45 @@ def levels_from(header):
         if field.startswith('poe-'):
             levels.append(float(field[4:]))
     return levels
+
+
+def taxonomy_mapping(oqparam, taxonomies):
+    """
+    :param oqparam: OqParam instance
+    :param taxonomies: array of strings tagcol.taxonomy
+    :returns: a dictionary loss_type -> [[(taxonomy, weight), ...], ...]
+    """
+    if 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
+        lst = [[(taxo, 1)] for taxo in taxonomies]
+        return {lt: lst for lt in oqparam.loss_names}
+    dic = oqparam.inputs['taxonomy_mapping']
+    if isinstance(dic, str):  # filename
+        dic = {lt: dic for lt in oqparam.loss_names}
+    return {lt: _taxonomy_mapping(dic[lt], taxonomies)
+            for lt in oqparam.loss_names}
+
+
+def _taxonomy_mapping(filename, taxonomies):
+    tmap_df = pandas.read_csv(filename)
+    if 'weight' not in tmap_df:
+        tmap_df['weight'] = 1.
+
+    assert set(tmap_df) == {'taxonomy', 'conversion', 'weight'}
+    dic = dict(list(tmap_df.groupby('taxonomy')))
+    taxonomies = taxonomies[1:]  # strip '?'
+    missing = set(taxonomies) - set(dic)
+    if missing:
+        raise InvalidFile('The taxonomies %s are in the exposure but not in %s'
+                          % (missing, filename))
+    lst = [[("?", 1)]]
+    for taxo in taxonomies:
+        recs = dic[taxo]
+        if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
+            raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
+                              (filename, taxo))
+        lst.append([(rec['conversion'], rec['weight'])
+                    for r, rec in recs.iterrows()])
+    return lst
 
 
 def get_pmap_from_csv(oqparam, fnames):

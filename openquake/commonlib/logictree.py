@@ -40,8 +40,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, Node as N, context
-from openquake.baselib.general import (groupby, group_array, duplicated,
-                                       add_defaults, AccumDict)
+from openquake.baselib.general import groupby, duplicated, AccumDict
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.imt import from_string
@@ -1110,34 +1109,6 @@ class GsimLogicTree(object):
                  (b.trt, b.id, b.gsim, b.weight['weight'])
                  for b in self.branches if b.effective]
         return '<%s\n%s>' % (self.__class__.__name__, '\n'.join(lines))
-
-
-def taxonomy_mapping(filename, taxonomies):
-    """
-    :param filename: path to the CSV file containing the taxonomy associations
-    :param taxonomies: an array taxonomy string -> taxonomy index
-    :returns: a list of lists [[(taxonomy, weight), ...], ...]
-    """
-    if filename is None:  # trivial mapping
-        return [[(taxo, 1)] for taxo in taxonomies]
-    dic = {}  # taxonomy index -> risk taxonomy
-    array = hdf5.read_csv(filename, {None: hdf5.vstr, 'weight': float}).array
-    arr = add_defaults(array, weight=1.)
-    assert arr.dtype.names == ('taxonomy', 'conversion', 'weight')
-    dic = group_array(arr, 'taxonomy')
-    taxonomies = taxonomies[1:]  # strip '?'
-    missing = set(taxonomies) - set(dic)
-    if missing:
-        raise InvalidFile('The taxonomies %s are in the exposure but not in %s'
-                          % (missing, filename))
-    lst = [[("?", 1)]]
-    for idx, taxo in enumerate(taxonomies, 1):
-        recs = dic[taxo]
-        if abs(recs['weight'].sum() - 1.) > pmf.PRECISION:
-            raise InvalidFile('%s: the weights do not sum up to 1 for %s' %
-                              (filename, taxo))
-        lst.append([(rec['conversion'], rec['weight']) for rec in recs])
-    return lst
 
 
 def capitalize(words):

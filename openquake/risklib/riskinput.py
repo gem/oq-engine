@@ -90,7 +90,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
             else:  # no CoVs
                 epsilons = ()
             arrays = []
-            rmodels, weights = crmodel.get_rmodels_weights(taxonomy)
+            rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
                 dat = data[alias.get(imt, imt)]

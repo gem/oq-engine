@@ -29,8 +29,8 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4, case_4a, case_6c, case_master, case_miriam,
-    occupants, case_1f, case_1g, case_7a, recompute)
+    case_1, case_2, case_3, case_4, case_4a, case_5, case_6c, case_master,
+    case_miriam, occupants, case_1f, case_1g, case_7a, recompute)
 
 
 def aae(data, expected):
@@ -238,6 +238,14 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
+
+    def test_case_5(self):
+        # taxonomy mapping
+        self.run_calc(case_5.__file__, 'job_eb.ini')
+        fnames = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                  fname, delta=1E-5)
 
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')

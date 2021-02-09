@@ -688,12 +688,12 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_rmodels_weights(self, taxidx):
+    def get_rmodels_weights(self, loss_type, taxidx):
         """
         :returns: a list of weighted risk models for the given taxonomy index
         """
         rmodels, weights = [], []
-        for key, weight in self.tmap[taxidx]:
+        for key, weight in self.tmap[loss_type][taxidx]:
             rmodels.append(self._riskmodels[key])
             weights.append(weight)
         return rmodels, weights
