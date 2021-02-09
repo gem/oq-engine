@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.11.0-git6f08fb75b7', start_date='2021-02-04T05:32:58', checksum=2020016273, risk_investigation_time=1.0, kind='agg_curves-rlz-000'"
+#,,,,"generated_by='OpenQuake engine 3.11.0-gitb53299d3c4', start_date='2021-02-09T06:13:01', checksum=641705409, risk_investigation_time=1.0, kind='agg_curves-000'"
 return_period,loss_value,loss_type,loss_ratio,annual_frequency_of_exceedence
 50,8.73906E-03,occupants,3.15870E-04,2.00000E-02
 100,1.22349E-02,occupants,4.42224E-04,1.00000E-02
