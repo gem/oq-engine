@@ -84,7 +84,8 @@ def calc_risk(df, param, monitor):
             alt.aggregate(out, mal, aggby)
             # NB: after the aggregation out contains losses, not loss_ratios
         ws = weights[haz['rlz']]
-        acc['momenta'][:, sid] = stats.calc_momenta(gmvs, ws)  # shape (2, M)
+        acc['momenta'][:, sid] = stats.calc_momenta(
+            stats.logcut(gmvs), ws)  # shape (2, M)
         if param['avg_losses']:
             with mon_avg:
                 for lni, ln in enumerate(alt.loss_names):
@@ -258,7 +259,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         rlzs = self.datastore['events']['rlz_id']
         totw = self.datastore['weights'][:][rlzs].sum()
-        self.datastore['avg_gmf'] = stats.calc_avg_std(self.momenta, totw)
+        self.datastore['avg_gmf'] = numpy.exp(
+            stats.calc_avg_std(self.momenta, totw))
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
         prc.datastore.parent = self.datastore.parent
         prc.run(exports='')
