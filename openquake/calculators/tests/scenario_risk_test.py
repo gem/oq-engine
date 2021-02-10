@@ -179,13 +179,14 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-5)
 
     def test_collapse_gsim_logic_tree(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       collapse_gsim_logic_tree='bs1')
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
-        self.assertEqualFiles('expected/portfolio_loss2.txt', fname)
+        self.assertEqualFiles(
+            'expected/portfolio_loss2.txt', fname, delta=1E-5)
 
     def test_case_7(self):
         # check independence from concurrent_tasks
