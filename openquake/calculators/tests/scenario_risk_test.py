@@ -177,6 +177,16 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(obj.tags, [b'state=01'])
         aac(obj.array, [[2698.1318]])  # extracted from avg_losses-stats
 
+        # check portfolio_loss
+        fname = gettemp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname)
+
+    def test_collapse_gsim_logic_tree(self):
+        self.run_calc(case_master.__file__, 'job.ini',
+                      collapse_gsim_logic_tree='bs1')
+        fname = gettemp(view('portfolio_loss', self.calc.datastore))
+        self.assertEqualFiles('expected/portfolio_loss2.txt', fname)
+
     def test_case_7(self):
         # check independence from concurrent_tasks
         self.run_calc(case_7.__file__, 'job.ini', concurrent_tasks='10')

@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Extended the `collapse_logic_tree` feature to scenarios and event based
+    calculations
   * Extended the taxonomy mapping feature to multiple loss types
   * The error was not stored in the database if the calculation failed
     before starting
