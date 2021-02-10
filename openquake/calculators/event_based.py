@@ -184,7 +184,7 @@ class EventBasedCalculator(base.HazardCalculator):
         for sid, df in gmf_df.groupby(gmf_df.index):
             eids = df.pop('eid').to_numpy()
             momenta[sid] = calc_momenta(
-                logcut(df.to_numpy()), self.weights[eids])
+                logcut(df.to_numpy(), 0), self.weights[eids])
         return momenta, gmf_df.eid.unique()
 
     def agg_dicts(self, acc, result):
