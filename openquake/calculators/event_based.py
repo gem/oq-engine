@@ -244,7 +244,7 @@ class EventBasedCalculator(base.HazardCalculator):
         G = gsim_lt.get_num_paths()
         if oq.inputs['rupture_model'].endswith('.xml'):
             ngmfs = oq.number_of_ground_motion_fields
-            self.gsims = readinput.get_gsims(oq)
+            self.gsims = [gsim_rlz.value[0] for gsim_rlz in gsim_lt]
             self.cmaker = ContextMaker(
                 '*', self.gsims, {'maximum_distance': oq.maximum_distance,
                                   'imtls': oq.imtls})

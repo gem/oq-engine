@@ -574,17 +574,6 @@ def get_gsim_lt(oqparam, trts=('*',)):
     return gsim_lt
 
 
-def get_gsims(oqparam):
-    """
-    Return an ordered list of GSIM instances from the gsim name in the
-    configuration file or from the gsim logic tree file.
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    return [rlz.value[0] for rlz in get_gsim_lt(oqparam)]
-
-
 def get_ruptures(fname_csv):
     """
     Read ruptures in CSV format and return an ArrayWrapper
