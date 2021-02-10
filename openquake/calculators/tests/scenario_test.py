@@ -63,10 +63,9 @@ class ScenarioTestCase(CalculatorTestCase):
                 median[imt].append(numpy.median(gmvs))
         return median
 
-    def test_case_1bis(self):
-        # 2 out of 3 sites were filtered out
-        out = self.run_calc(case_1.__file__, 'job.ini',
-                            maximum_distance='5.0', exports='csv')
+    def test_case_1(self):
+        # 2 out of 3 sites filtered out by maximum_distance=5.0
+        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv')
         self.assertEqualFiles(
             'BooreAtkinson2008_gmf.csv', out['gmf_data', 'csv'][0])
 
