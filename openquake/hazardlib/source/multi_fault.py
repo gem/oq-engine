@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.multi_fault`
 defines :class:`MultiFaultSource`.
 """
 
+import numpy as np
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.source.rupture import (
         NonParametricProbabilisticRupture)
@@ -26,6 +27,9 @@ from openquake.hazardlib.source.base import BaseSeismicSource
 
 
 class MultiFaultSource(BaseSeismicSource):
+
+    code = b'X'
+    MODIFICATIONS = {}
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  sections: list, rupture_idxs: list, occurrence_probs: list,
@@ -66,22 +70,8 @@ class MultiFaultSource(BaseSeismicSource):
     def count_ruptures(self):
         return len(self.mags)
 
-    # TODO
-    def sample_ruptures(self, eff_num_ses, ses_seed):
-        """
-        :param eff_num_ses: number of stochastic event sets * number of samples
-        :yields: triples (rupture, et_id, num_occurrences)
-        """
-        pass
-
-    # TODO
-    def MODIFICATIONS(self):
-        pass
-
-    # TODO
     def get_min_max_mag(self):
-        pass
+        return np.min(self.mags), np.max(self.mags)
 
-    # TODO
-    def get_one_rupture(self):
-        pass
+    def get_one_rupture(self, ses_seed, rupture_mutex):
+        raise NotImplementedError()

@@ -335,7 +335,9 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
 
     def get_one_rupture(self, ses_seed, rupture_mutex=False):
         """
-        Yields one random rupture from a source
+        Yields one random rupture from a source. IMPORTANT: this method
+        does not take into account the frequency of occurrence of the
+        ruptures
         """
         # The Mutex case is admitted only for non-parametric ruptures
         msg = 'Mutually exclusive ruptures are admitted only in case of'
