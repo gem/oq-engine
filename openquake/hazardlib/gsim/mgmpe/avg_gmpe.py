@@ -100,12 +100,13 @@ class AvgGMPE(GMPE):
         Call the underlying GMPEs and return the weighted mean and stddev
         """
         means = []
-        std2 = []
+        std2 = [[] for _ in stddev_types]
         for g, gsim in enumerate(self.gsims):
-            mean, [stdtot] = gsim.get_mean_and_stddevs(
+            mean, stddevs = gsim.get_mean_and_stddevs(
                 sctx, rctx, dctx, imt, stddev_types)
             means.append(mean)
-            std2.append(stdtot**2)
+            for s, stddev in enumerate(stddevs):
+                std2[s].append(stddev**2)
         mean = self.weights @ means
-        std = numpy.sqrt(self.weights @ std2)
-        return mean, [std]
+        stddevs = [numpy.sqrt(self.weights @ s) for s in std2]
+        return mean, stddevs
