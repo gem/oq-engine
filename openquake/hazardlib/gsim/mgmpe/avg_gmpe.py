@@ -32,6 +32,7 @@ logic tree file is as in this example::
                 <uncertaintyWeight>1</uncertaintyWeight>
               </logicTreeBranch>
 """
+import inspect
 import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
@@ -42,8 +43,6 @@ class AvgGMPE(GMPE):
     The AvgGMPE returns mean and stddevs from a set of underlying
     GMPEs with the given weights.
     """
-    experimental = True
-
     #: Supported tectonic region type is undefined
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
 
@@ -80,7 +79,12 @@ class AvgGMPE(GMPE):
         for branchid, branchparams in kwargs.items():
             [(gsim_name, params)] = branchparams.items()
             weights.append(params.pop('weight'))
-            gsim = registry[gsim_name](**params)
+            gsim_cls = registry[gsim_name]
+            sig = inspect.signature(gsim_cls.__init__)
+            if list(sig.parameters) == ['self']:  # trivial signature
+                gsim = gsim_cls()
+            else:
+                gsim = gsim_cls(**params)
             rd.update(gsim.REQUIRES_DISTANCES)
             rsp.update(gsim.REQUIRES_SITES_PARAMETERS)
             rrp.update(gsim.REQUIRES_RUPTURE_PARAMETERS)
