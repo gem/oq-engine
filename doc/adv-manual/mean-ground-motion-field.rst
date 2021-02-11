@@ -148,6 +148,10 @@ small and/or the σ is large the mean and standard deviation obtained
 from the logarithms of the ground motion fields could be quite different
 from the expected ones.
 
+Finally, it should be noticed that the geometric mean can be orders of
+magnitude different from the usual mean and it is purely a coincidence
+that in this case they are close (~0.137 vs ~0.155).
+
 
 Single-rupture hazardlib "mean" ground motion field
 -------------------------------------------------
