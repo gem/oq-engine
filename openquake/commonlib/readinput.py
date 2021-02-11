@@ -549,8 +549,6 @@ def get_gsim_lt(oqparam, trts=('*',)):
     if key in gsim_lt_cache:
         return gsim_lt_cache[key]
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
-    gsim_lt_cache[key] = gsim_lt
-
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
         for gsim in gsims:
@@ -571,19 +569,9 @@ def get_gsim_lt(oqparam, trts=('*',)):
                         branch.weight.dic['weight'], w, branch.gsim, k)
                     del branch.weight.dic[k]
     if oqparam.collapse_gsim_logic_tree:
-        return gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
+        gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
+    gsim_lt_cache[key] = gsim_lt
     return gsim_lt
-
-
-def get_gsims(oqparam):
-    """
-    Return an ordered list of GSIM instances from the gsim name in the
-    configuration file or from the gsim logic tree file.
-
-    :param oqparam:
-        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    """
-    return [rlz.value[0] for rlz in get_gsim_lt(oqparam)]
 
 
 def get_ruptures(fname_csv):
