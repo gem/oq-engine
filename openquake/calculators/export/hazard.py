@@ -434,11 +434,11 @@ def export_avg_gmf_csv(ekey, dstore):
     m = 0
     for imt in oq.imtls:
         dic['gmv_' + imt] = data[0, :, m]
-        dic['std_' + imt] = data[1, :, m]
+        dic['gsd_' + imt] = data[1, :, m]
         m += 1
     for imt in oq.get_sec_imts():
         dic['sep_' + imt] = data[0, :, m]
-        dic['std_' + imt] = data[1, :, m]
+        dic['gsd_' + imt] = data[1, :, m]
         m += 1
     fname = dstore.build_fname('avg_gmf', '', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(

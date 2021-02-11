@@ -25,7 +25,7 @@ from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import (
-    compute_pmap_stats, calc_momenta, calc_avg_std)
+    compute_pmap_stats, calc_momenta, calc_avg_std, logcut)
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import nofilter
@@ -171,6 +171,7 @@ class EventBasedCalculator(base.HazardCalculator):
     def calc_momenta(self):
         momenta = {}  # sid -> array of shape (2, M)
         size = self.datastore.getsize('gmf_data')
+        min_iml = self.oqparam.min_iml
         logging.info(f'Stored {humansize(size)} of GMFs')
         avail = psutil.virtual_memory().available
         if avail < size:
@@ -183,7 +184,8 @@ class EventBasedCalculator(base.HazardCalculator):
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         for sid, df in gmf_df.groupby(gmf_df.index):
             eids = df.pop('eid').to_numpy()
-            momenta[sid] = calc_momenta(df.to_numpy(), self.weights[eids])
+            momenta[sid] = calc_momenta(
+                logcut(df.to_numpy(), min_iml), self.weights[eids])
         return momenta, gmf_df.eid.unique()
 
     def agg_dicts(self, acc, result):
@@ -344,7 +346,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 momenta, rel_events = self.calc_momenta()
                 avg_gmf = numpy.zeros((2, self.N, M), F32)
                 for sid in momenta:
-                    avg_gmf[:, sid] = calc_avg_std(momenta[sid], totweight)
+                    avg_gmf[:, sid] = numpy.exp(
+                        calc_avg_std(momenta[sid], totweight))
                 self.datastore['avg_gmf'] = avg_gmf
             e = len(rel_events)
             if e == 0:

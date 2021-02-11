@@ -58,6 +58,17 @@ def calc_momenta(array, weights):
     return momenta
 
 
+def logcut(values, cutoff):
+    """
+    :values:
+        an array of values (1D or 2D with shape (N, M))
+    :returns:
+        the logarithm of the values, with a cutoff
+        (a scalar or an array of length M)
+    """
+    return numpy.log(numpy.maximum(values, cutoff))
+
+
 def calc_avg_std(momenta, totweight):
     """
     :param momenta: an array of shape (2, ...) obtained via calc_momenta
@@ -89,6 +100,14 @@ def avg_std(array, weights=None):
     if weights is None:
         weights = numpy.ones(len(array))
     return calc_avg_std(calc_momenta(array, weights), weights.sum())
+
+
+def geom_avg_std(array, cutoff, weights=None):
+    """
+    :returns: geometric mean and geometric stddev (see
+              https://en.wikipedia.org/wiki/Log-normal_distribution)
+    """
+    return numpy.exp(avg_std(logcut(array, cutoff), weights))
 
 
 def mean_curve(values, weights=None):

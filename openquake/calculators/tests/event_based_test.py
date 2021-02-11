@@ -93,14 +93,16 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def check_avg_gmf(self):
         # checking avg_gmf with a single site
+        min_iml = self.calc.oqparam.min_iml
         df = self.calc.datastore.read_df('gmf_data')
         assert len(df.sid.unique()) == 1
         weights = self.calc.datastore['weights'][:]
         rlzs = self.calc.datastore['events']['rlz_id']
-        ws = weights[rlzs]
-        gmvs = numpy.zeros(len(rlzs))  # number of events
-        gmvs[df.eid.to_numpy()] = df.gmv_0.to_numpy()
-        avgstd = stats.calc_avg_std(stats.calc_momenta(gmvs, ws), ws.sum())
+        totw = weights[rlzs].sum()
+        gmvs = df.gmv_0.to_numpy()
+        ws = weights[rlzs[df.eid.to_numpy()]]
+        mom = stats.calc_momenta(stats.logcut(gmvs, min_iml), ws)
+        avgstd = numpy.exp(stats.calc_avg_std(mom, totw))
         avg_gmf = self.calc.datastore['avg_gmf'][:]  # 2, N, M
         aac(avg_gmf[:, 0, 0], avgstd)
 
