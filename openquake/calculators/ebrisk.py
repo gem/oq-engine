@@ -85,7 +85,7 @@ def calc_risk(df, param, monitor):
             # NB: after the aggregation out contains losses, not loss_ratios
         ws = weights[haz['rlz']]
         acc['momenta'][:, sid] = stats.calc_momenta(
-            stats.logcut(gmvs), ws)  # shape (2, M)
+            stats.logcut(gmvs, param['min_iml']), ws)  # shape (2, M)
         if param['avg_losses']:
             with mon_avg:
                 for lni, ln in enumerate(alt.loss_names):
@@ -177,6 +177,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.aggkey, oq.loss_dt().names, sec_losses)
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
+        self.param['min_iml'] = oq.min_iml
         self.param['M'] = len(oq.all_imts())
         ct = oq.concurrent_tasks or 1
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)

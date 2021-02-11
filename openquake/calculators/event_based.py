@@ -171,6 +171,7 @@ class EventBasedCalculator(base.HazardCalculator):
     def calc_momenta(self):
         momenta = {}  # sid -> array of shape (2, M)
         size = self.datastore.getsize('gmf_data')
+        min_iml = self.oqparam.min_iml
         logging.info(f'Stored {humansize(size)} of GMFs')
         avail = psutil.virtual_memory().available
         if avail < size:
@@ -184,7 +185,7 @@ class EventBasedCalculator(base.HazardCalculator):
         for sid, df in gmf_df.groupby(gmf_df.index):
             eids = df.pop('eid').to_numpy()
             momenta[sid] = calc_momenta(
-                logcut(df.to_numpy(), 0), self.weights[eids])
+                logcut(df.to_numpy(), min_iml), self.weights[eids])
         return momenta, gmf_df.eid.unique()
 
     def agg_dicts(self, acc, result):
