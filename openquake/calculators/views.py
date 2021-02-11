@@ -359,6 +359,7 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
+    R = dstore['full_lt'].get_num_rlzs()
     K = dstore['agg_loss_table'].attrs.get('K', 0)
     df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
     weights = dstore['weights'][:]
@@ -367,7 +368,7 @@ def view_portfolio_loss(token, dstore):
     eids = df.pop('event_id').to_numpy()
     arr = df.to_numpy()
     E, L = arr.shape
-    avg = ws[eids] @ arr / ws.sum() * E
+    avg = ws[eids] @ arr / ws.sum() * E / R
     err = [avg[li] * binning_error(arr[:, li], eids) for li in range(L)]
     rows = [['avg'] + list(avg), ['err'] + err]
     return(rst_table(rows, ['loss'] + oq.loss_names))
