@@ -539,10 +539,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         else:
             # classical, event based and scenario calculators
             for riskid, vfs in self.risklist.groupby_id().items():
-                for vf in vfs.values():
-                    # set the seed; this is important for the case of
-                    # VulnerabilityFunctionWithPMF
-                    vf.seed = oq.random_seed
                 self._riskmodels[riskid] = get_riskmodel(
                     riskid, oq, risk_functions=vfs)
         self.primary_imtls = oq.get_primary_imtls()
