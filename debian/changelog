@@ -93,6 +93,7 @@
 
   [Marco Pagani, Michele Simionato, Thomas Chartier]
   * Added experimental version of KiteSource and KiteSurface
+  * Added support for exporting conditional probabilities as an output of dsg
 
   [Michele Simionato]
   * Changed the serialization of ruptures to support MultiSurfaces
