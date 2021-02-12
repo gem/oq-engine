@@ -421,10 +421,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             if ('disaggregation_output' not in self.oqparam or
                     self.oqparam.disaggregation_out == 'joint'):
                 self.save_disagg_results(results)
-                print('11111111111111')
             elif self.oqparam.disaggregation_out == 'conditional':
                 self.save_disagg_results_occ(results)
-                print('00000000000000')
             else:
                 raise ValueError('Unknown option for disaggregation output')
 
