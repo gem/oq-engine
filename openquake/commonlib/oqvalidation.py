@@ -1110,7 +1110,7 @@ class OqParam(valid.ParamSet):
                         'file is missing the IMT %r' % imt)
         if 'default' in mini:
             del mini['default']
-        return numpy.array([mini.get(imt, 0) for imt in self.imtls])
+        return numpy.array([mini.get(imt, 1E-10) for imt in self.imtls])
 
     def levels_per_imt(self):
         """

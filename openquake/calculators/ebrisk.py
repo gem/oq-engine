@@ -85,7 +85,7 @@ def calc_risk(df, param, monitor):
             # NB: after the aggregation out contains losses, not loss_ratios
         ws = weights[haz['rlz']]
         acc['momenta'][:, sid] = stats.calc_momenta(
-            stats.logcut(gmvs, param['min_iml']), ws)  # shape (2, M)
+            numpy.log(gmvs), ws)  # shape (2, M)
         if param['avg_losses']:
             with mon_avg:
                 for lni, ln in enumerate(alt.loss_names):

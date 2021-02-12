@@ -26,7 +26,7 @@ import numpy.testing
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import countby, gettemp
 from openquake.baselib.datastore import read
-from openquake.hazardlib import nrml, InvalidFile, stats
+from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import max_rel_diff_index
@@ -35,7 +35,7 @@ from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.getters import get_gmfgetter
-from openquake.calculators.event_based import get_mean_curves
+from openquake.calculators.event_based import get_mean_curves, compute_avg_gmf
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import case_18 as gmpe_tables
 from openquake.qa_tests_data.event_based import (
@@ -94,17 +94,12 @@ class EventBasedTestCase(CalculatorTestCase):
     def check_avg_gmf(self):
         # checking avg_gmf with a single site
         min_iml = self.calc.oqparam.min_iml
-        df = self.calc.datastore.read_df('gmf_data')
-        assert len(df.sid.unique()) == 1
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
         weights = self.calc.datastore['weights'][:]
         rlzs = self.calc.datastore['events']['rlz_id']
-        totw = weights[rlzs].sum()
-        gmvs = df.gmv_0.to_numpy()
-        ws = weights[rlzs[df.eid.to_numpy()]]
-        mom = stats.calc_momenta(stats.logcut(gmvs, min_iml), ws)
-        avgstd = numpy.exp(stats.calc_avg_std(mom, totw))
+        [(sid, avgstd)] = compute_avg_gmf(df, weights[rlzs], min_iml).items()
         avg_gmf = self.calc.datastore['avg_gmf'][:]  # 2, N, M
-        aac(avg_gmf[:, 0, 0], avgstd)
+        aac(avg_gmf[:, 0], avgstd)
 
     def test_spatial_correlation(self):
         expected = {sc1: [0.99, 0.41],

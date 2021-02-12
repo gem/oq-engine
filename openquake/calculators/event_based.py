@@ -24,8 +24,7 @@ import psutil
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.stats import (
-    compute_pmap_stats, calc_momenta, calc_avg_std, logcut)
+from openquake.hazardlib.stats import geom_avg_std, compute_pmap_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc.filters import nofilter
@@ -73,6 +72,27 @@ def compute_gmfs(rupgetter, param, monitor):
     getter = GmfGetter(rupgetter, srcfilter, oq, param['amplifier'],
                        param['sec_perils'])
     return getter.compute_gmfs_curves(monitor)
+
+
+def compute_avg_gmf(gmf_df, weights, min_iml):
+    """
+    :param gmf_df: a DataFrame with colums eid, sid, rlz, gmv...
+    :param weights: E weights associated to the realizations
+    :param min_iml: array of M minimum intensities
+    :returns: a dictionary site_id -> array of shape (2, M)
+    """
+    dic = {}
+    E = len(weights)
+    M = len(min_iml)
+    for sid, df in gmf_df.groupby(gmf_df.index):
+        eid = df.pop('eid')
+        if len(df) < E:
+            gmvs = numpy.ones((E, M), F32) * min_iml
+            gmvs[eid.to_numpy()] = df.to_numpy()
+        else:
+            gmvs = df.to_numpy()
+        dic[sid] = geom_avg_std(gmvs, weights)
+    return dic
 
 
 @base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
@@ -167,26 +187,6 @@ class EventBasedCalculator(base.HazardCalculator):
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
             imp.import_rups(self.datastore.getitem('ruptures')[()])
-
-    def calc_momenta(self):
-        momenta = {}  # sid -> array of shape (2, M)
-        size = self.datastore.getsize('gmf_data')
-        min_iml = self.oqparam.min_iml
-        logging.info(f'Stored {humansize(size)} of GMFs')
-        avail = psutil.virtual_memory().available
-        if avail < size:
-            logging.warning(
-                f'There is not enough free RAM ({humansize(avail)}) to read '
-                f'the GMFs, not computing avg_gmf')
-            return momenta, numpy.unique(self.datastore['gmf_data/eid'][:])
-
-        logging.info('Computing avg_gmf')
-        gmf_df = self.datastore.read_df('gmf_data', 'sid')
-        for sid, df in gmf_df.groupby(gmf_df.index):
-            eids = df.pop('eid').to_numpy()
-            momenta[sid] = calc_momenta(
-                logcut(df.to_numpy(), min_iml), self.weights[eids])
-        return momenta, gmf_df.eid.unique()
 
     def agg_dicts(self, acc, result):
         """
@@ -338,26 +338,42 @@ class EventBasedCalculator(base.HazardCalculator):
             return acc
         if oq.ground_motion_fields:
             with self.monitor('saving avg_gmf', measuremem=True):
-                M = len(oq.all_imts())
-                rlzs = self.datastore['events']['rlz_id']
-                self.weights = self.datastore['weights'][:][rlzs]
-                totweight = self.weights.sum()
-                self.num_events = numpy.bincount(rlzs)  # events by rlz
-                momenta, rel_events = self.calc_momenta()
-                avg_gmf = numpy.zeros((2, self.N, M), F32)
-                for sid in momenta:
-                    avg_gmf[:, sid] = numpy.exp(
-                        calc_avg_std(momenta[sid], totweight))
-                self.datastore['avg_gmf'] = avg_gmf
-            e = len(rel_events)
-            if e == 0:
-                raise RuntimeError(
-                    'No GMFs were generated, perhaps they were '
-                    'all below the minimum_intensity threshold')
-            elif e < len(self.datastore['events']):
-                self.datastore['relevant_events'] = rel_events
-                logging.info('Stored %d relevant event IDs', e)
+                self.save_avg_gmf()
         return acc
+
+    def save_avg_gmf(self):
+        size = self.datastore.getsize('gmf_data')
+        logging.info(f'Stored {humansize(size)} of GMFs')
+        avail = psutil.virtual_memory().available
+        if avail < size:
+            logging.warning(
+                f'There is not enough free RAM ({humansize(avail)}) to read '
+                f'the GMFs, not computing avg_gmf')
+            return numpy.unique(self.datastore['gmf_data/eid'][:])
+
+        rlzs = self.datastore['events']['rlz_id']
+        self.weights = self.datastore['weights'][:][rlzs]
+        gmf_df = self.datastore.read_df('gmf_data', 'sid')
+        for sec_imt in self.oqparam.get_sec_imts():  # ignore secondary perils
+            del gmf_df[sec_imt]
+        rel_events = gmf_df.eid.unique()
+        e = len(rel_events)
+        if e == 0:
+            raise RuntimeError(
+                'No GMFs were generated, perhaps they were '
+                'all below the minimum_intensity threshold')
+        elif e < len(self.datastore['events']):
+            self.datastore['relevant_events'] = rel_events
+            logging.info('Stored %d relevant event IDs', e)
+
+        # really compute and store the avg_gmf
+        M = len(self.oqparam.min_iml)
+        avg_gmf = numpy.zeros((2, self.N, M), F32)
+        for sid, avgstd in compute_avg_gmf(
+                gmf_df, self.weights, self.oqparam.min_iml).items():
+            avg_gmf[:, sid] = avgstd
+        self.datastore['avg_gmf'] = avg_gmf
+        return rel_events
 
     def post_execute(self, result):
         oq = self.oqparam
