@@ -191,10 +191,8 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         check_disagg_by_src(self.calc.datastore)
 
-    """
     def test_case_8(self):
         self.run_calc(case_8.__file__, 'job.ini')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
-    """

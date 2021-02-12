@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Example Source Model Containing an Area Source and a Simple Fault Source belonging to different tectonic region types"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultSource
+            id="2"
+            name="Simple Fault Source"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            1.0000000E+00 -5.0000000E-01 1.4000000E+00 0.0000000E+00 1.4000000E+00 3.0000000E-01
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        3.0000000E+01
+                    </dip>
+                    <upperSeismoDepth>
+                        8.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.0000000E+01
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.2000000E+00" bValue="9.0000000E-01" maxMag="7.5000000E+00" minMag="6.5000000E+00"/>
+                <rake>
+                    9.0000000E+01
+                </rake>
+            </simpleFaultSource>
+        </sourceGroup>
+        <sourceGroup
+        name="group 2"
+        tectonicRegion="Stable Continental Crust"
+        >
+            <areaSource
+            id="1"
+            name="Area Source"
+            tectonicRegion="Stable Continental Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -5.0000000E-01 -5.0000000E-01 -3.0000000E-01 -1.0000000E-01 1.0000000E-01 2.0000000E-01 3.0000000E-01 -8.0000000E-01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        1.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.5000000E+00" bValue="1.0000000E+00" maxMag="7.0000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.0000000E+00" rake="0.0000000E+00" strike="0.0000000E+00"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="5.0000000E+00" probability="1.0000000E+00"/>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
