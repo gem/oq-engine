@@ -20,6 +20,7 @@ import io
 import os
 import re
 import math
+import pandas
 
 import numpy.testing
 
@@ -100,6 +101,20 @@ class EventBasedTestCase(CalculatorTestCase):
         [(sid, avgstd)] = compute_avg_gmf(df, weights[rlzs], min_iml).items()
         avg_gmf = self.calc.datastore['avg_gmf'][:]  # 2, N, M
         aac(avg_gmf[:, 0], avgstd)
+
+    def test_compute_avg_gmf(self):
+        numpy.random.seed(42)
+        E = 1000
+        eids = numpy.arange(E)
+        min_iml = numpy.array([.05])
+        gmvs = numpy.random.lognormal(mean=-2.0, sigma=.5, size=E)
+        gmvs[gmvs < min_iml] = min_iml
+        gmf_df = pandas.DataFrame(dict(eid=eids, gmv_0=gmvs),
+                                  numpy.zeros(E, int))
+        weights = numpy.ones(E)
+        [(sid, avgstd)] = compute_avg_gmf(gmf_df, weights, min_iml).items()
+        # aac(avgstd, [[0.13664978], [1.63127694]]) without cutting min_iml
+        aac(avgstd, [[0.137023], [1.620616]], atol=1E-6)
 
     def test_spatial_correlation(self):
         expected = {sc1: [0.99, 0.41],
