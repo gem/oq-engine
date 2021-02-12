@@ -417,7 +417,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         with self.monitor('saving disagg results'):
-            import pdb; pdb.set_trace()
             if ('disaggregation_output' not in self.oqparam or
                     self.oqparam.disaggregation_out == 'joint'):
                 self.save_disagg_results(results)
@@ -447,7 +446,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.datastore['disagg-bins/Eps'] = b[4]
         self.datastore['disagg-bins/TRT'] = encode(self.trts)
 
-    def save_disagg_results(self, results):
+    def save_disagg_results_occ(self, results):
         """
         Save the computed PMFs in the datastore
 
@@ -522,7 +521,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             self.datastore['_vcurves'] = numpy.array(vcurves).reshape(NML1)
             self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]
 
-    def save_disagg_results_occ(self, results):
+    def save_disagg_results(self, results):
         """
         Save the computed PMFs in the datastore
 
