@@ -478,7 +478,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                     vcurves.append(self.curves[s])
                     count[s] += 1
                 mat4 = agg_probs(*mat5)  # shape (Ma D E Z) or (Ma Lo La Z)
-                occe = -numpy.log(1.-poe)/oq.investigation_time
+                occe = -numpy.log(1.-poe_agg)/oq.investigation_time
                 for key in oq.disagg_outputs:
                     if key == 'Mag' and k == 0:
                         tmp = pprod(mat4, axis=(1, 2))
