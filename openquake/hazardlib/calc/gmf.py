@@ -164,9 +164,6 @@ class GmfComputer(object):
                 eids = eids_by_rlz[rlz]
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
-                    tot = gmfa.sum(axis=0)  # shape (M,)
-                    if not tot.sum():
-                        continue
                     if sig_eps is not None:
                         tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
@@ -177,14 +174,13 @@ class GmfComputer(object):
                         for outkey, outarr in zip(sp.outputs, o):
                             items.append((outkey, outarr))
                     for i, gmv in enumerate(gmfa):
-                        if gmv.sum():
-                            data['sid'].append(sids[i])
-                            data['eid'].append(eid)
-                            data['rlz'].append(rlz)
-                            for m in range(M):
-                                data[f'gmv_{m}'].append(gmv[m])
-                            for outkey, outarr in items:
-                                data[outkey].append(outarr[i])
+                        data['sid'].append(sids[i])
+                        data['eid'].append(eid)
+                        data['rlz'].append(rlz)
+                        for m in range(M):
+                            data[f'gmv_{m}'].append(gmv[m])
+                        for outkey, outarr in items:
+                            data[outkey].append(outarr[i])
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += len(eids)
