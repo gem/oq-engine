@@ -62,3 +62,5 @@
 | case_59 | Test for NRCan15SiteTerm |
 | case_60 | |
 | case_61 | Test the Kite Fault with info for Simple Fault |
+| case_62 | |
+| case_63 | |

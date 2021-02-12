@@ -417,7 +417,16 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         with self.monitor('saving disagg results'):
-            self.save_disagg_results(results)
+            import pdb; pdb.set_trace()
+            if ('disaggregation_output' not in self.oqparam or
+                    self.oqparam.disaggregation_out == 'joint'):
+                self.save_disagg_results(results)
+                print('11111111111111')
+            elif self.oqparam.disaggregation_out == 'conditional':
+                self.save_disagg_results_occ(results)
+                print('00000000000000')
+            else:
+                raise ValueError('Unknown option for disaggregation output')
 
     def save_bin_edges(self, all_edges):
         """
@@ -441,6 +450,81 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.datastore['disagg-bins/TRT'] = encode(self.trts)
 
     def save_disagg_results(self, results):
+        """
+        Save the computed PMFs in the datastore
+
+        :param results:
+            a dict s, m, k -> 6D-matrix of shape (T, Ma, Lo, La, P, Z) or
+            (T, Ma, D, E, P, Z) depending if k is 0 or k is 1
+        """
+        oq = self.oqparam
+        out = output_dict(self.shapedic, oq.disagg_outputs)
+        count = numpy.zeros(len(self.sitecol), U16)
+        _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
+        vcurves = []  # hazard curves with a vertical section for large poes
+        for (s, m, k), mat6 in sorted(results.items()):
+            imt = self.imts[m]
+            for p, poe in enumerate(self.poes_disagg):
+                mat5 = mat6[..., p, :]
+                if k == 0 and m == 0 and poe == self.poes_disagg[-1]:
+                    # mat5 has shape (T, Ma, D, E, Z)
+                    _disagg_trt[s] = tuple(pprod(mat5[..., 0], axis=(1, 2, 3)))
+                poe2 = pprod(mat5, axis=(0, 1, 2, 3))
+                self.datastore['poe4'][s, m, p] = poe2  # shape Z
+                poe_agg = poe2.mean()
+                if (poe and abs(1 - poe_agg / poe) > .1 and not count[s]
+                        and self.hmap4[s, m, p].any()):
+                    logging.warning(
+                        'Site #%d, IMT=%s: poe_agg=%s is quite different from '
+                        'the expected poe=%s, perhaps not enough levels',
+                        s, imt, poe_agg, poe)
+                    vcurves.append(self.curves[s])
+                    count[s] += 1
+                mat4 = agg_probs(*mat5)  # shape (Ma D E Z) or (Ma Lo La Z)
+                occe = -numpy.log(1.-poe)/oq.investigation_time
+                for key in oq.disagg_outputs:
+                    if key == 'Mag' and k == 0:
+                        tmp = pprod(mat4, axis=(1, 2))
+                        occ = -numpy.log(1.-tmp)/oq.investigation_time
+                        out[key][s, m, p, :] = occ / occe
+                    elif key == 'Dist' and k == 0:
+                        tmp = pprod(mat4, axis=(0, 2))
+                        occ = -numpy.log(1.-tmp)/oq.investigation_time
+                        out[key][s, m, p, :] = occ / occe
+                    elif key == 'TRT' and k == 0:
+                        tmp = pprod(mat5, axis=(1, 2, 3))
+                        occ = -numpy.log(1.-tmp)/oq.investigation_time
+                        out[key][s, m, p, :] = occ / occe
+                    elif key == 'Mag_Dist' and k == 0:
+                        tmp = pprod(mat4, axis=2)
+                        occ = -numpy.log(1.-tmp)/oq.investigation_time
+                        out[key][s, m, p, :] = occ / occe
+                    elif key == 'Mag_Dist_Eps' and k == 0:
+                        tmp = mat4
+                        occ = -numpy.log(1.-tmp)/oq.investigation_time
+                        out[key][s, m, p, :] = occ / occe
+                    elif key == 'Lon_Lat' and k == 1:
+                        tmp = pprod(mat4, axis=0)
+                        occ = -numpy.log(1.-tmp)/oq.investigation_time
+                        out[key][s, m, p, :] = occ / occe
+                    elif key == 'Mag_Lon_Lat' and k == 1:
+                        occ = -numpy.log(1.-mat4)/oq.investigation_time
+                        out[key][s, m, p, :] = occ / occe
+                    elif key == 'Lon_Lat_TRT' and k == 1:
+                        # T Lo La Z -> Lo La T Z
+                        tmp = pprod(mat5, axis=1).transpose(1, 2, 0, 3)
+                        occ = -numpy.log(1.-tmp)/oq.investigation_time
+                        out[key][s, m, p, :] = occ / occe
+                    # shape NMP..Z
+        self.datastore['disagg'] = out
+        # below a dataset useful for debugging, at minimum IMT and maximum RP
+        self.datastore['_disagg_trt'] = _disagg_trt
+        if len(vcurves):
+            NML1 = len(vcurves), self.M, oq.imtls.size // self.M
+            self.datastore['_vcurves'] = numpy.array(vcurves).reshape(NML1)
+            self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]
+
+    def save_disagg_results_occ(self, results):
         """
         Save the computed PMFs in the datastore
 
