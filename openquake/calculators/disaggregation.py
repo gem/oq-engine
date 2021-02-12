@@ -417,10 +417,10 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Extracting and saving the PMFs for %d outputs '
                      '(N=%s, P=%d, M=%d, Z=%d)', numpy.prod(shp), *shp)
         with self.monitor('saving disagg results'):
-            if ('disaggregation_output' not in self.oqparam or
-                    self.oqparam.disaggregation_out == 'joint'):
+            if (not hasattr(self.oqparam, 'disagg_output_type') or
+                    self.oqparam.disagg_output_type == 'joint'):
                 self.save_disagg_results(results)
-            elif self.oqparam.disaggregation_out == 'conditional':
+            elif self.oqparam.disagg_output_type == 'conditional':
                 self.save_disagg_results_occ(results)
             else:
                 raise ValueError('Unknown option for disaggregation output')

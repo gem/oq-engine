@@ -155,6 +155,11 @@ disagg_outputs:
   Example: *disagg_outputs = Mag_Dist*
   Default: list of all possible outputs
 
+disagg_output_type:
+  Controls the type of disaggregation output
+  Example: *disaggr_output_type = conditional*
+  Default: joint
+
 discard_assets:
   Flag used in risk calculations to discard assets from the exposure.
   Example: *discard_assets = true*.
@@ -699,6 +704,8 @@ class OqParam(valid.ParamSet):
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs,
                                  list(calc.disagg.pmf_map))
+    disagg_output_type = valid.Param(valid.Choice('conditional', 'joint'),
+                                     'joint')
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     distance_bin_width = valid.Param(valid.positivefloat)
