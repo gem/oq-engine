@@ -102,12 +102,12 @@ def avg_std(array, weights=None):
     return calc_avg_std(calc_momenta(array, weights), weights.sum())
 
 
-def geom_avg_std(array, cutoff, weights=None):
+def geom_avg_std(array, weights=None):
     """
     :returns: geometric mean and geometric stddev (see
               https://en.wikipedia.org/wiki/Log-normal_distribution)
     """
-    return numpy.exp(avg_std(logcut(array, cutoff), weights))
+    return numpy.exp(avg_std(numpy.log(array), weights))
 
 
 def mean_curve(values, weights=None):

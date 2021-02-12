@@ -366,9 +366,16 @@ class GmfGetter(object):
         times = numpy.array([tup + (monitor.task_no,) for tup in self.times],
                             time_dt)
         times.sort(order='rup_id')
-        res = dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
+        res = dict(gmfdata=strip_zeros(gmfdata), hcurves=hcurves, times=times,
                    sig_eps=numpy.array(self.sig_eps, self.sig_eps_dt))
         return res
+
+
+def strip_zeros(gmf_df):
+    # remove the rows with all zero values
+    df = gmf_df[gmf_df.columns[3:]]  # strip eid, sid, rlz
+    ok = df.to_numpy().sum(axis=1) > 0
+    return gmf_df[ok]
 
 
 def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
