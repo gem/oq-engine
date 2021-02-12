@@ -354,6 +354,8 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs = self.datastore['events']['rlz_id']
         self.weights = self.datastore['weights'][:][rlzs]
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
+        for sec_imt in self.oqparam.get_sec_imts():  # ignore secondary perils
+            del gmf_df[sec_imt]
         rel_events = gmf_df.eid.unique()
         e = len(rel_events)
         if e == 0:
@@ -365,7 +367,7 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.info('Stored %d relevant event IDs', e)
 
         # really compute and store the avg_gmf
-        M = len(self.oqparam.all_imts())
+        M = len(self.oqparam.min_iml)
         avg_gmf = numpy.zeros((2, self.N, M), F32)
         for sid, avgstd in compute_avg_gmf(
                 gmf_df, self.weights, self.oqparam.min_iml).items():

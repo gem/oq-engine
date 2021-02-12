@@ -431,15 +431,9 @@ def export_avg_gmf_csv(ekey, dstore):
     sitecol = dstore['sitecol'].complete
     data = dstore['avg_gmf'][:]  # shape (2, N, M)
     dic = {'site_id': sitecol.sids, 'lon': sitecol.lons, 'lat': sitecol.lats}
-    m = 0
-    for imt in oq.imtls:
+    for m, imt in enumerate(oq.imtls):
         dic['gmv_' + imt] = data[0, :, m]
         dic['gsd_' + imt] = data[1, :, m]
-        m += 1
-    for imt in oq.get_sec_imts():
-        dic['sep_' + imt] = data[0, :, m]
-        dic['gsd_' + imt] = data[1, :, m]
-        m += 1
     fname = dstore.build_fname('avg_gmf', '', 'csv')
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
         pandas.DataFrame(dic), fname, comment=dstore.metadata)
