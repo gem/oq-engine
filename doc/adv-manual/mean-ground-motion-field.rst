@@ -60,7 +60,7 @@ where the weights sum up to 1. It is up to the user to check how big
 is the difference in the risk between the complete calculation and
 the mean field calculation. A factor of 2 discrepancies would not be
 surprising, but we have also seen situations where there is no difference
-withing the uncertainty due to the random seed choice.
+within the uncertainty due to the random seed choice.
 
 
 Mean ground motion field by event
