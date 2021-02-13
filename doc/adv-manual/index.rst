@@ -22,7 +22,7 @@ Contents:
    sampling
    rupture-sampling
    event-based-with-large-logic-tree
-   mean-ground-motion-fields
+   mean-ground-motion-field
    site-specific
    extract-api
    pandas

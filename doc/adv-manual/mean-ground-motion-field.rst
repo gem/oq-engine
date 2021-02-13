@@ -1,4 +1,4 @@
-On the concept of "mean" ground motion field
+The concept of "mean" ground motion field
 ============================================
 
 The engine has at least three different kinds of *mean ground motion
@@ -155,8 +155,8 @@ magnitude different from the usual mean and it is purely a coincidence
 that in this case they are close (~0.137 vs ~0.155).
 
 
-Single-rupture hazardlib "mean" ground motion field
--------------------------------------------------
+Single-rupture estimated median ground motion field
+---------------------------------------------------
 
 The mean ground motion field by event discussed above is an *a posteriori*
 output: *after* performing the calculation, some statistics are performed

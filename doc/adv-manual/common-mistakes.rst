@@ -153,6 +153,14 @@ have seen cases when setting setting ``pointsource_distance = 0``
 changed the result in the hazard maps only by 0.1% and gained an order of
 magnitude of speedup. You have to check on a case by case basis.
 
+There is a good example of use of the ``pointsource_distanc``` in the
+MultiPointClassicalPSHA demo. Here we will just show a plot displaying the
+hazard curve without `pointsource_distance` (with ID=-2) and with
+`pointsource_distance=200` km (with ID=-1). As you see they are nearly
+identical but the second calculation is ten times faster.
+
+.. image:: mp-demo.png
+
 The ``pointsource_distance`` is also crucial when using the
 `point source gridding`_ approximation: then it can be used to
 speedup calculations even when the nodal plane and hypocenter
