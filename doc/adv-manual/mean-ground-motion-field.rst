@@ -51,7 +51,7 @@ calls the methods ``.get_means_and_stddevs`` on the underlying GMPEs
 and performs a weighted average of the means and a weighted average
 of the variances using the usual formulas::
 
-   μ = ∑ w_i μ_i, σ^2 = ∑ w_i σ_i^2
+   μ = ∑ w_i μ_i, σ^2 = ∑ w_i (σ_i)^2
 
 where the weights sum up to 1. It is up to the user to check how big
 is the difference in the risk between the complete calculation and
