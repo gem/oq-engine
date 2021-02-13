@@ -49,9 +49,12 @@ that allows to replace a set of GMPEs with a single effective GMPE.
 More specifically, the method ``AvgGMPE.get_means_and_stddevs``
 calls the methods ``.get_means_and_stddevs`` on the underlying GMPEs
 and performs a weighted average of the means and a weighted average
-of the variances using the usual formulas::
+of the variances using the usual formulas:
 
-   μ = ∑ w_i μ_i, σ^2 = ∑ w_i (σ_i)^2
+.. math::
+
+   μ &= ∑_i w_i μ_i \\
+   σ^2 &= ∑_i w_i (σ_i)^2
 
 where the weights sum up to 1. It is up to the user to check how big
 is the difference in the risk between the complete calculation and
