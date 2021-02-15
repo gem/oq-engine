@@ -154,11 +154,12 @@ class GmfComputer(object):
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
             array, sig, eps = self.compute(gs, num_events)
-            M = len(array)
+            M, N, E = array.shape
+            for n in range(N):
+                for e in range(E):
+                    if (array[:, n, e] < min_iml).all():
+                        array[:, n, e] = 0
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
-            for i, miniml in enumerate(min_iml):  # gmv < minimum
-                arr = array[:, i, :]
-                arr[arr < miniml] = 0
             n = 0
             for rlz in rlzs:
                 eids = eids_by_rlz[rlz]
