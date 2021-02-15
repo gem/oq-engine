@@ -1,5 +1,5 @@
 This is a major release featuring several optimizations, new features,
-and a bug fixes. Over 300 pull requests were merged.
+and a bug fixes. Over 400 pull requests were merged.
 
 For the complete list of changes, see the changelog:
 https://github.com/gem/oq-engine/blob/engine-3.11/debian/changelog
@@ -10,7 +10,7 @@ Here are the highlights.
 
 The classical PSHA calculator has a brand new optimization called
 *point source gridding*, based on the idea of using a larger grid
-spacing for sites distant from the point sources. The feature is still
+for sites distant from the point sources. The feature is still
 experimental and not enabled by default, but the first results are
 very encouraging: for instance, the Australia model can be made 3
 times faster without changing the results much.  The point source
@@ -20,14 +20,18 @@ https://docs.openquake.org/oq-engine/advanced/point-source-gridding.html
 
 and you are invited to try it.
 
-Moreover, it has become easy to perform a sensitivity analysis with the
-engine, i.e. to run multiple calculations with different values of one
-(or more) parameters with a single command. This can be used to test
-the sensitivity to the parameters used in the point source gridding
+There is a syntax to perform sensitivity analysis, i.e. to run
+multiple calculations with different values of one (or more)
+parameters with a single command. This can be used to test the
+sensitivity to the parameters used in the point source gridding
 approximation, but in general it works for any global parameter.
+An example is the following:
+
+# add this to the job.ini to run 2 calculations
+sensitivity_analysis = {'maximum_distance': [100, 200]}
 
 Finally, the engine can now automatically download and run
-calculations from the URL to a .zip archive. For instance
+calculations from an URL containing a .zip archive. For instance
 
 ```
 $ oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
