@@ -416,18 +416,22 @@ class ClassicalCalculator(base.HazardCalculator):
                 rlzs_by_g.append(rlzs)
         self.datastore.hdf5.save_vlen(
             'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
-        poes_shape = (len(rlzs_by_g), self.N, self.oqparam.imtls.size)  # GNL
+        nlevels = self.oqparam.imtls.size
+        poes_shape = (len(rlzs_by_g), self.N, nlevels)  # GNL
         size = numpy.prod(poes_shape) * 8
         bytes_per_grp = size / len(self.grp_ids)
         avail = min(psutil.virtual_memory().available, config.memory.limit)
-        logging.info('Requiring %s for ProbabilityMap of shape %s',
+        logging.info('Requiring %s for full ProbabilityMap of shape %s',
                      humansize(size), poes_shape)
+        maxlen = max(len(rbs) for rbs in rlzs_by_gsim_list)
+        maxsize = maxlen * self.N * self.oqparam.imtls.size * 8
+        logging.info('Requiring %s for max ProbabilityMap of shape %s',
+                     humansize(maxsize), (maxlen, self.N, nlevels))
         if avail < bytes_per_grp:
             raise MemoryError(
                 'You have only %s of free RAM' % humansize(avail))
         elif avail < size:
             logging.warning('You have only %s of free RAM' % humansize(avail))
-        self.groups_per_block = len(self.grp_ids)
         self.ct = (self.oqparam.concurrent_tasks or 1) * 2.5
         # NB: it is CRITICAL for performance to have shape GNL and not NLG
         # dset[g, :, :] = XXX is fast, dset[:, :, g] = XXX is ultra-slow
@@ -471,7 +475,7 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {rec[0]: i for i, rec in enumerate(
             self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
-        blocks = list(block_splitter(grp_ids, self.groups_per_block))
+        blocks = list(block_splitter(grp_ids, len(self.grp_ids)))
         for b, block in enumerate(blocks, 1):
             args = self.get_args(block, self.haz)
             logging.info('Sending %d tasks', len(args))
