@@ -24,7 +24,7 @@ services:
     <<: *service_default
     container_name: engine-master
     hostname: engine-master
-    image: openquake/engine-master-zmq:nightly
+    image: openquake/engine-master-zmq:latest
     ports:
      - 8800:8800
     # Uncomment to enable auth in WebUI/API
@@ -48,7 +48,7 @@ services:
     # don't use name if want to scale
     # container_name: engine-worker
     hostname: engine-worker
-    image: openquake/engine-worker-zmq:nightly
+    image: openquake/engine-worker-zmq:latest
     volumes:
      - oqdata:/home/openquake/oqdata:ro
     networks:
