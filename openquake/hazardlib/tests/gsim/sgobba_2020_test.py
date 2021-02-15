@@ -38,7 +38,8 @@ class Sgobba2020Test(unittest.TestCase):
         ev_id = '160824013632'
 
         # Read dataframe with information
-        df = pd.read_csv(os.path.join(DATA_FOLDER, 'check_160824013632.csv'))
+        fname = 'check_{:s}_mean.csv'.format(ev_id)
+        df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
 
         # Get parameters
         locs = []
@@ -77,7 +78,7 @@ class Sgobba2020Test(unittest.TestCase):
         # Compute and check results for the event specific ground-motion
         expected = df.PGA.to_numpy()
         computed = np.exp(mean)
-        # np.testing.assert_allclose(computed, expected)
+        np.testing.assert_allclose(computed, expected)
 
     def test_cluster(self):
 

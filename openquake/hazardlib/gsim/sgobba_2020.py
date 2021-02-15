@@ -104,12 +104,13 @@ class SgobbaEtAl2020(GMPE):
         # Reading between-event std
         self.be = 0.0
         self.be_std = 0.0
+
         if event_id is not None:
             fname = os.path.join(DATA_FOLDER, 'event.csv')
-            df = pd.read_csv(fname, sep=';', index_col="id",
+            df = pd.read_csv(fname, sep=';', index_col='id',
                              dtype={'id': 'string'})
-            self.be = df.loc[event_id]['Be']
-            self.be_std = df.loc[event_id]['be_std']
+            self.df = df
+            assert event_id in df.index.values
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -119,6 +120,11 @@ class SgobbaEtAl2020(GMPE):
         # Get site indexes. They are used for the site correction and the
         # cluster (path) correction
         if self.cluster != 0 or self.event_id is not None:
+
+            label = "dBe_{:s}".format(imt.__str__())
+            self.be = self.df.loc[self.event_id][label]
+            # TODO
+            # self.be_std = self.df.loc[self.event_id]['be_std']
 
             # Load the coordinate of the grid
             fname = os.path.join(DATA_FOLDER, 'grid.csv')
@@ -141,7 +147,7 @@ class SgobbaEtAl2020(GMPE):
         mean = (C['a'] + self._get_magnitude_term(C, rup.mag) +
                 self._get_distance_term(C, rup.mag, dists) +
                 sc +
-                self._get_cluster_correction(sites, rup, imt) +
+                self._get_cluster_correction(C, sites, rup, imt) +
                 self.be)
 
         # To natural logarithm and fraction of g
@@ -173,13 +179,13 @@ class SgobbaEtAl2020(GMPE):
                                                      tmp[0:6])
         return correction
 
-    def _get_cluster_correction(self, sites, rup, imt):
+    def _get_cluster_correction(self, C, sites, rup, imt):
         """
         Get cluster correction. The use can specify various options through
         the cluster parameter. The available options are:
         - self.cluster = None
-            In this case the code finds the msot appropriate correction on the
-            basis of the rupture position
+            In this case the code finds the most appropriate correction using
+            the rupture position
         - self.cluster = 0
             No cluster correction
         - self.cluser = 1 or 4 or 5
@@ -191,7 +197,6 @@ class SgobbaEtAl2020(GMPE):
 
         # No cluster correction
         if cluster is None:
-
             cluster = 0
             midp = rup.surface.get_middle_point()
             mesh = Mesh(np.array([midp.longitude]), np.array([midp.latitude]))
@@ -207,14 +212,11 @@ class SgobbaEtAl2020(GMPE):
 
         if cluster == 0:
             return correction
-
         else:
-
             # Cluster coefficients
             fname = 'P_model_cluster{:d}.csv'.format(cluster)
             fname = os.path.join(DATA_FOLDER, fname)
-
-            data = np.loadtxt(fname, delimiter=",")
+            data = np.loadtxt(fname, delimiter=",", skiprows=1)
 
             # Compute the coefficients
             correction = np.zeros(shape)
@@ -228,6 +230,10 @@ class SgobbaEtAl2020(GMPE):
                 tmp = data[int(idx)]
                 correction[self.idxs == idx] = np.interp(per, self.PERIODS,
                                                          tmp[0:6])
+            # Adding L2L correction
+            label = "dL2L_cluster{:d}".format(cluster)
+            correction += C[label]
+
         return correction
 
     def _get_magnitude_term(self, C, mag):
@@ -249,21 +255,21 @@ class SgobbaEtAl2020(GMPE):
         term3 = C['c3']*(tmp-self.consts['Rref'])
         return term1 * term2 + term3
 
-    PERIODS = np.array([0, 0.1, 0.2, 0.5, 1.0, 2.0])
+    PERIODS = np.array([0, 0.2, 0.5, 1.0, 2.0])
 
     # PGA coefficients from the paper 
 #    COEFFS = CoeffsTable(sa_damping=5., table="""\
-#     IMT       a      b1      b2      c1       c2         c3    mref    taue  phis2s  phis2sref  taul2l  phip2p    sig0   sig0d
+#     IMT       a      b1      b2s      c1       c2         c3    mref    taue  phis2s  phis2sref  taul2l  phip2p    sig0   sig0d
 #     pga  2.9118  0.5450  0.1925  0.1809  -1.4588  -5.766e-3  3.8128  0.1527  0.2656     0.2011  0.0592  0.0970  0.2103  0.1585
 #    """)
 
     COEFFS = CoeffsTable(sa_damping=5., table="""\
-IMT a                b1                b2                c1                 c2                c3                   mref             sigma
-pga 2.92178299969904 0.549352522898805 0.195787600661646 0.182324348626393  -1.56833817017883 -0.00277072348000775 3.81278167434967 0.373287155304596
-0.3 3.28830711758503 0.801994610969008 0.411069425190021 0.0855612691462704 -1.47399366408535 -0.00151880647580076 4.1213551733821  0.347809987502868
-0.5 3.16050217205595 0.838494386998919 0.466787811642044 0.105723089676     -1.48056328666322  0.0                 4.87194107479204 0.336027704871346
-1.0 2.58227846237728 0.85911311807545  0.519131261495525 0.146088352194266  -1.28019118368202  0.0                 5.42555199253122 0.324958646112493
-2.0 1.88792168738756 0.727248116061721 0.47362977053987  0.244695132922949  -1.19816952711971  0.0                 5.26896508895249 0.316058351128692
+IMT a           b1          b2          c1          c2           c3           mref        sigma        dL2L_cluster1 dL2L_cluster4 dL2L_cluster5 tau_ev
+PGA 2.921783    0.549352523 0.195787601 0.182324349 -1.56833817  -0.002770723 3.812781674 0.373287155 -0.014400196 -0.014100668 -0.081491221 0.1547
+0.2 3.233717346 0.718110436 0.330819512 0.101391376 -1.474990811 -0.002359447 3.520852986 0.375753297 -0.029531349 -0.024299575 -0.077976198 0.1423
+0.5 3.160502172 0.838494387 0.466787812 0.10572309  -1.480563287  0.0         4.871941075 0.336027705  0.00929098  -0.009953723 -0.008281007 0.1181
+1   2.582278462 0.859113118 0.519131261 0.146088352 -1.280191184  0.0         5.425551993 0.324958646  0.000737173 -0.001235782  0.000181351 0.1242
+2   1.887921687 0.727248116 0.473629771 0.244695133 -1.198169527  0.0         5.268965089 0.316058351  5.61e-15    -1.18e-14     9.32e-15    0.1277
     """)
 
     consts = {'Mh': 5.0,
