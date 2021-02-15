@@ -186,7 +186,7 @@ class VulnerabilityFunction(object):
 
     def sample(self, means, covs, idxs, epsilons=None):
         """
-        Sample the epsilons and apply the corrections to the means.
+        Sample the distribution and apply the corrections to the means.
         This method is called only if there are nonzero covs.
 
         :param means:
@@ -202,7 +202,8 @@ class VulnerabilityFunction(object):
         """
         if self.distribution_name == 'LN' and epsilons is None:
             return means
-        self.set_distribution(epsilons)
+        elif self.distribution_name == 'LN':
+            self.set_distribution(epsilons)
         res = self._distribution.sample(means, covs, means * covs, idxs)
         return res
 
@@ -809,16 +810,16 @@ class LogNormalDistribution(Distribution):
         return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
 
 
-# The beta distribution `numpy.random.beta(alpha, beta)` is singular
+# NB: the beta distribution `numpy.random.beta(alpha, beta)` is singular
 # if the beta array contains some zeros; this happens if the vulnerability
 # function has zero coefficients of variation (stddevs).
 # Even if you do something like this:
-
+#
 # res = numpy.zeros_like(alpha)
 # ok = beta !=0  # not singular
 # res[ok] = numpy.random.beta(alpha[ok], beta[ok])
 # res[~ok] = 1
-
+#
 # this is not going to give results close to you want expect by
 # setting stddev=.0000001 and mean=.0000001 (i.e. smoothly going
 # through the limit) even if the the seed is fixed. The reason is that
@@ -836,8 +837,7 @@ class BetaDistribution(Distribution):
     def sample(self, means, _covs, stddevs, _idxs=None):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
-        res = numpy.random.beta(alpha, beta, size=None)
-        return res
+        return numpy.random.beta(alpha, beta)
 
     def survival(self, loss_ratio, mean, stddev):
         return stats.beta.sf(loss_ratio,
