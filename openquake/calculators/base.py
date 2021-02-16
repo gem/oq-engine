@@ -1010,8 +1010,8 @@ class RiskCalculator(HazardCalculator):
                               % self.oqparam.inputs['job_ini'])
         rlzs = dstore['events']['rlz_id']
         gmf_df = dstore.read_df('gmf_data', 'sid')
+        logging.info('Grouping the GMFs by site ID')
         by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
-        logging.info('Grouped the GMFs by site ID')
         for sid, assets in enumerate(self.assetcol.assets_by_site()):
             if len(assets) == 0:
                 continue
