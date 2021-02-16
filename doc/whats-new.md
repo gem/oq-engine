@@ -48,7 +48,7 @@ smaller than the CPU cache (that can give a speedup of a factor 2 or 3).
 A time-honored performance hack in event based calculations with full
 enumeration of the logic-tree has been finally removed: now the number 
 of generated ruptures is consistent with the case of sampling of the 
-logic-tree. This helps remove a source of confusion that was always
+logic-tree. This helps removing a source of confusion that was always
 present before. Event based calculations involving full-enumeration
 of the logic-tree are likely to require additional runtime now, but 
 the calculations are manageable, whereas previously they might not
@@ -60,15 +60,15 @@ the rupture seeds is now always `ses_seed`. Before it was `ses_seed` in
 event based but `random_seed` in scenario, a potential source of 
 confusion for the users since `random_seed` was also used for the 
 logic-tree sampling. 
-Please read the [FAQ section on the seeds](https://github.com/gem/oq-engine/blob/engine-3.10/doc/faq-risk.md#what-implications-do-random_seed-ses_seed-and-master_seed-have-on-my-calculation) used by the engine for more details.
+Please read the [FAQ section on the seeds](https://github.com/gem/oq-engine/blob/engine-3.11/doc/faq-risk.md#what-implications-do-random_seed-ses_seed-and-master_seed-have-on-my-calculation) used by the engine for more details.
 
 We changed the algorithm generating the rupture seeds, thus the engine
 will not produce the same GMFs as before, but they will still be
 statistically equivalent.
 
 We refined the "minimum_intensity" approximation, by making it more precise:
-ground motion values below the specified threshold are replaced with zeros 
-*if and only if* they are below the threshold for *all* intensity measure types.
+ground motion values below the specified threshold are replaced with zeros and
+not stored *if and only if* they are below the threshold for *all* intensity measure types.
 
 We improved the task distribution in event based calculations, because sometimes
 it was producing too many tasks and sometimes sending the
@@ -83,9 +83,10 @@ The `scenario` and `event_based` calculators (including `ebrisk`) now generate
 and store as a pandas-friendly dataset the (geometrically) averaged GMF
 on the events. This is useful for plotting and debugging purposes.
 
-We reduced the data transfer due to the GMPEs: in some large models,
-this can make a huge difference, while for most models you may not 
-see any sensible difference.
+We reduced the data transfer due to the GMPEs (in particular the Kotha
+GMPEs): in some cases, this can make a huge difference (we saw a 10x
+reduction in the newest model for Europe) while for most models you
+may not see any sensible difference.
 
 The preclassical calculator has been made faster and improved to
 determine the source weights more reliably, thus reducing the slow
@@ -162,7 +163,7 @@ Whe changed the internal storage of the PoEs in classical calculations
 to allow a substantial optimization of performance and memory
 occupation: this improvement is visible only in calculations with particularly
 complex logic trees. While at it, we fixed a bug in the sampling logic 
-affecting some models in engine 3.11.
+affecting some models in engine 3.10.
 
 We changed the string representation of the realizations to make it
 more compact (before it was practically impossible to print out the
