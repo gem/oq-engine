@@ -991,8 +991,7 @@ class RiskCalculator(HazardCalculator):
                 dstore = self.datastore.parent
             else:
                 dstore = self.datastore
-            meth = getattr(self, '_gen_riskinputs_' + kind)
-            riskinputs = list(meth(dstore))
+            riskinputs = getattr(self, '_gen_riskinputs_' + kind)(dstore)
         assert riskinputs
         if all(isinstance(ri.hazard_getter, getters.ZeroGetter)
                for ri in riskinputs):
@@ -1002,16 +1001,16 @@ class RiskCalculator(HazardCalculator):
         return riskinputs
 
     def _gen_riskinputs_gmf(self, dstore):
+        out = []
         if 'gmf_data' not in dstore:  # needed for case_shakemap
             dstore.close()
             dstore = self.datastore
         if 'gmf_data' not in dstore:
             raise InvalidFile('No gmf_data: did you forget gmfs_csv in %s?'
                               % self.oqparam.inputs['job_ini'])
-        with self.monitor('reading GMFs'):
-            rlzs = dstore['events']['rlz_id']
-            gmf_df = dstore.read_df('gmf_data', 'sid')
-            by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
+        rlzs = dstore['events']['rlz_id']
+        gmf_df = dstore.read_df('gmf_data', 'sid')
+        by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
         logging.info('Grouped the GMFs by site ID')
         for sid, assets in enumerate(self.assetcol.assets_by_site()):
             if len(assets) == 0:
@@ -1029,12 +1028,14 @@ class RiskCalculator(HazardCalculator):
                     'ground_motion_fields=False or a large minimum_intensity')
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
-                yield riskinput.RiskInput(getter, numpy.array(block))
+                out.append(riskinput.RiskInput(getter, numpy.array(block)))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
                               len(block), sid)
+        return out
 
     def _gen_riskinputs_poe(self, dstore):
+        out = []
         assets_by_site = self.assetcol.assets_by_site()
         for sid, assets in enumerate(assets_by_site):
             if len(assets) == 0:
@@ -1044,10 +1045,11 @@ class RiskCalculator(HazardCalculator):
             getter = getters.PmapGetter(dstore, ws, [sid], self.oqparam.imtls)
             for block in general.block_splitter(
                     assets, self.oqparam.assets_per_site_limit):
-                yield riskinput.RiskInput(getter, numpy.array(block))
+                out.append(riskinput.RiskInput(getter, numpy.array(block)))
             if len(block) >= TWO16:
                 logging.error('There are %d assets on site #%d!',
                               len(block), sid)
+        return out
 
     def execute(self):
         """
