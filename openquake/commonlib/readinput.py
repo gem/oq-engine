@@ -569,6 +569,7 @@ def get_gsim_lt(oqparam, trts=('*',)):
                         branch.weight.dic['weight'], w, branch.gsim, k)
                     del branch.weight.dic[k]
     if oqparam.collapse_gsim_logic_tree:
+        logging.info('Collapsing the gsim logic tree')
         gsim_lt = gsim_lt.collapse(oqparam.collapse_gsim_logic_tree)
     gsim_lt_cache[key] = gsim_lt
     return gsim_lt
