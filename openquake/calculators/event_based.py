@@ -364,7 +364,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 'all below the minimum_intensity threshold')
         elif e < len(self.datastore['events']):
             self.datastore['relevant_events'] = rel_events
-            logging.info('Stored %d relevant event IDs', e)
+            logging.info('Stored {:_d} relevant event IDs'.format(e))
 
         # really compute and store the avg_gmf
         M = len(self.oqparam.min_iml)
@@ -384,8 +384,9 @@ class EventBasedCalculator(base.HazardCalculator):
         M = len(oq.imtls)  # 0 in scenario
         L = oq.imtls.size
         L1 = L // (M or 1)
-        # check seed dependency
-        if 'gmf_data' in self.datastore:
+        # check seed dependency unless the number of GMFs is huge
+        if ('gmf_data' in self.datastore and
+                self.datastore.getsize('gmf_data') < 1E9):
             logging.info('Checking seed dependency')
             err = views.view('gmf_error', self.datastore)
             if err > .05:
