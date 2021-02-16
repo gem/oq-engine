@@ -14,7 +14,7 @@ sources for distant sites and a fine grid for close sites.
 The feature is still experimental and not enabled by default, but the
 first results are very encouraging: for instance, the Australia and
 Europe models can be made 3 times faster without changing the results
-much.  The point source gridding optimization is documented here
+much.  The point source gridding optimization is documented here:
 
 https://docs.openquake.org/oq-engine/advanced/point-source-gridding.html
 
@@ -26,10 +26,9 @@ parameters. This can be used to test the sensitivity to the parameters
 used in the point source gridding approximation, but in general it
 works for any global parameter.  An example to assess the sensitivity
 to the integration distance is the following:
-
-# add this to the job.ini to run 2 calculations
+```
 sensitivity_analysis = {'maximum_distance': [200, 300]}
-
+```
 Finally, now the engine can automatically download and run
 calculations from an URL containing a .zip archive. For instance
 
