@@ -316,12 +316,15 @@ def export_damages_csv(ekey, dstore):
         rlzs_or_stats = oq.hazard_stats()
     else:
         rlzs_or_stats = ['%03d' % r for r in range(len(rlzs))]
+    name = ekey[0].split('-')[0]
+    if oq.calculation_mode != 'classical_damage':
+        name = 'avg_' + name
     for i, ros in enumerate(rlzs_or_stats):
         if oq.modal_damage_state:
             damages = modal_damage_array(data[:, i], dmg_dt)
         else:
             damages = build_damage_array(data[:, i], dmg_dt)
-        fname = dstore.build_fname(ekey[0].split('-')[0], ros, ekey[1])
+        fname = dstore.build_fname(name, ros, ekey[1])
         writer.save(compose_arrays(assets, damages), fname,
                     comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
