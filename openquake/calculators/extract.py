@@ -667,11 +667,11 @@ def extract_tot_curves(dstore, what):
         arr /= dstore['agg_values'][K, l]
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
-    attrs = dict(shape_descr=['return_period', 'kind'])
-    attrs['return_period'] = rps
+    attrs = dict(shape_descr=['kind', 'return_period'])
     attrs['kind'] = kinds
+    attrs['return_period'] = rps
     attrs['units'] = list(units)  # used by the QGIS plugin
-    return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
+    return ArrayWrapper(arr.T, dict(json=hdf5.dumps(attrs)))
 
 
 @extract.add('agg_curves')

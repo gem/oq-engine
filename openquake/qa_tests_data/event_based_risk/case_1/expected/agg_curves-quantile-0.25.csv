@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.11.0-git6f08fb75b7', start_date='2021-02-04T05:32:27', checksum=3100364614, risk_investigation_time=50.0, kind='agg_curves-quantile-0.25'"
+#,,,,"generated_by='OpenQuake engine 3.11.0-gite54a474a1c', start_date='2021-02-17T08:09:17', checksum=4077124359, risk_investigation_time=50.0, kind='agg_curves-quantile-0.25'"
 return_period,loss_value,loss_type,loss_ratio,annual_frequency_of_exceedence
 60,3.11287E+01,nonstructural,5.65976E-03,1.66667E-02
 120,8.46462E+01,nonstructural,1.53902E-02,8.33333E-03
