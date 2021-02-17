@@ -75,7 +75,7 @@ def export_agg_curve_rlzs(ekey, dstore):
     dataf = aw.to_dframe().set_index(suffix[:-1])
     for r, ros in enumerate(rlzs_or_stats):
         md['kind'] = f'{name}-' + (
-            ros if isinstance(ros, str) else '%03d' % ros)
+            ros if isinstance(ros, str) else 'rlz-%03d' % ros)
         try:
             df = dataf[dataf.index == ros]
         except KeyError:
@@ -118,6 +118,7 @@ def export_agg_losses(ekey, dstore):
     md.update(dict(investigation_time=oq.investigation_time,
               risk_investigation_time=oq.risk_investigation_time))
     for r, ros in enumerate(rlzs_or_stats):
+        ros = ros if isinstance(ros, str) else 'rlz-%03d' % ros
         rows = []
         for (k, l), loss in numpy.ndenumerate(value[:, r]):
             if loss:  # many tag combinations are missing
@@ -315,7 +316,7 @@ def export_damages_csv(ekey, dstore):
     if ekey[0].endswith('stats'):
         rlzs_or_stats = oq.hazard_stats()
     else:
-        rlzs_or_stats = ['%03d' % r for r in range(len(rlzs))]
+        rlzs_or_stats = ['rlz-%03d' % r for r in range(len(rlzs))]
     name = ekey[0].split('-')[0]
     if oq.calculation_mode != 'classical_damage':
         name = 'avg_' + name
