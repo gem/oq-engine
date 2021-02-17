@@ -754,23 +754,22 @@ class DegenerateDistribution(Distribution):
 
 def make_epsilons(matrix, seed, correlation):
     """
-    Given a matrix N * R returns a matrix of the same shape N * R
+    Given a matrix of shape (A, E) returns a matrix of the same shape
     obtained by applying the multivariate_normal distribution to
-    N points and R samples, by starting from the given seed and
+    A points and E samples, by starting from the given seed and
     correlation.
     """
     if seed is not None:
         numpy.random.seed(seed)
-    asset_count = len(matrix)
-    samples = len(matrix[0])
+    A = len(matrix)
+    E = len(matrix[0])
     if not correlation:  # avoid building the covariance matrix
-        return numpy.random.normal(size=(samples, asset_count)).transpose()
-    means_vector = numpy.zeros(asset_count)
-    covariance_matrix = (
-        numpy.ones((asset_count, asset_count)) * correlation +
-        numpy.diag(numpy.ones(asset_count)) * (1 - correlation))
+        return numpy.random.normal(size=(E, A)).transpose()
+    means_vector = numpy.zeros(A)
+    covariance_matrix = (numpy.ones((A, A)) * correlation +
+                         numpy.diag(numpy.ones(A)) * (1 - correlation))
     return numpy.random.multivariate_normal(
-        means_vector, covariance_matrix, samples).transpose()
+        means_vector, covariance_matrix, E).transpose()
 
 
 @DISTRIBUTIONS.add('LN')
