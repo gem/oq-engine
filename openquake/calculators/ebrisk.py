@@ -263,5 +263,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore['avg_gmf'] = numpy.exp(
             stats.calc_avg_std(self.momenta, totw))
         prc = PostRiskCalculator(oq, self.datastore.calc_id)
+        if hasattr(self, 'exported'):
+            prc.exported = self.exported
         prc.datastore.parent = self.datastore.parent
         prc.run(exports='')

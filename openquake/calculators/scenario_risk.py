@@ -184,6 +184,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                          views.view('portfolio_loss', self.datastore))
         else:  # event_based_risk, run post_risk
             prc = post_risk.PostRiskCalculator(oq, self.datastore.calc_id)
+            if hasattr(self, 'exported'):
+                prc.exported = self.exported
             prc.run(exports='')
             try:
                 agglosses = self.datastore['agg_losses-rlzs'][K - 1]

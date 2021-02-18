@@ -318,7 +318,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         Export all the outputs in the datastore in the given export formats.
         Individual outputs are not exported if there are multiple realizations.
         """
-        self.exported = getattr(self.precalc, 'exported', {})
+        self.exported = getattr(self, 'exported', {})
         if isinstance(exports, tuple):
             fmts = exports
         elif exports:  # is a string
@@ -580,7 +580,7 @@ class HazardCalculator(BaseCalculator):
             calc.pre_checks = lambda: self.__class__.pre_checks(calc)
             calc.run(remove=False)
             for name in ('csm param sitecol assetcol crmodel realizations '
-                         'policy_name policy_dict full_lt').split():
+                         'policy_name policy_dict full_lt exported').split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
         else:
@@ -597,9 +597,7 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 oq.risk_imtls = (
                     self.datastore.parent['oqparam'].risk_imtls)
-        if 'precalc' in vars(self):
-            self.realizations = self.precalc.realizations
-        elif 'full_lt' in self.datastore:
+        if 'full_lt' in self.datastore:
             full_lt = self.datastore['full_lt']
             self.realizations = full_lt.get_realizations()
             if oq.hazard_calculation_id and 'gsim_logic_tree' in oq.inputs:
