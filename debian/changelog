@@ -1,3 +1,7 @@
+  [Nicolas Schmid]
+  * Added shakemap_url_grid and shakemap_url_uncertainty parameters to 
+    enable using shakemaps from http:// or file:// sources.
+  
   [Michele Simionato]
   * Extended the `collapse_logic_tree` feature to scenarios and event based
     calculations

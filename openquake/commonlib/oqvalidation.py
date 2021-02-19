@@ -784,6 +784,8 @@ class OqParam(valid.ParamSet):
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
     shakemap_id = valid.Param(valid.nice_string, None)
+    shakemap_url_grid = valid.Param(valid.utf8, None)
+    shakemap_url_uncertainty = valid.Param(valid.utf8, None)
     shift_hypo = valid.Param(valid.boolean, False)
     site_effects = valid.Param(valid.boolean, False)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)

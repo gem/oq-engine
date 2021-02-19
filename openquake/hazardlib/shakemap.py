@@ -29,7 +29,7 @@ from openquake.hazardlib import geo, site, imt, correlation
 from openquake.hazardlib.shakemapconverter import get_shakemap_array
 
 US_GOV = 'https://earthquake.usgs.gov'
-SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
+USGS_SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
 MAX_GMV = 5.  # 5 g
@@ -66,13 +66,13 @@ def urlextract(url, fname):
                 raise
 
 
-def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
+def get_usgs_url(shakemap_id, shakemap_url=USGS_SHAKEMAP_URL):
     """
     :param shakemap_id: USGS Shakemap ID
-    :returns: an array with the shakemap
+    :returns: a tuple with url for grid.xml and for uncertainty.xml
     """
     url = shakemap_url.format(shakemap_id)
-    logging.info('Downloading %s', url)
+
     contents = json.loads(urlopen(url).read())[
         'properties']['products']['shakemap'][-1]['contents']
     grid = contents.get('download/grid.xml')
@@ -80,12 +80,26 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
         raise MissingLink('Could not find grid.xml link in %s' % url)
     uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
         'download/uncertainty.xml')
-    if uncertainty is None:
-        with urlopen(grid['url']) as f:
+    return (grid['url'], uncertainty['url'])
+
+
+def download_array(shakemap):
+    """
+    :param shakemap: Either USGS Shakemap ID or tuple with url for grid.xml and for uncertainty.xml
+    :returns: an array with the shakemap
+    """
+    if isinstance(shakemap, str):
+        shakemap = get_usgs_url(shakemap)
+
+    logging.info('Downloading %s and %s', shakemap[0], shakemap[1])
+
+    if shakemap[1] is None:  # no uncertainty url
+        logging.error("No uncertainty file for shakemap found.")
+        with urlopen(shakemap[0]) as f:
             return get_shakemap_array(f)
     else:
-        with urlopen(grid['url']) as f1, urlextract(
-                uncertainty['url'], 'uncertainty.xml') as f2:
+        with urlopen(shakemap[0]) as f1, urlextract(
+                shakemap[1], 'uncertainty.xml') as f2:
             return get_shakemap_array(f1, f2)
 
 
@@ -99,7 +113,7 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
     :param discard_assets: set to zero the risk on assets with missing IMTs
     :returns: a pair (filtered site collection, filtered shakemap)
     """
-    if isinstance(array_or_id, str):  # shakemap ID
+    if isinstance(array_or_id, str) or isinstance(array_or_id, tuple):  # shakemap ID or url
         array = download_array(array_or_id)
     else:  # shakemap array
         array = array_or_id

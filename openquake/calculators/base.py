@@ -399,6 +399,7 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+
     def src_filter(self):
         """
         :returns: a SourceFilter
@@ -748,7 +749,7 @@ class HazardCalculator(BaseCalculator):
             if oq.region:
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
-            if oq.shakemap_id or 'shakemap' in oq.inputs:
+            if oq.shakemap_id or oq.shakemap_url_grid or 'shakemap' in oq.inputs:
                 self.sitecol, self.assetcol = self.read_shakemap(
                     haz_sitecol, assetcol)
                 self.datastore['sitecol'] = self.sitecol
@@ -921,6 +922,7 @@ class RiskCalculator(HazardCalculator):
     attributes .crmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
+
     def read_shakemap(self, haz_sitecol, assetcol):
         """
         Enabled only if there is a shakemap_id parameter in the job.ini.
@@ -938,8 +940,12 @@ class RiskCalculator(HazardCalculator):
             # [8, 9, 10, 11, 13, 15, 16, 17, 18];
             # the total assetcol has 26 assets on the total sites
             # and the reduced assetcol has 9 assets on the reduced sites
-            smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
-                oq.inputs['shakemap'])
+            if oq.shakemap_id:
+                smap = oq.shakemap_id
+            elif oq.shakemap_url_grid:
+                smap = (oq.shakemap_url_grid, oq.shakemap_url_uncertainty)
+            else:
+                smap = numpy.load(oq.inputs['shakemap'])
             sitecol, shakemap, discarded = get_sitecol_shakemap(
                 smap, oq.imtls, haz_sitecol,
                 oq.asset_hazard_distance['default'],
