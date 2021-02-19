@@ -8,7 +8,6 @@ on:
 
 jobs:
   engine:
-    if: "!contains(github.event.head_commit.message, 'skip CI')"
     runs-on: ubuntu-latest
 
     steps:
@@ -28,7 +27,6 @@ jobs:
         pytest openquake/server openquake/commands openquake/commonlib --disable-warnings --color=yes && pytest openquake --doctest-modules -x -k "not gsim" --disable-warnings --color=yes --durations=10 && pytest doc/adv-manual/common-mistakes.rst doc/adv-manual/risk.rst doc/adv-manual/developing.rst doc/adv-manual/rupture-sampling.rst && oq dbserver stop
 
   hazardlib:
-    if: "!contains(github.event.head_commit.message, 'skip CI')"
     runs-on: ubuntu-latest
 
     steps:

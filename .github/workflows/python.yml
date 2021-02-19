@@ -11,7 +11,6 @@ on:
 jobs:
 
   build_py36:
-    if: "!contains(github.event.head_commit.message, 'skip CI')"
     runs-on: ubuntu-latest
 
     steps:
@@ -39,7 +38,6 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   build_py37:
-    if: "!contains(github.event.head_commit.message, 'skip CI')"
     runs-on: ubuntu-latest
 
     steps:
@@ -67,7 +65,6 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   build_py38:
-    if: "!contains(github.event.head_commit.message, 'skip CI')"
     runs-on: ubuntu-latest
 
     steps:
