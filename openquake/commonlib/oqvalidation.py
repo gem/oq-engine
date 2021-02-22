@@ -522,6 +522,18 @@ shakemap_id:
   Example: *shakemap_id = usp000fjta*.
   Default: no default
 
+shakemap_url_grid:
+  Used in ShakeMap calculation to download a ShakeMap from another place than USGS.
+  Requires also shakemap_url_uncertainty to be defined.
+  Example: *shakemap_url_grid = https://another.site.org/shakemap.xml.
+  Default: None
+
+shakemap_url_uncertainty:
+  Used in ShakeMap calculation to download the uncertainty from another place than USGS.
+  Only works in combination with shakemap_url_grid.
+  Example: *shakemap_url_uncertainty = file://~/another/folder/shakemap.zip.
+  Default: None
+
 shift_hypo:
   Used in classical calculations to shift the rupture hypocenter.
   Example: *shift_hypo = true*.
@@ -1014,9 +1026,9 @@ class OqParam(valid.ParamSet):
 
         if ('amplification' in self.inputs and
             self.amplification_method == 'convolution' and
-            not self.soil_intensities):
-                raise InvalidFile('%s: The soil_intensities must be defined'
-                     % job_ini)
+                not self.soil_intensities):
+            raise InvalidFile('%s: The soil_intensities must be defined'
+                              % job_ini)
 
     def check_gsims(self, gsims):
         """
