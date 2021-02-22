@@ -388,12 +388,13 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
     rup_array = dstore['ruptures'][slc]
     rup_array.sort(order='et_id')  # avoid generating too many tasks
     maxweight = rup_array['n_occ'].sum() / (ct or 1)
+    scenario = 'scenario' in dstore['oqparam'].calculation_mode
     for block in general.block_splitter(
             rup_array, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('et_id')):
         et_id = block[0]['et_id']
         trt = trt_by_et[et_id]
-        proxies = [RuptureProxy(rec) for rec in block]
+        proxies = [RuptureProxy(rec, scenario=scenario) for rec in block]
         yield RuptureGetter(proxies, dstore.filename, et_id,
                             trt, rlzs_by_gsim[et_id])
 
@@ -506,7 +507,8 @@ class RuptureGetter(object):
         for proxy in self.proxies:
             sids = srcfilter.close_sids(proxy.rec, self.trt)
             if len(sids):
-                proxies.append(RuptureProxy(proxy.rec, len(sids)))
+                proxy.nsites = len(sids)
+                proxies.append(proxy)
         for block in general.block_splitter(proxies, maxw, weight):
             yield RuptureGetter(block, self.filename, self.et_id, self.trt,
                                 self.rlzs_by_gsim)
