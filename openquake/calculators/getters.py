@@ -17,14 +17,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import operator
-import unittest.mock as mock
 import numpy
 import pandas
 from openquake.baselib import hdf5, datastore, general, performance
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import calc, probability_map, stats
-from openquake.hazardlib.source.rupture import (
-    EBRupture, BaseRupture, events_dt, RuptureProxy)
+from openquake.hazardlib.source.rupture import BaseRupture, RuptureProxy
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib.calc import gmvs_to_poes
 
@@ -423,20 +421,6 @@ def get_ebruptures(dstore):
         for proxy in rgetter.get_proxies():
             ebrs.append(proxy.to_ebr(rgetter.trt))
     return ebrs
-
-
-def get_eid_rlz(proxies, rlzs_by_gsim):
-    """
-    :returns: a composite array with the associations eid->rlz
-    """
-    eid_rlz = []
-    for rup in proxies:
-        ebr = EBRupture(mock.Mock(rup_id=rup['seed']), rup['source_id'],
-                        rup['et_id'], rup['n_occ'])
-        for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
-            for eid in eids:
-                eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
-    return numpy.array(eid_rlz, events_dt)
 
 
 # this is never called directly; gen_rupture_getters is used instead
