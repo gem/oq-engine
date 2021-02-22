@@ -41,12 +41,14 @@ NB: parallelization would kill the performance::
 import itertools
 import warnings
 import logging
+from unittest import mock
 import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.general import get_indices
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
+from openquake.hazardlib.source.rupture import EBRupture, events_dt
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
@@ -263,6 +265,19 @@ class RuptureImporter(object):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
 
+    def get_eid_rlz(self, proxies, rlzs_by_gsim):
+        """
+        :returns: a composite array with the associations eid->rlz
+        """
+        eid_rlz = []
+        for rup in proxies:
+            ebr = EBRupture(mock.Mock(rup_id=rup['seed']), rup['source_id'],
+                            rup['et_id'], rup['n_occ'])
+            for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
+                for eid in eids:
+                    eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
+        return numpy.array(eid_rlz, events_dt)
+
     def import_rups(self, rup_array):
         """
         Import an array of ruptures in the proper format
@@ -286,8 +301,7 @@ class RuptureImporter(object):
         :param rup_array: an array of ruptures with fields et_id
         :returns: a list of RuptureGetters
         """
-        from openquake.calculators.getters import (
-            get_eid_rlz, gen_rupture_getters)
+        from openquake.calculators.getters import gen_rupture_getters
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
         self.check_overflow(E)  # check the number of events
@@ -302,10 +316,10 @@ class RuptureImporter(object):
                      'and {:_d} ruptures'.format(len(events), len(rup_array)))
         iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
         if len(events) < 1E5:
-            it = itertools.starmap(get_eid_rlz, iterargs)
+            it = itertools.starmap(self.get_eid_rlz, iterargs)
         else:
             it = parallel.Starmap(
-                get_eid_rlz, iterargs, progress=logging.debug,
+                self.get_eid_rlz, iterargs, progress=logging.debug,
                 h5=self.datastore.hdf5)
         i = 0
         for eid_rlz in it:
