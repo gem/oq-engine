@@ -41,7 +41,7 @@ NB: parallelization would kill the performance::
 import itertools
 import warnings
 import logging
-from unittest import mock
+from unittest.mock import Mock
 import numpy
 
 from openquake.baselib import parallel
@@ -270,12 +270,21 @@ class RuptureImporter(object):
         :returns: a composite array with the associations eid->rlz
         """
         eid_rlz = []
+        scenario = 'scenario' in self.oqparam.calculation_mode
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         for rup in proxies:
-            ebr = EBRupture(mock.Mock(rup_id=rup['seed']), rup['source_id'],
-                            rup['et_id'], rup['n_occ'])
-            for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
-                for eid in eids:
-                    eid_rlz.append((eid + rup['e0'], rup['id'], rlz_id))
+            if scenario:
+                all_eids = numpy.arange(rup['n_occ'], dtype=U32) + rup['e0']
+                splits = numpy.array_split(all_eids, len(rlzs))
+                for rlz_id, eids in zip(rlzs, splits):
+                    for eid in eids:
+                        eid_rlz.append((eid, rup['id'], rlz_id))
+            else:  # event based
+                ebr = EBRupture(Mock(rup_id=rup['seed']), rup['source_id'],
+                                rup['et_id'], rup['n_occ'], e0=rup['e0'])
+                for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
+                    for eid in eids:
+                        eid_rlz.append((eid, rup['id'], rlz_id))
         return numpy.array(eid_rlz, events_dt)
 
     def import_rups(self, rup_array):
