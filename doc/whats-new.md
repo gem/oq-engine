@@ -76,8 +76,8 @@ tasks to the workers was excessively slow.
 
 We changed the task distribution also in scenario calculations: now we
 parallelize by `number_of_ground_motion_fields` if there are more than
-`max_sites_disagg` sites (i.e. 10 sites). This improved a lot the performance
-in cases with many thousands of sites.
+10 sites. This improved a lot the performance in cases with many
+thousands of sites.
 
 The `scenario` and `event_based` calculators (including `ebrisk`) now generate
 and store as a pandas-friendly dataset the (geometrically) averaged GMF
