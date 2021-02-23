@@ -33,7 +33,7 @@ Finally, now the engine can automatically download and run
 calculations from an URL containing a .zip archive. For instance
 
 ```
-$ oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+$ oq engine --run "https://github.com/gem/oq-engine/blob/engine-3.11/openquake/server/tests/data/classical.zip?raw=true"
 ```
 
 # Hazard calculators
@@ -335,7 +335,7 @@ the risk side, but the feature is still not ready for primetime.
 # Packaging
 
 We now have a universal installer working on Linux, Windows and Mac
-(see https://github.com/gem/oq-engine/blob/master/doc/installing/universal.md).
+(see https://github.com/gem/oq-engine/blob/engine-3.11/doc/installing/universal.md).
 
 The universal installer is now the only supported way to install the engine on Mac
 and generic Linux systems. It works by using a pre-installed Python, which can
