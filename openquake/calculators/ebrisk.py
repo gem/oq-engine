@@ -174,7 +174,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if not hasattr(self, 'aggkey'):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.param['alt'] = alt = AggLossTable.new(
-            self.aggkey, oq.loss_dt().names, sec_losses)
+            self.aggkey, oq.loss_names, sec_losses)
         self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['min_iml'] = oq.min_iml
