@@ -369,8 +369,8 @@ def view_portfolio_loss(token, dstore):
     arr = df.to_numpy()
     E, L = arr.shape
     avg = ws[eids] @ arr / ws.sum() * E / R
-    err = [avg[li] * binning_error(arr[:, li], eids) for li in range(L)]
-    rows = [['avg'] + list(avg), ['err'] + err]
+    # err = [avg[li] * binning_error(arr[:, li], eids) for li in range(L)]
+    rows = [['avg'] + list(avg)]  # , ['err'] + err]
     return(rst_table(rows, ['loss'] + oq.loss_names))
 
 

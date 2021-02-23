@@ -184,7 +184,7 @@ RM       4_000
         [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
         df = read_csv(fname, index='event_id')
         nodamage = df[df['rlz_id'] == 0]['structural~no_damage'].sum()
-        self.assertEqual(nodamage, 1069466.0)
+        self.assertEqual(nodamage, 1068763.0)
 
         [fname] = export(('damages-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damages.csv', fname)
@@ -195,10 +195,10 @@ RM       4_000
         # check dd_data
         df = self.calc.datastore.read_df('dd_data', 'eid')
         dmg = df.loc[1937]  # damage caused by the event 1937
-        self.assertEqual(dmg.slight.sum(), 58)  # breaks in github
-        self.assertEqual(dmg.moderate.sum(), 57)
-        self.assertEqual(dmg.extensive.sum(), 37)
-        self.assertEqual(dmg.complete.sum(), 27)
+        self.assertEqual(dmg.slight.sum(), 54)  # breaks in github
+        self.assertEqual(dmg.moderate.sum(), 59)
+        self.assertEqual(dmg.extensive.sum(), 31)
+        self.assertEqual(dmg.complete.sum(), 25)
 
     def test_case_10(self):
         # error case: there a no RiskInputs

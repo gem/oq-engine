@@ -19,7 +19,6 @@
 import copy
 import logging
 import numpy
-import pandas
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base, post_risk, views

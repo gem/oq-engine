@@ -619,9 +619,11 @@ def init_workers():
 
 
 def getargnames(task_func):
-    # a task can be a function, a class or an instance with a __call__
+    # a task can be a function, a method, a class or a callable instance
     if inspect.isfunction(task_func):
         return inspect.getfullargspec(task_func).args
+    elif inspect.ismethod(task_func):
+        return inspect.getfullargspec(task_func).args[1:]
     elif inspect.isclass(task_func):
         return inspect.getfullargspec(task_func.__init__).args[1:]
     else:  # instance with a __call__ method

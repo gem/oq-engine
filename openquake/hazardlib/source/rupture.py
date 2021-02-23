@@ -710,6 +710,7 @@ class EBRupture(object):
         self.n_occ = n_occ
         self.id = id  # id of the rupture on the DataStore
         self.e0 = e0
+        self.scenario = False
 
     @property
     def rup_id(self):
@@ -723,13 +724,20 @@ class EBRupture(object):
         :params rlzs_by_gsim: a dictionary gsims -> rlzs array
         :returns: a dictionary rlz index -> eids array
         """
-        j = 0
         dic = {}
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        histo = general.random_histogram(self.n_occ, len(rlzs), self.rup_id)
-        for rlz, n in zip(rlzs, histo):
-            dic[rlz] = numpy.arange(j, j + n, dtype=U32) + self.e0
-            j += n
+        if self.scenario:
+            all_eids = numpy.arange(self.n_occ, dtype=U32) + self.e0
+            splits = numpy.array_split(all_eids, len(rlzs))
+            for rlz_id, eids in zip(rlzs, splits):
+                dic[rlz_id] = eids
+        else:
+            j = 0
+            histo = general.random_histogram(
+                self.n_occ, len(rlzs), self.rup_id)
+            for rlz, n in zip(rlzs, histo):
+                dic[rlz] = numpy.arange(j, j + n, dtype=U32) + self.e0
+                j += n
         return dic
 
     def get_eids(self):
@@ -793,9 +801,10 @@ class RuptureProxy(object):
     :param rec: a record with the rupture parameters
     :param nsites: approx number of sites affected by the rupture
     """
-    def __init__(self, rec, nsites=None):
+    def __init__(self, rec, nsites=None, scenario=False):
         self.rec = rec
         self.nsites = nsites
+        self.scenario = scenario
 
     @property
     def weight(self):
@@ -819,4 +828,5 @@ class RuptureProxy(object):
         rupture = _get_rupture(self.rec, self.geom, trt)
         ebr = EBRupture(rupture, self.rec['source_id'], self.rec['et_id'],
                         self.rec['n_occ'], self.rec['id'], self.rec['e0'])
+        ebr.scenario = self.scenario
         return ebr
