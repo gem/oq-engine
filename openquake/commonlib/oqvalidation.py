@@ -1213,7 +1213,7 @@ class OqParam(valid.ParamSet):
         Loss types plus insured types, if any
         """
         names = []
-        for lt, _ in self.loss_dt_list():
+        for lt in self.all_cost_types:
             names.append(lt)
         for name in self.inputs.get('insurance', []):
             names.append(lt + '_ins')
@@ -1229,8 +1229,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: a data type list [(loss_name, dtype), ...]
         """
-        loss_types = self.all_cost_types
-        dts = [(str(lt), dtype) for lt in loss_types]
+        dts = [(str(lt), dtype) for lt in self.loss_names]
         return dts
 
     def loss_maps_dt(self, dtype=F32):

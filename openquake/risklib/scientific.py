@@ -1427,14 +1427,12 @@ class AggLossTable(AccumDict):
     :param sec_losses: a list of SecondaryLosses (can be empty)
     """
     @classmethod
-    def new(cls, aggkey, loss_types, sec_losses=()):
+    def new(cls, aggkey, loss_names, sec_losses=()):
         self = cls()
         self.aggkey = {key: k for k, key in enumerate(aggkey)}
         self.aggkey[()] = len(aggkey)
-        self.loss_names = list(loss_types)
+        self.loss_names = loss_names
         self.sec_losses = sec_losses
-        for sec_loss in sec_losses:
-            self.loss_names.extend(sec_loss.outputs)
         self.accum = numpy.zeros(len(self.loss_names), F32)
         return self
 

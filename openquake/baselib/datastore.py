@@ -149,7 +149,10 @@ def sel(dset, filterdict):
         if dim in filterdict:
             val = filterdict[dim]
             values = dic[dim]
-            idx = values.index(val)
+            if val < 0:  # for instance sid=-1 means the last sid
+                idx = values[val]
+            else:
+                idx = values.index(val)
             lst.append(slice(idx, idx + 1))
         else:
             lst.append(slice(None))
