@@ -323,7 +323,7 @@ def view_totlosses(token, dstore):
     return rst_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 
-def __portfolio_loss(dstore):  # not used right now
+def _portfolio_loss(dstore):  # not used right now
     R = dstore['full_lt'].get_num_rlzs()
     K = dstore['agg_loss_table'].attrs.get('K', 0)
     df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
@@ -345,8 +345,7 @@ def view_portfolio_losses(token, dstore):
     """
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt()
-    arr = dstore.sel('agg_losses-rlzs', agg_id=-1)[0]  # shape R, L
-    data = arr.view(loss_dt)[:, 0]  # shape R
+    data = _portfolio_loss(dstore).view(loss_dt)[:, 0]  # shape R
     rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz_id')
     # this is very sensitive to rounding errors, so I am using a low precision

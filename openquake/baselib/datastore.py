@@ -149,7 +149,8 @@ def sel(dset, filterdict):
         if dim in filterdict:
             val = filterdict[dim]
             values = dic[dim]
-            if val < 0:  # for instance sid=-1 means the last sid
+            if isinstance(val, hdf5.INT) and val < 0:
+                # for instance sid=-1 means the last sid
                 idx = values[val]
             else:
                 idx = values.index(val)
