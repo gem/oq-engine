@@ -470,7 +470,7 @@ def get_shape_descr(json_string):
     for field in dic['shape_descr']:
         val = dic[field]
         if isinstance(val, INT):
-            dic[field] = range(val)
+            dic[field] = list(range(val))
     return dic
 
 

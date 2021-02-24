@@ -161,12 +161,26 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         tmp = gettemp(rst_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves8.csv', tmp)
 
+        # test ct_independence
+        loss4 = view('portfolio_losses', self.calc.datastore)
+        self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='0')
+        loss0 = view('portfolio_losses', self.calc.datastore)
+        self.assertEqual(loss0, loss4)
+
     def test_case_1f(self):
         # vulnerability function with BT
         self.run_calc(case_1f.__file__, 'job_h.ini,job_r.ini')
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles('portfolio_losses.txt', fname, delta=1E-5)
         os.remove(fname)
+
+    def test_ct_independence(self):
+        # vulnerability function with BT, ebrisk
+        self.run_calc(case_1f.__file__, 'job.ini', concurrent_tasks='0')
+        loss0 = view('portfolio_losses', self.calc.datastore)
+        self.run_calc(case_1f.__file__, 'job.ini', concurrent_tasks='2')
+        loss2 = view('portfolio_losses', self.calc.datastore)
+        self.assertNotEqual(loss0, loss2)
 
     def test_case_1g(self):
         # vulnerability function with PMF
