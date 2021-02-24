@@ -679,7 +679,7 @@ class OqParam(valid.ParamSet):
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
-    asset_correlation = valid.Param(valid.NoneOr(valid.FloatRange(0, 1)), 0)
+    asset_correlation = valid.Param(valid.Choice('0', '1'), 0)
     asset_life_expectancy = valid.Param(valid.positivefloat)
     assets_per_site_limit = valid.Param(valid.positivefloat, 1000)
     avg_losses = valid.Param(valid.boolean, True)
@@ -963,10 +963,6 @@ class OqParam(valid.ParamSet):
 
         # checks for event_based_risk
         if (self.calculation_mode == 'event_based_risk' and
-                self.asset_correlation not in (0, 1)):
-            raise ValueError('asset_correlation != {0, 1} is no longer'
-                             ' supported in %s' % job_ini)
-        elif (self.calculation_mode == 'event_based_risk' and
               not self.ground_motion_fields):
             raise ValueError('ground_motion_fields must be set to true in %s'
                              % job_ini)

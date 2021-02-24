@@ -752,6 +752,7 @@ class DegenerateDistribution(Distribution):
             loss_ratio, [loss_ratio > mean or not mean], [0, 1])
 
 
+# not used anymore
 def make_epsilons(matrix, seed, correlation):
     """
     Given a matrix of shape (A, E) returns a matrix of the same shape
