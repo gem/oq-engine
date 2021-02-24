@@ -190,7 +190,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         os.remove(fname)
 
     def test_case_2(self):
-        self.run_calc(case_2.__file__, 'job.ini')
+        self.run_calc(case_2.__file__, 'job.ini', concurrent_tasks='0')
+        loss0 = view('portfolio_losses', self.calc.datastore)
+        # test ct_independence
+        self.run_calc(case_2.__file__, 'job.ini', concurrent_tasks='2')
+        loss2 = view('portfolio_losses', self.calc.datastore)
+        self.assertEqual(loss0, loss2)
 
         # test the case when all GMFs are filtered out
         with self.assertRaises(RuntimeError) as ctx:
