@@ -21,7 +21,6 @@ import numpy
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import group_array, AccumDict
-from openquake.risklib import scientific
 
 U32 = numpy.uint32
 F32 = numpy.float32
