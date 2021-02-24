@@ -215,12 +215,15 @@ add_custom_pkg_repo () {
     # install package to manage repository properly
     ssh "$lxc_ip" "sudo apt-get install -y software-properties-common"
 
+    if [ "$REPO_BIN" ]; then
+         ssh $lxc_ip "sudo apt-add-repository -y \"$REPO_BIN\""
+    fi
     # add custom packages
     if ! ssh "$lxc_ip" ls repo/custom_pkgs >/dev/null ; then
         ssh "$lxc_ip" mkdir "repo"
         scp -r "${GEM_DEB_REPO}/custom_pkgs" "$lxc_ip:repo/custom_pkgs"
     fi
-    ssh "$lxc_ip" sudo apt-add-repository \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\"
+    ssh "$lxc_ip" "sudo apt-add-repository -y \"deb file:/home/ubuntu/repo/custom_pkgs ${BUILD_UBUVER} main\""
     ssh "$lxc_ip" sudo apt-get update
 }
 
@@ -278,6 +281,10 @@ add_local_pkg_repo () {
 build_dependencies_file () {
     local je_deps_base="$1"
     local branch_id="$2"
+
+    if [ "$REPO_BIN" ]; then
+        return
+    fi
 
     pwd
     if [ -e ${je_deps_base}_jenkins_deps_info ]; then
@@ -1366,6 +1373,10 @@ while [ $# -gt 0 ]; do
             ;;
         -R|--repository)
             BUILD_REPOSITORY=1
+            ;;
+        -r|--repo-bin)
+            REPO_BIN="$2"
+            shift
             ;;
         -U|--unsigned)
             BUILD_UNSIGN=1

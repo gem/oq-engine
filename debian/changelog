@@ -1,3 +1,5 @@
+python3-oq-engine (3.11.0-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Extended the `collapse_logic_tree` feature to scenarios and event based
     calculations
@@ -172,6 +174,8 @@
   * Added a method to the modifiable GMPE to add (or subtract) a delta std
   * Added a method to the modifiable GMPE to set the total std as the sum of
     tau plus a delta
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 23 Feb 2021 13:54:18 +0000
 
 python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
 
