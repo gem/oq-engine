@@ -188,9 +188,10 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
     A = len(assetcol)
     logging.info('Storing the epsilon matrix in %s', dstore.tempname)
     if oq.calculation_mode == 'scenario_risk':
-        eps = make_eps(assetcol.array, E, oq.master_seed, oq.asset_correlation)
+        eps = make_eps(assetcol.array, E, oq.master_seed,
+                       float(oq.asset_correlation))
     else:  # event based
-        if oq.asset_correlation:
+        if oq.asset_correlation == '1':
             numpy.random.seed(oq.master_seed)
             eps = numpy.array([numpy.random.normal(size=E)] * A)
         else:
