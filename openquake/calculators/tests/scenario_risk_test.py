@@ -87,7 +87,6 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     def test_case_4(self):
         # this test is sensitive to the ordering of the epsilons
-        # in openquake.riskinput.make_eps
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
         fname = gettemp(view('totlosses', self.calc.datastore))
         self.assertEqualFiles('expected/totlosses.txt', fname)

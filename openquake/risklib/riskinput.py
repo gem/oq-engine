@@ -156,27 +156,6 @@ class RiskInput(object):
             self.__class__.__name__, sid, len(self.aids))
 
 
-# used in scenario_risk
-def make_eps(asset_array, num_samples, seed, correlation):
-    """
-    :param asset_array: an array of assets
-    :param int num_samples: the number of ruptures
-    :param int seed: a random seed
-    :param float correlation: the correlation coefficient
-    :returns: epsilons matrix of shape (num_assets, num_samples)
-    """
-    assets_by_taxo = group_array(asset_array, 'taxonomy')
-    eps = numpy.zeros((len(asset_array), num_samples), numpy.float32)
-    for taxonomy, assets in assets_by_taxo.items():
-        shape = (len(assets), num_samples)
-        logging.info('Building %s epsilons for taxonomy %s', shape, taxonomy)
-        zeros = numpy.zeros(shape)
-        epsilons = scientific.make_epsilons(zeros, seed, correlation)
-        for asset, epsrow in zip(assets, epsilons):
-            eps[asset['ordinal']] = epsrow
-    return eps
-
-
 def cache_epsilons(dstore, oq, assetcol, crmodel, E):
     """
     Do nothing if there are no coefficients of variation of ignore_covs is
