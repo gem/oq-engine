@@ -187,19 +187,15 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
         return
     A = len(assetcol)
     logging.info('Storing the epsilon matrix in %s', dstore.tempname)
-    if oq.calculation_mode == 'scenario_risk':
-        eps = make_eps(assetcol.array, E, oq.master_seed,
-                       float(oq.asset_correlation))
-    else:  # event based
-        if oq.asset_correlation == '1':
-            numpy.random.seed(oq.master_seed)
-            eps = numpy.array([numpy.random.normal(size=E)] * A)
-        else:
-            seeds = oq.master_seed + numpy.arange(E)
-            eps = numpy.zeros((A, E), F32)
-            for i, seed in enumerate(seeds):
-                numpy.random.seed(seed)
-                eps[:, i] = numpy.random.normal(size=A)
+    if oq.asset_correlation == '1':
+        numpy.random.seed(oq.master_seed)
+        eps = numpy.array([numpy.random.normal(size=E)] * A)
+    else:
+        seeds = oq.master_seed + numpy.arange(E)
+        eps = numpy.zeros((A, E), F32)
+        for i, seed in enumerate(seeds):
+            numpy.random.seed(seed)
+            eps[:, i] = numpy.random.normal(size=A)
     with hdf5.File(dstore.tempname, 'w') as cache:
         cache['sitecol'] = dstore['sitecol']
         cache['epsilon_matrix'] = eps
