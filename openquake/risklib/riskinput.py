@@ -164,13 +164,21 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
     if oq.ignore_covs or not crmodel.covs or 'LN' not in crmodel.distributions:
         return
     A = len(assetcol)
+    eps = numpy.zeros((A, E), F32)
     logging.info('Storing the epsilon matrix in %s', dstore.tempname)
     if oq.asset_correlation == '1':
-        rng = numpy.random.default_rng(oq.master_seed)
-        eps = numpy.array([rng.normal(size=E)] * A)
+        # assets of the same taxonomy produce the same epsilons
+        n_assets = numpy.bincount(assetcol['taxonomy'])[1:]
+        assert n_assets.sum() == A
+        seeds = numpy.random.SeedSequence(oq.master_seed).spawn(len(n_assets))
+        start, stop = 0, 0
+        for t, seed in enumerate(seeds):
+            rng = numpy.random.default_rng(seed)
+            stop += n_assets[t]
+            eps[start:stop] = [rng.normal(size=E)] * n_assets[t]
+            start += n_assets[t]
     else:  # uncorrelated epsilons
         seeds = numpy.random.SeedSequence(oq.master_seed).spawn(A)
-        eps = numpy.zeros((A, E), F32)
         for a, seed in enumerate(seeds):
             eps[a] = numpy.random.default_rng(seed).normal(size=E)
     with hdf5.File(dstore.tempname, 'w') as cache:
