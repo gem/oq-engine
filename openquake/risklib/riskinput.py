@@ -168,11 +168,11 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
     if oq.asset_correlation == '1':
         rng = numpy.random.default_rng(oq.master_seed)
         eps = numpy.array([rng.normal(size=E)] * A)
-    else:
-        seeds = numpy.random.SeedSequence(oq.master_seed).spawn(E)
+    else:  # uncorrelated epsilons
+        seeds = numpy.random.SeedSequence(oq.master_seed).spawn(A)
         eps = numpy.zeros((A, E), F32)
-        for e, seed in enumerate(seeds):
-            eps[:, e] = numpy.random.default_rng(seed).normal(size=A)
+        for a, seed in enumerate(seeds):
+            eps[a] = numpy.random.default_rng(seed).normal(size=E)
     with hdf5.File(dstore.tempname, 'w') as cache:
         cache['sitecol'] = dstore['sitecol']
         cache['epsilon_matrix'] = eps

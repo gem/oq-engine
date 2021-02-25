@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Changed the logic behind the risk seeds for easyness of parallelization
+
 python3-oq-engine (3.11.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
