@@ -76,7 +76,7 @@ def event_based_risk(riskinputs, param, monitor):
                 out, param['minimum_asset_loss'], param['aggregate_by'])
             for lti, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
-                for a, asset in enumerate(ri.assets):
+                for a, asset in enumerate(out.assets):
                     aid = asset['ordinal']
                     lba = losses[a].sum()
                     if lba:
@@ -120,7 +120,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             return  # this happens in the reportwriter
 
         self.assetcol = self.datastore['assetcol']
-        self.riskinputs = self.build_riskinputs('gmf')
+        self.riskinputs = self.build_riskinputs('gmftask')
         self.param['tempname'] = riskinput.cache_epsilons(
             self.datastore, oq, self.assetcol, self.crmodel, self.E)
         self.param['aggregate_by'] = oq.aggregate_by
@@ -144,7 +144,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         with self.monitor('aggregating losses', measuremem=False):
             self.acc += res['alt']
             for (l, r, aid, lba) in res['losses_by_asset']:
-                self.avglosses[aid, r, l] = lba * self.avg_ratio[r]
+                self.avglosses[aid, r, l] += lba * self.avg_ratio[r]
         return acc
 
     def post_execute(self, result):

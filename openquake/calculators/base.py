@@ -998,6 +998,25 @@ class RiskCalculator(HazardCalculator):
         self.acc = None
         return riskinputs
 
+    def _gen_riskinputs_gmftask(self, dstore):
+        out = []
+        if 'gmf_data' not in dstore:  # needed for case_shakemap
+            dstore.close()
+            dstore = self.datastore
+        if 'gmf_data' not in dstore:
+            raise InvalidFile('No gmf_data: did you forget gmfs_csv in %s?'
+                              % self.oqparam.inputs['job_ini'])
+        allrlzs = dstore['events']['rlz_id']
+        for data in dstore['gmf_data/by_task']:
+            task_no, start, stop, *rupids = data
+            if rupids:
+                slc = slice(start, stop)
+                rlzs = allrlzs[dstore['gmf_data/eid'][slc]]
+                getter = getters.GmfTaskGetter(
+                    dstore, task_no, slc, rupids, rlzs)
+                out.append(riskinput.RiskInput(getter, self.assetcol))
+        return out
+
     def _gen_riskinputs_gmf(self, dstore):
         out = []
         if 'gmf_data' not in dstore:  # needed for case_shakemap
@@ -1161,7 +1180,9 @@ def create_gmf_data(dstore, M, sec_imts=(), data=None):
     for imt in sec_imts:
         items.append((str(imt), F32 if n == 0 else data[imt]))
     dstore.create_dframe('gmf_data', items, 'gzip')
+    dstore.create_dset('gmf_data/by_task', hdf5.vuint32)
     if data is not None:
+        dstore.hdf5.save_vlen('gmf_data/by_task', [U32([0, 0, len(data), 0])])
         df = pandas.DataFrame(dict(items))
         avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)
         for sid, df in df.groupby(df.sid):

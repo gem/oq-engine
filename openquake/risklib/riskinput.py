@@ -141,18 +141,23 @@ class RiskInput(object):
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
-            assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
             if hasattr(haz, 'groupby'):  # DataFrame
                 for (sid, rlz), df in haz.groupby(['sid', 'rlz']):
-                    yield get_output(crmodel, assets_by_taxo, df, rlz)
+                    assets = self.assets[self.assets['site_id'] == sid]
+                    if len(assets):
+                        assets_by_taxo = get_assets_by_taxo(assets, tempname)
+                        yield get_output(crmodel, assets_by_taxo, df, rlz)
             else:  # list of probability curves
                 for rlz, pc in enumerate(haz):
                     yield get_output(crmodel, assets_by_taxo, pc, rlz)
 
     def __repr__(self):
-        [sid] = self.hazard_getter.sids
-        return '<%s sid=%s, %d asset(s)>' % (
-            self.__class__.__name__, sid, len(self.aids))
+        if hasattr(self.hazard_getter, 'sids'):
+            [sid] = self.hazard_getter.sids
+            return '<%s sid=%s, %d asset(s)>' % (
+                self.__class__.__name__, sid, len(self.aids))
+        return '<%s %d>' % (
+            self.__class__.__name__, self.hazard_getter.task_no)
 
 
 def cache_epsilons(dstore, oq, assetcol, crmodel, E):

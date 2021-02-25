@@ -229,6 +229,31 @@ class GmfDataGetter(object):
         return self.df
 
 
+class GmfTaskGetter(object):
+    """
+    An object with an .init() and .get_hazard() method
+    """
+    def __init__(self, dstore, task_no, slc, rupids, rlzs):
+        self.dstore = dstore
+        self.task_no = task_no
+        self.slc = slc
+        self.rupids = rupids
+        self.rlzs = rlzs
+
+    def init(self):
+        pass
+
+    def get_hazard(self, gsim=None):
+        """
+        :param gsim: ignored
+        :returns: the underlying DataFrame
+        """
+        with self.dstore as ds:
+            df = ds.read_df('gmf_data', 'sid', slc=self.slc)
+            df['rlz'] = self.rlzs
+        return df
+
+
 class ZeroGetter(GmfDataGetter):
     """
     An object with an .init() and .get_hazard() method
