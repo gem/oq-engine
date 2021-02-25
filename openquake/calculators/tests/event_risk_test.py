@@ -66,7 +66,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
         self.assertEqual(len(alt), 8)
         totloss = alt.structural.sum()
-        aae(totloss, 15283.561, decimal=2)
+        aae(totloss, 14991.686, decimal=2)
 
     def test_case_4(self):
         # a simple test with 1 asset and two source models
