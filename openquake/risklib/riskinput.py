@@ -148,6 +148,7 @@ class RiskInput(object):
                         assets_by_taxo = get_assets_by_taxo(assets, tempname)
                         yield get_output(crmodel, assets_by_taxo, df, rlz)
             else:  # list of probability curves
+                assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
                 for rlz, pc in enumerate(haz):
                     yield get_output(crmodel, assets_by_taxo, pc, rlz)
 
