@@ -205,8 +205,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 stop = start + len(df)
                 times = result.pop('times')
                 [t] = numpy.unique(times['task_no'])
-                self.datastore['gmf_data/by_task'][t] = [start, stop]
                 rupids = list(times['rup_id'])
+                self.datastore['gmf_data/by_task'][t] = [start, stop] + rupids
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
                 hdf5.extend(dset, df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
@@ -322,9 +322,10 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
             self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
-            self.datastore.create_dset('gmf_data/time_by_rup',
-                                       time_dt, (nrups,), fillvalue=None)
-            self.datastore.create_dset('gmf_data/by_task', U32, (nrups, 2))
+            self.datastore.create_dset(
+                'gmf_data/time_by_rup', time_dt, (nrups,), fillvalue=None)
+            self.datastore.create_dset(
+                'gmf_data/by_task', hdf5.vuint32, (nrups,), fillvalue=None)
 
         # compute_gmfs in parallel
         nr = len(self.datastore['ruptures'])
