@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Changed the scenario_risk/event_based_risk calculator to distribute
+    by rupture
+
 python3-oq-engine (3.11.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
