@@ -159,7 +159,7 @@ def main(job_ini,
     if slowest:
         prof = cProfile.Profile()
         stmt = ('_run(job_ini, concurrent_tasks, calc_id, pdb, reuse_input, '
-                'loglevel, hc, exports, params)')
+                'loglevel, exports, params)')
         prof.runctx(stmt, globals(), locals())
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
