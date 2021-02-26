@@ -175,6 +175,8 @@ class GmfComputer(object):
                         for outkey, outarr in zip(sp.outputs, o):
                             items.append((outkey, outarr))
                     for i, gmv in enumerate(gmfa):
+                        if gmv.sum() == 0:
+                            continue
                         data['sid'].append(sids[i])
                         data['eid'].append(eid)
                         data['rlz'].append(rlz)
