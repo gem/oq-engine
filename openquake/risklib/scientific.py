@@ -184,7 +184,7 @@ class VulnerabilityFunction(object):
         gmvs_curve = gmvs_curve[idxs]
         return self._mlr_i1d(gmvs_curve), self._cov_for(gmvs_curve), idxs
 
-    def sample(self, means, covs, idxs, epsilons=None):
+    def sample(self, means, covs, idxs, epsilons):
         """
         Sample the distribution and apply the corrections to the means.
         This method is called only if there are nonzero covs.
@@ -196,13 +196,11 @@ class VulnerabilityFunction(object):
         :param idxs:
            array of E booleans with E >= E'
         :param epsilons:
-           array of E floats (or None)
+           array of E floats
         :returns:
            array of E' loss ratios
         """
-        if self.distribution_name == 'LN' and epsilons is None:
-            return means
-        elif self.distribution_name == 'LN':
+        if self.distribution_name == 'LN':
             self.set_distribution(epsilons)
         res = self._distribution.sample(means, covs, means * covs, idxs)
         return res

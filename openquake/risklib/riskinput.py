@@ -87,7 +87,7 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
             if len(assets_by_taxo.eps):
                 epsilons = assets_by_taxo.eps[taxonomy][:, eids]
             else:  # no CoVs
-                epsilons = ()
+                epsilons = numpy.zeros((len(assets_), len(eids)), F32)
             arrays = []
             rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
             for rm in rmodels:
