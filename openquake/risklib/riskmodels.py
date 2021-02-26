@@ -330,7 +330,7 @@ class RiskModel(object):
             for i, asset in enumerate(assets)]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
-    def event_based_risk(self, loss_type, assets, gmvs, eids, epsilons):
+    def event_based_risk(self, loss_type, assets, gmvs_by_sid, eids, epsilons):
         """
         :returns: an array of shape (A, E)
         """
@@ -342,15 +342,13 @@ class RiskModel(object):
         loss_matrix.fill(numpy.nan)
 
         vf = self.risk_functions[loss_type, 'vulnerability']
-        means, covs, idxs = vf.interpolate(gmvs)
         loss_ratio_matrix = numpy.zeros((len(assets), E))
-        if len(epsilons):
-            for a, eps in enumerate(epsilons):
-                loss_ratio_matrix[a, idxs] = vf.sample(means, covs, idxs, eps)
-        else:
-            ratios = vf.sample(means, covs, idxs, numpy.zeros(len(means), F32))
-            for a in range(len(assets)):
-                loss_ratio_matrix[a, idxs] = ratios
+        for a, asset in enumerate(assets):
+            sid = asset['site_id']
+            if sid in gmvs_by_sid:
+                means, covs, idxs = vf.interpolate(gmvs_by_sid[sid])
+                loss_ratio_matrix[a, idxs] = vf.sample(
+                    means, covs, idxs, epsilons[a])
         loss_matrix[:, :] = (loss_ratio_matrix.T * values).T
         return loss_matrix
 

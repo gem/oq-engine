@@ -18,6 +18,7 @@
 
 import logging
 import numpy
+import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import group_array, AccumDict
@@ -57,11 +58,12 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
     """
     primary = crmodel.primary_imtls
     alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
-    if hasattr(haz, 'array'):  # classical
+    classical = hasattr(haz, 'array')
+    if classical:
         eids = []
         data = {f'gmv_{m}': haz.array[crmodel.imtls(imt), 0]
                 for m, imt in enumerate(primary)}
-    elif set(haz.columns) - {'sid', 'eid', 'rlz'}:  # regular case
+    elif set(haz.columns) - {'sid', 'eid', 'rlz'}:  # GMFs
         # NB: in GMF-based calculations the order in which
         # the gmfs are stored is random since it depends on
         # which hazard task ends first; here we reorder
@@ -72,11 +74,10 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         # order and produce random results even if the
         # seed is set correctly; very tricky indeed! (MS)
         haz = haz.sort_values('eid')
-        eids = haz.eid.to_numpy()
-        data = haz
-    else:  # ZeroGetter for this site (event based)
-        eids = numpy.arange(1)
-        data = {f'gmv_{m}': [0] for m, imt in enumerate(primary)}
+        eids = haz.eid.unique()
+        data = haz.groupby('sid')
+    else:
+        raise NotImplementedError  # cannot happen
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
                loss_types=crmodel.loss_types, haz=haz)
     if rlzi is not None:
@@ -87,14 +88,16 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
             if len(assets_by_taxo.eps):
                 epsilons = assets_by_taxo.eps[taxonomy][:, eids]
             else:  # no CoVs
-                epsilons = ()
+                epsilons = numpy.zeros((len(assets_), len(eids)), F32)
             arrays = []
             rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
-                dat = data[alias.get(imt, imt)]
-                if hasattr(dat, 'to_numpy'):
-                    dat = dat.to_numpy()
+                col = alias.get(imt, imt)
+                if classical:
+                    dat = data[col]
+                else:
+                    dat = {sid: to_arr(df, col, eids) for sid, df in data}
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)
@@ -102,6 +105,14 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         arr = numpy.concatenate(ls)
         dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
     return hdf5.ArrayWrapper((), dic)
+
+
+def to_arr(df, col, all_eids):
+    idx = dict(zip(all_eids, range(len(all_eids))))
+    arr = numpy.zeros(len(all_eids), F32)
+    for eid, val in zip(df.eid.to_numpy(), df[col].to_numpy()):
+        arr[idx[eid]] = val
+    return arr
 
 
 class RiskInput(object):
@@ -141,14 +152,11 @@ class RiskInput(object):
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
-            if hasattr(haz, 'groupby'):  # DataFrame
-                for (sid, rlz), df in haz.groupby(['sid', 'rlz']):
-                    assets = self.assets[self.assets['site_id'] == sid]
-                    if len(assets):
-                        assets_by_taxo = get_assets_by_taxo(assets, tempname)
-                        yield get_output(crmodel, assets_by_taxo, df, rlz)
+            assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
+            if hasattr(haz, 'groupby'):  # DataFrame of gmfs
+                for rlz, df in haz.groupby('rlz'):
+                    yield get_output(crmodel, assets_by_taxo, haz, rlz)
             else:  # list of probability curves
-                assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
                 for rlz, pc in enumerate(haz):
                     yield get_output(crmodel, assets_by_taxo, pc, rlz)
 
