@@ -78,7 +78,7 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
                loss_types=crmodel.loss_types, haz=haz)
     dic['rlzs'] = haz.rlz.to_numpy()
     for lt in crmodel.loss_types:
-        ls = []
+        losses = []
         for taxonomy, assets_ in assets_by_taxo.items():
             if len(assets_by_taxo.eps):
                 epsilons = assets_by_taxo.eps[taxonomy][:, eids]
@@ -92,8 +92,8 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)
-            ls.append(res)
-        arr = numpy.concatenate(ls)
+            losses.append(res)
+        arr = numpy.concatenate(losses)  # losses per each taxonomy
         dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
     return hdf5.ArrayWrapper((), dic)
 
