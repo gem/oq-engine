@@ -27,7 +27,7 @@ from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
 from openquake.risklib.riskinput import (
-    cache_epsilons, get_assets_by_taxo, get_output)
+    cache_epsilons, get_assets_by_taxo, get_output_gmf)
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -79,7 +79,7 @@ def calc_risk(df, param, monitor):
             assets = asset_df.to_records()  # fast
             acc['events_per_sid'] += len(haz)
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
-            out = get_output(crmodel, assets_by_taxo, haz)  # slow
+            out = get_output_gmf(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
             alt.aggregate(out, mal, aggby)
             # NB: after the aggregation out contains losses, not loss_ratios
