@@ -18,6 +18,7 @@
 
 import logging
 import numpy
+import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import group_array, AccumDict
@@ -71,8 +72,8 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
         data = haz
     else:  # ZeroGetter for this site (event based)
         eids = numpy.arange(len(haz))
-        data = {f'gmv_{m}': numpy.zeros(len(haz))
-                for m, imt in enumerate(primary)}
+        data = pandas.DataFrame({f'gmv_{m}': numpy.zeros(len(haz))
+                                 for m, imt in enumerate(primary)})
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
                loss_types=crmodel.loss_types, haz=haz)
     dic['rlzs'] = haz.rlz.to_numpy()
@@ -87,9 +88,7 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
             rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
-                dat = data[alias.get(imt, imt)]
-                if hasattr(dat, 'to_numpy'):
-                    dat = dat.to_numpy()
+                dat = data[alias.get(imt, imt)].to_numpy()
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)
