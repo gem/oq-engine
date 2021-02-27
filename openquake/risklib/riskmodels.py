@@ -247,7 +247,7 @@ class RiskModel(object):
         """
         return sorted(lt for (lt, kind) in self.risk_functions)
 
-    def __call__(self, loss_type, assets, gmvs, eids, epsilons):
+    def __call__(self, loss_type, assets, gmvs, eids=None, epsilons=None):
         meth = getattr(self, self.calcmode)
         res = meth(loss_type, assets, gmvs, eids, epsilons)
         return res
@@ -336,22 +336,12 @@ class RiskModel(object):
         """
         values = get_values(loss_type, assets, self.time_event)
         E = len(eids)
-
-        # a matrix of A x E elements
-        loss_matrix = numpy.empty((len(assets), E))
-        loss_matrix.fill(numpy.nan)
-
         vf = self.risk_functions[loss_type, 'vulnerability']
         means, covs, idxs = vf.interpolate(gmvs)
         loss_ratio_matrix = numpy.zeros((len(assets), E))
-        if len(epsilons):
-            for a, eps in enumerate(epsilons):
-                loss_ratio_matrix[a, idxs] = vf.sample(means, covs, idxs, eps)
-        else:
-            ratios = vf.sample(means, covs, idxs, numpy.zeros(len(means), F32))
-            for a in range(len(assets)):
-                loss_ratio_matrix[a, idxs] = ratios
-        loss_matrix[:, :] = (loss_ratio_matrix.T * values).T
+        for a, eps in enumerate(epsilons):
+            loss_ratio_matrix[a, idxs] = vf.sample(means, covs, idxs, eps)
+        loss_matrix = (loss_ratio_matrix.T * values).T  # shape (A, E)
         return loss_matrix
 
     scenario = ebrisk = scenario_risk = event_based_risk

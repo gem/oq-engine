@@ -322,7 +322,6 @@ class EventBasedCalculator(base.HazardCalculator):
             base.create_gmf_data(self.datastore, M, oq.get_sec_imts())
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
-            self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
             self.datastore.create_dset(
                 'gmf_data/time_by_rup', time_dt, (nrups,), fillvalue=None)
 

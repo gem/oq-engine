@@ -48,23 +48,18 @@ def get_assets_by_taxo(assets, tempname=None):
     return assets_by_taxo
 
 
-def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
+def get_output_gmf(crmodel, assets_by_taxo, haz):
     """
     :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
-    :param haz: an array or a dictionary of hazard on that site
+    :param haz: a DataFrame of GMVs on that site
     :param rlzi: if given, a realization index
     :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
     primary = crmodel.primary_imtls
     alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
-    if hasattr(haz, 'array'):  # classical
-        eids = []
-        data = {f'gmv_{m}': haz.array[crmodel.imtls(imt), 0]
-                for m, imt in enumerate(primary)}
-    elif set(haz.columns) - {'sid', 'eid', 'rlz'}:  # regular case
-        # NB: in GMF-based calculations the order in which
-        # the gmfs are stored is random since it depends on
-        # which hazard task ends first; here we reorder
+    if set(haz.columns) - {'sid', 'eid', 'rlz'}:  # regular case
+        # the order in which the gmfs are stored is random since it depends
+        # on which hazard task ends first; here we reorder
         # the gmfs by event ID; this is convenient in
         # general and mandatory for the case of
         # VulnerabilityFunctionWithPMF, otherwise the
@@ -75,19 +70,19 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
         eids = haz.eid.to_numpy()
         data = haz
     else:  # ZeroGetter for this site (event based)
-        eids = numpy.arange(1)
-        data = {f'gmv_{m}': [0] for m, imt in enumerate(primary)}
+        eids = numpy.arange(len(haz))
+        data = {f'gmv_{m}': numpy.zeros(len(haz))
+                for m, imt in enumerate(primary)}
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
                loss_types=crmodel.loss_types, haz=haz)
-    if rlzi is not None:
-        dic['rlzi'] = rlzi
+    dic['rlzs'] = haz.rlz.to_numpy()
     for lt in crmodel.loss_types:
         ls = []
         for taxonomy, assets_ in assets_by_taxo.items():
             if len(assets_by_taxo.eps):
                 epsilons = assets_by_taxo.eps[taxonomy][:, eids]
             else:  # no CoVs
-                epsilons = ()
+                epsilons = numpy.zeros((len(assets_), len(eids)), F32)
             arrays = []
             rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
             for rm in rmodels:
@@ -96,6 +91,38 @@ def get_output(crmodel, assets_by_taxo, haz, rlzi=None):
                 if hasattr(dat, 'to_numpy'):
                     dat = dat.to_numpy()
                 arrays.append(rm(lt, assets_, dat, eids, epsilons))
+            res = arrays[0] if len(arrays) == 1 else numpy.average(
+                arrays, weights=weights, axis=0)
+            ls.append(res)
+        arr = numpy.concatenate(ls)
+        dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
+    return hdf5.ArrayWrapper((), dic)
+
+
+def get_output_pc(crmodel, assets_by_taxo, haz, rlzi):
+    """
+    :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
+    :param haz: an ArrayWrapper of ProbabilityCurves on that site
+    :param rlzi: if given, a realization index
+    :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
+    """
+    primary = crmodel.primary_imtls
+    alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
+    data = {f'gmv_{m}': haz.array[crmodel.imtls(imt), 0]
+            for m, imt in enumerate(primary)}
+    dic = dict(assets=assets_by_taxo.assets,
+               loss_types=crmodel.loss_types, haz=haz, rlzi=rlzi)
+    for lt in crmodel.loss_types:
+        ls = []
+        for taxonomy, assets_ in assets_by_taxo.items():
+            arrays = []
+            rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
+            for rm in rmodels:
+                imt = rm.imt_by_lt[lt]
+                dat = data[alias.get(imt, imt)]
+                if hasattr(dat, 'to_numpy'):
+                    dat = dat.to_numpy()
+                arrays.append(rm(lt, assets_, dat))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)
             ls.append(res)
@@ -141,16 +168,16 @@ class RiskInput(object):
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
-            if hasattr(haz, 'groupby'):  # DataFrame
-                for (sid, rlz), df in haz.groupby(['sid', 'rlz']):
+            if hasattr(haz, 'groupby'):  # DataFrame of GMFs
+                for sid, df in haz.groupby('sid'):
                     assets = self.assets[self.assets['site_id'] == sid]
                     if len(assets):
                         assets_by_taxo = get_assets_by_taxo(assets, tempname)
-                        yield get_output(crmodel, assets_by_taxo, df, rlz)
+                        yield get_output_gmf(crmodel, assets_by_taxo, df)
             else:  # list of probability curves
                 assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
                 for rlz, pc in enumerate(haz):
-                    yield get_output(crmodel, assets_by_taxo, pc, rlz)
+                    yield get_output_pc(crmodel, assets_by_taxo, pc, rlz)
 
     def __repr__(self):
         if hasattr(self.hazard_getter, 'sids'):
