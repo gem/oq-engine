@@ -74,7 +74,7 @@ def get_output_gmf(crmodel, assets_by_taxo, haz, rlzi=None):
         data = {f'gmv_{m}': [0] for m, imt in enumerate(primary)}
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
                loss_types=crmodel.loss_types, haz=haz)
-    if rlzi is not None:
+    if rlzi is not None:  # scenario_risk, else ebrisk
         dic['rlzi'] = rlzi
     for lt in crmodel.loss_types:
         ls = []
@@ -99,7 +99,7 @@ def get_output_gmf(crmodel, assets_by_taxo, haz, rlzi=None):
     return hdf5.ArrayWrapper((), dic)
 
 
-def get_output_pc(crmodel, assets_by_taxo, haz, rlzi=None):
+def get_output_pc(crmodel, assets_by_taxo, haz, rlzi):
     """
     :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
     :param haz: an ArrayWrapper of ProbabilityCurves on that site
@@ -111,9 +111,7 @@ def get_output_pc(crmodel, assets_by_taxo, haz, rlzi=None):
     data = {f'gmv_{m}': haz.array[crmodel.imtls(imt), 0]
             for m, imt in enumerate(primary)}
     dic = dict(assets=assets_by_taxo.assets,
-               loss_types=crmodel.loss_types, haz=haz)
-    if rlzi is not None:
-        dic['rlzi'] = rlzi
+               loss_types=crmodel.loss_types, haz=haz, rlzi=rlzi)
     for lt in crmodel.loss_types:
         ls = []
         for taxonomy, assets_ in assets_by_taxo.items():
