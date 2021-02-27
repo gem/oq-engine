@@ -19,6 +19,7 @@
 import copy
 import logging
 import numpy
+import pandas
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.risklib import scientific, riskinput
 from openquake.calculators import base, post_risk, views
@@ -76,12 +77,12 @@ def event_based_risk(riskinputs, param, monitor):
                 out, param['minimum_asset_loss'], param['aggregate_by'])
             for lti, loss_type in enumerate(crmodel.loss_types):
                 losses = out[loss_type]
-                for a, asset in enumerate(ri.assets):
+                for a, asset in enumerate(out.assets):
                     aid = asset['ordinal']
-                    lba = losses[a].sum()
-                    if lba:
-                        result['losses_by_asset'].append(
-                            (lti, out.rlzi, aid, lba))
+                    ser = pandas.Series(losses[a], out.rlzs).groupby(
+                        out.rlzs).sum()
+                    for rlz, lba in ser.items():
+                        result['losses_by_asset'].append((lti, rlz, aid, lba))
     return result
 
 

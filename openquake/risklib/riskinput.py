@@ -48,7 +48,7 @@ def get_assets_by_taxo(assets, tempname=None):
     return assets_by_taxo
 
 
-def get_output_gmf(crmodel, assets_by_taxo, haz, rlzi=None):
+def get_output_gmf(crmodel, assets_by_taxo, haz):
     """
     :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
     :param haz: a DataFrame of GMVs on that site
@@ -70,12 +70,12 @@ def get_output_gmf(crmodel, assets_by_taxo, haz, rlzi=None):
         eids = haz.eid.to_numpy()
         data = haz
     else:  # ZeroGetter for this site (event based)
-        eids = numpy.arange(1)
-        data = {f'gmv_{m}': [0] for m, imt in enumerate(primary)}
+        eids = numpy.arange(len(haz))
+        data = {f'gmv_{m}': numpy.zeros(len(haz))
+                for m, imt in enumerate(primary)}
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
                loss_types=crmodel.loss_types, haz=haz)
-    if rlzi is not None:  # scenario_risk, else ebrisk
-        dic['rlzi'] = rlzi
+    dic['rlzs'] = haz.rlz.to_numpy()
     for lt in crmodel.loss_types:
         ls = []
         for taxonomy, assets_ in assets_by_taxo.items():
@@ -170,8 +170,8 @@ class RiskInput(object):
             # thing since it calls get_output directly
             assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
             if hasattr(haz, 'groupby'):  # DataFrame
-                for (sid, rlz), df in haz.groupby(['sid', 'rlz']):
-                    yield get_output_gmf(crmodel, assets_by_taxo, df, rlz)
+                for sid, df in haz.groupby('sid'):
+                    yield get_output_gmf(crmodel, assets_by_taxo, df)
             else:  # list of probability curves
                 for rlz, pc in enumerate(haz):
                     yield get_output_pc(crmodel, assets_by_taxo, pc, rlz)
