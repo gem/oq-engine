@@ -18,7 +18,6 @@
 
 import logging
 import numpy
-import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.stats import set_rlzs_stats, avg_std

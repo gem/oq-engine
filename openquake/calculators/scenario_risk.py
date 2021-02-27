@@ -66,7 +66,7 @@ def event_based_risk(riskinputs, param, monitor):
     """
     crmodel = monitor.read('crmodel')
     alt = copy.copy(param['alt'])
-    result = dict(losses_by_asset=[], alt=alt)
+    result = dict(losses_by_asset=numpy.zeros(param['ARL']), alt=alt)
     sec_sims = param['secondary_simulations'].items()
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
@@ -82,7 +82,7 @@ def event_based_risk(riskinputs, param, monitor):
                     ser = pandas.Series(losses[a], out.rlzs).groupby(
                         out.rlzs).sum()
                     for rlz, lba in ser.items():
-                        result['losses_by_asset'].append((lti, rlz, aid, lba))
+                        result['losses_by_asset'][aid, rlz, lti] = lba
     return result
 
 
@@ -120,6 +120,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if not oq.ground_motion_fields:
             return  # this happens in the reportwriter
 
+        L = len(oq.loss_names)
         self.assetcol = self.datastore['assetcol']
         self.riskinputs = self.build_riskinputs('gmftask')
         self.param['tempname'] = riskinput.cache_epsilons(
@@ -127,12 +128,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['secondary_simulations'] = oq.secondary_simulations
         self.param['master_seed'] = oq.master_seed
+        self.param['ARL'] = len(self.assetcol), self.R, L
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
         aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.param['alt'] = self.acc = scientific.AggLossTable.new(
             aggkey, oq.loss_names, sec_losses=[])
-        L = len(oq.loss_names)
         self.avglosses = numpy.zeros((len(self.assetcol), self.R, L), F32)
         if oq.investigation_time:  # event_based
             self.avg_ratio = numpy.array([oq.ses_ratio] * self.R)
@@ -144,8 +145,8 @@ class EventBasedRiskCalculator(base.RiskCalculator):
             raise MemoryError('You ran out of memory!')
         with self.monitor('aggregating losses', measuremem=False):
             self.acc += res['alt']
-            for (l, r, aid, lba) in res['losses_by_asset']:
-                self.avglosses[aid, r, l] += lba * self.avg_ratio[r]
+            for r, ar in enumerate(self.avg_ratio):
+                self.avglosses[:, r, :] += res['losses_by_asset'][:, r] * ar
         return acc
 
     def post_execute(self, result):
