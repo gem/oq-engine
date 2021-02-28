@@ -364,8 +364,13 @@ class RiskModel(object):
         vf = self.risk_functions[loss_type, 'vulnerability']
         means, covs = vf.interpolate(gmf_df[col].to_numpy())
         losses = numpy.zeros((len(assets), E))
-        for a, eps in enumerate(epsilons):
-            losses[a] = vf.sample(means, covs, eps) * values[a]
+        if len(epsilons):
+            for a, eps in enumerate(epsilons[:, eids]):
+                losses[a] = vf.sample(means, covs, eps) * values[a]
+        else:  # no CoVs
+            ratios = vf.sample(means, covs, numpy.zeros(len(eids)))
+            for a in range(len(assets)):
+                losses[a] = ratios * values[a]
         return losses
 
     scenario = ebrisk = scenario_risk = event_based_risk
