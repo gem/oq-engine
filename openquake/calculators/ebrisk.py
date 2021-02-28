@@ -61,7 +61,7 @@ def calc_risk(df, param, monitor):
     with monitor('getting crmodel'):
         crmodel = monitor.read('crmodel')
         weights = dstore['weights'][()]
-    acc = dict(events_per_sid=0)
+    acc = dict(events_per_sid=numpy.zeros(param['N'], U32))
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
     tempname = param['tempname']
     aggby = param['aggregate_by']
@@ -74,10 +74,11 @@ def calc_risk(df, param, monitor):
             haz = haz_by_sid[sid]
         except KeyError:  # no hazard here
             continue
+        else:
+            acc['events_per_sid'][sid] += len(haz)
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
         with mon_risk:
             assets = asset_df.to_records()  # fast
-            acc['events_per_sid'] += len(haz)
             assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
             out = get_output_gmf(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
@@ -90,8 +91,6 @@ def calc_risk(df, param, monitor):
             with mon_avg:
                 for lni, ln in enumerate(alt.loss_names):
                     losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
-    if len(df):
-        acc['events_per_sid'] /= len(df)
     acc['alt'] = alt.to_dframe()
     if param['avg_losses']:
         acc['losses_by_A'] = losses_by_A * param['ses_ratio']
@@ -215,7 +214,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         srcfilter = self.src_filter()
         logging.info(
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
-        self.events_per_sid = []
+        self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         M = len(oq.all_imts())
         self.momenta = numpy.zeros((2, self.N, M))
@@ -249,7 +248,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if self.oqparam.avg_losses:
             with self.monitor('saving avg_losses'):
                 self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
-        self.events_per_sid.append(dic['events_per_sid'])
+        self.events_per_sid += dic['events_per_sid']
         self.momenta += dic['momenta']
 
     def post_execute(self, dummy):
@@ -257,6 +256,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         Compute and store average losses from the agg_loss_table dataset,
         and then loss curves and maps.
         """
+        logging.info('Events per site: ~%d', self.events_per_sid.mean())
         oq = self.oqparam
         rlzs = self.datastore['events']['rlz_id']
         totw = self.datastore['weights'][:][rlzs].sum()
