@@ -787,10 +787,9 @@ class LogNormalDistribution(Distribution):
         if self.epsilons is None:
             raise ValueError("A LogNormalDistribution must be initialized "
                              "before you can use it")
-        eps = self.epsilons
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
-        probs = means / numpy.sqrt(1 + covs ** 2) * numpy.exp(eps * sigma)
-        return probs
+        factor = numpy.exp(self.epsilons * sigma) / numpy.sqrt(1 + covs ** 2)
+        return means * factor
 
     def survival(self, loss_ratio, mean, stddev):
         # scipy does not handle correctly the limit case stddev = 0.
