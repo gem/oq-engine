@@ -289,7 +289,7 @@ class RiskModel(object):
         imls = self.hazard_imtls[vf.imt]
         values = get_values(loss_type, assets)
         lrcurves = numpy.array(
-            [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
+            [scientific.classical(vf, imls, hazard_curve[col], lratios)] * n)
         return rescale(lrcurves, values)
 
     def classical_bcr(self, loss_type, assets, hazard, col,
