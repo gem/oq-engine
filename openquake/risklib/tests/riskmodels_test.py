@@ -21,6 +21,7 @@ import pickle
 import unittest
 import unittest.mock as mock
 import numpy
+import pandas
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
@@ -329,11 +330,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         assets = numpy.array([1, 1], [('value-structural', float)])
         eids = numpy.array([1, 2, 3, 4, 5])
         gmvs = numpy.array([.1, .2, .3, .4, .5])
+        gmf_df = pandas.DataFrame(dict(gmv_0=gmvs, eid=eids))
         epsilons = numpy.array(
             [[.01, .02, .03, .04, .05], [.001, .002, .003, .004, .005]])
 
         # compute the losses by considering all the events
-        losses = rm('structural', assets, gmvs, eids, epsilons)
+        losses = rm('structural', assets, gmf_df, 'gmv_0', eids, epsilons)
         numpy.testing.assert_allclose(losses, self.expected_losses)
 
         # split the events in two blocks
@@ -343,7 +345,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         gmvs2 = numpy.array([.3, .4, .5])
         eps1 = numpy.array([[.01, .02], [.001, .002]])
         eps2 = numpy.array([[.03, .04, .05], [.003, .004, .005]])
-        losses1 = rm('structural', assets, gmvs1, eids1, eps1)
-        losses2 = rm('structural', assets, gmvs2, eids2, eps2)
+        gmf1_df = pandas.DataFrame(dict(gmv_0=gmvs1, eid=eids1))
+        gmf2_df = pandas.DataFrame(dict(gmv_0=gmvs2, eid=eids2))
+        losses1 = rm('structural', assets, gmf1_df, 'gmv_0', eids1, eps1)
+        losses2 = rm('structural', assets, gmf2_df, 'gmv_0', eids2, eps2)
         numpy.testing.assert_allclose(losses1, self.expected_losses[:, :2])
         numpy.testing.assert_allclose(losses2, self.expected_losses[:, 2:])

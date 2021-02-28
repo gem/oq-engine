@@ -382,7 +382,7 @@ class LogNormalDistributionTestCase(unittest.TestCase):
         self.dist = scientific.LogNormalDistribution(epsilons)
         samples = self.dist.sample(numpy.array([0., 0., .1, .1]),
                                    numpy.array([0., .1, 0., .1]),
-                                   None, slice(None)).reshape(-1)
+                                   None).reshape(-1)
         numpy.testing.assert_allclose([0., 0., 0.1, 0.10228396], samples)
 
 
