@@ -247,9 +247,10 @@ class RiskModel(object):
         """
         return sorted(lt for (lt, kind) in self.risk_functions)
 
-    def __call__(self, loss_type, assets, gmvs, eids=None, epsilons=None):
+    def __call__(self, loss_type, assets, gmf_df, col=None, eids=None,
+                 epsilons=None):
         meth = getattr(self, self.calcmode)
-        res = meth(loss_type, assets, gmvs, eids, epsilons)
+        res = meth(loss_type, assets, gmf_df, col, eids, epsilons)
         return res
 
     def __toh5__(self):
@@ -265,7 +266,8 @@ class RiskModel(object):
     # ######################## calculation methods ######################### #
 
     def classical_risk(
-            self, loss_type, assets, hazard_curve, eids=None, eps=None):
+            self, loss_type, assets, hazard_curve,
+            col=None, eids=None, eps=None):
         """
         :param str loss_type:
             the loss type considered
@@ -287,14 +289,15 @@ class RiskModel(object):
         imls = self.hazard_imtls[vf.imt]
         values = get_values(loss_type, assets)
         lrcurves = numpy.array(
-            [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
+            [scientific.classical(vf, imls, hazard_curve[col], lratios)] * n)
         return rescale(lrcurves, values)
 
-    def classical_bcr(self, loss_type, assets, hazard, eids=None, eps=None):
+    def classical_bcr(self, loss_type, assets, hazard, col,
+                      eids=None, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
-        :param hazard: an hazard curve
+        :param hazard: a dictionary col -> hazard curve
         :param _eps: dummy parameter, unused
         :param _eids: dummy parameter, unused
         :returns: a list of triples (eal_orig, eal_retro, bcr_result)
@@ -313,8 +316,8 @@ class RiskModel(object):
         curves_retro = functools.partial(
             scientific.classical, vf_retro, imls,
             loss_ratios=self.loss_ratios_retro[loss_type])
-        original_loss_curves = numpy.array([curves_orig(hazard)] * n)
-        retrofitted_loss_curves = numpy.array([curves_retro(hazard)] * n)
+        original_loss_curves = numpy.array([curves_orig(hazard[col])] * n)
+        retrofitted_loss_curves = numpy.array([curves_retro(hazard[col])] * n)
 
         eal_original = numpy.array([scientific.average_loss(lc)
                                     for lc in original_loss_curves])
@@ -330,46 +333,12 @@ class RiskModel(object):
             for i, asset in enumerate(assets)]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
-    def event_based_risk(self, loss_type, assets, gmvs, eids, epsilons):
-        """
-        :returns: an array of shape (A, E)
-        """
-        values = get_values(loss_type, assets, self.time_event)
-        E = len(eids)
-        vf = self.risk_functions[loss_type, 'vulnerability']
-        means, covs, idxs = vf.interpolate(gmvs)
-        loss_ratio_matrix = numpy.zeros((len(assets), E))
-        for a, eps in enumerate(epsilons):
-            loss_ratio_matrix[a, idxs] = vf.sample(means, covs, idxs, eps)
-        loss_matrix = (loss_ratio_matrix.T * values).T  # shape (A, E)
-        return loss_matrix
-
-    scenario = ebrisk = scenario_risk = event_based_risk
-
-    def scenario_damage(self, loss_type, assets, gmvs, eids=None, eps=None):
-        """
-        :param loss_type: the loss type
-        :param assets: a list of A assets of the same taxonomy
-        :param gmvs: an array of E ground motion values
-        :param eids: an array of E event IDs
-        :param eps: dummy parameter, unused
-        :returns: an array of shape (A, E, D) elements
-
-        where N is the number of points, E the number of events
-        and D the number of damage states.
-        """
-        ffs = self.risk_functions[loss_type, 'fragility']
-        damages = scientific.scenario_damage(ffs, gmvs).T
-        return numpy.array([damages] * len(assets))
-
-    event_based_damage = scenario_damage
-
-    def classical_damage(
-            self, loss_type, assets, hazard_curve, eids=None, eps=None):
+    def classical_damage(self, loss_type, assets, hazard_curve, col,
+                         eids=None, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
-        :param hazard_curve: an hazard curve array
+        :param hazard_curve: a dictionary col -> hazard curve
         :returns: an array of N x D elements
 
         where N is the number of points and D the number of damage states.
@@ -379,12 +348,47 @@ class RiskModel(object):
         debug = False  # assets['id'] == b'a5' to debug case_master
         rtime = self.risk_investigation_time or self.investigation_time
         damage = scientific.classical_damage(
-            ffl, hazard_imls, hazard_curve,
+            ffl, hazard_imls, hazard_curve[col],
             investigation_time=self.investigation_time,
             risk_investigation_time=rtime,
             steps_per_interval=self.steps_per_interval, debug=debug)
         res = numpy.array([a['number'] * damage for a in assets])
         return res
+
+    def event_based_risk(self, loss_type, assets, gmf_df, col, eids, epsilons):
+        """
+        :returns: an array of shape (A, E)
+        """
+        values = get_values(loss_type, assets, self.time_event)
+        E = len(eids)
+        vf = self.risk_functions[loss_type, 'vulnerability']
+        means, covs = vf.interpolate(gmf_df[col].to_numpy())
+        losses = numpy.zeros((len(assets), E))
+        for a, eps in enumerate(epsilons):
+            losses[a] = vf.sample(means, covs, eps) * values[a]
+        return losses
+
+    scenario = ebrisk = scenario_risk = event_based_risk
+
+    def scenario_damage(self, loss_type, assets, gmf_df, col,
+                        eids=None, eps=None):
+        """
+        :param loss_type: the loss type
+        :param assets: a list of A assets of the same taxonomy
+        :param gmf_df: a DataFrame of GMFs
+        :param eids: an array of E event IDs
+        :param eps: dummy parameter, unused
+        :returns: an array of shape (A, E, D) elements
+
+        where N is the number of points, E the number of events
+        and D the number of damage states.
+        """
+        gmvs = gmf_df[col].to_numpy()
+        ffs = self.risk_functions[loss_type, 'fragility']
+        damages = scientific.scenario_damage(ffs, gmvs).T
+        return numpy.array([damages] * len(assets))
+
+    event_based_damage = scenario_damage
 
 
 # NB: the approach used here relies on the convention of having the

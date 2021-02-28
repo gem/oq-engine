@@ -18,7 +18,6 @@
 
 import logging
 import numpy
-import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import group_array, AccumDict
@@ -58,25 +57,22 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
     """
     primary = crmodel.primary_imtls
     alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
-    if set(haz.columns) - {'sid', 'eid', 'rlz'}:  # regular case
-        # the order in which the gmfs are stored is random since it depends
-        # on which hazard task ends first; here we reorder
-        # the gmfs by event ID; this is convenient in
-        # general and mandatory for the case of
-        # VulnerabilityFunctionWithPMF, otherwise the
-        # sample method would receive the means in random
-        # order and produce random results even if the
-        # seed is set correctly; very tricky indeed! (MS)
-        haz = haz.sort_values('eid')
-        eids = haz.eid.to_numpy()
-        data = haz
-    else:  # ZeroGetter for this site (event based)
-        eids = numpy.arange(len(haz))
-        data = pandas.DataFrame({f'gmv_{m}': numpy.zeros(len(haz))
-                                 for m, imt in enumerate(primary)})
+    # the order in which the gmfs are stored is random since it depends
+    # on which hazard task ends first; here we reorder
+    # the gmfs by event ID; this is convenient in
+    # general and mandatory for the case of
+    # VulnerabilityFunctionWithPMF, otherwise the
+    # sample method would receive the means in random
+    # order and produce random results even if the
+    # seed is set correctly; very tricky indeed! (MS)
+    haz = haz.sort_values('eid')
+    for m, imt in enumerate(primary):
+        col = f'gmv_{m}'
+        if col not in haz.columns:
+            haz[col] = numpy.zeros(len(haz))  # ZeroGetter
+    eids = haz.eid.to_numpy()
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
-               loss_types=crmodel.loss_types, haz=haz)
-    dic['rlzs'] = haz.rlz.to_numpy()
+               loss_types=crmodel.loss_types, haz=haz, rlzs=haz.rlz.to_numpy())
     for lt in crmodel.loss_types:
         losses = []
         for taxonomy, assets_ in assets_by_taxo.items():
@@ -88,8 +84,8 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
             rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
-                dat = data[alias.get(imt, imt)].to_numpy()
-                arrays.append(rm(lt, assets_, dat, eids, epsilons))
+                col = alias.get(imt, imt)
+                arrays.append(rm(lt, assets_, haz, col, eids, epsilons))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)
             losses.append(res)
@@ -118,10 +114,8 @@ def get_output_pc(crmodel, assets_by_taxo, haz, rlzi):
             rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
-                dat = data[alias.get(imt, imt)]
-                if hasattr(dat, 'to_numpy'):
-                    dat = dat.to_numpy()
-                arrays.append(rm(lt, assets_, dat))
+                col = alias.get(imt, imt)
+                arrays.append(rm(lt, assets_, data, col))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)
             ls.append(res)
@@ -169,8 +163,7 @@ class RiskInput(object):
             # thing since it calls get_output directly
             assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
             if hasattr(haz, 'groupby'):  # DataFrame
-                for sid, df in haz.groupby('sid'):
-                    yield get_output_gmf(crmodel, assets_by_taxo, df)
+                yield get_output_gmf(crmodel, assets_by_taxo, haz)
             else:  # list of probability curves
                 for rlz, pc in enumerate(haz):
                     yield get_output_pc(crmodel, assets_by_taxo, pc, rlz)

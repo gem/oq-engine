@@ -169,7 +169,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_1f(self):
         # vulnerability function with BT
-        self.run_calc(case_1f.__file__, 'job_h.ini,job_r.ini')
+        self.run_calc(case_1f.__file__, 'job_h.ini,job_r.ini',
+                      concurrent_tasks='0')
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles('portfolio_losses.txt', fname, delta=1E-5)
         os.remove(fname)
@@ -184,7 +185,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_1g(self):
         # vulnerability function with PMF
-        self.run_calc(case_1g.__file__, 'job_h.ini,job_r.ini')
+        self.run_calc(case_1g.__file__, 'job_h.ini,job_r.ini',
+                      concurrent_tasks='0')
         [fname] = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_losses.csv', fname)
         os.remove(fname)

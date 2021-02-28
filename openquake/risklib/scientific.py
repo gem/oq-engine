@@ -175,34 +175,36 @@ class VulnerabilityFunction(object):
         :param gmvs:
            array of intensity measure levels
         :returns:
-           (interpolated loss ratios, interpolated covs, indices > min)
+           (interpolated loss ratios, interpolated covs)
         """
+        means = numpy.zeros_like(gmvs)
+        covs = numpy.zeros_like(gmvs, F64)
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
-        idxs = gmvs_curve >= self.imls[0]  # indices over the minimum
-        gmvs_curve = gmvs_curve[idxs]
-        return self._mlr_i1d(gmvs_curve), self._cov_for(gmvs_curve), idxs
+        ok = gmvs_curve >= self.imls[0]  # indices over the minimum
+        curve_ok = gmvs_curve[ok]
+        means[ok] = self._mlr_i1d(curve_ok)
+        covs[ok] = self._cov_for(curve_ok)
+        return means, covs
 
-    def sample(self, means, covs, idxs, epsilons):
+    def sample(self, means, covs, epsilons):
         """
         Sample the distribution and apply the corrections to the means.
         This method is called only if there are nonzero covs.
 
         :param means:
-           array of E' loss ratios
+           array of E loss ratios
         :param covs:
-           array of E' floats
-        :param idxs:
-           array of E booleans with E >= E'
+           array of E floats
         :param epsilons:
            array of E floats
         :returns:
-           array of E' loss ratios
+           array of E loss ratios
         """
         if self.distribution_name == 'LN':
             self.set_distribution(epsilons)
-        res = self._distribution.sample(means, covs, means * covs, idxs)
+        res = self._distribution.sample(means, covs, means * covs)
         return res
 
     # this is used in the tests, not in the engine code base
@@ -210,10 +212,9 @@ class VulnerabilityFunction(object):
         """
         A small wrapper around .interpolate and .apply_to
         """
-        means, covs, idxs = self.interpolate(gmvs)
+        means, covs = self.interpolate(gmvs)
         # for gmvs < min(iml) we return a loss of 0 (default)
-        ratios = numpy.zeros(len(gmvs))
-        ratios[idxs] = self.sample(means, covs, idxs, epsilons)
+        ratios = self.sample(means, covs, epsilons)
         return ratios
 
     def strictly_increasing(self):
@@ -404,29 +405,28 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         :param gmvs:
            array of intensity measure levels
         :returns:
-           (interpolated probabilities, zeros, indices > min)
+           (interpolated probabilities, zeros)
         """
         # gmvs are clipped to max(iml)
+        out = numpy.zeros((len(self.probs), len(gmvs)))
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
-        idxs = gmvs_curve >= self.imls[0]  # indices over the minimum
-        gmvs_curve = gmvs_curve[idxs]
-        return self._probs_i1d(gmvs_curve), numpy.zeros_like(gmvs_curve), idxs
+        ok = gmvs_curve >= self.imls[0]  # indices over the minimum
+        out[:, ok] = self._probs_i1d(gmvs_curve[ok])
+        return out, numpy.zeros_like(ok)
 
-    def sample(self, probs, _covs, idxs, epsilons):
+    def sample(self, probs, _covs, epsilons):
         """
         Sample the .loss_ratios with the given probabilities.
 
         :param probs:
-           array of E' floats
+           array of E floats
         :param _covs:
            ignored, it is there only for API consistency
-        :param idxs:
-           array of E booleans with E >= E'
         :param epsilons:
            array of E floats
         :returns:
-           array of E' probabilities
+           array of E probabilities
         """
         self.set_distribution(epsilons)
         return self._distribution.sample(self.loss_ratios, probs)
@@ -719,7 +719,7 @@ class Distribution(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def sample(self, means, covs, stddevs, idxs):
+    def sample(self, means, covs, stddevs):
         """
         :returns: sample a set of losses
         :param means: an array of mean losses
@@ -742,7 +742,7 @@ class DegenerateDistribution(Distribution):
     The degenerate distribution. E.g. a distribution with a delta
     corresponding to the mean.
     """
-    def sample(self, means, _covs, _stddev, _idxs):
+    def sample(self, means, _covs, _stddev):
         return means
 
     def survival(self, loss_ratio, mean, _stddev):
@@ -783,11 +783,11 @@ class LogNormalDistribution(Distribution):
     def __init__(self, epsilons=None):
         self.epsilons = epsilons
 
-    def sample(self, means, covs, _stddevs, idxs):
+    def sample(self, means, covs, _stddevs):
         if self.epsilons is None:
             raise ValueError("A LogNormalDistribution must be initialized "
                              "before you can use it")
-        eps = self.epsilons[idxs]
+        eps = self.epsilons
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
         probs = means / numpy.sqrt(1 + covs ** 2) * numpy.exp(eps * sigma)
         return probs
@@ -832,7 +832,7 @@ class LogNormalDistribution(Distribution):
 # VulnerabilityFunction.__init__.
 @DISTRIBUTIONS.add('BT')
 class BetaDistribution(Distribution):
-    def sample(self, means, _covs, stddevs, _idxs=None):
+    def sample(self, means, _covs, stddevs):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
         return numpy.random.beta(alpha, beta)
