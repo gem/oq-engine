@@ -82,7 +82,7 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
-                arrays.append(rm(lt, assets_, haz, col, eids, epsilons))
+                arrays.append(rm(lt, assets_, haz, col, epsilons))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)
             losses.append(res)
