@@ -365,8 +365,8 @@ class RiskModel(object):
         means, covs = vf.interpolate(gmf_df[col].to_numpy())
         losses = numpy.zeros((len(assets), E))
         if len(epsilons):
-            for a, eps in enumerate(epsilons[:, eids]):
-                losses[a] = vf.sample(means, covs, eps) * values[a]
+            for a, eps in enumerate(epsilons):
+                losses[a] = vf.sample(means, covs, eps[eids]) * values[a]
         else:  # no CoVs
             ratios = vf.sample(means, covs, numpy.zeros(len(eids)))
             for a in range(len(assets)):
