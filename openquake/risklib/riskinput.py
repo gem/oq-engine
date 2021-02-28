@@ -166,8 +166,7 @@ class RiskInput(object):
             # thing since it calls get_output directly
             assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
             if hasattr(haz, 'groupby'):  # DataFrame
-                for sid, df in haz.groupby('sid'):
-                    yield get_output_gmf(crmodel, assets_by_taxo, df)
+                yield get_output_gmf(crmodel, assets_by_taxo, haz)
             else:  # list of probability curves
                 for rlz, pc in enumerate(haz):
                     yield get_output_pc(crmodel, assets_by_taxo, pc, rlz)

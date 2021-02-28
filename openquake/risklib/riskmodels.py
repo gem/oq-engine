@@ -266,7 +266,8 @@ class RiskModel(object):
     # ######################## calculation methods ######################### #
 
     def classical_risk(
-            self, loss_type, assets, hazard_curve, eids=None, eps=None):
+            self, loss_type, assets, hazard_curve,
+            col=None, eids=None, eps=None):
         """
         :param str loss_type:
             the loss type considered
@@ -291,7 +292,8 @@ class RiskModel(object):
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values)
 
-    def classical_bcr(self, loss_type, assets, hazard, eids=None, eps=None):
+    def classical_bcr(self, loss_type, assets, hazard,
+                      col=None, eids=None, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
