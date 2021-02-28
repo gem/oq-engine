@@ -175,7 +175,7 @@ class VulnerabilityFunction(object):
         :param gmvs:
            array of intensity measure levels
         :returns:
-           (interpolated loss ratios, interpolated covs, gmvs >= min)
+           (interpolated loss ratios, interpolated covs)
         """
         means = numpy.zeros_like(gmvs)
         covs = numpy.zeros_like(gmvs, F64)
