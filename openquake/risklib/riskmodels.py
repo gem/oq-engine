@@ -327,8 +327,7 @@ class RiskModel(object):
             for i, asset in enumerate(assets)]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
-    def classical_damage(self, loss_type, assets, hazard_curve, col,
-                         eids=None, eps=None):
+    def classical_damage(self, loss_type, assets, hazard_curve, col, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
