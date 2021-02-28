@@ -175,14 +175,14 @@ class VulnerabilityFunction(object):
         :param gmvs:
            array of intensity measure levels
         :returns:
-           (interpolated loss ratios, interpolated covs, indices > min)
+           (interpolated loss ratios, interpolated covs, gmvs >= min)
         """
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
-        idxs = gmvs_curve >= self.imls[0]  # indices over the minimum
-        gmvs_curve = gmvs_curve[idxs]
-        return self._mlr_i1d(gmvs_curve), self._cov_for(gmvs_curve), idxs
+        ok = gmvs_curve >= self.imls[0]  # indices over the minimum
+        curve_ok = gmvs_curve[ok]
+        return self._mlr_i1d(curve_ok), self._cov_for(curve_ok), ok
 
     def sample(self, means, covs, idxs, epsilons):
         """
@@ -404,14 +404,14 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         :param gmvs:
            array of intensity measure levels
         :returns:
-           (interpolated probabilities, zeros, indices > min)
+           (interpolated probabilities, zeros, gmvs > min)
         """
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
-        idxs = gmvs_curve >= self.imls[0]  # indices over the minimum
-        gmvs_curve = gmvs_curve[idxs]
-        return self._probs_i1d(gmvs_curve), numpy.zeros_like(gmvs_curve), idxs
+        ok = gmvs_curve >= self.imls[0]  # indices over the minimum
+        curve_ok = gmvs_curve[ok]
+        return self._probs_i1d(curve_ok), numpy.zeros_like(curve_ok), ok
 
     def sample(self, probs, _covs, idxs, epsilons):
         """

@@ -333,19 +333,18 @@ class RiskModel(object):
             for i, asset in enumerate(assets)]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
-    def event_based_risk(self, loss_type, assets, gmv_df, col, eids, epsilons):
+    def event_based_risk(self, loss_type, assets, gmf_df, col, eids, epsilons):
         """
         :returns: an array of shape (A, E)
         """
         values = get_values(loss_type, assets, self.time_event)
         E = len(eids)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        means, covs, idxs = vf.interpolate(gmv_df[col].to_numpy())
-        loss_ratio_matrix = numpy.zeros((len(assets), E))
+        means, covs, ok = vf.interpolate(gmf_df[col].to_numpy())
+        losses = numpy.zeros((len(assets), E))
         for a, eps in enumerate(epsilons):
-            loss_ratio_matrix[a, idxs] = vf.sample(means, covs, idxs, eps)
-        loss_matrix = (loss_ratio_matrix.T * values).T  # shape (A, E)
-        return loss_matrix
+            losses[a, ok] = vf.sample(means, covs, ok, eps) * values[a]
+        return losses
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
