@@ -204,7 +204,9 @@ class VulnerabilityFunction(object):
         """
         if self.distribution_name == 'LN':
             self.set_distribution(epsilons)
-        res = self._distribution.sample(means, covs, means * covs)
+            res = self._distribution.sample(means, covs, None)
+        else:
+            res = self._distribution.sample(means, covs, means * covs)
         return res
 
     # this is used in the tests, not in the engine code base
