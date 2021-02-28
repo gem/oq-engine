@@ -18,7 +18,6 @@
 
 import logging
 import numpy
-import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import group_array, AccumDict
@@ -115,10 +114,8 @@ def get_output_pc(crmodel, assets_by_taxo, haz, rlzi):
             rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
-                dat = data[alias.get(imt, imt)]
-                if hasattr(dat, 'to_numpy'):
-                    dat = dat.to_numpy()
-                arrays.append(rm(lt, assets_, dat))
+                col = alias.get(imt, imt)
+                arrays.append(rm(lt, assets_, data, col))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)
             ls.append(res)

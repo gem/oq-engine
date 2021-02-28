@@ -292,12 +292,12 @@ class RiskModel(object):
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values)
 
-    def classical_bcr(self, loss_type, assets, hazard,
-                      col=None, eids=None, eps=None):
+    def classical_bcr(self, loss_type, assets, hazard, col,
+                      eids=None, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
-        :param hazard: an hazard curve
+        :param hazard: a dictionary col -> hazard curve
         :param _eps: dummy parameter, unused
         :param _eids: dummy parameter, unused
         :returns: a list of triples (eal_orig, eal_retro, bcr_result)
@@ -316,8 +316,8 @@ class RiskModel(object):
         curves_retro = functools.partial(
             scientific.classical, vf_retro, imls,
             loss_ratios=self.loss_ratios_retro[loss_type])
-        original_loss_curves = numpy.array([curves_orig(hazard)] * n)
-        retrofitted_loss_curves = numpy.array([curves_retro(hazard)] * n)
+        original_loss_curves = numpy.array([curves_orig(hazard[col])] * n)
+        retrofitted_loss_curves = numpy.array([curves_retro(hazard[col])] * n)
 
         eal_original = numpy.array([scientific.average_loss(lc)
                                     for lc in original_loss_curves])
@@ -332,6 +332,28 @@ class RiskModel(object):
                 asset['value-' + loss_type], asset['retrofitted'])
             for i, asset in enumerate(assets)]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
+
+    def classical_damage(self, loss_type, assets, hazard_curve, col,
+                         eids=None, eps=None):
+        """
+        :param loss_type: the loss type
+        :param assets: a list of N assets of the same taxonomy
+        :param hazard_curve: a dictionary col -> hazard curve
+        :returns: an array of N x D elements
+
+        where N is the number of points and D the number of damage states.
+        """
+        ffl = self.risk_functions[loss_type, 'fragility']
+        hazard_imls = self.hazard_imtls[ffl.imt]
+        debug = False  # assets['id'] == b'a5' to debug case_master
+        rtime = self.risk_investigation_time or self.investigation_time
+        damage = scientific.classical_damage(
+            ffl, hazard_imls, hazard_curve[col],
+            investigation_time=self.investigation_time,
+            risk_investigation_time=rtime,
+            steps_per_interval=self.steps_per_interval, debug=debug)
+        res = numpy.array([a['number'] * damage for a in assets])
+        return res
 
     def event_based_risk(self, loss_type, assets, gmf_df, col, eids, epsilons):
         """
@@ -367,28 +389,6 @@ class RiskModel(object):
         return numpy.array([damages] * len(assets))
 
     event_based_damage = scenario_damage
-
-    def classical_damage(
-            self, loss_type, assets, hazard_curve, eids=None, eps=None):
-        """
-        :param loss_type: the loss type
-        :param assets: a list of N assets of the same taxonomy
-        :param hazard_curve: an hazard curve array
-        :returns: an array of N x D elements
-
-        where N is the number of points and D the number of damage states.
-        """
-        ffl = self.risk_functions[loss_type, 'fragility']
-        hazard_imls = self.hazard_imtls[ffl.imt]
-        debug = False  # assets['id'] == b'a5' to debug case_master
-        rtime = self.risk_investigation_time or self.investigation_time
-        damage = scientific.classical_damage(
-            ffl, hazard_imls, hazard_curve,
-            investigation_time=self.investigation_time,
-            risk_investigation_time=rtime,
-            steps_per_interval=self.steps_per_interval, debug=debug)
-        res = numpy.array([a['number'] * damage for a in assets])
-        return res
 
 
 # NB: the approach used here relies on the convention of having the
