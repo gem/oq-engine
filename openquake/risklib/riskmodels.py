@@ -348,12 +348,12 @@ class RiskModel(object):
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
-    def scenario_damage(self, loss_type, assets, gmf_dt, col,
+    def scenario_damage(self, loss_type, assets, gmf_df, col,
                         eids=None, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of A assets of the same taxonomy
-        :param gmf_dt: a DataFrame of GMFs
+        :param gmf_df: a DataFrame of GMFs
         :param eids: an array of E event IDs
         :param eps: dummy parameter, unused
         :returns: an array of shape (A, E, D) elements
@@ -361,7 +361,7 @@ class RiskModel(object):
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
-        gmvs = gmf_dt[col].to_numpy()
+        gmvs = gmf_df[col].to_numpy()
         ffs = self.risk_functions[loss_type, 'fragility']
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))

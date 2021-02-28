@@ -298,7 +298,7 @@ aid
                       secondary_simulations='{}')
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
         aac(losses(0, alt), [4982, 3524, 3235, 1388, 4988, 4999, 4988, 4993])
-        aac(losses(1, alt), [38175, 3, 903, 11122, 28598, 30341, 18978, 0])
+        aac(losses(1, alt), [38175, 3, 903, 11122, 28599, 30341, 18978, 0])
         aac(losses(2, alt), [26412, 0, 21055, 44631, 36447, 0, 0, 0])
 
 
