@@ -369,13 +369,12 @@ class RiskModel(object):
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
-    def scenario_damage(self, loss_type, assets, gmf_df, col,
-                        eps=None):
+    def scenario_damage(self, loss_type, assets, gmf_df, col, epsilons=None):
         """
         :param loss_type: the loss type
         :param assets: a list of A assets of the same taxonomy
         :param gmf_df: a DataFrame of GMFs
-        :param eps: dummy parameter, unused
+        :param epsilons: dummy parameter, unused
         :returns: an array of shape (A, E, D) elements
 
         where N is the number of points, E the number of events
