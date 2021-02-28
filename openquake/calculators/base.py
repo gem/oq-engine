@@ -425,7 +425,9 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: the total number of sites
         """
-        return len(self.sitecol.complete) if self.sitecol else None
+        if hasattr(self, 'sitecol'):
+            return len(self.sitecol.complete) if self.sitecol else None
+        return len(self.datastore['sitecol'])
 
     @property
     def few_sites(self):

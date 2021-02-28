@@ -76,16 +76,13 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
     for lt in crmodel.loss_types:
         losses = []
         for taxonomy, assets_ in assets_by_taxo.items():
-            if len(assets_by_taxo.eps):
-                epsilons = assets_by_taxo.eps[taxonomy][:, eids]
-            else:  # no CoVs
-                epsilons = numpy.zeros((len(assets_), len(eids)), F32)
+            epsilons = assets_by_taxo.eps.get(taxonomy, ())
             arrays = []
             rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
-                arrays.append(rm(lt, assets_, haz, col, eids, epsilons))
+                arrays.append(rm(lt, assets_, haz, col, epsilons))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)
             losses.append(res)

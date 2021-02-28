@@ -247,10 +247,9 @@ class RiskModel(object):
         """
         return sorted(lt for (lt, kind) in self.risk_functions)
 
-    def __call__(self, loss_type, assets, gmf_df, col=None, eids=None,
-                 epsilons=None):
+    def __call__(self, loss_type, assets, gmf_df, col=None, epsilons=None):
         meth = getattr(self, self.calcmode)
-        res = meth(loss_type, assets, gmf_df, col, eids, epsilons)
+        res = meth(loss_type, assets, gmf_df, col, epsilons)
         return res
 
     def __toh5__(self):
@@ -266,8 +265,7 @@ class RiskModel(object):
     # ######################## calculation methods ######################### #
 
     def classical_risk(
-            self, loss_type, assets, hazard_curve,
-            col=None, eids=None, eps=None):
+            self, loss_type, assets, hazard_curve, col=None, eps=None):
         """
         :param str loss_type:
             the loss type considered
@@ -276,8 +274,6 @@ class RiskModel(object):
             :class:`openquake.risklib.scientific.Asset` instances
         :param hazard_curve:
             an array of poes
-        :param eids:
-            ignored, here only for API compatibility with other calculators
         :param eps:
             ignored, here only for API compatibility with other calculators
         :returns:
@@ -292,14 +288,12 @@ class RiskModel(object):
             [scientific.classical(vf, imls, hazard_curve[col], lratios)] * n)
         return rescale(lrcurves, values)
 
-    def classical_bcr(self, loss_type, assets, hazard, col,
-                      eids=None, eps=None):
+    def classical_bcr(self, loss_type, assets, hazard, col, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
         :param hazard: a dictionary col -> hazard curve
         :param _eps: dummy parameter, unused
-        :param _eids: dummy parameter, unused
         :returns: a list of triples (eal_orig, eal_retro, bcr_result)
         """
         if loss_type != 'structural':
@@ -333,8 +327,7 @@ class RiskModel(object):
             for i, asset in enumerate(assets)]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
-    def classical_damage(self, loss_type, assets, hazard_curve, col,
-                         eids=None, eps=None):
+    def classical_damage(self, loss_type, assets, hazard_curve, col, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -355,29 +348,33 @@ class RiskModel(object):
         res = numpy.array([a['number'] * damage for a in assets])
         return res
 
-    def event_based_risk(self, loss_type, assets, gmf_df, col, eids, epsilons):
+    def event_based_risk(self, loss_type, assets, gmf_df, col, epsilons):
         """
         :returns: an array of shape (A, E)
         """
         values = get_values(loss_type, assets, self.time_event)
+        eids = gmf_df.eid.to_numpy()
         E = len(eids)
         vf = self.risk_functions[loss_type, 'vulnerability']
         means, covs = vf.interpolate(gmf_df[col].to_numpy())
         losses = numpy.zeros((len(assets), E))
-        for a, eps in enumerate(epsilons):
-            losses[a] = vf.sample(means, covs, eps) * values[a]
+        if len(epsilons):
+            for a, eps in enumerate(epsilons):
+                losses[a] = vf.sample(means, covs, eps[eids]) * values[a]
+        else:  # no CoVs
+            ratios = vf.sample(means, covs, numpy.zeros(len(eids)))
+            for a in range(len(assets)):
+                losses[a] = ratios * values[a]
         return losses
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
-    def scenario_damage(self, loss_type, assets, gmf_df, col,
-                        eids=None, eps=None):
+    def scenario_damage(self, loss_type, assets, gmf_df, col, epsilons=None):
         """
         :param loss_type: the loss type
         :param assets: a list of A assets of the same taxonomy
         :param gmf_df: a DataFrame of GMFs
-        :param eids: an array of E event IDs
-        :param eps: dummy parameter, unused
+        :param epsilons: dummy parameter, unused
         :returns: an array of shape (A, E, D) elements
 
         where N is the number of points, E the number of events
