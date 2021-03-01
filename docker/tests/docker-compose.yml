@@ -6,7 +6,8 @@ networks:
     internal: true
 volumes:
   oqdata:
-#definizione di un yaml template da usare poi negli altri servizi
+
+#yaml template
 x-op-service-default: &service_default
   restart: unless-stopped
   init: true
@@ -40,8 +41,6 @@ services:
 
   worker:
     <<: *service_default
-    # don't use name if want to scale
-    # container_name: engine-worker
     hostname: engine-worker
     image: openquake/engine-worker-zmq:nightly
     networks:
