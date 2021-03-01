@@ -166,6 +166,22 @@ class RiskInput(object):
 
 
 class EpsilonGetter(object):
+    """
+    An object ``EpsilonGetter(master_seed, asset_correlation, E)``
+    has a method ``.get(assets)`` which returns a matrix of (A, E)
+    normally distributed random numbers, being A the number of assets.
+    If the ``asset_correlation`` is 1 the numbers are the same for
+    all assets of the same taxonomy.
+
+    >>> epsgetter = EpsilonGetter(42, 1, 5)
+    >>> assets = numpy.array([(0, 1), (1, 1), (2, 2)],
+    ...     [('ordinal', int), ('taxonomy', int)])
+    >>> epsgetter.get(assets)
+    array([[ 0.79422116, -1.6106067 , -0.76643026, -0.4143733 ,  0.5967326 ],
+           [ 0.79422116, -1.6106067 , -0.76643026, -0.4143733 ,  0.5967326 ],
+           [ 2.0044227 , -0.7924013 ,  1.2191101 ,  1.3231088 ,  1.1357217 ]],
+          dtype=float32)
+    """
     def __init__(self, master_seed, asset_correlation, tot_events):
         self.master_seed = master_seed
         self.asset_correlation = asset_correlation
