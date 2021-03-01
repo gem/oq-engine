@@ -206,6 +206,7 @@ class VulnerabilityFunction(object):
             self.set_distribution(epsilons)
             res = self._distribution.sample(means, covs, None)
         else:
+            self._distribution.rng = rng
             res = self._distribution.sample(means, covs, means * covs)
         return res
 
@@ -836,7 +837,7 @@ class BetaDistribution(Distribution):
     def sample(self, means, _covs, stddevs):
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
-        return numpy.random.beta(alpha, beta)
+        return self.rng.beta(alpha, beta)
 
     def survival(self, loss_ratio, mean, stddev):
         return stats.beta.sf(loss_ratio,

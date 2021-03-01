@@ -188,29 +188,22 @@ class EpsilonGetter(object):
         self.asset_correlation = asset_correlation
         self.tot_events = tot_events
 
+    def gen_rng(self, assets):
+        for a, asset in enumerate(assets):
+            idx = int(asset['taxonomy'] if self.asset_correlation
+                      else asset['ordinal'])
+            philox = numpy.random.Philox(
+                self.master_seed * self.tot_events + idx)
+            yield numpy.random.Generator(philox)
+
     def get(self, assets):
         """
         :param assets: array of assets
         :returns: an array of shape (num_assets, tot_events) and dtype float32
         """
         epsilons = numpy.zeros((len(assets), self.tot_events), F32)
-        if self.asset_correlation:
-            ser = pandas.Series(assets['ordinal'])
-            a = 0
-            for taxid, subser in ser.groupby(assets['taxonomy']):
-                philox = numpy.random.Philox(self.master_seed).advance(
-                    int(taxid) * self.tot_events)
-                eps = numpy.random.Generator(philox).normal(
-                    size=self.tot_events)
-                for _ in subser:
-                    epsilons[a] = eps
-                    a += 1
-        else:
-            for a, asset in enumerate(assets):
-                philox = numpy.random.Philox(self.master_seed).advance(
-                    int(asset['ordinal']) * self.tot_events)
-                epsilons[a] = numpy.random.Generator(philox).normal(
-                    size=self.tot_events)
+        for a, rng in enumerate(self.gen_rng(assets)):
+            epsilons[a] = rng.normal(size=self.tot_events)
         return epsilons
 
 
