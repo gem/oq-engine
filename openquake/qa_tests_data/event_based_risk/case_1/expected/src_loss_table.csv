@@ -1,8 +1,8 @@
-#,,"generated_by='OpenQuake engine 3.11.0-git6f08fb75b7', start_date='2021-02-04T05:32:27', checksum=3100364614, investigation_time=50.0, risk_investigation_time=50.0"
+#,,"generated_by='OpenQuake engine 3.12.0-git9e2d8f2fb3', start_date='2021-03-01T01:49:26', checksum=4077124359, investigation_time=50.0, risk_investigation_time=50.0"
 source,loss_type,loss_value
-1,nonstructural,1.01663E+03
-1,structural,2.54900E+03
-2,nonstructural,4.15930E+02
-2,structural,1.00275E+03
-3,nonstructural,3.19911E+03
-3,structural,1.02066E+04
+1,nonstructural,1.01676E+03
+1,structural,2.54907E+03
+2,nonstructural,4.15944E+02
+2,structural,1.00276E+03
+3,nonstructural,3.19917E+03
+3,structural,1.02067E+04
