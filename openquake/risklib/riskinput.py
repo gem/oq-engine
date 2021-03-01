@@ -25,10 +25,10 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def get_assets_by_taxo(assets, epsgetter):
+def get_assets_by_taxo(assets, epsgetter=None):
     """
     :param assets: an array of assets
-    :param epsgetter: EpsilonGetter instance
+    :param epsgetter: EpsilonGetter instance (None in scenario_damage)
     :returns: assets_by_taxo with attributes eps and idxs
     """
     assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
@@ -36,8 +36,9 @@ def get_assets_by_taxo(assets, epsgetter):
     assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
         a['ordinal'] for a in assets_by_taxo.values()]))
     assets_by_taxo.eps = {}
-    for taxo, assets in assets_by_taxo.items():
-        assets_by_taxo.eps[taxo] = epsgetter.get(assets)
+    if epsgetter:
+        for taxo, assets in assets_by_taxo.items():
+            assets_by_taxo.eps[taxo] = epsgetter.get(assets)
     return assets_by_taxo
 
 
@@ -133,7 +134,7 @@ class RiskInput(object):
             aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
 
-    def gen_outputs(self, crmodel, monitor, epsgetter, haz=None):
+    def gen_outputs(self, crmodel, monitor, epsgetter=None, haz=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield one output per realization.
@@ -176,16 +177,19 @@ class EpsilonGetter(object):
         :returns: an array of shape (num_assets, tot_events) and dtype float32
         """
         epsilons = numpy.zeros((len(assets), self.tot_events), F32)
-        rng = numpy.random.Generator(numpy.random.Philox(self.master_seed))
         if self.asset_correlation:
             ser = pandas.Series(assets['ordinal'])
             for taxid, aids in ser.groupby(assets['taxonomy']):
+                rng = numpy.random.Generator(
+                    numpy.random.Philox(self.master_seed))
                 rng.bit_generator.advance(taxid * self.tot_events)
                 eps = rng.normal(size=self.tot_events)
                 for a in aids:
                     epsilons[a] = eps
         else:
             for a, asset in enumerate(assets):
+                rng = numpy.random.Generator(
+                    numpy.random.Philox(self.master_seed))
                 rng.bit_generator.advance(
                     int(asset['ordinal']) * self.tot_events)
                 epsilons[a] = rng.normal(size=self.tot_events)

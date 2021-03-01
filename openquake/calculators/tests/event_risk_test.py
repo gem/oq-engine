@@ -54,7 +54,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
         self.assertEqual(len(alt), 10)
         totloss = alt.structural.sum()
-        val = 60.0885
+        val = 60.1972
         aae(totloss / 1E6, [val], decimal=4)
 
         # avg_losses-rlzs has shape (A, R, LI)
@@ -66,7 +66,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
         self.assertEqual(len(alt), 8)
         totloss = alt.structural.sum()
-        aae(totloss, 15840.627, decimal=2)
+        aae(totloss, 15328.052, decimal=2)
 
     def test_case_4(self):
         # a simple test with 1 asset and two source models
