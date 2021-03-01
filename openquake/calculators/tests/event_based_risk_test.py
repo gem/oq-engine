@@ -261,12 +261,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   delta=1E-5)
 
     def test_case_5(self):
-        # taxonomy mapping
+        # taxonomy mapping, the numbers are different in Ubuntu 20 vs 18
         self.run_calc(case_5.__file__, 'job_eb.ini')
         fnames = export(('agg_curves-rlzs', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
-                                  fname, delta=1E-5)
+                                  fname, delta=5E-4)
 
     def test_occupants(self):
         self.run_calc(occupants.__file__, 'job.ini')
