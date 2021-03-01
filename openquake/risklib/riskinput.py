@@ -87,7 +87,7 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
                 arrays, weights=weights, axis=0)
             losses.append(res)
         arr = numpy.concatenate(losses)  # losses per each taxonomy
-        dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
+        dic[lt] = arr[assets_by_taxo.idxs]  # reordered by ordinal
     return hdf5.ArrayWrapper((), dic)
 
 
