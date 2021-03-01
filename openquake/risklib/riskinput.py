@@ -173,7 +173,8 @@ class EpsilonGetter(object):
     If the ``asset_correlation`` is 1 the numbers are the same for
     all assets of the same taxonomy.
 
-    >>> epsgetter = EpsilonGetter(42, 1, 5)
+    >>> epsgetter = EpsilonGetter(
+    ...     master_seed=42, asset_correlation=1, tot_events=5)
     >>> assets = numpy.array([(0, 1), (1, 1), (2, 2)],
     ...     [('ordinal', int), ('taxonomy', int)])
     >>> epsgetter.get(assets)
