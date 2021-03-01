@@ -342,13 +342,14 @@ class EventBasedCalculator(base.HazardCalculator):
         return acc
 
     def save_avg_gmf(self):
+        """
+        Compute and save avg_gmf, unless there are too many GMFs
+        """
         size = self.datastore.getsize('gmf_data')
         logging.info(f'Stored {humansize(size)} of GMFs')
-        avail = psutil.virtual_memory().available
-        if avail < size:
+        if size > 1024**3:
             logging.warning(
-                f'There is not enough free RAM ({humansize(avail)}) to read '
-                f'the GMFs, not computing avg_gmf')
+                'There are more than 1 GB of GMFs, not computing avg_gmf')
             return numpy.unique(self.datastore['gmf_data/eid'][:])
 
         rlzs = self.datastore['events']['rlz_id']
