@@ -207,11 +207,13 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def execute(self):
         self.datastore.flush()  # just to be sure
         oq = self.oqparam
-        epsgetter = EpsilonGetter(
-            oq.master_seed, int(oq.asset_correlation), self.E)
-        self.set_param(hdf5path=self.datastore.filename, epsgetter=epsgetter,
-                       ignore_covs=oq.ignore_covs or not self.crmodel.covs
-                       or 'LN' not in self.crmodel.distributions)
+        if (oq.ignore_covs or not self.crmodel.covs or
+                'LN' not in self.crmodel.distributions):
+            epsgetter = None
+        else:
+            epsgetter = EpsilonGetter(
+                oq.master_seed, int(oq.asset_correlation), self.E)
+        self.set_param(hdf5path=self.datastore.filename, epsgetter=epsgetter)
         srcfilter = self.src_filter()
         logging.info(
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))

@@ -181,20 +181,19 @@ class EpsilonGetter(object):
             ser = pandas.Series(assets['ordinal'])
             a = 0
             for taxid, subser in ser.groupby(assets['taxonomy']):
-                rng = numpy.random.Generator(
-                    numpy.random.Philox(self.master_seed))
-                rng.bit_generator.advance(taxid * self.tot_events)
-                eps = rng.normal(size=self.tot_events)
+                philox = numpy.random.Philox(self.master_seed).advance(
+                    int(taxid) * self.tot_events)
+                eps = numpy.random.Generator(philox).normal(
+                    size=self.tot_events)
                 for _ in subser:
                     epsilons[a] = eps
                     a += 1
         else:
             for a, asset in enumerate(assets):
-                rng = numpy.random.Generator(
-                    numpy.random.Philox(self.master_seed))
-                rng.bit_generator.advance(
+                philox = numpy.random.Philox(self.master_seed).advance(
                     int(asset['ordinal']) * self.tot_events)
-                epsilons[a] = rng.normal(size=self.tot_events)
+                epsilons[a] = numpy.random.Generator(philox).normal(
+                    size=self.tot_events)
         return epsilons
 
 
