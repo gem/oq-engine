@@ -18,6 +18,7 @@
 
 import logging
 import numpy
+import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.general import group_array, AccumDict
@@ -171,6 +172,38 @@ class RiskInput(object):
             self.__class__.__name__, sid, len(self.aids))
 
 
+class EpsilonGetter(object):
+    def __init__(self, master_seed, asset_correlation, tot_events):
+        self.master_seed = master_seed
+        self.asset_correlation = asset_correlation
+        self.tot_events = tot_events
+
+    def get(self, assets):
+        """
+        :param assets: array of assets
+        :returns: an array of shape (num_assets, tot_events) and dtype float32
+        """
+        epsilons = numpy.zeros((len(assets), self.tot_events), F32)
+        if self.asset_correlation:
+            ser = pandas.Series(assets['ordinal'])
+            a = 0
+            for taxid, subser in ser.groupby(assets['taxonomy']):
+                rng = numpy.random.Generator(
+                    numpy.random.Philox(self.master_seed))
+                rng.bit_generator.advance(taxid * self.tot_events)
+                eps = rng.normal(size=self.tot_events)
+                for _ in subser:
+                    epsilons[a] = eps
+                    a += 1
+        else:
+            for a, asset in enumerate(assets):
+                rng = numpy.random.Generator(
+                    numpy.random.Philox(self.master_seed))
+                rng.bit_generator.advance(asset['ordinal'] * self.tot_events)
+                epsilons[a] = rng.normal(size=self.tot_events)
+        return epsilons
+
+
 def cache_epsilons(dstore, oq, assetcol, crmodel, E):
     """
     Do nothing if there are no coefficients of variation of ignore_covs is
@@ -179,20 +212,11 @@ def cache_epsilons(dstore, oq, assetcol, crmodel, E):
     """
     if oq.ignore_covs or not crmodel.covs or 'LN' not in crmodel.distributions:
         return
-    A = len(assetcol)
     logging.info('Storing the epsilon matrix in %s', dstore.tempname)
-    if oq.asset_correlation == '1':
-        numpy.random.seed(oq.master_seed)
-        eps = numpy.array([numpy.random.normal(size=E)] * A)
-    else:
-        seeds = oq.master_seed + numpy.arange(E)
-        eps = numpy.zeros((A, E), F32)
-        for i, seed in enumerate(seeds):
-            numpy.random.seed(seed)
-            eps[:, i] = numpy.random.normal(size=A)
+    egetter = EpsilonGetter(oq.master_seed, int(oq.asset_correlation), E)
     with hdf5.File(dstore.tempname, 'w') as cache:
         cache['sitecol'] = dstore['sitecol']
-        cache['epsilon_matrix'] = eps
+        cache['epsilon_matrix'] = egetter.get(assetcol.array)
     return dstore.tempname
 
 

@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Changed the algorithm used to generate the epsilons to avoid storing the
+    epsilon matrix
+
 python3-oq-engine (3.11.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
