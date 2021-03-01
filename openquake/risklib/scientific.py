@@ -860,9 +860,14 @@ class DiscreteDistribution(Distribution):
         ret = numpy.zeros(probs.shape[1])
         r = numpy.arange(len(loss_ratios))
         for i in range(probs.shape[1]):
+            if probs[:, i].sum() == 0:  # oq-risk-tests/case_1g
+                # probs (i.e. means) are zeros for events
+                # producing a loss below the threshold
+                continue
             random.seed(self.seed + i)
             # the seed is set inside the loop to avoid block-size dependency
-            pmf = stats.rv_discrete(name='pmf', values=(r, probs[:, i])).rvs()
+            pmf = stats.rv_discrete(
+                name='pmf', values=(r, probs[:, i])).rvs()
             ret[i] = loss_ratios[pmf]
         return ret
 
