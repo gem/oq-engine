@@ -179,13 +179,15 @@ class EpsilonGetter(object):
         epsilons = numpy.zeros((len(assets), self.tot_events), F32)
         if self.asset_correlation:
             ser = pandas.Series(assets['ordinal'])
-            for taxid, aids in ser.groupby(assets['taxonomy']):
+            a = 0
+            for taxid, subser in ser.groupby(assets['taxonomy']):
                 rng = numpy.random.Generator(
                     numpy.random.Philox(self.master_seed))
                 rng.bit_generator.advance(taxid * self.tot_events)
                 eps = rng.normal(size=self.tot_events)
-                for a in aids:
+                for _ in subser:
                     epsilons[a] = eps
+                    a += 1
         else:
             for a, asset in enumerate(assets):
                 rng = numpy.random.Generator(
