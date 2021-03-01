@@ -69,7 +69,7 @@ def event_based_risk(riskinputs, param, monitor):
     result = dict(losses_by_asset=[], alt=alt)
     sec_sims = param['secondary_simulations'].items()
     for ri in riskinputs:
-        for out in ri.gen_outputs(crmodel, monitor, param['tempname']):
+        for out in ri.gen_outputs(crmodel, monitor, param['epsgetter']):
             if sec_sims:
                 run_sec_sims(out, crmodel.loss_types, sec_sims,
                              param['master_seed'])
@@ -122,8 +122,10 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         self.assetcol = self.datastore['assetcol']
         self.riskinputs = self.build_riskinputs('gmf')
-        self.param['tempname'] = riskinput.cache_epsilons(
-            self.datastore, oq, self.assetcol, self.crmodel, self.E)
+        self.param['epsgetter'] = riskinput.EpsilonGetter(
+            oq.master_seed, int(oq.asset_correlation), self.E)
+        self.param['ignore_covs'] = (oq.ignore_covs or not self.crmodel.covs
+                                     or 'LN' not in self.crmodel.distributions)
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['secondary_simulations'] = oq.secondary_simulations
         self.param['master_seed'] = oq.master_seed

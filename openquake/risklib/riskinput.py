@@ -16,10 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import numpy
 import pandas
-
 from openquake.baselib import hdf5
 from openquake.baselib.general import group_array, AccumDict
 
@@ -27,10 +25,10 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def get_assets_by_taxo(assets, tempname=None):
+def get_assets_by_taxo(assets, epsgetter):
     """
     :param assets: an array of assets
-    :param tempname: hdf5 file where the epsilons are (or None)
+    :param epsgetter: EpsilonGetter instance
     :returns: assets_by_taxo with attributes eps and idxs
     """
     assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
@@ -38,14 +36,8 @@ def get_assets_by_taxo(assets, tempname=None):
     assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
         a['ordinal'] for a in assets_by_taxo.values()]))
     assets_by_taxo.eps = {}
-    if tempname is None:  # no epsilons
-        return assets_by_taxo
-    # otherwise read the epsilons and group them by taxonomy
-    with hdf5.File(tempname, 'r') as h5:
-        dset = h5['epsilon_matrix']
-        for taxo, assets in assets_by_taxo.items():
-            lst = [dset[aid] for aid in assets['ordinal']]
-            assets_by_taxo.eps[taxo] = numpy.array(lst)
+    for taxo, assets in assets_by_taxo.items():
+        assets_by_taxo.eps[taxo] = epsgetter.get(assets)
     return assets_by_taxo
 
 
@@ -141,7 +133,7 @@ class RiskInput(object):
             aids.append(asset['ordinal'])
         self.aids = numpy.array(aids, numpy.uint32)
 
-    def gen_outputs(self, crmodel, monitor, tempname=None, haz=None):
+    def gen_outputs(self, crmodel, monitor, epsgetter, haz=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield one output per realization.
@@ -159,7 +151,7 @@ class RiskInput(object):
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
-            assets_by_taxo = get_assets_by_taxo(self.assets, tempname)
+            assets_by_taxo = get_assets_by_taxo(self.assets, epsgetter)
             if hasattr(haz, 'groupby'):  # DataFrame
                 yield get_output_gmf(crmodel, assets_by_taxo, haz)
             else:  # list of probability curves
@@ -194,25 +186,10 @@ class EpsilonGetter(object):
                     epsilons[a] = eps
         else:
             for a, asset in enumerate(assets):
-                rng.bit_generator.advance(asset['ordinal'] * self.tot_events)
+                rng.bit_generator.advance(
+                    int(asset['ordinal']) * self.tot_events)
                 epsilons[a] = rng.normal(size=self.tot_events)
         return epsilons
-
-
-def cache_epsilons(dstore, oq, assetcol, crmodel, E):
-    """
-    Do nothing if there are no coefficients of variation of ignore_covs is
-    set. Otherwise, generate an epsilon matrix of shape (A, E) and save it
-    in the cache file, by returning the path to it.
-    """
-    if oq.ignore_covs or not crmodel.covs or 'LN' not in crmodel.distributions:
-        return
-    logging.info('Storing the epsilon matrix in %s', dstore.tempname)
-    egetter = EpsilonGetter(oq.master_seed, int(oq.asset_correlation), E)
-    with hdf5.File(dstore.tempname, 'w') as cache:
-        cache['sitecol'] = dstore['sitecol']
-        cache['epsilon_matrix'] = egetter.get(assetcol.array)
-    return dstore.tempname
 
 
 def str2rsi(key):

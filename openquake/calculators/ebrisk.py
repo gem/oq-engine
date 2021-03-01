@@ -27,7 +27,7 @@ from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
 from openquake.risklib.riskinput import (
-    cache_epsilons, get_assets_by_taxo, get_output_gmf)
+    EpsilonGetter, get_assets_by_taxo, get_output_gmf)
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -63,7 +63,6 @@ def calc_risk(df, param, monitor):
         weights = dstore['weights'][()]
     acc = dict(events_per_sid=numpy.zeros(param['N'], U32))
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
-    tempname = param['tempname']
     aggby = param['aggregate_by']
     mal = param['minimum_asset_loss']
     haz_by_sid = {s: d for s, d in df.groupby('sid')}
@@ -78,8 +77,9 @@ def calc_risk(df, param, monitor):
             acc['events_per_sid'][sid] += len(haz)
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
         with mon_risk:
+            #! this is converting the asset ordinal from U32 to U64
             assets = asset_df.to_records()  # fast
-            assets_by_taxo = get_assets_by_taxo(assets, tempname)  # fast
+            assets_by_taxo = get_assets_by_taxo(assets, param['epsgetter'])
             out = get_output_gmf(crmodel, assets_by_taxo, haz)  # slow
         with mon_agg:
             alt.aggregate(out, mal, aggby)
@@ -207,10 +207,11 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def execute(self):
         self.datastore.flush()  # just to be sure
         oq = self.oqparam
-        self.set_param(
-            hdf5path=self.datastore.filename,
-            tempname=cache_epsilons(
-                self.datastore, oq, self.assetcol, self.crmodel, self.E))
+        epsgetter = EpsilonGetter(
+            oq.master_seed, int(oq.asset_correlation), self.E)
+        self.set_param(hdf5path=self.datastore.filename, epsgetter=epsgetter,
+                       ignore_covs=oq.ignore_covs or not self.crmodel.covs
+                       or 'LN' not in self.crmodel.distributions)
         srcfilter = self.src_filter()
         logging.info(
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
