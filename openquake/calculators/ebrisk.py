@@ -77,7 +77,7 @@ def calc_risk(df, param, monitor):
             acc['events_per_sid'][sid] += len(haz)
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
         with mon_risk:
-            #! this is converting the asset ordinal from U32 to U64
+            # NB: this is converting the asset ordinal from U32 to U64
             assets = asset_df.to_records()  # fast
             assets_by_taxo = get_assets_by_taxo(assets, param['epsgetter'])
             out = get_output_gmf(crmodel, assets_by_taxo, haz)  # slow
@@ -210,6 +210,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         if (oq.ignore_covs or not self.crmodel.covs or
                 'LN' not in self.crmodel.distributions):
             epsgetter = None
+            logging.info('Ignoring epsilons')
         else:
             epsgetter = EpsilonGetter(
                 oq.master_seed, int(oq.asset_correlation), self.E)

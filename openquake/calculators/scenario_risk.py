@@ -125,6 +125,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         if (oq.ignore_covs or not self.crmodel.covs or
                 'LN' not in self.crmodel.distributions):
             self.param['epsgetter'] = None
+            logging.info('Ignoring epsilons')
         else:
             self.param['epsgetter'] = riskinput.EpsilonGetter(
                 oq.master_seed, int(oq.asset_correlation), self.E)
