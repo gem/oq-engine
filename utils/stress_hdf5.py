@@ -15,7 +15,7 @@ def store(h5, num_gb):
         h5.flush()
         print(f'Stored {i+1} GB in {int(time.time()-t0)} seconds')
     speed = int(1024 * num_gb / (time.time() - t0))
-    print(f'{speed} MB/s')
+    print('speed=%d MB/s' % speed)
 
 
 if __name__ == '__main__':
