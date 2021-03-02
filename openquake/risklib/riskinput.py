@@ -63,7 +63,7 @@ def get_output_gmf(crmodel, assets_by_taxo, haz, epsgetter):
                loss_types=crmodel.loss_types, haz=haz, rlzs=haz.rlz.to_numpy())
     items = []
     for taxonomy, assets_ in assets_by_taxo.items():
-        epsilons = epsgetter.get(assets_) if epsgetter else ()
+        epsilons = epsgetter.get(assets_, 0, epsgetter.tot_events) if epsgetter else ()
         items.append((taxonomy, assets_, epsilons))
     for lt in crmodel.loss_types:
         losses = []
@@ -186,22 +186,23 @@ class EpsilonGetter(object):
         self.asset_correlation = asset_correlation
         self.tot_events = tot_events
 
-    def gen_rng(self, assets):
+    def gen_rng(self, assets, e0=0):
         for a, asset in enumerate(assets):
             idx = int(asset['taxonomy'] if self.asset_correlation
                       else asset['ordinal'])
             philox = numpy.random.Philox(
                 self.master_seed * self.tot_events + idx)
-            yield numpy.random.Generator(philox)
+            yield numpy.random.Generator(philox.advance(e0))
 
-    def get(self, assets):
+    def get(self, assets, e0, e1):
         """
         :param assets: array of assets
         :returns: an array of shape (num_assets, tot_events) and dtype float32
         """
-        epsilons = numpy.zeros((len(assets), self.tot_events), F32)
-        for a, rng in enumerate(self.gen_rng(assets)):
-            epsilons[a] = rng.normal(size=self.tot_events)
+        ne = e1 - e0
+        epsilons = numpy.zeros((len(assets), ne), F32)
+        for a, rng in enumerate(self.gen_rng(assets, e0)):
+            epsilons[a] = rng.normal(size=ne)
         return epsilons
 
 

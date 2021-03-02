@@ -744,6 +744,7 @@ class EBRupture(object):
         """
         :returns: an array of event IDs
         """
+        1/0
         return numpy.arange(self.n_occ, dtype=U32)
 
     def export(self, events_by_ses):
