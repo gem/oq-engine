@@ -186,6 +186,10 @@ class EpsilonGetter(object):
         self.num_events = num_events
         self.tot_events = tot_events
 
+    def full(self):
+        return self.__class__(self.master_seed, self.asset_correlation,
+                              0, self.tot_events, self.tot_events)
+
     def __bool__(self):
         return bool(self.tot_events)
 
