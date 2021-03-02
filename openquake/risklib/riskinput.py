@@ -196,12 +196,18 @@ class EpsilonGetter(object):
         return bool(self.tot_events)
 
     def gen_rng(self, assets):
+        ss = numpy.random.SeedSequence(self.master_seed)
+        if self.asset_correlation:
+            taxids = numpy.unique(assets['taxonomy'])
+            seeds = dict(zip(taxids, ss.spawn(len(taxids))))
+        else:
+            seeds = ss.spawn(len(assets))
         for a, asset in enumerate(assets):
-            idx = int(asset['taxonomy'] if self.asset_correlation
-                      else asset['ordinal'])
-            philox = numpy.random.Philox(
-                self.master_seed * self.tot_events + idx)
-            yield numpy.random.Generator(philox.advance(self.e0))
+            seed = (seeds[asset['taxonomy']] if self.asset_correlation
+                    else seeds[a])
+            rng = numpy.random.default_rng(seed)
+            rng.bit_generator.advance(self.e0)
+            yield rng
 
     def get(self, assets):
         """

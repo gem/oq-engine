@@ -62,7 +62,7 @@ def calc_risk(df, param, monitor):
         crmodel = monitor.read('crmodel')
         weights = dstore['weights'][()]
     epsgetter = EpsilonGetter(
-        param['master_seed'], param['asset_correlation'], 0, param['E'],
+        param['master_seed'], param['asset_correlation'], df.e0, df.num_events,
         0 if param['ignore_covs'] else param['E'])
     acc = dict(events_per_sid=numpy.zeros(param['N'], U32))
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no

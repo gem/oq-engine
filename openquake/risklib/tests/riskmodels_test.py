@@ -25,10 +25,12 @@ import pandas
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.risklib import riskmodels, nrml_examples
+from openquake.risklib import riskinput, riskmodels, nrml_examples
 from openquake.qa_tests_data.scenario_damage import case_4b
 
 FF_DIR = os.path.dirname(case_4b.__file__)
+
+aac = numpy.testing.assert_allclose
 
 
 class ParseCompositeRiskModelTestCase(unittest.TestCase):
@@ -343,11 +345,30 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         eids2 = numpy.array([2, 3, 4])
         gmvs1 = numpy.array([.1, .2])
         gmvs2 = numpy.array([.3, .4, .5])
-        eps1 = numpy.array([[.01, .02], [.001, .002]])
-        eps2 = numpy.array([[.03, .04, .05], [.003, .004, .005]])
         gmf1_df = pandas.DataFrame(dict(gmv_0=gmvs1, eid=eids1))
         gmf2_df = pandas.DataFrame(dict(gmv_0=gmvs2, eid=eids2))
         losses1 = rm('structural', assets, gmf1_df, 'gmv_0', epsilons)
         losses2 = rm('structural', assets, gmf2_df, 'gmv_0', epsilons)
         numpy.testing.assert_allclose(losses1, self.expected_losses[:, :2])
         numpy.testing.assert_allclose(losses2, self.expected_losses[:, 2:])
+
+    def test_split_epsilons(self):
+        eps = make_rng(42).normal(size=10)
+        eps0 = make_rng(42).normal(size=5)
+        eps1 = make_rng(42, 5).normal(size=5)
+        aac(eps, numpy.hstack([eps0, eps1]))
+
+        assets = numpy.array([(0, 1), (1, 1), (2, 1)],
+                             [('ordinal', int), ('taxonomy', int)])
+        egetter = riskinput.EpsilonGetter(42, 0, 0, 10, 10)
+        egetter0 = riskinput.EpsilonGetter(42, 0, 0, 5, 10)
+        egetter1 = riskinput.EpsilonGetter(42, 0, 5, 5, 10)
+        eps = egetter.get(assets)  # shape (3, 10)
+        eps0 = egetter0.get(assets)  # shape (3, 5)
+        eps1 = egetter1.get(assets)  # shape (3, 5)
+        aac(eps, numpy.hstack([eps0, eps1]))
+
+
+def make_rng(seed, nsteps=0):
+    bitgen = numpy.random.PCG64(42).advance(nsteps)
+    return numpy.random.Generator(bitgen)
