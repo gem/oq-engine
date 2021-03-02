@@ -122,6 +122,13 @@ class SimpleFaultSource(ParametricSeismicSource):
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
 
+    def get_surface(self):
+        """ Returns the surface of the fault i.e. and instance of
+            `class`:openquake.hazardlib.geo.srurface.SimpleFaultSurface"""
+        return SimpleFaultSurface.from_fault_data(self.fault_trace,
+            self.upper_seismogenic_depth, self.lower_seismogenic_depth,
+            self.dip, self.rupture_mesh_spacing)
+
     def iter_ruptures(self, **kwargs):
         """
         See :meth:
