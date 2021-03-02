@@ -359,10 +359,11 @@ class RiskModel(object):
         means, covs = vf.interpolate(gmf_df[col].to_numpy())
         losses = numpy.zeros((len(assets), E))
         if epsgetter:
-            for a, eps in enumerate(epsgetter.get(assets, eids)):
+            eps = epsgetter.get(assets, eids)  # shape (A, E)
+            for a in range(len(assets)):
                 if epsgetter.e0 and a == 0:
                     import pdb; pdb.set_trace()
-                losses[a] = vf.sample(means, covs, eps) * values[a]
+                losses[a] = vf.sample(means, covs, eps[a]) * values[a]
         else:  # no CoVs
             ratios = vf.sample(means, covs, numpy.zeros(len(eids)))
             for a in range(len(assets)):
