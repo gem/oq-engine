@@ -208,15 +208,18 @@ class EpsilonGetter(object):
             rng.bit_generator.advance(self.e0)
             yield rng
 
-    def get(self, assets):
+    def get(self, assets, eids=None):
         """
-        :param assets: array of assets
+        :param assets: an array of assets
+        :parame eids: an array of events in the range e0 <= e < e0 + num_events
         :returns: an array of shape (num_assets, num_events) and dtype float32
         """
         epsilons = numpy.zeros((len(assets), self.num_events), F32)
         for a, rng in enumerate(self.gen_rng(assets)):
             epsilons[a] = rng.normal(size=self.num_events)
-        return epsilons
+        if eids is None:
+            return epsilons
+        return epsilons[:, eids - self.e0]
 
 
 def str2rsi(key):

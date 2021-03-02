@@ -359,8 +359,7 @@ class RiskModel(object):
         means, covs = vf.interpolate(gmf_df[col].to_numpy())
         losses = numpy.zeros((len(assets), E))
         if epsgetter:
-            for a, epsilons in enumerate(epsgetter.get(assets)):
-                eps = epsilons[eids - epsgetter.e0]
+            for a, eps in enumerate(epsgetter.get(assets, eids)):
                 if epsgetter.e0 and a == 0:
                     import pdb; pdb.set_trace()
                 losses[a] = vf.sample(means, covs, eps) * values[a]
