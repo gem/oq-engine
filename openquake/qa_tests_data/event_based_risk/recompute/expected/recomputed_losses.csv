@@ -1,8 +1,8 @@
-#,,,,"generated_by='OpenQuake engine 3.12.0-git88959c193e', start_date='2021-03-02T04:05:13', checksum=147663202, investigation_time=1000.0, risk_investigation_time=1.0"
+#,,,,"generated_by='OpenQuake engine 3.12.0-git314d71d7d1', start_date='2021-03-02T07:36:48', checksum=147663202, investigation_time=1000.0, risk_investigation_time=1.0"
 loss_type,NAME_1,loss_value,exposed_value,loss_ratio
-structural,West,4.05513E+04,1.05780E+08,3.83357E-04
-structural,Far-Western,2.77446E+04,3.58571E+07,7.73756E-04
-structural,Mid-Western,8.07109E+04,1.02071E+08,7.90731E-04
-structural,East,7.01515E+04,1.32973E+08,5.27563E-04
-structural,Central,1.20464E+06,1.21048E+09,9.95179E-04
-structural,*total*,1.42380E+06,1.58716E+09,8.97075E-04
+structural,West,4.21818E+04,1.05780E+08,3.98771E-04
+structural,Far-Western,2.22041E+04,3.58571E+07,6.19238E-04
+structural,Mid-Western,6.71605E+04,1.02071E+08,6.57976E-04
+structural,East,6.32694E+04,1.32973E+08,4.75807E-04
+structural,Central,1.32195E+06,1.21048E+09,1.09209E-03
+structural,*total*,1.51677E+06,1.58716E+09,9.55652E-04

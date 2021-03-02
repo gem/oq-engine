@@ -1,20 +1,20 @@
-#,,,,,"generated_by='OpenQuake engine 3.12.0-git910c83f525', start_date='2021-03-02T06:41:20', checksum=1896526101, risk_investigation_time=1.0, kind='agg_curves-rlz-000'"
+#,,,,,"generated_by='OpenQuake engine 3.12.0-git314d71d7d1', start_date='2021-03-02T07:36:16', checksum=1896526101, risk_investigation_time=1.0, kind='agg_curves-rlz-000'"
 return_period,loss_value,loss_type,NAME_1,loss_ratio,annual_frequency_of_exceedence
-50,9.52289E+02,structural,Region A,4.76144E-02,2.00000E-02
-100,2.25421E+03,structural,Region A,1.12711E-01,1.00000E-02
-200,3.31143E+03,structural,Region A,1.65571E-01,5.00000E-03
-500,8.46699E+03,structural,Region A,4.23350E-01,2.00000E-03
-1000,1.30978E+04,structural,Region A,6.54890E-01,1.00000E-03
-2000,1.63312E+04,structural,Region A,8.16561E-01,5.00000E-04
-50,1.06780E+03,structural,RegionB,2.13560E-02,2.00000E-02
-100,1.70108E+03,structural,RegionB,3.40216E-02,1.00000E-02
-200,2.88181E+03,structural,RegionB,5.76363E-02,5.00000E-03
-500,5.55727E+03,structural,RegionB,1.11145E-01,2.00000E-03
-1000,6.66961E+03,structural,RegionB,1.33392E-01,1.00000E-03
-2000,8.86139E+03,structural,RegionB,1.77228E-01,5.00000E-04
-50,2.21383E+03,structural,*total*,3.16262E-02,2.00000E-02
-100,3.95984E+03,structural,*total*,5.65692E-02,1.00000E-02
-200,6.26582E+03,structural,*total*,8.95117E-02,5.00000E-03
-500,1.40243E+04,structural,*total*,2.00347E-01,2.00000E-03
-1000,1.89202E+04,structural,*total*,2.70288E-01,1.00000E-03
-2000,2.30008E+04,structural,*total*,3.28583E-01,5.00000E-04
+50,9.74833E+02,structural,Region A,4.87417E-02,2.00000E-02
+100,1.94691E+03,structural,Region A,9.73453E-02,1.00000E-02
+200,3.57851E+03,structural,Region A,1.78926E-01,5.00000E-03
+500,7.90019E+03,structural,Region A,3.95010E-01,2.00000E-03
+1000,1.20485E+04,structural,Region A,6.02425E-01,1.00000E-03
+2000,2.15759E+04,structural,Region A,1.07880E+00,5.00000E-04
+50,1.01747E+03,structural,RegionB,2.03495E-02,2.00000E-02
+100,1.72083E+03,structural,RegionB,3.44166E-02,1.00000E-02
+200,2.91525E+03,structural,RegionB,5.83050E-02,5.00000E-03
+500,4.60745E+03,structural,RegionB,9.21490E-02,2.00000E-03
+1000,9.88303E+03,structural,RegionB,1.97661E-01,1.00000E-03
+2000,9.94210E+03,structural,RegionB,1.98842E-01,5.00000E-04
+50,2.11928E+03,structural,*total*,3.02755E-02,2.00000E-02
+100,3.73821E+03,structural,*total*,5.34029E-02,1.00000E-02
+200,6.07536E+03,structural,*total*,8.67909E-02,5.00000E-03
+500,1.25197E+04,structural,*total*,1.78853E-01,2.00000E-03
+1000,2.19315E+04,structural,*total*,3.13308E-01,1.00000E-03
+2000,3.15180E+04,structural,*total*,4.50257E-01,5.00000E-04
