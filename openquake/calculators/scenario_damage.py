@@ -18,10 +18,10 @@
 
 import logging
 import numpy
-import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.stats import set_rlzs_stats, avg_std
+from openquake.risklib import riskinput
 from openquake.calculators import base, views
 
 U16 = numpy.uint16
@@ -105,7 +105,7 @@ def scenario_damage(riskinputs, param, monitor):
     for ri in riskinputs:
         # here instead F32 floats are ok
         R = ri.hazard_getter.num_rlzs
-        for out in ri.gen_outputs(crmodel, monitor):
+        for out in ri.gen_outputs(crmodel, monitor, param['epsgetter']):
             for r in range(R):
                 ne = num_events[r]  # total number of events
                 ok = out.rlzs == r  # events beloging to realization r
@@ -177,6 +177,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.param['master_seed'] = oq.master_seed
         self.param['num_events'] = numpy.bincount(  # events by rlz
             self.datastore['events']['rlz_id'])
+        self.param['epsgetter'] = riskinput.EpsilonGetter(
+            oq.master_seed, oq.asset_correlation, 0, self.E, 0)
         self.datastore.create_dframe(
             'dd_data', self.param['asset_damage_dt'], 'gzip')
         self.riskinputs = self.build_riskinputs('gmf')

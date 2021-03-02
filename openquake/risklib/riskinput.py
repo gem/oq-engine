@@ -63,8 +63,10 @@ def get_output_gmf(crmodel, assets_by_taxo, haz, epsgetter):
                loss_types=crmodel.loss_types, haz=haz, rlzs=haz.rlz.to_numpy())
     items = []
     for taxonomy, assets_ in assets_by_taxo.items():
-        epsilons = epsgetter.get(assets_, 0, epsgetter.tot_events) if epsgetter else ()
+        epsilons = epsgetter.get(assets_) if epsgetter else ()
         items.append((taxonomy, assets_, epsilons))
+    haz.e0 = epsgetter.e0
+    haz.num_events = epsgetter.num_events
     for lt in crmodel.loss_types:
         losses = []
         for taxonomy, assets_, epsilons in items:
@@ -172,7 +174,8 @@ class EpsilonGetter(object):
     all assets of the same taxonomy.
 
     >>> epsgetter = EpsilonGetter(
-    ...     master_seed=42, asset_correlation=1, tot_events=5)
+    ...     master_seed=42, asset_correlation=1,
+    ...     e0=0, num_events=5, tot_events=5)
     >>> assets = numpy.array([(0, 1), (1, 1), (2, 2)],
     ...     [('ordinal', int), ('taxonomy', int)])
     >>> epsgetter.get(assets)
@@ -181,28 +184,33 @@ class EpsilonGetter(object):
            [ 2.0044227 , -0.7924013 ,  1.2191101 ,  1.3231088 ,  1.1357217 ]],
           dtype=float32)
     """
-    def __init__(self, master_seed, asset_correlation, tot_events):
+    def __init__(self, master_seed, asset_correlation, e0, num_events,
+                 tot_events):
         self.master_seed = master_seed
         self.asset_correlation = asset_correlation
+        self.e0 = e0
+        self.num_events = num_events
         self.tot_events = tot_events
 
-    def gen_rng(self, assets, e0=0):
+    def __bool__(self):
+        return bool(self.tot_events)
+
+    def gen_rng(self, assets):
         for a, asset in enumerate(assets):
             idx = int(asset['taxonomy'] if self.asset_correlation
                       else asset['ordinal'])
             philox = numpy.random.Philox(
                 self.master_seed * self.tot_events + idx)
-            yield numpy.random.Generator(philox.advance(e0))
+            yield numpy.random.Generator(philox.advance(self.e0))
 
-    def get(self, assets, e0, e1):
+    def get(self, assets):
         """
         :param assets: array of assets
-        :returns: an array of shape (num_assets, tot_events) and dtype float32
+        :returns: an array of shape (num_assets, num_events) and dtype float32
         """
-        ne = e1 - e0
-        epsilons = numpy.zeros((len(assets), ne), F32)
-        for a, rng in enumerate(self.gen_rng(assets, e0)):
-            epsilons[a] = rng.normal(size=ne)
+        epsilons = numpy.zeros((len(assets), self.num_events), F32)
+        for a, rng in enumerate(self.gen_rng(assets)):
+            epsilons[a] = rng.normal(size=self.num_events)
         return epsilons
 
 

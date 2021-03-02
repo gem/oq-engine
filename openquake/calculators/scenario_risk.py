@@ -124,11 +124,12 @@ class EventBasedRiskCalculator(base.RiskCalculator):
         self.riskinputs = self.build_riskinputs('gmf')
         if (oq.ignore_covs or not self.crmodel.covs or
                 'LN' not in self.crmodel.distributions):
-            self.param['epsgetter'] = None
+            self.param['epsgetter'] = riskinput.EpsilonGetter(
+                oq.master_seed, int(oq.asset_correlation), 0, self.E, 0)
             logging.info('Ignoring epsilons')
         else:
             self.param['epsgetter'] = riskinput.EpsilonGetter(
-                oq.master_seed, int(oq.asset_correlation), self.E)
+                oq.master_seed, int(oq.asset_correlation), 0, self.E, self.E)
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['secondary_simulations'] = oq.secondary_simulations
         self.param['master_seed'] = oq.master_seed

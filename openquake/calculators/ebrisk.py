@@ -61,6 +61,9 @@ def calc_risk(df, param, monitor):
     with monitor('getting crmodel'):
         crmodel = monitor.read('crmodel')
         weights = dstore['weights'][()]
+    epsgetter = EpsilonGetter(
+        param['master_seed'], param['asset_correlation'], 0, param['E'],
+        0 if param['ignore_covs'] else param['E'])
     acc = dict(events_per_sid=numpy.zeros(param['N'], U32))
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
     aggby = param['aggregate_by']
@@ -80,8 +83,7 @@ def calc_risk(df, param, monitor):
             # NB: this is converting the asset ordinal from U32 to U64
             assets = asset_df.to_records()  # fast
             assets_by_taxo = get_assets_by_taxo(assets)
-            out = get_output_gmf(  # slow
-                crmodel, assets_by_taxo, haz, param['epsgetter'])
+            out = get_output_gmf(crmodel, assets_by_taxo, haz, epsgetter)
         with mon_agg:
             alt.aggregate(out, mal, aggby)
             # NB: after the aggregation out contains losses, not loss_ratios
@@ -129,6 +131,8 @@ def ebrisk(rupgetter, param, monitor):
     gmf_info = []
     srcfilter = monitor.read('srcfilter')
     param['N'] = len(srcfilter.sitecol.complete)
+    param['e0'] = rupgetter.e0
+    param['e1'] = rupgetter.e0 + rupgetter.num_events
     gg = getters.GmfGetter(rupgetter, srcfilter, param['oqparam'],
                            param['amplifier'])
     with mon_haz:
@@ -147,7 +151,10 @@ def ebrisk(rupgetter, param, monitor):
             alldata[key] = U32(alldata[key])
         else:
             alldata[key] = F32(alldata[key])
-    res = calc_risk(pandas.DataFrame(alldata), param, monitor)
+    gmf_df = pandas.DataFrame(alldata)
+    gmf_df.e0 = rupgetter.e0
+    gmf_df.num_events = rupgetter.num_events
+    res = calc_risk(gmf_df, param, monitor)
     if gmf_info:
         res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
     return res
@@ -208,14 +215,14 @@ class EbriskCalculator(event_based.EventBasedCalculator):
     def execute(self):
         self.datastore.flush()  # just to be sure
         oq = self.oqparam
-        if (oq.ignore_covs or not self.crmodel.covs or
-                'LN' not in self.crmodel.distributions):
-            epsgetter = None
+        self.set_param(hdf5path=self.datastore.filename,
+                       ignore_covs=(oq.ignore_covs or not self.crmodel.covs or
+                                    'LN' not in self.crmodel.distributions),
+                       E=self.E,
+                       master_seed=oq.master_seed,
+                       asset_correlation=int(oq.asset_correlation))
+        if self.param['ignore_covs']:
             logging.info('Ignoring epsilons')
-        else:
-            epsgetter = EpsilonGetter(
-                oq.master_seed, int(oq.asset_correlation), self.E)
-        self.set_param(hdf5path=self.datastore.filename, epsgetter=epsgetter)
         srcfilter = self.src_filter()
         logging.info(
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))

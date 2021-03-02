@@ -355,12 +355,13 @@ class RiskModel(object):
         values = get_values(loss_type, assets, self.time_event)
         eids = gmf_df.eid.to_numpy()
         E = len(eids)
+        e0 = gmf_df.e0
         vf = self.risk_functions[loss_type, 'vulnerability']
         means, covs = vf.interpolate(gmf_df[col].to_numpy())
         losses = numpy.zeros((len(assets), E))
         if len(epsilons):
             for a, eps in enumerate(epsilons):
-                losses[a] = vf.sample(means, covs, eps[eids]) * values[a]
+                losses[a] = vf.sample(means, covs, eps[eids-e0]) * values[a]
         else:  # no CoVs
             ratios = vf.sample(means, covs, numpy.zeros(len(eids)))
             for a in range(len(assets)):
@@ -369,7 +370,7 @@ class RiskModel(object):
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
-    def scenario_damage(self, loss_type, assets, gmf_df, col, epsilons=None):
+    def scenario_damage(self, loss_type, assets, gmf_df, col, epsilons):
         """
         :param loss_type: the loss type
         :param assets: a list of A assets of the same taxonomy

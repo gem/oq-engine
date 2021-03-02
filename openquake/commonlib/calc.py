@@ -45,7 +45,6 @@ from unittest.mock import Mock
 import numpy
 
 from openquake.baselib import parallel
-from openquake.baselib.general import get_indices
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
@@ -343,9 +342,9 @@ class RuptureImporter(object):
             extra['year'] = numpy.random.choice(itime, len(events)) + 1
         extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
-        eindices = get_indices(events['rup_id'])
-        arr = numpy.array(list(eindices.values()))[:, 0, :]
-        self.datastore['ruptures']['e0'] = arr[:, 0]
+        cumsum = self.datastore['ruptures']['n_occ'].cumsum()
+        rup_array['e0'][1:] = cumsum[:-1]
+        self.datastore['ruptures']['e0'] = rup_array['e0']
 
     def check_overflow(self, E):
         """

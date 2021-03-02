@@ -19,7 +19,6 @@
 import os.path
 import logging
 import numpy
-import psutil
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
