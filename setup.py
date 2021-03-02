@@ -70,6 +70,7 @@ install_requires = [
     'requests >=2.20, <2.24',
     'pyshp ==1.2.3',
     'toml',
+    'pyproj >=1.9',
 ]
 
 extras_require = {
@@ -80,7 +81,6 @@ extras_require = {
                 "python-prctl ==1.6.1",
                 "setproctitle"],
     'osgeo':  [
-        'pyproj >=1.9',
         'GDAL >= 2.4',
     ],
     'dev':  [

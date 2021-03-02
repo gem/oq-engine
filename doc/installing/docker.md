@@ -35,7 +35,7 @@ $ docker pull docker.io/openquake/engine:nightly
 For each stable release (starting with 2.2) a container is published and tagged with its release version. This contains the stable release of the OpenQuake Engine and its software stack. For the last stable release is also available the latest tag
 
 ```bash
-$ docker pull docker.io/openquake/engine:3.10
+$ docker pull docker.io/openquake/engine:3.11
 ```
 ```bash
 $ docker pull docker.io/openquake/engine:latest
