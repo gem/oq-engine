@@ -201,10 +201,11 @@ class EpsilonGetter(object):
             taxids = numpy.unique(assets['taxonomy'])
             seeds = dict(zip(taxids, ss.spawn(len(taxids))))
         else:
-            seeds = ss.spawn(len(assets))
-        for a, asset in enumerate(assets):
+            ordinals = assets['ordinal']
+            seeds = dict(zip(ordinals, ss.spawn(len(assets))))
+        for asset in assets:
             seed = (seeds[asset['taxonomy']] if self.asset_correlation
-                    else seeds[a])
+                    else seeds[asset['ordinal']])
             rng = numpy.random.default_rng(seed)
             rng.bit_generator.advance(self.e0)
             yield rng
