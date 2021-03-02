@@ -90,7 +90,7 @@ rupture_dt = numpy.dtype([
     ('code', U8), ('n_occ', U32), ('mag', F32), ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
-    ('hypo', (F32, 3)), ('geom_id', U32), ('e0', U32), ('e1', U32)])
+    ('hypo', (F32, 3)), ('geom_id', U32), ('e0', U32)])
 
 
 # this is really fast
@@ -140,7 +140,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (0, ebrupture.rup_id, ebrupture.source_id, ebrupture.et_id,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
-               minlon, minlat, maxlon, maxlat, hypo, 0, 0, 0)
+               minlon, minlat, maxlon, maxlat, hypo, 0, 0)
         rups.append(tup)
         # we are storing the geometries as arrays of 32 bit floating points;
         # the first element is the number of surfaces, then there are
