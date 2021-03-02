@@ -353,22 +353,22 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(losses2, self.expected_losses[:, 2:])
 
     def test_split_epsilons(self):
+        # low level test
+        def make_rng(seed, nsteps=0):
+            bitgen = numpy.random.PCG64(seed).advance(nsteps)
+            return numpy.random.Generator(bitgen)
         eps = make_rng(42).normal(size=10)
         eps0 = make_rng(42).normal(size=5)
         eps1 = make_rng(42, 5).normal(size=5)
         aac(eps, numpy.hstack([eps0, eps1]))
 
+        # mid level test
         assets = numpy.array([(0, 1), (1, 1), (2, 1)],
                              [('ordinal', int), ('taxonomy', int)])
         egetter = riskinput.EpsilonGetter(42, 0, 0, 10, 10)
-        egetter0 = riskinput.EpsilonGetter(42, 0, 0, 5, 10)
-        egetter1 = riskinput.EpsilonGetter(42, 0, 5, 5, 10)
+        egetter0 = riskinput.EpsilonGetter(42, 0, 0, 4, 10)
+        egetter1 = riskinput.EpsilonGetter(42, 0, 4, 6, 10)
         eps = egetter.get(assets)  # shape (3, 10)
-        eps0 = egetter0.get(assets)  # shape (3, 5)
-        eps1 = egetter1.get(assets)  # shape (3, 5)
+        eps0 = egetter0.get(assets)  # shape (3, 4)
+        eps1 = egetter1.get(assets)  # shape (3, 6)
         aac(eps, numpy.hstack([eps0, eps1]))
-
-
-def make_rng(seed, nsteps=0):
-    bitgen = numpy.random.PCG64(42).advance(nsteps)
-    return numpy.random.Generator(bitgen)

@@ -360,9 +360,9 @@ class RiskModel(object):
         losses = numpy.zeros((len(assets), E))
         if epsgetter:
             for a, epsilons in enumerate(epsgetter.get(assets)):
-                eps = epsilons[[eids - epsgetter.e0]]
-                if epsgetter.e0 and a == 0:
-                    import pdb; pdb.set_trace()
+                eps = epsilons[eids - epsgetter.e0]
+                #if epsgetter.e0 and a == 0:
+                #    import pdb; pdb.set_trace()
                 losses[a] = vf.sample(means, covs, eps) * values[a]
         else:  # no CoVs
             ratios = vf.sample(means, covs, numpy.zeros(len(eids)))
