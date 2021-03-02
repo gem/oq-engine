@@ -61,21 +61,15 @@ def get_output_gmf(crmodel, assets_by_taxo, haz, epsgetter):
     eids = haz.eid.to_numpy()
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
                loss_types=crmodel.loss_types, haz=haz, rlzs=haz.rlz.to_numpy())
-    items = []
-    for taxonomy, assets_ in assets_by_taxo.items():
-        epsilons = epsgetter.get(assets_) if epsgetter else ()
-        items.append((taxonomy, assets_, epsilons))
-    haz.e0 = epsgetter.e0
-    haz.num_events = epsgetter.num_events
     for lt in crmodel.loss_types:
         losses = []
-        for taxonomy, assets_, epsilons in items:
+        for taxonomy, assets_ in assets_by_taxo.items():
             arrays = []
             rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
-                arrays.append(rm(lt, assets_, haz, col, epsilons))
+                arrays.append(rm(lt, assets_, haz, col, epsgetter))
             res = arrays[0] if len(arrays) == 1 else numpy.average(
                 arrays, weights=weights, axis=0)
             losses.append(res)

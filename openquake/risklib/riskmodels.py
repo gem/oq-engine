@@ -247,9 +247,9 @@ class RiskModel(object):
         """
         return sorted(lt for (lt, kind) in self.risk_functions)
 
-    def __call__(self, loss_type, assets, gmf_df, col=None, epsilons=None):
+    def __call__(self, loss_type, assets, gmf_df, col=None, epsgetter=None):
         meth = getattr(self, self.calcmode)
-        res = meth(loss_type, assets, gmf_df, col, epsilons)
+        res = meth(loss_type, assets, gmf_df, col, epsgetter)
         return res
 
     def __toh5__(self):
@@ -348,20 +348,22 @@ class RiskModel(object):
         res = numpy.array([a['number'] * damage for a in assets])
         return res
 
-    def event_based_risk(self, loss_type, assets, gmf_df, col, epsilons):
+    def event_based_risk(self, loss_type, assets, gmf_df, col, epsgetter):
         """
         :returns: an array of shape (A, E)
         """
         values = get_values(loss_type, assets, self.time_event)
         eids = gmf_df.eid.to_numpy()
         E = len(eids)
-        e0 = gmf_df.e0
         vf = self.risk_functions[loss_type, 'vulnerability']
         means, covs = vf.interpolate(gmf_df[col].to_numpy())
         losses = numpy.zeros((len(assets), E))
-        if len(epsilons):
-            for a, eps in enumerate(epsilons):
-                losses[a] = vf.sample(means, covs, eps[eids-e0]) * values[a]
+        if epsgetter:
+            for a, epsilons in enumerate(epsgetter.get(assets)):
+                eps = epsilons[[eids - epsgetter.e0]]
+                if epsgetter.e0 and a == 0:
+                    import pdb; pdb.set_trace()
+                losses[a] = vf.sample(means, covs, eps) * values[a]
         else:  # no CoVs
             ratios = vf.sample(means, covs, numpy.zeros(len(eids)))
             for a in range(len(assets)):
