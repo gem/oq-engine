@@ -79,8 +79,9 @@ def calc_risk(df, param, monitor):
         with mon_risk:
             # NB: this is converting the asset ordinal from U32 to U64
             assets = asset_df.to_records()  # fast
-            assets_by_taxo = get_assets_by_taxo(assets, param['epsgetter'])
-            out = get_output_gmf(crmodel, assets_by_taxo, haz)  # slow
+            assets_by_taxo = get_assets_by_taxo(assets)
+            out = get_output_gmf(  # slow
+                crmodel, assets_by_taxo, haz, param['epsgetter'])
         with mon_agg:
             alt.aggregate(out, mal, aggby)
             # NB: after the aggregation out contains losses, not loss_ratios

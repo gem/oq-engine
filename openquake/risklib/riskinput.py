@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.general import group_array, AccumDict
 
@@ -25,24 +24,19 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def get_assets_by_taxo(assets, epsgetter=None):
+def get_assets_by_taxo(assets):
     """
     :param assets: an array of assets
-    :param epsgetter: EpsilonGetter instance (None in scenario_damage)
     :returns: assets_by_taxo with attributes eps and idxs
     """
     assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
     assets_by_taxo.assets = assets
     assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
         a['ordinal'] for a in assets_by_taxo.values()]))
-    assets_by_taxo.eps = {}
-    if epsgetter:
-        for taxo, assets in assets_by_taxo.items():
-            assets_by_taxo.eps[taxo] = epsgetter.get(assets)
     return assets_by_taxo
 
 
-def get_output_gmf(crmodel, assets_by_taxo, haz):
+def get_output_gmf(crmodel, assets_by_taxo, haz, epsgetter):
     """
     :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
     :param haz: a DataFrame of GMVs on that site
@@ -67,10 +61,13 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
     eids = haz.eid.to_numpy()
     dic = dict(eids=eids, assets=assets_by_taxo.assets,
                loss_types=crmodel.loss_types, haz=haz, rlzs=haz.rlz.to_numpy())
+    items = []
+    for taxonomy, assets_ in assets_by_taxo.items():
+        epsilons = epsgetter.get(assets_) if epsgetter else ()
+        items.append((taxonomy, assets_, epsilons))
     for lt in crmodel.loss_types:
         losses = []
-        for taxonomy, assets_ in assets_by_taxo.items():
-            epsilons = assets_by_taxo.eps.get(taxonomy, ())
+        for taxonomy, assets_, epsilons in items:
             arrays = []
             rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
             for rm in rmodels:
@@ -85,7 +82,7 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
     return hdf5.ArrayWrapper((), dic)
 
 
-def get_output_pc(crmodel, assets_by_taxo, haz, rlzi):
+def get_output_pc(crmodel, assets_by_taxo, haz, epsgetter, rlzi):
     """
     :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
     :param haz: an ArrayWrapper of ProbabilityCurves on that site
@@ -152,12 +149,13 @@ class RiskInput(object):
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
-            assets_by_taxo = get_assets_by_taxo(self.assets, epsgetter)
+            assets_by_taxo = get_assets_by_taxo(self.assets)
             if hasattr(haz, 'groupby'):  # DataFrame
-                yield get_output_gmf(crmodel, assets_by_taxo, haz)
+                yield get_output_gmf(crmodel, assets_by_taxo, haz, epsgetter)
             else:  # list of probability curves
                 for rlz, pc in enumerate(haz):
-                    yield get_output_pc(crmodel, assets_by_taxo, pc, rlz)
+                    yield get_output_pc(
+                        crmodel, assets_by_taxo, pc, epsgetter, rlz)
 
     def __repr__(self):
         [sid] = self.hazard_getter.sids
