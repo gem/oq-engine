@@ -1,4 +1,4 @@
-#,,,,,"generated_by='OpenQuake engine 3.12.0-git314d71d7d1', start_date='2021-03-02T07:36:16', checksum=1896526101, risk_investigation_time=1.0, kind='agg_curves-rlz-000'"
+#,,,,,"generated_by='OpenQuake engine 3.12.0-gitd00a4c8f52', start_date='2021-03-02T07:41:25', checksum=1896526101, risk_investigation_time=1.0, kind='agg_curves-rlz-000'"
 return_period,loss_value,loss_type,NAME_1,loss_ratio,annual_frequency_of_exceedence
 50,9.74833E+02,structural,Region A,4.87417E-02,2.00000E-02
 100,1.94691E+03,structural,Region A,9.73453E-02,1.00000E-02
@@ -6,15 +6,15 @@ return_period,loss_value,loss_type,NAME_1,loss_ratio,annual_frequency_of_exceede
 500,7.90019E+03,structural,Region A,3.95010E-01,2.00000E-03
 1000,1.20485E+04,structural,Region A,6.02425E-01,1.00000E-03
 2000,2.15759E+04,structural,Region A,1.07880E+00,5.00000E-04
-50,1.01747E+03,structural,RegionB,2.03495E-02,2.00000E-02
-100,1.72083E+03,structural,RegionB,3.44166E-02,1.00000E-02
-200,2.91525E+03,structural,RegionB,5.83050E-02,5.00000E-03
-500,4.60745E+03,structural,RegionB,9.21490E-02,2.00000E-03
-1000,9.88303E+03,structural,RegionB,1.97661E-01,1.00000E-03
-2000,9.94210E+03,structural,RegionB,1.98842E-01,5.00000E-04
-50,2.11928E+03,structural,*total*,3.02755E-02,2.00000E-02
-100,3.73821E+03,structural,*total*,5.34029E-02,1.00000E-02
-200,6.07536E+03,structural,*total*,8.67909E-02,5.00000E-03
-500,1.25197E+04,structural,*total*,1.78853E-01,2.00000E-03
-1000,2.19315E+04,structural,*total*,3.13308E-01,1.00000E-03
-2000,3.15180E+04,structural,*total*,4.50257E-01,5.00000E-04
+50,1.01320E+03,structural,RegionB,2.02639E-02,2.00000E-02
+100,1.68277E+03,structural,RegionB,3.36554E-02,1.00000E-02
+200,2.47477E+03,structural,RegionB,4.94953E-02,5.00000E-03
+500,5.93624E+03,structural,RegionB,1.18725E-01,2.00000E-03
+1000,6.46181E+03,structural,RegionB,1.29236E-01,1.00000E-03
+2000,1.01478E+04,structural,RegionB,2.02957E-01,5.00000E-04
+50,2.09006E+03,structural,*total*,2.98580E-02,2.00000E-02
+100,3.89364E+03,structural,*total*,5.56234E-02,1.00000E-02
+200,5.95536E+03,structural,*total*,8.50765E-02,5.00000E-03
+500,1.72349E+04,structural,*total*,2.46213E-01,2.00000E-03
+1000,1.80480E+04,structural,*total*,2.57829E-01,1.00000E-03
+2000,2.80377E+04,structural,*total*,4.00539E-01,5.00000E-04
