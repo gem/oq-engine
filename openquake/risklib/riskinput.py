@@ -194,13 +194,12 @@ class EpsilonGetter(object):
         return bool(self.tot_events)
 
     def gen_rng(self, assets):
-        ss = numpy.random.SeedSequence(self.master_seed)
         if self.asset_correlation:
             taxids = numpy.unique(assets['taxonomy'])
-            seeds = dict(zip(taxids, ss.spawn(len(taxids))))
+            seeds = dict(zip(taxids, self.master_seed + taxids))
         else:
             ordinals = assets['ordinal']
-            seeds = dict(zip(ordinals, ss.spawn(len(assets))))
+            seeds = dict(zip(ordinals, self.master_seed + ordinals))
         for asset in assets:
             seed = (seeds[asset['taxonomy']] if self.asset_correlation
                     else seeds[asset['ordinal']])
@@ -220,6 +219,10 @@ class EpsilonGetter(object):
         if eids is None:
             return epsilons
         return epsilons[:, eids - self.e0]
+
+    def __repr__(self):
+        return '<%s[%d:%d]>' % (self.__class__.__name__, self.e0,
+                                self.e0 + self.num_events)
 
 
 def str2rsi(key):

@@ -281,7 +281,7 @@ master_seed:
   calculations with vulnerability functions with nonzero coefficients of
   variation.
   Example: *master_seed = 1234*.
-  Default: 0
+  Default: 123456789
 
 max:
   Compute the maximum across realizations. Akin to mean and quantiles.
@@ -727,7 +727,7 @@ class OqParam(valid.ParamSet):
     investigation_time = valid.Param(valid.positivefloat, None)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
-    master_seed = valid.Param(valid.positiveint, 0)
+    master_seed = valid.Param(valid.positiveint, 123456789)
     maximum_distance = valid.Param(valid.MagDepDistance.new)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)

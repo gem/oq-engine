@@ -223,6 +223,8 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                        asset_correlation=int(oq.asset_correlation))
         if self.param['ignore_covs']:
             logging.info('Ignoring epsilons')
+        else:
+            logging.info('Generating {:_d} epsilons'.format(self.E * self.A))
         srcfilter = self.src_filter()
         logging.info(
             'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))

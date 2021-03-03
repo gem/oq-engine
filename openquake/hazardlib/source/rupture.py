@@ -727,7 +727,7 @@ class EBRupture(object):
         dic = {}
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         if self.scenario:
-            all_eids = numpy.arange(self.n_occ, dtype=U32) + self.e0
+            all_eids = numpy.arange(self.e0, self.e0 + self.n_occ, dtype=U32)
             splits = numpy.array_split(all_eids, len(rlzs))
             for rlz_id, eids in zip(rlzs, splits):
                 dic[rlz_id] = eids
@@ -740,12 +740,12 @@ class EBRupture(object):
                 j += n
         return dic
 
+    # useful for debugging
     def get_eids(self):
         """
         :returns: an array of event IDs
         """
-        1/0
-        return numpy.arange(self.n_occ, dtype=U32)
+        return numpy.arange(self.e0, self.e0 + self.n_occ, dtype=U32)
 
     def export(self, events_by_ses):
         """

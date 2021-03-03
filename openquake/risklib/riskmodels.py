@@ -361,8 +361,6 @@ class RiskModel(object):
         if epsgetter:
             eps = epsgetter.get(assets, eids)  # shape (A, E)
             for a in range(len(assets)):
-                if epsgetter.e0 and a == 0:
-                    import pdb; pdb.set_trace()
                 losses[a] = vf.sample(means, covs, eps[a]) * values[a]
         else:  # no CoVs
             ratios = vf.sample(means, covs, numpy.zeros(len(eids)))
