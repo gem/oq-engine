@@ -1215,13 +1215,13 @@ class OqParam(valid.ParamSet):
             names.append(lt + '_ins')
         return names
 
-    def loss_dt(self, dtype=F32):
+    def loss_dt(self, dtype=F64):
         """
         :returns: a composite dtype based on the loss types including occupants
         """
         return numpy.dtype(self.loss_dt_list(dtype))
 
-    def loss_dt_list(self, dtype=F32):
+    def loss_dt_list(self, dtype=F64):
         """
         :returns: a data type list [(loss_name, dtype), ...]
         """
