@@ -810,7 +810,7 @@ def extract_aggregate(dstore, what):
 
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
-    loss_dt = dstore['oqparam'].loss_dt()
+    loss_dt = dstore['oqparam'].loss_dt(F32)
     rlzs = dstore['full_lt'].get_realizations()
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
@@ -916,8 +916,8 @@ def build_damage_array(data, damage_dt):
     A, L, D = data.shape
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
-        for l, lt in enumerate(damage_dt.names):
-            dmg[lt][a] = tuple(data[a, l])
+        for li, lt in enumerate(damage_dt.names):
+            dmg[lt][a] = tuple(data[a, li])
     return dmg
 
 

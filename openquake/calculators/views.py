@@ -331,7 +331,7 @@ def _portfolio_loss(dstore):
     loss = df.to_numpy()
     rlzs = dstore['events']['rlz_id'][eids]
     L = loss.shape[1]
-    data = numpy.zeros((R, L), F32)
+    data = numpy.zeros((R, L))
     for row, rlz in zip(loss, rlzs):
         data[rlz] += row
     return data
