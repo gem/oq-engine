@@ -10,8 +10,6 @@ The binary distributions of the engine include their own Python, so they are tot
 $ oq info venv
 ```
 
-## Power users
-
 Scientists wanting to develop new GMPEs or new features for the engine should look at the **[Installing the OpenQuake Engine for development on Linux and macOS](development.md)**  and the **[Installing the OpenQuake Engine for development on Windows](development-windows.md)** guides.
 
 ### PyPI
