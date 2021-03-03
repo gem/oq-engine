@@ -1,5 +1,5 @@
-#,,,,"generated_by='OpenQuake engine 3.12.0-git314d71d7d1', start_date='2021-03-02T07:34:54', checksum=3590982611, investigation_time=1.0, risk_investigation_time=50.0"
+#,,,,"generated_by='OpenQuake engine 3.12.0-gitc9b8689405', start_date='2021-03-03T05:54:05', checksum=3590982611, investigation_time=1.0, risk_investigation_time=50.0"
 event_id,structural,rlz_id,rup_id,year
-0,1.62653E+02,0,0,1
-1,1.27181E+02,0,1,1
-2,1.44829E+02,0,1,1
+0,1.59820E+02,0,0,1
+1,1.30537E+02,0,1,1
+2,1.41558E+02,0,1,1

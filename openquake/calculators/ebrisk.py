@@ -198,7 +198,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
 
         descr = [('event_id', U32), ('agg_id', U32)]
         for name in oq.loss_names:
-            descr.append((name, F32))
+            descr.append((name, F64))
         self.datastore.create_dframe(
             'agg_loss_table', descr, K=len(self.aggkey))
         self.param.pop('oqparam', None)  # unneeded

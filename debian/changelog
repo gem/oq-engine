@@ -1,6 +1,17 @@
   [Michele Simionato]
+  * Storing the agg_loss_table as 64 bit floats instead of 32 bit floats
   * Changed the algorithm used to generate the epsilons to avoid storing the
     epsilon matrix
+
+python3-oq-engine (3.11.2-1~xenial01) xenial; urgency=low
+
+  [Matteo Nastasi]
+  * Fixed setup.py 'pyproj' dependency
+
+  [Antonio Ettorre]
+  * Fixed docker builder
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 02 Mar 2021 09:22:59 +0000
 
 python3-oq-engine (3.11.1-1~xenial01) xenial; urgency=low
 

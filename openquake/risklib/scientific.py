@@ -1438,7 +1438,7 @@ class AggLossTable(AccumDict):
         self.aggkey[()] = len(aggkey)
         self.loss_names = loss_names
         self.sec_losses = sec_losses
-        self.accum = numpy.zeros(len(self.loss_names), F32)
+        self.accum = numpy.zeros(len(self.loss_names), F64)
         return self
 
     def aggregate(self, out, minimum_loss, aggby):
@@ -1494,12 +1494,10 @@ class AggLossTable(AccumDict):
         for (eid, idx), arr in self.items():
             out['event_id'].append(eid)
             out['agg_id'].append(idx)
-            for l, ln in enumerate(self.loss_names):
-                out[ln].append(arr[l])
+            for li, ln in enumerate(self.loss_names):
+                out[ln].append(arr[li])
         out['event_id'] = U32(out['event_id'])
         out['agg_id'] = U32(out['agg_id'])
-        for ln in self.loss_names:
-            out[ln] = F32(out[ln])
         return pandas.DataFrame(out)
 
 

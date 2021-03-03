@@ -1,10 +1,10 @@
-#,,,,"generated_by='OpenQuake engine 3.12.0-git314d71d7d1', start_date='2021-03-02T07:36:47', checksum=641705409, risk_investigation_time=1.0, kind='agg_curves-rlz-000'"
+#,,,,"generated_by='OpenQuake engine 3.12.0-gitc9b8689405', start_date='2021-03-03T05:53:48', checksum=641705409, risk_investigation_time=1.0, kind='agg_curves-rlz-000'"
 return_period,loss_value,loss_type,loss_ratio,annual_frequency_of_exceedence
-50,8.54978E-03,occupants,3.09028E-04,2.00000E-02
-100,1.24294E-02,occupants,4.49255E-04,1.00000E-02
-200,1.65888E-02,occupants,5.99597E-04,5.00000E-03
-500,2.36030E-02,occupants,8.53120E-04,2.00000E-03
-1000,3.26946E-02,occupants,1.18173E-03,1.00000E-03
-2000,4.99337E-02,occupants,1.80483E-03,5.00000E-04
-5000,7.20224E-02,occupants,2.60322E-03,2.00000E-04
-10000,9.67809E-02,occupants,3.49811E-03,1.00000E-04
+50,8.60656E-03,occupants,3.11080E-04,2.00000E-02
+100,1.19121E-02,occupants,4.30558E-04,1.00000E-02
+200,1.51723E-02,occupants,5.48396E-04,5.00000E-03
+500,2.36347E-02,occupants,8.54267E-04,2.00000E-03
+1000,2.93722E-02,occupants,1.06165E-03,1.00000E-03
+2000,5.72047E-02,occupants,2.06764E-03,5.00000E-04
+5000,7.60957E-02,occupants,2.75045E-03,2.00000E-04
+10000,8.97252E-02,occupants,3.24308E-03,1.00000E-04
