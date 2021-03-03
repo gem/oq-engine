@@ -66,7 +66,7 @@ RM       4_000
         # test agg_damages, 1 realization x 3 damage states
         [dmg] = extract(self.calc.datastore, 'agg_damages/structural?'
                         'taxonomy=RC&CRESTA=01.1')
-        aac([1528., 444., 28.], dmg, atol=1E-4)
+        aac([1512., 464., 24.], dmg, atol=1E-4)
         # test no intersection
         dmg = extract(self.calc.datastore, 'agg_damages/structural?'
                       'taxonomy=RM&CRESTA=01.1')
@@ -165,8 +165,8 @@ RM       4_000
 
         # check dd_data is readable by pandas
         df = self.calc.datastore.read_df('dd_data', ['aid', 'eid', 'lid'])
-        self.assertEqual(len(df), 221)
-        self.assertEqual(len(df[df.ds1 > 0]), 76)  # only 76/300 are nonzero
+        self.assertEqual(len(df), 224)
+        self.assertEqual(len(df[df.ds1 > 0]), 75)  # only 75/300 are nonzero
 
     def test_case_8(self):
         # case with a shakemap
