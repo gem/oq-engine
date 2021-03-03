@@ -1498,8 +1498,6 @@ class AggLossTable(AccumDict):
                 out[ln].append(arr[li])
         out['event_id'] = U32(out['event_id'])
         out['agg_id'] = U32(out['agg_id'])
-        for ln in self.loss_names:
-            out[ln] = F64(out[ln])
         return pandas.DataFrame(out)
 
 
