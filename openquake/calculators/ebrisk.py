@@ -45,7 +45,7 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def calc_risk(df, param, monitor):
+def event_based_risk(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
     :param param: a dictionary of parameters coming from the job.ini
@@ -153,7 +153,7 @@ def ebrisk(rupgetter, param, monitor):
             alldata[key] = U32(alldata[key])
         else:
             alldata[key] = F32(alldata[key])
-    res = calc_risk(pandas.DataFrame(alldata), param, monitor)
+    res = event_based_risk(pandas.DataFrame(alldata), param, monitor)
     if gmf_info:
         res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
     return res
@@ -270,7 +270,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 'Produced %s of GMFs', general.humansize(gmf_bytes.sum()))
         else:  # start from GMFs
             smap = parallel.Starmap(
-                calc_risk, self.gen_args(), h5=self.datastore.hdf5)
+                event_based_risk, self.gen_args(), h5=self.datastore.hdf5)
             smap.monitor.save('assets', self.assetcol.to_dframe())
             smap.monitor.save('crmodel', self.crmodel)
             smap.reduce(self.agg_dicts)
