@@ -66,7 +66,8 @@ def calc_risk(df, param, monitor):
     aggby = param['aggregate_by']
     mal = param['minimum_asset_loss']
     haz_by_sid = {s: d for s, d in df.groupby('sid')}
-    losses_by_A = numpy.zeros((len(assets_df), len(alt.loss_names)), F32)
+    ARL = len(assets_df), len(weights), len(alt.loss_names)
+    losses_by_A = numpy.zeros(ARL, F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
@@ -90,10 +91,16 @@ def calc_risk(df, param, monitor):
         if param['avg_losses']:
             with mon_avg:
                 for lni, ln in enumerate(alt.loss_names):
-                    losses_by_A[assets['ordinal'], lni] += out[ln] @ ws
+                    df = pandas.DataFrame(
+                        {aid: out[ln][a] for a, aid in enumerate(
+                            assets['ordinal'])}, haz['rlz'])
+                    tot_df = df.groupby(df.index).sum()
+                    for aid in tot_df.columns:
+                        losses_by_A[aid, tot_df.index.to_numpy(), lni] += (
+                            tot_df[aid].to_numpy())
     acc['alt'] = alt.to_dframe()
     if param['avg_losses']:
-        acc['losses_by_A'] = losses_by_A * param['ses_ratio']
+        acc['losses_by_A'] = losses_by_A
     return acc
 
 
@@ -174,7 +181,6 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.param['alt'] = alt = AggLossTable.new(
             self.aggkey, oq.loss_names, sec_losses)
-        self.param['ses_ratio'] = oq.ses_ratio
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['min_iml'] = oq.min_iml
         self.param['M'] = len(oq.all_imts())
@@ -194,10 +200,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.create_dframe(
             'agg_loss_table', descr, K=len(self.aggkey))
         self.param.pop('oqparam', None)  # unneeded
-        self.datastore.create_dset('avg_losses-stats', F32, (A, 1, L))
-        self.datastore.set_shape_descr(
-            'avg_losses-stats', asset_id=self.assetcol['id'], stat=['mean'],
-            loss_type=oq.loss_names)
+        if oq.avg_losses:
+            self.avg_losses = numpy.zeros((A, self.R, L), F32)
+            self.datastore.create_dset('avg_losses-rlzs', F32, (A, self.R, L))
+            self.datastore.set_shape_descr(
+                'avg_losses-rlzs', asset_id=self.assetcol['id'], rlzs=self.R,
+                loss_type=oq.loss_names)
         alt_nbytes = 4 * self.E * L
         if alt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The event loss table is too big to be transfer'
@@ -250,8 +258,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
                 dset = self.datastore['agg_loss_table/' + name]
                 hdf5.extend(dset, df[name].to_numpy())
         if self.oqparam.avg_losses:
-            with self.monitor('saving avg_losses'):
-                self.datastore['avg_losses-stats'][:, 0] += dic['losses_by_A']
+            self.avg_losses += dic['losses_by_A']
         self.events_per_sid += dic['events_per_sid']
         self.momenta += dic['momenta']
 
@@ -260,8 +267,12 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         Compute and store average losses from the agg_loss_table dataset,
         and then loss curves and maps.
         """
-        logging.info('Events per site: ~%d', self.events_per_sid.mean())
         oq = self.oqparam
+        self.datastore['avg_losses-rlzs'] = self.avg_losses * oq.ses_ratio
+        stats.set_rlzs_stats(self.datastore, 'avg_losses',
+                             asset_id=self.assetcol['id'],
+                             loss_type=oq.loss_names)
+        logging.info('Events per site: ~%d', self.events_per_sid.mean())
         rlzs = self.datastore['events']['rlz_id']
         totw = self.datastore['weights'][:][rlzs].sum()
         self.datastore['avg_gmf'] = numpy.exp(
