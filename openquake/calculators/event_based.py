@@ -19,7 +19,6 @@
 import os.path
 import logging
 import numpy
-import psutil
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
@@ -200,16 +199,10 @@ class EventBasedCalculator(base.HazardCalculator):
         with sav_mon:
             df = result.pop('gmfdata')
             if len(df):
-                dset = self.datastore['gmf_data/sid']
-                start = len(dset)
-                stop = start + len(df)
                 times = result.pop('times')
-                [t] = numpy.unique(times['task_no'])
                 rupids = list(times['rup_id'])
-                self.datastore.hdf5.save_vlen(
-                    'gmf_data/by_task', [U32([t, start, stop] + rupids)])
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
-                hdf5.extend(dset, df.sid.to_numpy())
+                hdf5.extend(self.datastore['gmf_data/sid'], df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
                 for m in range(len(primary)):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
@@ -322,9 +315,8 @@ class EventBasedCalculator(base.HazardCalculator):
             base.create_gmf_data(self.datastore, M, oq.get_sec_imts())
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
-            self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
-            self.datastore.create_dset(
-                'gmf_data/time_by_rup', time_dt, (nrups,), fillvalue=None)
+            self.datastore.create_dset('gmf_data/time_by_rup',
+                                       time_dt, (nrups,), fillvalue=None)
 
         # compute_gmfs in parallel
         nr = len(self.datastore['ruptures'])
@@ -348,13 +340,14 @@ class EventBasedCalculator(base.HazardCalculator):
         return acc
 
     def save_avg_gmf(self):
+        """
+        Compute and save avg_gmf, unless there are too many GMFs
+        """
         size = self.datastore.getsize('gmf_data')
         logging.info(f'Stored {humansize(size)} of GMFs')
-        avail = psutil.virtual_memory().available
-        if avail < size:
+        if size > 1024**3:
             logging.warning(
-                f'There is not enough free RAM ({humansize(avail)}) to read '
-                f'the GMFs, not computing avg_gmf')
+                'There are more than 1 GB of GMFs, not computing avg_gmf')
             return numpy.unique(self.datastore['gmf_data/eid'][:])
 
         rlzs = self.datastore['events']['rlz_id']
