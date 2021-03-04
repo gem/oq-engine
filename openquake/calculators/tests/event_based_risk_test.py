@@ -429,7 +429,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_losses.csv', fname, delta=1E-5)
 
         [fname] = out['agg_curves-rlzs', 'csv']
-        self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/agg_curves.csv', fname, delta=5E-5)
 
     # NB: big difference between Ubuntu 18 and 20
     def test_asset_loss_table(self):
