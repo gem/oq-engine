@@ -36,7 +36,6 @@ from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, util
 from openquake.calculators.export import export as exp
@@ -55,6 +54,7 @@ TWO32 = 2 ** 32
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
+task_dt = numpy.dtype([('task_no', U16), ('start', U32), ('stop', U32)])
 
 
 def get_calc(job_ini, calc_id):
@@ -516,6 +516,7 @@ class HazardCalculator(BaseCalculator):
                 if not oq.inputs['gmfs'].endswith('.csv'):
                     raise NotImplementedError(
                         'Importer for %s' % oq.inputs['gmfs'])
+                self.datastore['full_lt'] = logictree.FullLogicTree.fake()
                 E = len(import_gmfs(self.datastore, oq,
                                     self.sitecol.complete.sids))
                 if hasattr(oq, 'number_of_ground_motion_fields'):
@@ -619,6 +620,8 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: the number of realizations
         """
+        if 'weights' in self.datastore:
+            return len(self.datastore['weights'])
         try:
             return self.csm.full_lt.get_num_rlzs()
         except AttributeError:  # no self.csm
@@ -649,8 +652,6 @@ class HazardCalculator(BaseCalculator):
                         '%d assets were discarded; use `oq show discarded` to'
                         ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
-        self.policy_name = ''
-        self.policy_dict = {}
         if oq.inputs.get('insurance'):
             k, v = zip(*oq.inputs['insurance'].items())
             self.load_insurance_data(k, v)
@@ -738,6 +739,8 @@ class HazardCalculator(BaseCalculator):
 
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
+        self.policy_name = ''
+        self.policy_dict = {}
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
@@ -923,52 +926,6 @@ class RiskCalculator(HazardCalculator):
     attributes .crmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
-    def read_shakemap(self, haz_sitecol, assetcol):
-        """
-        Enabled only if there is a shakemap_id parameter in the job.ini.
-        Download, unzip, parse USGS shakemap files and build a corresponding
-        set of GMFs which are then filtered with the hazard site collection
-        and stored in the datastore.
-        """
-        oq = self.oqparam
-        E = oq.number_of_ground_motion_fields
-        oq.risk_imtls = oq.imtls or self.datastore.parent['oqparam'].imtls
-        logging.info('Getting/reducing shakemap')
-        with self.monitor('getting/reducing shakemap'):
-            # for instance for the test case_shakemap the haz_sitecol
-            # has sids in range(0, 26) while sitecol.sids is
-            # [8, 9, 10, 11, 13, 15, 16, 17, 18];
-            # the total assetcol has 26 assets on the total sites
-            # and the reduced assetcol has 9 assets on the reduced sites
-            smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
-                oq.inputs['shakemap'])
-            sitecol, shakemap, discarded = get_sitecol_shakemap(
-                smap, oq.imtls, haz_sitecol,
-                oq.asset_hazard_distance['default'],
-                oq.discard_assets)
-            if len(discarded):
-                self.datastore['discarded'] = discarded
-            assetcol.reduce_also(sitecol)
-
-        logging.info('Building GMFs')
-        with self.monitor('building/saving GMFs'):
-            imts, gmfs = to_gmfs(
-                shakemap, oq.spatial_correlation, oq.cross_correlation,
-                oq.site_effects, oq.truncation_level, E, oq.random_seed,
-                oq.imtls)
-            N, E, M = gmfs.shape
-            events = numpy.zeros(E, rupture.events_dt)
-            events['id'] = numpy.arange(E, dtype=U32)
-            self.datastore['events'] = events
-            # convert into an array of dtype gmv_data_dt
-            lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
-                   for s in numpy.arange(N, dtype=U32)
-                   for ei, event in enumerate(events)]
-            oq.hazard_imtls = {imt: [0] for imt in imts}
-            data = numpy.array(lst, oq.gmf_data_dt())
-            create_gmf_data(self.datastore, len(imts), data=data)
-        return sitecol, assetcol
-
     def build_riskinputs(self, kind):
         """
         :param kind:
@@ -1164,6 +1121,7 @@ def create_gmf_data(dstore, M, sec_imts=(), data=None):
     for imt in sec_imts:
         items.append((str(imt), F32 if n == 0 else data[imt]))
     dstore.create_dframe('gmf_data', items, 'gzip')
+    by_task = dstore.create_dset('gmf_data/by_task', task_dt)
     if data is not None:
         df = pandas.DataFrame(dict(items))
         avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)
@@ -1172,6 +1130,7 @@ def create_gmf_data(dstore, M, sec_imts=(), data=None):
             df.pop('sid')
             avg_gmf[:, sid] = stats.avg_std(df.to_numpy())
         dstore['avg_gmf'] = avg_gmf
+        hdf5.extend(by_task, numpy.array([(0, 0, len(data))], task_dt))
 
 
 def save_agg_values(dstore, assetcol, lossnames, tagnames):

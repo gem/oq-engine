@@ -67,12 +67,12 @@ def event_based_risk(riskinputs, param, monitor):
     crmodel = monitor.read('crmodel')
     alt = copy.copy(param['alt'])
     result = dict(losses_by_asset=[], alt=alt)
-    sec_sims = param['secondary_simulations'].items()
+    # sec_sims = param['secondary_simulations'].items()
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor, param['epsgetter']):
-            if sec_sims:
-                run_sec_sims(out, crmodel.loss_types, sec_sims,
-                             param['master_seed'])
+            #if sec_sims:
+            #    run_sec_sims(out, crmodel.loss_types, sec_sims,
+            #                 param['master_seed'])
             alt.aggregate(
                 out, param['minimum_asset_loss'], param['aggregate_by'])
             for lti, loss_type in enumerate(crmodel.loss_types):
@@ -86,7 +86,7 @@ def event_based_risk(riskinputs, param, monitor):
     return result
 
 
-@base.calculators.add('scenario_risk', 'event_based_risk')
+@base.calculators.add('old_scenario_risk')
 class EventBasedRiskCalculator(base.RiskCalculator):
     """
     Run a scenario/event_based risk calculation

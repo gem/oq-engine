@@ -25,11 +25,13 @@ import pandas
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
+from openquake.hazardlib.source import rupture
+from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
 from openquake.risklib.riskinput import (
     EpsilonGetter, get_assets_by_taxo, get_output_gmf)
 from openquake.commonlib import logs
-from openquake.calculators import base, event_based, getters
+from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
 
 U8 = numpy.uint8
@@ -159,20 +161,50 @@ def ebrisk(rupgetter, param, monitor):
     return res
 
 
-@base.calculators.add('ebrisk')
-class EbriskCalculator(event_based.EventBasedCalculator):
+@base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
+class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     """
-    Event based PSHA calculator generating event loss tables
+    Event based risk calculator generating event loss tables
     """
     core_task = start_ebrisk
     is_stochastic = True
     precalc = 'event_based'
-    accept_precalc = ['event_based', 'event_based_risk']
+    accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
 
     def pre_execute(self):
         oq = self.oqparam
-        oq.ground_motion_fields = False
+        if oq.calculation_mode == 'ebrisk':
+            oq.ground_motion_fields = False
+        parent = self.datastore.parent
+        if parent:
+            self.datastore['full_lt'] = parent['full_lt']
+            ne = len(parent['events'])
+            logging.info('There are %d ruptures and %d events',
+                         len(parent['ruptures']), ne)
+
+        if oq.investigation_time and oq.return_periods != [0]:
+            # setting return_periods = 0 disable loss curves
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+            if eff_time < 2:
+                logging.warning(
+                    'eff_time=%s is too small to compute loss curves',
+                    eff_time)
         super().pre_execute()
+
+        if (oq.ignore_covs or not self.crmodel.covs or
+                'LN' not in self.crmodel.distributions):
+            epsgetter = None
+            logging.info('Ignoring epsilons')
+        else:
+            epsgetter = EpsilonGetter(
+                oq.master_seed, int(oq.asset_correlation), self.E)
+        self.set_param(hdf5path=self.datastore.filename, epsgetter=epsgetter)
+        logging.info(
+            'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
+        self.events_per_sid = numpy.zeros(self.N, U32)
+        self.datastore.swmr_on()
+        M = len(oq.all_imts())
+        self.momenta = numpy.zeros((2, self.N, M))
         sec_losses = []
         if self.policy_dict:
             sec_losses.append(
@@ -184,6 +216,7 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['min_iml'] = oq.min_iml
         self.param['M'] = len(oq.all_imts())
+        self.param['N'] = self.N
         ct = oq.concurrent_tasks or 1
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
@@ -199,12 +232,18 @@ class EbriskCalculator(event_based.EventBasedCalculator):
             descr.append((name, F64))
         self.datastore.create_dframe(
             'agg_loss_table', descr, K=len(self.aggkey))
-        self.param.pop('oqparam', None)  # unneeded
+        R = len(self.datastore['weights'])
+        self.rlzs = self.datastore['events']['rlz_id']
+        self.num_events = numpy.bincount(self.rlzs)  # events by rlz
         if oq.avg_losses:
-            self.avg_losses = numpy.zeros((A, self.R, L), F32)
-            self.datastore.create_dset('avg_losses-rlzs', F32, (A, self.R, L))
+            if oq.investigation_time:  # event_based
+                self.avg_ratio = numpy.array([oq.ses_ratio] * R)
+            else:  # scenario
+                self.avg_ratio = 1. / self.num_events
+            self.avg_losses = numpy.zeros((A, R, L), F32)
+            self.datastore.create_dset('avg_losses-rlzs', F32, (A, R, L))
             self.datastore.set_shape_descr(
-                'avg_losses-rlzs', asset_id=self.assetcol['id'], rlzs=self.R,
+                'avg_losses-rlzs', asset_id=self.assetcol['id'], rlz=R,
                 loss_type=oq.loss_names)
         alt_nbytes = 4 * self.E * L
         if alt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
@@ -213,33 +252,30 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         self.datastore.create_dset('gmf_info', gmf_info_dt)
 
     def execute(self):
-        self.datastore.flush()  # just to be sure
-        oq = self.oqparam
-        if (oq.ignore_covs or not self.crmodel.covs or
-                'LN' not in self.crmodel.distributions):
-            epsgetter = None
-            logging.info('Ignoring epsilons')
-        else:
-            epsgetter = EpsilonGetter(
-                oq.master_seed, int(oq.asset_correlation), self.E)
-        self.set_param(hdf5path=self.datastore.filename, epsgetter=epsgetter)
-        srcfilter = self.src_filter()
-        logging.info(
-            'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
-        self.events_per_sid = numpy.zeros(self.N, U32)
-        self.datastore.swmr_on()
-        M = len(oq.all_imts())
-        self.momenta = numpy.zeros((2, self.N, M))
-        smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
-        smap.monitor.save('srcfilter', srcfilter)
-        smap.monitor.save('crmodel', self.crmodel)
-        for rg in getters.gen_rupture_getters(
-                self.datastore, oq.concurrent_tasks):
-            smap.submit((rg, self.param))
-        smap.reduce(self.agg_dicts)
-        gmf_bytes = self.datastore['gmf_info']['gmfbytes'].sum()
-        logging.info(
-            'Produced %s of GMFs', general.humansize(gmf_bytes))
+        """
+        Compute risk from GMFs or ruptures depending on what is stored
+        """
+        if 'gmf_data' not in self.datastore:  # start from ruptures
+            smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
+            smap.monitor.save('srcfilter', self.src_filter())
+            smap.monitor.save('crmodel', self.crmodel)
+            for rg in getters.gen_rupture_getters(
+                    self.datastore, self.oqparam.concurrent_tasks):
+                smap.submit((rg, self.param))
+            smap.reduce(self.agg_dicts)
+            gmf_bytes = self.datastore['gmf_info']['gmfbytes']
+            if len(gmf_bytes) == 0:
+                raise RuntimeError(
+                    'No GMFs were generated, perhaps they were '
+                    'all below the minimum_intensity threshold')
+            logging.info(
+                'Produced %s of GMFs', general.humansize(gmf_bytes.sum()))
+        else:  # start from GMFs
+            smap = parallel.Starmap(
+                calc_risk, self.gen_args(), h5=self.datastore.hdf5)
+            smap.monitor.save('assets', self.assetcol.to_dframe())
+            smap.monitor.save('crmodel', self.crmodel)
+            smap.reduce(self.agg_dicts)
         return 1
 
     def agg_dicts(self, dummy, dic):
@@ -268,17 +304,109 @@ class EbriskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
-        self.datastore['avg_losses-rlzs'] = self.avg_losses * oq.ses_ratio
-        stats.set_rlzs_stats(self.datastore, 'avg_losses',
-                             asset_id=self.assetcol['id'],
-                             loss_type=oq.loss_names)
+        if oq.avg_losses:
+            for r in range(self.R):
+                self.avg_losses[:, r] *= self.avg_ratio[r]
+            self.datastore['avg_losses-rlzs'] = self.avg_losses
+            stats.set_rlzs_stats(self.datastore, 'avg_losses',
+                                 asset_id=self.assetcol['id'],
+                                 loss_type=oq.loss_names)
         logging.info('Events per site: ~%d', self.events_per_sid.mean())
         rlzs = self.datastore['events']['rlz_id']
         totw = self.datastore['weights'][:][rlzs].sum()
         self.datastore['avg_gmf'] = numpy.exp(
             stats.calc_avg_std(self.momenta, totw))
-        prc = PostRiskCalculator(oq, self.datastore.calc_id)
-        if hasattr(self, 'exported'):
-            prc.exported = self.exported
-        prc.datastore.parent = self.datastore.parent
-        prc.run(exports='')
+
+        # save agg_losses
+        alt = self.datastore.read_df('agg_loss_table', 'event_id')
+        K = self.datastore['agg_loss_table'].attrs.get('K', 0)
+        units = self.datastore['cost_calculator'].get_units(oq.loss_names)
+        if oq.investigation_time is None:  # scenario, compute agg_losses
+            alt['rlz_id'] = self.rlzs[alt.index.to_numpy()]
+            agglosses = numpy.zeros((K + 1, self.R, self.L), F32)
+            for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
+                agglosses[agg_id, rlz_id] = numpy.array(
+                    [df[ln].sum() for ln in oq.loss_names]
+                ) * self.avg_ratio[rlz_id]
+            self.datastore['agg_losses-rlzs'] = agglosses
+            stats.set_rlzs_stats(self.datastore, 'agg_losses', agg_id=K,
+                                 loss_types=oq.loss_names, units=units)
+            logging.info('Total portfolio loss\n' +
+                         views.view('portfolio_loss', self.datastore))
+        else:  # event_based_risk, run post_risk
+            prc = PostRiskCalculator(oq, self.datastore.calc_id)
+            if hasattr(self, 'exported'):
+                prc.exported = self.exported
+            prc.run(exports='')
+
+        if (oq.investigation_time or not oq.avg_losses or
+                'agg_losses-rlzs' not in self.datastore):
+            return
+
+        # sanity check on the agg_losses and sum_losses
+        sumlosses = self.avg_losses.sum(axis=0)
+        if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
+            url = ('https://docs.openquake.org/oq-engine/advanced/'
+                   'addition-is-non-associative.html')
+            logging.warning(
+                'Due to rounding errors inherent in floating-point arithmetic,'
+                ' agg_losses != sum(avg_losses): %s != %s\nsee %s',
+                agglosses.mean(), sumlosses.mean(), url)
+
+    def gen_args(self):
+        """
+        :yields: pairs (gmf_df, param)
+        """
+        rlz_id = self.datastore['events']['rlz_id']
+        recs = self.datastore['gmf_data/by_task'][:]
+        recs.sort(order='task_no')
+        for task_no, start, stop in recs:
+            df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
+            df['rlz'] = rlz_id[df.eid.to_numpy()]
+            yield df, self.param
+
+    def read_shakemap(self, haz_sitecol, assetcol):
+        """
+        Enabled only if there is a shakemap_id parameter in the job.ini.
+        Download, unzip, parse USGS shakemap files and build a corresponding
+        set of GMFs which are then filtered with the hazard site collection
+        and stored in the datastore.
+        """
+        oq = self.oqparam
+        E = oq.number_of_ground_motion_fields
+        oq.risk_imtls = oq.imtls or self.datastore.parent['oqparam'].imtls
+        logging.info('Getting/reducing shakemap')
+        with self.monitor('getting/reducing shakemap'):
+            # for instance for the test case_shakemap the haz_sitecol
+            # has sids in range(0, 26) while sitecol.sids is
+            # [8, 9, 10, 11, 13, 15, 16, 17, 18];
+            # the total assetcol has 26 assets on the total sites
+            # and the reduced assetcol has 9 assets on the reduced sites
+            smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
+                oq.inputs['shakemap'])
+            sitecol, shakemap, discarded = get_sitecol_shakemap(
+                smap, oq.imtls, haz_sitecol,
+                oq.asset_hazard_distance['default'],
+                oq.discard_assets)
+            if len(discarded):
+                self.datastore['discarded'] = discarded
+            assetcol.reduce_also(sitecol)
+
+        logging.info('Building GMFs')
+        with self.monitor('building/saving GMFs'):
+            imts, gmfs = to_gmfs(
+                shakemap, oq.spatial_correlation, oq.cross_correlation,
+                oq.site_effects, oq.truncation_level, E, oq.random_seed,
+                oq.imtls)
+            N, E, M = gmfs.shape
+            events = numpy.zeros(E, rupture.events_dt)
+            events['id'] = numpy.arange(E, dtype=U32)
+            self.datastore['events'] = events
+            # convert into an array of dtype gmv_data_dt
+            lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
+                   for s in numpy.arange(N, dtype=U32)
+                   for ei, event in enumerate(events)]
+            oq.hazard_imtls = {imt: [0] for imt in imts}
+            data = numpy.array(lst, oq.gmf_data_dt())
+            base.create_gmf_data(self.datastore, len(imts), data=data)
+        return sitecol, assetcol

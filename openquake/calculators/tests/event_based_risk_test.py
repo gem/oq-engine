@@ -77,10 +77,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
 
-        # FIXME: the error in portfolio_loss is not reproducible
-        # tmp = gettemp(view('portfolio_loss', self.calc.datastore))
-        # self.assertEqualFiles('expected/portfolio_loss.txt', tmp)
-
         # test the src_loss_table extractor
         [fname] = export(('src_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
@@ -360,7 +356,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             'expected/portfolio_losses.txt', fname, delta=1E-5)
 
         # this is a case with exposure, site model and region_grid_spacing
-        self.run_calc(case_miriam.__file__, 'job2.ini')
+        self.run_calc(case_miriam.__file__, 'job2.ini', concurrent_tasks=4)
         hcurves = dict(extract(self.calc.datastore, 'hcurves'))['all']
         sitecol = self.calc.datastore['sitecol']  # filtered sitecol
         self.assertEqual(len(hcurves), len(sitecol))
