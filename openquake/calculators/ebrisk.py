@@ -25,8 +25,6 @@ import pandas
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
-from openquake.hazardlib.source import rupture
-from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
 from openquake.risklib.riskinput import (
     EpsilonGetter, get_assets_by_taxo, get_output_gmf)
@@ -364,49 +362,3 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
             df['rlz'] = rlz_id[df.eid.to_numpy()]
             yield df, self.param
-
-    def read_shakemap(self, haz_sitecol, assetcol):
-        """
-        Enabled only if there is a shakemap_id parameter in the job.ini.
-        Download, unzip, parse USGS shakemap files and build a corresponding
-        set of GMFs which are then filtered with the hazard site collection
-        and stored in the datastore.
-        """
-        oq = self.oqparam
-        E = oq.number_of_ground_motion_fields
-        oq.risk_imtls = oq.imtls or self.datastore.parent['oqparam'].imtls
-        logging.info('Getting/reducing shakemap')
-        with self.monitor('getting/reducing shakemap'):
-            # for instance for the test case_shakemap the haz_sitecol
-            # has sids in range(0, 26) while sitecol.sids is
-            # [8, 9, 10, 11, 13, 15, 16, 17, 18];
-            # the total assetcol has 26 assets on the total sites
-            # and the reduced assetcol has 9 assets on the reduced sites
-            smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
-                oq.inputs['shakemap'])
-            sitecol, shakemap, discarded = get_sitecol_shakemap(
-                smap, oq.imtls, haz_sitecol,
-                oq.asset_hazard_distance['default'],
-                oq.discard_assets)
-            if len(discarded):
-                self.datastore['discarded'] = discarded
-            assetcol.reduce_also(sitecol)
-
-        logging.info('Building GMFs')
-        with self.monitor('building/saving GMFs'):
-            imts, gmfs = to_gmfs(
-                shakemap, oq.spatial_correlation, oq.cross_correlation,
-                oq.site_effects, oq.truncation_level, E, oq.random_seed,
-                oq.imtls)
-            N, E, M = gmfs.shape
-            events = numpy.zeros(E, rupture.events_dt)
-            events['id'] = numpy.arange(E, dtype=U32)
-            self.datastore['events'] = events
-            # convert into an array of dtype gmv_data_dt
-            lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
-                   for s in numpy.arange(N, dtype=U32)
-                   for ei, event in enumerate(events)]
-            oq.hazard_imtls = {imt: [0] for imt in imts}
-            data = numpy.array(lst, oq.gmf_data_dt())
-            base.create_gmf_data(self.datastore, len(imts), data=data)
-        return sitecol, assetcol

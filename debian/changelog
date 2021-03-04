@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Merged the calculators scenario_risk and ebrisk
   * Storing the agg_loss_table as 64 bit floats instead of 32 bit floats
   * Changed the algorithm used to generate the epsilons to avoid storing the
     epsilon matrix
