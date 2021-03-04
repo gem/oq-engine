@@ -421,7 +421,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_6c(self):
         # case with asset_correlation=1
-        self.run_calc(case_6c.__file__, 'job_h.ini', concurrent_tasks='6')
+        self.run_calc(case_6c.__file__, 'job_h.ini')
         hc = str(self.calc.datastore.calc_id)
         out = self.run_calc(case_6c.__file__, 'job_r.ini', exports='csv',
                             hazard_calculation_id=hc)
