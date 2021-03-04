@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import unittest
 import numpy
 
 from openquake.baselib.hdf5 import read_csv
@@ -286,6 +287,8 @@ aid
         self.assertEqualFiles('expected/avg_damages2.csv', fname)
 
     def test_case_11_risk(self):
+        raise unittest.SkipTest('Not implemented yet')
+
         # losses due to liquefaction
         self.run_calc(case_11.__file__, 'job_risk.ini')
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')

@@ -199,10 +199,17 @@ class EventBasedCalculator(base.HazardCalculator):
         with sav_mon:
             df = result.pop('gmfdata')
             if len(df):
+                by_task = self.datastore['gmf_data/by_task']
+                dset = self.datastore['gmf_data/sid']
                 times = result.pop('times')
+                [task_no] = numpy.unique(times['task_no'])
+                start = len(dset)
+                stop = start + len(df)
+                hdf5.extend(by_task, numpy.array([(task_no, start, stop)],
+                                                 base.task_dt))
                 rupids = list(times['rup_id'])
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
-                hdf5.extend(self.datastore['gmf_data/sid'], df.sid.to_numpy())
+                hdf5.extend(dset, df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
                 for m in range(len(primary)):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
@@ -308,7 +315,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
-        N = len(self.sitecol.complete)
+
         if oq.ground_motion_fields:
             M = len(oq.get_primary_imtls())
             nrups = len(self.datastore['ruptures'])

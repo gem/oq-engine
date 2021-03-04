@@ -132,9 +132,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if self.R > 1:  # individual realizations saved only if many
             loss_curves = numpy.zeros((self.A, self.R), self.loss_curve_dt)
             avg_losses = numpy.zeros((self.A, self.R, self.L), F32)
-            for l, r, a, (losses, poes, avg) in result['loss_curves']:
-                lc = loss_curves[a, r][ltypes[l]]
-                avg_losses[a, r, l] = avg
+            for li, r, a, (losses, poes, avg) in result['loss_curves']:
+                lc = loss_curves[a, r][ltypes[li]]
+                avg_losses[a, r, li] = avg
                 base.set_array(lc['losses'], losses)
                 base.set_array(lc['poes'], poes)
             self.datastore['avg_losses-rlzs'] = avg_losses

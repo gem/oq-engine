@@ -962,8 +962,8 @@ class OqParam(valid.ParamSet):
                     'for classical_damage calculations' % job_ini)
 
         # checks for event_based_risk
-        if (self.calculation_mode == 'event_based_risk' and
-              not self.ground_motion_fields):
+        if (self.calculation_mode == 'event_based_risk' and not
+                self.ground_motion_fields):
             raise ValueError('ground_motion_fields must be set to true in %s'
                              % job_ini)
 
@@ -1101,9 +1101,7 @@ class OqParam(valid.ParamSet):
                 try:
                     mini[imt] = calc.filters.getdefault(mini, imt)
                 except KeyError:
-                    raise ValueError(
-                        'The parameter `minimum_intensity` in the job.ini '
-                        'file is missing the IMT %r' % imt)
+                    mini[imt] = 0
         if 'default' in mini:
             del mini['default']
         return numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
