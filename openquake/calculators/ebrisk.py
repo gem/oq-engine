@@ -198,7 +198,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 oq.master_seed, int(oq.asset_correlation), self.E)
         self.set_param(hdf5path=self.datastore.filename, epsgetter=epsgetter)
         logging.info(
-            'Sending {:_d} ruptures'.format(len(self.datastore['ruptures'])))
+            'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         M = len(oq.all_imts())
