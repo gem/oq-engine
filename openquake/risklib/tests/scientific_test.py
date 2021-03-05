@@ -50,7 +50,7 @@ class BetaDistributionTestCase(unittest.TestCase):
         numpy.random.seed(0)
         numpy.testing.assert_allclose(
             [0.057241368], scientific.BetaDistribution().sample(
-                numpy.array([0.1]), None, numpy.array([0.1])))
+                numpy.array([0.1]), numpy.array([1])))
 
     def test_zero_ratios(self):
         # a loss ratio can be zero if the corresponding CoV is zero
@@ -381,8 +381,7 @@ class LogNormalDistributionTestCase(unittest.TestCase):
             seed=17, correlation=correlation)
         self.dist = scientific.LogNormalDistribution(epsilons)
         samples = self.dist.sample(numpy.array([0., 0., .1, .1]),
-                                   numpy.array([0., .1, 0., .1]),
-                                   None).reshape(-1)
+                                   numpy.array([0., .1, 0., .1])).reshape(-1)
         numpy.testing.assert_allclose([0., 0., 0.1, 0.10228396], samples)
 
 
