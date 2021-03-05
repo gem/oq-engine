@@ -111,7 +111,7 @@ def get_output_pc(crmodel, assets_by_taxo, haz, rlzi):
                 arrays, weights=weights, axis=0)
             ls.append(res)
         arr = numpy.concatenate(ls)
-        dic[lt] = arr[assets_by_taxo.idxs] if len(arr) else arr
+        dic[lt] = arr[assets_by_taxo.idxs]
     return hdf5.ArrayWrapper((), dic)
 
 
