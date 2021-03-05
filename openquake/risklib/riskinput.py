@@ -134,9 +134,10 @@ class MultiEventRNG(object):
 
     >>> epsgetter = MultiEventRNG(
     ...     master_seed=42, asset_correlation=1, eids=[0, 1, 2])
-    >>> epsgetter.normal(numpy.arange(2), 3)
-    array([[-1.1043996, -1.1043996, -1.1043996],
-           [-2.4686112, -2.4686112, -2.4686112]], dtype=float32)
+    >>> epsgetter.normal(3, [0, 1])
+    array([[-1.1043996, -2.4686112],
+           [-1.1043996, -2.4686112],
+           [-1.1043996, -2.4686112]], dtype=float32)
     """
     def __init__(self, master_seed, asset_correlation, eids):
         self.master_seed = master_seed
