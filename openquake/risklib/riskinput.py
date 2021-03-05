@@ -146,18 +146,32 @@ class MultiEventRNG(object):
             ph = numpy.random.Philox(self.master_seed + eid)
             self.rng[eid] = numpy.random.Generator(ph)
 
-    def normal(self, eids, *size):
+    def normal(self, size, eids):
         """
         :param eids: array of event IDs
         :returns: array of shape (E, size...) and dtype float32
         """
-        res = numpy.zeros((len(eids),) + size, F32)
+        res = numpy.zeros((size, len(eids)), F32)
         for e, eid in enumerate(eids):
             rng = self.rng[eid]
             if self.asset_correlation:
-                res[e] = numpy.ones(size) * rng.normal()
+                res[:, e] = numpy.ones(size) * rng.normal()
             else:
-                res[e] = rng.normal(size=size)
+                res[:, e] = rng.normal(size=size)
+        return res
+
+    def beta(self, size, eids, alpha, beta):
+        """
+        :param eids: array of event IDs
+        :returns: array of shape (size, len(eids)) and dtype float32
+        """
+        res = numpy.zeros((size, len(eids)), F32)
+        for e, eid in enumerate(eids):
+            rng = self.rng[eid]
+            if self.asset_correlation:
+                res[:, e] = numpy.ones(size) * rng.beta(alpha[e], beta[e])
+            else:
+                res[:, e] = rng.beta(alpha[e], beta[e], size=size)
         return res
 
 
