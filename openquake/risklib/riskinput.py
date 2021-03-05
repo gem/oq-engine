@@ -52,10 +52,6 @@ def get_output_gmf(crmodel, taxo, assets, haz, epsilons):
     # order and produce random results even if the
     # seed is set correctly; very tricky indeed! (MS)
     haz = haz.sort_values('eid')
-    for m, imt in enumerate(primary):
-        col = f'gmv_{m}'
-        if col not in haz.columns:
-            haz[col] = numpy.zeros(len(haz))  # ZeroGetter
     eids = haz.eid.to_numpy()
     dic = dict(eids=eids, assets=assets,
                loss_types=crmodel.loss_types, haz=haz, rlzs=haz.rlz.to_numpy())
@@ -65,6 +61,8 @@ def get_output_gmf(crmodel, taxo, assets, haz, epsilons):
         for rm in rmodels:
             imt = rm.imt_by_lt[lt]
             col = alias.get(imt, imt)
+            if col not in haz.columns:
+                haz[col] = numpy.zeros(len(haz))  # ZeroGetter
             arrays.append(rm(lt, assets, haz, col, epsilons))
         dic[lt] = arrays[0] if len(arrays) == 1 else numpy.average(
             arrays, weights=weights, axis=0)
