@@ -332,7 +332,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         gmvs = numpy.array([.1, .2, .3, .4, .5])
         gmf_df = pandas.DataFrame(dict(gmv_0=gmvs, eid=eids))
         epsilons = numpy.array([[.01, .02, .03, .04, .05],
-                                [.001, .002, .003, .004, .005]])
+                                [.001, .002, .003, .004, .005]]).T
 
         # compute the losses by considering all the events
         losses = rm('structural', assets, gmf_df, 'gmv_0', epsilons)
@@ -343,11 +343,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         eids2 = numpy.array([2, 3, 4])
         gmvs1 = numpy.array([.1, .2])
         gmvs2 = numpy.array([.3, .4, .5])
-        eps1 = numpy.array([[.01, .02], [.001, .002]])
-        eps2 = numpy.array([[.03, .04, .05], [.003, .004, .005]])
+        eps1 = numpy.array([[.01, .02], [.001, .002]]).T
+        eps2 = numpy.array([[.03, .04, .05], [.003, .004, .005]]).T
         gmf1_df = pandas.DataFrame(dict(gmv_0=gmvs1, eid=eids1))
         gmf2_df = pandas.DataFrame(dict(gmv_0=gmvs2, eid=eids2))
-        losses1 = rm('structural', assets, gmf1_df, 'gmv_0', epsilons)
-        losses2 = rm('structural', assets, gmf2_df, 'gmv_0', epsilons)
+        losses1 = rm('structural', assets, gmf1_df, 'gmv_0', eps1)
+        losses2 = rm('structural', assets, gmf2_df, 'gmv_0', eps2)
         numpy.testing.assert_allclose(losses1, self.expected_losses[:, :2])
         numpy.testing.assert_allclose(losses2, self.expected_losses[:, 2:])
