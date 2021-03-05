@@ -32,9 +32,6 @@ def get_assets_by_taxo(assets, epsgetter=None):
     :returns: assets_by_taxo with attributes eps and idxs
     """
     assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
-    assets_by_taxo.assets = assets
-    assets_by_taxo.idxs = numpy.argsort(numpy.concatenate([
-        a['ordinal'] for a in assets_by_taxo.values()]))
     assets_by_taxo.eps = {}
     if epsgetter:
         for taxo, assets in assets_by_taxo.items():
@@ -42,7 +39,7 @@ def get_assets_by_taxo(assets, epsgetter=None):
     return assets_by_taxo
 
 
-def get_output_gmf(crmodel, assets_by_taxo, haz):
+def get_output_gmf(crmodel, taxo, assets, haz, epsilons):
     """
     :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
     :param haz: a DataFrame of GMVs on that site
@@ -65,27 +62,21 @@ def get_output_gmf(crmodel, assets_by_taxo, haz):
         if col not in haz.columns:
             haz[col] = numpy.zeros(len(haz))  # ZeroGetter
     eids = haz.eid.to_numpy()
-    dic = dict(eids=eids, assets=assets_by_taxo.assets,
+    dic = dict(eids=eids, assets=assets,
                loss_types=crmodel.loss_types, haz=haz, rlzs=haz.rlz.to_numpy())
     for lt in crmodel.loss_types:
-        losses = []
-        for taxonomy, assets_ in assets_by_taxo.items():
-            epsilons = assets_by_taxo.eps.get(taxonomy, ())
-            arrays = []
-            rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
-            for rm in rmodels:
-                imt = rm.imt_by_lt[lt]
-                col = alias.get(imt, imt)
-                arrays.append(rm(lt, assets_, haz, col, epsilons))
-            res = arrays[0] if len(arrays) == 1 else numpy.average(
-                arrays, weights=weights, axis=0)
-            losses.append(res)
-        arr = numpy.concatenate(losses)  # losses per each taxonomy
-        dic[lt] = arr[assets_by_taxo.idxs]  # reordered by ordinal
+        arrays = []
+        rmodels, weights = crmodel.get_rmodels_weights(lt, taxo)
+        for rm in rmodels:
+            imt = rm.imt_by_lt[lt]
+            col = alias.get(imt, imt)
+            arrays.append(rm(lt, assets, haz, col, epsilons))
+        dic[lt] = arrays[0] if len(arrays) == 1 else numpy.average(
+            arrays, weights=weights, axis=0)
     return hdf5.ArrayWrapper((), dic)
 
 
-def get_output_pc(crmodel, assets_by_taxo, haz, rlzi):
+def get_output_pc(crmodel, taxo, assets, haz, rlzi):
     """
     :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
     :param haz: an ArrayWrapper of ProbabilityCurves on that site
@@ -96,22 +87,17 @@ def get_output_pc(crmodel, assets_by_taxo, haz, rlzi):
     alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
     data = {f'gmv_{m}': haz.array[crmodel.imtls(imt), 0]
             for m, imt in enumerate(primary)}
-    dic = dict(assets=assets_by_taxo.assets,
+    dic = dict(assets=assets,
                loss_types=crmodel.loss_types, haz=haz, rlzi=rlzi)
     for lt in crmodel.loss_types:
-        ls = []
-        for taxonomy, assets_ in assets_by_taxo.items():
-            arrays = []
-            rmodels, weights = crmodel.get_rmodels_weights(lt, taxonomy)
-            for rm in rmodels:
-                imt = rm.imt_by_lt[lt]
-                col = alias.get(imt, imt)
-                arrays.append(rm(lt, assets_, data, col))
-            res = arrays[0] if len(arrays) == 1 else numpy.average(
-                arrays, weights=weights, axis=0)
-            ls.append(res)
-        arr = numpy.concatenate(ls)
-        dic[lt] = arr[assets_by_taxo.idxs]
+        arrays = []
+        rmodels, weights = crmodel.get_rmodels_weights(lt, taxo)
+        for rm in rmodels:
+            imt = rm.imt_by_lt[lt]
+            col = alias.get(imt, imt)
+            arrays.append(rm(lt, assets, data, col))
+        dic[lt] = arrays[0] if len(arrays) == 1 else numpy.average(
+            arrays, weights=weights, axis=0)
     return hdf5.ArrayWrapper((), dic)
 
 
@@ -153,11 +139,13 @@ class RiskInput(object):
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
             assets_by_taxo = get_assets_by_taxo(self.assets, epsgetter)
-            if hasattr(haz, 'groupby'):  # DataFrame
-                yield get_output_gmf(crmodel, assets_by_taxo, haz)
-            else:  # list of probability curves
-                for rlz, pc in enumerate(haz):
-                    yield get_output_pc(crmodel, assets_by_taxo, pc, rlz)
+            for taxo, assets in assets_by_taxo.items():
+                epsilons = assets_by_taxo.eps.get(taxo, ())
+                if hasattr(haz, 'groupby'):  # DataFrame
+                    yield get_output_gmf(crmodel, taxo, assets, haz, epsilons)
+                else:  # list of probability curves
+                    for rlz, pc in enumerate(haz):
+                        yield get_output_pc(crmodel, taxo, assets, pc, rlz)
 
     def __repr__(self):
         [sid] = self.hazard_getter.sids

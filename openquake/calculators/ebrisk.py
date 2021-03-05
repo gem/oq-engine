@@ -77,27 +77,29 @@ def event_based_risk(df, param, monitor):
         else:
             acc['events_per_sid'][sid] += len(haz)
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
-        with mon_risk:
-            # NB: this is converting the asset ordinal from U32 to U64
-            assets = asset_df.to_records()  # fast
-            assets_by_taxo = get_assets_by_taxo(assets, param['epsgetter'])
-            out = get_output_gmf(crmodel, assets_by_taxo, haz)  # slow
-        with mon_agg:
-            alt.aggregate(out, mal, aggby)
-            # NB: after the aggregation out contains losses, not loss_ratios
-        ws = weights[haz['rlz']]
-        acc['momenta'][:, sid] = stats.calc_momenta(
-            numpy.log(numpy.maximum(gmvs, param['min_iml'])), ws)  # (2, M)
-        if param['avg_losses']:
-            with mon_avg:
-                for lni, ln in enumerate(alt.loss_names):
-                    df = pandas.DataFrame(
-                        {aid: out[ln][a] for a, aid in enumerate(
-                            assets['ordinal'])}, haz['rlz'])
-                    tot_df = df.groupby(df.index).sum()
-                    for aid in tot_df.columns:
-                        losses_by_A[aid, tot_df.index.to_numpy(), lni] += (
-                            tot_df[aid].to_numpy())
+        # NB: this is converting the asset ordinal from U32 to U64
+        assets = asset_df.to_records()  # fast
+        assets_by_taxo = get_assets_by_taxo(assets, param['epsgetter'])
+        for taxo, assets in assets_by_taxo.items():
+            epsilons = assets_by_taxo.eps.get(taxo, ())
+            with mon_risk:
+                out = get_output_gmf(crmodel, taxo, assets, haz, epsilons)
+            with mon_agg:
+                alt.aggregate(out, mal, aggby)
+                # NB: after the aggregation out contains losses, not loss_ratios
+            ws = weights[haz['rlz']]
+            acc['momenta'][:, sid] = stats.calc_momenta(
+                numpy.log(numpy.maximum(gmvs, param['min_iml'])), ws)  # (2, M)
+            if param['avg_losses']:
+                with mon_avg:
+                    for lni, ln in enumerate(alt.loss_names):
+                        df = pandas.DataFrame(
+                            {aid: out[ln][a] for a, aid in enumerate(
+                                assets['ordinal'])}, haz['rlz'])
+                        tot_df = df.groupby(df.index).sum()
+                        for aid in tot_df.columns:
+                            losses_by_A[aid, tot_df.index.to_numpy(), lni] += (
+                                tot_df[aid].to_numpy())
     acc['alt'] = alt.to_dframe()
     if param['avg_losses']:
         acc['losses_by_A'] = losses_by_A
