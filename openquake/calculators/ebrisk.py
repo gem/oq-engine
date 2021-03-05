@@ -78,7 +78,6 @@ def event_based_risk(df, param, monitor):
         else:
             acc['events_per_sid'][sid] += len(haz)
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
-        # NB: this is converting the asset ordinal from U32 to U64
         for taxo, assets in asset_df.groupby('taxonomy'):
             epsilons = epsgetter.get(assets) if epsgetter else ()
             with mon_risk:
