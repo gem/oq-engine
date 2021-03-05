@@ -26,7 +26,7 @@ import pandas
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
-from openquake.risklib.riskinput import EpsilonGetter, get_output_gmf
+from openquake.risklib.riskinput import MultiEventRNG, get_output_gmf
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -71,7 +71,7 @@ def event_based_risk(df, param, monitor):
     if param['ignore_covs']:
         rndgen = None
     else:
-        rndgen = EpsilonGetter(
+        rndgen = MultiEventRNG(
             param['master_seed'], param['asset_correlation'], df.eid)
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
@@ -82,12 +82,10 @@ def event_based_risk(df, param, monitor):
             acc['events_per_sid'][sid] += len(haz)
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
         rlzs = haz.rlz.to_numpy()
-        eids = haz.eid.to_numpy()
         for taxo, assets in asset_df.groupby('taxonomy'):
             with mon_risk:
                 aids = assets.ordinal.to_numpy()
-                epsilons = rndgen.normal(eids, len(assets)) if rndgen else ()
-                out = get_output_gmf(crmodel, taxo, assets, haz, epsilons)
+                out = get_output_gmf(crmodel, taxo, assets, haz, rndgen)
             with mon_agg:
                 alt.aggregate(out, mal, aggby)
                 # NB: after the aggregation out contains losses

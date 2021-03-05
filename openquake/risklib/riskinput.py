@@ -17,20 +17,19 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-import pandas
 from openquake.baselib import hdf5
 
 U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def get_output_gmf(crmodel, taxo, assets, haz, epsilons):
+def get_output_gmf(crmodel, taxo, assets, haz, rndgen=None):
     """
     :param crmodel: a CompositeRiskModel instance
     :param taxo: a taxonomy index
     :param assets: a DataFrame of assets of the given taxonomy
     :param haz: a DataFrame of GMVs on that site
-    :param rlzi: if given, a realization index
+    :param rndgen: a MultiEventRNG instance
     :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
     primary = crmodel.primary_imtls
@@ -55,7 +54,7 @@ def get_output_gmf(crmodel, taxo, assets, haz, epsilons):
             col = alias.get(imt, imt)
             if col not in haz.columns:
                 haz[col] = numpy.zeros(len(haz))  # ZeroGetter
-            arrays.append(rm(lt, assets, haz, col, epsilons))
+            arrays.append(rm(lt, assets, haz, col, rndgen))
         dic[lt] = arrays[0] if len(arrays) == 1 else numpy.average(
             arrays, weights=weights, axis=0)
     return hdf5.ArrayWrapper((), dic)
@@ -99,7 +98,7 @@ class RiskInput(object):
         self.weight = len(assets)
         self.aids = assets.ordinal.to_numpy()
 
-    def gen_outputs(self, crmodel, monitor, epsgetter=None, haz=None):
+    def gen_outputs(self, crmodel, monitor, haz=None):
         """
         Group the assets per taxonomy and compute the outputs by using the
         underlying riskmodels. Yield one output per realization.
@@ -113,14 +112,9 @@ class RiskInput(object):
             with monitor('getting hazard', measuremem=False):
                 haz = hazard_getter.get_hazard()
         with monitor('computing risk', measuremem=False):
-            # this approach is slow for event_based_risk since a lot of
-            # small arrays are passed (one per realization) instead of
-            # a long array with all realizations; ebrisk does the right
-            # thing since it calls get_output directly
             for taxo, assets in self.assets.groupby('taxonomy'):
-                epsilons = epsgetter.get(assets) if epsgetter else ()
                 if hasattr(haz, 'groupby'):  # DataFrame
-                    yield get_output_gmf(crmodel, taxo, assets, haz, epsilons)
+                    yield get_output_gmf(crmodel, taxo, assets, haz)
                 else:  # list of probability curves
                     for rlz, pc in enumerate(haz):
                         yield get_output_pc(crmodel, taxo, assets, pc, rlz)
@@ -131,14 +125,14 @@ class RiskInput(object):
             self.__class__.__name__, sid, len(self.aids))
 
 
-class EpsilonGetter(object):
+class MultiEventRNG(object):
     """
-    An object ``EpsilonGetter(master_seed, asset_correlation, eids)``
+    An object ``MultiEventRNG(master_seed, asset_correlation, eids)``
     has a method ``.get(A, eids)`` which returns a matrix of (A, E)
     normally distributed random numbers.
     If the ``asset_correlation`` is 1 the numbers are the same.
 
-    >>> epsgetter = EpsilonGetter(
+    >>> epsgetter = MultiEventRNG(
     ...     master_seed=42, asset_correlation=1, eids=[0, 1, 2])
     >>> epsgetter.normal(numpy.arange(2), 3)
     array([[-1.1043996, -1.1043996, -1.1043996],

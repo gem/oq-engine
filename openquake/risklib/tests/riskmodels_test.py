@@ -25,7 +25,7 @@ import pandas
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.risklib import riskmodels, nrml_examples
+from openquake.risklib import riskmodels, nrml_examples, riskinput
 from openquake.qa_tests_data.scenario_damage import case_4b
 
 FF_DIR = os.path.dirname(case_4b.__file__)
@@ -297,9 +297,9 @@ lossCategory="contents">
 
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
-    expected_losses = numpy.array([   # shape (2, 5)
-        [0.3458312, 0.34684792, 0.3478676, 0.3488903, 0.34991604],
-        [0.3449187, 0.34501997, 0.34512126, 0.3452226, 0.34532395]])
+    expected_losses = numpy.array(  # shape (2, 5)
+        [[0.249337, 0.167056, 0.374337, 0.483821, 0.605163],
+         [0.364503, 0.294082, 0.285084, 0.350432, 0.413865]])
 
     def test_splittable_events(self):
         # split the events in two blocks and check that the losses are
@@ -331,23 +331,24 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         eids = numpy.array([0, 1, 2, 3, 4])
         gmvs = numpy.array([.1, .2, .3, .4, .5])
         gmf_df = pandas.DataFrame(dict(gmv_0=gmvs, eid=eids))
-        epsilons = numpy.array([[.01, .02, .03, .04, .05],
-                                [.001, .002, .003, .004, .005]]).T
 
         # compute the losses by considering all the events
-        losses = rm('structural', assets, gmf_df, 'gmv_0', epsilons)
-        numpy.testing.assert_allclose(losses, self.expected_losses)
+        rndgen = riskinput.MultiEventRNG(42, 0, eids)
+        losses = rm('structural', assets, gmf_df, 'gmv_0', rndgen)
+        numpy.testing.assert_allclose(losses, self.expected_losses, rtol=1E-5)
 
         # split the events in two blocks
         eids1 = numpy.array([0, 1])
         eids2 = numpy.array([2, 3, 4])
         gmvs1 = numpy.array([.1, .2])
         gmvs2 = numpy.array([.3, .4, .5])
-        eps1 = numpy.array([[.01, .02], [.001, .002]]).T
-        eps2 = numpy.array([[.03, .04, .05], [.003, .004, .005]]).T
         gmf1_df = pandas.DataFrame(dict(gmv_0=gmvs1, eid=eids1))
         gmf2_df = pandas.DataFrame(dict(gmv_0=gmvs2, eid=eids2))
-        losses1 = rm('structural', assets, gmf1_df, 'gmv_0', eps1)
-        losses2 = rm('structural', assets, gmf2_df, 'gmv_0', eps2)
-        numpy.testing.assert_allclose(losses1, self.expected_losses[:, :2])
-        numpy.testing.assert_allclose(losses2, self.expected_losses[:, 2:])
+        rndgen = riskinput.MultiEventRNG(42, 0, eids1)
+        losses1 = rm('structural', assets, gmf1_df, 'gmv_0', rndgen)
+        rndgen = riskinput.MultiEventRNG(42, 0, eids2)
+        losses2 = rm('structural', assets, gmf2_df, 'gmv_0', rndgen)
+        numpy.testing.assert_allclose(losses1, self.expected_losses[:, :2],
+                                      rtol=1E-5)
+        numpy.testing.assert_allclose(losses2, self.expected_losses[:, 2:],
+                                      rtol=1E-5)

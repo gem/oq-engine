@@ -104,7 +104,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        numpy.testing.assert_allclose(aw.array, [687.9359])
+        numpy.testing.assert_allclose(aw.array, [687.92365])
 
         fnames = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         for fname in fnames:
