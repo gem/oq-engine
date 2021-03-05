@@ -133,51 +133,38 @@ class RiskInput(object):
 
 class EpsilonGetter(object):
     """
-    An object ``EpsilonGetter(master_seed, asset_correlation, E)``
-    has a method ``.get(assets)`` which returns a matrix of (A, E)
-    normally distributed random numbers, being A the number of assets.
-    If the ``asset_correlation`` is 1 the numbers are the same for
-    all assets of the same taxonomy.
+    An object ``EpsilonGetter(master_seed, asset_correlation, eids)``
+    has a method ``.get(A, eids)`` which returns a matrix of (A, E)
+    normally distributed random numbers.
+    If the ``asset_correlation`` is 1 the numbers are the same.
 
     >>> epsgetter = EpsilonGetter(
-    ...     master_seed=42, asset_correlation=1, tot_events=5)
-    >>> assets = numpy.array([(0, 1), (1, 1), (2, 2)],
-    ...     [('ordinal', int), ('taxonomy', int)])
-    >>> epsgetter.get(assets)
-    array([[ 0.79422116, -1.6106067 , -0.76643026, -0.4143733 ,  0.5967326 ],
-           [ 0.79422116, -1.6106067 , -0.76643026, -0.4143733 ,  0.5967326 ],
-           [ 2.0044227 , -0.7924013 ,  1.2191101 ,  1.3231088 ,  1.1357217 ]],
-          dtype=float32)
+    ...     master_seed=42, asset_correlation=1, eids=[0, 1, 2])
+    >>> epsgetter.normal(numpy.arange(2), 3)
+    array([[-1.1043996, -1.1043996, -1.1043996],
+           [-2.4686112, -2.4686112, -2.4686112]], dtype=float32)
     """
-    def __init__(self, master_seed, asset_correlation, tot_events):
+    def __init__(self, master_seed, asset_correlation, eids):
         self.master_seed = master_seed
         self.asset_correlation = asset_correlation
-        self.tot_events = tot_events
+        self.rng = {}
+        for eid in eids:
+            ph = numpy.random.Philox(self.master_seed + eid)
+            self.rng[eid] = numpy.random.Generator(ph)
 
-    def get(self, assets):
+    def normal(self, eids, *size):
         """
-        :param assets: array of assets
-        :returns: an array of shape (num_assets, tot_events) and dtype float32
+        :param eids: array of event IDs
+        :returns: array of shape (E, size...) and dtype float32
         """
-        epsilons = numpy.zeros((len(assets), self.tot_events), F32)
-        if self.asset_correlation:
-            ser = pandas.Series(assets['ordinal'])
-            a = 0
-            for taxid, subser in ser.groupby(assets['taxonomy']):
-                philox = numpy.random.Philox(self.master_seed).advance(
-                    int(taxid) * self.tot_events)
-                eps = numpy.random.Generator(philox).normal(
-                    size=self.tot_events)
-                for _ in subser:
-                    epsilons[a] = eps
-                    a += 1
-        else:
-            for a, ordinal in enumerate(assets.ordinal):
-                philox = numpy.random.Philox(self.master_seed).advance(
-                    int(ordinal) * self.tot_events)
-                epsilons[a] = numpy.random.Generator(philox).normal(
-                    size=self.tot_events)
-        return epsilons
+        res = numpy.zeros((len(eids),) + size, F32)
+        for e, eid in enumerate(eids):
+            rng = self.rng[eid]
+            if self.asset_correlation:
+                res[e] = numpy.ones(size) * rng.normal()
+            else:
+                res[e] = rng.normal(size=size)
+        return res
 
 
 def str2rsi(key):
