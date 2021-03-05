@@ -77,26 +77,24 @@ def event_based_risk(df, param, monitor):
         else:
             acc['events_per_sid'][sid] += len(haz)
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
+        rlzs = haz['rlz'].to_numpy()
         for taxo, assets in asset_df.groupby('taxonomy'):
+            aids = assets.ordinal.to_numpy()
             epsilons = epsgetter.get(assets) if epsgetter else ()
             with mon_risk:
                 out = get_output_gmf(crmodel, taxo, assets, haz, epsilons)
             with mon_agg:
                 alt.aggregate(out, mal, aggby)
                 # NB: after the aggregation out contains losses
-            ws = weights[haz['rlz']]
+            ws = weights[rlzs]
             acc['momenta'][:, sid] = stats.calc_momenta(
                 numpy.log(numpy.maximum(gmvs, param['min_iml'])), ws)  # (2, M)
             if param['avg_losses']:
                 with mon_avg:
                     for lni, ln in enumerate(alt.loss_names):
-                        df = pandas.DataFrame(
-                            {aid: out[ln][a] for a, aid in enumerate(
-                                assets['ordinal'])}, haz['rlz'])
-                        tot_df = df.groupby(df.index).sum()
-                        for aid in tot_df.columns:
-                            losses_by_A[aid, tot_df.index.to_numpy(), lni] += (
-                                tot_df[aid].to_numpy())
+                        for rlz, losses in zip(rlzs, out[ln].T):
+                            losses_by_A[aids, rlz, lni] += losses
+
     acc['alt'] = alt.to_dframe()
     if param['avg_losses']:
         acc['losses_by_A'] = losses_by_A
