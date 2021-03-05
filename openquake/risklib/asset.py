@@ -557,12 +557,12 @@ class AssetCollection(object):
             self.tot_sites = len(sitecol)
         sitecol.make_complete()
 
-    def to_dframe(self):
+    def to_dframe(self, indexfield='id'):
         """
         :returns: the associated DataFrame
         """
         dic = {name: self.array[name] for name in self.array.dtype.names}
-        return pandas.DataFrame(dic, dic['id'])
+        return pandas.DataFrame(dic, dic[indexfield])
 
     def __iter__(self):
         for i in range(len(self)):

@@ -228,7 +228,7 @@ class GmfDataGetter(object):
         """
         return self.df
 
-
+# used in scenario_damage
 class ZeroGetter(GmfDataGetter):
     """
     An object with an .init() and .get_hazard() method

@@ -26,8 +26,7 @@ import pandas
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
-from openquake.risklib.riskinput import (
-    EpsilonGetter, get_assets_by_taxo, get_output_gmf)
+from openquake.risklib.riskinput import EpsilonGetter, get_output_gmf
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -57,7 +56,7 @@ def event_based_risk(df, param, monitor):
     mon_avg = monitor('averaging losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
-        assets_df = dstore.read_df('assetcol/array', 'ordinal')
+        assets_df = dstore.read_df('assetcol/array', 'id')
     with monitor('getting crmodel'):
         crmodel = monitor.read('crmodel')
         weights = dstore['weights'][()]
@@ -69,6 +68,7 @@ def event_based_risk(df, param, monitor):
     ARL = len(assets_df), len(weights), len(alt.loss_names)
     losses_by_A = numpy.zeros(ARL, F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
+    epsgetter = param['epsgetter']
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
             haz = haz_by_sid[sid]
@@ -77,27 +77,24 @@ def event_based_risk(df, param, monitor):
         else:
             acc['events_per_sid'][sid] += len(haz)
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
-        with mon_risk:
-            # NB: this is converting the asset ordinal from U32 to U64
-            assets = asset_df.to_records()  # fast
-            assets_by_taxo = get_assets_by_taxo(assets, param['epsgetter'])
-            out = get_output_gmf(crmodel, assets_by_taxo, haz)  # slow
-        with mon_agg:
-            alt.aggregate(out, mal, aggby)
-            # NB: after the aggregation out contains losses, not loss_ratios
-        ws = weights[haz['rlz']]
-        acc['momenta'][:, sid] = stats.calc_momenta(
-            numpy.log(numpy.maximum(gmvs, param['min_iml'])), ws)  # (2, M)
-        if param['avg_losses']:
-            with mon_avg:
-                for lni, ln in enumerate(alt.loss_names):
-                    df = pandas.DataFrame(
-                        {aid: out[ln][a] for a, aid in enumerate(
-                            assets['ordinal'])}, haz['rlz'])
-                    tot_df = df.groupby(df.index).sum()
-                    for aid in tot_df.columns:
-                        losses_by_A[aid, tot_df.index.to_numpy(), lni] += (
-                            tot_df[aid].to_numpy())
+        rlzs = haz['rlz'].to_numpy()
+        for taxo, assets in asset_df.groupby('taxonomy'):
+            aids = assets.ordinal.to_numpy()
+            epsilons = epsgetter.get(assets) if epsgetter else ()
+            with mon_risk:
+                out = get_output_gmf(crmodel, taxo, assets, haz, epsilons)
+            with mon_agg:
+                alt.aggregate(out, mal, aggby)
+                # NB: after the aggregation out contains losses
+            ws = weights[rlzs]
+            acc['momenta'][:, sid] = stats.calc_momenta(
+                numpy.log(numpy.maximum(gmvs, param['min_iml'])), ws)  # (2, M)
+            if param['avg_losses']:
+                with mon_avg:
+                    for lni, ln in enumerate(alt.loss_names):
+                        for rlz, losses in zip(rlzs, out[ln].T):
+                            losses_by_A[aids, rlz, lni] += losses
+
     acc['alt'] = alt.to_dframe()
     if param['avg_losses']:
         acc['losses_by_A'] = losses_by_A

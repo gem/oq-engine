@@ -46,9 +46,9 @@ def classical_damage(riskinputs, param, monitor):
         result = AccumDict(accum=numpy.zeros((R, L, D), F32))
         for out in ri.gen_outputs(crmodel, monitor):
             r = out.rlzi
-            for l, loss_type in enumerate(crmodel.loss_types):
-                for a, frac in zip(ri.assets['ordinal'], out[loss_type]):
-                    result[a][r, l] = frac
+            for li, loss_type in enumerate(crmodel.loss_types):
+                for a, frac in zip(out.assets['ordinal'], out[loss_type]):
+                    result[a][r, li] = frac
         yield result
 
 
