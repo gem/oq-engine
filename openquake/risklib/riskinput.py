@@ -29,7 +29,7 @@ def get_output_gmf(crmodel, taxo, assets, haz, rndgen=None):
     :param taxo: a taxonomy index
     :param assets: a DataFrame of assets of the given taxonomy
     :param haz: a DataFrame of GMVs on that site
-    :param rndgen: a RandomGen instance
+    :param rndgen: a MultiEventRNG instance
     :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
     primary = crmodel.primary_imtls
@@ -125,14 +125,14 @@ class RiskInput(object):
             self.__class__.__name__, sid, len(self.aids))
 
 
-class RandomGen(object):
+class MultiEventRNG(object):
     """
-    An object ``RandomGen(master_seed, asset_correlation, eids)``
+    An object ``MultiEventRNG(master_seed, asset_correlation, eids)``
     has a method ``.get(A, eids)`` which returns a matrix of (A, E)
     normally distributed random numbers.
     If the ``asset_correlation`` is 1 the numbers are the same.
 
-    >>> epsgetter = RandomGen(
+    >>> epsgetter = MultiEventRNG(
     ...     master_seed=42, asset_correlation=1, eids=[0, 1, 2])
     >>> epsgetter.normal(numpy.arange(2), 3)
     array([[-1.1043996, -1.1043996, -1.1043996],

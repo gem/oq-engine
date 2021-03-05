@@ -333,7 +333,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         gmf_df = pandas.DataFrame(dict(gmv_0=gmvs, eid=eids))
 
         # compute the losses by considering all the events
-        rndgen = riskinput.RandomGen(42, 0, eids)
+        rndgen = riskinput.MultiEventRNG(42, 0, eids)
         losses = rm('structural', assets, gmf_df, 'gmv_0', rndgen)
         numpy.testing.assert_allclose(losses, self.expected_losses, rtol=1E-5)
 
@@ -344,9 +344,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         gmvs2 = numpy.array([.3, .4, .5])
         gmf1_df = pandas.DataFrame(dict(gmv_0=gmvs1, eid=eids1))
         gmf2_df = pandas.DataFrame(dict(gmv_0=gmvs2, eid=eids2))
-        rndgen = riskinput.RandomGen(42, 0, eids1)
+        rndgen = riskinput.MultiEventRNG(42, 0, eids1)
         losses1 = rm('structural', assets, gmf1_df, 'gmv_0', rndgen)
-        rndgen = riskinput.RandomGen(42, 0, eids2)
+        rndgen = riskinput.MultiEventRNG(42, 0, eids2)
         losses2 = rm('structural', assets, gmf2_df, 'gmv_0', rndgen)
         numpy.testing.assert_allclose(losses1, self.expected_losses[:, :2],
                                       rtol=1E-5)

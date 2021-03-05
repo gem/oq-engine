@@ -26,7 +26,7 @@ import pandas
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
-from openquake.risklib.riskinput import RandomGen, get_output_gmf
+from openquake.risklib.riskinput import MultiEventRNG, get_output_gmf
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -71,7 +71,7 @@ def event_based_risk(df, param, monitor):
     if param['ignore_covs']:
         rndgen = None
     else:
-        rndgen = RandomGen(
+        rndgen = MultiEventRNG(
             param['master_seed'], param['asset_correlation'], df.eid)
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
