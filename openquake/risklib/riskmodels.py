@@ -285,10 +285,10 @@ class RiskModel(object):
         imls = self.hazard_imtls[vf.imt]
         values = get_values(loss_type, assets)
         lrcurves = numpy.array(
-            [scientific.classical(vf, imls, hazard_curve[col], lratios)] * n)
+            [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values)
 
-    def classical_bcr(self, loss_type, assets, hazard, col, eps=None):
+    def classical_bcr(self, loss_type, assets, hazard, col=None, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -310,8 +310,8 @@ class RiskModel(object):
         curves_retro = functools.partial(
             scientific.classical, vf_retro, imls,
             loss_ratios=self.loss_ratios_retro[loss_type])
-        original_loss_curves = numpy.array([curves_orig(hazard[col])] * n)
-        retrofitted_loss_curves = numpy.array([curves_retro(hazard[col])] * n)
+        original_loss_curves = numpy.array([curves_orig(hazard)] * n)
+        retrofitted_loss_curves = numpy.array([curves_retro(hazard)] * n)
 
         eal_original = numpy.array([scientific.average_loss(lc)
                                     for lc in original_loss_curves])
@@ -327,7 +327,8 @@ class RiskModel(object):
             for i, asset in enumerate(assets)]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
-    def classical_damage(self, loss_type, assets, hazard_curve, col, eps=None):
+    def classical_damage(self, loss_type, assets, hazard_curve,
+                         col=None, eps=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -341,7 +342,7 @@ class RiskModel(object):
         debug = False  # assets['id'] == b'a5' to debug case_master
         rtime = self.risk_investigation_time or self.investigation_time
         damage = scientific.classical_damage(
-            ffl, hazard_imls, hazard_curve[col],
+            ffl, hazard_imls, hazard_curve,
             investigation_time=self.investigation_time,
             risk_investigation_time=rtime,
             steps_per_interval=self.steps_per_interval, debug=debug)

@@ -78,19 +78,15 @@ def get_output_pc(crmodel, taxo, assets, haz, rlzi):
     :param rlzi: if given, a realization index
     :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
-    primary = crmodel.primary_imtls
-    alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
-    data = {f'gmv_{m}': haz.array[crmodel.imtls(imt), 0]
-            for m, imt in enumerate(primary)}
-    dic = dict(assets=assets,
-               loss_types=crmodel.loss_types, haz=haz, rlzi=rlzi)
+    dic = dict(assets=assets, loss_types=crmodel.loss_types, haz=haz,
+               rlzi=rlzi)
     for lt in crmodel.loss_types:
         arrays = []
         rmodels, weights = crmodel.get_rmodels_weights(lt, taxo)
         for rm in rmodels:
             imt = rm.imt_by_lt[lt]
-            col = alias.get(imt, imt)
-            arrays.append(rm(lt, assets, data, col))
+            data = haz.array[crmodel.imtls(imt), 0]
+            arrays.append(rm(lt, assets, data))
         dic[lt] = arrays[0] if len(arrays) == 1 else numpy.average(
             arrays, weights=weights, axis=0)
     return hdf5.ArrayWrapper((), dic)
