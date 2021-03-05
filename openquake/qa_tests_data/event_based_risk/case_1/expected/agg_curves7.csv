@@ -3,5 +3,5 @@ return_period kind policy taxonomy value
 ============= ==== ====== ======== =======
 240           mean A      RC       0.03562
 480           mean A      RC       0.04532
-960           mean A      RC       0.28581
+960           mean A      RC       0.28587
 ============= ==== ====== ======== =======

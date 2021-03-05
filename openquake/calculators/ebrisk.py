@@ -82,12 +82,10 @@ def event_based_risk(df, param, monitor):
             acc['events_per_sid'][sid] += len(haz)
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
         rlzs = haz.rlz.to_numpy()
-        eids = haz.eid.to_numpy()
         for taxo, assets in asset_df.groupby('taxonomy'):
             with mon_risk:
                 aids = assets.ordinal.to_numpy()
-                epsilons = rndgen.normal(eids, len(assets)) if rndgen else ()
-                out = get_output_gmf(crmodel, taxo, assets, haz, epsilons)
+                out = get_output_gmf(crmodel, taxo, assets, haz, rndgen)
             with mon_agg:
                 alt.aggregate(out, mal, aggby)
                 # NB: after the aggregation out contains losses

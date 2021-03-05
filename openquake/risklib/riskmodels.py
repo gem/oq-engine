@@ -349,7 +349,7 @@ class RiskModel(object):
         res = numpy.array([a['number'] * damage for a in assets.to_records()])
         return res
 
-    def event_based_risk(self, loss_type, assets, gmf_df, col, epsilons):
+    def event_based_risk(self, loss_type, assets, gmf_df, col, rndgen):
         """
         :returns: an array of shape (A, E)
         """
@@ -359,7 +359,8 @@ class RiskModel(object):
         vf = self.risk_functions[loss_type, 'vulnerability']
         means, covs = vf.interpolate(gmf_df[col].to_numpy())
         losses = numpy.zeros((len(assets), E))
-        if len(epsilons):
+        if rndgen:
+            epsilons = rndgen.normal(eids, len(assets))
             for a, eps in enumerate(epsilons.T):
                 losses[a] = vf.sample(means, covs, eps) * values[a]
         else:  # no CoVs
