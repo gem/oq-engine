@@ -68,8 +68,11 @@ def event_based_risk(df, param, monitor):
     ARL = len(assets_df), len(weights), len(alt.loss_names)
     losses_by_A = numpy.zeros(ARL, F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
-    rndgen = EpsilonGetter(
-        param['master_seed'], param['asset_correlation'], df.eid)
+    if param['ignore_covs']:
+        rndgen = None
+    else:
+        rndgen = EpsilonGetter(
+            param['master_seed'], param['asset_correlation'], df.eid)
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
             haz = haz_by_sid[sid]
@@ -193,6 +196,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.param['ignore_covs'] = True
             logging.info('Ignoring epsilons')
         else:
+            self.param['ignore_covs'] = False
             logging.info('Using {:_d} random generators'.format(self.E))
         self.set_param(hdf5path=self.datastore.filename,
                        master_seed=oq.master_seed,
