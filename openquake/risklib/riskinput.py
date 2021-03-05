@@ -25,18 +25,13 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def get_assets_by_taxo(assets, epsgetter=None):
+def get_assets_by_taxo(assets):
     """
     :param assets: an array of assets
     :param epsgetter: EpsilonGetter instance (None in scenario_damage)
     :returns: assets_by_taxo with attributes eps and idxs
     """
-    assets_by_taxo = AccumDict(group_array(assets, 'taxonomy'))
-    assets_by_taxo.eps = {}
-    if epsgetter:
-        for taxo, assets in assets_by_taxo.items():
-            assets_by_taxo.eps[taxo] = epsgetter.get(assets)
-    return assets_by_taxo
+    return AccumDict(group_array(assets, 'taxonomy'))
 
 
 def get_output_gmf(crmodel, taxo, assets, haz, epsilons):
@@ -138,9 +133,9 @@ class RiskInput(object):
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
-            assets_by_taxo = get_assets_by_taxo(self.assets, epsgetter)
+            assets_by_taxo = get_assets_by_taxo(self.assets)
             for taxo, assets in assets_by_taxo.items():
-                epsilons = assets_by_taxo.eps.get(taxo, ())
+                epsilons = epsgetter.get(assets) if epsgetter else ()
                 if hasattr(haz, 'groupby'):  # DataFrame
                     yield get_output_gmf(crmodel, taxo, assets, haz, epsilons)
                 else:  # list of probability curves

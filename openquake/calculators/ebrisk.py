@@ -69,6 +69,7 @@ def event_based_risk(df, param, monitor):
     ARL = len(assets_df), len(weights), len(alt.loss_names)
     losses_by_A = numpy.zeros(ARL, F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
+    epsgetter = param['epsgetter']
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
             haz = haz_by_sid[sid]
@@ -79,14 +80,14 @@ def event_based_risk(df, param, monitor):
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
         # NB: this is converting the asset ordinal from U32 to U64
         assets = asset_df.to_records()  # fast
-        assets_by_taxo = get_assets_by_taxo(assets, param['epsgetter'])
+        assets_by_taxo = get_assets_by_taxo(assets)
         for taxo, assets in assets_by_taxo.items():
-            epsilons = assets_by_taxo.eps.get(taxo, ())
+            epsilons = epsgetter.get(assets) if epsgetter else ()
             with mon_risk:
                 out = get_output_gmf(crmodel, taxo, assets, haz, epsilons)
             with mon_agg:
                 alt.aggregate(out, mal, aggby)
-                # NB: after the aggregation out contains losses, not loss_ratios
+                # NB: after the aggregation out contains losses
             ws = weights[haz['rlz']]
             acc['momenta'][:, sid] = stats.calc_momenta(
                 numpy.log(numpy.maximum(gmvs, param['min_iml'])), ws)  # (2, M)
