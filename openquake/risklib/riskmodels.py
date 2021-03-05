@@ -354,20 +354,9 @@ class RiskModel(object):
         :returns: an array of shape (A, E)
         """
         values = get_values(loss_type, assets, self.time_event)
-        eids = gmf_df.eid.to_numpy()
-        E = len(eids)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        means, covs = vf.interpolate(gmf_df[col].to_numpy())
-        losses = numpy.zeros((len(assets), E))
-        if rndgen:
-            epsilons = rndgen.normal(len(assets), eids)
-            for a, eps in enumerate(epsilons):
-                losses[a] = vf.sample(means, covs, eps) * values[a]
-        else:  # no CoVs
-            ratios = vf.sample(means, covs, numpy.zeros(len(eids)))
-            for a in range(len(assets)):
-                losses[a] = ratios * values[a]
-        return losses
+        return vf.calc_losses(values, gmf_df[col].to_numpy(),
+                              gmf_df.eid.to_numpy(), rndgen)
 
     scenario = ebrisk = scenario_risk = event_based_risk
 

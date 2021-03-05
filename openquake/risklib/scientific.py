@@ -209,6 +209,26 @@ class VulnerabilityFunction(object):
             res = self._distribution.sample(means, covs)
         return res
 
+    def calc_losses(self, values, gmvs, eids, rng=None):
+        """
+        :param values: A asset values
+        :param gmvs: E ground motion values
+        :param eids: E event IDs
+        :param rng: a MultiEventRNG or None
+        :returns: a matrix of losses of shape (A, E)
+        """
+        means, covs = self.interpolate(gmvs)
+        losses = numpy.zeros((len(values), len(eids)))
+        if rng:
+            epsilons = rng.normal(len(values), eids)
+            for a, eps in enumerate(epsilons):
+                losses[a] = self.sample(means, covs, eps) * values[a]
+        else:  # no CoVs
+            ratios = self.sample(means, covs, numpy.zeros_like(eids))
+            for a, val in enumerate(values):
+                losses[a] = ratios * val
+        return losses
+
     # this is used in the tests, not in the engine code base
     def __call__(self, gmvs, epsilons):
         """
