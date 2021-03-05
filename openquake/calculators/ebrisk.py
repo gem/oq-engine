@@ -68,7 +68,7 @@ def event_based_risk(df, param, monitor):
     ARL = len(assets_df), len(weights), len(alt.loss_names)
     losses_by_A = numpy.zeros(ARL, F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
-    epsgetter = EpsilonGetter(
+    rndgen = EpsilonGetter(
         param['master_seed'], param['asset_correlation'], df.eid)
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
@@ -81,9 +81,9 @@ def event_based_risk(df, param, monitor):
         rlzs = haz.rlz.to_numpy()
         eids = haz.eid.to_numpy()
         for taxo, assets in asset_df.groupby('taxonomy'):
-            aids = assets.ordinal.to_numpy()
-            epsilons = epsgetter.normal(eids, len(assets)) if epsgetter else ()
             with mon_risk:
+                aids = assets.ordinal.to_numpy()
+                epsilons = rndgen.normal(eids, len(assets)) if rndgen else ()
                 out = get_output_gmf(crmodel, taxo, assets, haz, epsilons)
             with mon_agg:
                 alt.aggregate(out, mal, aggby)
