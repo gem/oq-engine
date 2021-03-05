@@ -68,7 +68,11 @@ def event_based_risk(df, param, monitor):
     ARL = len(assets_df), len(weights), len(alt.loss_names)
     losses_by_A = numpy.zeros(ARL, F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
-    epsgetter = param['epsgetter']
+    if param['ignore_covs']:
+        rndgen = None
+    else:
+        rndgen = EpsilonGetter(
+            param['master_seed'], param['asset_correlation'], df.eid)
     for sid, asset_df in assets_df.groupby('site_id'):
         try:
             haz = haz_by_sid[sid]
@@ -77,11 +81,12 @@ def event_based_risk(df, param, monitor):
         else:
             acc['events_per_sid'][sid] += len(haz)
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
-        rlzs = haz['rlz'].to_numpy()
+        rlzs = haz.rlz.to_numpy()
+        eids = haz.eid.to_numpy()
         for taxo, assets in asset_df.groupby('taxonomy'):
-            aids = assets.ordinal.to_numpy()
-            epsilons = epsgetter.get(assets) if epsgetter else ()
             with mon_risk:
+                aids = assets.ordinal.to_numpy()
+                epsilons = rndgen.normal(eids, len(assets)) if rndgen else ()
                 out = get_output_gmf(crmodel, taxo, assets, haz, epsilons)
             with mon_agg:
                 alt.aggregate(out, mal, aggby)
@@ -188,12 +193,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         if (oq.ignore_covs or not self.crmodel.covs or
                 'LN' not in self.crmodel.distributions):
-            epsgetter = None
+            self.param['ignore_covs'] = True
             logging.info('Ignoring epsilons')
         else:
-            epsgetter = EpsilonGetter(
-                oq.master_seed, int(oq.asset_correlation), self.E)
-        self.set_param(hdf5path=self.datastore.filename, epsgetter=epsgetter)
+            self.param['ignore_covs'] = False
+            logging.info('Using {:_d} random generators'.format(self.E))
+        self.set_param(hdf5path=self.datastore.filename,
+                       master_seed=oq.master_seed,
+                       asset_correlation=int(oq.asset_correlation))
         logging.info(
             'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = numpy.zeros(self.N, U32)

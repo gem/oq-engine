@@ -1,9 +1,9 @@
-#,,,,,"generated_by='OpenQuake engine 3.12.0-git9e2d8f2fb3', start_date='2021-03-01T01:56:54', checksum=3590982611, investigation_time=1.0, risk_investigation_time=1.0"
+#,,,,,"generated_by='OpenQuake engine 3.12.0-gitc3cab7e3ce', start_date='2021-03-05T05:09:57', checksum=3590982611, investigation_time=1.0, risk_investigation_time=1.0"
 asset_id,NAME_1,taxonomy,lon,lat,structural
-a4,RegionB,tax1,-122.00000,37.91000,2.80521E+00
-a5,RegionB,tax1,-122.00000,37.91000,2.80521E+00
-a6,RegionB,tax1,-122.00000,37.91000,2.80521E+00
-a1,Region A,tax1,-122.00000,38.11300,1.95998E+01
-a2,Region A,tax1,-122.00000,38.11300,1.95998E+01
-a3,RegionB,tax1,-122.00000,38.11300,1.95998E+01
-a7,RegionB,tax1,-121.88600,38.11300,6.01553E+00
+a4,RegionB,tax1,-122.00000,37.91000,3.08925E+00
+a5,RegionB,tax1,-122.00000,37.91000,3.08925E+00
+a6,RegionB,tax1,-122.00000,37.91000,3.08925E+00
+a1,Region A,tax1,-122.00000,38.11300,2.02642E+01
+a2,Region A,tax1,-122.00000,38.11300,2.02642E+01
+a3,RegionB,tax1,-122.00000,38.11300,2.02642E+01
+a7,RegionB,tax1,-121.88600,38.11300,6.90993E+00

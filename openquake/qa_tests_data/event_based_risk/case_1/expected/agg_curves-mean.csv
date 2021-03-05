@@ -1,12 +1,12 @@
-#,,,,"generated_by='OpenQuake engine 3.12.0-git48fa50d131', start_date='2021-03-01T02:46:20', checksum=4077124359, risk_investigation_time=50.0, kind='agg_curves-mean'"
+#,,,,"generated_by='OpenQuake engine 3.12.0-gitc3cab7e3ce', start_date='2021-03-05T05:09:39', checksum=4077124359, risk_investigation_time=50.0, kind='agg_curves-mean'"
 return_period,loss_value,loss_type,loss_ratio,annual_frequency_of_exceedence
-60,3.78457E+01,nonstructural,6.88105E-03,1.66667E-02
-120,1.71733E+02,nonstructural,3.12241E-02,8.33333E-03
-240,3.67595E+02,nonstructural,6.68354E-02,4.16667E-03
-480,8.42237E+02,nonstructural,1.53134E-01,2.08333E-03
-960,9.34834E+02,nonstructural,1.69970E-01,1.04167E-03
-60,1.87610E+02,structural,1.70554E-02,1.66667E-02
-120,5.26070E+02,structural,4.78245E-02,8.33333E-03
-240,1.18114E+03,structural,1.07376E-01,4.16667E-03
-480,1.97509E+03,structural,1.79554E-01,2.08333E-03
-960,2.80188E+03,structural,2.54717E-01,1.04167E-03
+60,3.78433E+01,nonstructural,6.88061E-03,1.66667E-02
+120,1.71728E+02,nonstructural,3.12232E-02,8.33333E-03
+240,3.67649E+02,nonstructural,6.68454E-02,4.16667E-03
+480,8.42060E+02,nonstructural,1.53102E-01,2.08333E-03
+960,9.34846E+02,nonstructural,1.69972E-01,1.04167E-03
+60,1.87586E+02,structural,1.70532E-02,1.66667E-02
+120,5.26083E+02,structural,4.78257E-02,8.33333E-03
+240,1.18122E+03,structural,1.07383E-01,4.16667E-03
+480,1.97514E+03,structural,1.79558E-01,2.08333E-03
+960,2.80142E+03,structural,2.54674E-01,1.04167E-03
