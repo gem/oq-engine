@@ -125,14 +125,14 @@ class RiskInput(object):
             self.__class__.__name__, sid, len(self.aids))
 
 
-class EpsilonGetter(object):
+class RandomGen(object):
     """
-    An object ``EpsilonGetter(master_seed, asset_correlation, eids)``
+    An object ``RandomGen(master_seed, asset_correlation, eids)``
     has a method ``.get(A, eids)`` which returns a matrix of (A, E)
     normally distributed random numbers.
     If the ``asset_correlation`` is 1 the numbers are the same.
 
-    >>> epsgetter = EpsilonGetter(
+    >>> epsgetter = RandomGen(
     ...     master_seed=42, asset_correlation=1, eids=[0, 1, 2])
     >>> epsgetter.normal(numpy.arange(2), 3)
     array([[-1.1043996, -1.1043996, -1.1043996],
