@@ -53,7 +53,7 @@ def get_output_gmf(crmodel, taxo, assets, haz, epsilons):
     # seed is set correctly; very tricky indeed! (MS)
     haz = haz.sort_values('eid')
     eids = haz.eid.to_numpy()
-    dic = dict(eids=eids, assets=assets,
+    dic = dict(eids=eids, assets=assets.to_records(),
                loss_types=crmodel.loss_types, haz=haz, rlzs=haz.rlz.to_numpy())
     for lt in crmodel.loss_types:
         arrays = []
@@ -76,8 +76,8 @@ def get_output_pc(crmodel, taxo, assets, haz, rlzi):
     :param rlzi: if given, a realization index
     :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
     """
-    dic = dict(assets=assets, loss_types=crmodel.loss_types, haz=haz,
-               rlzi=rlzi)
+    dic = dict(assets=assets.to_records(), loss_types=crmodel.loss_types,
+               haz=haz, rlzi=rlzi)
     for lt in crmodel.loss_types:
         arrays = []
         rmodels, weights = crmodel.get_rmodels_weights(lt, taxo)
@@ -104,10 +104,7 @@ class RiskInput(object):
         self.hazard_getter = hazard_getter
         self.assets = assets
         self.weight = len(assets)
-        aids = []
-        for asset in self.assets:
-            aids.append(asset['ordinal'])
-        self.aids = numpy.array(aids, numpy.uint32)
+        self.aids = assets.ordinal.to_numpy()
 
     def gen_outputs(self, crmodel, monitor, epsgetter=None, haz=None):
         """
@@ -127,8 +124,7 @@ class RiskInput(object):
             # small arrays are passed (one per realization) instead of
             # a long array with all realizations; ebrisk does the right
             # thing since it calls get_output directly
-            assets_by_taxo = get_assets_by_taxo(self.assets)
-            for taxo, assets in assets_by_taxo.items():
+            for taxo, assets in self.assets.groupby('taxonomy'):
                 epsilons = epsgetter.get(assets) if epsgetter else ()
                 if hasattr(haz, 'groupby'):  # DataFrame
                     yield get_output_gmf(crmodel, taxo, assets, haz, epsilons)
@@ -183,9 +179,9 @@ class EpsilonGetter(object):
                     epsilons[a] = eps
                     a += 1
         else:
-            for a, asset in enumerate(assets):
+            for a, ordinal in enumerate(assets.ordinal):
                 philox = numpy.random.Philox(self.master_seed).advance(
-                    int(asset['ordinal']) * self.tot_events)
+                    int(ordinal) * self.tot_events)
                 epsilons[a] = numpy.random.Generator(philox).normal(
                     size=self.tot_events)
         return epsilons

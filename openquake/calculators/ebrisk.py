@@ -57,7 +57,7 @@ def event_based_risk(df, param, monitor):
     mon_avg = monitor('averaging losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
-        assets_df = dstore.read_df('assetcol/array', 'ordinal')
+        assets_df = dstore.read_df('assetcol/array', 'id')
     with monitor('getting crmodel'):
         crmodel = monitor.read('crmodel')
         weights = dstore['weights'][()]
@@ -79,9 +79,7 @@ def event_based_risk(df, param, monitor):
             acc['events_per_sid'][sid] += len(haz)
         gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
         # NB: this is converting the asset ordinal from U32 to U64
-        assets = asset_df.to_records()  # fast
-        assets_by_taxo = get_assets_by_taxo(assets)
-        for taxo, assets in assets_by_taxo.items():
+        for taxo, assets in asset_df.groupby('taxonomy'):
             epsilons = epsgetter.get(assets) if epsgetter else ()
             with mon_risk:
                 out = get_output_gmf(crmodel, taxo, assets, haz, epsilons)

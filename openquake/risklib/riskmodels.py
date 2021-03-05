@@ -324,7 +324,7 @@ class RiskModel(object):
                 eal_original[i], eal_retrofitted[i],
                 self.interest_rate, self.asset_life_expectancy,
                 asset['value-' + loss_type], asset['retrofitted'])
-            for i, asset in enumerate(assets)]
+            for i, asset in enumerate(assets.to_records())]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
     def classical_damage(self, loss_type, assets, hazard_curve,
@@ -346,7 +346,7 @@ class RiskModel(object):
             investigation_time=self.investigation_time,
             risk_investigation_time=rtime,
             steps_per_interval=self.steps_per_interval, debug=debug)
-        res = numpy.array([a['number'] * damage for a in assets])
+        res = numpy.array([a['number'] * damage for a in assets.to_records()])
         return res
 
     def event_based_risk(self, loss_type, assets, gmf_df, col, epsilons):

@@ -971,9 +971,8 @@ class RiskCalculator(HazardCalculator):
         logging.info('Events per site: ~%d', len(gmf_df) / self.N)
         logging.info('Grouping the GMFs by site ID')
         by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
-        for sid, assets in enumerate(self.assetcol.assets_by_site()):
-            if len(assets) == 0:
-                continue
+        asset_df = self.assetcol.to_dframe('site_id')
+        for sid, assets in asset_df.groupby(asset_df.index):
             try:
                 df = by_sid[sid]
             except KeyError:
@@ -985,29 +984,27 @@ class RiskCalculator(HazardCalculator):
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '
                     'ground_motion_fields=False or a large minimum_intensity')
-            for block in general.block_splitter(
-                    assets, self.oqparam.assets_per_site_limit):
-                out.append(riskinput.RiskInput(getter, numpy.array(block)))
-            if len(block) >= TWO16:
+            for slc in general.split_in_slices(
+                    len(assets), self.oqparam.assets_per_site_limit):
+                out.append(riskinput.RiskInput(getter, assets[slc]))
+            if slc.stop - slc.start >= TWO16:
                 logging.error('There are %d assets on site #%d!',
-                              len(block), sid)
+                              slc.stop - slc.start, sid)
         return out
 
     def _gen_riskinputs_poe(self, dstore):
         out = []
-        assets_by_site = self.assetcol.assets_by_site()
-        for sid, assets in enumerate(assets_by_site):
-            if len(assets) == 0:
-                continue
+        asset_df = self.assetcol.to_dframe('site_id')
+        for sid, assets in asset_df.groupby(asset_df.index):
             # hcurves, shape (R, N)
             ws = [rlz.weight for rlz in self.realizations]
             getter = getters.PmapGetter(dstore, ws, [sid], self.oqparam.imtls)
-            for block in general.block_splitter(
-                    assets, self.oqparam.assets_per_site_limit):
-                out.append(riskinput.RiskInput(getter, numpy.array(block)))
-            if len(block) >= TWO16:
+            for slc in general.split_in_slices(
+                    len(assets), self.oqparam.assets_per_site_limit):
+                out.append(riskinput.RiskInput(getter, assets[slc]))
+            if slc.stop - slc.start >= TWO16:
                 logging.error('There are %d assets on site #%d!',
-                              len(block), sid)
+                              slc.stop - slc.start, sid)
         return out
 
     def execute(self):
