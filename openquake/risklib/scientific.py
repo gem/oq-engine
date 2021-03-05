@@ -164,7 +164,7 @@ class VulnerabilityFunction(object):
         if (self.covs > 0).any():
             self._distribution = DISTRIBUTIONS[self.distribution_name]()
         else:
-            self._distribution = DegenerateDistribution()
+            self._distribution = DISTRIBUTIONS['DG']()
         self._distribution.epsilons = (numpy.array(epsilons)
                                        if epsilons is not None else None)
         assert self.seed is not None, self
@@ -204,9 +204,9 @@ class VulnerabilityFunction(object):
         """
         if self.distribution_name == 'LN':
             self.set_distribution(epsilons)
-            res = self._distribution.sample(means, covs, None)
+            res = self._distribution.sample(means, covs)
         else:
-            res = self._distribution.sample(means, covs, means * covs)
+            res = self._distribution.sample(means, covs)
         return res
 
     # this is used in the tests, not in the engine code base
@@ -721,12 +721,11 @@ class Distribution(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def sample(self, means, covs, stddevs):
+    def sample(self, means, covs):
         """
         :returns: sample a set of losses
         :param means: an array of mean losses
-        :param covs: an array of covariances
-        :param stddevs: an array of stddevs
+        :param covs: an array of coefficients of variation
         """
         raise NotImplementedError
 
@@ -739,38 +738,18 @@ class Distribution(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
 
+@DISTRIBUTIONS.add('DG')
 class DegenerateDistribution(Distribution):
     """
     The degenerate distribution. E.g. a distribution with a delta
     corresponding to the mean.
     """
-    def sample(self, means, _covs, _stddev):
+    def sample(self, means, _covs):
         return means
 
     def survival(self, loss_ratio, mean, _stddev):
         return numpy.piecewise(
             loss_ratio, [loss_ratio > mean or not mean], [0, 1])
-
-
-# not used anymore
-def make_epsilons(matrix, seed, correlation):
-    """
-    Given a matrix of shape (A, E) returns a matrix of the same shape
-    obtained by applying the multivariate_normal distribution to
-    A points and E samples, by starting from the given seed and
-    correlation.
-    """
-    if seed is not None:
-        numpy.random.seed(seed)
-    A = len(matrix)
-    E = len(matrix[0])
-    if not correlation:  # avoid building the covariance matrix
-        return numpy.random.normal(size=(E, A)).transpose()
-    means_vector = numpy.zeros(A)
-    covariance_matrix = (numpy.ones((A, A)) * correlation +
-                         numpy.diag(numpy.ones(A)) * (1 - correlation))
-    return numpy.random.multivariate_normal(
-        means_vector, covariance_matrix, E).transpose()
 
 
 @DISTRIBUTIONS.add('LN')
@@ -785,7 +764,7 @@ class LogNormalDistribution(Distribution):
     def __init__(self, epsilons=None):
         self.epsilons = epsilons
 
-    def sample(self, means, covs, _stddevs):
+    def sample(self, means, covs):
         if self.epsilons is None:
             raise ValueError("A LogNormalDistribution must be initialized "
                              "before you can use it")
@@ -833,7 +812,8 @@ class LogNormalDistribution(Distribution):
 # VulnerabilityFunction.__init__.
 @DISTRIBUTIONS.add('BT')
 class BetaDistribution(Distribution):
-    def sample(self, means, _covs, stddevs):
+    def sample(self, means, covs):
+        stddevs = means * covs
         alpha = self._alpha(means, stddevs)
         beta = self._beta(means, stddevs)
         return numpy.random.beta(alpha, beta)
@@ -1528,6 +1508,27 @@ class InsuredLosses(object):
                 res[lt + '_ins'] = insured_losses(
                     losses, ded * avalue, lim * avalue)
         return res
+
+
+# not used anymore
+def make_epsilons(matrix, seed, correlation):
+    """
+    Given a matrix of shape (A, E) returns a matrix of the same shape
+    obtained by applying the multivariate_normal distribution to
+    A points and E samples, by starting from the given seed and
+    correlation.
+    """
+    if seed is not None:
+        numpy.random.seed(seed)
+    A = len(matrix)
+    E = len(matrix[0])
+    if not correlation:  # avoid building the covariance matrix
+        return numpy.random.normal(size=(E, A)).transpose()
+    means_vector = numpy.zeros(A)
+    covariance_matrix = (numpy.ones((A, A)) * correlation +
+                         numpy.diag(numpy.ones(A)) * (1 - correlation))
+    return numpy.random.multivariate_normal(
+        means_vector, covariance_matrix, E).transpose()
 
 
 # ####################### Consequences ##################################### #
