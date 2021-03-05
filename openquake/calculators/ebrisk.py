@@ -26,8 +26,7 @@ import pandas
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
-from openquake.risklib.riskinput import (
-    EpsilonGetter, get_assets_by_taxo, get_output_gmf)
+from openquake.risklib.riskinput import EpsilonGetter, get_output_gmf
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator

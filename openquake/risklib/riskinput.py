@@ -19,24 +19,16 @@
 import numpy
 import pandas
 from openquake.baselib import hdf5
-from openquake.baselib.general import group_array, AccumDict
 
 U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def get_assets_by_taxo(assets):
-    """
-    :param assets: an array of assets
-    :param epsgetter: EpsilonGetter instance (None in scenario_damage)
-    :returns: assets_by_taxo with attributes eps and idxs
-    """
-    return AccumDict(group_array(assets, 'taxonomy'))
-
-
 def get_output_gmf(crmodel, taxo, assets, haz, epsilons):
     """
-    :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
+    :param crmodel: a CompositeRiskModel instance
+    :param taxo: a taxonomy index
+    :param assets: a DataFrame of assets of the given taxonomy
     :param haz: a DataFrame of GMVs on that site
     :param rlzi: if given, a realization index
     :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
@@ -71,7 +63,8 @@ def get_output_gmf(crmodel, taxo, assets, haz, epsilons):
 
 def get_output_pc(crmodel, taxo, assets, haz, rlzi):
     """
-    :param assets_by_taxo: a dictionary taxonomy index -> assets on a site
+    :param taxo: a taxonomy index
+    :param assets: a DataFrame of assets of the given taxonomy
     :param haz: an ArrayWrapper of ProbabilityCurves on that site
     :param rlzi: if given, a realization index
     :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
