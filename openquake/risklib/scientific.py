@@ -19,7 +19,6 @@
 """
 This module includes the scientific API of the oq-risklib
 """
-import abc
 import copy
 import bisect
 import itertools
@@ -29,7 +28,7 @@ from functools import lru_cache
 import numpy
 import pandas
 from numpy.testing import assert_equal
-from scipy import interpolate, stats, random
+from scipy import interpolate, stats
 
 from openquake.baselib.general import CallableDict, AccumDict
 from openquake.hazardlib.stats import compute_stats2
@@ -440,7 +439,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         :param gmvs:
            array of intensity measure levels
         :returns:
-           (interpolated probabilities of shape (E, L), zeros)
+           (interpolated probabilities of shape (E, L), None)
         """
         # gmvs are clipped to max(iml)
         out = numpy.zeros((len(self.probs), len(gmvs)))
@@ -448,7 +447,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         out[:, ok] = self._probs_i1d(gmvs_curve[ok])
-        return out.T, numpy.zeros_like(ok)
+        return out.T, None
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
