@@ -443,7 +443,6 @@ class CompositeRiskModel(collections.abc.Mapping):
             if rf.kind == 'fragility':  # rf is a FragilityFunctionList
                 risklist.append(rf)
             else:  # rf is a vulnerability function
-                rf.seed = oqparam.master_seed
                 rf.init()
                 if lt.endswith('_retrofitted'):
                     # strip _retrofitted, since len('_retrofitted') = 12
@@ -541,7 +540,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if hasattr(rf, 'distribution_name'):
                     self.distributions.add(rf.distribution_name)
                 if hasattr(rf, 'init'):  # vulnerability function
-                    rf.seed = oq.master_seed  # setting the seed
                     if oq.ignore_covs:
                         rf.covs = numpy.zeros_like(rf.covs)
                     rf.init()
