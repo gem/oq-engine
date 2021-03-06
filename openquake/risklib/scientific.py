@@ -248,12 +248,30 @@ class VulnerabilityFunction(object):
         losses = numpy.ones((len(values), len(eids)))
         for a, val in enumerate(values):
             losses[a] *= val
-        if rng:
-            epsilons = rng.normal(len(values), eids)
-            for a, eps in enumerate(epsilons):
-                losses[a] *= self.sample(means, covs, eps)
-        else:  # no CoVs
-            ratios = self.sample(means, covs, numpy.zeros_like(eids))
+        if self.distribution_name == 'DG':
+            for a in range(len(values)):
+                losses[a] *= means
+        elif self.distribution_name == 'LN':
+            if rng and self.covs.sum():
+                epsilons = rng.normal(len(values), eids)
+                for a, eps in enumerate(epsilons):
+                    losses[a] *= self.sample(means, covs, eps)
+            else:  # no CoVs
+                ratios = self.sample(means, covs, numpy.zeros_like(eids))
+                for a in range(len(values)):
+                    losses[a] *= ratios
+        elif self.distribution_name == 'PM':
+            # FIXME: we are using full correlation here, always
+            ratios = numpy.zeros_like(gmvs)
+            arange = numpy.arange(len(self.loss_ratios))
+            for e, eid in enumerate(eids):
+                if means[:, e].sum() == 0:  # oq-risk-tests/case_1g
+                    # means are zeros for events below the threshold
+                    continue
+                pmf = stats.rv_discrete(
+                    name='pmf', values=(arange, means[:, e]),
+                    seed=rng.master_seed + eid).rvs()
+                ratios[e] = self.loss_ratios[pmf]
             for a in range(len(values)):
                 losses[a] *= ratios
         return losses

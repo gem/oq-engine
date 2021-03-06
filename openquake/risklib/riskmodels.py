@@ -247,9 +247,9 @@ class RiskModel(object):
         """
         return sorted(lt for (lt, kind) in self.risk_functions)
 
-    def __call__(self, loss_type, assets, gmf_df, col=None, epsilons=None):
+    def __call__(self, loss_type, assets, gmf_df, col=None, rndgen=None):
         meth = getattr(self, self.calcmode)
-        res = meth(loss_type, assets, gmf_df, col, epsilons)
+        res = meth(loss_type, assets, gmf_df, col, rndgen)
         return res
 
     def __toh5__(self):
