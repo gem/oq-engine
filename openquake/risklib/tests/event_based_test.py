@@ -137,7 +137,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.1109), "TSES": 200, "TimeSpan": 50}
 
     def test_an_empty_gmf_produces_an_empty_set(self):
-        [res] = self.vulnerability_function1.calc_losses([1], [], [])
+        [res] = self.vulnerability_function1([1], [], [])
         self.assertEqual(len(res), 0)
 
     def test_sampling_lr_gmf_inside_range_vulnimls(self):
@@ -158,7 +158,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.044604, 0.175115, 0.297628, 0.181567, 0.344077, 0.091288,
             0.165941, 0.300442, 0.164211, 0.25775]])
 
-        ratios = vf.calc_losses([1], gmf, EIDS, self.RNG)
+        ratios = vf([1], gmf, EIDS, self.RNG)
         numpy.testing.assert_allclose(expected_loss_ratios,
                                       ratios, atol=0.0, rtol=0.01)
 
@@ -179,7 +179,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.array([[0., 0.175115, 0.297628, 0.181567, 0.344077,
                           0.091288, 0.165941, 0.300442, 0., 0.25775]]),
-            vuln_function.calc_losses([1], gmfs, EIDS, self.RNG),
+            vuln_function([1], gmfs, EIDS, self.RNG),
             atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
@@ -199,7 +199,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.array([[0.236383, 0.175115, 0.297628, 0.181567, 0.344077,
                           0.091288, 0.165941, 0.300442, 0.207284, 0.25775]]),
-            vuln_function.calc_losses([1], gmfs, EIDS, self.RNG),
+            vuln_function([1], gmfs, EIDS, self.RNG),
             atol=0.0, rtol=0.01)
 
     def test_loss_ratios_boundaries(self):
@@ -219,13 +219,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # min IML in this case is 0.01
         numpy.testing.assert_allclose(
             numpy.zeros((1, 3)),
-            self.vulnerability_function1.calc_losses(
+            self.vulnerability_function1(
                 [1], [0.0001, 0.0002, 0.0003], EIDS[:3], self.RNG))
 
         # max IML in this case is 0.52
         numpy.testing.assert_allclose(
             numpy.array([[0.700, 0.700]]),
-            self.vulnerability_function1.calc_losses(
+            self.vulnerability_function1(
                 [1], [0.525, 0.530], EIDS[:2], self.RNG))
 
     def test_loss_ratios_computation_using_gmfs(self):
@@ -246,5 +246,5 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # the length of the result is the length of the gmf
         numpy.testing.assert_allclose(
             expected_loss_ratios,
-            self.vulnerability_function1.calc_losses(
+            self.vulnerability_function1(
                 [1], GMF[:10], EIDS, self.RNG))

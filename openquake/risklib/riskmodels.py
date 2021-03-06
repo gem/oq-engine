@@ -355,8 +355,8 @@ class RiskModel(object):
         """
         values = get_values(loss_type, assets, self.time_event)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        return vf.calc_losses(values, gmf_df[col].to_numpy(),
-                              gmf_df.eid.to_numpy(), rndgen)
+        return vf(values, gmf_df[col].to_numpy(),
+                  gmf_df.eid.to_numpy(), rndgen)
 
     scenario = ebrisk = scenario_risk = event_based_risk
 

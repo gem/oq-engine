@@ -203,7 +203,7 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def calc_losses(self, values, gmvs, eids, rng=None):
+    def __call__(self, values, gmvs, eids, rng=None):
         """
         :param values: A asset values
         :param gmvs: E ground motion values
