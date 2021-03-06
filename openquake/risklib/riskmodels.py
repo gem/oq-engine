@@ -247,9 +247,9 @@ class RiskModel(object):
         """
         return sorted(lt for (lt, kind) in self.risk_functions)
 
-    def __call__(self, loss_type, assets, gmf_df, col=None, epsilons=None):
+    def __call__(self, loss_type, assets, gmf_df, col=None, rndgen=None):
         meth = getattr(self, self.calcmode)
-        res = meth(loss_type, assets, gmf_df, col, epsilons)
+        res = meth(loss_type, assets, gmf_df, col, rndgen)
         return res
 
     def __toh5__(self):
@@ -355,8 +355,8 @@ class RiskModel(object):
         """
         values = get_values(loss_type, assets, self.time_event)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        return vf.calc_losses(values, gmf_df[col].to_numpy(),
-                              gmf_df.eid.to_numpy(), rndgen)
+        return vf(values, gmf_df[col].to_numpy(),
+                  gmf_df.eid.to_numpy(), rndgen)
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
@@ -443,7 +443,6 @@ class CompositeRiskModel(collections.abc.Mapping):
             if rf.kind == 'fragility':  # rf is a FragilityFunctionList
                 risklist.append(rf)
             else:  # rf is a vulnerability function
-                rf.seed = oqparam.master_seed
                 rf.init()
                 if lt.endswith('_retrofitted'):
                     # strip _retrofitted, since len('_retrofitted') = 12
@@ -541,7 +540,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if hasattr(rf, 'distribution_name'):
                     self.distributions.add(rf.distribution_name)
                 if hasattr(rf, 'init'):  # vulnerability function
-                    rf.seed = oq.master_seed  # setting the seed
                     if oq.ignore_covs:
                         rf.covs = numpy.zeros_like(rf.covs)
                     rf.init()
