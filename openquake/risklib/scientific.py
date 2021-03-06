@@ -245,15 +245,17 @@ class VulnerabilityFunction(object):
         :returns: a matrix of losses of shape (A, E)
         """
         means, covs = self.interpolate(gmvs)
-        losses = numpy.zeros((len(values), len(eids)))
+        losses = numpy.ones((len(values), len(eids)))
+        for a, val in enumerate(values):
+            losses[a] *= val
         if rng:
             epsilons = rng.normal(len(values), eids)
             for a, eps in enumerate(epsilons):
-                losses[a] = self.sample(means, covs, eps) * values[a]
+                losses[a] *= self.sample(means, covs, eps)
         else:  # no CoVs
             ratios = self.sample(means, covs, numpy.zeros_like(eids))
-            for a, val in enumerate(values):
-                losses[a] = ratios * val
+            for a in range(len(values)):
+                losses[a] *= ratios
         return losses
 
     # this is used in the tests, not in the engine code base
