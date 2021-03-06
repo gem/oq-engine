@@ -243,6 +243,7 @@ class VulnerabilityFunction(object):
             for a in range(len(values)):
                 losses[a] *= ratios
         elif self.distribution_name == 'BT':
+            assert rng, 'ignore_covs cannot be zero with the beta distribution'
             stddevs = means * covs
             alpha = _alpha(means, stddevs)
             beta = _beta(means, stddevs)
