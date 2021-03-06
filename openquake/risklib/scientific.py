@@ -274,6 +274,15 @@ class VulnerabilityFunction(object):
                 ratios[e] = self.loss_ratios[pmf]
             for a in range(len(values)):
                 losses[a] *= ratios
+        elif self.distribution_name == 'BT':
+            stddevs = means * covs
+            alpha = _alpha(means, stddevs)
+            beta = _beta(means, stddevs)
+            ratios = rng.beta(len(values), eids, alpha, beta)
+            for a in range(len(values)):
+                losses[a] *= ratios[a]
+        else:
+            raise NotImplementedError(self.distribution_name)
         return losses
 
     # this is used in the tests, not in the engine code base
