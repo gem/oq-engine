@@ -240,6 +240,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         hc_id = self.calc.datastore.calc_id
         self.run_calc(case_3.__file__, 'job.ini',
                       exports='csv', hazard_calculation_id=str(hc_id))
+        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
         [fname] = export(('agg_curves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
