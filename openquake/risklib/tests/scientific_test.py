@@ -25,59 +25,6 @@ from openquake.risklib import scientific
 aaae = numpy.testing.assert_array_almost_equal
 
 
-class DegenerateDistributionTest(unittest.TestCase):
-    def setUp(self):
-        self.distribution = scientific.DegenerateDistribution()
-
-    def test_survival_zero_mean(self):
-        self.assertEqual(
-            0, self.distribution.survival(numpy.random.random(), 0, None))
-
-    def test_survival_nonzeromean(self):
-        loss_ratio = numpy.random.random()
-        mean = loss_ratio - numpy.random.random()
-
-        self.assertEqual(
-            0, self.distribution.survival(loss_ratio, mean, None))
-
-        mean = loss_ratio + numpy.random.random()
-        self.assertEqual(
-            1, self.distribution.survival(loss_ratio, mean, None))
-
-
-class BetaDistributionTestCase(unittest.TestCase):
-    def test_sample_one(self):
-        numpy.random.seed(0)
-        numpy.testing.assert_allclose(
-            [0.057241368], scientific.BetaDistribution().sample(
-                numpy.array([0.1]), numpy.array([1])))
-
-    def test_zero_ratios(self):
-        # a loss ratio can be zero if the corresponding CoV is zero
-        scientific.VulnerabilityFunction(
-            'v1', 'PGA', [.1, .2, .3], [0, .1, .2], [0, .2, .3], 'BT')
-
-    def test_large_covs(self):
-        with self.assertRaises(ValueError) as ctx:
-            scientific.VulnerabilityFunction(
-                'v1', 'PGA', [.1, .2, .3], [.05, .1, .2], [.1, .2, 3], 'BT')
-        self.assertIn('The coefficient of variation 3.0 > 2.0 does not satisfy'
-                      ' the requirement 0 < σ < sqrt[μ × (1 - μ)] in '
-                      '<VulnerabilityFunction(v1, PGA)>', str(ctx.exception))
-
-    def test_zero_covs(self):
-        with self.assertRaises(ValueError) as ctx:
-            scientific.VulnerabilityFunction(
-                'v1', 'PGA', [.1, .2, .3], [.3, .1, .2], [0, .2, .3], 'BT')
-        self.assertIn('zero coefficient of variation in [0.  0.2 0.3]',
-                      str(ctx.exception))
-
-    def test_all_zero_covs(self):
-        # this is correct, must use the DegenerateDistribution
-        scientific.VulnerabilityFunction(
-            'v1', 'PGA', [.1, .2, .3], [.3, .1, .2], [0, 0, 0], 'BT')
-
-
 epsilons = scientific.make_epsilons(
     numpy.zeros((1, 3)), seed=3, correlation=0)[0]
 

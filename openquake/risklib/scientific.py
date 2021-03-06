@@ -164,6 +164,7 @@ class VulnerabilityFunction(object):
         if (self.covs > 0).any():
             self._distribution = DISTRIBUTIONS[self.distribution_name]()
         else:
+            self.distribution_name = 'DG'
             self._distribution = DISTRIBUTIONS['DG']()
         self._distribution.epsilons = (numpy.array(epsilons)
                                        if epsilons is not None else None)
@@ -208,6 +209,32 @@ class VulnerabilityFunction(object):
         else:
             res = self._distribution.sample(means, covs)
         return res
+
+    def survival(self, loss_ratio, mean, stddev):
+        """
+        Compute the survival probability based on the underlying
+        distribution.
+        """
+        if self.distribution_name == 'DG':
+            return numpy.piecewise(
+                loss_ratio, [loss_ratio > mean or not mean], [0, 1])
+        elif self.distribution_name == 'LN':
+            # scipy does not handle correctly the limit case stddev = 0.
+            # In that case, when `mean` > 0 the survival function
+            # approaches to a step function, otherwise (`mean` == 0) we
+            # returns 0
+            if stddev == 0:
+                return numpy.piecewise(
+                    loss_ratio, [loss_ratio > mean or not mean], [0, 1])
+            variance = stddev ** 2.0
+            sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
+            mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
+            return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
+        elif self.distribution_name == 'BT':
+            return stats.beta.sf(
+                loss_ratio, _alpha(mean, stddev), _beta(mean, stddev))
+        else:
+            raise NotImplementedError(self.distribution_name)
 
     def calc_losses(self, values, gmvs, eids, rng=None):
         """
@@ -336,7 +363,7 @@ class VulnerabilityFunction(object):
         for row, loss_ratio in enumerate(loss_ratios):
             for col, (mean_loss_ratio, stddev) in enumerate(
                     zip(self.mean_loss_ratios, self._stddevs)):
-                lrem[row, col] = self._distribution.survival(
+                lrem[row, col] = self.survival(
                     loss_ratio, mean_loss_ratio, stddev)
         return lrem
 
@@ -749,14 +776,6 @@ class Distribution(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
-    @abc.abstractmethod
-    def survival(self, loss_ratio, mean, stddev):
-        """
-        Return the survival function of the distribution with `mean`
-        and `stddev` applied to `loss_ratio`
-        """
-        raise NotImplementedError
-
 
 @DISTRIBUTIONS.add('DG')
 class DegenerateDistribution(Distribution):
@@ -766,10 +785,6 @@ class DegenerateDistribution(Distribution):
     """
     def sample(self, means, _covs):
         return means
-
-    def survival(self, loss_ratio, mean, _stddev):
-        return numpy.piecewise(
-            loss_ratio, [loss_ratio > mean or not mean], [0, 1])
 
 
 @DISTRIBUTIONS.add('LN')
@@ -791,21 +806,6 @@ class LogNormalDistribution(Distribution):
         sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
         factor = numpy.exp(self.epsilons * sigma) / numpy.sqrt(1 + covs ** 2)
         return means * factor
-
-    def survival(self, loss_ratio, mean, stddev):
-        # scipy does not handle correctly the limit case stddev = 0.
-        # In that case, when `mean` > 0 the survival function
-        # approaches to a step function, otherwise (`mean` == 0) we
-        # returns 0
-        if stddev == 0:
-            return numpy.piecewise(
-                loss_ratio, [loss_ratio > mean or not mean], [0, 1])
-
-        variance = stddev ** 2.0
-
-        sigma = numpy.sqrt(numpy.log((variance / mean ** 2.0) + 1.0))
-        mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
-        return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
 
 
 # NB: the beta distribution `numpy.random.beta(alpha, beta)` is singular
@@ -834,22 +834,17 @@ class LogNormalDistribution(Distribution):
 class BetaDistribution(Distribution):
     def sample(self, means, covs):
         stddevs = means * covs
-        alpha = self._alpha(means, stddevs)
-        beta = self._beta(means, stddevs)
+        alpha = _alpha(means, stddevs)
+        beta = _beta(means, stddevs)
         return numpy.random.beta(alpha, beta)
 
-    def survival(self, loss_ratio, mean, stddev):
-        return stats.beta.sf(loss_ratio,
-                             self._alpha(mean, stddev),
-                             self._beta(mean, stddev))
 
-    @staticmethod
-    def _alpha(mean, stddev):
-        return ((1 - mean) / stddev ** 2 - 1 / mean) * mean ** 2
+def _alpha(mean, stddev):
+    return ((1 - mean) / stddev ** 2 - 1 / mean) * mean ** 2
 
-    @staticmethod
-    def _beta(mean, stddev):
-        return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
+
+def _beta(mean, stddev):
+    return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
 
 
 @DISTRIBUTIONS.add('PM')
@@ -870,18 +865,6 @@ class DiscreteDistribution(Distribution):
                 name='pmf', values=(r, probs[:, i])).rvs()
             ret[i] = loss_ratios[pmf]
         return ret
-
-    def survival(self, loss_ratios, probs):
-        """
-        Required for the Classical Risk and BCR Calculators.
-        Currently left unimplemented as the PMF format is used only for the
-        Scenario and Event Based Risk Calculators.
-
-        :param int steps: number of steps between loss ratios.
-        """
-        # TODO: to be implemented if the classical risk calculator
-        # needs to support the pmf vulnerability format
-        return
 
 
 #
