@@ -158,18 +158,6 @@ class VulnerabilityFunction(object):
         self._stddevs = self.covs * self.mean_loss_ratios
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
-        self.set_distribution(None)
-
-    def set_distribution(self, epsilons=None):
-        if (self.covs > 0).any():
-            self._distribution = DISTRIBUTIONS[self.distribution_name]()
-        else:
-            self.distribution_name = 'DG'
-            self._distribution = DISTRIBUTIONS['DG']()
-        self._distribution.epsilons = (numpy.array(epsilons)
-                                       if epsilons is not None else None)
-        assert self.seed is not None, self
-        numpy.random.seed(self.seed)  # set by CompositeRiskModel.init
 
     def interpolate(self, gmvs):
         """
@@ -188,27 +176,6 @@ class VulnerabilityFunction(object):
         means[ok] = self._mlr_i1d(curve_ok)
         covs[ok] = self._cov_for(curve_ok)
         return means, covs
-
-    def sample(self, means, covs, epsilons):
-        """
-        Sample the distribution and apply the corrections to the means.
-        This method is called only if there are nonzero covs.
-
-        :param means:
-           array of E loss ratios
-        :param covs:
-           array of E floats
-        :param epsilons:
-           array of E floats
-        :returns:
-           array of E loss ratios
-        """
-        if self.distribution_name == 'LN':
-            self.set_distribution(epsilons)
-            res = self._distribution.sample(means, covs)
-        else:
-            res = self._distribution.sample(means, covs)
-        return res
 
     def survival(self, loss_ratio, mean, stddev):
         """
@@ -253,13 +220,14 @@ class VulnerabilityFunction(object):
                 losses[a] *= means
         elif self.distribution_name == 'LN':
             if rng and self.covs.sum():
+                sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
+                div = numpy.sqrt(1 + covs ** 2)
                 epsilons = rng.normal(len(values), eids)
                 for a, eps in enumerate(epsilons):
-                    losses[a] *= self.sample(means, covs, eps)
+                    losses[a] *= means * numpy.exp(eps * sigma) / div
             else:  # no CoVs
-                ratios = self.sample(means, covs, numpy.zeros_like(eids))
                 for a in range(len(values)):
-                    losses[a] *= ratios
+                    losses[a] *= means
         elif self.distribution_name == 'PM':
             # FIXME: we are using full correlation here, always
             ratios = numpy.zeros_like(gmvs)
@@ -284,16 +252,6 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
         return losses
-
-    # this is used in the tests, not in the engine code base
-    def __call__(self, gmvs, epsilons):
-        """
-        A small wrapper around .interpolate and .apply_to
-        """
-        means, covs = self.interpolate(gmvs)
-        # for gmvs < min(iml) we return a loss of 0 (default)
-        ratios = self.sample(means, covs, epsilons)
-        return ratios
 
     def strictly_increasing(self):
         """
@@ -360,7 +318,7 @@ class VulnerabilityFunction(object):
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.mean_loss_ratios,
-                self.covs, self.distribution_name, self.seed)
+                self.covs, self.distribution_name)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -369,7 +327,6 @@ class VulnerabilityFunction(object):
         self.mean_loss_ratios = state[3]
         self.covs = state[4]
         self.distribution_name = state[5]
-        self.seed = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, covs, distribution):
@@ -379,7 +336,7 @@ class VulnerabilityFunction(object):
         assert len(loss_ratios) == len(imls)
         assert all(x >= 0.0 for x in loss_ratios)
         assert covs is None or all(x >= 0.0 for x in covs)
-        assert distribution in ["LN", "BT"]
+        assert distribution in ["DG", "LN", "BT", "PM"]
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
@@ -427,8 +384,6 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
     :param ratios: an array of mean ratios (M)
     :param probs: a matrix of probabilities of shape (M, L)
     """
-    seed = None
-
     def __init__(self, vf_id, imt, imls, loss_ratios, probs):
         self.id = vf_id
         self.imt = imt
@@ -448,16 +403,10 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
     def init(self):
         # the seed is reset in CompositeRiskModel.__init__
         self._probs_i1d = interpolate.interp1d(self.imls, self.probs)
-        self.set_distribution(None)
-
-    def set_distribution(self, epsilons=None):
-        self._distribution = DISTRIBUTIONS[self.distribution_name]()
-        self._distribution.epsilons = epsilons
-        self._distribution.seed = self.seed  # needed only for PM
 
     def __getstate__(self):
         return (self.id, self.imt, self.imls, self.loss_ratios,
-                self.probs, self.distribution_name, self.seed)
+                self.probs, self.distribution_name)
 
     def __setstate__(self, state):
         self.id = state[0]
@@ -466,7 +415,6 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         self.loss_ratios = state[3]
         self.probs = state[4]
         self.distribution_name = state[5]
-        self.seed = state[6]
         self.init()
 
     def _check_vulnerability_data(self, imls, loss_ratios, probs):
@@ -492,22 +440,6 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         out[:, ok] = self._probs_i1d(gmvs_curve[ok])
         return out, numpy.zeros_like(ok)
-
-    def sample(self, probs, _covs, epsilons):
-        """
-        Sample the .loss_ratios with the given probabilities.
-
-        :param probs:
-           array of E floats
-        :param _covs:
-           ignored, it is there only for API consistency
-        :param epsilons:
-           array of E floats
-        :returns:
-           array of E probabilities
-        """
-        self.set_distribution(epsilons)
-        return self._distribution.sample(self.loss_ratios, probs)
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
@@ -781,119 +713,12 @@ class FragilityModel(dict):
             self.limitStates, sorted(self))
 
 
-#
-# Distribution & Sampling
-#
-
-DISTRIBUTIONS = CallableDict()
-
-
-class Distribution(metaclass=abc.ABCMeta):
-    """
-    A Distribution class models continuous probability distribution of
-    random variables used to sample losses of a set of assets. It is
-    usually registered with a name (e.g. LN, BT, PM) by using
-    :class:`openquake.baselib.general.CallableDict`
-    """
-
-    @abc.abstractmethod
-    def sample(self, means, covs):
-        """
-        :returns: sample a set of losses
-        :param means: an array of mean losses
-        :param covs: an array of coefficients of variation
-        """
-        raise NotImplementedError
-
-
-@DISTRIBUTIONS.add('DG')
-class DegenerateDistribution(Distribution):
-    """
-    The degenerate distribution. E.g. a distribution with a delta
-    corresponding to the mean.
-    """
-    def sample(self, means, _covs):
-        return means
-
-
-@DISTRIBUTIONS.add('LN')
-class LogNormalDistribution(Distribution):
-    """
-    Model a distribution of a random variable whoose logarithm are
-    normally distributed.
-
-    :attr epsilons: An array of random numbers generated with
-                    :func:`numpy.random.multivariate_normal` with size E
-    """
-    def __init__(self, epsilons=None):
-        self.epsilons = epsilons
-
-    def sample(self, means, covs):
-        if self.epsilons is None:
-            raise ValueError("A LogNormalDistribution must be initialized "
-                             "before you can use it")
-        sigma = numpy.sqrt(numpy.log(covs ** 2.0 + 1.0))
-        factor = numpy.exp(self.epsilons * sigma) / numpy.sqrt(1 + covs ** 2)
-        return means * factor
-
-
-# NB: the beta distribution `numpy.random.beta(alpha, beta)` is singular
-# if the beta array contains some zeros; this happens if the vulnerability
-# function has zero coefficients of variation (stddevs).
-# Even if you do something like this:
-#
-# res = numpy.zeros_like(alpha)
-# ok = beta !=0  # not singular
-# res[ok] = numpy.random.beta(alpha[ok], beta[ok])
-# res[~ok] = 1
-#
-# this is not going to give results close to you want expect by
-# setting stddev=.0000001 and mean=.0000001 (i.e. smoothly going
-# through the limit) even if the the seed is fixed. The reason is that
-# the random number generator will advance differently.  Suppose the
-# array size is 10 and there is a single singular value with beta=0
-# and 9 values with beta != 0; the call to numpy.random.beta(alpha, beta)
-# will advance the generator by 9 steps, while if you regularize the
-# singularity by using stddev=.0000001 and mean=.00000001 the random
-# generator will advance by 10 steps. The numbers produced by the beta
-# distribution will be quite different.
-# This is why having stddevs == 0 is an error and it is forbidden in
-# VulnerabilityFunction.__init__.
-@DISTRIBUTIONS.add('BT')
-class BetaDistribution(Distribution):
-    def sample(self, means, covs):
-        stddevs = means * covs
-        alpha = _alpha(means, stddevs)
-        beta = _beta(means, stddevs)
-        return numpy.random.beta(alpha, beta)
-
-
 def _alpha(mean, stddev):
     return ((1 - mean) / stddev ** 2 - 1 / mean) * mean ** 2
 
 
 def _beta(mean, stddev):
     return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
-
-
-@DISTRIBUTIONS.add('PM')
-class DiscreteDistribution(Distribution):
-    seed = None  # to be set
-
-    def sample(self, loss_ratios, probs):
-        ret = numpy.zeros(probs.shape[1])
-        r = numpy.arange(len(loss_ratios))
-        for i in range(probs.shape[1]):
-            if probs[:, i].sum() == 0:  # oq-risk-tests/case_1g
-                # probs (i.e. means) are zeros for events
-                # producing a loss below the threshold
-                continue
-            random.seed(self.seed + i)
-            # the seed is set inside the loop to avoid block-size dependency
-            pmf = stats.rv_discrete(
-                name='pmf', values=(r, probs[:, i])).rvs()
-            ret[i] = loss_ratios[pmf]
-        return ret
 
 
 #
