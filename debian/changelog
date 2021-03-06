@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the avg_losses exporter when aggregate_by=id
   * Merged the calculators scenario_risk and ebrisk and ensured independency
     from the number of tasks even for the "BT" and "PM" distributions
   * Storing the agg_loss_table as 64 bit floats instead of 32 bit floats
