@@ -203,6 +203,50 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
+    def sample(self, num_assets, means, covs, eids, rng):
+        """
+        :param num_assets: number of assets
+        :param means: E loss ratios
+        :param covs: E coefficients of variation
+        :param eids: E event IDs
+        :param rng: a MultiEventRNG or None
+        :returns: a matrix of loss ratios of shape (A, E)
+        """
+        ratios = numpy.zeros((num_assets, len(eids)))
+        if self.distribution_name == 'DG':
+            for a in range(num_assets):
+                ratios[a] = means
+        elif self.distribution_name == 'LN':
+            if rng and self.covs.sum():
+                sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
+                div = numpy.sqrt(1 + covs ** 2)
+                epsilons = rng.normal(num_assets, eids)
+                for a, eps in enumerate(epsilons):
+                    ratios[a] = means * numpy.exp(eps * sigma) / div
+            else:  # no CoVs
+                for a in range(num_assets):
+                    ratios[a] = means
+        elif self.distribution_name == 'PM':
+            lrs = F64(self.loss_ratios)  # when read from the datastore
+            arange = numpy.arange(len(self.loss_ratios))
+            for e, eid in enumerate(eids):
+                if means[:, e].sum() == 0:  # oq-risk-tests/case_1g
+                    # means are zeros for events below the threshold
+                    continue
+                pmf = stats.rv_discrete(
+                    name='pmf', values=(arange, means[:, e]),
+                    seed=rng.master_seed + eid).rvs(size=num_assets)
+                ratios[:, e] = lrs[pmf]
+        elif self.distribution_name == 'BT':
+            assert rng, 'ignore_covs cannot be zero with the beta distribution'
+            stddevs = means * covs
+            alpha = _alpha(means, stddevs)
+            beta = _beta(means, stddevs)
+            ratios[:, :] = rng.beta(num_assets, eids, alpha, beta)
+        else:
+            raise NotImplementedError(self.distribution_name)
+        return ratios
+
     def __call__(self, values, gmvs, eids, rng=None):
         """
         :param values: A asset values
@@ -212,46 +256,10 @@ class VulnerabilityFunction(object):
         :returns: a matrix of losses of shape (A, E)
         """
         means, covs = self.interpolate(gmvs)
-        losses = numpy.ones((len(values), len(eids)))
+        ratios = self.sample(len(values), means, covs, eids, rng)
+        losses = numpy.zeros((len(values), len(eids)))
         for a, val in enumerate(values):
-            losses[a] *= val
-        if self.distribution_name == 'DG':
-            for a in range(len(values)):
-                losses[a] *= means
-        elif self.distribution_name == 'LN':
-            if rng and self.covs.sum():
-                sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-                div = numpy.sqrt(1 + covs ** 2)
-                epsilons = rng.normal(len(values), eids)
-                for a, eps in enumerate(epsilons):
-                    losses[a] *= means * numpy.exp(eps * sigma) / div
-            else:  # no CoVs
-                for a in range(len(values)):
-                    losses[a] *= means
-        elif self.distribution_name == 'PM':
-            # FIXME: we are using full correlation here, always
-            ratios = numpy.zeros_like(gmvs)
-            arange = numpy.arange(len(self.loss_ratios))
-            for e, eid in enumerate(eids):
-                if means[:, e].sum() == 0:  # oq-risk-tests/case_1g
-                    # means are zeros for events below the threshold
-                    continue
-                pmf = stats.rv_discrete(
-                    name='pmf', values=(arange, means[:, e]),
-                    seed=rng.master_seed + eid).rvs()
-                ratios[e] = self.loss_ratios[pmf]
-            for a in range(len(values)):
-                losses[a] *= ratios
-        elif self.distribution_name == 'BT':
-            assert rng, 'ignore_covs cannot be zero with the beta distribution'
-            stddevs = means * covs
-            alpha = _alpha(means, stddevs)
-            beta = _beta(means, stddevs)
-            ratios = rng.beta(len(values), eids, alpha, beta)
-            for a in range(len(values)):
-                losses[a] *= ratios[a]
-        else:
-            raise NotImplementedError(self.distribution_name)
+            losses[a] = val * ratios[a]
         return losses
 
     def strictly_increasing(self):

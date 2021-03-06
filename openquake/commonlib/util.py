@@ -198,7 +198,7 @@ def get_assets(dstore):
     :returns: an array of records (id, tag1, ..., tagN, lon, lat)
     """
     assetcol = dstore['assetcol']
-    tagnames = sorted(assetcol.tagnames)
+    tagnames = sorted(tn for tn in assetcol.tagnames if tn != 'id')
     tag = {t: getattr(assetcol.tagcol, t) for t in tagnames}
     dtlist = [('id', '<S100')]
     for tagname in tagnames:
