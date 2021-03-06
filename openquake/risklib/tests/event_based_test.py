@@ -18,14 +18,9 @@
 
 import numpy
 import unittest
+from openquake.risklib import scientific, riskinput
 
-from openquake.risklib import scientific
-
-
-EPSILONS = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
-            -0.4336, 0.3426, 3.5784, 2.7694]
-
-
+EIDS = numpy.arange(10)
 GMF = (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
        0.04336, 0.099552, 0.071968, 0.003456, 0.030704, 0.011744,
        0.024176, 0.002224, 0.008912, 0.004224, 0.033584, 0.041088,
@@ -61,7 +56,6 @@ GMF = (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
        0.166192, 0.00376, 0.013216, 0.000592, 0.002832, 0.052928,
        0.007872, 0.001072, 0.021136, 0.029568, 0.012944, 0.004064,
        0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104)
-
 TSES = 900.
 TIMESPAN = 50.
 
@@ -69,6 +63,7 @@ TIMESPAN = 50.
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.RNG = riskinput.MultiEventRNG(42, 0, EIDS)
         self.vulnerability_function1 = scientific.VulnerabilityFunction(
             'VF1', 'PGA',
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
@@ -142,7 +137,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.1109), "TSES": 200, "TimeSpan": 50}
 
     def test_an_empty_gmf_produces_an_empty_set(self):
-        self.assertEqual(0, self.vulnerability_function1([], []).size)
+        [res] = self.vulnerability_function1([1], [], [])
+        self.assertEqual(len(res), 0)
 
     def test_sampling_lr_gmf_inside_range_vulnimls(self):
         # Sampling loss ratios (covs greater than zero), Ground Motion Fields
@@ -156,15 +152,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         gmf = (
             0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
-            0.1419, 0.4218, 0.9157, 0.7922, 0.9595,
-        )
+            0.1419, 0.4218, 0.9157, 0.7922, 0.9595)
 
-        expected_loss_ratios = numpy.array([
-            0.0722, 0.4106, 0.1800, 0.1710, 0.2508,
-            0.0395, 0.1145, 0.2883, 0.4734, 0.4885,
-        ])
+        expected_loss_ratios = numpy.array([[
+            0.044604, 0.175115, 0.297628, 0.181567, 0.344077, 0.091288,
+            0.165941, 0.300442, 0.164211, 0.25775]])
 
-        ratios = vf(gmf, EPSILONS)
+        ratios = vf([1], gmf, EIDS, self.RNG)
         numpy.testing.assert_allclose(expected_loss_ratios,
                                       ratios, atol=0.0, rtol=0.01)
 
@@ -183,9 +177,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.1419, 0.4218, 0.9157, 0.05, 0.9595)
 
         numpy.testing.assert_allclose(
-            numpy.array([0., 0.4105595, 0.18002423, 0.17102685, 0.25077079,
-                         0.03945861, 0.11454372, 0.28828653, 0., 0.48847448]),
-            vuln_function(gmfs, EPSILONS), atol=0.0, rtol=0.01)
+            numpy.array([[0., 0.175115, 0.297628, 0.181567, 0.344077,
+                          0.091288, 0.165941, 0.300442, 0., 0.25775]]),
+            vuln_function([1], gmfs, EIDS, self.RNG),
+            atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
         # Sampling loss ratios (covs greater than zero), Ground Motion Fields
@@ -196,16 +191,16 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         covs = [0.30, 0.30, 0.20, 0.20]
         vuln_function = scientific.VulnerabilityFunction(
             'VF', 'PGA', imls, loss_ratios, covs, "LN")
-        vuln_function.seed = 42
         vuln_function.init()
 
         gmfs = (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 1.05, 0.9595)
 
         numpy.testing.assert_allclose(
-            numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
-                         0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
-            vuln_function(gmfs, EPSILONS), atol=0.0, rtol=0.01)
+            numpy.array([[0.236383, 0.175115, 0.297628, 0.181567, 0.344077,
+                          0.091288, 0.165941, 0.300442, 0.207284, 0.25775]]),
+            vuln_function([1], gmfs, EIDS, self.RNG),
+            atol=0.0, rtol=0.01)
 
     def test_loss_ratios_boundaries(self):
         # Loss ratios generation given a GMFs and a vulnerability function
@@ -223,14 +218,15 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         # min IML in this case is 0.01
         numpy.testing.assert_allclose(
-            numpy.array([0.0, 0.0, 0.0]),
+            numpy.zeros((1, 3)),
             self.vulnerability_function1(
-                [0.0001, 0.0002, 0.0003], EPSILONS[:3]))
+                [1], [0.0001, 0.0002, 0.0003], EIDS[:3], self.RNG))
 
         # max IML in this case is 0.52
         numpy.testing.assert_allclose(
-            numpy.array([0.700, 0.700]),
-            self.vulnerability_function1([0.525, 0.530], EPSILONS[:2]))
+            numpy.array([[0.700, 0.700]]),
+            self.vulnerability_function1(
+                [1], [0.525, 0.530], EIDS[:2], self.RNG))
 
     def test_loss_ratios_computation_using_gmfs(self):
         # Loss ratios generation given a GMFs and a vulnerability function
@@ -239,15 +235,16 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # takes each IML defined in the GMFs and interpolates them using
         # the given vulnerability function.
         # manually computed values by Vitor Silva
-        expected_loss_ratios = numpy.array([
+        expected_loss_ratios = numpy.array([[
             0.0605584000000000,
             0.273100266666667, 0.0958560000000000, 0.0184384000000000,
             0.270366933333333, 0.0,
             0.0252480000000000, 0.0795669333333333,
             0.0529024000000000, 0.0,
-        ])
+        ]])
 
         # the length of the result is the length of the gmf
         numpy.testing.assert_allclose(
             expected_loss_ratios,
-            self.vulnerability_function1(GMF[:10], EPSILONS))
+            self.vulnerability_function1(
+                [1], GMF[:10], EIDS, self.RNG))

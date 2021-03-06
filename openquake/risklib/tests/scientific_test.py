@@ -23,10 +23,7 @@ import numpy
 from openquake.risklib import scientific
 
 aaae = numpy.testing.assert_array_almost_equal
-
-
-epsilons = scientific.make_epsilons(
-    numpy.zeros((1, 3)), seed=3, correlation=0)[0]
+eids = numpy.arange(3)
 
 
 class VulnerabilityFunctionTestCase(unittest.TestCase):
@@ -56,7 +53,6 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         self.test_func = scientific.VulnerabilityFunction(
             self.ID, self.IMT, self.IMLS_GOOD, self.LOSS_RATIOS_GOOD,
             self.COVS_GOOD)
-        self.test_func.seed = 42
         self.test_func.init()
 
     def test_vuln_func_constructor_raises_on_bad_imls(self):
@@ -123,20 +119,20 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             self.COVS_GOOD)
 
     def test_loss_ratio_interp_many_values(self):
-        expected_lrs = numpy.array([0.0161928, 0.05880167, 0.12242504])
+        expected_lrs = numpy.array([[0.01, 0.055, 1.]])
         test_input = [0.005, 0.006, 0.0269]
         numpy.testing.assert_allclose(
-            expected_lrs, self.test_func(test_input, epsilons))
+            expected_lrs, self.test_func([1], test_input, eids))
 
     def test_loss_ratio_interp_many_values_clipped(self):
         # Given a list of IML values (abscissae), test for proper interpolation
         # of loss ratios (ordinates).
         # This test also ensures that input IML values are 'clipped' to the IML
         # range defined for the vulnerability function.
-        expected_lrs = numpy.array([0., 0.05880167, 0.12242504])
+        expected_lrs = numpy.array([[0., 0.055, 1.]])
         test_input = [0.00049, 0.006, 2.7]
         numpy.testing.assert_allclose(
-            expected_lrs, self.test_func(test_input, epsilons))
+            expected_lrs, self.test_func([1], test_input, eids))
 
     def test_cov_interp_many_values(self):
         expected_covs = numpy.array([0.3, 0.2, 10])
@@ -162,9 +158,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             vf = scientific.VulnerabilityFunction(
                 self.ID, self.IMT, self.IMLS_GOOD,
                 [0.0, 0.1, 0.2, 0.3, 0.4, 0.5],
-                [0.001, 0.002, 0.003, 0.004, 0.005, 0.006],
-            )
-            vf.seed = 42
+                [0.001, 0.002, 0.003, 0.004, 0.005, 0.006])
             vf.init()
         expected_error = (
             'It is not valid to define a mean loss ratio = 0 with a '
@@ -182,9 +176,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             [0.1, 0.2, 0.3, 0.45, 0.6],  # IMLs
             [0.0, 0.1, 0.2, 0.4, 1.2],   # loss ratios
             [0.0, 0.0, 0.3, 0.2, 0.1],   # CoVs
-            'LN'
-        )
-        curve.seed = 42
+            'LN')
         curve.init()
         loss_ratios = tuple(curve.mean_loss_ratios_with_steps(5))
         lrem = curve.loss_ratio_exceedance_matrix(loss_ratios)
@@ -213,123 +205,6 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         ])
         aaae(lrem, expected_lrem, decimal=3)
 
-
-class VulnerabilityFunctionBlockSizeTestCase(unittest.TestCase):
-    """
-    Test the block size independency of the vulnerability function
-    """
-    @classmethod
-    def setUpClass(cls):
-        cls.vf = scientific.VulnerabilityFunction(
-            'RM', 'PGA', [0.02, 0.3, 0.5, 0.9, 1.2],
-            [0.05, 0.1, 0.2, 0.4, 0.8],
-            [0.0001, 0.0001, 0.0001, 0.0001, 0.0001])
-        cls.vf.seed = 42
-        cls.vf.init()
-
-    def test(self):
-        # values passed as a single block produce the same losses when
-        # passed in several blocks
-
-        gmvs = [0.3307648, 0.77900947, 0., 2.15393227, 0.,
-                0., 0.42448847, 0., 0., 0., 0.15023323,
-                0., 0., 0., 0., 0., 0., 0., 0.51451394, 0.]
-        eps = [0.49671415, 0.64768854, -0.23415337, 1.57921282, -0.46947439,
-               -0.46341769, 0.24196227, -1.72491783, -1.01283112, -0.90802408,
-               1.46564877, 0.0675282, -0.54438272, -1.15099358, -0.60063869,
-               -0.60170661, -0.01349722, 0.82254491, 0.2088636, -1.32818605]
-        singleblock = list(self.vf(gmvs, eps).reshape(-1))
-
-        # multiblock
-        gmvs_, eps_ = [None] * 7, [None] * 7
-        gmvs_[0] = [0.3307648, 0.77900947, 0.]
-        eps_[0] = [0.49671415, 0.64768854, -0.23415337]
-        gmvs_[1] = [2.15393227, 0., 0.]
-        eps_[1] = [1.57921282, -0.46947439, -0.46341769]
-        gmvs_[2] = [0.42448847, 0., 0.]
-        eps_[2] = [0.24196227, -1.72491783, -1.01283112]
-        gmvs_[3] = [0., 0.15023323, 0.]
-        eps_[3] = [-0.90802408, 1.46564877, 0.0675282]
-        gmvs_[4] = [0., 0., 0.]
-        eps_[4] = [-0.54438272, -1.15099358, -0.60063869]
-        gmvs_[5] = [0., 0., 0.]
-        eps_[5] = [-0.60170661, -0.01349722, 0.82254491]
-        gmvs_[6] = [0.51451394, 0.]
-        eps_[6] = [0.2088636, -1.32818605]
-        multiblock = []
-        for gmvs, eps in zip(gmvs_, eps_):
-            multiblock.extend(self.vf(gmvs, eps).reshape(-1))
-
-        # this test has been broken forever, finally fixed in OpenQuake 1.5
-        self.assertEqual(singleblock, multiblock)
-
-
-class MeanLossTestCase(unittest.TestCase):
-    def test_mean_loss(self):
-        vf = scientific.VulnerabilityFunction(
-            'VF1', 'PGA', imls=[0.1, 0.2, 0.3, 0.5, 0.7],
-            mean_loss_ratios=[0.0035, 0.07, 0.14, 0.28, 0.56],
-            covs=[0.1, 0.2, 0.3, 0.4, 0.5])
-        vf.seed = 42
-        vf.init()
-
-        epsilons = [0.98982371, 0.2776809, -0.44858935, 0.96196624,
-                    -0.82757864, 0.53465707, 1.22838619]
-        imls = [0.280357, 0.443609, 0.241845, 0.506982, 0.459758,
-                0.456199, 0.38077]
-        mean = vf(imls, epsilons).mean()
-        aaae(mean, 0.2318058254)
-
-        # if you don't reorder the epsilons, the mean loss depends on
-        # the order of the imls!
-        reordered_imls = [0.443609, 0.280357, 0.241845, 0.506982, 0.459758,
-                          0.456199, 0.38077]
-        mean2 = vf(reordered_imls, epsilons).mean()
-        aaae(mean2, 0.238145174018)
-        self.assertGreater(abs(mean2 - mean), 0.005)
-
-        # by reordering the epsilons the problem is solved
-        reordered_epsilons = [0.2776809, 0.98982371, -0.44858935, 0.96196624,
-                              -0.82757864, 0.53465707, 1.22838619]
-        mean3 = vf(reordered_imls, reordered_epsilons).mean()
-        aaae(mean3, mean)
-
-
-class LogNormalDistributionTestCase(unittest.TestCase):
-
-    def test_init(self):
-        assets_num = 100
-        samples_num = 1000
-        correlation = 0.37
-        epsilons = scientific.make_epsilons(
-            numpy.zeros((assets_num, samples_num)),
-            seed=17, correlation=correlation)
-        self.dist = scientific.LogNormalDistribution(epsilons)
-
-        tol = 0.1
-        for a1, a2 in scientific.pairwise(range(assets_num)):
-            coeffs = numpy.corrcoef(
-                self.dist.epsilons[a1, :], self.dist.epsilons[a2, :])
-
-            numpy.testing.assert_allclose([1, 1], [coeffs[0, 0], coeffs[1, 1]])
-            numpy.testing.assert_allclose(
-                correlation, coeffs[0, 1], rtol=0, atol=tol)
-            numpy.testing.assert_allclose(
-                correlation, coeffs[1, 0], rtol=0, atol=tol)
-
-    def test_sample_mixed(self):
-        # test that sampling works also when we have both covs = 0 and
-        # covs != 0
-        assets_num = 1
-        samples_num = 1
-        correlation = 0.37
-        epsilons = scientific.make_epsilons(
-            numpy.zeros((assets_num, samples_num)),
-            seed=17, correlation=correlation)
-        self.dist = scientific.LogNormalDistribution(epsilons)
-        samples = self.dist.sample(numpy.array([0., 0., .1, .1]),
-                                   numpy.array([0., .1, 0., .1])).reshape(-1)
-        numpy.testing.assert_allclose([0., 0., 0.1, 0.10228396], samples)
 
 
 class VulnerabilityLossRatioStepsTestCase(unittest.TestCase):

@@ -188,15 +188,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
         super().pre_execute()
-
-        if (oq.ignore_covs or not self.crmodel.covs or
-                'LN' not in self.crmodel.distributions):
-            self.param['ignore_covs'] = True
-            logging.info('Ignoring epsilons')
-        else:
-            self.param['ignore_covs'] = False
-            logging.info('Using {:_d} random generators'.format(self.E))
         self.set_param(hdf5path=self.datastore.filename,
+                       ignore_covs=oq.ignore_covs,
                        master_seed=oq.master_seed,
                        asset_correlation=int(oq.asset_correlation))
         logging.info(
