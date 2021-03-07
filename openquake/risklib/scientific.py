@@ -201,47 +201,59 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def sample(self, num_assets, mean_covs, eid, rng):
+    def sample(self, mean_covs, eid, rng):
         """
-        :param num_assets: number of assets
         :param mean_covs: matrix of shape (A, 2) of loss ratios and covs
-        :param eid: valied event IDs
+        :param eid: valid event IDs
         :param rng: a MultiEventRNG or None
         :returns: an array of A loss ratios
         """
-        means, covs = mean_covs[:2]
-        ratios = numpy.zeros(num_assets)
+        A = len(mean_covs)
+        means, covs = mean_covs[:, 0], mean_covs[:, 1]
+        ratios = means
         if self.distribution_name == 'DG':
-            for a in range(num_assets):
-                ratios[a] = means
+            pass
         elif self.distribution_name == 'LN':
             if rng and self.covs.sum():
                 sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                 div = numpy.sqrt(1 + covs ** 2)
-                eps = rng.normal(num_assets, eid)
-                ratios[:] = means * numpy.exp(eps * sigma) / div
-            else:  # no CoVs
-                for a in range(num_assets):
-                    ratios[a] = means
+                eps = rng.normal(A, eid)
+                ratios[:] *= numpy.exp(eps * sigma) / div
         elif self.distribution_name == 'PM':
             lrs = F64(self.loss_ratios)  # when read from the datastore
             arange = numpy.arange(len(self.loss_ratios))
-            if mean_covs.sum():  # oq-risk-tests/case_1g
-                # means are zeros for events below the threshold
-                pmf = stats.rv_discrete(
-                    name='pmf', values=(arange, mean_covs),
-                    seed=rng.master_seed + eid
-                ).rvs(size=num_assets)
-                ratios[:] = lrs[pmf]
+            for a, mc in enumerate(mean_covs):
+                if mc.sum():  # oq-risk-tests/case_1g
+                    # means are zeros for events below the threshold
+                    pmf = stats.rv_discrete(
+                        name='pmf',
+                        values=(arange, mc),
+                        seed=rng.master_seed + eid
+                    ).rvs()
+                    ratios[a] = lrs[pmf]
         elif self.distribution_name == 'BT':
             assert rng, 'ignore_covs cannot be zero with the beta distribution'
             stddevs = means * covs
             alpha = _alpha(means, stddevs)
             beta = _beta(means, stddevs)
-            ratios[:] = rng.beta(num_assets, eid, alpha, beta)
+            ratios[:] = rng.beta(A, eid, alpha, beta)
         else:
             raise NotImplementedError(self.distribution_name)
         return ratios
+
+    def calc_lbe(self, asset_df, gmf_df, col, rng=None):
+        A = len(asset_df)
+        ls = []
+        aidx = {sid: df.index.to_numpy()
+                for sid, df in asset_df.groupby('sid')}
+        for eid, df in gmf_df.groupby('eid'):
+            mean_covs = self.interpolate(df[col].to_numpy())
+            mc = numpy.zeros((A,) + mean_covs.shape[1:])
+            for s, sid in enumerate(df.sid):
+                for a in aidx[sid]:
+                    mc[a] = mean_covs[s]
+            ls.append(self.sample(mc, eid, rng) * asset_df.value.to_numpy())
+        return numpy.array(ls).T  # shape (A, E)
 
     def __call__(self, values, gmvs, eids, rng=None):
         """

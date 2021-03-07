@@ -353,10 +353,12 @@ class RiskModel(object):
         """
         :returns: an array of shape (A, E)
         """
-        values = get_values(loss_type, assets, self.time_event)
+        asset_df = pandas.DataFrame(dict(
+            value=get_values(loss_type, assets, self.time_event).to_numpy(),
+            sid=assets.site_id.to_numpy())
+        ).sort_values('sid')
         vf = self.risk_functions[loss_type, 'vulnerability']
-        return vf(values, gmf_df[col].to_numpy(),
-                  gmf_df.eid.to_numpy(), rndgen)
+        return vf.calc_lbe(asset_df, gmf_df, col, rndgen)
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
