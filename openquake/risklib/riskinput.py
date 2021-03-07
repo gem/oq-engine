@@ -134,10 +134,12 @@ class MultiEventRNG(object):
 
     >>> epsgetter = MultiEventRNG(
     ...     master_seed=42, asset_correlation=1, eids=[0, 1, 2])
-    >>> epsgetter.normal(3, [0, 1])
-    array([[-1.1043996, -2.4686112],
-           [-1.1043996, -2.4686112],
-           [-1.1043996, -2.4686112]], dtype=float32)
+    >>> epsgetter.normal(3, 0)
+    array([-1.10439952, -1.10439952, -1.10439952])
+    >>> epsgetter.normal(3, 1)
+    array([-2.46861114, -2.46861114, -2.46861114])
+    >>> epsgetter.beta(3, 1, 1.0, 0.1)
+    array([0.48157279, 0.48157279, 0.48157279])
     """
     def __init__(self, master_seed, asset_correlation, eids):
         self.master_seed = master_seed
@@ -147,33 +149,31 @@ class MultiEventRNG(object):
             ph = numpy.random.Philox(self.master_seed + eid)
             self.rng[eid] = numpy.random.Generator(ph)
 
-    def normal(self, size, eids):
+    def normal(self, size, eid):
         """
-        :param eids: array of event IDs
-        :returns: array of shape (E, size...) and dtype float32
+        :param size: an array shape or size
+        :param eid: valid event ID
+        :returns: array of shape size and dtype float32
         """
-        res = numpy.zeros((size, len(eids)), F32)
-        for e, eid in enumerate(eids):
-            rng = self.rng[eid]
-            if self.asset_correlation:
-                res[:, e] = numpy.ones(size) * rng.normal()
-            else:
-                res[:, e] = rng.normal(size=size)
-        return res
+        rng = self.rng[eid]
+        if self.asset_correlation:
+            return numpy.ones(size) * rng.normal()
+        else:
+            return rng.normal(size=size)
 
-    def beta(self, size, eids, alpha, beta):
+    def beta(self, size, eid, alpha, beta):
         """
-        :param eids: array of event IDs
+        :param size: an array shape or size
+        :param eid: valid event ID
+        :param alpha: parameter of the beta distribution
+        :param betaa: parameter of the beta distribution
         :returns: array of shape (size, len(eids)) and dtype float32
         """
-        res = numpy.zeros((size, len(eids)), F32)
-        for e, eid in enumerate(eids):
-            rng = self.rng[eid]
-            if self.asset_correlation:
-                res[:, e] = numpy.ones(size) * rng.beta(alpha[e], beta[e])
-            else:
-                res[:, e] = rng.beta(alpha[e], beta[e], size=size)
-        return res
+        rng = self.rng[eid]
+        if self.asset_correlation:
+            return numpy.ones(size) * rng.beta(alpha, beta)
+        else:
+            return rng.beta(alpha, beta, size=size)
 
 
 def str2rsi(key):

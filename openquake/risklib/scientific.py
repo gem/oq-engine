@@ -219,9 +219,9 @@ class VulnerabilityFunction(object):
             if rng and self.covs.sum():
                 sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                 div = numpy.sqrt(1 + covs ** 2)
-                epsilons = rng.normal(num_assets, eids)
-                for a, eps in enumerate(epsilons):
-                    ratios[a] = means * numpy.exp(eps * sigma) / div
+                for e, eid in enumerate(eids):
+                    eps = rng.normal(num_assets, eid)
+                    ratios[:, e] = means[e] * numpy.exp(eps * sigma[e]) / div[e]
             else:  # no CoVs
                 for a in range(num_assets):
                     ratios[a] = means
@@ -242,7 +242,8 @@ class VulnerabilityFunction(object):
             stddevs = means * covs
             alpha = _alpha(means, stddevs)
             beta = _beta(means, stddevs)
-            ratios[:, :] = rng.beta(num_assets, eids, alpha, beta)
+            for e, eid in enumerate(eids):
+                ratios[:, e] = rng.beta(num_assets, eid, alpha[e], beta[e])
         else:
             raise NotImplementedError(self.distribution_name)
         return ratios
