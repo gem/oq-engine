@@ -57,8 +57,9 @@ def get_sof_adjustment(rake, imt):
         raise ValueError('Unsupported IMT')
     # Set coefficients
     f_n_ss = 0.95
-    p_r = 0.85
-    p_n = 0.0
+    p_r = 0.68
+    p_n = 0.02
+    p_S = 0.30 # not used
     # Normal - F_N:EQ
     if -135 < rake <= -45:
         famp = f_r_ss**(-p_r) * f_n_ss**(1-p_n)
