@@ -34,15 +34,6 @@ def get_output_gmf(crmodel, taxo, assets, haz, rndgen=None):
     """
     primary = crmodel.primary_imtls
     alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
-    # the order in which the gmfs are stored is random since it depends
-    # on which hazard task ends first; here we reorder
-    # the gmfs by event ID; this is convenient in
-    # general and mandatory for the case of
-    # VulnerabilityFunctionWithPMF, otherwise the
-    # sample method would receive the means in random
-    # order and produce random results even if the
-    # seed is set correctly; very tricky indeed! (MS)
-    haz = haz.sort_values('eid')
     eids = haz.eid.to_numpy()
     dic = dict(eids=eids, assets=assets.to_records(),
                loss_types=crmodel.loss_types, haz=haz, rlzs=haz.rlz.to_numpy())
