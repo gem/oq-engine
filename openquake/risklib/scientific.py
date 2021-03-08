@@ -1316,13 +1316,13 @@ class AggLossTable(AccumDict):
 
         # populate outputs
         if aggby == ['id']:
-            idxs = [self.aggkey[o1, ] for o1 in assets['ordinal'] + 1]
+            kids = [self.aggkey[o1, ] for o1 in assets['ordinal'] + 1]
         elif aggby == ['site_id']:
-            idxs = [self.aggkey[s1, ] for s1 in assets['site_id'] + 1]
+            kids = [self.aggkey[s1, ] for s1 in assets['site_id'] + 1]
         elif aggby:
-            idxs = [self.aggkey[tuple(rec)] for rec in assets[aggby]]
+            kids = [self.aggkey[tuple(rec)] for rec in assets[aggby]]
         else:
-            idxs = []
+            kids = []
         for a, asset in enumerate(out.assets):
             lt_losses = []
             for lti, lt in enumerate(out.loss_types):
@@ -1342,19 +1342,19 @@ class AggLossTable(AccumDict):
             for eid, loss in zip(eids, out[ln].T):
                 self[eid, K][lni] += loss.sum()
             # this is the slow part, if aggregate_by is given
-            for asset, idx, losses in zip(assets, idxs, out[ln]):
+            for asset, kid, losses in zip(assets, kids, out[ln]):
                 for eid, loss in zip(eids, losses):
                     if loss:
-                        self[eid, idx][lni] += loss
+                        self[eid, kid][lni] += loss
 
     def to_dframe(self):
         """
         Convert the AggLosTable into a DataFrame
         """
         out = AccumDict(accum=[])  # col -> values
-        for (eid, idx), arr in self.items():
+        for (eid, kid), arr in self.items():
             out['event_id'].append(eid)
-            out['agg_id'].append(idx)
+            out['agg_id'].append(kid)
             for li, ln in enumerate(self.loss_names):
                 out[ln].append(arr[li])
         out['event_id'] = U32(out['event_id'])

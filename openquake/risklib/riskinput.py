@@ -36,7 +36,7 @@ def get_output_gmf(crmodel, taxo, assets, haz, rndgen=None):
     alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
     eids = haz.eid.to_numpy()
     dic = dict(eids=eids, assets=assets.to_records(),
-               loss_types=crmodel.loss_types, haz=haz, rlzs=haz.rlz.to_numpy())
+               loss_types=crmodel.loss_types, haz=haz)
     for lt in crmodel.loss_types:
         arrays = []
         rmodels, weights = crmodel.get_rmodels_weights(lt, taxo)
