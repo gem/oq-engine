@@ -226,7 +226,11 @@ class GmfDataGetter(object):
         :param gsim: ignored
         :returns: the underlying DataFrame
         """
-        return self.df
+        # the order in which the gmfs are stored is random since it depends
+        # on which hazard task ends first; here we reorder
+        # the gmfs by event ID for reproducibility
+        return self.df.sort_values('eid')
+
 
 # used in scenario_damage
 class ZeroGetter(GmfDataGetter):

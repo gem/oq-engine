@@ -163,28 +163,24 @@ class VulnerabilityFunction(object):
         :param gmvs:
            array of intensity measure levels
         :returns:
-           (interpolated loss ratios, interpolated covs)
+           interpolated loss ratios and covs
         """
-        means = numpy.zeros_like(gmvs)
-        covs = numpy.zeros_like(gmvs, F64)
+        mean_covs = numpy.zeros((len(gmvs), 2))
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         curve_ok = gmvs_curve[ok]
-        means[ok] = self._mlr_i1d(curve_ok)
-        covs[ok] = self._cov_for(curve_ok)
-        return means, covs
+        mean_covs[ok, 0] = self._mlr_i1d(curve_ok)
+        mean_covs[ok, 1] = self._cov_for(curve_ok)
+        return mean_covs
 
     def survival(self, loss_ratio, mean, stddev):
         """
         Compute the survival probability based on the underlying
         distribution.
         """
-        if self.distribution_name == 'DG':
-            return numpy.piecewise(
-                loss_ratio, [loss_ratio > mean or not mean], [0, 1])
-        elif self.distribution_name == 'LN':
+        if self.distribution_name == 'LN':
             # scipy does not handle correctly the limit case stddev = 0.
             # In that case, when `mean` > 0 the survival function
             # approaches to a step function, otherwise (`mean` == 0) we
@@ -202,20 +198,18 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def sample(self, num_assets, means, covs, eids, rng):
+    def sample(self, num_assets, mean_covs, eids, rng):
         """
         :param num_assets: number of assets
-        :param means: E loss ratios
-        :param covs: E coefficients of variation
+        :param mean_covs: (E, 2) loss ratios and covs
         :param eids: E event IDs
         :param rng: a MultiEventRNG or None
         :returns: a matrix of loss ratios of shape (A, E)
         """
+        means = mean_covs[:, 0]
+        covs = mean_covs[:, 1]
         ratios = numpy.zeros((num_assets, len(eids)))
-        if self.distribution_name == 'DG':
-            for a in range(num_assets):
-                ratios[a] = means
-        elif self.distribution_name == 'LN':
+        if self.distribution_name == 'LN':
             if rng and self.covs.sum():
                 sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                 div = numpy.sqrt(1 + covs ** 2)
@@ -229,16 +223,15 @@ class VulnerabilityFunction(object):
             lrs = F64(self.loss_ratios)  # when read from the datastore
             arange = numpy.arange(len(self.loss_ratios))
             for e, eid in enumerate(eids):
-                if means[e].sum() == 0:  # oq-risk-tests/case_1g
+                if mean_covs[e].sum() == 0:  # oq-risk-tests/case_1g
                     # means are zeros for events below the threshold
                     continue
                 pmf = stats.rv_discrete(
-                    name='pmf', values=(arange, means[e]),
+                    name='pmf', values=(arange, mean_covs[e]),
                     seed=rng.master_seed + eid
                 ).rvs(size=num_assets)
                 ratios[:, e] = lrs[pmf]
         elif self.distribution_name == 'BT':
-            assert rng, 'ignore_covs cannot be zero with the beta distribution'
             stddevs = means * covs
             alpha = _alpha(means, stddevs)
             beta = _beta(means, stddevs)
@@ -255,11 +248,11 @@ class VulnerabilityFunction(object):
         :param rng: a MultiEventRNG or None
         :returns: a matrix of losses of shape (A, E)
         """
-        means, covs = self.interpolate(gmvs)
-        ratios = self.sample(len(values), means, covs, eids, rng)
+        mean_covs = self.interpolate(gmvs)
         losses = numpy.zeros((len(values), len(eids)))
+        losses[:] = self.sample(len(values), mean_covs, eids, rng)
         for a, val in enumerate(values):
-            losses[a] = val * ratios[a]
+            losses[a] *= val
         return losses
 
     def strictly_increasing(self):
@@ -345,7 +338,7 @@ class VulnerabilityFunction(object):
         assert len(loss_ratios) == len(imls)
         assert all(x >= 0.0 for x in loss_ratios)
         assert covs is None or all(x >= 0.0 for x in covs)
-        assert distribution in ["DG", "LN", "BT", "PM"]
+        assert distribution in ["LN", "BT", "PM"]
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
@@ -439,7 +432,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         :param gmvs:
            array of intensity measure levels
         :returns:
-           (interpolated probabilities of shape (E, L), None)
+           interpolated probabilities of shape (E, L)
         """
         # gmvs are clipped to max(iml)
         out = numpy.zeros((len(self.probs), len(gmvs)))
@@ -447,7 +440,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         out[:, ok] = self._probs_i1d(gmvs_curve[ok])
-        return out.T, None
+        return out.T
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):

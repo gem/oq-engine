@@ -68,6 +68,12 @@ def event_based_risk(df, param, monitor):
     ARL = len(assets_df), len(weights), len(alt.loss_names)
     losses_by_A = numpy.zeros(ARL, F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
+    for sid, haz in haz_by_sid.items():
+        gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
+        ws = weights[haz.rlz.to_numpy()]
+        acc['momenta'][:, sid] = stats.calc_momenta(
+            numpy.log(numpy.maximum(gmvs, param['min_iml'])), ws)
+        acc['events_per_sid'][sid] += len(haz)
     if param['ignore_covs']:
         rndgen = None
     else:
@@ -78,9 +84,6 @@ def event_based_risk(df, param, monitor):
             haz = haz_by_sid[sid]
         except KeyError:  # no hazard here
             continue
-        else:
-            acc['events_per_sid'][sid] += len(haz)
-        gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
         rlzs = haz.rlz.to_numpy()
         for taxo, assets in asset_df.groupby('taxonomy'):
             with mon_risk:
@@ -89,9 +92,6 @@ def event_based_risk(df, param, monitor):
             with mon_agg:
                 alt.aggregate(out, mal, aggby)
                 # NB: after the aggregation out contains losses
-            ws = weights[rlzs]
-            acc['momenta'][:, sid] = stats.calc_momenta(
-                numpy.log(numpy.maximum(gmvs, param['min_iml'])), ws)  # (2, M)
             if param['avg_losses']:
                 with mon_avg:
                     for lni, ln in enumerate(alt.loss_names):
