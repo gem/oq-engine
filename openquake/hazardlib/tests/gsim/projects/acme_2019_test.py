@@ -39,17 +39,17 @@ class GetSoFTestCase(unittest.TestCase):
         # Normal
         rake = -90
         period = 0.01
-        expected = 0.8136
+        expected = 0.8401
         computed = get_sof_adjustment(rake, SA(period))
         self.assertAlmostEqual(computed, expected, 4, msg=self.MSG)
         # Reverse
         rake = 90
-        expected = 1.0277
+        expected = 1.0612
         computed = get_sof_adjustment(rake, SA(period))
         self.assertAlmostEqual(computed, expected, 4, msg=self.MSG)
         # SS
         rake = 0
-        expected = 0.8564
+        expected = 0.8843
         computed = get_sof_adjustment(rake, SA(period))
         self.assertAlmostEqual(computed, expected, 4, msg=self.MSG)
 
@@ -57,16 +57,16 @@ class GetSoFTestCase(unittest.TestCase):
         # Normal
         rake = -90
         period = 2.0
-        expected = 0.9832
+        expected = 0.9775
         computed = get_sof_adjustment(rake, SA(period))
         self.assertAlmostEqual(computed, expected, 4, msg=self.MSG)
         # Reverse
         rake = 90
-        expected = 0.9940
+        expected = 0.9882
         computed = get_sof_adjustment(rake, SA(period))
         self.assertAlmostEqual(computed, expected, 4, msg=self.MSG)
         # SS
         rake = 0
-        expected = 1.0350
+        expected = 1.0289
         computed = get_sof_adjustment(rake, SA(period))
         self.assertAlmostEqual(computed, expected, 4, msg=self.MSG)
