@@ -37,6 +37,7 @@ F64 = numpy.float64
 F32 = numpy.float32
 U32 = numpy.uint32
 U16 = numpy.uint16
+U8 = numpy.uint8
 
 
 def pairwise(iterable):
@@ -1187,8 +1188,7 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     assert len(losses)
     if isinstance(losses, list):
         losses = numpy.array(losses)
-    shp = losses.shape[:-1]  # total shape is (L...E)
-    num_losses = losses.shape[-1]
+    num_losses = len(losses)
     if num_events is None:
         num_events = num_losses
     elif num_events < num_losses:
@@ -1201,16 +1201,16 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     # num_losses < num_events: just add zeros
     num_zeros = num_events - num_losses
     if num_zeros:
-        newlosses = numpy.zeros(shp + (num_events,), losses.dtype)
-        newlosses[..., num_events-num_losses:num_events] = losses
+        newlosses = numpy.zeros(num_events, losses.dtype)
+        newlosses[num_events-num_losses:num_events] = losses
         losses = newlosses
     periods = eff_time / numpy.arange(num_events, 0., -1)
     num_left = sum(1 for rp in return_periods if rp < periods[0])
     num_right = sum(1 for rp in return_periods if rp > periods[-1])
     rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
-    curve = numpy.zeros(shp + (len(return_periods),), losses.dtype)
+    curve = numpy.zeros(len(return_periods), losses.dtype)
     logr, logp = numpy.log(rperiods), numpy.log(periods)
-    for idx, _ in numpy.ndenumerate(losses[..., 0]):
+    for idx, _ in numpy.ndenumerate(losses[0]):
         tup = idx + (slice(num_left, P-num_right),)
         curve[tup] = numpy.interp(logr, logp, losses[idx])
         tup = idx + (slice(P-num_right, None),)
@@ -1243,54 +1243,17 @@ class LossCurvesMapsBuilder(object):
             self.poes = 1. - numpy.exp(
                 - risk_investigation_time / return_periods)
 
-    def pair(self, array, stats):
-        """
-        :return (array, array_stats) if stats, else (array, None)
-        """
-        if len(self.weights) > 1 and stats:
-            statnames, statfuncs = zip(*stats)
-            array_stats = compute_stats2(array, statfuncs, self.weights)
-        else:
-            array_stats = None
-        return array, array_stats
-
-    # used in event_based_risk
-    def build_curve(self, asset_value, loss_ratios, rlzi):
-        return asset_value * losses_by_period(
-            loss_ratios, self.return_periods,
-            self.num_events.get(rlzi, 0), self.eff_time)
-
-    # used in event_based_risk
-    def build_maps(self, curves, clp, stats=()):
-        """
-        :param curves: a composite array of shape (A, R, P)
-        :param clp: a list of C conditional loss poes
-        :param stats: list of pairs [(statname, statfunc), ...]
-        :returns: an array of loss_maps of shape (A, R, C, LI)
-        """
-        shp = curves.shape[:2] + (len(clp), len(curves.dtype))  # (A, R, C, LI)
-        array = numpy.zeros(shp, F32)
-        for lti, lt in enumerate(curves.dtype.names):
-            for a, curves_ in enumerate(curves[lt]):
-                for r, ls in enumerate(curves_):
-                    for c, poe in enumerate(clp):
-                        clratio = conditional_loss_ratio(ls, self.poes, poe)
-                        array[a, r, c, lti] = clratio
-        return self.pair(array, stats)
-
     # used in post_risk
-    def build_curves(self, losses, rlzi):
+    def build_curve(self, losses, rlzi):
         return losses_by_period(
             losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 
 
 class AggLossTable(AccumDict):
     """
-    A dictionary of matrices of shape L', with L' the total number of loss
-    types (primary + secondary).
-    :param aggkey: a dictionary tuple -> integer
-    :param loss_types: a list of primary loss types
-    :param sec_losses: a list of SecondaryLosses (can be empty)
+    :param aggkey: dictionary tuple -> integer
+    :param loss_types: primary loss types + secondary loss types
+    :param sec_losses: seconday loss types (if any)
     """
     @classmethod
     def new(cls, aggkey, loss_names, sec_losses=()):
@@ -1299,7 +1262,7 @@ class AggLossTable(AccumDict):
         self.aggkey[()] = len(aggkey)
         self.loss_names = loss_names
         self.sec_losses = sec_losses
-        self.accum = numpy.zeros(len(self.loss_names), F64)
+        self.accum = 0
         return self
 
     def aggregate(self, out, minimum_loss, aggby):
@@ -1340,25 +1303,26 @@ class AggLossTable(AccumDict):
         K = len(self.aggkey) - 1
         for lni, ln in enumerate(self.loss_names):
             for eid, loss in zip(eids, out[ln].T):
-                self[eid, K][lni] += loss.sum()
+                self[eid, K, lni] += loss.sum()
             # this is the slow part, if aggregate_by is given
             for asset, kid, losses in zip(assets, kids, out[ln]):
                 for eid, loss in zip(eids, losses):
                     if loss:
-                        self[eid, kid][lni] += loss
+                        self[eid, kid, lni] += loss
 
     def to_dframe(self):
         """
         Convert the AggLosTable into a DataFrame
         """
         out = AccumDict(accum=[])  # col -> values
-        for (eid, kid), arr in self.items():
+        for (eid, kid, lid), loss in self.items():
             out['event_id'].append(eid)
             out['agg_id'].append(kid)
-            for li, ln in enumerate(self.loss_names):
-                out[ln].append(arr[li])
+            out['loss_id'].append(lid)
+            out['loss'].append(loss)
         out['event_id'] = U32(out['event_id'])
         out['agg_id'] = U32(out['agg_id'])
+        out['loss_id'] = U8(out['loss_id'])
         return pandas.DataFrame(out)
 
 

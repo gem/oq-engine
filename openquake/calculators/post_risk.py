@@ -107,20 +107,19 @@ def get_src_loss_table(dstore, L):
     source_id = python3compat.decode(dstore['ruptures']['source_id'][rup_ids])
     w = dstore['weights'][:]
     acc = general.AccumDict(accum=numpy.zeros(L, F32))
-    del alt['event_id']
-    all_losses = numpy.array(alt)
-    for source_id, rlz_id, losses in zip(source_id, rlz_ids, all_losses):
-        acc[source_id] += losses * w[rlz_id]
+    for source_id, rlz_id, loss_id, loss in zip(
+            source_id, rlz_ids, alt.loss_id.to_numpy(), alt.loss.to_numpy()):
+        acc[source_id][loss_id] += loss * w[rlz_id]
     return zip(*sorted(acc.items()))
 
 
-def post_risk(builder, kr_losses, monitor):
+def post_risk(builder, krl_losses, monitor):
     """
-    :returns: dictionary kr -> L loss curves
+    :returns: dictionary krl -> loss curve
     """
     res = {}
-    for k, r, losses in kr_losses:
-        res[k, r] = builder.build_curves(losses, r)
+    for k, r, l, losses in krl_losses:
+        res[k, r, l] = builder.build_curve(losses, r)
     return res
 
 
@@ -189,27 +188,24 @@ class PostRiskCalculator(base.RiskCalculator):
         # producing concurrent_tasks/2 = num_cores tasks
         blocksize = int(numpy.ceil(
             (K + 1) * self.R / (oq.concurrent_tasks // 2 or 1)))
-        kr_losses = []
+        krl_losses = []
         agg_losses = numpy.zeros((K + 1, self.R, self.L), F32)
         agg_curves = numpy.zeros((K + 1, self.R, self.L, P), F32)
-        gb = alt_df.groupby([alt_df.agg_id, alt_df.rlz_id])
+        gb = alt_df.groupby([alt_df.agg_id, alt_df.rlz_id, alt_df.loss_id])
         # NB: in the future we may use multiprocessing.shared_memory
-        for (k, r), df in gb:
-            arr = numpy.zeros((self.L, len(df)), F32)
-            for lni, ln in enumerate(oq.loss_names):
-                arr[lni] = df[ln].to_numpy()
-            agg_losses[k, r] = arr.sum(axis=1)
-            kr_losses.append((k, r, arr))
-            if len(kr_losses) >= blocksize:
-                size = sum(ls.nbytes for k, r, ls in kr_losses)
+        for (k, r, lni), df in gb:
+            agg_losses[k, r, lni] = df.loss.sum()
+            krl_losses.append((k, r, lni, df.loss.to_numpy()))
+            if len(krl_losses) >= blocksize:
+                size = len(krl_losses) * 8
                 logging.info('Sending %s of losses',
                              general.humansize(size))
-                smap.submit((builder, kr_losses))
-                kr_losses[:] = []
-        if kr_losses:
-            smap.submit((builder, kr_losses))
-        for (k, r), curve in smap.reduce().items():
-            agg_curves[k, r] = curve
+                smap.submit((builder, krl_losses))
+                krl_losses[:] = []
+        if krl_losses:
+            smap.submit((builder, krl_losses))
+        for krl, curve in smap.reduce().items():
+            agg_curves[krl] = curve
         self.datastore['agg_losses-rlzs'] = agg_losses * oq.ses_ratio
         set_rlzs_stats(self.datastore, 'agg_losses',
                        agg_id=K + 1, loss_types=oq.loss_names, units=units)

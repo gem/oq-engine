@@ -29,6 +29,7 @@ from openquake.calculators.extract import (
     extract, build_damage_dt, build_damage_array, sanitize)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
+from openquake.calculators import views
 from openquake.commonlib import writers
 from openquake.commonlib.util import get_assets, compose_arrays
 
@@ -210,6 +211,7 @@ def export_agg_loss_table(ekey, dstore):
     try:
         K = dstore.get_attr('agg_loss_table', 'K', 0)
         df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+        df = views.alt_to_many_columns(df, oq.loss_names)
     except KeyError:  # scenario_damage + consequences
         df = dstore.read_df('losses_by_event')
         ren = {'loss_%d' % li: ln for li, ln in enumerate(oq.loss_names)}

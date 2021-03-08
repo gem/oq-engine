@@ -221,11 +221,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
 
-        descr = [('event_id', U32), ('agg_id', U32)]
-        for name in oq.loss_names:
-            descr.append((name, F64))
+        descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
+                 ('loss', F64)]
         self.datastore.create_dframe(
-            'agg_loss_table', descr, K=len(self.aggkey))
+            'agg_loss_table', descr, K=len(self.aggkey), L=len(oq.loss_names))
         R = len(self.datastore['weights'])
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
