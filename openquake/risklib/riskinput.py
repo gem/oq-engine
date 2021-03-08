@@ -55,8 +55,10 @@ def get_output_gmf(crmodel, taxo, assets, haz, rndgen=None):
             if col not in haz.columns:
                 haz[col] = numpy.zeros(len(haz))  # ZeroGetter
             arrays.append(rm(lt, assets, haz, col, rndgen))
-        dic[lt] = arrays[0] if len(arrays) == 1 else numpy.average(
-            arrays, weights=weights, axis=0)
+        # average on the risk models
+        dic[lt] = arrays[0] * weights[0]
+        for arr, w in zip(arrays[1:], weights[1:]):
+            dic[lt] += arr * w
     return hdf5.ArrayWrapper((), dic)
 
 
