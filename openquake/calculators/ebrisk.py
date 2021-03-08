@@ -221,11 +221,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
 
-        descr = [('event_id', U32), ('agg_id', U32)]
-        for name in oq.loss_names:
-            descr.append((name, F64))
+        descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
+                 ('loss', F64)]
         self.datastore.create_dframe(
-            'agg_loss_table', descr, K=len(self.aggkey))
+            'agg_loss_table', descr, K=len(self.aggkey), L=len(oq.loss_names))
         R = len(self.datastore['weights'])
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
@@ -319,10 +318,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if oq.investigation_time is None:  # scenario, compute agg_losses
             alt['rlz_id'] = self.rlzs[alt.index.to_numpy()]
             agglosses = numpy.zeros((K + 1, self.R, self.L), F32)
-            for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
-                agglosses[agg_id, rlz_id] = numpy.array(
-                    [df[ln].sum() for ln in oq.loss_names]
-                ) * self.avg_ratio[rlz_id]
+            for (agg_id, rlz_id, loss_id), df in alt.groupby(
+                    ['agg_id', 'rlz_id', 'loss_id']):
+                agglosses[agg_id, rlz_id, loss_id] = (
+                    df.loss.sum() * self.avg_ratio[rlz_id])
             self.datastore['agg_losses-rlzs'] = agglosses
             stats.set_rlzs_stats(self.datastore, 'agg_losses', agg_id=K,
                                  loss_types=oq.loss_names, units=units)
