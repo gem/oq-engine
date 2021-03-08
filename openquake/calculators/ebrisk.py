@@ -318,10 +318,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if oq.investigation_time is None:  # scenario, compute agg_losses
             alt['rlz_id'] = self.rlzs[alt.index.to_numpy()]
             agglosses = numpy.zeros((K + 1, self.R, self.L), F32)
-            for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
-                agglosses[agg_id, rlz_id] = numpy.array(
-                    [df[ln].sum() for ln in oq.loss_names]
-                ) * self.avg_ratio[rlz_id]
+            for (agg_id, rlz_id, loss_id), df in alt.groupby(
+                    ['agg_id', 'rlz_id', 'loss_id']):
+                agglosses[agg_id, rlz_id, loss_id] = (
+                    df.loss.sum() * self.avg_ratio[rlz_id])
             self.datastore['agg_losses-rlzs'] = agglosses
             stats.set_rlzs_stats(self.datastore, 'agg_losses', agg_id=K,
                                  loss_types=oq.loss_names, units=units)

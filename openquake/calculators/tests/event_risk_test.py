@@ -45,7 +45,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_2.__file__, 'job.ini')
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
         self.assertEqual(len(alt), 3)
-        totloss = alt.structural.sum()
+        totloss = alt.loss.sum()
         aae(totloss, 1.82, decimal=4)
 
     def test_case_3(self):
@@ -53,7 +53,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_3.__file__, 'job.ini')
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
         self.assertEqual(len(alt), 10)
-        totloss = alt.structural.sum()
+        totloss = alt.loss.sum()
 
         # avg_losses-rlzs has shape (A, R, LI)
         avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
@@ -63,7 +63,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(ebr_2.__file__, 'job_ebrisk.ini', exports='csv')
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
         self.assertEqual(len(alt), 8)
-        totloss = alt.structural.sum()
+        totloss = alt.loss.sum()
         aae(totloss, 16081.2718, decimal=2)
 
     def test_case_4(self):
