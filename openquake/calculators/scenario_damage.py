@@ -107,7 +107,7 @@ def scenario_damage(riskinputs, param, monitor):
         for out in ri.gen_outputs(crmodel, monitor):
             for r in range(R):
                 ne = num_events[r]  # total number of events
-                ok = out.rlzs == r  # events beloging to realization r
+                ok = out.haz.rlz.to_numpy() == r  # events beloging to rlz r
                 if ok.sum() == 0:
                     continue
                 eids = out.eids[ok]

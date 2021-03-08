@@ -59,6 +59,7 @@ def event_based_risk(df, param, monitor):
         assets_df = dstore.read_df('assetcol/array', 'id')
     with monitor('getting crmodel'):
         crmodel = monitor.read('crmodel')
+        rlz_id = monitor.read('rlz_id')
         weights = dstore['weights'][()]
     acc = dict(events_per_sid=numpy.zeros(param['N'], U32))
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
@@ -68,9 +69,10 @@ def event_based_risk(df, param, monitor):
     ARL = len(assets_df), len(weights), len(alt.loss_names)
     losses_by_A = numpy.zeros(ARL, F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
+    cols = [col for col in df.columns if col not in {'sid', 'eid', 'rlz'}]
     for sid, haz in haz_by_sid.items():
-        gmvs = haz[haz.columns[3:]].to_numpy()  # skip sid, eid, rlz
-        ws = weights[haz.rlz.to_numpy()]
+        gmvs = haz[cols].to_numpy()
+        ws = weights[rlz_id[haz.eid.to_numpy()]]
         acc['momenta'][:, sid] = stats.calc_momenta(
             numpy.log(numpy.maximum(gmvs, param['min_iml'])), ws)
         acc['events_per_sid'][sid] += len(haz)
@@ -84,7 +86,6 @@ def event_based_risk(df, param, monitor):
             haz = haz_by_sid[sid]
         except KeyError:  # no hazard here
             continue
-        rlzs = haz.rlz.to_numpy()
         for taxo, assets in asset_df.groupby('taxonomy'):
             with mon_risk:
                 aids = assets.ordinal.to_numpy()
@@ -95,7 +96,7 @@ def event_based_risk(df, param, monitor):
             if param['avg_losses']:
                 with mon_avg:
                     for lni, ln in enumerate(alt.loss_names):
-                        for rlz, losses in zip(rlzs, out[ln].T):
+                        for rlz, losses in zip(rlz_id[out.eids], out[ln].T):
                             losses_by_A[aids, rlz, lni] += losses
 
     acc['alt'] = alt.to_dframe()
@@ -252,6 +253,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
             smap.monitor.save('srcfilter', self.src_filter())
             smap.monitor.save('crmodel', self.crmodel)
+            smap.monitor.save('rlz_id', self.rlzs)
             for rg in getters.gen_rupture_getters(
                     self.datastore, self.oqparam.concurrent_tasks):
                 smap.submit((rg, self.param))
@@ -268,6 +270,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 event_based_risk, self.gen_args(), h5=self.datastore.hdf5)
             smap.monitor.save('assets', self.assetcol.to_dframe())
             smap.monitor.save('crmodel', self.crmodel)
+            smap.monitor.save('rlz_id', self.rlzs)
             smap.reduce(self.agg_dicts)
         return 1
 
@@ -305,8 +308,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                  asset_id=self.assetcol['id'],
                                  loss_type=oq.loss_names)
         logging.info('Events per site: ~%d', self.events_per_sid.mean())
-        rlzs = self.datastore['events']['rlz_id']
-        totw = self.datastore['weights'][:][rlzs].sum()
+        totw = self.datastore['weights'][:][self.rlzs].sum()
         self.datastore['avg_gmf'] = numpy.exp(
             stats.calc_avg_std(self.momenta, totw))
 
@@ -350,10 +352,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         :yields: pairs (gmf_df, param)
         """
-        rlz_id = self.datastore['events']['rlz_id']
         recs = self.datastore['gmf_data/by_task'][:]
         recs.sort(order='task_no')
         for task_no, start, stop in recs:
             df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
-            df['rlz'] = rlz_id[df.eid.to_numpy()]
             yield df, self.param
