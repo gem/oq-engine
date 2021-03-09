@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
+import pandas
 import unittest
 from openquake.risklib import scientific, riskinput
 
@@ -58,6 +59,11 @@ GMF = (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
        0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104)
 TSES = 900.
 TIMESPAN = 50.
+
+def call(vf, gmvs, eids, rng=None):
+    gmf_df = pandas.DataFrame(
+        dict(eid=eids, gmv_0=gmvs, sid=numpy.zeros(len(eids))))
+    return vf(None, gmf_df, 'gmv_0', rng)
 
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
@@ -137,7 +143,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.1109), "TSES": 200, "TimeSpan": 50}
 
     def test_an_empty_gmf_produces_an_empty_set(self):
-        [res] = self.vulnerability_function1(None, [], [])
+        [res] = call(self.vulnerability_function1, [], [])
         self.assertEqual(res.shape, (1, 0))
 
     def test_sampling_lr_gmf_inside_range_vulnimls(self):
@@ -158,7 +164,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.044604, 0.175115, 0.297628, 0.181567, 0.344077, 0.091288,
             0.165941, 0.300442, 0.164211, 0.25775]])
 
-        ratios = vf(None, gmf, EIDS, self.RNG)
+        ratios = call(vf, gmf, EIDS, self.RNG)
         numpy.testing.assert_allclose(expected_loss_ratios,
                                       ratios, atol=0.0, rtol=0.01)
 
@@ -179,7 +185,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.array([[0., 0.175115, 0.297628, 0.181567, 0.344077,
                           0.091288, 0.165941, 0.300442, 0., 0.25775]]),
-            vuln_function(None, gmfs, EIDS, self.RNG),
+            call(vuln_function, gmfs, EIDS, self.RNG),
             atol=0.0, rtol=0.01)
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
@@ -199,7 +205,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             numpy.array([[0.236383, 0.175115, 0.297628, 0.181567, 0.344077,
                           0.091288, 0.165941, 0.300442, 0.207284, 0.25775]]),
-            vuln_function(None, gmfs, EIDS, self.RNG),
+            call(vuln_function, gmfs, EIDS, self.RNG),
             atol=0.0, rtol=0.01)
 
     def test_loss_ratios_boundaries(self):
@@ -219,14 +225,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # min IML in this case is 0.01
         numpy.testing.assert_allclose(
             numpy.zeros((1, 3)),
-            self.vulnerability_function1(
-                None, [0.0001, 0.0002, 0.0003], EIDS[:3], self.RNG))
+            call(self.vulnerability_function1,
+                 [0.0001, 0.0002, 0.0003], EIDS[:3], self.RNG))
 
         # max IML in this case is 0.52
         numpy.testing.assert_allclose(
             numpy.array([[0.700, 0.700]]),
-            self.vulnerability_function1(
-                None, [0.525, 0.530], EIDS[:2], self.RNG))
+            call(self.vulnerability_function1,
+                 [0.525, 0.530], EIDS[:2], self.RNG))
 
     def test_loss_ratios_computation_using_gmfs(self):
         # Loss ratios generation given a GMFs and a vulnerability function
@@ -246,4 +252,4 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # the length of the result is the length of the gmf
         numpy.testing.assert_allclose(
             expected_loss_ratios,
-            self.vulnerability_function1(None, GMF[:10], EIDS, self.RNG))
+            call(self.vulnerability_function1, GMF[:10], EIDS, self.RNG))
