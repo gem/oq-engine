@@ -693,9 +693,13 @@ class CompositeRiskModel(collections.abc.Mapping):
                 if event:
                     arrays.append(rm(lt, assets, haz, col, rndgen))
                 else:  # classical
-                    arrays.append(rm(lt, assets, haz.array[self.imtls(imt), 0]))
-            # average on the risk models
-            dic[lt] = arrays[0] * weights[0]
+                    hcurve = haz.array[self.imtls(imt), 0]
+                    arrays.append(rm(lt, assets, hcurve))
+
+            # average on the risk models (unsupported for classical_risk)
+            dic[lt] = arrays[0]
+            if weights[0] != 1:
+                dic[lt] *= weights[0]
             for arr, w in zip(arrays[1:], weights[1:]):
                 dic[lt] += arr * w
 
