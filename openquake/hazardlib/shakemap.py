@@ -180,12 +180,11 @@ def spatial_covariance_array(stddev, corrmatrices):
     # this depends on sPGA, sSa03, sSa10, sSa30
     M, N = corrmatrices.shape[:2]
     matrices = []
+
     for i, std in enumerate(stddev):
-        covmatrix = numpy.zeros((N, N))
-        for j in range(N):
-            for k in range(N):
-                covmatrix[j, k] = corrmatrices[i, j, k] * std[j] * std[k]
+        covmatrix = numpy.multiply(corrmatrices[i], numpy.outer(std, std))
         matrices.append(covmatrix)
+
     return numpy.array(matrices)
 
 
