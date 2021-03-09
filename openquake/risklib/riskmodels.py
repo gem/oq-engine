@@ -698,7 +698,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             for k in sec_loss.outputs:
                 dic[k] = numpy.zeros((len(assets), len(eids)))
 
-        for a, asset in enumerate(assets.to_records()):
+        for a, asset in enumerate(dic['assets']):
             lt_losses = []
             for lti, lt in enumerate(self.loss_types):
                 ls = dic[lt][a]
