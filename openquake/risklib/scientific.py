@@ -1306,8 +1306,6 @@ class AggLossTable(AccumDict):
         return pandas.DataFrame(out)
 
 
-# must have attribute .outputs and method .compute(asset, losses, loss_type)
-# returning a dictionary sec_key -> sec_losses
 class InsuredLosses(object):
     """
     There is an insured loss for each loss type in the policy dictionary.
