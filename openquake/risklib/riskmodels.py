@@ -691,9 +691,11 @@ class CompositeRiskModel(collections.abc.Mapping):
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    losses = rm(lt, assets, haz, col, rndgen)
-                    losses[losses < self.minimum_loss[lt]] = 0
-                    arrays.append(losses)
+                    array = rm(lt, assets, haz, col, rndgen)
+                    # array (A, E) for losses and (A, E, D) for damages
+                    if array.ndim == 2 and self.minimum_loss[lt]:
+                        array[array < self.minimum_loss[lt]] = 0
+                    arrays.append(array)
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
                     arrays.append(rm(lt, assets, hcurve))
