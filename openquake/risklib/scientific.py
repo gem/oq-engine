@@ -158,14 +158,16 @@ class VulnerabilityFunction(object):
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
 
-    def interpolate(self, gmvs):
+    def interpolate(self, gmf_df, col):
         """
-        :param gmvs:
-           array of intensity measure levels
+        :param gmf_df:
+           DataFrame of GMFs
         :returns:
-           interpolated loss ratios and covs
+           DataFrame of interpolated loss ratios and covs
         """
-        df = pandas.DataFrame(dict(mean=numpy.zeros_like(gmvs),
+        gmvs = gmf_df[col].to_numpy()
+        df = pandas.DataFrame(dict(eid=gmf_df.eid.to_numpy(),
+                                   mean=numpy.zeros_like(gmvs),
                                    cov=numpy.zeros_like(gmvs)))
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
@@ -199,11 +201,10 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def sample(self, values, ratio_df, eids, rng, AE):
+    def sample(self, values, ratio_df, rng, AE):
         """
         :param values: pandas.Series of asset values
         :param ratio_df: DataFrame with E elements
-        :param eids: E event IDs
         :param rng: a MultiEventRNG or None
         :returns: a matrix of loss ratios of shape (A, E)
         """
@@ -212,7 +213,7 @@ class VulnerabilityFunction(object):
         if self.distribution_name == 'PM':
             lrs = F64(self.loss_ratios)  # when read from the datastore
             arange = numpy.arange(len(self.loss_ratios))
-        for e, eid in enumerate(eids):
+        for e, eid in enumerate(ratio_df.eid):
             if self.distribution_name == 'LN':
                 means = ratio_df['mean'][e]
                 covs = ratio_df['cov'][e]
@@ -246,7 +247,7 @@ class VulnerabilityFunction(object):
                 raise NotImplementedError(self.distribution_name)
         return losses
 
-    def __call__(self, values, gmvs, eids, rng=None, AE=None):
+    def __call__(self, values, gmf_df, col, rng=None, AE=None):
         """
         :param values: A asset values
         :param gmvs: E ground motion values
@@ -259,9 +260,9 @@ class VulnerabilityFunction(object):
         if test:  # in the tests
             values = pandas.Series([1], [0])
         if AE is None:
-            AE = len(values), len(eids)
-        mean_covs = self.interpolate(gmvs)
-        losses = self.sample(values, mean_covs, eids, rng, AE)
+            AE = len(values), len(gmf_df)
+        df = self.interpolate(gmf_df, col)
+        losses = self.sample(values, df, rng, AE)
         if test:
             losses = losses.todense()
         return losses
@@ -438,16 +439,20 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     # MN: in the test gmvs_curve is of shape (5,), self.probs of shape (7, 8)
     # self.imls of shape (8,) and the returned means have shape (5, 7)
-    def interpolate(self, gmvs):
+    def interpolate(self, gmf_df, col):
         """
         :param gmvs:
-           array of intensity measure levels
+           DataFrame of GMFs
+        :param col:
+           name of the column to consider
         :returns:
-           DataFrame of interpolated probabilities with M columns
+           DataFrame of interpolated probabilities
         """
         # gmvs are clipped to max(iml)
         M = len(self.probs)
+        gmvs = gmf_df[col].to_numpy()
         df = pandas.DataFrame({m: numpy.zeros_like(gmvs) for m in range(M)})
+        df['eid'] = gmf_df.eid.to_numpy()
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
