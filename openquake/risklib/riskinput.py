@@ -17,32 +17,9 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-from openquake.baselib import hdf5
 
 U32 = numpy.uint32
 F32 = numpy.float32
-
-
-def get_output_pc(crmodel, taxo, assets, haz, rlzi):
-    """
-    :param taxo: a taxonomy index
-    :param assets: a DataFrame of assets of the given taxonomy
-    :param haz: an ArrayWrapper of ProbabilityCurves on that site
-    :param rlzi: if given, a realization index
-    :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
-    """
-    dic = dict(assets=assets.to_records(), loss_types=crmodel.loss_types,
-               haz=haz, rlzi=rlzi)
-    for lt in crmodel.loss_types:
-        arrays = []
-        rmodels, weights = crmodel.get_rmodels_weights(lt, taxo)
-        for rm in rmodels:
-            imt = rm.imt_by_lt[lt]
-            data = haz.array[crmodel.imtls(imt), 0]
-            arrays.append(rm(lt, assets, data))
-        dic[lt] = arrays[0] if len(arrays) == 1 else numpy.average(
-            arrays, weights=weights, axis=0)
-    return hdf5.ArrayWrapper((), dic)
 
 
 class RiskInput(object):
@@ -80,7 +57,7 @@ class RiskInput(object):
                     yield crmodel.get_output(taxo, assets, haz)
                 else:  # list of probability curves
                     for rlz, pc in enumerate(haz):
-                        yield get_output_pc(crmodel, taxo, assets, pc, rlz)
+                        yield crmodel.get_output(taxo, assets, pc, rlz=rlz)
 
     def __repr__(self):
         [sid] = self.hazard_getter.sids

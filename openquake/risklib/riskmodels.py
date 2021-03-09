@@ -667,19 +667,21 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_output(self, taxo, assets, haz, sec_losses=(), rndgen=None):
+    def get_output(self, taxo, assets, haz, sec_losses=(), rndgen=None,
+                   rlz=None):
         """
         :param taxo: a taxonomy index
         :param assets: a DataFrame of assets of the given taxonomy
         :param haz: a DataFrame of GMVs on that site
         :param sec_losses: a list of SecondaryLoss instances
         :param rndgen: a MultiEventRNG instance
+        :param rlz: a realization index (or None)
         :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
         """
         primary = self.primary_imtls
         alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
         eids = haz.eid.to_numpy()
-        dic = dict(eids=eids, assets=assets.to_records(),
+        dic = dict(eids=eids, assets=assets.to_records(), rlzi=rlz,
                    loss_types=self.loss_types, haz=haz)
         for lt in self.loss_types:
             arrays = []
