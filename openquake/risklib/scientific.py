@@ -241,7 +241,7 @@ class VulnerabilityFunction(object):
             raise NotImplementedError(self.distribution_name)
         return ratios
 
-    def __call__(self, values, gmvs, eids, rng, AE):
+    def __call__(self, values, gmvs, eids, rng=None, AE=None):
         """
         :param values: A asset values
         :param gmvs: E ground motion values
@@ -250,8 +250,15 @@ class VulnerabilityFunction(object):
         :param AE: a pair of integers (A, E)
         :returns: a matrix of losses of shape (A, E)
         """
+        test = values is None
+        if test:  # in the tests
+            values = pandas.Series([1], [0])
+        if AE is None:
+            AE = len(values), len(eids)
         mean_covs = self.interpolate(gmvs)
         losses = self.sample(values, mean_covs, eids, rng, AE)
+        if test:
+            losses = losses.todense()
         for a, val in values.items():
             losses[a] *= val
         return losses
