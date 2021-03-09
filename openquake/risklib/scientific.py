@@ -31,7 +31,6 @@ from numpy.testing import assert_equal
 from scipy import interpolate, stats
 
 from openquake.baselib.general import CallableDict, AccumDict
-from openquake.hazardlib.stats import compute_stats2
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -1252,30 +1251,23 @@ class LossCurvesMapsBuilder(object):
 class AggLossTable(AccumDict):
     """
     :param aggkey: dictionary tuple -> integer
-    :param loss_types: primary loss types + secondary loss types
-    :param sec_losses: seconday loss types (if any)
+    :param loss_names: primary loss types + secondary loss types
     """
     @classmethod
-    def new(cls, aggkey, loss_names, sec_losses=()):
+    def new(cls, aggkey, loss_names):
         self = cls()
         self.aggkey = {key: k for k, key in enumerate(aggkey)}
         self.aggkey[()] = len(aggkey)
         self.loss_names = loss_names
-        self.sec_losses = sec_losses
         self.accum = 0
         return self
 
-    def aggregate(self, out, minimum_loss, aggby):
+    def aggregate(self, out, aggby):
         """
         Populate the event loss table
         """
-        eids = out.eids
-        assets = out.assets
-
-        # initialize secondary losses outputs, if any
-        for sec_loss in self.sec_losses:
-            for k in sec_loss.outputs:
-                setattr(out, k, numpy.zeros((len(assets), len(eids))))
+        eids = out['eids']
+        assets = out['assets']
 
         # populate outputs
         if aggby == ['id']:
@@ -1286,18 +1278,6 @@ class AggLossTable(AccumDict):
             kids = [self.aggkey[tuple(rec)] for rec in assets[aggby]]
         else:
             kids = []
-        for a, asset in enumerate(out.assets):
-            lt_losses = []
-            for lti, lt in enumerate(out.loss_types):
-                ls = out[lt][a]
-                if minimum_loss[lt]:
-                    ls[ls < minimum_loss[lt]] = 0
-                lt_losses.append((lt, ls))
-
-            # secondary outputs, if any
-            for sec_loss in self.sec_losses:
-                for k, o in sec_loss.compute(asset, lt_losses, eids).items():
-                    out[k][a] = o
 
         # aggregation
         K = len(self.aggkey) - 1
@@ -1326,8 +1306,6 @@ class AggLossTable(AccumDict):
         return pandas.DataFrame(out)
 
 
-# must have attribute .outputs and method .compute(asset, losses, loss_type)
-# returning a dictionary sec_key -> sec_losses
 class InsuredLosses(object):
     """
     There is an insured loss for each loss type in the policy dictionary.
@@ -1337,22 +1315,17 @@ class InsuredLosses(object):
         self.policy_dict = policy_dict
         self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def compute(self, asset, lt_losses, eids):
+    def update(self, out):
         """
-        :param asset: an asset record
-        :param lt_losses: a list of pairs (loss_type, E losses)
-        :param eids: an array of E event IDs
-        :returns: a dictionary loss_type_ins -> E insured losses
+        :param out: a dictionary with keys assets and loss_types
         """
-        res = {}
-        policy_idx = asset[self.policy_name]
-        for lt, losses in lt_losses:
-            if lt in self.policy_dict:
+        for a, asset in enumerate(out['assets']):
+            policy_idx = asset[self.policy_name]
+            for lt in self.policy_dict:
                 avalue = asset['value-' + lt]
                 ded, lim = self.policy_dict[lt][policy_idx]
-                res[lt + '_ins'] = insured_losses(
-                    losses, ded * avalue, lim * avalue)
-        return res
+                out[lt + '_ins'][a] = insured_losses(
+                    out[lt][a], ded * avalue, lim * avalue)
 
 
 # not used anymore

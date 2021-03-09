@@ -107,19 +107,20 @@ def scenario_damage(riskinputs, param, monitor):
         for out in ri.gen_outputs(crmodel, monitor):
             for r in range(R):
                 ne = num_events[r]  # total number of events
-                ok = out.haz.rlz.to_numpy() == r  # events beloging to rlz r
+                ok = out['haz'].rlz.to_numpy() == r  # events beloging to rlz r
                 if ok.sum() == 0:
                     continue
-                eids = out.eids[ok]
+                eids = out['eids'][ok]
                 for lti, loss_type in enumerate(crmodel.loss_types):
                     for asset, fractions in zip(
-                            out.assets, out[loss_type][:, ok]):
+                            out['assets'], out[loss_type][:, ok]):
                         aid = asset['ordinal']
                         if float_dmg_dist:
                             damages = fractions * asset['number']
                             if sec_sims:
                                 run_sec_sims(
-                                    damages, out.haz[ok], sec_sims, seed + aid)
+                                    damages, out['haz'][ok], sec_sims,
+                                    seed + aid)
                         else:
                             damages = bin_ddd(
                                 fractions, asset['number'], seed + aid)
