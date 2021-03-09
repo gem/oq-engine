@@ -224,14 +224,15 @@ class VulnerabilityFunction(object):
         elif self.distribution_name == 'PM':
             lrs = F64(self.loss_ratios)  # when read from the datastore
             arange = numpy.arange(len(self.loss_ratios))
-            for e, eid in enumerate(ratio_df.eid):
-                ls = [ratio_df[col][e] for col in ratio_df.columns
-                      if col != 'eid']
-                if sum(ls) == 0:  # oq-risk-tests/case_1g
+            # the test 1g has E=8 events and C=7 columns
+            eids = ratio_df.pop('eid')
+            arr = ratio_df.to_numpy()  # shape (E, C)
+            for e, eid in enumerate(eids):
+                if arr[e].sum() == 0:  # oq-risk-tests/case_1g
                     # means are zeros for events below the threshold
                     continue
                 pmf = stats.rv_discrete(
-                    name='pmf', values=(arange, ls),
+                    name='pmf', values=(arange, arr[e]),
                     seed=rng.master_seed + eid
                 ).rvs(size=len(aids))
                 losses[aids, eid] = lrs[pmf] * values
