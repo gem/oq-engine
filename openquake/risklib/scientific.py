@@ -206,7 +206,7 @@ class VulnerabilityFunction(object):
         :param rng: a MultiEventRNG or None
         :returns: a matrix of loss ratios of shape (A, E)
         """
-        ratios = sparse.dok_matrix(AE)
+        losses = sparse.dok_matrix(AE)
         aids = values.index.to_numpy()
         if self.distribution_name == 'PM':
             lrs = F64(self.loss_ratios)  # when read from the datastore
@@ -219,9 +219,10 @@ class VulnerabilityFunction(object):
                     sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                     div = numpy.sqrt(1 + covs ** 2)
                     eps = rng.normal(len(values), eid)
-                    ratios[aids, eid] = means * numpy.exp(eps * sigma) / div
+                    losses[aids, eid] = means * values * numpy.exp(
+                        eps * sigma) / div
                 else:  # no CoVs
-                    ratios[aids, eid] = means
+                    losses[aids, eid] = means * values
             elif self.distribution_name == 'PM':
                 if mean_covs[e].sum() == 0:  # oq-risk-tests/case_1g
                     # means are zeros for events below the threshold
@@ -230,15 +231,16 @@ class VulnerabilityFunction(object):
                     name='pmf', values=(arange, mean_covs[e]),
                     seed=rng.master_seed + eid
                 ).rvs(size=len(aids))
-                ratios[aids, eid] = lrs[pmf]
+                losses[aids, eid] = lrs[pmf] * values
             elif self.distribution_name == 'BT':
                 stddevs = means * covs
                 alpha = _alpha(means, stddevs)
                 beta = _beta(means, stddevs)
-                ratios[aids, eid] = rng.beta(len(aids), eid, alpha, beta)
+                losses[aids, eid] = values * rng.beta(
+                    len(aids), eid, alpha, beta)
             else:
                 raise NotImplementedError(self.distribution_name)
-        return ratios
+        return losses
 
     def __call__(self, values, gmvs, eids, rng=None, AE=None):
         """
@@ -258,8 +260,6 @@ class VulnerabilityFunction(object):
         losses = self.sample(values, mean_covs, eids, rng, AE)
         if test:
             losses = losses.todense()
-        for a, val in values.items():
-            losses[a] *= val
         return losses
 
     def strictly_increasing(self):
