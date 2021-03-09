@@ -268,11 +268,7 @@ def cholesky(spatial_cov, cross_corr):
     LLT = []
     for i in range(M):
         row = [L[i] @ L[j].T * cross_corr[i, j] for j in range(M)]
-        for j in range(N):
-            singlerow = numpy.zeros(M * N)
-            for i in range(M):
-                singlerow[i * N:(i + 1) * N] = row[i][j]
-            LLT.append(singlerow)
+        LLT.extend(numpy.array(row).transpose(1, 0, 2).reshape(N, M*N))
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
