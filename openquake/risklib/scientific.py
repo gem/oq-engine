@@ -198,23 +198,24 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def sample(self, values, mean_covs, eids, rng, AE):
+    def sample(self, assets, mean_covs, gmf_df, rng, AE):
         """
-        :param values: pandas.Series of asset values
+        :param assets: DataFrame with ordinal, value and site_id
         :param mean_covs: (E, 2) loss ratios and covs
         :param eids: E event IDs
         :param rng: a MultiEventRNG or None
         :returns: a matrix of loss ratios of shape (A, E)
         """
+        sids = assets.pop('site_id')
         means = mean_covs[:, 0]
         covs = mean_covs[:, 1]
         ratios = sparse.dok_matrix(AE)
-        aids = values.index.to_numpy()
+        aids = assets.index.to_numpy()
         if self.distribution_name == 'LN':
             if rng and self.covs.sum():
                 sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                 div = numpy.sqrt(1 + covs ** 2)
-                epsilons = rng.normal(len(values), eids)
+                epsilons = rng.normal(len(assets), eids)
                 for aid, eps in zip(aids, epsilons):
                     ratios[aid, eids] = means * numpy.exp(eps * sigma) / div
             else:  # no CoVs
@@ -241,20 +242,17 @@ class VulnerabilityFunction(object):
             raise NotImplementedError(self.distribution_name)
         return ratios
 
-    def __call__(self, values, gmvs, eids, rng, AE):
+    def __call__(self, assets, gmf_df, col, rng, AE):
         """
-        :param values: A asset values
+        :param assets: A assets with fields ordinal, value, site_id
         :param gmvs: E ground motion values
         :param eids: E event IDs
         :param rng: a MultiEventRNG or None
         :param AE: a pair of integers (A, E)
         :returns: a matrix of losses of shape (A, E)
         """
-        mean_covs = self.interpolate(gmvs)
-        losses = self.sample(values, mean_covs, eids, rng, AE)
-        for a, val in values.items():
-            losses[a] *= val
-        return losses
+        mean_covs = self.interpolate(gmf_df[col].to_numpy())
+        return self.sample(assets, mean_covs, gmf_df, rng, AE)
 
     def strictly_increasing(self):
         """

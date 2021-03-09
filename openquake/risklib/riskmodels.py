@@ -186,10 +186,12 @@ def get_values(loss_type, assets, time_event=None):
         a numpy array with the values for the given assets, depending on the
         loss_type.
     """
+    sid = assets['site_id']
     if loss_type == 'occupants' and time_event:
-        return assets['occupants_%s' % time_event]
+        val = assets['occupants_%s' % time_event]
     else:
-        return assets['value-' + loss_type]
+        val = assets['value-' + loss_type]
+    return pandas.DataFrame(dict(sid=sid, val=val), assets.index)
 
 
 loss_poe_dt = numpy.dtype([('loss', F64), ('poe', F64)])
@@ -357,10 +359,19 @@ class RiskModel(object):
         """
         :returns: an array of shape (A, E)
         """
-        values = get_values(loss_type, assets, self.time_event)
+        values = get_values(loss_type, assets, self.time_event)  # val, site_id
+        vals = {sid: df.val for sid, df in values.groupby('site_id')}
         vf = self.risk_functions[loss_type, 'vulnerability']
-        return vf(values, gmf_df[col].to_numpy(),
-                  gmf_df.eid.to_numpy(), rndgen, AE)
+        mean_covs = vf.interpolate(gmf_df[col].to_numpy())
+        allmeans = []
+        alleids = []
+        allvalues = []
+        for sid, eid, mc in zip(gmf_df.sid, gmf_df.eid, mean_covs):
+            for val in vals[sid]:
+                allvalues.append(val)
+                allmeans.append(mc)
+                alleids.append(eid)
+        return vf.sample(allvalues, allmeans, alleids, rndgen, AE)
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
