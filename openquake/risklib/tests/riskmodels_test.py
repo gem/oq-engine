@@ -324,9 +324,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 </nrml>""")
         vfs = {('structural', 'vulnerability'):
                nrml.to_python(vuln_model)['PGA', 'RC/A']}
-        vfs['structural', 'vulnerability'].seed = 42
         vfs['structural', 'vulnerability'].init()
-        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs)
+        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs,
+                                  minimum_asset_loss=dict(structural=0))
         assets = pandas.DataFrame(
             {'value-structural': numpy.array([1, 1])})
         eids = numpy.array([0, 1, 2, 3, 4])

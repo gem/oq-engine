@@ -361,7 +361,7 @@ class RiskModel(object):
         vf = self.risk_functions[loss_type, 'vulnerability']
         losses = vf(values, gmf_df[col].to_numpy(),
                     gmf_df.eid.to_numpy(), rndgen, AE)
-        losses[losses < self.minimum_loss[loss_type]] = 0
+        losses[losses < self.minimum_asset_loss[loss_type]] = 0
         return losses
 
     scenario = ebrisk = scenario_risk = event_based_risk
@@ -409,6 +409,7 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     extra['lrem_steps_per_interval'] = oqparam.lrem_steps_per_interval
     extra['steps_per_interval'] = oqparam.steps_per_interval
     extra['time_event'] = oqparam.time_event
+    extra['minimum_asset_loss'] = oqparam.minimum_asset_loss
     if oqparam.calculation_mode == 'classical_bcr':
         extra['interest_rate'] = oqparam.interest_rate
         extra['asset_life_expectancy'] = oqparam.asset_life_expectancy
@@ -567,8 +568,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                     iml[rf.imt].append(rf.imls[0])
         if sum(oq.minimum_intensity.values()) == 0 and iml:
             oq.minimum_intensity = {imt: min(ls) for imt, ls in iml.items()}
-        self.minimum_loss = {lt: getdefault(oq.minimum_asset_loss, lt)
-                             for lt in oq.loss_names}
 
     def eid_dmg_dt(self):
         """
@@ -695,7 +694,6 @@ class CompositeRiskModel(collections.abc.Mapping):
             arrays = []
             rmodels, weights = self.get_rmodels_weights(lt, taxo)
             for rm in rmodels:
-                rm.minimum_loss = self.minimum_loss
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
