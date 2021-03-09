@@ -452,14 +452,14 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         # gmvs are clipped to max(iml)
         M = len(self.probs)
         gmvs = gmf_df[col].to_numpy()
-        df = pandas.DataFrame({m: numpy.zeros_like(gmvs) for m in range(M)})
-        df['eid'] = gmf_df.eid.to_numpy()
+        dic = {m: numpy.zeros_like(gmvs) for m in range(M)}
+        dic['eid'] = gmf_df.eid.to_numpy()
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         for m, probs in enumerate(self._probs_i1d(gmvs_curve[ok])):
-            df[m][ok] = probs
-        return df
+            dic[m][ok] = probs
+        return pandas.DataFrame(dic)
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
