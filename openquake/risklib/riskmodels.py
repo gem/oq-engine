@@ -680,7 +680,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         primary = self.primary_imtls
         alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
-        eids = haz.eid.to_numpy()
+        event = hasattr(haz, 'eid')
+        eids = haz.eid.to_numpy() if event else [None]
         dic = dict(eids=eids, assets=assets.to_records(), rlzi=rlz,
                    loss_types=self.loss_types, haz=haz)
         for lt in self.loss_types:
@@ -689,7 +690,10 @@ class CompositeRiskModel(collections.abc.Mapping):
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
-                arrays.append(rm(lt, assets, haz, col, rndgen))
+                if event:
+                    arrays.append(rm(lt, assets, haz, col, rndgen))
+                else:  # classical
+                    arrays.append(rm(lt, assets, haz.array[self.imtls(imt), 0]))
             # average on the risk models
             dic[lt] = arrays[0] * weights[0]
             for arr, w in zip(arrays[1:], weights[1:]):
@@ -710,7 +714,7 @@ class CompositeRiskModel(collections.abc.Mapping):
 
             # secondary outputs, if any
             for sec_loss in sec_losses:
-                for k, o in sec_loss.compute(asset, lt_losses, eids).items():
+                for k, o in sec_loss.compute(asset, lt_losses).items():
                     dic[k][a] = o
 
         return hdf5.ArrayWrapper((), dic)

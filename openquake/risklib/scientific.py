@@ -1318,11 +1318,10 @@ class InsuredLosses(object):
         self.policy_dict = policy_dict
         self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def compute(self, asset, lt_losses, eids):
+    def compute(self, asset, lt_losses):
         """
         :param asset: an asset record
         :param lt_losses: a list of pairs (loss_type, E losses)
-        :param eids: an array of E event IDs
         :returns: a dictionary loss_type_ins -> E insured losses
         """
         res = {}
