@@ -176,7 +176,7 @@ class VulnerabilityFunction(object):
         curve_ok = gmvs_curve[ok]
         dic['mean'][ok] = self._mlr_i1d(curve_ok)
         dic['cov'][ok] = self._cov_for(curve_ok)
-        return pandas.DataFrame(dic)
+        return pandas.DataFrame(dic, gmf_df.sid)
 
     def survival(self, loss_ratio, mean, stddev):
         """
@@ -459,7 +459,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         for m, probs in enumerate(self._probs_i1d(gmvs_curve[ok])):
             dic[m][ok] = probs
-        return pandas.DataFrame(dic)
+        return pandas.DataFrame(dic, gmf_df.sid)
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
