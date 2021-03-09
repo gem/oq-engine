@@ -721,7 +721,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 for k, o in sec_loss.compute(asset, lt_losses).items():
                     dic[k][a] = o
 
-        return hdf5.ArrayWrapper((), dic)
+        return dic
 
     def get_rmodels_weights(self, loss_type, taxidx):
         """

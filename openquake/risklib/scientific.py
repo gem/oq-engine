@@ -1267,8 +1267,8 @@ class AggLossTable(AccumDict):
         """
         Populate the event loss table
         """
-        eids = out.eids
-        assets = out.assets
+        eids = out['eids']
+        assets = out['assets']
 
         # populate outputs
         if aggby == ['id']:

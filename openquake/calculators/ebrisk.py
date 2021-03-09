@@ -96,7 +96,7 @@ def event_based_risk(df, param, monitor):
             if param['avg_losses']:
                 with mon_avg:
                     for lni, ln in enumerate(alt.loss_names):
-                        for rlz, losses in zip(rlz_id[out.eids], out[ln].T):
+                        for rlz, losses in zip(rlz_id[out['eids']], out[ln].T):
                             losses_by_A[aids, rlz, lni] += losses
 
     acc['alt'] = alt.to_dframe()
