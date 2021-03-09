@@ -60,6 +60,7 @@ GMF = (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
 TSES = 900.
 TIMESPAN = 50.
 
+
 def call(vf, gmvs, eids, rng=None):
     gmf_df = pandas.DataFrame(
         dict(eid=eids, gmv_0=gmvs, sid=numpy.zeros(len(eids))))

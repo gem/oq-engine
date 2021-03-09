@@ -332,7 +332,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         eids = numpy.array([0, 1, 2, 3, 4])
         AE = len(assets), len(eids)
         gmvs = numpy.array([.1, .2, .3, .4, .5])
-        gmf_df = pandas.DataFrame(dict(gmv_0=gmvs, eid=eids))
+        gmf_df = pandas.DataFrame(dict(gmv_0=gmvs, eid=eids, sid=[0]*5))
 
         # compute the losses by considering all the events
         rndgen = riskinput.MultiEventRNG(42, 0, eids)
@@ -345,8 +345,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         eids2 = numpy.array([2, 3, 4])
         gmvs1 = numpy.array([.1, .2])
         gmvs2 = numpy.array([.3, .4, .5])
-        gmf1_df = pandas.DataFrame(dict(gmv_0=gmvs1, eid=eids1))
-        gmf2_df = pandas.DataFrame(dict(gmv_0=gmvs2, eid=eids2))
+        gmf1_df = pandas.DataFrame(dict(gmv_0=gmvs1, eid=eids1, sid=[0]*2))
+        gmf2_df = pandas.DataFrame(dict(gmv_0=gmvs2, eid=eids2, sid=[0]*3))
         rndgen = riskinput.MultiEventRNG(42, 0, eids1)
         losses1 = rm('structural', assets, gmf1_df, 'gmv_0', rndgen, AE)
         rndgen = riskinput.MultiEventRNG(42, 0, eids2)
