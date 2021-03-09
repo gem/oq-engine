@@ -56,7 +56,7 @@ def event_based_risk(df, param, monitor):
     mon_avg = monitor('averaging losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
-        assets_df = dstore.read_df('assetcol/array', 'id')
+        assets_df = dstore.read_df('assetcol/array', 'ordinal')
     with monitor('getting crmodel'):
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
@@ -65,6 +65,7 @@ def event_based_risk(df, param, monitor):
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
     aggby = param['aggregate_by']
     haz_by_sid = {s: d for s, d in df.groupby('sid')}
+    AE = len(assets_df), len(rlz_id)
     ARL = len(assets_df), len(weights), len(alt.loss_names)
     losses_by_A = numpy.zeros(ARL, F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
@@ -87,17 +88,16 @@ def event_based_risk(df, param, monitor):
             continue
         for taxo, assets in asset_df.groupby('taxonomy'):
             with mon_risk:
-                aids = assets.ordinal.to_numpy()
                 out = crmodel.get_output(
-                    taxo, assets, haz, param['sec_losses'], rndgen)
+                    taxo, assets, haz, param['sec_losses'], rndgen, AE=AE)
             with mon_agg:
                 alt.aggregate(out, aggby)
                 # NB: after the aggregation out contains losses
             if param['avg_losses']:
                 with mon_avg:
                     for lni, ln in enumerate(alt.loss_names):
-                        for rlz, losses in zip(rlz_id[out['eids']], out[ln].T):
-                            losses_by_A[aids, rlz, lni] += losses
+                        for (aid, eid), loss in out[ln].items():
+                            losses_by_A[aid, rlz_id[eid], lni] += loss
 
     acc['alt'] = alt.to_dframe()
     if param['avg_losses']:

@@ -28,7 +28,7 @@ from functools import lru_cache
 import numpy
 import pandas
 from numpy.testing import assert_equal
-from scipy import interpolate, stats
+from scipy import interpolate, stats, sparse
 
 from openquake.baselib.general import CallableDict, AccumDict
 
@@ -198,9 +198,9 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def sample(self, num_assets, mean_covs, eids, rng):
+    def sample(self, values, mean_covs, eids, rng, AE):
         """
-        :param num_assets: number of assets
+        :param values: pandas.Series of asset values
         :param mean_covs: (E, 2) loss ratios and covs
         :param eids: E event IDs
         :param rng: a MultiEventRNG or None
@@ -208,17 +208,18 @@ class VulnerabilityFunction(object):
         """
         means = mean_covs[:, 0]
         covs = mean_covs[:, 1]
-        ratios = numpy.zeros((num_assets, len(eids)))
+        ratios = sparse.dok_matrix(AE)
+        aids = values.index.to_numpy()
         if self.distribution_name == 'LN':
             if rng and self.covs.sum():
                 sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                 div = numpy.sqrt(1 + covs ** 2)
-                epsilons = rng.normal(num_assets, eids)
-                for a, eps in enumerate(epsilons):
-                    ratios[a] = means * numpy.exp(eps * sigma) / div
+                epsilons = rng.normal(len(values), eids)
+                for aid, eps in zip(aids, epsilons):
+                    ratios[aid, eids] = means * numpy.exp(eps * sigma) / div
             else:  # no CoVs
-                for a in range(num_assets):
-                    ratios[a] = means
+                for eid, mean in zip(eids, means):
+                    ratios[aids, eid] = mean
         elif self.distribution_name == 'PM':
             lrs = F64(self.loss_ratios)  # when read from the datastore
             arange = numpy.arange(len(self.loss_ratios))
@@ -229,29 +230,36 @@ class VulnerabilityFunction(object):
                 pmf = stats.rv_discrete(
                     name='pmf', values=(arange, mean_covs[e]),
                     seed=rng.master_seed + eid
-                ).rvs(size=num_assets)
-                ratios[:, e] = lrs[pmf]
+                ).rvs(size=len(aids))
+                ratios[aids, e] = lrs[pmf]
         elif self.distribution_name == 'BT':
             stddevs = means * covs
             alpha = _alpha(means, stddevs)
             beta = _beta(means, stddevs)
-            ratios[:, :] = rng.beta(num_assets, eids, alpha, beta)
+            ratios[aids, eids] = rng.beta(len(aids), eids, alpha, beta)
         else:
             raise NotImplementedError(self.distribution_name)
         return ratios
 
-    def __call__(self, values, gmvs, eids, rng=None):
+    def __call__(self, values, gmvs, eids, rng=None, AE=None):
         """
         :param values: A asset values
         :param gmvs: E ground motion values
         :param eids: E event IDs
         :param rng: a MultiEventRNG or None
+        :param AE: a pair of integers (A, E)
         :returns: a matrix of losses of shape (A, E)
         """
+        test = values is None
+        if test:  # in the tests
+            values = pandas.Series([1], [0])
+        if AE is None:
+            AE = len(values), len(eids)
         mean_covs = self.interpolate(gmvs)
-        losses = numpy.zeros((len(values), len(eids)))
-        losses[:] = self.sample(len(values), mean_covs, eids, rng)
-        for a, val in enumerate(values):
+        losses = self.sample(values, mean_covs, eids, rng, AE)
+        if test:
+            losses = losses.todense()
+        for a, val in values.items():
             losses[a] *= val
         return losses
 
@@ -1266,29 +1274,28 @@ class AggLossTable(AccumDict):
         """
         Populate the event loss table
         """
-        eids = out['eids']
         assets = out['assets']
 
         # populate outputs
         if aggby == ['id']:
-            kids = [self.aggkey[o1, ] for o1 in assets['ordinal'] + 1]
+            kid = {o: self.aggkey[o + 1, ] for o in assets['ordinal']}
         elif aggby == ['site_id']:
-            kids = [self.aggkey[s1, ] for s1 in assets['site_id'] + 1]
+            kid = {rec['ordinal']: self.aggkey[rec['site_id'] + 1, ]
+                   for rec in assets}
         elif aggby:
-            kids = [self.aggkey[tuple(rec)] for rec in assets[aggby]]
+            kid = {rec['ordinal']: self.aggkey[tuple(rec[aggby])]
+                   for rec in assets}
         else:
-            kids = []
+            kid = {}
 
         # aggregation
         K = len(self.aggkey) - 1
         for lni, ln in enumerate(self.loss_names):
-            for eid, loss in zip(eids, out[ln].T):
-                self[eid, K, lni] += loss.sum()
-            # this is the slow part, if aggregate_by is given
-            for asset, kid, losses in zip(assets, kids, out[ln]):
-                for eid, loss in zip(eids, losses):
-                    if loss:
-                        self[eid, kid, lni] += loss
+            for (aid, eid), loss in out[ln].items():
+                self[eid, K, lni] += loss
+                # this is the slow part, if aggregate_by is given
+                if kid:
+                    self[eid, kid[aid], lni] += loss
 
     def to_dframe(self):
         """
@@ -1319,13 +1326,15 @@ class InsuredLosses(object):
         """
         :param out: a dictionary with keys assets and loss_types
         """
-        for a, asset in enumerate(out['assets']):
+        for asset in out['assets']:
+            aid = asset['ordinal']
             policy_idx = asset[self.policy_name]
             for lt in self.policy_dict:
                 avalue = asset['value-' + lt]
                 ded, lim = self.policy_dict[lt][policy_idx]
-                out[lt + '_ins'][a] = insured_losses(
-                    out[lt][a], ded * avalue, lim * avalue)
+                mat = out[lt][aid].tocoo()
+                out[lt + '_ins'][aid, mat.col] = insured_losses(
+                    mat.data, ded * avalue, lim * avalue)
 
 
 # not used anymore
