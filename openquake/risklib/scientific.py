@@ -166,17 +166,17 @@ class VulnerabilityFunction(object):
            DataFrame of interpolated loss ratios and covs
         """
         gmvs = gmf_df[col].to_numpy()
-        df = pandas.DataFrame(dict(eid=gmf_df.eid.to_numpy(),
-                                   mean=numpy.zeros_like(gmvs),
-                                   cov=numpy.zeros_like(gmvs)))
+        dic = dict(eid=gmf_df.eid.to_numpy(),
+                   mean=numpy.zeros_like(gmvs),
+                   cov=numpy.zeros_like(gmvs))
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         curve_ok = gmvs_curve[ok]
-        df['mean'][ok] = self._mlr_i1d(curve_ok)
-        df['cov'][ok] = self._cov_for(curve_ok)
-        return df
+        dic['mean'][ok] = self._mlr_i1d(curve_ok)
+        dic['cov'][ok] = self._cov_for(curve_ok)
+        return pandas.DataFrame(dic)
 
     def survival(self, loss_ratio, mean, stddev):
         """
