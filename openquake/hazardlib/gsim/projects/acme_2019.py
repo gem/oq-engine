@@ -57,8 +57,8 @@ def get_sof_adjustment(rake, imt):
         raise ValueError('Unsupported IMT')
     # Set coefficients
     f_n_ss = 0.95
-    p_r = 0.85
-    p_n = 0.0
+    p_r = 0.68
+    p_n = 0.02
     # Normal - F_N:EQ
     if -135 < rake <= -45:
         famp = f_r_ss**(-p_r) * f_n_ss**(1-p_n)
@@ -353,7 +353,9 @@ class AlAtikSigmaModel(GMPE):
         acc = np.log(disp * (2 * np.pi / imt)**2)
         return acc
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types, 
+                             extr=True):
+
         nsites = len(sites)
         stddevs = self.get_stddevs(rup.mag, imt, stds_types, nsites)
 
@@ -362,8 +364,7 @@ class AlAtikSigmaModel(GMPE):
         cappingp = self.get_capping_period(cornerp, self.gmpe)
 
         # apply extrapolation to periods > cappingp
-#        import pdb; pdb.set_trace()
-        if imt.period > cappingp:
+        if extr and imt.period > cappingp:
             # compute acceleration at the capping period
             mean, _ = self.gmpe.get_mean_and_stddevs(
                 sites, rup, dists, SA(cappingp), stds_types)
