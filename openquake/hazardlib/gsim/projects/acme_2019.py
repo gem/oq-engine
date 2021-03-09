@@ -418,4 +418,24 @@ class AlAtikSigmaModel(GMPE):
         if self.ergodic:
             C = self.PHI_S2SS[imt]
             phi = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
+        
+        # check if phi adjustment (2.6.6) is needed
+        # -> if phi < 0.4 in middle branch and T is below 0.5 s
+        # -> preserve separation between high and low phi values 
+        if imt.period < 0.5 and self.phi_ss_quantile == 0.5:
+            phi = max(phi, 0.4)
+
+        elif imt.period < 0.5 and self.phi_ss_quantile != 0.5:
+            # compute phi at quantile 0.5 and take the maximum comp to 0.4
+            PHI_SS_0p5 = get_phi_ss_at_quantile(
+                                        PHI_SETUP[self.phi_model], 0.5)
+            phi_0p5 = get_phi_ss(imt, mag, PHI_SS_0p5)
+
+            if self.ergodic:
+                C = self.PHI_S2SS[imt]
+                phi_0p5 = np.sqrt(phi_0p5 ** 2. + C["phi_s2ss"] ** 2.)
+            
+            # make adjustment if needed
+            phi = 0.4 + phi - phi_0p5 if phi_0p5 < 0.4 else phi
+
         return phi
