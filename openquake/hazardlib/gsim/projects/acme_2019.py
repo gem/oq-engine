@@ -451,6 +451,7 @@ PHI_S2SS_BRB = CoeffsTable(sa_damping=5., table="""\
     imt   phi_s2ss  
     PGA     0.0000 
     0.001   0.0000
+    0.999   0.0000
     1.000   0.0011
     1.200   0.0040
     1.500   0.0075
