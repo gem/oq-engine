@@ -23,36 +23,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def get_output_gmf(crmodel, taxo, assets, haz, rndgen=None):
-    """
-    :param crmodel: a CompositeRiskModel instance
-    :param taxo: a taxonomy index
-    :param assets: a DataFrame of assets of the given taxonomy
-    :param haz: a DataFrame of GMVs on that site
-    :param rndgen: a MultiEventRNG instance
-    :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
-    """
-    primary = crmodel.primary_imtls
-    alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
-    eids = haz.eid.to_numpy()
-    dic = dict(eids=eids, assets=assets.to_records(),
-               loss_types=crmodel.loss_types, haz=haz)
-    for lt in crmodel.loss_types:
-        arrays = []
-        rmodels, weights = crmodel.get_rmodels_weights(lt, taxo)
-        for rm in rmodels:
-            imt = rm.imt_by_lt[lt]
-            col = alias.get(imt, imt)
-            if col not in haz.columns:
-                haz[col] = numpy.zeros(len(haz))  # ZeroGetter
-            arrays.append(rm(lt, assets, haz, col, rndgen))
-        # average on the risk models
-        dic[lt] = arrays[0] * weights[0]
-        for arr, w in zip(arrays[1:], weights[1:]):
-            dic[lt] += arr * w
-    return hdf5.ArrayWrapper((), dic)
-
-
 def get_output_pc(crmodel, taxo, assets, haz, rlzi):
     """
     :param taxo: a taxonomy index
@@ -107,7 +77,7 @@ class RiskInput(object):
         with monitor('computing risk', measuremem=False):
             for taxo, assets in self.assets.groupby('taxonomy'):
                 if hasattr(haz, 'groupby'):  # DataFrame
-                    yield get_output_gmf(crmodel, taxo, assets, haz)
+                    yield crmodel.get_output(taxo, assets, haz)
                 else:  # list of probability curves
                     for rlz, pc in enumerate(haz):
                         yield get_output_pc(crmodel, taxo, assets, pc, rlz)

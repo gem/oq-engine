@@ -26,7 +26,7 @@ import pandas
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
-from openquake.risklib.riskinput import MultiEventRNG, get_output_gmf
+from openquake.risklib.riskinput import MultiEventRNG
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -89,7 +89,7 @@ def event_based_risk(df, param, monitor):
         for taxo, assets in asset_df.groupby('taxonomy'):
             with mon_risk:
                 aids = assets.ordinal.to_numpy()
-                out = get_output_gmf(crmodel, taxo, assets, haz, rndgen)
+                out = crmodel.get_output(taxo, assets, haz, rndgen)
             with mon_agg:
                 alt.aggregate(out, mal, aggby)
                 # NB: after the aggregation out contains losses

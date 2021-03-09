@@ -664,6 +664,32 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
+    def get_output(self, taxo, assets, haz, rndgen=None):
+        """
+        :param taxo: a taxonomy index
+        :param assets: a DataFrame of assets of the given taxonomy
+        :param haz: a DataFrame of GMVs on that site
+        :param rndgen: a MultiEventRNG instance
+        :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
+        """
+        primary = self.primary_imtls
+        alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
+        eids = haz.eid.to_numpy()
+        dic = dict(eids=eids, assets=assets.to_records(),
+                   loss_types=self.loss_types, haz=haz)
+        for lt in self.loss_types:
+            arrays = []
+            rmodels, weights = self.get_rmodels_weights(lt, taxo)
+            for rm in rmodels:
+                imt = rm.imt_by_lt[lt]
+                col = alias.get(imt, imt)
+                arrays.append(rm(lt, assets, haz, col, rndgen))
+            # average on the risk models
+            dic[lt] = arrays[0] * weights[0]
+            for arr, w in zip(arrays[1:], weights[1:]):
+                dic[lt] += arr * w
+        return hdf5.ArrayWrapper((), dic)
+
     def get_rmodels_weights(self, loss_type, taxidx):
         """
         :returns: a list of weighted risk models for the given taxonomy index
