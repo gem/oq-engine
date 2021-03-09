@@ -31,7 +31,6 @@ from numpy.testing import assert_equal
 from scipy import interpolate, stats
 
 from openquake.baselib.general import CallableDict, AccumDict
-from openquake.hazardlib.stats import compute_stats2
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -1318,21 +1317,17 @@ class InsuredLosses(object):
         self.policy_dict = policy_dict
         self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def compute(self, asset, lt_losses):
+    def update(self, out):
         """
-        :param asset: an asset record
-        :param lt_losses: a list of pairs (loss_type, E losses)
-        :returns: a dictionary loss_type_ins -> E insured losses
+        :param out: a dictionary with keys assets and loss_types
         """
-        res = {}
-        policy_idx = asset[self.policy_name]
-        for lt, losses in lt_losses:
-            if lt in self.policy_dict:
+        for a, asset in enumerate(out['assets']):
+            policy_idx = asset[self.policy_name]
+            for lt in self.policy_dict:
                 avalue = asset['value-' + lt]
                 ded, lim = self.policy_dict[lt][policy_idx]
-                res[lt + '_ins'] = insured_losses(
-                    losses, ded * avalue, lim * avalue)
-        return res
+                out[lt + '_ins'][a] = insured_losses(
+                    out[lt][a], ded * avalue, lim * avalue)
 
 
 # not used anymore

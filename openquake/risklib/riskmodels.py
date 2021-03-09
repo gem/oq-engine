@@ -691,7 +691,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    arrays.append(rm(lt, assets, haz, col, rndgen))
+                    losses = rm(lt, assets, haz, col, rndgen)
+                    losses[losses < self.minimum_loss[lt]] = 0
+                    arrays.append(losses)
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
                     arrays.append(rm(lt, assets, hcurve))
@@ -703,24 +705,12 @@ class CompositeRiskModel(collections.abc.Mapping):
             for arr, w in zip(arrays[1:], weights[1:]):
                 dic[lt] += arr * w
 
-        # initialize secondary losses outputs, if any
+        # compute secondary losses, if any
+        # FIXME: it should be moved up, before the computation of the mean
         for sec_loss in sec_losses:
-            for k in sec_loss.outputs:
-                dic[k] = numpy.zeros((len(assets), len(eids)))
-
-        for a, asset in enumerate(dic['assets']):
-            lt_losses = []
-            for lti, lt in enumerate(self.loss_types):
-                ls = dic[lt][a]
-                if self.minimum_loss[lt]:
-                    ls[ls < self.minimum_loss[lt]] = 0
-                lt_losses.append((lt, ls))
-
-            # secondary outputs, if any
-            for sec_loss in sec_losses:
-                for k, o in sec_loss.compute(asset, lt_losses).items():
-                    dic[k][a] = o
-
+            for sec_lt in sec_loss.outputs:
+                dic[sec_lt] = numpy.zeros((len(assets), len(eids)))
+            sec_loss.update(dic)
         return dic
 
     def get_rmodels_weights(self, loss_type, taxidx):
