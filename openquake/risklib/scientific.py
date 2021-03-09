@@ -226,7 +226,8 @@ class VulnerabilityFunction(object):
                 else:  # no CoVs
                     losses[aids, eid] = means * values
             elif self.distribution_name == 'PM':
-                ls = [ratio_df[col][e] for col in ratio_df.columns]
+                ls = [ratio_df[col][e] for col in ratio_df.columns
+                      if col != 'eid']
                 if sum(ls) == 0:  # oq-risk-tests/case_1g
                     # means are zeros for events below the threshold
                     continue
