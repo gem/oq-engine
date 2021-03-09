@@ -198,25 +198,24 @@ def cross_correlation_matrix(imts, corr='yes'):
     assert corr in 'yes no full', corr
     # if there is only PGA this is a 1x1 identity matrix
     M = len(imts)
-    cross_matrix = numpy.zeros((M, M))
-    for i, im in enumerate(imts):
-        T1 = im.period or 0.05
+    cross_matrix = numpy.eye(M)
+    if corr == 'full':
+        cross_matrix = numpy.full((M, M), 0.99999)
+        numpy.fill_diagonal(cross_matrix, 1)
+    elif corr == 'yes':
+        for i, im in enumerate(imts):
+            T1 = im.period or 0.05
 
-        for j in range(M):
-            T2 = imts[j].period or 0.05
-            if i == j:
-                cross_matrix[i, j] = 1
-            else:
+            for j in range(M):
+                if i == j:
+                    continue
+                T2 = imts[j].period or 0.05
                 Tmax = max(T1, T2)
                 Tmin = min(T1, T2)
                 II = 1 if Tmin < 0.189 else 0
-                if corr == 'full':
-                    cross_matrix[i, j] = 0.99999
-                elif corr == 'yes':
-                    cross_matrix[i, j] = 1 - math.cos(math.pi / 2 - (
-                        0.359 + 0.163 * II * math.log(Tmin / 0.189)
-                    ) * math.log(Tmax / Tmin))
-
+                cross_matrix[i, j] = 1 - math.cos(math.pi / 2 - (
+                    0.359 + 0.163 * II * math.log(Tmin / 0.189)
+                ) * math.log(Tmax / Tmin))
     return cross_matrix
 
 
