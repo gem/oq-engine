@@ -167,8 +167,8 @@ class VulnerabilityFunction(object):
         """
         gmvs = gmf_df[col].to_numpy()
         dic = dict(eid=gmf_df.eid.to_numpy(),
-                   mean=numpy.zeros_like(gmvs),
-                   cov=numpy.zeros_like(gmvs))
+                   mean=numpy.zeros(len(gmvs)),
+                   cov=numpy.zeros(len(gmvs)))
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
@@ -210,9 +210,11 @@ class VulnerabilityFunction(object):
         """
         losses = sparse.dok_matrix(AE)
         aids = values.index.to_numpy()
+        values = values.to_numpy()
         if self.distribution_name == 'LN':
-            for eid, means, covs in zip(
-                    ratio_df['eid'], ratio_df['mean'], ratio_df['cov']):
+            for eid, df in ratio_df.groupby('eid'):
+                means = df['mean'].to_numpy()
+                covs = df['cov'].to_numpy()
                 if rng and self.covs.sum():
                     sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                     div = numpy.sqrt(1 + covs ** 2)
@@ -237,8 +239,9 @@ class VulnerabilityFunction(object):
                 ).rvs(size=len(aids))
                 losses[aids, eid] = lrs[pmf] * values
         elif self.distribution_name == 'BT':
-            for eid, means, covs in zip(
-                    ratio_df['eid'], ratio_df['mean'], ratio_df['cov']):
+            for eid, df in ratio_df.groupby('eid'):
+                means = df['mean'].to_numpy()
+                covs = df['cov'].to_numpy()
                 stddevs = means * covs
                 alpha = _alpha(means, stddevs)
                 beta = _beta(means, stddevs)
@@ -444,8 +447,7 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         """
         :param gmvs:
            DataFrame of GMFs
-        :param col:
-           name of the column to consider
+        :param col:           name of the column to consider
         :returns:
            DataFrame of interpolated probabilities
         """
