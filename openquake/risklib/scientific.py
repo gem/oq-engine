@@ -210,13 +210,9 @@ class VulnerabilityFunction(object):
         """
         losses = sparse.dok_matrix(AE)
         aids = values.index.to_numpy()
-        if self.distribution_name == 'PM':
-            lrs = F64(self.loss_ratios)  # when read from the datastore
-            arange = numpy.arange(len(self.loss_ratios))
-        for e, eid in enumerate(ratio_df.eid):
-            if self.distribution_name == 'LN':
-                means = ratio_df['mean'][e]
-                covs = ratio_df['cov'][e]
+        if self.distribution_name == 'LN':
+            for eid, means, covs in zip(
+                    ratio_df['eid'], ratio_df['mean'], ratio_df['cov']):
                 if rng and self.covs.sum():
                     sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                     div = numpy.sqrt(1 + covs ** 2)
@@ -225,7 +221,10 @@ class VulnerabilityFunction(object):
                         eps * sigma) / div
                 else:  # no CoVs
                     losses[aids, eid] = means * values
-            elif self.distribution_name == 'PM':
+        elif self.distribution_name == 'PM':
+            lrs = F64(self.loss_ratios)  # when read from the datastore
+            arange = numpy.arange(len(self.loss_ratios))
+            for e, eid in enumerate(ratio_df.eid):
                 ls = [ratio_df[col][e] for col in ratio_df.columns
                       if col != 'eid']
                 if sum(ls) == 0:  # oq-risk-tests/case_1g
@@ -236,16 +235,16 @@ class VulnerabilityFunction(object):
                     seed=rng.master_seed + eid
                 ).rvs(size=len(aids))
                 losses[aids, eid] = lrs[pmf] * values
-            elif self.distribution_name == 'BT':
-                means = ratio_df['mean'][e]
-                covs = ratio_df['cov'][e]
+        elif self.distribution_name == 'BT':
+            for eid, means, covs in zip(
+                    ratio_df['eid'], ratio_df['mean'], ratio_df['cov']):
                 stddevs = means * covs
                 alpha = _alpha(means, stddevs)
                 beta = _beta(means, stddevs)
                 losses[aids, eid] = values * rng.beta(
                     len(aids), eid, alpha, beta)
-            else:
-                raise NotImplementedError(self.distribution_name)
+        else:
+            raise NotImplementedError(self.distribution_name)
         return losses
 
     def __call__(self, values, gmf_df, col, rng=None, AE=None):
