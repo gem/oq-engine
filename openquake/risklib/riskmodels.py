@@ -359,8 +359,7 @@ class RiskModel(object):
         """
         values = get_values(loss_type, assets, self.time_event)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        losses = vf(values, gmf_df[col].to_numpy(),
-                    gmf_df.eid.to_numpy(), rndgen, AE)
+        losses = vf(values, gmf_df, col, rndgen, AE)
         losses[losses < self.minimum_asset_loss[loss_type]] = 0
         return losses
 

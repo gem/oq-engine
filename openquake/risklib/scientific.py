@@ -158,23 +158,25 @@ class VulnerabilityFunction(object):
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
 
-    def interpolate(self, gmvs):
+    def interpolate(self, gmf_df, col):
         """
-        :param gmvs:
-           array of intensity measure levels
+        :param gmf_df:
+           DataFrame of GMFs
         :returns:
-           interpolated loss ratios and covs
+           DataFrame of interpolated loss ratios and covs
         """
-        df = pandas.DataFrame(dict(mean=numpy.zeros_like(gmvs),
-                                   cov=numpy.zeros_like(gmvs)))
+        gmvs = gmf_df[col].to_numpy()
+        dic = dict(eid=gmf_df.eid.to_numpy(),
+                   mean=numpy.zeros_like(gmvs),
+                   cov=numpy.zeros_like(gmvs))
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         curve_ok = gmvs_curve[ok]
-        df['mean'][ok] = self._mlr_i1d(curve_ok)
-        df['cov'][ok] = self._cov_for(curve_ok)
-        return df
+        dic['mean'][ok] = self._mlr_i1d(curve_ok)
+        dic['cov'][ok] = self._cov_for(curve_ok)
+        return pandas.DataFrame(dic, gmf_df.sid)
 
     def survival(self, loss_ratio, mean, stddev):
         """
@@ -199,23 +201,18 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def sample(self, values, ratio_df, eids, rng, AE):
+    def sample(self, values, ratio_df, rng, AE):
         """
         :param values: pandas.Series of asset values
         :param ratio_df: DataFrame with E elements
-        :param eids: E event IDs
         :param rng: a MultiEventRNG or None
         :returns: a matrix of loss ratios of shape (A, E)
         """
         losses = sparse.dok_matrix(AE)
         aids = values.index.to_numpy()
-        if self.distribution_name == 'PM':
-            lrs = F64(self.loss_ratios)  # when read from the datastore
-            arange = numpy.arange(len(self.loss_ratios))
-        for e, eid in enumerate(eids):
-            if self.distribution_name == 'LN':
-                means = ratio_df['mean'][e]
-                covs = ratio_df['cov'][e]
+        if self.distribution_name == 'LN':
+            for eid, means, covs in zip(
+                    ratio_df['eid'], ratio_df['mean'], ratio_df['cov']):
                 if rng and self.covs.sum():
                     sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                     div = numpy.sqrt(1 + covs ** 2)
@@ -224,29 +221,34 @@ class VulnerabilityFunction(object):
                         eps * sigma) / div
                 else:  # no CoVs
                     losses[aids, eid] = means * values
-            elif self.distribution_name == 'PM':
-                ls = [ratio_df[col][e] for col in ratio_df.columns]
-                if sum(ls) == 0:  # oq-risk-tests/case_1g
+        elif self.distribution_name == 'PM':
+            lrs = F64(self.loss_ratios)  # when read from the datastore
+            arange = numpy.arange(len(self.loss_ratios))
+            # the test 1g has E=8 events and C=7 columns
+            eids = ratio_df.pop('eid')
+            arr = ratio_df.to_numpy()  # shape (E, C)
+            for e, eid in enumerate(eids):
+                if arr[e].sum() == 0:  # oq-risk-tests/case_1g
                     # means are zeros for events below the threshold
                     continue
                 pmf = stats.rv_discrete(
-                    name='pmf', values=(arange, ls),
+                    name='pmf', values=(arange, arr[e]),
                     seed=rng.master_seed + eid
                 ).rvs(size=len(aids))
                 losses[aids, eid] = lrs[pmf] * values
-            elif self.distribution_name == 'BT':
-                means = ratio_df['mean'][e]
-                covs = ratio_df['cov'][e]
+        elif self.distribution_name == 'BT':
+            for eid, means, covs in zip(
+                    ratio_df['eid'], ratio_df['mean'], ratio_df['cov']):
                 stddevs = means * covs
                 alpha = _alpha(means, stddevs)
                 beta = _beta(means, stddevs)
                 losses[aids, eid] = values * rng.beta(
                     len(aids), eid, alpha, beta)
-            else:
-                raise NotImplementedError(self.distribution_name)
+        else:
+            raise NotImplementedError(self.distribution_name)
         return losses
 
-    def __call__(self, values, gmvs, eids, rng=None, AE=None):
+    def __call__(self, values, gmf_df, col, rng=None, AE=None):
         """
         :param values: A asset values
         :param gmvs: E ground motion values
@@ -259,9 +261,9 @@ class VulnerabilityFunction(object):
         if test:  # in the tests
             values = pandas.Series([1], [0])
         if AE is None:
-            AE = len(values), len(eids)
-        mean_covs = self.interpolate(gmvs)
-        losses = self.sample(values, mean_covs, eids, rng, AE)
+            AE = len(values), len(gmf_df)
+        df = self.interpolate(gmf_df, col)
+        losses = self.sample(values, df, rng, AE)
         if test:
             losses = losses.todense()
         return losses
@@ -438,22 +440,26 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     # MN: in the test gmvs_curve is of shape (5,), self.probs of shape (7, 8)
     # self.imls of shape (8,) and the returned means have shape (5, 7)
-    def interpolate(self, gmvs):
+    def interpolate(self, gmf_df, col):
         """
         :param gmvs:
-           array of intensity measure levels
+           DataFrame of GMFs
+        :param col:
+           name of the column to consider
         :returns:
-           DataFrame of interpolated probabilities with M columns
+           DataFrame of interpolated probabilities
         """
         # gmvs are clipped to max(iml)
         M = len(self.probs)
-        df = pandas.DataFrame({m: numpy.zeros_like(gmvs) for m in range(M)})
+        gmvs = gmf_df[col].to_numpy()
+        dic = {m: numpy.zeros_like(gmvs) for m in range(M)}
+        dic['eid'] = gmf_df.eid.to_numpy()
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         for m, probs in enumerate(self._probs_i1d(gmvs_curve[ok])):
-            df[m][ok] = probs
-        return df
+            dic[m][ok] = probs
+        return pandas.DataFrame(dic, gmf_df.sid)
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
