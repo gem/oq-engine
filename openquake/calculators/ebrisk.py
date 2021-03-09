@@ -26,7 +26,7 @@ import pandas
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import AggLossTable, InsuredLosses
-from openquake.risklib.riskinput import MultiEventRNG, get_output_gmf
+from openquake.risklib.riskinput import MultiEventRNG
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -56,7 +56,7 @@ def event_based_risk(df, param, monitor):
     mon_avg = monitor('averaging losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
     with monitor('getting assets'):
-        assets_df = dstore.read_df('assetcol/array', 'id')
+        assets_df = dstore.read_df('assetcol/array', 'ordinal')
     with monitor('getting crmodel'):
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
@@ -64,8 +64,8 @@ def event_based_risk(df, param, monitor):
     acc = dict(events_per_sid=numpy.zeros(param['N'], U32))
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
     aggby = param['aggregate_by']
-    mal = param['minimum_asset_loss']
     haz_by_sid = {s: d for s, d in df.groupby('sid')}
+    AE = len(assets_df), len(rlz_id)
     ARL = len(assets_df), len(weights), len(alt.loss_names)
     losses_by_A = numpy.zeros(ARL, F32)
     acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
@@ -88,16 +88,16 @@ def event_based_risk(df, param, monitor):
             continue
         for taxo, assets in asset_df.groupby('taxonomy'):
             with mon_risk:
-                aids = assets.ordinal.to_numpy()
-                out = get_output_gmf(crmodel, taxo, assets, haz, rndgen)
+                out = crmodel.get_output(
+                    taxo, assets, haz, param['sec_losses'], rndgen, AE=AE)
             with mon_agg:
-                alt.aggregate(out, mal, aggby)
+                alt.aggregate(out, aggby)
                 # NB: after the aggregation out contains losses
             if param['avg_losses']:
                 with mon_avg:
                     for lni, ln in enumerate(alt.loss_names):
-                        for rlz, losses in zip(rlz_id[out.eids], out[ln].T):
-                            losses_by_A[aids, rlz, lni] += losses
+                        for (aid, eid), loss in out[ln].items():
+                            losses_by_A[aid, rlz_id[eid], lni] += loss
 
     acc['alt'] = alt.to_dframe()
     if param['avg_losses']:
@@ -205,8 +205,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 InsuredLosses(self.policy_name, self.policy_dict))
         if not hasattr(self, 'aggkey'):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
-        self.param['alt'] = alt = AggLossTable.new(
-            self.aggkey, oq.loss_names, sec_losses)
+        self.param['alt'] = alt = AggLossTable.new(self.aggkey, oq.loss_names)
+        self.param['sec_losses'] = sec_losses
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['min_iml'] = oq.min_iml
         self.param['M'] = len(oq.all_imts())
@@ -215,7 +215,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
         self.L = L = len(alt.loss_names)
-        mal = self.param['minimum_asset_loss']
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
                 any(val == 0 for val in mal.values())):
             logging.warning('The calculation is really big; consider setting '

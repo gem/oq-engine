@@ -22,12 +22,14 @@ import operator
 import functools
 import collections
 import numpy
+import scipy
 import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property, groupby
 from openquake.hazardlib import valid, nrml, InvalidFile
+from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
@@ -247,9 +249,10 @@ class RiskModel(object):
         """
         return sorted(lt for (lt, kind) in self.risk_functions)
 
-    def __call__(self, loss_type, assets, gmf_df, col=None, rndgen=None):
+    def __call__(self, loss_type, assets, gmf_df,
+                 col=None, rndgen=None, AE=None):
         meth = getattr(self, self.calcmode)
-        res = meth(loss_type, assets, gmf_df, col, rndgen)
+        res = meth(loss_type, assets, gmf_df, col, rndgen, AE)
         return res
 
     def __toh5__(self):
@@ -264,8 +267,8 @@ class RiskModel(object):
 
     # ######################## calculation methods ######################### #
 
-    def classical_risk(
-            self, loss_type, assets, hazard_curve, col=None, eps=None):
+    def classical_risk(self, loss_type, assets, hazard_curve,
+                       col=None, rng=None, AE=None):
         """
         :param str loss_type:
             the loss type considered
@@ -288,7 +291,8 @@ class RiskModel(object):
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values)
 
-    def classical_bcr(self, loss_type, assets, hazard, col=None, eps=None):
+    def classical_bcr(self, loss_type, assets, hazard,
+                      col=None, rng=None, AE=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -328,7 +332,7 @@ class RiskModel(object):
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
     def classical_damage(self, loss_type, assets, hazard_curve,
-                         col=None, eps=None):
+                         col=None, rng=None, AE=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -349,18 +353,21 @@ class RiskModel(object):
         res = numpy.array([a['number'] * damage for a in assets.to_records()])
         return res
 
-    def event_based_risk(self, loss_type, assets, gmf_df, col, rndgen):
+    def event_based_risk(self, loss_type, assets, gmf_df, col, rndgen, AE):
         """
         :returns: an array of shape (A, E)
         """
         values = get_values(loss_type, assets, self.time_event)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        return vf(values, gmf_df[col].to_numpy(),
-                  gmf_df.eid.to_numpy(), rndgen)
+        losses = vf(values, gmf_df[col].to_numpy(),
+                    gmf_df.eid.to_numpy(), rndgen, AE)
+        losses[losses < self.minimum_asset_loss[loss_type]] = 0
+        return losses
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
-    def scenario_damage(self, loss_type, assets, gmf_df, col, epsilons=None):
+    def scenario_damage(self, loss_type, assets, gmf_df, col,
+                        rng=None, AE=None):
         """
         :param loss_type: the loss type
         :param assets: a list of A assets of the same taxonomy
@@ -402,6 +409,7 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     extra['lrem_steps_per_interval'] = oqparam.lrem_steps_per_interval
     extra['steps_per_interval'] = oqparam.steps_per_interval
     extra['time_event'] = oqparam.time_event
+    extra['minimum_asset_loss'] = oqparam.minimum_asset_loss
     if oqparam.calculation_mode == 'classical_bcr':
         extra['interest_rate'] = oqparam.interest_rate
         extra['asset_life_expectancy'] = oqparam.asset_life_expectancy
@@ -663,6 +671,51 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
+
+    def get_output(self, taxo, assets, haz, sec_losses=(), rndgen=None,
+                   rlz=None, AE=None):
+        """
+        :param taxo: a taxonomy index
+        :param assets: a DataFrame of assets of the given taxonomy
+        :param haz: a DataFrame of GMVs on that site
+        :param sec_losses: a list of SecondaryLoss instances
+        :param rndgen: a MultiEventRNG instance
+        :param rlz: a realization index (or None)
+        :param AE: a shape (A, E) or None
+        :returns: a dictionary of arrays
+        """
+        primary = self.primary_imtls
+        alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
+        event = hasattr(haz, 'eid')
+        eids = haz.eid.to_numpy() if event else [None]
+        dic = dict(eids=eids, assets=assets.to_records(), rlzi=rlz,
+                   loss_types=self.loss_types, haz=haz)
+        for lt in self.loss_types:
+            arrays = []
+            rmodels, weights = self.get_rmodels_weights(lt, taxo)
+            for rm in rmodels:
+                imt = rm.imt_by_lt[lt]
+                col = alias.get(imt, imt)
+                if event:
+                    arrays.append(rm(lt, assets, haz, col, rndgen, AE))
+                else:  # classical
+                    hcurve = haz.array[self.imtls(imt), 0]
+                    arrays.append(rm(lt, assets, hcurve))
+
+            # average on the risk models (unsupported for classical_risk)
+            dic[lt] = arrays[0]
+            if weights[0] != 1:
+                dic[lt] *= weights[0]
+            for arr, w in zip(arrays[1:], weights[1:]):
+                dic[lt] += arr * w
+
+        # compute secondary losses, if any
+        # FIXME: it should be moved up, before the computation of the mean
+        for sec_loss in sec_losses:
+            for sec_lt in sec_loss.outputs:
+                dic[sec_lt] = scipy.sparse.dok_matrix(AE)
+            sec_loss.update(dic)
+        return dic
 
     def get_rmodels_weights(self, loss_type, taxidx):
         """

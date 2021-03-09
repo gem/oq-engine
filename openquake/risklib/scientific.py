@@ -28,10 +28,9 @@ from functools import lru_cache
 import numpy
 import pandas
 from numpy.testing import assert_equal
-from scipy import interpolate, stats
+from scipy import interpolate, stats, sparse
 
 from openquake.baselib.general import CallableDict, AccumDict
-from openquake.hazardlib.stats import compute_stats2
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -166,15 +165,16 @@ class VulnerabilityFunction(object):
         :returns:
            interpolated loss ratios and covs
         """
-        mean_covs = numpy.zeros((len(gmvs), 2))
+        df = pandas.DataFrame(dict(mean=numpy.zeros_like(gmvs),
+                                   cov=numpy.zeros_like(gmvs)))
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         curve_ok = gmvs_curve[ok]
-        mean_covs[ok, 0] = self._mlr_i1d(curve_ok)
-        mean_covs[ok, 1] = self._cov_for(curve_ok)
-        return mean_covs
+        df['mean'][ok] = self._mlr_i1d(curve_ok)
+        df['cov'][ok] = self._cov_for(curve_ok)
+        return df
 
     def survival(self, loss_ratio, mean, stddev):
         """
@@ -199,61 +199,71 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def sample(self, num_assets, mean_covs, eids, rng):
+    def sample(self, values, ratio_df, eids, rng, AE):
         """
-        :param num_assets: number of assets
-        :param mean_covs: (E, 2) loss ratios and covs
+        :param values: pandas.Series of asset values
+        :param ratio_df: DataFrame with E elements
         :param eids: E event IDs
         :param rng: a MultiEventRNG or None
         :returns: a matrix of loss ratios of shape (A, E)
         """
-        means = mean_covs[:, 0]
-        covs = mean_covs[:, 1]
-        ratios = numpy.zeros((num_assets, len(eids)))
-        if self.distribution_name == 'LN':
-            if rng and self.covs.sum():
-                sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-                div = numpy.sqrt(1 + covs ** 2)
-                epsilons = rng.normal(num_assets, eids)
-                for a, eps in enumerate(epsilons):
-                    ratios[a] = means * numpy.exp(eps * sigma) / div
-            else:  # no CoVs
-                for a in range(num_assets):
-                    ratios[a] = means
-        elif self.distribution_name == 'PM':
+        losses = sparse.dok_matrix(AE)
+        aids = values.index.to_numpy()
+        if self.distribution_name == 'PM':
             lrs = F64(self.loss_ratios)  # when read from the datastore
             arange = numpy.arange(len(self.loss_ratios))
-            for e, eid in enumerate(eids):
-                if mean_covs[e].sum() == 0:  # oq-risk-tests/case_1g
+        for e, eid in enumerate(eids):
+            if self.distribution_name == 'LN':
+                means = ratio_df['mean'][e]
+                covs = ratio_df['cov'][e]
+                if rng and self.covs.sum():
+                    sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
+                    div = numpy.sqrt(1 + covs ** 2)
+                    eps = rng.normal(len(values), eid)
+                    losses[aids, eid] = means * values * numpy.exp(
+                        eps * sigma) / div
+                else:  # no CoVs
+                    losses[aids, eid] = means * values
+            elif self.distribution_name == 'PM':
+                ls = [ratio_df[col][e] for col in ratio_df.columns]
+                if sum(ls) == 0:  # oq-risk-tests/case_1g
                     # means are zeros for events below the threshold
                     continue
                 pmf = stats.rv_discrete(
-                    name='pmf', values=(arange, mean_covs[e]),
+                    name='pmf', values=(arange, ls),
                     seed=rng.master_seed + eid
-                ).rvs(size=num_assets)
-                ratios[:, e] = lrs[pmf]
-        elif self.distribution_name == 'BT':
-            stddevs = means * covs
-            alpha = _alpha(means, stddevs)
-            beta = _beta(means, stddevs)
-            ratios[:, :] = rng.beta(num_assets, eids, alpha, beta)
-        else:
-            raise NotImplementedError(self.distribution_name)
-        return ratios
+                ).rvs(size=len(aids))
+                losses[aids, eid] = lrs[pmf] * values
+            elif self.distribution_name == 'BT':
+                means = ratio_df['mean'][e]
+                covs = ratio_df['cov'][e]
+                stddevs = means * covs
+                alpha = _alpha(means, stddevs)
+                beta = _beta(means, stddevs)
+                losses[aids, eid] = values * rng.beta(
+                    len(aids), eid, alpha, beta)
+            else:
+                raise NotImplementedError(self.distribution_name)
+        return losses
 
-    def __call__(self, values, gmvs, eids, rng=None):
+    def __call__(self, values, gmvs, eids, rng=None, AE=None):
         """
         :param values: A asset values
         :param gmvs: E ground motion values
         :param eids: E event IDs
         :param rng: a MultiEventRNG or None
+        :param AE: a pair of integers (A, E)
         :returns: a matrix of losses of shape (A, E)
         """
+        test = values is None
+        if test:  # in the tests
+            values = pandas.Series([1], [0])
+        if AE is None:
+            AE = len(values), len(eids)
         mean_covs = self.interpolate(gmvs)
-        losses = numpy.zeros((len(values), len(eids)))
-        losses[:] = self.sample(len(values), mean_covs, eids, rng)
-        for a, val in enumerate(values):
-            losses[a] *= val
+        losses = self.sample(values, mean_covs, eids, rng, AE)
+        if test:
+            losses = losses.todense()
         return losses
 
     def strictly_increasing(self):
@@ -433,15 +443,17 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
         :param gmvs:
            array of intensity measure levels
         :returns:
-           interpolated probabilities of shape (E, L)
+           DataFrame of interpolated probabilities with M columns
         """
         # gmvs are clipped to max(iml)
-        out = numpy.zeros((len(self.probs), len(gmvs)))
+        M = len(self.probs)
+        df = pandas.DataFrame({m: numpy.zeros_like(gmvs) for m in range(M)})
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
-        out[:, ok] = self._probs_i1d(gmvs_curve[ok])
-        return out.T
+        for m, probs in enumerate(self._probs_i1d(gmvs_curve[ok])):
+            df[m][ok] = probs
+        return df
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):
@@ -1252,63 +1264,43 @@ class LossCurvesMapsBuilder(object):
 class AggLossTable(AccumDict):
     """
     :param aggkey: dictionary tuple -> integer
-    :param loss_types: primary loss types + secondary loss types
-    :param sec_losses: seconday loss types (if any)
+    :param loss_names: primary loss types + secondary loss types
     """
     @classmethod
-    def new(cls, aggkey, loss_names, sec_losses=()):
+    def new(cls, aggkey, loss_names):
         self = cls()
         self.aggkey = {key: k for k, key in enumerate(aggkey)}
         self.aggkey[()] = len(aggkey)
         self.loss_names = loss_names
-        self.sec_losses = sec_losses
         self.accum = 0
         return self
 
-    def aggregate(self, out, minimum_loss, aggby):
+    def aggregate(self, out, aggby):
         """
         Populate the event loss table
         """
-        eids = out.eids
-        assets = out.assets
-
-        # initialize secondary losses outputs, if any
-        for sec_loss in self.sec_losses:
-            for k in sec_loss.outputs:
-                setattr(out, k, numpy.zeros((len(assets), len(eids))))
+        assets = out['assets']
 
         # populate outputs
         if aggby == ['id']:
-            kids = [self.aggkey[o1, ] for o1 in assets['ordinal'] + 1]
+            kid = {o: self.aggkey[o + 1, ] for o in assets['ordinal']}
         elif aggby == ['site_id']:
-            kids = [self.aggkey[s1, ] for s1 in assets['site_id'] + 1]
+            kid = {rec['ordinal']: self.aggkey[rec['site_id'] + 1, ]
+                   for rec in assets}
         elif aggby:
-            kids = [self.aggkey[tuple(rec)] for rec in assets[aggby]]
+            kid = {rec['ordinal']: self.aggkey[tuple(rec[aggby])]
+                   for rec in assets}
         else:
-            kids = []
-        for a, asset in enumerate(out.assets):
-            lt_losses = []
-            for lti, lt in enumerate(out.loss_types):
-                ls = out[lt][a]
-                if minimum_loss[lt]:
-                    ls[ls < minimum_loss[lt]] = 0
-                lt_losses.append((lt, ls))
-
-            # secondary outputs, if any
-            for sec_loss in self.sec_losses:
-                for k, o in sec_loss.compute(asset, lt_losses, eids).items():
-                    out[k][a] = o
+            kid = {}
 
         # aggregation
         K = len(self.aggkey) - 1
         for lni, ln in enumerate(self.loss_names):
-            for eid, loss in zip(eids, out[ln].T):
-                self[eid, K, lni] += loss.sum()
-            # this is the slow part, if aggregate_by is given
-            for asset, kid, losses in zip(assets, kids, out[ln]):
-                for eid, loss in zip(eids, losses):
-                    if loss:
-                        self[eid, kid, lni] += loss
+            for (aid, eid), loss in out[ln].items():
+                self[eid, K, lni] += loss
+                # this is the slow part, if aggregate_by is given
+                if kid:
+                    self[eid, kid[aid], lni] += loss
 
     def to_dframe(self):
         """
@@ -1326,8 +1318,6 @@ class AggLossTable(AccumDict):
         return pandas.DataFrame(out)
 
 
-# must have attribute .outputs and method .compute(asset, losses, loss_type)
-# returning a dictionary sec_key -> sec_losses
 class InsuredLosses(object):
     """
     There is an insured loss for each loss type in the policy dictionary.
@@ -1337,22 +1327,19 @@ class InsuredLosses(object):
         self.policy_dict = policy_dict
         self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def compute(self, asset, lt_losses, eids):
+    def update(self, out):
         """
-        :param asset: an asset record
-        :param lt_losses: a list of pairs (loss_type, E losses)
-        :param eids: an array of E event IDs
-        :returns: a dictionary loss_type_ins -> E insured losses
+        :param out: a dictionary with keys assets and loss_types
         """
-        res = {}
-        policy_idx = asset[self.policy_name]
-        for lt, losses in lt_losses:
-            if lt in self.policy_dict:
+        for asset in out['assets']:
+            aid = asset['ordinal']
+            policy_idx = asset[self.policy_name]
+            for lt in self.policy_dict:
                 avalue = asset['value-' + lt]
                 ded, lim = self.policy_dict[lt][policy_idx]
-                res[lt + '_ins'] = insured_losses(
-                    losses, ded * avalue, lim * avalue)
-        return res
+                mat = out[lt][aid].tocoo()
+                out[lt + '_ins'][aid, mat.col] = insured_losses(
+                    mat.data, ded * avalue, lim * avalue)
 
 
 # not used anymore

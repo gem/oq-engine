@@ -237,11 +237,13 @@ class ZeroGetter(GmfDataGetter):
     """
     An object with an .init() and .get_hazard() method
     """
-    def __init__(self, sid, rlzs, R):
+    def __init__(self, sid, rlzs, R, gmvcolumns):
         nr = len(rlzs)
         self.sids = [sid]
         self.df = pandas.DataFrame({
             'sid': [sid] * nr, 'rlz': rlzs, 'eid': numpy.arange(nr)})
+        for col in gmvcolumns:
+            self.df[col] = numpy.zeros(nr, dtype=F32)
         self.num_rlzs = R
 
 
