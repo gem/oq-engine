@@ -359,8 +359,10 @@ class RiskModel(object):
         """
         values = get_values(loss_type, assets, self.time_event)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        return vf(values, gmf_df[col].to_numpy(),
-                  gmf_df.eid.to_numpy(), rndgen, AE)
+        losses = vf(values, gmf_df[col].to_numpy(),
+                    gmf_df.eid.to_numpy(), rndgen, AE)
+        losses[losses < self.minimum_loss[loss_type]] = 0
+        return losses
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
@@ -693,14 +695,11 @@ class CompositeRiskModel(collections.abc.Mapping):
             arrays = []
             rmodels, weights = self.get_rmodels_weights(lt, taxo)
             for rm in rmodels:
+                rm.minimum_loss = self.minimum_loss
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    array = rm(lt, assets, haz, col, rndgen, AE)
-                    # array (A, E) for losses and (A, E, D) for damages
-                    if array.ndim == 2 and self.minimum_loss[lt]:
-                        array[array < self.minimum_loss[lt]] = 0
-                    arrays.append(array)
+                    arrays.append(rm(lt, assets, haz, col, rndgen, AE))
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
                     arrays.append(rm(lt, assets, hcurve))

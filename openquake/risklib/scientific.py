@@ -206,24 +206,23 @@ class VulnerabilityFunction(object):
         :param rng: a MultiEventRNG or None
         :returns: a matrix of loss ratios of shape (A, E)
         """
-        means = mean_covs[:, 0]
-        covs = mean_covs[:, 1]
         ratios = sparse.dok_matrix(AE)
         aids = values.index.to_numpy()
-        if self.distribution_name == 'LN':
-            if rng and self.covs.sum():
-                sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-                div = numpy.sqrt(1 + covs ** 2)
-                epsilons = rng.normal(len(values), eids)
-                for aid, eps in zip(aids, epsilons):
-                    ratios[aid, eids] = means * numpy.exp(eps * sigma) / div
-            else:  # no CoVs
-                for eid, mean in zip(eids, means):
-                    ratios[aids, eid] = mean
-        elif self.distribution_name == 'PM':
+        if self.distribution_name == 'PM':
             lrs = F64(self.loss_ratios)  # when read from the datastore
             arange = numpy.arange(len(self.loss_ratios))
-            for e, eid in enumerate(eids):
+        for e, eid in enumerate(eids):
+            means = mean_covs[e, 0]
+            covs = mean_covs[e, 1]
+            if self.distribution_name == 'LN':
+                if rng and self.covs.sum():
+                    sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
+                    div = numpy.sqrt(1 + covs ** 2)
+                    eps = rng.normal(len(values), eid)
+                    ratios[aids, eid] = means * numpy.exp(eps * sigma) / div
+                else:  # no CoVs
+                    ratios[aids, eid] = means
+            elif self.distribution_name == 'PM':
                 if mean_covs[e].sum() == 0:  # oq-risk-tests/case_1g
                     # means are zeros for events below the threshold
                     continue
@@ -231,14 +230,14 @@ class VulnerabilityFunction(object):
                     name='pmf', values=(arange, mean_covs[e]),
                     seed=rng.master_seed + eid
                 ).rvs(size=len(aids))
-                ratios[aids, e] = lrs[pmf]
-        elif self.distribution_name == 'BT':
-            stddevs = means * covs
-            alpha = _alpha(means, stddevs)
-            beta = _beta(means, stddevs)
-            ratios[aids, eids] = rng.beta(len(aids), eids, alpha, beta)
-        else:
-            raise NotImplementedError(self.distribution_name)
+                ratios[aids, eid] = lrs[pmf]
+            elif self.distribution_name == 'BT':
+                stddevs = means * covs
+                alpha = _alpha(means, stddevs)
+                beta = _beta(means, stddevs)
+                ratios[aids, eid] = rng.beta(len(aids), eid, alpha, beta)
+            else:
+                raise NotImplementedError(self.distribution_name)
         return ratios
 
     def __call__(self, values, gmvs, eids, rng=None, AE=None):
