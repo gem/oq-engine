@@ -21,7 +21,7 @@ import math
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.imt import SA
+from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
         YenierAtkinson2015BSSA
@@ -297,9 +297,15 @@ class AlAtikSigmaModel(GMPE):
                                              self.phi_ss_quantile)
         # if required setup phis2ss
         if self.ergodic:
-            self.PHI_S2SS = get_phi_s2ss_at_quantile(
-                PHI_S2SS_MODEL[self.phi_s2ss_model],
-                self.phi_s2ss_quantile)
+            if self.phi_s2ss_model == 'cena':
+                self.PHI_S2SS = get_phi_s2ss_at_quantile(
+                    PHI_S2SS_MODEL[self.phi_s2ss_model],
+                    self.phi_s2ss_quantile)
+            elif self.phi_s2ss_model == 'brb':
+                self.PHI_S2SS = PHI_S2SS_BRB
+            else:
+                opts = "'cena', 'brb', or 'None'"
+                raise ValueError('phi_s2ss_model can be {}'.format(opts))
 
     def get_corner_period(self, mag):
         """
@@ -439,3 +445,15 @@ class AlAtikSigmaModel(GMPE):
             phi = 0.4 + phi - phi_0p5 if phi_0p5 < 0.4 else phi
 
         return phi
+
+# PHI_SS2S coefficients, table 2.2 HID
+PHI_S2SS_BRB = CoeffsTable(sa_damping=5., table="""\
+    imt   phi_s2ss  
+    PGA     0.0000 
+    0.001   0.0000
+    1.000   0.0011
+    1.200   0.0040
+    1.500   0.0075
+    2.000   0.0111
+    10.00   0.0111
+    """)
