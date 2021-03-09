@@ -1252,30 +1252,23 @@ class LossCurvesMapsBuilder(object):
 class AggLossTable(AccumDict):
     """
     :param aggkey: dictionary tuple -> integer
-    :param loss_types: primary loss types + secondary loss types
-    :param sec_losses: seconday loss types (if any)
+    :param loss_names: primary loss types + secondary loss types
     """
     @classmethod
-    def new(cls, aggkey, loss_names, sec_losses=()):
+    def new(cls, aggkey, loss_names):
         self = cls()
         self.aggkey = {key: k for k, key in enumerate(aggkey)}
         self.aggkey[()] = len(aggkey)
         self.loss_names = loss_names
-        self.sec_losses = sec_losses
         self.accum = 0
         return self
 
-    def aggregate(self, out, minimum_loss, aggby):
+    def aggregate(self, out, aggby):
         """
         Populate the event loss table
         """
         eids = out.eids
         assets = out.assets
-
-        # initialize secondary losses outputs, if any
-        for sec_loss in self.sec_losses:
-            for k in sec_loss.outputs:
-                setattr(out, k, numpy.zeros((len(assets), len(eids))))
 
         # populate outputs
         if aggby == ['id']:
@@ -1286,18 +1279,6 @@ class AggLossTable(AccumDict):
             kids = [self.aggkey[tuple(rec)] for rec in assets[aggby]]
         else:
             kids = []
-        for a, asset in enumerate(out.assets):
-            lt_losses = []
-            for lti, lt in enumerate(out.loss_types):
-                ls = out[lt][a]
-                if minimum_loss[lt]:
-                    ls[ls < minimum_loss[lt]] = 0
-                lt_losses.append((lt, ls))
-
-            # secondary outputs, if any
-            for sec_loss in self.sec_losses:
-                for k, o in sec_loss.compute(asset, lt_losses, eids).items():
-                    out[k][a] = o
 
         # aggregation
         K = len(self.aggkey) - 1

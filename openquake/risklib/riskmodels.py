@@ -28,6 +28,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property, groupby
 from openquake.hazardlib import valid, nrml, InvalidFile
+from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
@@ -560,6 +561,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     iml[rf.imt].append(rf.imls[0])
         if sum(oq.minimum_intensity.values()) == 0 and iml:
             oq.minimum_intensity = {imt: min(ls) for imt, ls in iml.items()}
+        self.minimum_loss = {lt: getdefault(oq.minimum_asset_loss, lt)
+                             for lt in oq.loss_names}
 
     def eid_dmg_dt(self):
         """
@@ -664,11 +667,12 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_output(self, taxo, assets, haz, rndgen=None):
+    def get_output(self, taxo, assets, haz, sec_losses=(), rndgen=None):
         """
         :param taxo: a taxonomy index
         :param assets: a DataFrame of assets of the given taxonomy
         :param haz: a DataFrame of GMVs on that site
+        :param sec_losses: a list of SecondaryLoss instances
         :param rndgen: a MultiEventRNG instance
         :returns: an ArrayWrapper loss_type -> array of shape (A, ...)
         """
@@ -688,6 +692,25 @@ class CompositeRiskModel(collections.abc.Mapping):
             dic[lt] = arrays[0] * weights[0]
             for arr, w in zip(arrays[1:], weights[1:]):
                 dic[lt] += arr * w
+
+        # initialize secondary losses outputs, if any
+        for sec_loss in sec_losses:
+            for k in sec_loss.outputs:
+                dic[k] = numpy.zeros((len(assets), len(eids)))
+
+        for a, asset in enumerate(assets.to_records()):
+            lt_losses = []
+            for lti, lt in enumerate(self.loss_types):
+                ls = dic[lt][a]
+                if self.minimum_loss[lt]:
+                    ls[ls < self.minimum_loss[lt]] = 0
+                lt_losses.append((lt, ls))
+
+            # secondary outputs, if any
+            for sec_loss in sec_losses:
+                for k, o in sec_loss.compute(asset, lt_losses, eids).items():
+                    dic[k][a] = o
+
         return hdf5.ArrayWrapper((), dic)
 
     def get_rmodels_weights(self, loss_type, taxidx):
