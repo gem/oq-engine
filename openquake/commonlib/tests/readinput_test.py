@@ -103,6 +103,7 @@ export_dir = %s
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
                 'risk_investigation_time': None,
+                'minimum_asset_loss': {},
             }
 
             params = getparams(readinput.get_oqparam(source))
