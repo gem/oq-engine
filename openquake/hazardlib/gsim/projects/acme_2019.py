@@ -111,6 +111,28 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
 
     adapted = True
 
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extracting dictionary of coefficients specific to required
+        # intensity measure type.
+        C = self.COEFFS[imt]
+        # intensity on a reference soil is used for both mean
+        # and stddev calculations.
+        ln_y_ref = self._get_ln_y_ref(rup, dists, C)
+        # exp1 and exp2 are parts of eq. 12 and eq. 13,
+        # calculate it once for both.
+        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
+        exp2 = np.exp(C['phi3'] * (1130 - 360))
+        mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2)
+#        stddevs = self.get_stddevs(sites, rup, C, stddev_types,
+#                                    ln_y_ref, exp1, exp2)
+        stddevs = np.zeros_like(mean)
+        return mean, stddevs
+
     def _get_mean(self, sites, C, ln_y_ref, exp1, exp2):
         """
         Add site effects to an intensity. Implements eq. 13b.
@@ -260,9 +282,10 @@ class AlAtikSigmaModel(GMPE):
         self.gmpe = registry[self.gmpe_name]()
         self.set_parameters()
 
-        with self.open(self.kappa_file) as myfile:
-            data = myfile.read().decode('utf-8')
-        self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
+        if self.kappa_file:
+            with self.open(self.kappa_file) as myfile:
+                data = myfile.read().decode('utf-8')
+            self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
 
     def _setup_standard_deviations(self, fle):
         # setup tau
@@ -339,6 +362,7 @@ class AlAtikSigmaModel(GMPE):
         cappingp = self.get_capping_period(cornerp, self.gmpe)
 
         # apply extrapolation to periods > cappingp
+#        import pdb; pdb.set_trace()
         if imt.period > cappingp:
             # compute acceleration at the capping period
             mean, _ = self.gmpe.get_mean_and_stddevs(
@@ -351,12 +375,13 @@ class AlAtikSigmaModel(GMPE):
                 sites, rup, dists, imt, stds_types)
 
         kappa = 1
-        if imt.period == 0:
-            kappa = self.KAPPATAB[SA(0.01)][self.kappa_val]
-        elif imt.period > 2.0:
-            kappa = self.KAPPATAB[SA(2.0)][self.kappa_val]
-        else:
-            kappa = self.KAPPATAB[imt][self.kappa_val]
+        if self.kappa_file:
+            if imt.period == 0:
+                kappa = self.KAPPATAB[SA(0.01)][self.kappa_val]
+            elif imt.period > 2.0:
+                kappa = self.KAPPATAB[SA(2.0)][self.kappa_val]
+            else:
+                kappa = self.KAPPATAB[imt][self.kappa_val]
         return mean + np.log(kappa), stddevs
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
