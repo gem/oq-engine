@@ -29,7 +29,7 @@ import pandas
 
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
-from openquake.baselib import parallel
+from openquake.baselib import parallel, python3compat
 from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile, site, stats
 from openquake.hazardlib.site_amplification import Amplifier
@@ -1184,8 +1184,9 @@ def save_agg_values(dstore, assetcol, lossnames, tagnames):
             (name, hdf5.vstr) for name in tagnames]
         kvs = []
         for key, val in aggkey.items():
+            val = tuple(python3compat.decode(val))
             kvs.append(key + val)
-            lst.append(' '.join(map(str, val)))
+            lst.append(' '.join(val))
         dstore['agg_keys'] = numpy.array(kvs, dt)
     lst.append('*total*')
     loss_names = dstore['oqparam'].loss_names
