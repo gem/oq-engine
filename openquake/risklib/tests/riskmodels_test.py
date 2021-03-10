@@ -328,7 +328,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs,
                                   minimum_asset_loss=dict(structural=0))
         assets = pandas.DataFrame(
-            {'value-structural': numpy.array([1, 1])})
+            {'site_id': [0, 0], 'value-structural': numpy.array([1, 1])})
         eids = numpy.array([0, 1, 2, 3, 4])
         AE = len(assets), len(eids)
         gmvs = numpy.array([.1, .2, .3, .4, .5])
