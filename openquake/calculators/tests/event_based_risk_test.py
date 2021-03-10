@@ -272,7 +272,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
 
-    def test_case_master1(self):
+    def test_case_master(self):
         # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
         # it looks like the cholesky decomposition is OS-dependent, so
         # the GMFs are different of macOS/Ubuntu20/Ubuntu18
@@ -314,20 +314,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         df2 = self.calc.datastore.read_df('agg_curves-stats', 'assets')
         aae(df2.columns, ['agg_id', 'stat', 'lti', 'return_period', 'value'])
 
-    def test_case_master2(self):
-        self.run_calc(case_master.__file__, 'job.ini',
-                      calculation_mode='ebrisk', exports='',
-                      concurrent_tasks='4')
-
         fname = export(('agg_curves-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
-
-        fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avg_losses-mean.csv',
-                              fname, delta=1E-4)
-
-        fname = export(('agg_loss_table', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/elt.csv', fname, delta=1E-4)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
