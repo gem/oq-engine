@@ -29,7 +29,6 @@ from openquake.baselib import hdf5
 from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property, groupby
 from openquake.hazardlib import valid, nrml, InvalidFile
-from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
@@ -180,18 +179,6 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
     return rlist
 
 
-def get_values(loss_type, assets, time_event=None):
-    """
-    :returns:
-        a numpy array with the values for the given assets, depending on the
-        loss_type.
-    """
-    if loss_type == 'occupants' and time_event:
-        return assets['occupants_%s' % time_event]
-    else:
-        return assets['value-' + loss_type]
-
-
 loss_poe_dt = numpy.dtype([('loss', F64), ('poe', F64)])
 
 
@@ -286,7 +273,7 @@ class RiskModel(object):
         vf = self.risk_functions[loss_type, 'vulnerability']
         lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
-        values = get_values(loss_type, assets)
+        values = assets['value-' + loss_type]
         lrcurves = numpy.array(
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values)
@@ -357,10 +344,15 @@ class RiskModel(object):
         """
         :returns: an array of shape (A, E)
         """
-        values = get_values(loss_type, assets, self.time_event)
+        sid = assets['site_id']
+        if loss_type == 'occupants' and self.time_event:
+            val = assets['occupants_%s' % self.time_event].to_numpy()
+        else:
+            val = assets['value-' + loss_type].to_numpy()
+        asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        losses = vf(values, gmf_df, col, rndgen, AE)
-        losses[losses < self.minimum_asset_loss[loss_type]] = 0
+        losses = vf(asset_df, gmf_df, col, rndgen, AE,
+                    self.minimum_asset_loss[loss_type])
         return losses
 
     scenario = ebrisk = scenario_risk = event_based_risk
