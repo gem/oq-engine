@@ -74,7 +74,7 @@ class MultiEventRNG(object):
 
     >>> epsgetter = MultiEventRNG(
     ...     master_seed=42, asset_correlation=1, eids=[0, 1, 2])
-    >>> epsgetter.normal(3, eid=1)
+    >>> epsgetter.normal(eid=1, size=3)
     array([-2.46861114, -2.46861114, -2.46861114])
     >>> epsgetter.beta(eid=1, alpha=1.1, beta=.1)
     array([0.40714461])
@@ -87,10 +87,10 @@ class MultiEventRNG(object):
             ph = numpy.random.Philox(self.master_seed + eid)
             self.rng[eid] = numpy.random.Generator(ph)
 
-    def normal(self, size, eid):
+    def normal(self, eid, size):
         """
-        :param size: number of assets affected by the given event
         :param eid: event ID
+        :param size: number of assets affected by the given event
         :returns: array of dtype float32
         """
         rng = self.rng[eid]

@@ -218,7 +218,7 @@ class VulnerabilityFunction(object):
                 if rng and self.covs.sum():
                     sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                     div = numpy.sqrt(1 + covs ** 2)
-                    eps = rng.normal(len(df), eid)
+                    eps = rng.normal(eid, len(df))
                     losses[df.aid, eid] = cutoff(
                         means * vals * numpy.exp(eps * sigma) / div)
                 else:  # no CoVs
