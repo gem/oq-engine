@@ -51,8 +51,10 @@ def get_sof_adjustment(rake, imt):
     """
     if imt.name == 'PGA' or (imt.name == 'SA' and imt.period <= 0.4):
         f_r_ss = 1.2
-    elif imt.name == 'SA' and imt.period > 0.4:
+    elif imt.name == 'SA' and imt.period > 0.4 and imt.period < 3.0:
         f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(imt.period/0.4)
+    elif imt.name == 'SA' and imt.period >= 3.0:
+        f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(3.0/0.4)
     else:
         raise ValueError('Unsupported IMT')
     # Set coefficients
