@@ -275,7 +275,7 @@ class RiskModel(object):
         vf = self.risk_functions[loss_type, 'vulnerability']
         lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
-        values = assets['value-' + loss_type]
+        values = assets['value-' + loss_type].to_numpy()
         lrcurves = numpy.array(
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values)
