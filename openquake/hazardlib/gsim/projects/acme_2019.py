@@ -21,13 +21,15 @@ import math
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
+from openquake.hazardlib.gsim.projects.acme_base import (CoeffsTableACME,
+                                            get_phi_ss_at_quantile_ACME)
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
         YenierAtkinson2015BSSA
 from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
                                                get_tau_at_quantile,
-                                               get_phi_ss_at_quantile,
+                                               #get_phi_ss_at_quantile,
                                                get_phi_ss,
                                                TAU_SETUP,
                                                PHI_SETUP,
@@ -295,7 +297,8 @@ class AlAtikSigmaModel(GMPE):
                                        TAU_SETUP[self.tau_model]["STD"],
                                        self.tau_quantile)
         # setup phi
-        self.PHI_SS = get_phi_ss_at_quantile(PHI_SETUP[self.phi_model],
+        PHI_SETUP['global_linear'] = PHI_SS_GLOBAL_LINEAR
+        self.PHI_SS = get_phi_ss_at_quantile_ACME(PHI_SETUP[self.phi_model],
                                              self.phi_ss_quantile)
         # if required setup phis2ss
         if self.ergodic:
@@ -422,10 +425,8 @@ class AlAtikSigmaModel(GMPE):
         """
         Returns the within-event standard deviation (phi)
         """
+        print('getting PHI')
         phi = get_phi_ss(imt, mag, self.PHI_SS)
-        if self.ergodic:
-            C = self.PHI_S2SS[imt]
-            phi = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
         
         # check if phi adjustment (2.6.6) is needed
         # -> if phi < 0.4 in middle branch and T is below 0.5 s
@@ -435,21 +436,21 @@ class AlAtikSigmaModel(GMPE):
 
         elif imt.period < 0.5 and self.phi_ss_quantile != 0.5:
             # compute phi at quantile 0.5 and take the maximum comp to 0.4
-            PHI_SS_0p5 = get_phi_ss_at_quantile(
+            PHI_SS_0p5 = get_phi_ss_at_quantile_ACME(
                                         PHI_SETUP[self.phi_model], 0.5)
             phi_0p5 = get_phi_ss(imt, mag, PHI_SS_0p5)
 
-            if self.ergodic:
-                C = self.PHI_S2SS[imt]
-                phi_0p5 = np.sqrt(phi_0p5 ** 2. + C["phi_s2ss"] ** 2.)
-            
             # make adjustment if needed
             phi = 0.4 + phi - phi_0p5 if phi_0p5 < 0.4 else phi
+
+        if self.ergodic:
+            C = self.PHI_S2SS[imt]
+            phi = np.sqrt(phi ** 2. + C["phi_s2ss"] ** 2.)
 
         return phi
 
 # PHI_SS2S coefficients, table 2.2 HID
-PHI_S2SS_BRB = CoeffsTable(sa_damping=5., table="""\
+PHI_S2SS_BRB = CoeffsTableACME(sa_damping=5., table="""\
     imt   phi_s2ss  
     PGA     0.0000 
     0.001   0.0000
@@ -460,3 +461,33 @@ PHI_S2SS_BRB = CoeffsTable(sa_damping=5., table="""\
     2.000   0.0111
     10.00   0.0111
     """)
+
+# Phi_ss coefficients for the global model
+PHI_SS_GLOBAL_LINEAR = CoeffsTableACME(sa_damping=5., table="""\
+imt     mean_a   var_a  mean_b  var_b
+pgv     0.5034  0.0609  0.3585  0.0316
+pga     0.5477  0.0731  0.3505  0.0412
+0.010   0.5477  0.0731  0.3505  0.0412
+0.020   0.5464  0.0727  0.3505  0.0416
+0.030   0.5450  0.0723  0.3505  0.0419
+0.040   0.5436  0.0720  0.3505  0.0422
+0.050   0.5424  0.0716  0.3505  0.0425
+0.075   0.5392  0.0707  0.3505  0.0432
+0.100   0.5361  0.0699  0.3505  0.0439
+0.150   0.5299  0.0682  0.3543  0.0453
+0.200   0.5240  0.0666  0.3659  0.0465
+0.250   0.5183  0.0651  0.3765  0.0476
+0.300   0.5127  0.0637  0.3876  0.0486
+0.400   0.5022  0.0611  0.4066  0.0503
+0.500   0.4923  0.0586  0.4170  0.0515
+0.750   0.4704  0.0535  0.4277  0.0526
+1.000   0.4519  0.0495  0.4257  0.0508
+1.500   0.4231  0.0439  0.4142  0.0433
+2.000   0.4026  0.0405  0.4026  0.0396
+3.000   0.3775  0.0371  0.3775  0.0366
+4.000   0.3648  0.0358  0.3648  0.0358
+5.000   0.3583  0.0353  0.3583  0.0356
+7.500   0.3529  0.0350  0.3529  0.0355
+10.00   0.3519  0.0350  0.3519  0.0355
+""")
+
