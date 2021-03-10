@@ -82,10 +82,10 @@ def event_based_risk(df, param, monitor):
         rndgen = MultiEventRNG(
             param['master_seed'], param['asset_correlation'], df.eid)
     for taxo, asset_df in assets_df.groupby('taxonomy'):
+        gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         with mon_risk:
-            ok = numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())
             out = crmodel.get_output(
-                taxo, asset_df, df[ok], param['sec_losses'], rndgen, AE=AE)
+                taxo, asset_df, gmf_df, param['sec_losses'], rndgen, AE=AE)
         with mon_agg:
             alt.aggregate(out, aggby)
         if param['avg_losses']:
