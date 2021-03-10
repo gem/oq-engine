@@ -230,7 +230,7 @@ class VulnerabilityFunction(object):
             cols = [col for col in ratio_df.columns if isinstance(col, int)]
             for eid, df in ratio_df.groupby('eid'):
                 pmf = []
-                for probs in df[cols].to_numpy():
+                for probs in df[cols].to_numpy():  # probs by asset
                     if probs.sum() == 0:  # oq-risk-tests/case_1g
                         # means are zeros for events below the threshold
                         continue
