@@ -106,20 +106,7 @@ class MultiEventRNG(object):
         :param beta: parameters of the beta distribution for the given event
         :returns: array of dtype float32 with the same shape as alpha and beta
         """
-        rng = self.rng[eid]
-        if isinstance(alpha, float):
-            size = 1
-            assert isinstance(beta, float)
-            alpha = numpy.array([alpha])
-            beta = numpy.array([beta])
-        else:
-            size = len(alpha)
-            assert len(beta) == size, (len(beta), size)
-        beta[beta == 0] = 1E-3  # cutoff to avoid the singularity
-        if self.asset_correlation:
-            return numpy.ones(size) * rng.beta(alpha, beta)
-        else:
-            return rng.beta(alpha, beta, size=size)
+        return self.rng[eid].beta(alpha, beta)
 
 
 def str2rsi(key):
