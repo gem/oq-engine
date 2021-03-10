@@ -28,7 +28,7 @@
         <occupancy occupants="6" period="night" />
       </occupancies>
     </asset>
-    <asset id="a2" number="2" area="150" taxonomy="tax1" >
+    <asset id="a2" number="2" area="150" taxonomy="tax2" >
       <location lon="-122.000" lat="38.1" />
       <costs>
         <cost type="structural" value="20000" />
