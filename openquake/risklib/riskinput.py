@@ -77,7 +77,7 @@ class MultiEventRNG(object):
     >>> epsgetter.normal(eid=1, size=3)
     array([-2.46861114, -2.46861114, -2.46861114])
     >>> epsgetter.beta(eid=1, alpha=1.1, beta=.1)
-    array([0.40714461])
+    0.4071446143850375
     """
     def __init__(self, master_seed, asset_correlation, eids):
         self.master_seed = master_seed
