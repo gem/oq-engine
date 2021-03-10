@@ -158,22 +158,25 @@ class VulnerabilityFunction(object):
         self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
         self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
 
-    def interpolate(self, gmvs):
+    def interpolate(self, gmf_df, col):
         """
-        :param gmvs:
-           array of intensity measure levels
+        :param gmf_df:
+           DataFrame of GMFs
         :returns:
-           interpolated loss ratios and covs
+           DataFrame of interpolated loss ratios and covs
         """
-        mean_covs = numpy.zeros((len(gmvs), 2))
+        gmvs = gmf_df[col].to_numpy()
+        dic = dict(eid=gmf_df.eid.to_numpy(),
+                   mean=numpy.zeros(len(gmvs)),
+                   cov=numpy.zeros(len(gmvs)))
         # gmvs are clipped to max(iml)
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         curve_ok = gmvs_curve[ok]
-        mean_covs[ok, 0] = self._mlr_i1d(curve_ok)
-        mean_covs[ok, 1] = self._cov_for(curve_ok)
-        return mean_covs
+        dic['mean'][ok] = self._mlr_i1d(curve_ok)
+        dic['cov'][ok] = self._cov_for(curve_ok)
+        return pandas.DataFrame(dic, gmf_df.sid)
 
     def survival(self, loss_ratio, mean, stddev):
         """
@@ -198,61 +201,78 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def sample(self, assets, mean_covs, gmf_df, rng, AE):
+    def sample(self, ratio_df, rng, AE, cutoff):
         """
-        :param assets: DataFrame with ordinal, value and site_id
-        :param mean_covs: (E, 2) loss ratios and covs
-        :param eids: E event IDs
+        :param ratio_df: DataFrame with loss ratios and asset values
         :param rng: a MultiEventRNG or None
+        :param AE: pair (A, E) with the total numbers of assets and events
+        :param cutoff: a function setting to zero losses below a threshold
         :returns: a matrix of loss ratios of shape (A, E)
         """
-        sids = assets.pop('site_id')
-        means = mean_covs[:, 0]
-        covs = mean_covs[:, 1]
-        ratios = sparse.dok_matrix(AE)
-        aids = assets.index.to_numpy()
+        losses = sparse.dok_matrix(AE)
         if self.distribution_name == 'LN':
-            if rng and self.covs.sum():
-                sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-                div = numpy.sqrt(1 + covs ** 2)
-                epsilons = rng.normal(len(assets), eids)
-                for aid, eps in zip(aids, epsilons):
-                    ratios[aid, eids] = means * numpy.exp(eps * sigma) / div
-            else:  # no CoVs
-                for eid, mean in zip(eids, means):
-                    ratios[aids, eid] = mean
+            for eid, df in ratio_df.groupby('eid'):
+                means = df['mean'].to_numpy()
+                covs = df['cov'].to_numpy()
+                vals = df['val'].to_numpy()
+                if rng and self.covs.sum():
+                    sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
+                    div = numpy.sqrt(1 + covs ** 2)
+                    eps = rng.normal(len(df), eid)
+                    losses[df.aid, eid] = cutoff(
+                        means * vals * numpy.exp(eps * sigma) / div)
+                else:  # no CoVs
+                    losses[df.aid, eid] = cutoff(means * vals)
         elif self.distribution_name == 'PM':
             lrs = F64(self.loss_ratios)  # when read from the datastore
             arange = numpy.arange(len(self.loss_ratios))
-            for e, eid in enumerate(eids):
-                if mean_covs[e].sum() == 0:  # oq-risk-tests/case_1g
-                    # means are zeros for events below the threshold
-                    continue
-                pmf = stats.rv_discrete(
-                    name='pmf', values=(arange, mean_covs[e]),
-                    seed=rng.master_seed + eid
-                ).rvs(size=len(aids))
-                ratios[aids, e] = lrs[pmf]
+            # the test 1g has E=8 events and C=7 columns
+            cols = [col for col in ratio_df.columns if isinstance(col, int)]
+            for eid, df in ratio_df.groupby('eid'):
+                pmf = []
+                for probs in df[cols].to_numpy():  # probs by asset
+                    if probs.sum() == 0:  # oq-risk-tests/case_1g
+                        # means are zeros for events below the threshold
+                        continue
+                    pmf.append(stats.rv_discrete(
+                        name='pmf', values=(arange, probs),
+                        seed=rng.master_seed + eid
+                    ).rvs())
+                losses[df.aid, eid] = cutoff(lrs[pmf] * df.val.to_numpy())
         elif self.distribution_name == 'BT':
-            stddevs = means * covs
-            alpha = _alpha(means, stddevs)
-            beta = _beta(means, stddevs)
-            ratios[aids, eids] = rng.beta(len(aids), eids, alpha, beta)
+            for eid, df in ratio_df.groupby('eid'):
+                means = df['mean'].to_numpy()
+                covs = df['cov'].to_numpy()
+                vals = df['val'].to_numpy()
+                stddevs = means * covs
+                alpha = _alpha(means, stddevs)
+                beta = _beta(means, stddevs)
+                losses[df.aid, eid] = cutoff(vals * rng.beta(
+                    len(df), eid, alpha, beta))
         else:
             raise NotImplementedError(self.distribution_name)
-        return ratios
+        return losses
 
-    def __call__(self, assets, gmf_df, col, rng, AE):
+    def __call__(self, asset_df, gmf_df, col, rng=None, AE=None, minloss=0):
         """
-        :param assets: A assets with fields ordinal, value, site_id
-        :param gmvs: E ground motion values
-        :param eids: E event IDs
+        :param asset_df: a DataFrame with A assets
+        :param gmf_df: a DataFrame of GMFs for the given assets
         :param rng: a MultiEventRNG or None
         :param AE: a pair of integers (A, E)
         :returns: a matrix of losses of shape (A, E)
         """
-        mean_covs = self.interpolate(gmf_df[col].to_numpy())
-        return self.sample(assets, mean_covs, gmf_df, rng, AE)
+        def cutoff(losses):
+            losses[losses < minloss] = 0
+            return losses
+        test = asset_df is None and AE is None
+        if test:  # in the tests
+            asset_df = pandas.DataFrame(dict(aid=0, val=1), [0])
+            AE = len(asset_df), len(gmf_df)
+        df = self.interpolate(gmf_df, col)
+        losses = self.sample(asset_df.join(df), rng, AE, cutoff)
+        if test:
+            losses = losses.todense()
+        return losses
 
     def strictly_increasing(self):
         """
@@ -426,20 +446,25 @@ class VulnerabilityFunctionWithPMF(VulnerabilityFunction):
 
     # MN: in the test gmvs_curve is of shape (5,), self.probs of shape (7, 8)
     # self.imls of shape (8,) and the returned means have shape (5, 7)
-    def interpolate(self, gmvs):
+    def interpolate(self, gmf_df, col):
         """
         :param gmvs:
-           array of intensity measure levels
+           DataFrame of GMFs
+        :param col:           name of the column to consider
         :returns:
-           interpolated probabilities of shape (E, L)
+           DataFrame of interpolated probabilities
         """
         # gmvs are clipped to max(iml)
-        out = numpy.zeros((len(self.probs), len(gmvs)))
+        M = len(self.probs)
+        gmvs = gmf_df[col].to_numpy()
+        dic = {m: numpy.zeros_like(gmvs) for m in range(M)}
+        dic['eid'] = gmf_df.eid.to_numpy()
         gmvs_curve = numpy.piecewise(
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
-        out[:, ok] = self._probs_i1d(gmvs_curve[ok])
-        return out.T
+        for m, probs in enumerate(self._probs_i1d(gmvs_curve[ok])):
+            dic[m][ok] = probs
+        return pandas.DataFrame(dic, gmf_df.sid)
 
     @lru_cache()
     def loss_ratio_exceedance_matrix(self, loss_ratios):

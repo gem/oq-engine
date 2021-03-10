@@ -324,31 +324,34 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 </nrml>""")
         vfs = {('structural', 'vulnerability'):
                nrml.to_python(vuln_model)['PGA', 'RC/A']}
-        vfs['structural', 'vulnerability'].seed = 42
         vfs['structural', 'vulnerability'].init()
-        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs)
-        assets = numpy.array([1, 1], [('value-structural', float)])
+        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs,
+                                  minimum_asset_loss=dict(structural=0))
+        assets = pandas.DataFrame(
+            {'site_id': [0, 0], 'value-structural': numpy.array([1, 1])})
         eids = numpy.array([0, 1, 2, 3, 4])
+        AE = len(assets), len(eids)
         gmvs = numpy.array([.1, .2, .3, .4, .5])
-        gmf_df = pandas.DataFrame(dict(gmv_0=gmvs, eid=eids))
+        gmf_df = pandas.DataFrame(dict(gmv_0=gmvs, eid=eids, sid=[0]*5))
 
         # compute the losses by considering all the events
         rndgen = riskinput.MultiEventRNG(42, 0, eids)
-        losses = rm('structural', assets, gmf_df, 'gmv_0', rndgen)
-        numpy.testing.assert_allclose(losses, self.expected_losses, rtol=1E-5)
+        losses = rm('structural', assets, gmf_df, 'gmv_0', rndgen, AE)
+        numpy.testing.assert_allclose(
+            losses.todense(), self.expected_losses, rtol=1E-5)
 
         # split the events in two blocks
         eids1 = numpy.array([0, 1])
         eids2 = numpy.array([2, 3, 4])
         gmvs1 = numpy.array([.1, .2])
         gmvs2 = numpy.array([.3, .4, .5])
-        gmf1_df = pandas.DataFrame(dict(gmv_0=gmvs1, eid=eids1))
-        gmf2_df = pandas.DataFrame(dict(gmv_0=gmvs2, eid=eids2))
+        gmf1_df = pandas.DataFrame(dict(gmv_0=gmvs1, eid=eids1, sid=[0]*2))
+        gmf2_df = pandas.DataFrame(dict(gmv_0=gmvs2, eid=eids2, sid=[0]*3))
         rndgen = riskinput.MultiEventRNG(42, 0, eids1)
-        losses1 = rm('structural', assets, gmf1_df, 'gmv_0', rndgen)
+        losses1 = rm('structural', assets, gmf1_df, 'gmv_0', rndgen, AE)
         rndgen = riskinput.MultiEventRNG(42, 0, eids2)
-        losses2 = rm('structural', assets, gmf2_df, 'gmv_0', rndgen)
-        numpy.testing.assert_allclose(losses1, self.expected_losses[:, :2],
-                                      rtol=1E-5)
-        numpy.testing.assert_allclose(losses2, self.expected_losses[:, 2:],
-                                      rtol=1E-5)
+        losses2 = rm('structural', assets, gmf2_df, 'gmv_0', rndgen, AE)
+        numpy.testing.assert_allclose(
+            losses1.todense()[:, :2], self.expected_losses[:, :2], rtol=1E-5)
+        numpy.testing.assert_allclose(
+            losses2.todense()[:, 2:], self.expected_losses[:, 2:], rtol=1E-5)

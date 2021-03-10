@@ -29,7 +29,6 @@ from openquake.baselib import hdf5
 from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property, groupby
 from openquake.hazardlib import valid, nrml, InvalidFile
-from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
@@ -180,20 +179,8 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
     return rlist
 
 
-def get_values(loss_type, assets, time_event=None):
-    """
-    :returns:
-        a numpy array with the values for the given assets, depending on the
-        loss_type.
-    """
     sid = assets['site_id']
-    if loss_type == 'occupants' and time_event:
-        val = assets['occupants_%s' % time_event]
-    else:
-        val = assets['value-' + loss_type]
     return pandas.DataFrame(dict(sid=sid, val=val), assets.index)
-
-
 loss_poe_dt = numpy.dtype([('loss', F64), ('poe', F64)])
 
 
@@ -288,7 +275,7 @@ class RiskModel(object):
         vf = self.risk_functions[loss_type, 'vulnerability']
         lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
-        values = get_values(loss_type, assets)
+        values = assets['value-' + loss_type]
         lrcurves = numpy.array(
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values)
@@ -359,19 +346,16 @@ class RiskModel(object):
         """
         :returns: an array of shape (A, E)
         """
-        values = get_values(loss_type, assets, self.time_event)  # val, site_id
-        vals = {sid: df.val for sid, df in values.groupby('site_id')}
+        sid = assets['site_id']
+        if loss_type == 'occupants' and self.time_event:
+            val = assets['occupants_%s' % self.time_event].to_numpy()
+        else:
+            val = assets['value-' + loss_type].to_numpy()
+        asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        mean_covs = vf.interpolate(gmf_df[col].to_numpy())
-        allmeans = []
-        alleids = []
-        allvalues = []
-        for sid, eid, mc in zip(gmf_df.sid, gmf_df.eid, mean_covs):
-            for val in vals[sid]:
-                allvalues.append(val)
-                allmeans.append(mc)
-                alleids.append(eid)
-        return vf.sample(allvalues, allmeans, alleids, rndgen, AE)
+        losses = vf(asset_df, gmf_df, col, rndgen, AE,
+                    self.minimum_asset_loss[loss_type])
+        return losses
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
@@ -418,6 +402,7 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     extra['lrem_steps_per_interval'] = oqparam.lrem_steps_per_interval
     extra['steps_per_interval'] = oqparam.steps_per_interval
     extra['time_event'] = oqparam.time_event
+    extra['minimum_asset_loss'] = oqparam.minimum_asset_loss
     if oqparam.calculation_mode == 'classical_bcr':
         extra['interest_rate'] = oqparam.interest_rate
         extra['asset_life_expectancy'] = oqparam.asset_life_expectancy
@@ -576,8 +561,6 @@ class CompositeRiskModel(collections.abc.Mapping):
                     iml[rf.imt].append(rf.imls[0])
         if sum(oq.minimum_intensity.values()) == 0 and iml:
             oq.minimum_intensity = {imt: min(ls) for imt, ls in iml.items()}
-        self.minimum_loss = {lt: getdefault(oq.minimum_asset_loss, lt)
-                             for lt in oq.loss_names}
 
     def eid_dmg_dt(self):
         """
@@ -707,11 +690,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    array = rm(lt, assets, haz, col, rndgen, AE)
-                    # array (A, E) for losses and (A, E, D) for damages
-                    if array.ndim == 2 and self.minimum_loss[lt]:
-                        array[array < self.minimum_loss[lt]] = 0
-                    arrays.append(array)
+                    arrays.append(rm(lt, assets, haz, col, rndgen, AE))
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
                     arrays.append(rm(lt, assets, hcurve))
