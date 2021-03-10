@@ -248,13 +248,12 @@ class VulnerabilityFunction(object):
                 stddevs = means * covs
                 ok = stddevs > 0
                 if ok.sum() == 0:
-                    # all GMVs are below the threshold
+                    # all GMVs are below the threshold, no losses
                     continue
-                means = means[ok]
-                stddevs = stddevs[ok]
+                stddevs[ok] = 1E-6  # cutoff to avoid singularities
                 alpha = _alpha(means, stddevs)
                 beta = _beta(means, stddevs)
-                losses[df.aid[ok], eid] = cutoff(
+                losses[df.aid, eid] = cutoff(
                     vals * rng.beta(eid, alpha, beta))
         else:
             raise NotImplementedError(self.distribution_name)
