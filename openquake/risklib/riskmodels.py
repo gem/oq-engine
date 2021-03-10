@@ -179,8 +179,6 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
     return rlist
 
 
-    sid = assets['site_id']
-    return pandas.DataFrame(dict(sid=sid, val=val), assets.index)
 loss_poe_dt = numpy.dtype([('loss', F64), ('poe', F64)])
 
 
