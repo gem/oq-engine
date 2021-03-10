@@ -238,7 +238,8 @@ class VulnerabilityFunction(object):
                         name='pmf', values=(arange, probs),
                         seed=rng.master_seed + eid
                     ).rvs())
-                losses[df.aid, eid] = cutoff(lrs[pmf] * df.val.to_numpy())
+                if pmf:
+                    losses[df.aid, eid] = cutoff(lrs[pmf] * df.val.to_numpy())
         elif self.distribution_name == 'BT':
             for eid, df in ratio_df.groupby('eid'):
                 means = df['mean'].to_numpy()
