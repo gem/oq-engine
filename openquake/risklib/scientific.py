@@ -244,12 +244,18 @@ class VulnerabilityFunction(object):
             for eid, df in ratio_df.groupby('eid'):
                 means = df['mean'].to_numpy()
                 covs = df['cov'].to_numpy()
-                covs[covs == 0] = 1E-6  # cutoff to avoid the singularity
                 vals = df['val'].to_numpy()
                 stddevs = means * covs
+                ok = stddevs > 0
+                if ok.sum() == 0:
+                    # all GMVs are below the threshold
+                    continue
+                means = means[ok]
+                stddevs = stddevs[ok]
                 alpha = _alpha(means, stddevs)
                 beta = _beta(means, stddevs)
-                losses[df.aid, eid] = cutoff(vals * rng.beta(eid, alpha, beta))
+                losses[df.aid[ok], eid] = cutoff(
+                    vals * rng.beta(eid, alpha, beta))
         else:
             raise NotImplementedError(self.distribution_name)
         return losses
