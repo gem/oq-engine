@@ -1,4 +1,4 @@
-#,,,,,,,,,,,"generated_by='OpenQuake engine 3.12.0-git0c40386a1a', start_date='2021-03-10T05:08:27', checksum=1301611540, investigation_time=1.0, risk_investigation_time=50.0"
+#,,,,,,,,,,,"generated_by='OpenQuake engine 3.12.0-gitb8d454c12d', start_date='2021-03-10T08:19:20', checksum=1301611540, investigation_time=1.0, risk_investigation_time=50.0"
 asset_id,cresta,occupancy,state,taxonomy,lon,lat,business_interruption,contents,nonstructural,occupants,structural
 a3,0.21,Com,02,tax1,-122.57000,38.11300,2.15936E+01,5.15035E+02,7.53973E+02,4.61497E-04,0.00000E+00
 a2,0.12,Res,01,tax2,-122.11400,38.11300,3.22368E+01,1.76873E+02,3.04345E+02,7.43892E-04,0.00000E+00

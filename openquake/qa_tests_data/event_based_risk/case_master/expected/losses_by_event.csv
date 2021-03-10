@@ -1,4 +1,4 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.12.0-git0c40386a1a', start_date='2021-03-10T05:08:27', checksum=1301611540, investigation_time=1.0, risk_investigation_time=50.0"
+#,,,,,,,,"generated_by='OpenQuake engine 3.12.0-gitb8d454c12d', start_date='2021-03-10T08:19:20', checksum=1301611540, investigation_time=1.0, risk_investigation_time=50.0"
 event_id,business_interruption,contents,nonstructural,occupants,structural,rlz_id,rup_id,year
 0,3.83304E+02,3.51606E+03,4.46355E+03,7.32166E-03,8.99335E+02,1,0,1
 1,2.23545E+02,2.11817E+03,5.12600E+03,4.66077E-03,2.03884E+02,5,1,1

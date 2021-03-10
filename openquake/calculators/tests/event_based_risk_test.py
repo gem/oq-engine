@@ -272,7 +272,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
 
-    def test_case_master1(self):
+    def test_case_master(self):
         # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
         # it looks like the cholesky decomposition is OS-dependent, so
         # the GMFs are different of macOS/Ubuntu20/Ubuntu18
@@ -300,7 +300,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check losses_by_tag
         fnames = export(
-            ('aggregate_by/avg_losses?tag=occupancy&kind=mean', 'csv'),
+            ('aggregate_by/avg_losses?tag=occupancy&kind=quantile-0.5', 'csv'),
             self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0],
                               delta=1E-4)
@@ -314,20 +314,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         df2 = self.calc.datastore.read_df('agg_curves-stats', 'assets')
         aae(df2.columns, ['agg_id', 'stat', 'lti', 'return_period', 'value'])
 
-    def test_case_master2(self):
-        self.run_calc(case_master.__file__, 'job.ini',
-                      calculation_mode='ebrisk', exports='',
-                      concurrent_tasks='4')
-
         fname = export(('agg_curves-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
-
-        fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avg_losses-mean.csv',
-                              fname, delta=1E-4)
-
-        fname = export(('agg_loss_table', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/elt.csv', fname, delta=1E-4)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
@@ -337,8 +325,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # aggregate by all loss types
         fnames = export(
-            ('aggregate_by/avg_losses?tag=taxonomy&tag=occupancy&kind=mean',
-             'csv'),
+            ('aggregate_by/avg_losses?tag=taxonomy&tag=occupancy&'
+             'kind=quantile-0.5', 'csv'),
             dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
