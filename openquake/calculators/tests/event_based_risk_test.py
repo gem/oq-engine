@@ -300,7 +300,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check losses_by_tag
         fnames = export(
-            ('aggregate_by/avg_losses?tag=occupancy&kind=mean', 'csv'),
+            ('aggregate_by/avg_losses?tag=occupancy&kind=quantile-0.5', 'csv'),
             self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0],
                               delta=1E-4)
@@ -337,8 +337,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # aggregate by all loss types
         fnames = export(
-            ('aggregate_by/avg_losses?tag=taxonomy&tag=occupancy&kind=mean',
-             'csv'),
+            ('aggregate_by/avg_losses?tag=taxonomy&tag=occupancy&'
+             'kind=quantile-0.5', 'csv'),
             dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
