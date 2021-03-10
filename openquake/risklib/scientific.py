@@ -214,37 +214,40 @@ class VulnerabilityFunction(object):
             for eid, df in ratio_df.groupby('eid'):
                 means = df['mean'].to_numpy()
                 covs = df['cov'].to_numpy()
+                vals = df['val'].to_numpy()
                 if rng and self.covs.sum():
                     sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                     div = numpy.sqrt(1 + covs ** 2)
                     eps = rng.normal(len(df), eid)
-                    losses[df.aid, eid] = cutoff(means * df.val * numpy.exp(
-                        eps * sigma) / div)
+                    losses[df.aid, eid] = cutoff(
+                        means * vals * numpy.exp(eps * sigma) / div)
                 else:  # no CoVs
-                    losses[df.aid, eid] = cutoff(means * df.val)
+                    losses[df.aid, eid] = cutoff(means * vals)
         elif self.distribution_name == 'PM':
             lrs = F64(self.loss_ratios)  # when read from the datastore
             arange = numpy.arange(len(self.loss_ratios))
             # the test 1g has E=8 events and C=7 columns
             cols = [col for col in ratio_df.columns if isinstance(col, int)]
             for eid, df in ratio_df.groupby('eid'):
-                probs = df[cols].to_numpy().flatten()
-                if probs.sum() == 0:  # oq-risk-tests/case_1g
-                    # means are zeros for events below the threshold
-                    continue
-                pmf = stats.rv_discrete(
-                    name='pmf', values=(arange, probs),
-                    seed=rng.master_seed + eid
-                ).rvs(size=len(df))
-                losses[df.aid, eid] = cutoff(lrs[pmf] * df.val)
+                pmf = []
+                for probs in df[cols].to_numpy():
+                    if probs.sum() == 0:  # oq-risk-tests/case_1g
+                        # means are zeros for events below the threshold
+                        continue
+                    pmf.append(stats.rv_discrete(
+                        name='pmf', values=(arange, probs),
+                        seed=rng.master_seed + eid
+                    ).rvs())
+                losses[df.aid, eid] = cutoff(lrs[pmf] * df.val.to_numpy())
         elif self.distribution_name == 'BT':
             for eid, df in ratio_df.groupby('eid'):
                 means = df['mean'].to_numpy()
                 covs = df['cov'].to_numpy()
+                vals = df['val'].to_numpy()
                 stddevs = means * covs
                 alpha = _alpha(means, stddevs)
                 beta = _beta(means, stddevs)
-                losses[df.aid, eid] = cutoff(df.val * rng.beta(
+                losses[df.aid, eid] = cutoff(vals * rng.beta(
                     len(df), eid, alpha, beta))
         else:
             raise NotImplementedError(self.distribution_name)
