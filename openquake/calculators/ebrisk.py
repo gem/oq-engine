@@ -81,23 +81,18 @@ def event_based_risk(df, param, monitor):
     else:
         rndgen = MultiEventRNG(
             param['master_seed'], param['asset_correlation'], df.eid)
-    for sid, asset_df in assets_df.groupby('site_id'):
-        try:
-            haz = haz_by_sid[sid]
-        except KeyError:  # no hazard here
-            continue
-        for taxo, assets in asset_df.groupby('taxonomy'):
-            with mon_risk:
-                out = crmodel.get_output(
-                    taxo, assets, haz, param['sec_losses'], rndgen, AE=AE)
-            with mon_agg:
-                alt.aggregate(out, aggby)
-                # NB: after the aggregation out contains losses
-            if param['avg_losses']:
-                with mon_avg:
-                    for lni, ln in enumerate(alt.loss_names):
-                        for (aid, eid), loss in out[ln].items():
-                            losses_by_A[aid, rlz_id[eid], lni] += loss
+    for taxo, asset_df in assets_df.groupby('taxonomy'):
+        with mon_risk:
+            ok = numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())
+            out = crmodel.get_output(
+                taxo, asset_df, df[ok], param['sec_losses'], rndgen, AE=AE)
+        with mon_agg:
+            alt.aggregate(out, aggby)
+        if param['avg_losses']:
+            with mon_avg:
+                for lni, ln in enumerate(alt.loss_names):
+                    for (aid, eid), loss in out[ln].items():
+                        losses_by_A[aid, rlz_id[eid], lni] += loss
 
     acc['alt'] = alt.to_dframe()
     if param['avg_losses']:

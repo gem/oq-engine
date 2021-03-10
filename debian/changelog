@@ -2,8 +2,9 @@
   * Fixed a bug in the agg_curves exporter with aggregate_by=id
   * Internal: changed how the agg_loss_table is stored
   * Fixed the avg_losses exporter when aggregate_by=id
-  * Merged the calculators scenario_risk and ebrisk and ensured independency
-    from the number of tasks even for the "BT" and "PM" distributions
+  * Fully merged the calculators scenario_risk, event_based_risk and ebrisk and
+    ensured independency from the number of tasks even for the "BT" and "PM"
+    distributions
   * Storing the agg_loss_table as 64 bit floats instead of 32 bit floats
   * Changed the algorithm used to generate the epsilons to avoid storing the
     epsilon matrix
