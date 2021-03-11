@@ -1,7 +1,7 @@
 name: playbook_ansible
 'on':
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 6 * * *"
 
 jobs:
 
