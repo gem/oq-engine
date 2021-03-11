@@ -211,7 +211,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.A = A = len(self.assetcol)
         self.L = L = len(alt.loss_names)
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
-                any(val == 0 for val in self.minimum_asset_loss.values())):
+                any(val == 0 for val in oq.minimum_asset_loss.values())):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
 
