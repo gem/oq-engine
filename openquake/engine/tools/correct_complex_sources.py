@@ -49,7 +49,7 @@ def fix_source_node(node):
     if node.tag.endswith('complexFaultSource'):
         geom = node.complexFaultGeometry
         top = geom.faultTopEdge
-        intermediate = [edge for edge in geom.getnodes('intermediateEdge')]
+        intermediate = list(geom.getnodes('intermediateEdge'))
         bottom = geom.faultBottomEdge
         edges = list(map(make_edge, [top] + intermediate + [bottom]))
         try:

@@ -1,0 +1,20 @@
+version = 1
+
+test_patterns = ["**tests/**"]
+
+exclude_patterns = [
+    "rpm/systemd/**",
+    "k8s/**",
+    "helpers/**",
+    "docker/**",
+    "demos/**",
+    "debian/**",
+    "bin/**"
+]
+
+[[analyzers]]
+name = "python"
+enabled = true
+
+  [analyzers.meta]
+  runtime_version = "3.x.x"

@@ -476,9 +476,6 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
             buf = 0.0001 * looptime
     # if pd is located at 2nd fault segment, then the DPP calculation will
     # keep going on the next fault patch
-    if n_seg == 2:
-        go_next_patch = True
-    else:
-        go_next_patch = False
+    go_next_patch = n_seg == 2
 
     return pd, e, go_next_patch

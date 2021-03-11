@@ -42,17 +42,17 @@ class BlockSplitterTestCase(unittest.TestCase):
             [6, 7, 8],
             [9],
         ]
-        actual = [x for x in block_splitter(self.DATA, 3)]
+        actual = list(block_splitter(self.DATA, 3))
         self.assertEqual(expected, actual)
 
     def test_block_splitter_block_size_eq_data_len(self):
         expected = [self.DATA]
-        actual = [x for x in block_splitter(self.DATA, 10)]
+        actual = list(block_splitter(self.DATA, 10))
         self.assertEqual(expected, actual)
 
     def test_block_splitter_block_size_gt_data_len(self):
         expected = [self.DATA]
-        actual = [x for x in block_splitter(self.DATA, 11)]
+        actual = list(block_splitter(self.DATA, 11))
         self.assertEqual(expected, actual)
 
     def test_block_splitter_zero_block_size(self):
@@ -75,7 +75,7 @@ class BlockSplitterTestCase(unittest.TestCase):
             [6, 7, 8],
             [9],
         ]
-        actual = [x for x in block_splitter(data, 3)]
+        actual = list(block_splitter(data, 3))
         self.assertEqual(expected, actual)
 
     def test_block_splitter_with_iter(self):
@@ -87,7 +87,7 @@ class BlockSplitterTestCase(unittest.TestCase):
             [6, 7, 8],
             [9],
         ]
-        actual = [x for x in block_splitter(data, 3)]
+        actual = list(block_splitter(data, 3))
         self.assertEqual(expected, actual)
 
     def test_split_with_weight(self):

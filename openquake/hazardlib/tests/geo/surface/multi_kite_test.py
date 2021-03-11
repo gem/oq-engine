@@ -19,7 +19,6 @@
 import unittest
 import numpy as np
 from openquake.hazardlib.geo import Point, Line, Mesh
-from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 

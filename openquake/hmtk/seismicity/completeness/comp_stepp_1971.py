@@ -251,8 +251,7 @@ class Stepp1971(BaseCatalogueCompleteness):
             * start_year: Earliest year found in the catalogue
             * time_bin: Bin edges of the time windows
         '''
-        cond = (isinstance(config['time_bin'], list) or
-                isinstance(config['time_bin'], np.ndarray))
+        cond = isinstance(config['time_bin'], (list, np.ndarray))
         if cond:
             # Check to make sure input years are in order from recent to oldest
             for ival in range(1, len(config['time_bin'])):
@@ -405,8 +404,7 @@ class Stepp1971(BaseCatalogueCompleteness):
             * model_line: Expected Poisson model
         '''
         fixed_slope = -0.5  # f'(log10(T^-0.5)) === 0.5
-        if isinstance(initial_values, list) or isinstance(initial_values,
-                                                          np.ndarray):
+        if isinstance(initial_values, (list, np.ndarray)):
             x_0 = initial_values
         else:
             x_0 = [-1.0, xdata[int(len(xdata) / 2)], xdata[0]]

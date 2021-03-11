@@ -64,7 +64,7 @@ def event_based_risk(df, param, monitor):
     acc = dict(events_per_sid=numpy.zeros(param['N'], U32))
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
     aggby = param['aggregate_by']
-    haz_by_sid = {s: d for s, d in df.groupby('sid')}
+    haz_by_sid = dict(df.groupby('sid'))
     AE = len(assets_df), len(rlz_id)
     ARL = len(assets_df), len(weights), len(alt.loss_names)
     losses_by_A = numpy.zeros(ARL, F32)

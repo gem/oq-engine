@@ -96,10 +96,7 @@ class CampbellBozorgnia2008(GMPE):
         # For spectral accelerations at periods between 0.0 and 0.25 s, Sa (T)
         # cannot be less than PGA on soil, therefore if the IMT is in this
         # period range it is necessary to calculate PGA on soil
-        if imt.name == 'SA' and imt.period > 0.0 and imt.period < 0.25:
-            get_pga_site = True
-        else:
-            get_pga_site = False
+        get_pga_site = bool(imt.name == 'SA' and imt.period > 0.0 and imt.period < 0.25)
         pga1100, pga_site = self._compute_imt1100(C_PGA,
                                                   sites,
                                                   rup,

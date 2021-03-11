@@ -131,7 +131,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         hyd = PMF([(1.0, 10.)])
         src = PointSource(sid, name, trt, mfd, rms, msr, rar, tom, usd, lsd,
                           loc, npd, hyd)
-        rups = [r for r in src.iter_ruptures()]
+        rups = list(src.iter_ruptures())
 
         # Compute distances
         param = 'closest_point'

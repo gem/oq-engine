@@ -385,7 +385,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         self.M = len(oq.imtls)
         self.L1 = oq.imtls.size // self.M
-        sources = encode([src_id for src_id in self.csm.source_info])
+        sources = encode(list(self.csm.source_info))
         size, msg = get_nbytes_msg(
             dict(N=self.N, R=self.R, M=self.M, L1=self.L1, Ns=self.Ns))
         ps = 'pointSource' in self.full_lt.source_model_lt.source_types

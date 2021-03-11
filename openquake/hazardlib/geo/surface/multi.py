@@ -460,7 +460,7 @@ class MultiSurface(BaseSurface):
         edge_sets = self._get_cartesian_edge_set()
         self.gc2_config = {}
         # Determine furthest two points apart
-        endpoint_set = numpy.vstack([cep for cep in self.cartesian_endpoints])
+        endpoint_set = numpy.vstack(list(self.cartesian_endpoints))
         dmat = squareform(pdist(endpoint_set))
         irow, icol = numpy.unravel_index(numpy.argmax(dmat), dmat.shape)
         # Join further points to form a vector (a_hat in Spudich & Chiou)

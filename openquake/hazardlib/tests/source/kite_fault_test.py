@@ -226,7 +226,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
             ppp(source.profiles, source.surface)
 
         if MAKE_MOVIES:
-            ruptures = [r for r in source.iter_ruptures()]
+            ruptures = list(source.iter_ruptures())
             self._ruptures_animation('test01', source.surface, ruptures,
                                      source.profiles)
 
@@ -248,6 +248,6 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         self.assertEqual(source.count_ruptures(), 28, msg)
 
         if MAKE_MOVIES:
-            ruptures = [r for r in source.iter_ruptures()]
+            ruptures = list(source.iter_ruptures())
             self._ruptures_animation('test02', source.surface, ruptures,
                                      source.profiles)

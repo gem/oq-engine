@@ -417,7 +417,6 @@ def get(xml, investigation_time=50., rupture_mesh_spacing=5.,
 
 
 if __name__ == '__main__':
-    import sys
     for fname in sys.argv[1:]:
         print('****** %s ******' % fname)
         print(read(fname).to_str())

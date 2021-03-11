@@ -210,8 +210,7 @@ class WriteStrainCsv(object):
             output_variables - Updated list of headers
         '''
         output_variables = list(strain.data)
-        cond = (isinstance(strain.target_magnitudes, np.ndarray) or
-                isinstance(strain.target_magnitudes, list))
+        cond = isinstance(strain.target_magnitudes, (np.ndarray, list))
         if cond:
             magnitude_list = ['%.3f' % mag for mag in strain.target_magnitudes]
         else:
