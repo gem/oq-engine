@@ -853,8 +853,7 @@ class HazardCalculator(BaseCalculator):
                           avg_losses=oq.avg_losses,
                           amplifier=self.amplifier,
                           sec_perils=sec_perils,
-                          ses_seed=oq.ses_seed,
-                          minimum_asset_loss=mal)
+                          ses_seed=oq.ses_seed)
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):

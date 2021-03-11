@@ -34,8 +34,8 @@ services:
      - oqdata:/home/openquake/oqdata
     # Uncomment to expose demos inside the container
     # - ../../demos:/home/openquake/demos:ro
-    # use different openquake.cfg from the docker image
-     - ./openquake.cfg:/etc/openquake/openquake.cfg
+    # Uncomment if want to use different openquake.cfg from the docker image
+    # - ./openquake.cfg:/opt/openquake/openquake.cfg
     networks:
      backend:
       aliases:
