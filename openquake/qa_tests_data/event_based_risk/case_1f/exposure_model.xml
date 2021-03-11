@@ -56,6 +56,20 @@
         <occupancy occupants="6" period="night" />
       </occupancies>
     </asset>
+    <asset id="a4" number="2" area="120" taxonomy="tax3" >
+      <location lon="-122.000" lat="38.1" />
+      <costs>
+        <cost type="structural" value="15000" />
+        <cost type="nonstructural" value="10000" />
+        <cost type="contents" value="8000" />
+        <cost type="business_interruption" value="9000" />
+      </costs>
+      <occupancies>
+        <occupancy occupants="2" period="day" />
+        <occupancy occupants="4" period="transit" />
+        <occupancy occupants="6" period="night" />
+      </occupancies>
+    </asset>
   </assets>
 </exposureModel>
 
