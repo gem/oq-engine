@@ -74,10 +74,10 @@ class MultiEventRNG(object):
 
     >>> epsgetter = MultiEventRNG(
     ...     master_seed=42, asset_correlation=1, eids=[0, 1, 2])
-    >>> epsgetter.normal(3, 1)
+    >>> epsgetter.normal(eid=1, size=3)
     array([-2.46861114, -2.46861114, -2.46861114])
-    >>> epsgetter.beta(3, 1, 1.1, .1)
-    array([0.40714461, 0.40714461, 0.40714461])
+    >>> epsgetter.beta(eid=1, alpha=1.1, beta=.1)
+    0.4071446143850375
     """
     def __init__(self, master_seed, asset_correlation, eids):
         self.master_seed = master_seed
@@ -87,10 +87,10 @@ class MultiEventRNG(object):
             ph = numpy.random.Philox(self.master_seed + eid)
             self.rng[eid] = numpy.random.Generator(ph)
 
-    def normal(self, size, eid):
+    def normal(self, eid, size):
         """
-        :param size: number of assets affected by the given event
         :param eid: event ID
+        :param size: number of assets affected by the given event
         :returns: array of dtype float32
         """
         rng = self.rng[eid]
@@ -99,18 +99,14 @@ class MultiEventRNG(object):
         else:
             return rng.normal(size=size)
 
-    def beta(self, size, eid, alpha, beta):
+    def beta(self, eid, alpha, beta):
         """
         :param eid: event ID
-        :param alpha: parameter of the beta distribution for the given event
-        :param beta: parameter of the beta distribution for the given event
-        :returns: array of dtype float32
+        :param alpha: parameters of the beta distribution for the given event
+        :param beta: parameters of the beta distribution for the given event
+        :returns: array of dtype float32 with the same shape as alpha and beta
         """
-        rng = self.rng[eid]
-        if self.asset_correlation:
-            return numpy.ones(size) * rng.beta(alpha, beta)
-        else:
-            return rng.beta(alpha, beta, size=size)
+        return self.rng[eid].beta(alpha, beta)
 
 
 def str2rsi(key):

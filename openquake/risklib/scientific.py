@@ -218,7 +218,7 @@ class VulnerabilityFunction(object):
                 if rng and self.covs.sum():
                     sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                     div = numpy.sqrt(1 + covs ** 2)
-                    eps = rng.normal(len(df), eid)
+                    eps = rng.normal(eid, len(df))
                     losses[df.aid, eid] = cutoff(
                         means * vals * numpy.exp(eps * sigma) / div)
                 else:  # no CoVs
@@ -246,10 +246,15 @@ class VulnerabilityFunction(object):
                 covs = df['cov'].to_numpy()
                 vals = df['val'].to_numpy()
                 stddevs = means * covs
+                zeros = stddevs == 0
+                if zeros.all():
+                    # all GMVs are below the threshold, no losses
+                    continue
+                elif zeros.any():
+                    stddevs[zeros] = 1E-10  # cutoff to avoid singularities
                 alpha = _alpha(means, stddevs)
                 beta = _beta(means, stddevs)
-                losses[df.aid, eid] = cutoff(vals * rng.beta(
-                    len(df), eid, alpha, beta))
+                losses[df.aid, eid] = cutoff(vals * rng.beta(eid, alpha, beta))
         else:
             raise NotImplementedError(self.distribution_name)
         return losses
