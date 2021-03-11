@@ -243,6 +243,7 @@ class VulnerabilityFunction(object):
         elif self.distribution_name == 'BT':
             for eid, df in ratio_df.groupby('eid'):
                 means = df['mean'].to_numpy()
+                import pdb; pdb.set_trace()
                 if (means == 0).all():
                     # all GMVs are below the threshold, no losses
                     continue
