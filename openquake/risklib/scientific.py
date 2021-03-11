@@ -21,6 +21,7 @@ This module includes the scientific API of the oq-risklib
 """
 import copy
 import bisect
+import warnings
 import itertools
 import collections
 from functools import lru_cache
@@ -31,6 +32,8 @@ from numpy.testing import assert_equal
 from scipy import interpolate, stats, sparse
 
 from openquake.baselib.general import CallableDict, AccumDict
+
+warnings.simplefilter("error", category=sparse.base.SparseEfficiencyWarning)
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -197,8 +200,8 @@ class VulnerabilityFunction(object):
             mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
             return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
         elif self.distribution_name == 'BT':
-            return stats.beta.sf(
-                loss_ratio, _alpha(mean, stddev), _beta(mean, stddev))
+            alpha, beta = _alpha_beta(mean, stddev)
+            return stats.beta.sf(loss_ratio, alpha, mean, stddev)
         else:
             raise NotImplementedError(self.distribution_name)
 
@@ -244,17 +247,21 @@ class VulnerabilityFunction(object):
         elif self.distribution_name == 'BT':
             for eid, df in ratio_df.groupby('eid'):
                 means = df['mean'].to_numpy()
-                if (means == 0).all():
+                zmeans = means == 0
+                if zmeans.all():
                     # all GMVs are below the threshold, no losses
                     continue
+                elif zmeans.any():
+                    means[zmeans] = 1E-10  # cutoff to avoid singularities
                 covs = df['cov'].to_numpy()
                 vals = df['val'].to_numpy()
                 stddevs = means * covs
-                zeros = stddevs == 0
-                if zeros.any():
-                    stddevs[zeros] = 1E-10  # cutoff to avoid singularities
-                alpha = _alpha(means, stddevs)
-                beta = _beta(means, stddevs)
+                zdevs = stddevs == 0
+                if zdevs.any():
+                    stddevs[zdevs] = 1E-10  # cutoff to avoid singularities
+                    # NB: 1E-10 would cause a negative alpha -1.00000000e+00!!
+                means[means == 1] = .999999999  # cutoff to avoid singularities
+                alpha, beta = _alpha_beta(means, stddevs)
                 losses[df.aid, eid] = cutoff(vals * rng.beta(eid, alpha, beta))
         else:
             raise NotImplementedError(self.distribution_name)
@@ -768,12 +775,9 @@ class FragilityModel(dict):
 # This is why having stddevs == 0 is an error and it is forbidden in
 # VulnerabilityFunction.__init__.
 
-def _alpha(mean, stddev):
-    return ((1 - mean) / stddev ** 2 - 1 / mean) * mean ** 2
-
-
-def _beta(mean, stddev):
-    return ((1 - mean) / stddev ** 2 - 1 / mean) * (mean - mean ** 2)
+def _alpha_beta(mean, stddev):
+    c = (1 - mean) / stddev ** 2 - 1 / mean
+    return c * mean ** 2, c * (mean - mean ** 2)
 
 
 #
