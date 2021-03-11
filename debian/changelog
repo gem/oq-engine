@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Weighted the heavy sources in parallel in event based calculations
   * Suppported zero coefficient of variations with the beta distribution
   * Fixed a bug in the agg_curves exporter with aggregate_by=id
   * Internal: changed how the agg_loss_table is stored
