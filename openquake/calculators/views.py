@@ -981,8 +981,9 @@ def view_biggest_ebr_task(token, dstore):
     maxtask = by_task.loc[by_task['size'].idxmax()]
     taxon = dstore['assetcol/tagcol'].taxonomy
     asset_df = dstore.read_df('assetcol/array', 'taxonomy')
+    nsites = asset_df.site_id.max() + 1
     sids = dstore['gmf_data/sid'][maxtask.start:maxtask.stop]
-    ne_by_sid = numpy.bincount(sids)
+    ne_by_sid = numpy.bincount(sids, minlength=nsites)
     eids = numpy.unique(dstore['gmf_data/sid'][maxtask.start:maxtask.stop])
     ne = len(eids)
     ser = asset_df.groupby('taxonomy').id.count()  # for the EBR demo
