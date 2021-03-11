@@ -243,14 +243,14 @@ class VulnerabilityFunction(object):
         elif self.distribution_name == 'BT':
             for eid, df in ratio_df.groupby('eid'):
                 means = df['mean'].to_numpy()
+                if (means == 0).all():
+                    # all GMVs are below the threshold, no losses
+                    continue
                 covs = df['cov'].to_numpy()
                 vals = df['val'].to_numpy()
                 stddevs = means * covs
                 zeros = stddevs == 0
-                if zeros.all():
-                    # all GMVs are below the threshold, no losses
-                    continue
-                elif zeros.any():
+                if zeros.any():
                     stddevs[zeros] = 1E-10  # cutoff to avoid singularities
                 alpha = _alpha(means, stddevs)
                 beta = _beta(means, stddevs)
