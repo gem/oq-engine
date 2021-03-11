@@ -136,7 +136,8 @@ class VulnerabilityFunction(object):
                 if lr == 0:  # possible with cov == 0
                     pass
                 elif lr > 1:
-                    raise ValueError('The meanLRs must be ≤ 1, got %s' % lr)
+                    raise ValueError(
+                        'The meanLRs must be below 1, got %s' % lr)
                 elif cov == 0 and anycovs:
                     raise ValueError(
                         'Found a zero coefficient of variation in %s' %
@@ -145,8 +146,8 @@ class VulnerabilityFunction(object):
                     # see https://github.com/gem/oq-engine/issues/4841
                     raise ValueError(
                         'The coefficient of variation %s > %s does not '
-                        'satisfy the requirement 0 < σ < sqrt[μ × (1 - μ)] '
-                        'in %s' % (cov, numpy.sqrt(1 / lr - 1), self))
+                        'satisfy the requirement 0 < sig < sqrt[mu × (1 - mu)]'
+                        ' in %s' % (cov, numpy.sqrt(1 / lr - 1), self))
 
         self.distribution_name = distribution
 
@@ -243,14 +244,14 @@ class VulnerabilityFunction(object):
         elif self.distribution_name == 'BT':
             for eid, df in ratio_df.groupby('eid'):
                 means = df['mean'].to_numpy()
+                if (means == 0).all():
+                    # all GMVs are below the threshold, no losses
+                    continue
                 covs = df['cov'].to_numpy()
                 vals = df['val'].to_numpy()
                 stddevs = means * covs
                 zeros = stddevs == 0
-                if zeros.all():
-                    # all GMVs are below the threshold, no losses
-                    continue
-                elif zeros.any():
+                if zeros.any():
                     stddevs[zeros] = 1E-10  # cutoff to avoid singularities
                 alpha = _alpha(means, stddevs)
                 beta = _beta(means, stddevs)
