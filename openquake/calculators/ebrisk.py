@@ -259,6 +259,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(gmf_bytes.sum()))
         else:  # start from GMFs
+            logging.info(views.view('biggest_ebr_task', self.datastore))
             smap = parallel.Starmap(
                 event_based_risk, self.gen_args(), h5=self.datastore.hdf5)
             smap.monitor.save('assets', self.assetcol.to_dframe())

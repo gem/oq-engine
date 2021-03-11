@@ -968,3 +968,38 @@ def view_zero_losses(token, dstore):
 
 def _get(df, sid):
     return df.loc[sid].to_dict()
+
+
+@view.add('biggest_ebr_task')
+def view_biggest_ebr_task(token, dstore):
+    """
+    Display the biggest event_based_risk task in terms of number of
+    events and assets
+    """
+    by_task = dstore.read_df('gmf_data/by_task')
+    by_task['size'] = by_task.stop - by_task.start
+    maxtask = by_task.loc[by_task['size'].idxmax()]
+    taxon = dstore['assetcol/tagcol'].taxonomy
+    asset_df = dstore.read_df('assetcol/array', 'taxonomy')
+    sids = dstore['gmf_data/sid'][maxtask.start:maxtask.stop]
+    ne_by_sid = numpy.bincount(sids)
+    eids = numpy.unique(dstore['gmf_data/sid'][maxtask.start:maxtask.stop])
+    ne = len(eids)
+    ser = asset_df.groupby('taxonomy').id.count()  # for the EBR demo
+    # taxonomy
+    # 1    2253
+    # 2    2253
+    # 3    2253
+    # 4    2253
+    # 5      51
+    max_assets = ser.max()
+    taxid = ser.idxmax()
+    tot = 0
+    for site_id in asset_df.loc[taxid].site_id:
+        tot += ne_by_sid[site_id]
+    na = tot / ne
+    hsize = humansize(tot * 8)
+    msg = "Biggest task #{:d}: {:_d} events x {:.1f} (of {:_d}) assets " \
+        "of taxonomy {}, {}".format(maxtask.task_no, ne, na, max_assets,
+                                    taxon[taxid], hsize)
+    return msg
