@@ -247,10 +247,11 @@ class VulnerabilityFunction(object):
                 vals = df['val'].to_numpy()
                 stddevs = means * covs
                 zeros = stddevs == 0
-                if zeros.all() == 0:
+                if zeros.all():
                     # all GMVs are below the threshold, no losses
                     continue
-                stddevs[zeros] = 1E-10  # cutoff to avoid singularities
+                elif zeros.any():
+                    stddevs[zeros] = 1E-10  # cutoff to avoid singularities
                 alpha = _alpha(means, stddevs)
                 beta = _beta(means, stddevs)
                 losses[df.aid, eid] = cutoff(vals * rng.beta(eid, alpha, beta))
