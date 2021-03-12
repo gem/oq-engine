@@ -224,7 +224,7 @@ class VulnerabilityFunction(object):
                     eps = rng.normal(eid, len(df))
                     losses[df.aid, eid] = cutoff(
                         means * vals * numpy.exp(eps * sigma) / div)
-                else:  # no CoVs
+                else:  # ignore_covs = true or all covs are really zero
                     losses[df.aid, eid] = cutoff(means * vals)
         elif self.distribution_name == 'PM':
             lrs = F64(self.loss_ratios)  # when read from the datastore
@@ -246,11 +246,13 @@ class VulnerabilityFunction(object):
         elif self.distribution_name == 'BT':
             for eid, df in ratio_df.groupby('eid'):
                 means = df['mean'].to_numpy()
-                covs = df['cov'].to_numpy()
                 vals = df['val'].to_numpy()
-                stddevs = means * covs
-                losses[df.aid, eid] = cutoff(
-                    vals * rng.beta(eid, means, stddevs))
+                if self.covs.sum():
+                    stddevs = means * df['cov'].to_numpy()
+                    losses[df.aid, eid] = cutoff(
+                        vals * rng.beta(eid, means, stddevs))
+                else:  # ignore_covs = true or all covs are really zero
+                    losses[df.aid, eid] = cutoff(means * vals)
         else:
             raise NotImplementedError(self.distribution_name)
         return losses
