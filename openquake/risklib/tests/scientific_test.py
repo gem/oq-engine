@@ -27,7 +27,8 @@ aaae = numpy.testing.assert_array_almost_equal
 eids = numpy.arange(3)
 
 
-def call(vf, gmvs, eids, rng=None):
+def call(vf, gmvs, eids):
+    rng = scientific.MultiEventRNG(42, eids)
     gmf_df = pandas.DataFrame(
         dict(eid=eids, gmv_0=gmvs, sid=numpy.zeros(len(eids))))
     return vf(None, gmf_df, 'gmv_0', rng)
@@ -126,20 +127,20 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             self.COVS_GOOD)
 
     def test_loss_ratio_interp_many_values(self):
-        expected_lrs = numpy.array([[0.01, 0.055, 1.]])
+        expected_lrs = numpy.array([[0.006926, 0.033077, 0.181509]])
         test_input = [0.005, 0.006, 0.0269]
         numpy.testing.assert_allclose(
-            expected_lrs, call(self.test_func, test_input, eids))
+            expected_lrs, call(self.test_func, test_input, eids), atol=1E-6)
 
     def test_loss_ratio_interp_many_values_clipped(self):
         # Given a list of IML values (abscissae), test for proper interpolation
         # of loss ratios (ordinates).
         # This test also ensures that input IML values are 'clipped' to the IML
         # range defined for the vulnerability function.
-        expected_lrs = numpy.array([[0., 0.055, 1.]])
+        expected_lrs = numpy.array([[0., 0.033077, 0.181509]])
         test_input = [0.00049, 0.006, 2.7]
         numpy.testing.assert_allclose(
-            expected_lrs, call(self.test_func, test_input, eids))
+            expected_lrs, call(self.test_func, test_input, eids), atol=1E-6)
 
     def test_cov_interp_many_values(self):
         expected_covs = numpy.array([0.3, 0.2, 10])
