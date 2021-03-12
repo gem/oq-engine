@@ -30,7 +30,7 @@ import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, sparse
 
-from openquake.baselib.general import CallableDict, AccumDict
+from openquake.baselib.general import CallableDict, AccumDict, humansize
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -274,9 +274,17 @@ class VulnerabilityFunction(object):
             cols = None
         sampler = Sampler(self.distribution_name, rng, covs, cols, minloss)
         loss_matrix = sparse.dok_matrix(AE)
-        for eid, df in ratio_df.groupby('eid'):
-            join = df.join(asset_df, how='inner')
-            loss_matrix[join.aid, eid] = sampler.get_losses(eid, join)
+        memory = ratio_df.memory_usage().sum()
+        print(humansize(memory))
+        if memory > 1E8:  # more then 100 MB
+            # perform a lot of small joins
+            for eid, df in ratio_df.groupby('eid'):
+                join = df.join(asset_df, how='inner')
+                loss_matrix[join.aid, eid] = sampler.get_losses(eid, join)
+        else:
+            # perform a single big join
+            for eid, df in ratio_df.join(asset_df, how='inner').groupby('eid'):
+                loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
         if testmode:
             loss_matrix = loss_matrix.todense()
         return loss_matrix
