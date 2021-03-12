@@ -25,7 +25,7 @@ import pandas
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.risklib import riskmodels, nrml_examples, riskinput
+from openquake.risklib import riskmodels, nrml_examples, scientific
 from openquake.qa_tests_data.scenario_damage import case_4b
 
 FF_DIR = os.path.dirname(case_4b.__file__)
@@ -335,7 +335,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         gmf_df = pandas.DataFrame(dict(gmv_0=gmvs, eid=eids, sid=[0]*5))
 
         # compute the losses by considering all the events
-        rndgen = riskinput.MultiEventRNG(42, 0, eids)
+        rndgen = scientific.MultiEventRNG(42, eids)
         losses = rm('structural', assets, gmf_df, 'gmv_0', rndgen, AE)
         numpy.testing.assert_allclose(
             losses.todense(), self.expected_losses, rtol=1E-5)
@@ -347,9 +347,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         gmvs2 = numpy.array([.3, .4, .5])
         gmf1_df = pandas.DataFrame(dict(gmv_0=gmvs1, eid=eids1, sid=[0]*2))
         gmf2_df = pandas.DataFrame(dict(gmv_0=gmvs2, eid=eids2, sid=[0]*3))
-        rndgen = riskinput.MultiEventRNG(42, 0, eids1)
+        rndgen = scientific.MultiEventRNG(42, eids1)
         losses1 = rm('structural', assets, gmf1_df, 'gmv_0', rndgen, AE)
-        rndgen = riskinput.MultiEventRNG(42, 0, eids2)
+        rndgen = scientific.MultiEventRNG(42, eids2)
         losses2 = rm('structural', assets, gmf2_df, 'gmv_0', rndgen, AE)
         numpy.testing.assert_allclose(
             losses1.todense()[:, :2], self.expected_losses[:, :2], rtol=1E-5)

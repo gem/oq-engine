@@ -19,7 +19,7 @@
 import numpy
 import pandas
 import unittest
-from openquake.risklib import scientific, riskinput
+from openquake.risklib import scientific
 
 EIDS = numpy.arange(10)
 GMF = (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
@@ -70,7 +70,7 @@ def call(vf, gmvs, eids, rng=None):
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.RNG = riskinput.MultiEventRNG(42, 0, EIDS)
+        self.RNG = scientific.MultiEventRNG(42, EIDS)
         self.vulnerability_function1 = scientific.VulnerabilityFunction(
             'VF1', 'PGA',
             [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52],
