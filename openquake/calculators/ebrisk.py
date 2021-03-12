@@ -79,8 +79,12 @@ def event_based_risk(df, param, monitor):
         if param['avg_losses']:
             with mon_avg:
                 for lni, ln in enumerate(alt.loss_names):
-                    for (aid, eid), loss in out[ln].items():
-                        losses_by_A[aid, rlz_id[eid], lni] += loss
+                    coo = out[ln].tocoo()
+                    ldf = pandas.DataFrame(dict(aid=coo.row, loss=coo.data,
+                                                rlz=rlz_id[coo.col]))
+                    tot = ldf.groupby(['aid', 'rlz']).sum()
+                    for (aid, rlz), loss in zip(tot.index, tot.loss):
+                        losses_by_A[aid, rlz, lni] = loss
 
     acc['alt'] = alt.to_dframe()
     if param['avg_losses']:
