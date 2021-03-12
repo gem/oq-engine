@@ -317,6 +317,9 @@ class AlAtikSigmaModel(GMPE):
         Corner period given as:
         10^(-1.884 - log10(D_sigma)/3 + 0.5*Mw)
         where D_sigma = 80 bars (8 MPa)
+        
+        from 2.6.5:
+        cornerp is to be constrained to not go below 1.0
         """
         D_sigma = 80
         cornerp = 10**(-1.884 - np.log10(D_sigma)/3 + 0.5*mag)
@@ -324,19 +327,31 @@ class AlAtikSigmaModel(GMPE):
             cornerp = 1.0
         return cornerp
 
-    def get_capping_period(self, cornerp, gmpe):
+    def get_capping_period(self, cornerp, gmpe, imt):
         """
         Capping period is the smaller of the corner period and the
         max period of coefficents provided by the GMPE
         """
         try:
-            highest_period = max(gmpe.COEFFS.sa_coeffs).period
+            coeffs = gmpe.COEFFS.sa_coeffs
+            imts = [*coeffs]
+            periods = [imt.period for imt in imts]
+            highest_period = periods[-1]
+            second_highest = periods[-2]
         except AttributeError:
-            highest_period = max(gmpe.TAB2.sa_coeffs).period
-        cappingp = min(highest_period, cornerp)
+            coeffs = gmpe.TAB2.sa_coeffs
+            imts = [*coeffs]
+            periods = [imt.period for imt in imts]
+            highest_period = periods[-1]
+            second_highest = periods[-2]
+
         if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
-            cappingp = 1.0
-        return cappingp
+            # increasing since 2019 from 1.0
+            highest_period = 2.0
+            second_highest = [p for p in periods if p < highest_period][-1]
+            print(highest_period, second_highest)
+        return highest_period, second_highest
+        #return cappingp, ind_1, ind_2, highest_period, second_highest
 
     def get_disp_from_acc(self, acc, imt):
         """
@@ -364,27 +379,62 @@ class AlAtikSigmaModel(GMPE):
         acc = np.log(disp * (2 * np.pi / imt)**2)
         return acc
 
+    def extrapolate_in_PSA(self, sites, rup, dists, imt_high, 
+                           imt_second, stds_types, imt):
+        # get mean at highest imt
+        mean_high, _ = self.gmpe.get_mean_and_stddevs(
+                sites, rup, dists, SA(imt_high), stds_types)
+        
+        mean_low, _ = self.gmpe.get_mean_and_stddevs(
+                sites, rup, dists, SA(imt_second), stds_types)
+
+        delta_y = mean_high - mean_low
+        delta_x = imt_high - imt_second
+
+        mean = mean_high + (delta_y/delta_x) * (imt - imt_high)
+
+        return mean, _
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types, 
                              extr=True):
 
         nsites = len(sites)
         stddevs = self.get_stddevs(rup.mag, imt, stds_types, nsites)
-
-        # compute corner frequency and capping period
+        
         cornerp = self.get_corner_period(rup.mag)
-        cappingp = self.get_capping_period(cornerp, self.gmpe)
+        # capping period only compares 
+        # - highest period with a coefficient
+        # - corner period
+        # - 2.0 if it's bindi 
+        hp, sp = self.get_capping_period(cornerp, self.gmpe, imt)
 
-        # apply extrapolation to periods > cappingp
-        if extr and imt.period > cappingp:
-            # compute acceleration at the capping period
-            mean, _ = self.gmpe.get_mean_and_stddevs(
-                sites, rup, dists, SA(cappingp), stds_types)
-            # convert to spectral displacement at the capping period
-            disp = self.get_disp_from_acc(mean, cappingp)
-            mean = self.get_acc_from_disp(disp, imt.period)
-        else:
+        # 1 - if imt.period < cornerp, no changes needed
+        if extr and imt.period <= cornerp and imt.period <= hp:
             mean, _ = self.gmpe.get_mean_and_stddevs(
                 sites, rup, dists, imt, stds_types)
+        # if the period is larger than the corner period but the corner period
+        # is less than the highest period
+        elif extr and imt.period >= cornerp and cornerp <= hp:
+            mean, _ = self.gmpe.get_mean_and_stddevs(
+                sites, rup, dists, SA(cornerp), stds_types)
+            disp = self.get_disp_from_acc(mean, cornerp)
+            mean = self.get_acc_from_disp(disp, imt.period)
+        # if the corner period is longer than highest and imt is above
+        # highets but below corner
+        elif extr and cornerp > hp and imt.period >= hp and imt.period < cornerp:
+            mean, _ = self.extrapolate_in_PSA(sites, rup, dists,
+                                hp, sp, stds_types, imt.period)
+        elif extr and cornerp > hp and imt.period >= cornerp:
+            mean, _ = self.extrapolate_in_PSA(sites, rup, dists,
+                                hp, sp, stds_types, cornerp)
+            disp = self.get_disp_from_acc(mean, cornerp)
+            mean = self.get_acc_from_disp(disp, imt.period)
+
+        else:
+            print('using regular computation! check if meant to extrapolate')
+            mean, _ = self.gmpe.get_mean_and_stddevs(
+                sites, rup, dists, imt, stds_types)
+
 
         kappa = 1
         if self.kappa_file:
@@ -425,7 +475,6 @@ class AlAtikSigmaModel(GMPE):
         """
         Returns the within-event standard deviation (phi)
         """
-        print('getting PHI')
         phi = get_phi_ss(imt, mag, self.PHI_SS)
         
         # check if phi adjustment (2.6.6) is needed
