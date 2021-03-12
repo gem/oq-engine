@@ -336,22 +336,20 @@ class AlAtikSigmaModel(GMPE):
             coeffs = gmpe.COEFFS.sa_coeffs
             imts = [*coeffs]
             periods = [imt.period for imt in imts]
-            highest_period = periods[-1]
-            second_highest = periods[-2]
+            if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
+                highest_period = 2.0
+                periods = [p for p in periods if p <= highest_period]
+            set_highest = periods[-5:]
         except AttributeError:
             coeffs = gmpe.TAB2.sa_coeffs
             imts = [*coeffs]
             periods = [imt.period for imt in imts]
-            highest_period = periods[-1]
-            second_highest = periods[-2]
+            if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
+                highest_period = 2.0
+                periods = [p for p in periods if p <= highest_period]
+            set_highest = periods[-5:]
 
-        if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
-            # increasing since 2019 from 1.0
-            highest_period = 2.0
-            second_highest = [p for p in periods if p < highest_period][-1]
-            print(highest_period, second_highest)
-        return highest_period, second_highest
-        #return cappingp, ind_1, ind_2, highest_period, second_highest
+        return set_highest
 
     def get_disp_from_acc(self, acc, imt):
         """
@@ -380,20 +378,31 @@ class AlAtikSigmaModel(GMPE):
         return acc
 
     def extrapolate_in_PSA(self, sites, rup, dists, imt_high, 
-                           imt_second, stds_types, imt):
-        # get mean at highest imt
-        mean_high, _ = self.gmpe.get_mean_and_stddevs(
-                sites, rup, dists, SA(imt_high), stds_types)
-        
-        mean_low, _ = self.gmpe.get_mean_and_stddevs(
-                sites, rup, dists, SA(imt_second), stds_types)
+                           set_imt, stds_types, imt):
 
-        delta_y = mean_high - mean_low
-        delta_x = imt_high - imt_second
+        extrap_mean = []
+        t_log10 = np.log10([im for im in set_imt])
+        from openquake.hazardlib.contexts import DistancesContext
+        for d in np.arange(0,len(dists.rjb)):
+            dist = DistancesContext()
+            if hasattr(dists, 'rjb'):
+                dist.rjb = np.array([dists.rjb[d]])
+            if hasattr(dists, 'rrup'):
+                dist.rrup= np.array([dists.rrup[d]])
+            means_log10 = []
+            for im in set_imt:
+                mean_ln, _ = self.gmpe.get_mean_and_stddevs(
+                                   sites, rup, dist, SA(im), stds_types)
+                mean = np.exp(mean_ln[0])
+                means_log10.append(np.log10(mean))
+                
+            mb = np.polyfit(t_log10, means_log10, 1)
+            mean_imt_log10 = mb[0] * np.log10(imt) + mb[1]
+            extrap_mean.append(np.log(10**mean_imt_log10))
+            _ = np.zeros_like(extrap_mean)
 
-        mean = mean_high + (delta_y/delta_x) * (imt - imt_high)
 
-        return mean, _
+        return extrap_mean, _
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types, 
                              extr=True):
@@ -406,7 +415,8 @@ class AlAtikSigmaModel(GMPE):
         # - highest period with a coefficient
         # - corner period
         # - 2.0 if it's bindi 
-        hp, sp = self.get_capping_period(cornerp, self.gmpe, imt)
+        sp = self.get_capping_period(cornerp, self.gmpe, imt)
+        hp = sp[-1]
 
         # 1 - if imt.period < cornerp, no changes needed
         if extr and imt.period <= cornerp and imt.period <= hp:
