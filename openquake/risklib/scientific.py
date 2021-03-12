@@ -200,8 +200,7 @@ class VulnerabilityFunction(object):
             mu = mean ** 2.0 / numpy.sqrt(variance + mean ** 2.0)
             return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
         elif self.distribution_name == 'BT':
-            alpha, beta = _alpha_beta(mean, stddev)
-            return stats.beta.sf(loss_ratio, alpha, mean, stddev)
+            return stats.beta.sf(loss_ratio, *_alpha_beta(mean, stddev))
         else:
             raise NotImplementedError(self.distribution_name)
 
@@ -787,8 +786,16 @@ class MultiEventRNG(object):
         :param eid: event ID
         :param means: array of floats in the range 0..1
         :param stddevs: array of floats in the range 0..1 with the same shape
-        :returns: array of floats
+        :returns: array of floats following the beta distribution
+
+        This function works properly even when some or all of the stddevs
+        are zero: in that case it returns the means since the distribution
+        becomes extremelyn peaked. It also works properly when some one or
+        all of the means are zero, returning zero in that case.
         """
+        # NB: you should not expect a smooth limit for the case of stddev->0
+        # since the random number generator will advance of a different number
+        # of steps with stddev == 0 and stddev != 0
         res = numpy.array(means)
         ok = (means != 0) & (stddevs != 0)  # nonsingular values
         alpha, beta = _alpha_beta(means[ok], stddevs[ok])
@@ -1431,10 +1438,10 @@ if __name__ == '__main__':
     ones = numpy.ones(100)
     vals = rng.beta(1, .5 * ones, .05 * ones)
     print(vals.mean(), vals.std())
-    #print(vals)
+    # print(vals)
     vals = rng.beta(1, .5 * ones, .01 * ones)
     print(vals.mean(), vals.std())
-    #print(vals)
+    # print(vals)
     plt.plot(x, beta(.5, .05), label='.5[.05]')
     plt.plot(x, beta(.5, .01), label='.5[.01]')
     plt.legend()
