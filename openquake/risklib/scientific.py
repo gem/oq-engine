@@ -74,10 +74,11 @@ def fine_graining(points, steps):
 
 # sampling functions
 class Sampler(object):
-    def __init__(self, distname, rng, covs, minloss=0):
+    def __init__(self, distname, rng, covs, cols=None, minloss=0):
         self.distname = distname
         self.rng = rng
         self.covs = covs
+        self.cols = cols
         self.minloss = minloss
         if distname == 'LN':
             self.get_aids_losses = self.sampleLN
@@ -92,7 +93,7 @@ class Sampler(object):
         losses[losses < self.minloss] = 0
         return losses
 
-    def sampleLN(self, eid, df, cols=None):
+    def sampleLN(self, eid, df):
         means = df['mean'].to_numpy()
         covs = df['cov'].to_numpy()
         vals = df['val'].to_numpy()
@@ -105,7 +106,7 @@ class Sampler(object):
         else:  # ignore_covs = true or all covs are really zero
             return df.aid.to_numpy(), self.cutoff(means * vals)
 
-    def sampleBT(self, eid, df, cols=None):
+    def sampleBT(self, eid, df):
         means = df['mean'].to_numpy()
         vals = df['val'].to_numpy()
         if self.covs.sum():
@@ -115,10 +116,10 @@ class Sampler(object):
         else:  # ignore_covs = true or all covs are really zero
             return df.aid.to_numpy(), self.cutoff(means * vals)
 
-    def samplePM(self, eid, df, cols):
+    def samplePM(self, eid, df):
         pmf = []
         arange = numpy.arange(len(self.covs))
-        for probs in df[cols].to_numpy():  # probs by asset
+        for probs in df[self.cols].to_numpy():  # probs by asset
             if probs.sum() == 0:  # oq-risk-tests/case_1g
                 # means are zeros for events below the threshold
                 continue
@@ -278,9 +279,9 @@ class VulnerabilityFunction(object):
         else:
             covs = self.covs
             cols = None
-        sampler = Sampler(self.distribution_name, rng, covs, minloss)
+        sampler = Sampler(self.distribution_name, rng, covs, cols, minloss)
         for eid, df in ratio_df.groupby(ratio_df.index):
-            aids, losses = sampler.get_aids_losses(eid, df, cols)
+            aids, losses = sampler.get_aids_losses(eid, df)
             loss_matrix[aids, eid] = losses
         return loss_matrix
 
