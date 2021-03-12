@@ -274,8 +274,9 @@ class VulnerabilityFunction(object):
             cols = None
         sampler = Sampler(self.distribution_name, rng, covs, cols, minloss)
         loss_matrix = sparse.dok_matrix(AE)
-        for eid, df in asset_df.join(ratio_df).groupby('eid'):
-            loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
+        for eid, df in ratio_df.groupby('eid'):
+            join = df.join(asset_df, how='inner')
+            loss_matrix[join.aid, eid] = sampler.get_losses(eid, join)
         if testmode:
             loss_matrix = loss_matrix.todense()
         return loss_matrix
