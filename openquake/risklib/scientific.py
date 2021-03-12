@@ -751,12 +751,12 @@ class MultiEventRNG(object):
     normally distributed random numbers.
     If the ``asset_correlation`` is 1 the numbers are the same.
 
-    >>> epsgetter = MultiEventRNG(
+    >>> rng = MultiEventRNG(
     ...     master_seed=42, eids=[0, 1, 2], asset_correlation=1)
-    >>> epsgetter.normal(eid=1, size=3)
+    >>> rng.normal(eid=1, size=3)
     array([-2.46861114, -2.46861114, -2.46861114])
-    >>> epsgetter.beta(eid=1, alpha=1.1, beta=.1)
-    0.4071446143850375
+    >>> rng.beta(1, means=numpy.array([.5]*3), stddevs=numpy.array([.05]*3))
+    array([0.4372343 , 0.57308132, 0.56392573])
     """
     def __init__(self, master_seed, eids, asset_correlation=0):
         self.master_seed = master_seed
