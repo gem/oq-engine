@@ -65,50 +65,6 @@ class RiskInput(object):
             self.__class__.__name__, sid, len(self.aids))
 
 
-class MultiEventRNG(object):
-    """
-    An object ``MultiEventRNG(master_seed, asset_correlation, eids)``
-    has a method ``.get(A, eids)`` which returns a matrix of (A, E)
-    normally distributed random numbers.
-    If the ``asset_correlation`` is 1 the numbers are the same.
-
-    >>> epsgetter = MultiEventRNG(
-    ...     master_seed=42, asset_correlation=1, eids=[0, 1, 2])
-    >>> epsgetter.normal(eid=1, size=3)
-    array([-2.46861114, -2.46861114, -2.46861114])
-    >>> epsgetter.beta(eid=1, alpha=1.1, beta=.1)
-    0.4071446143850375
-    """
-    def __init__(self, master_seed, asset_correlation, eids):
-        self.master_seed = master_seed
-        self.asset_correlation = asset_correlation
-        self.rng = {}
-        for eid in eids:
-            ph = numpy.random.Philox(self.master_seed + eid)
-            self.rng[eid] = numpy.random.Generator(ph)
-
-    def normal(self, eid, size):
-        """
-        :param eid: event ID
-        :param size: number of assets affected by the given event
-        :returns: array of dtype float32
-        """
-        rng = self.rng[eid]
-        if self.asset_correlation:
-            return numpy.ones(size) * rng.normal()
-        else:
-            return rng.normal(size=size)
-
-    def beta(self, eid, alpha, beta):
-        """
-        :param eid: event ID
-        :param alpha: parameters of the beta distribution for the given event
-        :param beta: parameters of the beta distribution for the given event
-        :returns: array of dtype float32 with the same shape as alpha and beta
-        """
-        return self.rng[eid].beta(alpha, beta)
-
-
 def str2rsi(key):
     """
     Convert a string of the form 'rlz-XXXX/sid-YYYY/ZZZ'

@@ -247,22 +247,11 @@ class VulnerabilityFunction(object):
         elif self.distribution_name == 'BT':
             for eid, df in ratio_df.groupby('eid'):
                 means = df['mean'].to_numpy()
-                zmeans = means == 0
-                if zmeans.all():
-                    # all GMVs are below the threshold, no losses
-                    continue
-                elif zmeans.any():
-                    means[zmeans] = 1E-10  # cutoff to avoid singularities
                 covs = df['cov'].to_numpy()
                 vals = df['val'].to_numpy()
                 stddevs = means * covs
-                zdevs = stddevs == 0
-                if zdevs.any():
-                    stddevs[zdevs] = 1E-10  # cutoff to avoid singularities
-                    # NB: 1E-10 would cause a negative alpha -1.00000000e+00!!
-                means[means == 1] = .999999999  # cutoff to avoid singularities
-                alpha, beta = _alpha_beta(means, stddevs)
-                losses[df.aid, eid] = cutoff(vals * rng.beta(eid, alpha, beta))
+                losses[df.aid, eid] = cutoff(
+                    vals * rng.beta(eid, means, stddevs))
         else:
             raise NotImplementedError(self.distribution_name)
         return losses
@@ -751,33 +740,60 @@ class FragilityModel(dict):
             self.__class__.__name__, self.lossCategory,
             self.limitStates, sorted(self))
 
+# ########################### random generators  ###########################
 
-# NB: the beta distribution `numpy.random.beta(alpha, beta)` is singular
-# if the beta array contains some zeros; this happens if the vulnerability
-# function has zero coefficients of variation (stddevs).
-# Even if you do something like this:
-#
-# res = numpy.zeros_like(alpha)
-# ok = beta !=0  # not singular
-# res[ok] = numpy.random.beta(alpha[ok], beta[ok])
-# res[~ok] = 1
-#
-# this is not going to give results close to you want expect by
-# setting stddev=.0000001 and mean=.0000001 (i.e. smoothly going
-# through the limit) even if the the seed is fixed. The reason is that
-# the random number generator will advance differently.  Suppose the
-# array size is 10 and there is a single singular value with beta=0
-# and 9 values with beta != 0; the call to numpy.random.beta(alpha, beta)
-# will advance the generator by 9 steps, while if you regularize the
-# singularity by using stddev=.0000001 and mean=.00000001 the random
-# generator will advance by 10 steps. The numbers produced by the beta
-# distribution will be quite different.
-# This is why having stddevs == 0 is an error and it is forbidden in
-# VulnerabilityFunction.__init__.
 
 def _alpha_beta(mean, stddev):
     c = (1 - mean) / stddev ** 2 - 1 / mean
     return c * mean ** 2, c * (mean - mean ** 2)
+
+
+class MultiEventRNG(object):
+    """
+    An object ``MultiEventRNG(master_seed, eids, asset_correlation=0)``
+    has a method ``.get(A, eids)`` which returns a matrix of (A, E)
+    normally distributed random numbers.
+    If the ``asset_correlation`` is 1 the numbers are the same.
+
+    >>> epsgetter = MultiEventRNG(
+    ...     master_seed=42, eids=[0, 1, 2], asset_correlation=1)
+    >>> epsgetter.normal(eid=1, size=3)
+    array([-2.46861114, -2.46861114, -2.46861114])
+    >>> epsgetter.beta(eid=1, alpha=1.1, beta=.1)
+    0.4071446143850375
+    """
+    def __init__(self, master_seed, eids, asset_correlation=0):
+        self.master_seed = master_seed
+        self.asset_correlation = asset_correlation
+        self.rng = {}
+        for eid in eids:
+            ph = numpy.random.Philox(self.master_seed + eid)
+            self.rng[eid] = numpy.random.Generator(ph)
+
+    def normal(self, eid, size):
+        """
+        :param eid: event ID
+        :param size: number of assets affected by the given event
+        :returns: array of dtype float32
+        """
+        rng = self.rng[eid]
+        if self.asset_correlation:
+            return numpy.ones(size) * rng.normal()
+        else:
+            return rng.normal(size=size)
+
+    def beta(self, eid, means, stddevs):
+        """
+        :param eid: event ID
+        :param means: array of floats in the range 0..1
+        :param stddevs: array of floats in the range 0..1 with the same shape
+        :returns: array of floats
+        """
+        res = numpy.array(means)
+        ok = (means != 0) & (stddevs != 0)  # nonsingular values
+        alpha, beta = _alpha_beta(means[ok], stddevs[ok])
+        res[ok] = self.rng[eid].beta(alpha, beta)
+        return res
 
 
 #
@@ -1398,3 +1414,28 @@ def economic_losses(coeffs, asset, dmgdist, loss_type):
     :returns: array of economic losses of length E
     """
     return dmgdist @ coeffs * asset['value-' + loss_type]
+
+
+if __name__ == '__main__':
+    # plots of the beta distribution in terms of mean and stddev
+    # see https://en.wikipedia.org/wiki/Beta_distribution
+    import matplotlib.pyplot as plt
+    x = numpy.arange(0, 1, .01)
+
+    def beta(mean, stddev):
+        a, b = _alpha_beta(numpy.array([mean]*100),
+                           numpy.array([stddev]*100))
+        return stats.beta.pdf(x, a, b)
+
+    rng = MultiEventRNG(42, [1])
+    ones = numpy.ones(100)
+    vals = rng.beta(1, .5 * ones, .05 * ones)
+    print(vals.mean(), vals.std())
+    #print(vals)
+    vals = rng.beta(1, .5 * ones, .01 * ones)
+    print(vals.mean(), vals.std())
+    #print(vals)
+    plt.plot(x, beta(.5, .05), label='.5[.05]')
+    plt.plot(x, beta(.5, .01), label='.5[.01]')
+    plt.legend()
+    plt.show()

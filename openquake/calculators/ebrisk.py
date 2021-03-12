@@ -25,8 +25,8 @@ import pandas
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
-from openquake.risklib.scientific import AggLossTable, InsuredLosses
-from openquake.risklib.riskinput import MultiEventRNG
+from openquake.risklib.scientific import (
+    AggLossTable, InsuredLosses, MultiEventRNG)
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -80,7 +80,7 @@ def event_based_risk(df, param, monitor):
         rndgen = None
     else:
         rndgen = MultiEventRNG(
-            param['master_seed'], param['asset_correlation'], df.eid)
+            param['master_seed'], df.eid, param['asset_correlation'])
     for taxo, asset_df in assets_df.groupby('taxonomy'):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         with mon_risk:
