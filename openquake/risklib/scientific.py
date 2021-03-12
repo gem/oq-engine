@@ -297,8 +297,8 @@ class VulnerabilityFunction(object):
         if test:  # in the tests
             asset_df = pandas.DataFrame(dict(aid=0, val=1), [0])
             AE = len(asset_df), len(gmf_df)
-        df = self.interpolate(gmf_df, col)
-        losses = self.sample(asset_df.join(df), rng, AE, minloss)
+        ratio_df = asset_df.join(self.interpolate(gmf_df, col), how='inner')
+        losses = self.sample(ratio_df, rng, AE, minloss)
         if test:
             losses = losses.todense()
         return losses
