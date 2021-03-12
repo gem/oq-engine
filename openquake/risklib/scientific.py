@@ -215,7 +215,7 @@ class VulnerabilityFunction(object):
                 means = df['mean'].to_numpy()
                 covs = df['cov'].to_numpy()
                 vals = df['val'].to_numpy()
-                if rng and self.covs.sum():
+                if self.covs.sum():
                     sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
                     div = numpy.sqrt(1 + covs ** 2)
                     eps = rng.normal(eid, len(df))

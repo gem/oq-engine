@@ -64,23 +64,11 @@ def event_based_risk(df, param, monitor):
     acc = dict(events_per_sid=numpy.zeros(param['N'], U32))
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
     aggby = param['aggregate_by']
-    haz_by_sid = {s: d for s, d in df.groupby('sid')}
     AE = len(assets_df), len(rlz_id)
     ARL = len(assets_df), len(weights), len(alt.loss_names)
     losses_by_A = numpy.zeros(ARL, F32)
-    acc['momenta'] = numpy.zeros((2, param['N'], param['M']))
-    cols = [col for col in df.columns if col not in {'sid', 'eid', 'rlz'}]
-    for sid, haz in haz_by_sid.items():
-        gmvs = haz[cols].to_numpy()
-        ws = weights[rlz_id[haz.eid.to_numpy()]]
-        acc['momenta'][:, sid] = stats.calc_momenta(
-            numpy.log(numpy.maximum(gmvs, param['min_iml'])), ws)
-        acc['events_per_sid'][sid] += len(haz)
-    if param['ignore_covs']:
-        rndgen = None
-    else:
-        rndgen = MultiEventRNG(
-            param['master_seed'], df.eid, param['asset_correlation'])
+    rndgen = MultiEventRNG(
+        param['master_seed'], df.eid, param['asset_correlation'])
     for taxo, asset_df in assets_df.groupby('taxonomy'):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         with mon_risk:
@@ -193,7 +181,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         M = len(oq.all_imts())
-        self.momenta = numpy.zeros((2, self.N, M))
         sec_losses = []
         if self.policy_dict:
             sec_losses.append(
@@ -285,7 +272,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if self.oqparam.avg_losses:
             self.avg_losses += dic['losses_by_A']
         self.events_per_sid += dic['events_per_sid']
-        self.momenta += dic['momenta']
 
     def post_execute(self, dummy):
         """
@@ -301,9 +287,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                  asset_id=self.assetcol['id'],
                                  loss_type=oq.loss_names)
         logging.info('Events per site: ~%d', self.events_per_sid.mean())
-        totw = self.datastore['weights'][:][self.rlzs].sum()
-        self.datastore['avg_gmf'] = numpy.exp(
-            stats.calc_avg_std(self.momenta, totw))
 
         # save agg_losses
         alt = self.datastore.read_df('agg_loss_table', 'event_id')

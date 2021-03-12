@@ -95,9 +95,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # this is a case with insured losses and tags
         self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4')
 
-        shp = self.calc.datastore['avg_gmf'].shape
-        self.assertEqual(shp, (2, 3, 5))  # 3 sites x 5 IMTs
-
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
