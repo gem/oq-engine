@@ -71,6 +71,67 @@ def fine_graining(points, steps):
                             for x, y in pairwise(points)])
     return numpy.concatenate([ls, [points[-1]]])
 
+
+# sampling functions
+class Sampler(object):
+    def __init__(self, distname, rng, covs, minloss=0):
+        self.distname = distname
+        self.rng = rng
+        self.covs = covs
+        self.minloss = minloss
+        if distname == 'LN':
+            self.get_aids_losses = self.sampleLN
+        elif distname == 'BT':
+            self.get_aids_losses = self.sampleBT
+        elif distname == 'PM':
+            self.get_aids_losses = self.samplePM
+        else:
+            raise NotImplementedError(distname)
+
+    def cutoff(self, losses):
+        losses[losses < self.minloss] = 0
+        return losses
+
+    def sampleLN(self, eid, df, cols=None):
+        means = df['mean'].to_numpy()
+        covs = df['cov'].to_numpy()
+        vals = df['val'].to_numpy()
+        if self.covs.sum():
+            sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
+            div = numpy.sqrt(1 + covs ** 2)
+            eps = self.rng.normal(eid, len(df))
+            return df.aid.to_numpy(), self.cutoff(
+                means * vals * numpy.exp(eps * sigma) / div)
+        else:  # ignore_covs = true or all covs are really zero
+            return df.aid.to_numpy(), self.cutoff(means * vals)
+
+    def sampleBT(self, eid, df, cols=None):
+        means = df['mean'].to_numpy()
+        vals = df['val'].to_numpy()
+        if self.covs.sum():
+            stddevs = means * df['cov'].to_numpy()
+            return df.aid.to_numpy(), self.cutoff(
+                vals * self.rng.beta(eid, means, stddevs))
+        else:  # ignore_covs = true or all covs are really zero
+            return df.aid.to_numpy(), self.cutoff(means * vals)
+
+    def samplePM(self, eid, df, cols):
+        pmf = []
+        arange = numpy.arange(len(self.covs))
+        for probs in df[cols].to_numpy():  # probs by asset
+            if probs.sum() == 0:  # oq-risk-tests/case_1g
+                # means are zeros for events below the threshold
+                continue
+            pmf.append(stats.rv_discrete(
+                name='pmf', values=(arange, probs),
+                seed=self.rng.master_seed + eid
+            ).rvs())
+        if pmf:
+            return df.aid.to_numpy(), self.cutoff(
+                self.covs[pmf] * df.val.to_numpy())
+        else:
+            return df.aid.to_numpy(), numpy.zeros(len(df.aid))
+
 #
 # Input models
 #
@@ -201,7 +262,7 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def sample(self, ratio_df, rng, AE, cutoff):
+    def sample(self, ratio_df, rng, AE, minloss):
         """
         :param ratio_df: DataFrame with loss ratios and asset values
         :param rng: a MultiEventRNG or None
@@ -209,50 +270,19 @@ class VulnerabilityFunction(object):
         :param cutoff: a function setting to zero losses below a threshold
         :returns: a matrix of loss ratios of shape (A, E)
         """
-        losses = sparse.dok_matrix(AE)
-        if self.distribution_name == 'LN':
-            for eid, df in ratio_df.groupby('eid'):
-                means = df['mean'].to_numpy()
-                covs = df['cov'].to_numpy()
-                vals = df['val'].to_numpy()
-                if self.covs.sum():
-                    sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-                    div = numpy.sqrt(1 + covs ** 2)
-                    eps = rng.normal(eid, len(df))
-                    losses[df.aid, eid] = cutoff(
-                        means * vals * numpy.exp(eps * sigma) / div)
-                else:  # ignore_covs = true or all covs are really zero
-                    losses[df.aid, eid] = cutoff(means * vals)
-        elif self.distribution_name == 'PM':
-            lrs = F64(self.loss_ratios)  # when read from the datastore
-            arange = numpy.arange(len(self.loss_ratios))
-            # the test 1g has E=8 events and C=7 columns
+        loss_matrix = sparse.dok_matrix(AE)
+        ratio_df = ratio_df.set_index('eid')
+        if self.distribution_name == 'PM':  # special case
+            covs = F64(self.loss_ratios)
             cols = [col for col in ratio_df.columns if isinstance(col, int)]
-            for eid, df in ratio_df.groupby('eid'):
-                pmf = []
-                for probs in df[cols].to_numpy():  # probs by asset
-                    if probs.sum() == 0:  # oq-risk-tests/case_1g
-                        # means are zeros for events below the threshold
-                        continue
-                    pmf.append(stats.rv_discrete(
-                        name='pmf', values=(arange, probs),
-                        seed=rng.master_seed + eid
-                    ).rvs())
-                if pmf:
-                    losses[df.aid, eid] = cutoff(lrs[pmf] * df.val.to_numpy())
-        elif self.distribution_name == 'BT':
-            for eid, df in ratio_df.groupby('eid'):
-                means = df['mean'].to_numpy()
-                vals = df['val'].to_numpy()
-                if self.covs.sum():
-                    stddevs = means * df['cov'].to_numpy()
-                    losses[df.aid, eid] = cutoff(
-                        vals * rng.beta(eid, means, stddevs))
-                else:  # ignore_covs = true or all covs are really zero
-                    losses[df.aid, eid] = cutoff(means * vals)
         else:
-            raise NotImplementedError(self.distribution_name)
-        return losses
+            covs = self.covs
+            cols = None
+        sampler = Sampler(self.distribution_name, rng, covs, minloss)
+        for eid, df in ratio_df.groupby(ratio_df.index):
+            aids, losses = sampler.get_aids_losses(eid, df, cols)
+            loss_matrix[aids, eid] = losses
+        return loss_matrix
 
     def __call__(self, asset_df, gmf_df, col, rng=None, AE=None, minloss=0):
         """
@@ -262,15 +292,12 @@ class VulnerabilityFunction(object):
         :param AE: a pair of integers (A, E)
         :returns: a matrix of losses of shape (A, E)
         """
-        def cutoff(losses):
-            losses[losses < minloss] = 0
-            return losses
         test = asset_df is None and AE is None
         if test:  # in the tests
             asset_df = pandas.DataFrame(dict(aid=0, val=1), [0])
             AE = len(asset_df), len(gmf_df)
         df = self.interpolate(gmf_df, col)
-        losses = self.sample(asset_df.join(df), rng, AE, cutoff)
+        losses = self.sample(asset_df.join(df), rng, AE, minloss)
         if test:
             losses = losses.todense()
         return losses
