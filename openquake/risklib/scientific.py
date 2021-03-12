@@ -275,7 +275,7 @@ class VulnerabilityFunction(object):
         sampler = Sampler(self.distribution_name, rng, covs, cols, minloss)
         loss_matrix = sparse.dok_matrix(AE)
         memory = ratio_df.memory_usage().sum()
-        print(humansize(memory))
+        print(humansize(memory), self.id)
         if memory > 1E8:  # more then 100 MB
             # perform a lot of small joins
             for eid, df in ratio_df.groupby('eid'):
