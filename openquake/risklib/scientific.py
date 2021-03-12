@@ -80,14 +80,7 @@ class Sampler(object):
         self.covs = covs
         self.cols = cols
         self.minloss = minloss
-        if distname == 'LN':
-            self.get_aids_losses = self.sampleLN
-        elif distname == 'BT':
-            self.get_aids_losses = self.sampleBT
-        elif distname == 'PM':
-            self.get_aids_losses = self.samplePM
-        else:
-            raise NotImplementedError(distname)
+        self.get_losses = getattr(self, 'sample' + distname)
 
     def cutoff(self, losses):
         losses[losses < self.minloss] = 0
@@ -95,26 +88,24 @@ class Sampler(object):
 
     def sampleLN(self, eid, df):
         means = df['mean'].to_numpy()
-        covs = df['cov'].to_numpy()
         vals = df['val'].to_numpy()
         if self.covs.sum():
+            covs = df['cov'].to_numpy()
             sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
             div = numpy.sqrt(1 + covs ** 2)
             eps = self.rng.normal(eid, len(df))
-            return df.aid.to_numpy(), self.cutoff(
-                means * vals * numpy.exp(eps * sigma) / div)
+            return self.cutoff(means * vals * numpy.exp(eps * sigma) / div)
         else:  # ignore_covs = true or all covs are really zero
-            return df.aid.to_numpy(), self.cutoff(means * vals)
+            return self.cutoff(means * vals)
 
     def sampleBT(self, eid, df):
         means = df['mean'].to_numpy()
         vals = df['val'].to_numpy()
         if self.covs.sum():
             stddevs = means * df['cov'].to_numpy()
-            return df.aid.to_numpy(), self.cutoff(
-                vals * self.rng.beta(eid, means, stddevs))
+            return self.cutoff(vals * self.rng.beta(eid, means, stddevs))
         else:  # ignore_covs = true or all covs are really zero
-            return df.aid.to_numpy(), self.cutoff(means * vals)
+            return self.cutoff(means * vals)
 
     def samplePM(self, eid, df):
         pmf = []
@@ -128,10 +119,9 @@ class Sampler(object):
                 seed=self.rng.master_seed + eid
             ).rvs())
         if pmf:
-            return df.aid.to_numpy(), self.cutoff(
-                self.covs[pmf] * df.val.to_numpy())
+            return self.cutoff(self.covs[pmf] * df.val.to_numpy())
         else:
-            return df.aid.to_numpy(), numpy.zeros(len(df.aid))
+            return numpy.zeros(len(df.aid))
 
 #
 # Input models
@@ -281,8 +271,7 @@ class VulnerabilityFunction(object):
             cols = None
         sampler = Sampler(self.distribution_name, rng, covs, cols, minloss)
         for eid, df in ratio_df.groupby(ratio_df.index):
-            aids, losses = sampler.get_aids_losses(eid, df)
-            loss_matrix[aids, eid] = losses
+            loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
         return loss_matrix
 
     def __call__(self, asset_df, gmf_df, col, rng=None, AE=None, minloss=0):
