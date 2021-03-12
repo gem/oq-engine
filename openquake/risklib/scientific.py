@@ -253,27 +253,6 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def sample(self, ratio_df, rng, AE, minloss):
-        """
-        :param ratio_df: DataFrame with loss ratios and asset values
-        :param rng: a MultiEventRNG or None
-        :param AE: pair (A, E) with the total numbers of assets and events
-        :param cutoff: a function setting to zero losses below a threshold
-        :returns: a matrix of loss ratios of shape (A, E)
-        """
-        loss_matrix = sparse.dok_matrix(AE)
-        ratio_df = ratio_df.set_index('eid')
-        if self.distribution_name == 'PM':  # special case
-            covs = F64(self.loss_ratios)
-            cols = [col for col in ratio_df.columns if isinstance(col, int)]
-        else:
-            covs = self.covs
-            cols = None
-        sampler = Sampler(self.distribution_name, rng, covs, cols, minloss)
-        for eid, df in ratio_df.groupby(ratio_df.index):
-            loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
-        return loss_matrix
-
     def __call__(self, asset_df, gmf_df, col, rng=None, AE=None, minloss=0):
         """
         :param asset_df: a DataFrame with A assets
@@ -282,15 +261,24 @@ class VulnerabilityFunction(object):
         :param AE: a pair of integers (A, E)
         :returns: a matrix of losses of shape (A, E)
         """
-        test = asset_df is None and AE is None
-        if test:  # in the tests
+        testmode = asset_df is None and AE is None
+        if testmode:  # in the tests
             asset_df = pandas.DataFrame(dict(aid=0, val=1), [0])
             AE = len(asset_df), len(gmf_df)
-        ratio_df = asset_df.join(self.interpolate(gmf_df, col), how='inner')
-        losses = self.sample(ratio_df, rng, AE, minloss)
-        if test:
-            losses = losses.todense()
-        return losses
+        ratio_df = self.interpolate(gmf_df, col)
+        if self.distribution_name == 'PM':  # special case
+            covs = F64(self.loss_ratios)
+            cols = [col for col in ratio_df.columns if isinstance(col, int)]
+        else:
+            covs = self.covs
+            cols = None
+        sampler = Sampler(self.distribution_name, rng, covs, cols, minloss)
+        loss_matrix = sparse.dok_matrix(AE)
+        for eid, df in asset_df.join(ratio_df).groupby('eid'):
+            loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
+        if testmode:
+            loss_matrix = loss_matrix.todense()
+        return loss_matrix
 
     def strictly_increasing(self):
         """
