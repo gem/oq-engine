@@ -21,7 +21,6 @@ This module includes the scientific API of the oq-risklib
 """
 import copy
 import bisect
-import warnings
 import itertools
 import collections
 from functools import lru_cache
@@ -32,8 +31,6 @@ from numpy.testing import assert_equal
 from scipy import interpolate, stats, sparse
 
 from openquake.baselib.general import CallableDict, AccumDict
-
-warnings.simplefilter("error", category=sparse.base.SparseEfficiencyWarning)
 
 F64 = numpy.float64
 F32 = numpy.float32
