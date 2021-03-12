@@ -20,6 +20,8 @@
 import os
 import sys
 import logging
+import warnings
+from scipy import sparse
 
 from openquake.baselib import sap
 from openquake import commands
@@ -35,12 +37,16 @@ if os.environ['OQ_DISTRIBUTE'] == 'celery' and 'run' in sys.argv:
           'Use oq engine --run instead!')
 
 
+# global settings, like logging and warnings
 def oq():
     args = set(sys.argv[1:])
     if 'engine' not in args and 'dbserver' not in args:
         # oq engine and oq dbserver define their own log levels
         level = logging.DEBUG if 'debug' in args else logging.INFO
         logging.basicConfig(level=level)
+
+    warnings.simplefilter(  # make sure we do not make efficiency errors
+        "error", category=sparse.base.SparseEfficiencyWarning)
     sap.run(commands, prog='oq')
 
 
