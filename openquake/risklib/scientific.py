@@ -267,13 +267,19 @@ class VulnerabilityFunction(object):
             lratios = ()
             cols = None
         sampler = Sampler(self.distribution_name, rng, lratios, cols, minloss)
-        loss_matrix = sparse.dok_matrix(AE)
         if not hasattr(self, 'covs') or self.covs.any():
+            loss_matrix = sparse.dok_matrix(AE)
             for eid, df in asset_df.join(ratio_df).groupby('eid'):
                 loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
+            loss_matrix = loss_matrix.tocoo()
         else:  # zero CoVs
-            for eid, df in asset_df.join(ratio_df).groupby('eid'):
-                loss_matrix[df.aid, eid] = sampler.cutoff(df['mean'] * df['val'])
+            df = ratio_df.join(asset_df, how='inner')
+            aids = df['aid'].to_numpy()
+            eids = df['eid'].to_numpy()
+            means = df['mean'].to_numpy()
+            vals = df['val'].to_numpy()
+            losses = sampler.cutoff(means * vals)
+            loss_matrix = sparse.coo_matrix((losses, (aids, eids)), AE)
         if testmode:
             loss_matrix = loss_matrix.todense()
         return loss_matrix
@@ -1341,7 +1347,8 @@ class AggLossTable(AccumDict):
         # aggregation
         K = len(self.aggkey) - 1
         for lni, ln in enumerate(self.loss_names):
-            for (aid, eid), loss in out[ln].items():
+            o = out[ln]
+            for aid, eid, loss in zip(o.row, o.col, o.data):
                 self[eid, K, lni] += loss
                 # this is the slow part, if aggregate_by is given
                 if kid:
