@@ -55,9 +55,10 @@ def event_based_risk(df, param, monitor):
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
-    with monitor('getting assets'):
+    with monitor('getting data'):
+        if hasattr(df, 'start'):  # it is actually a slice
+            df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
-    with monitor('getting crmodel'):
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = dstore['weights'][()]
@@ -186,7 +187,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
-        M = len(oq.all_imts())
         sec_losses = []
         if self.policy_dict:
             sec_losses.append(
@@ -337,5 +337,4 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         recs = self.datastore['gmf_data/by_task'][:]
         recs.sort(order='task_no')
         for task_no, start, stop in recs:
-            df = self.datastore.read_df('gmf_data', slc=slice(start, stop))
-            yield df, self.param
+            yield slice(start, stop), self.param
