@@ -259,7 +259,7 @@ class VulnerabilityFunction(object):
         if testmode:  # in the tests
             asset_df = pandas.DataFrame(dict(aid=0, val=1), [0])
             AE = len(asset_df), len(gmf_df)
-        ratio_df = self.interpolate(gmf_df, col)
+        ratio_df = self.interpolate(gmf_df, col)  # really fast
         if self.distribution_name == 'PM':  # special case
             lratios = F64(self.loss_ratios)
             cols = [col for col in ratio_df.columns if isinstance(col, int)]
