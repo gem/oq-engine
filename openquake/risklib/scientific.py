@@ -74,11 +74,12 @@ def fine_graining(points, steps):
 
 # sampling functions
 class Sampler(object):
-    def __init__(self, distname, rng, covs, cols=None, minloss=0):
+    def __init__(self, distname, rng, lratios=(), cols=None, minloss=0):
         self.distname = distname
         self.rng = rng
-        self.covs = covs
-        self.cols = cols
+        self.arange = numpy.arange(len(lratios))  # for the PM distribution
+        self.lratios = lratios  # for the PM distribution
+        self.cols = cols  # for the PM distribution
         self.minloss = minloss
         self.get_losses = getattr(self, 'sample' + distname)
 
@@ -89,37 +90,30 @@ class Sampler(object):
     def sampleLN(self, eid, df):
         means = df['mean'].to_numpy()
         vals = df['val'].to_numpy()
-        if self.covs.sum():
-            covs = df['cov'].to_numpy()
-            sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-            div = numpy.sqrt(1 + covs ** 2)
-            eps = self.rng.normal(eid, len(df))
-            return self.cutoff(means * vals * numpy.exp(eps * sigma) / div)
-        else:  # ignore_covs = true or all covs are really zero
-            return self.cutoff(means * vals)
+        covs = df['cov'].to_numpy()
+        sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
+        div = numpy.sqrt(1 + covs ** 2)
+        eps = self.rng.normal(eid, len(df))
+        return self.cutoff(means * vals * numpy.exp(eps * sigma) / div)
 
     def sampleBT(self, eid, df):
         means = df['mean'].to_numpy()
         vals = df['val'].to_numpy()
-        if self.covs.sum():
-            stddevs = means * df['cov'].to_numpy()
-            return self.cutoff(vals * self.rng.beta(eid, means, stddevs))
-        else:  # ignore_covs = true or all covs are really zero
-            return self.cutoff(means * vals)
+        stddevs = means * df['cov'].to_numpy()
+        return self.cutoff(vals * self.rng.beta(eid, means, stddevs))
 
     def samplePM(self, eid, df):
+        vals = df['val'].to_numpy()
         pmf = []
-        arange = numpy.arange(len(self.covs))
         for probs in df[self.cols].to_numpy():  # probs by asset
             if probs.sum() == 0:  # oq-risk-tests/case_1g
                 # means are zeros for events below the threshold
                 continue
             pmf.append(stats.rv_discrete(
-                name='pmf', values=(arange, probs),
-                seed=self.rng.master_seed + eid
-            ).rvs())
+                name='pmf', values=(self.arange, probs),
+                seed=self.rng.master_seed + eid).rvs())
         if pmf:
-            return self.cutoff(self.covs[pmf] * df.val.to_numpy())
+            return self.cutoff(self.lratios[pmf] * vals)
         else:
             return numpy.zeros(len(df.aid))
 
@@ -267,15 +261,19 @@ class VulnerabilityFunction(object):
             AE = len(asset_df), len(gmf_df)
         ratio_df = self.interpolate(gmf_df, col)
         if self.distribution_name == 'PM':  # special case
-            covs = F64(self.loss_ratios)
+            lratios = F64(self.loss_ratios)
             cols = [col for col in ratio_df.columns if isinstance(col, int)]
         else:
-            covs = self.covs
+            lratios = ()
             cols = None
-        sampler = Sampler(self.distribution_name, rng, covs, cols, minloss)
+        sampler = Sampler(self.distribution_name, rng, lratios, cols, minloss)
         loss_matrix = sparse.dok_matrix(AE)
-        for eid, df in asset_df.join(ratio_df).groupby('eid'):
-            loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
+        if not hasattr(self, 'covs') or self.covs.any():
+            for eid, df in asset_df.join(ratio_df).groupby('eid'):
+                loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
+        else:  # zero CoVs
+            for eid, df in asset_df.join(ratio_df).groupby('eid'):
+                loss_matrix[df.aid, eid] = sampler.cutoff(df['mean'] * df['val'])
         if testmode:
             loss_matrix = loss_matrix.todense()
         return loss_matrix
