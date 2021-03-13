@@ -74,11 +74,12 @@ def fine_graining(points, steps):
 
 # sampling functions
 class Sampler(object):
-    def __init__(self, distname, rng, covs, cols=None, minloss=0):
+    def __init__(self, distname, rng, lratios=(), cols=None, minloss=0):
         self.distname = distname
         self.rng = rng
-        self.covs = covs
-        self.cols = cols
+        self.arange = numpy.arange(len(lratios))  # for the PM distribution
+        self.lratios = lratios  # for the PM distribution
+        self.cols = cols  # for the PM distribution
         self.minloss = minloss
         self.get_losses = getattr(self, 'sample' + distname)
 
@@ -89,37 +90,30 @@ class Sampler(object):
     def sampleLN(self, eid, df):
         means = df['mean'].to_numpy()
         vals = df['val'].to_numpy()
-        if self.covs.sum():
-            covs = df['cov'].to_numpy()
-            sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-            div = numpy.sqrt(1 + covs ** 2)
-            eps = self.rng.normal(eid, len(df))
-            return self.cutoff(means * vals * numpy.exp(eps * sigma) / div)
-        else:  # ignore_covs = true or all covs are really zero
-            return self.cutoff(means * vals)
+        covs = df['cov'].to_numpy()
+        sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
+        div = numpy.sqrt(1 + covs ** 2)
+        eps = self.rng.normal(eid, len(df))
+        return self.cutoff(means * vals * numpy.exp(eps * sigma) / div)
 
     def sampleBT(self, eid, df):
         means = df['mean'].to_numpy()
         vals = df['val'].to_numpy()
-        if self.covs.sum():
-            stddevs = means * df['cov'].to_numpy()
-            return self.cutoff(vals * self.rng.beta(eid, means, stddevs))
-        else:  # ignore_covs = true or all covs are really zero
-            return self.cutoff(means * vals)
+        stddevs = means * df['cov'].to_numpy()
+        return self.cutoff(vals * self.rng.beta(eid, means, stddevs))
 
     def samplePM(self, eid, df):
+        vals = df['val'].to_numpy()
         pmf = []
-        arange = numpy.arange(len(self.covs))
         for probs in df[self.cols].to_numpy():  # probs by asset
             if probs.sum() == 0:  # oq-risk-tests/case_1g
                 # means are zeros for events below the threshold
                 continue
             pmf.append(stats.rv_discrete(
-                name='pmf', values=(arange, probs),
-                seed=self.rng.master_seed + eid
-            ).rvs())
+                name='pmf', values=(self.arange, probs),
+                seed=self.rng.master_seed + eid).rvs())
         if pmf:
-            return self.cutoff(self.covs[pmf] * df.val.to_numpy())
+            return self.cutoff(self.lratios[pmf] * vals)
         else:
             return numpy.zeros(len(df.aid))
 
@@ -265,17 +259,30 @@ class VulnerabilityFunction(object):
         if testmode:  # in the tests
             asset_df = pandas.DataFrame(dict(aid=0, val=1), [0])
             AE = len(asset_df), len(gmf_df)
-        ratio_df = self.interpolate(gmf_df, col)
+        ratio_df = self.interpolate(gmf_df, col)  # really fast
         if self.distribution_name == 'PM':  # special case
-            covs = F64(self.loss_ratios)
+            lratios = F64(self.loss_ratios)
             cols = [col for col in ratio_df.columns if isinstance(col, int)]
         else:
-            covs = self.covs
+            lratios = ()
             cols = None
-        sampler = Sampler(self.distribution_name, rng, covs, cols, minloss)
-        loss_matrix = sparse.dok_matrix(AE)
-        for eid, df in asset_df.join(ratio_df).groupby('eid'):
-            loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
+        sampler = Sampler(self.distribution_name, rng, lratios, cols, minloss)
+        if not hasattr(self, 'covs') or self.covs.any():  # slow lane
+            loss_matrix = sparse.dok_matrix(AE)
+            df = asset_df.join(ratio_df)
+            # print(df.memory_usage().sum())
+            for eid, df in df.groupby('eid'):
+                loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
+            loss_matrix = loss_matrix.tocoo()
+        else:  # fast lane for zero CoVs
+            df = ratio_df.join(asset_df, how='inner')
+            # print(df.memory_usage().sum())
+            aids = df['aid'].to_numpy()
+            eids = df['eid'].to_numpy()
+            means = df['mean'].to_numpy()
+            vals = df['val'].to_numpy()
+            losses = sampler.cutoff(means * vals)
+            loss_matrix = sparse.coo_matrix((losses, (aids, eids)), AE)
         if testmode:
             loss_matrix = loss_matrix.todense()
         return loss_matrix
@@ -1343,7 +1350,9 @@ class AggLossTable(AccumDict):
         # aggregation
         K = len(self.aggkey) - 1
         for lni, ln in enumerate(self.loss_names):
-            for (aid, eid), loss in out[ln].items():
+            # NB: the taxonomy mapping causes the csr format, we need to convert
+            out[ln] = o = out[ln].tocoo()
+            for aid, eid, loss in zip(o.row, o.col, o.data):
                 self[eid, K, lni] += loss
                 # this is the slow part, if aggregate_by is given
                 if kid:
@@ -1374,19 +1383,23 @@ class InsuredLosses(object):
         self.policy_dict = policy_dict
         self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def update(self, out):
+    def update(self, out, asset_df):
         """
-        :param out: a dictionary with keys assets and loss_types
+        :param out: a dictionary of sparse matrices keyed by loss_type
+        :param asset_df: a DataFrame of assets with index "ordinal"
         """
-        for asset in out['assets']:
-            aid = asset['ordinal']
-            policy_idx = asset[self.policy_name]
-            for lt in self.policy_dict:
+        for lt in self.policy_dict:
+            o = out[lt]
+            ins = sparse.dok_matrix(o.shape)
+            policy = self.policy_dict[lt]
+            for aid, eid, loss in zip(o.row, o.col, o.data):
+                asset = asset_df.loc[aid]
                 avalue = asset['value-' + lt]
-                ded, lim = self.policy_dict[lt][policy_idx]
-                mat = out[lt][aid].tocoo()
-                out[lt + '_ins'][aid, mat.col] = insured_losses(
-                    mat.data, ded * avalue, lim * avalue)
+                policy_idx = asset[self.policy_name]
+                ded, lim = policy[policy_idx]
+                ins[aid, eid] = insured_losses(
+                    loss, ded * avalue, lim * avalue)
+            out[lt + '_ins'] = ins.tocoo()
 
 
 # not used anymore
