@@ -334,7 +334,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         :yields: pairs (gmf_df, param)
         """
-        recs = self.datastore['gmf_data/by_task'][:]
-        recs.sort(order='task_no')
-        for task_no, start, stop in recs:
-            yield slice(start, stop), self.param
+        nrows = len(self.datastore['gmf_data/sid'])
+        ct = self.oqparam.concurrent_tasks or 1
+        for slc in general.split_in_slices(nrows, ct):
+            print(slc)
+            yield slc, self.param
