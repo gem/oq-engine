@@ -269,11 +269,14 @@ class VulnerabilityFunction(object):
         sampler = Sampler(self.distribution_name, rng, lratios, cols, minloss)
         if not hasattr(self, 'covs') or self.covs.any():  # slow lane
             loss_matrix = sparse.dok_matrix(AE)
-            for eid, df in asset_df.join(ratio_df).groupby('eid'):
+            df = asset_df.join(ratio_df)
+            # print(df.memory_usage().sum())
+            for eid, df in df.groupby('eid'):
                 loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
             loss_matrix = loss_matrix.tocoo()
         else:  # fast lane for zero CoVs
             df = ratio_df.join(asset_df, how='inner')
+            # print(df.memory_usage().sum())
             aids = df['aid'].to_numpy()
             eids = df['eid'].to_numpy()
             means = df['mean'].to_numpy()

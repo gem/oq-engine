@@ -71,6 +71,8 @@ def event_based_risk(df, param, monitor):
         param['master_seed'], df.eid, param['asset_correlation'])
     for taxo, asset_df in assets_df.groupby('taxonomy'):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
+        if len(gmf_df) == 0:
+            continue
         with mon_risk:
             out = crmodel.get_output(
                 taxo, asset_df, gmf_df, param['sec_losses'], rndgen, AE=AE)
