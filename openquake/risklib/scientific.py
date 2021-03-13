@@ -267,12 +267,12 @@ class VulnerabilityFunction(object):
             lratios = ()
             cols = None
         sampler = Sampler(self.distribution_name, rng, lratios, cols, minloss)
-        if not hasattr(self, 'covs') or self.covs.any():
+        if not hasattr(self, 'covs') or self.covs.any():  # slow lane
             loss_matrix = sparse.dok_matrix(AE)
             for eid, df in asset_df.join(ratio_df).groupby('eid'):
                 loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
             loss_matrix = loss_matrix.tocoo()
-        else:  # zero CoVs
+        else:  # fast lane for zero CoVs
             df = ratio_df.join(asset_df, how='inner')
             aids = df['aid'].to_numpy()
             eids = df['eid'].to_numpy()
@@ -1347,7 +1347,8 @@ class AggLossTable(AccumDict):
         # aggregation
         K = len(self.aggkey) - 1
         for lni, ln in enumerate(self.loss_names):
-            o = out[ln]
+            # NB: the taxonomy mapping causes the csr format, we need to convert
+            out[ln] = o = out[ln].tocoo()
             for aid, eid, loss in zip(o.row, o.col, o.data):
                 self[eid, K, lni] += loss
                 # this is the slow part, if aggregate_by is given
@@ -1379,19 +1380,23 @@ class InsuredLosses(object):
         self.policy_dict = policy_dict
         self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def update(self, out):
+    def update(self, out, asset_df):
         """
-        :param out: a dictionary with keys assets and loss_types
+        :param out: a dictionary of sparse matrices keyed by loss_type
+        :param asset_df: a DataFrame of assets with index "ordinal"
         """
-        for asset in out['assets']:
-            aid = asset['ordinal']
-            policy_idx = asset[self.policy_name]
-            for lt in self.policy_dict:
+        for lt in self.policy_dict:
+            o = out[lt]
+            ins = sparse.dok_matrix(o.shape)
+            policy = self.policy_dict[lt]
+            for aid, eid, loss in zip(o.row, o.col, o.data):
+                asset = asset_df.loc[aid]
                 avalue = asset['value-' + lt]
-                ded, lim = self.policy_dict[lt][policy_idx]
-                mat = out[lt][aid].tocoo()
-                out[lt + '_ins'][aid, mat.col] = insured_losses(
-                    mat.data, ded * avalue, lim * avalue)
+                policy_idx = asset[self.policy_name]
+                ded, lim = policy[policy_idx]
+                ins[aid, eid] = insured_losses(
+                    loss, ded * avalue, lim * avalue)
+            out[lt + '_ins'] = ins.tocoo()
 
 
 # not used anymore

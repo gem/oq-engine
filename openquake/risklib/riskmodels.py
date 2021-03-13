@@ -702,9 +702,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         # compute secondary losses, if any
         # FIXME: it should be moved up, before the computation of the mean
         for sec_loss in sec_losses:
-            for sec_lt in sec_loss.outputs:
-                dic[sec_lt] = scipy.sparse.dok_matrix(AE)
-            sec_loss.update(dic)
+            sec_loss.update(dic, assets)
         return dic
 
     def get_rmodels_weights(self, loss_type, taxidx):
