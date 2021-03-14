@@ -335,11 +335,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         :yields: pairs (gmf_df, param)
         """
-        logging.info('Splitting gmf_data')
         ct = self.oqparam.concurrent_tasks or 1
         eids = self.datastore['gmf_data/eid'][:]
         maxweight = len(eids) / ct
         start = stop = weight = 0
+        logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         for eid, group in itertools.groupby(eids):
             nsites = sum(1 for _ in group)
             stop += nsites
