@@ -1350,7 +1350,7 @@ class AggLossTable(AccumDict):
         # aggregation
         K = len(self.aggkey) - 1
         for lni, ln in enumerate(self.loss_names):
-            # NB: the taxonomy mapping causes the csr format, we need to convert
+            # NB: the taxonomy mapping causes the csr format, conversion needed
             out[ln] = o = out[ln].tocoo()
             for aid, eid, loss in zip(o.row, o.col, o.data):
                 self[eid, K, lni] += loss
