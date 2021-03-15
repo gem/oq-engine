@@ -167,7 +167,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                             'taxonomy=*').array  # shape (T, R) = (3, 2)
         if sys.platform != 'darwin':
             self.assertEqualFiles('expected/agglosses_taxo.txt',
-                                  gettemp(str(agglosses)))
+                                  gettemp(str(agglosses)), delta=1E-5)
 
         # extract agglosses with a * and a selection
         obj = extract(self.calc.datastore, 'agg_losses/structural?'
