@@ -1100,6 +1100,7 @@ def import_gmfs(dstore, oqparam, sids):
             gmvs = dic[sid]
             gmvlst.append(gmvs)
     data = numpy.concatenate(gmvlst)
+    data.sort(order='eid')
     create_gmf_data(dstore, len(oqparam.get_primary_imtls()),
                     oqparam.get_sec_imts(), data=data)
     dstore['weights'] = numpy.ones(1)

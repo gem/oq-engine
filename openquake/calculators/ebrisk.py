@@ -19,6 +19,7 @@
 import copy
 import logging
 import operator
+import itertools
 from datetime import datetime
 import numpy
 import pandas
@@ -340,7 +341,18 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         :yields: pairs (gmf_df, param)
         """
-        recs = self.datastore['gmf_data/by_task'][:]
-        recs.sort(order='task_no')
-        for task_no, start, stop in recs:
+        ct = self.oqparam.concurrent_tasks or 1
+        eids = self.datastore['gmf_data/eid'][:]
+        maxweight = len(eids) / ct
+        start = stop = weight = 0
+        logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
+        for eid, group in itertools.groupby(eids):
+            nsites = sum(1 for _ in group)
+            stop += nsites
+            weight += nsites
+            if weight > maxweight:
+                yield slice(start, stop), self.param
+                weight = 0
+                start = stop
+        if weight:
             yield slice(start, stop), self.param
