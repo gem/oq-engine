@@ -68,6 +68,8 @@ def event_based_risk(df, param, monitor):
     AE = len(assets_df), len(rlz_id)
     AR = len(assets_df), len(weights)
     EK1 = len(rlz_id), param['K'] + 1
+    losses_by_AR = {
+        ln: sparse.dok_matrix(AR) for ln in crmodel.oqparam.loss_names}
     losses_by_EK1 = {
         ln: sparse.dok_matrix(EK1) for ln in crmodel.oqparam.loss_names}
     rndgen = MultiEventRNG(
@@ -80,33 +82,33 @@ def event_based_risk(df, param, monitor):
             out = crmodel.get_output(
                 taxo, asset_df, gmf_df, param['sec_losses'], rndgen, AE=AE)
 
-        lba = {}  # loss_name -> losses_by_AR
         for lni, ln in enumerate(crmodel.oqparam.loss_names):
-            lbe = losses_by_EK1[ln]
             coo = out[ln].tocoo()  # shape (A, E)
+            if coo.getnnz() == 0:
+                continue
+            lba = losses_by_AR[ln]
+            lbe = losses_by_EK1[ln]
             with mon_agg:
                 ldf = pandas.DataFrame(dict(eid=coo.col, loss=coo.data))
                 if K:
                     ldf['kid'] = kids[coo.row]
-                    tot = ldf.groupby(['eid', 'kid']).sum()
-                    for (eid, kid), loss in zip(tot.index, tot.loss):
+                    tot = ldf.groupby(['eid', 'kid']).loss.sum()
+                    for (eid, kid), loss in zip(tot.index, tot.to_numpy()):
                         lbe[eid, kid] += loss
                 tot = ldf.groupby('eid').loss.sum()
                 for eid, loss in zip(tot.index, tot.to_numpy()):
                     lbe[eid, K] += loss
             if param['avg_losses']:
                 with mon_avg:
-                    if coo.getnnz():
-                        ldf = pandas.DataFrame(
-                            dict(aid=coo.row, loss=coo.data,
-                                 rlz=rlz_id[coo.col]))
-                        tot = ldf.groupby(['aid', 'rlz']).loss.sum()
-                        aids, rlzs = zip(*tot.index)
-                        losses_by_AR = sparse.coo_matrix(
-                            (tot.to_numpy(), (aids, rlzs)), AR)
-                        lba[ln] = losses_by_AR
-        yield lba
+                    ldf = pandas.DataFrame(
+                        dict(aid=coo.row, loss=coo.data,
+                             rlz=rlz_id[coo.col]))
+                    tot = ldf.groupby(['aid', 'rlz']).loss.sum()
+                    for (aid, rlz), loss in zip(tot.index, tot.to_numpy()):
+                        lba[aid, rlz] = loss
     for lni, ln in enumerate(crmodel.oqparam.loss_names):
+        if param['avg_losses']:
+            yield {ln: losses_by_AR[ln].tocoo()}
         lbe = losses_by_EK1[ln].tocoo()
         nnz = lbe.getnnz()
         if nnz:

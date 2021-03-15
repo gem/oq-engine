@@ -206,7 +206,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_2_correlation(self):
         self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation='1')
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_losses.csv', fname)
+        self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
 
         # test losses_by_tag with a single realization
         [fname] = export(
