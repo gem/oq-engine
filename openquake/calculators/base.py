@@ -1146,8 +1146,13 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
             kvs.append(key + val)
             lst.append(' '.join(val))
         dstore['agg_keys'] = numpy.array(kvs, dt)
-        key2i = {key: i for i, key in enumerate(aggkey)}
-        kids = [key2i[tuple(rec[aggby])] for rec in assetcol.array]
+        if aggby == ['id']:
+            kids = assetcol['ordinal']
+        elif aggby == ['site_id']:
+            kids = assetcol['site_id']
+        else:
+            key2i = {key: i for i, key in enumerate(aggkey)}
+            kids = [key2i[tuple(t)] for t in assetcol[aggby]]
         dstore['assetcol/kids'] = U16(kids)
     lst.append('*total*')
     dstore['agg_values'] = assetcol.get_agg_values(lossnames, aggby)
