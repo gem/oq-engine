@@ -68,8 +68,7 @@ def event_based_risk(df, param, monitor):
     AE = len(assets_df), len(rlz_id)
     AR = len(assets_df), len(weights)
     EK1 = len(rlz_id), param['K'] + 1
-    losses_by_AR = {
-        ln: sparse.dok_matrix(AR) for ln in crmodel.oqparam.loss_names}
+    losses_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
     losses_by_EK1 = {
         ln: sparse.dok_matrix(EK1) for ln in crmodel.oqparam.loss_names}
     rndgen = MultiEventRNG(
@@ -86,7 +85,6 @@ def event_based_risk(df, param, monitor):
             coo = out[ln].tocoo()  # shape (A, E)
             if coo.getnnz() == 0:
                 continue
-            lba = losses_by_AR[ln]
             lbe = losses_by_EK1[ln]
             with mon_agg:
                 ldf = pandas.DataFrame(dict(eid=coo.col, loss=coo.data))
@@ -104,11 +102,11 @@ def event_based_risk(df, param, monitor):
                         dict(aid=coo.row, loss=coo.data,
                              rlz=rlz_id[coo.col]))
                     tot = ldf.groupby(['aid', 'rlz']).loss.sum()
-                    for (aid, rlz), loss in zip(tot.index, tot.to_numpy()):
-                        lba[aid, rlz] = loss
+                    aids, rlzs = zip(*tot.index)
+                    losses_by_AR[ln].append(
+                        sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR))
+    yield losses_by_AR
     for lni, ln in enumerate(crmodel.oqparam.loss_names):
-        if param['avg_losses']:
-            yield {ln: losses_by_AR[ln].tocoo()}
         lbe = losses_by_EK1[ln].tocoo()
         nnz = lbe.getnnz()
         if nnz:
@@ -302,7 +300,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                         dset = self.datastore['agg_loss_table/' + name]
                         hdf5.extend(dset, ls[name].to_numpy())
                 else:  # summing avg_losses, fast
-                    self.avg_losses[ls.row, ls.col, lti[ln]] += ls.data
+                    for coo in ls:
+                        self.avg_losses[coo.row, coo.col, lti[ln]] += coo.data
 
     def post_execute(self, dummy):
         """
