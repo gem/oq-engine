@@ -81,7 +81,8 @@ def event_based_risk(df, param, monitor):
             alt.aggregate(out, aggby)
         if param['avg_losses']:
             with mon_avg:
-                for lni, ln in enumerate(alt.loss_names):
+                lba = {}  # loss_name -> losses_by_AR
+                for lni, ln in enumerate(crmodel.oqparam.loss_names):
                     coo = out[ln]
                     if coo.getnnz():
                         ldf = pandas.DataFrame(dict(aid=coo.row, loss=coo.data,
@@ -90,8 +91,8 @@ def event_based_risk(df, param, monitor):
                         aids, rlzs = zip(*tot.index)
                         losses_by_AR = sparse.coo_matrix(
                             (tot.to_numpy(), (aids, rlzs)), AR)
-                        yield lni, losses_by_AR
-
+                        lba[ln] = losses_by_AR
+                yield lba
     acc['alt'] = alt.to_dframe()
     yield acc
 
@@ -265,15 +266,17 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         :param dummy: unused parameter
         :param dic: dictionary or tuple (lni, losses_by_AR)
         """
-        with self.monitor('summing avg_losses'):
-            if isinstance(dic, tuple):  # for losses_by_AR
-                lni, losses = dic
-                self.avg_losses[losses.row, losses.col, lni] += losses.data
-                return
-        if 'gmf_info' in dic:
-            hdf5.extend(self.datastore['gmf_info'], dic.pop('gmf_info'))
         if not dic:
             return
+        if 'gmf_info' in dic:
+            hdf5.extend(self.datastore['gmf_info'], dic.pop('gmf_info'))
+            return
+        lti = self.oqparam.lti
+        with self.monitor('summing avg_losses'):
+            if 'alt' not in dic:  # for losses_by_AR
+                for ln, ls in dic.items():
+                    self.avg_losses[ls.row, ls.col, lti[ln]] += ls.data
+                return
         self.oqparam.ground_motion_fields = False  # hack
         with self.monitor('saving agg_loss_table'):
             df = dic['alt']
