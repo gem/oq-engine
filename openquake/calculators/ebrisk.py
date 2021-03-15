@@ -263,12 +263,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     def agg_dicts(self, dummy, dic):
         """
         :param dummy: unused parameter
-        :param dic: dictionary with keys alt, losses_by_A
+        :param dic: dictionary or tuple (lni, losses_by_AR)
         """
-        if isinstance(dic, tuple):
-            lni, losses = dic
-            self.avg_losses[losses.row, losses.col, lni] += losses.data
-            return
+        with self.monitor('summing avg_losses'):
+            if isinstance(dic, tuple):  # for losses_by_AR
+                lni, losses = dic
+                self.avg_losses[losses.row, losses.col, lni] += losses.data
+                return
         if 'gmf_info' in dic:
             hdf5.extend(self.datastore['gmf_info'], dic.pop('gmf_info'))
         if not dic:
