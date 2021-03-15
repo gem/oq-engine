@@ -923,8 +923,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         for sid, assets in zip(sitecol.sids, assets_by):
             assets_by_site[sid] = assets
             num_assets += len(assets)
-        logging.info(
-            'Associated %d assets to %d sites', num_assets, len(sitecol))
+        logging.info('Associated {:_d} assets to {:_d} sites'.format(
+            num_assets, len(sitecol)))
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
