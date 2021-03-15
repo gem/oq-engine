@@ -22,8 +22,7 @@ ARG oq_branch
 ENV LANG en_US.UTF-8
 WORKDIR /usr/src
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
-    pip install "dask[complete]" && \
-    pip --disable-pip-version-check install -e .[cluster,osgeo] -r requirements-py38-linux64.txt --no-warn-script-location
+    pip --disable-pip-version-check install -e . -r requirements-py38-linux64.txt --no-warn-script-location
 #
 #
 ENV OQ_CONFIG_FILE /etc/openquake/openquake.cfg
