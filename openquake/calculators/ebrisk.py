@@ -69,7 +69,7 @@ def event_based_risk(df, param, monitor):
     AE = len(assets_df), len(rlz_id)
     AR = len(assets_df), len(weights)
     rndgen = MultiEventRNG(
-        param['master_seed'], df.eid, param['asset_correlation'])
+        param['master_seed'], df.eid.unique(), param['asset_correlation'])
     for taxo, asset_df in assets_df.groupby('taxonomy'):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         if len(gmf_df) == 0:
