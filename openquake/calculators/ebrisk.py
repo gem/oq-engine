@@ -92,8 +92,8 @@ def event_based_risk(df, param, monitor):
                 ldf = pandas.DataFrame(dict(eid=coo.col, loss=coo.data))
                 if K:
                     ldf['kid'] = kids[coo.row]
-                    tot = ldf.groupby(['eid', 'kid']).sum()
-                    for (eid, kid), loss in zip(tot.index, tot.loss):
+                    tot = ldf.groupby(['eid', 'kid']).loss.sum()
+                    for (eid, kid), loss in zip(tot.index, tot.to_numpy()):
                         lbe[eid, kid] += loss
                 tot = ldf.groupby('eid').loss.sum()
                 for eid, loss in zip(tot.index, tot.to_numpy()):
