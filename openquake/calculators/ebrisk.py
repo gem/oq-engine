@@ -16,18 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import copy
 import logging
 import operator
 import itertools
 from datetime import datetime
 import numpy
 import pandas
+from scipy import sparse
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
-from openquake.risklib.scientific import (
-    AggLossTable, InsuredLosses, MultiEventRNG)
+from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -60,15 +59,13 @@ def event_based_risk(df, param, monitor):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
+        kids = dstore['assetcol/kids'][:]
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = dstore['weights'][()]
     acc = dict(events_per_sid=numpy.zeros(param['N'], U32))
-    alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
-    aggby = param['aggregate_by']
-    AE = len(assets_df), len(rlz_id)
-    ARL = len(assets_df), len(weights), len(alt.loss_names)
-    losses_by_A = numpy.zeros(ARL, F32)
+    AR = len(assets_df), len(weights)
+    EK = len(rlz_id), param['K']
     rndgen = MultiEventRNG(
         param['master_seed'], df.eid, param['asset_correlation'])
     for taxo, asset_df in assets_df.groupby('taxonomy'):
@@ -78,17 +75,26 @@ def event_based_risk(df, param, monitor):
         with mon_risk:
             out = crmodel.get_output(
                 taxo, asset_df, gmf_df, param['sec_losses'], rndgen, AE=AE)
-        with mon_agg:
-            alt.aggregate(out, aggby)
-        if param['avg_losses']:
-            with mon_avg:
-                for lni, ln in enumerate(alt.loss_names):
-                    coo = out[ln]
+        for lni, ln in enumerate(crmodel.loss_names):
+            losses_by_AR = sparse.coo_matrix(AR)
+            losses_by_EK = sparse.coo_matrix(EK)
+            coo = out[ln]
+            with mon_agg:
+                ldf = pandas.DataFrame(dict(aid=coo.row, loss=coo.data,
+                                            kid=kids[coo.row]))
+                tot = ldf.groupby(['eid', 'kid']).sum()
+                for (eid, kid), loss in zip(tot.index, tot.loss):
+                    losses_by_EK[eid, kid] = loss
+                tot = ldf.groupby('eid').loss.sum()
+                for eid, loss in zip(tot.index, tot.loss):
+                    losses_by_EK[eid, K] = loss
+            if param['avg_losses']:
+                with mon_avg:
                     ldf = pandas.DataFrame(dict(aid=coo.row, loss=coo.data,
                                                 rlz=rlz_id[coo.col]))
                     tot = ldf.groupby(['aid', 'rlz']).sum()
                     for (aid, rlz), loss in zip(tot.index, tot.loss):
-                        losses_by_A[aid, rlz, lni] = loss
+                        losses_by_AR[aid, rlz] = loss
 
     acc['alt'] = alt.to_dframe()
     if param['avg_losses']:
@@ -145,10 +151,9 @@ def ebrisk(rupgetter, param, monitor):
             alldata[key] = U32(alldata[key])
         else:
             alldata[key] = F32(alldata[key])
-    res = event_based_risk(pandas.DataFrame(alldata), param, monitor)
+    yield from event_based_risk(pandas.DataFrame(alldata), param, monitor)
     if gmf_info:
-        res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
-    return res
+        yield {'gmf_info': numpy.array(gmf_info, gmf_info_dt)}
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -194,12 +199,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 InsuredLosses(self.policy_name, self.policy_dict))
         if not hasattr(self, 'aggkey'):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
-        self.param['alt'] = alt = AggLossTable.new(self.aggkey, oq.loss_names)
         self.param['sec_losses'] = sec_losses
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['min_iml'] = oq.min_iml
         self.param['M'] = len(oq.all_imts())
         self.param['N'] = self.N
+        self.param['K'] = len(self.aggkey)
         ct = oq.concurrent_tasks or 1
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
