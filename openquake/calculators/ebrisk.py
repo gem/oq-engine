@@ -50,7 +50,7 @@ def event_based_risk(df, param, monitor):
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
     :param param: a dictionary of parameters coming from the job.ini
     :param monitor: a Monitor instance
-    :returns: a dictionary of arrays with keys alt, losses_by_AR
+    :returns: a dictionary of arrays
     """
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
@@ -120,7 +120,7 @@ def ebrisk(rupgetter, param, monitor):
     :param rupgetter: RuptureGetter with multiple ruptures
     :param param: dictionary of parameters coming from oqparam
     :param monitor: a Monitor instance
-    :returns: a dictionary with keys alt, losses_by_A
+    :returns: a dictionary of arrays
     """
     mon_rup = monitor('getting ruptures', measuremem=False)
     mon_haz = monitor('getting hazard', measuremem=True)
