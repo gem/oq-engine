@@ -22,6 +22,7 @@ import operator
 from datetime import datetime
 import numpy
 import pandas
+from scipy import sparse
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
@@ -49,7 +50,7 @@ def event_based_risk(df, param, monitor):
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
     :param param: a dictionary of parameters coming from the job.ini
     :param monitor: a Monitor instance
-    :returns: a dictionary of arrays with keys alt, losses_by_A
+    :returns: a dictionary of arrays with keys alt, losses_by_AR
     """
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
@@ -66,8 +67,7 @@ def event_based_risk(df, param, monitor):
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
     aggby = param['aggregate_by']
     AE = len(assets_df), len(rlz_id)
-    ARL = len(assets_df), len(weights), len(alt.loss_names)
-    losses_by_A = numpy.zeros(ARL, F32)
+    AR = len(assets_df), len(weights)
     rndgen = MultiEventRNG(
         param['master_seed'], df.eid, param['asset_correlation'])
     for taxo, asset_df in assets_df.groupby('taxonomy'):
@@ -83,16 +83,17 @@ def event_based_risk(df, param, monitor):
             with mon_avg:
                 for lni, ln in enumerate(alt.loss_names):
                     coo = out[ln]
-                    ldf = pandas.DataFrame(dict(aid=coo.row, loss=coo.data,
-                                                rlz=rlz_id[coo.col]))
-                    tot = ldf.groupby(['aid', 'rlz']).sum()
-                    for (aid, rlz), loss in zip(tot.index, tot.loss):
-                        losses_by_A[aid, rlz, lni] = loss
+                    if coo.getnnz():
+                        ldf = pandas.DataFrame(dict(aid=coo.row, loss=coo.data,
+                                                    rlz=rlz_id[coo.col]))
+                        tot = ldf.groupby(['aid', 'rlz']).loss.sum()
+                        aids, rlzs = zip(*tot.index)
+                        losses_by_AR = sparse.coo_matrix(
+                            (tot.to_numpy(), (aids, rlzs)), AR)
+                        yield lni, losses_by_AR
 
     acc['alt'] = alt.to_dframe()
-    if param['avg_losses']:
-        acc['losses_by_A'] = losses_by_A
-    return acc
+    yield acc
 
 
 def start_ebrisk(rgetter, param, monitor):
@@ -110,7 +111,7 @@ def start_ebrisk(rgetter, param, monitor):
             print(msg)
         yield ebrisk, rg, param
     if rgetters:
-        yield ebrisk(rgetters[-1], param, monitor)
+        yield from ebrisk(rgetters[-1], param, monitor)
 
 
 def ebrisk(rupgetter, param, monitor):
@@ -144,10 +145,9 @@ def ebrisk(rupgetter, param, monitor):
             alldata[key] = U32(alldata[key])
         else:
             alldata[key] = F32(alldata[key])
-    res = event_based_risk(pandas.DataFrame(alldata), param, monitor)
+    yield from event_based_risk(pandas.DataFrame(alldata), param, monitor)
     if gmf_info:
-        res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
-    return res
+        yield {'gmf_info': numpy.array(gmf_info, gmf_info_dt)}
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -265,6 +265,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         :param dummy: unused parameter
         :param dic: dictionary with keys alt, losses_by_A
         """
+        if isinstance(dic, tuple):
+            lni, losses = dic
+            self.avg_losses[losses.row, losses.col, lni] += losses.data
+            return
         if 'gmf_info' in dic:
             hdf5.extend(self.datastore['gmf_info'], dic.pop('gmf_info'))
         if not dic:
@@ -275,8 +279,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             for name in df.columns:
                 dset = self.datastore['agg_loss_table/' + name]
                 hdf5.extend(dset, df[name].to_numpy())
-        if self.oqparam.avg_losses:
-            self.avg_losses += dic['losses_by_A']
         self.events_per_sid += dic['events_per_sid']
 
     def post_execute(self, dummy):
