@@ -55,7 +55,6 @@ TWO32 = 2 ** 32
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
-task_dt = numpy.dtype([('task_no', U16), ('start', U32), ('stop', U32)])
 
 
 def get_calc(job_ini, calc_id):
@@ -1120,7 +1119,6 @@ def create_gmf_data(dstore, M, sec_imts=(), data=None):
     for imt in sec_imts:
         items.append((str(imt), F32 if n == 0 else data[imt]))
     dstore.create_dframe('gmf_data', items, 'gzip')
-    by_task = dstore.create_dset('gmf_data/by_task', task_dt)
     if data is not None:
         df = pandas.DataFrame(dict(items))
         avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)
@@ -1129,31 +1127,37 @@ def create_gmf_data(dstore, M, sec_imts=(), data=None):
             df.pop('sid')
             avg_gmf[:, sid] = stats.avg_std(df.to_numpy())
         dstore['avg_gmf'] = avg_gmf
-        hdf5.extend(by_task, numpy.array([(0, 0, len(data))], task_dt))
 
 
-def save_agg_values(dstore, assetcol, lossnames, tagnames):
+def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
     Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
     lst = []
-    if tagnames:
-        aggkey = assetcol.tagcol.get_aggkey(tagnames)
+    if aggby:
+        aggkey = assetcol.tagcol.get_aggkey(aggby)
         logging.info('Storing %d aggregation keys', len(aggkey))
-        dt = [(name + '_', U16) for name in tagnames] + [
-            (name, hdf5.vstr) for name in tagnames]
+        dt = [(name + '_', U16) for name in aggby] + [
+            (name, hdf5.vstr) for name in aggby]
         kvs = []
         for key, val in aggkey.items():
             val = tuple(python3compat.decode(val))
             kvs.append(key + val)
             lst.append(' '.join(val))
         dstore['agg_keys'] = numpy.array(kvs, dt)
+        if aggby == ['id']:
+            kids = assetcol['ordinal']
+        elif aggby == ['site_id']:
+            kids = assetcol['site_id']
+        else:
+            key2i = {key: i for i, key in enumerate(aggkey)}
+            kids = [key2i[tuple(t)] for t in assetcol[aggby]]
+        dstore['assetcol/kids'] = U16(kids)
     lst.append('*total*')
-    loss_names = dstore['oqparam'].loss_names
-    dstore['agg_values'] = assetcol.get_agg_values(lossnames, tagnames)
-    dstore.set_shape_descr('agg_values', aggregation=lst, loss_type=loss_names)
-    return aggkey if tagnames else {}
+    dstore['agg_values'] = assetcol.get_agg_values(lossnames, aggby)
+    dstore.set_shape_descr('agg_values', aggregation=lst, loss_type=lossnames)
+    return aggkey if aggby else {}
 
 
 def read_shakemap(calc, haz_sitecol, assetcol):

@@ -1315,67 +1315,6 @@ class LossCurvesMapsBuilder(object):
             losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 
 
-class AggLossTable(AccumDict):
-    """
-    :param aggkey: dictionary tuple -> integer
-    :param loss_names: primary loss types + secondary loss types
-    """
-    @classmethod
-    def new(cls, aggkey, loss_names):
-        self = cls()
-        self.aggkey = {key: k for k, key in enumerate(aggkey)}
-        self.aggkey[()] = len(aggkey)
-        self.loss_names = loss_names
-        self.accum = 0
-        return self
-
-    def aggregate(self, out, aggby):
-        """
-        Populate the event loss table
-        """
-        assets = out['assets']
-
-        # populate outputs
-        if aggby == ['id']:
-            kid = {o: self.aggkey[o + 1, ] for o in assets['ordinal']}
-        elif aggby == ['site_id']:
-            kid = {rec['ordinal']: self.aggkey[rec['site_id'] + 1, ]
-                   for rec in assets}
-        elif aggby:
-            kid = {rec['ordinal']: self.aggkey[tuple(rec[aggby])]
-                   for rec in assets}
-        else:
-            kid = {}
-
-        # aggregation
-        K = len(self.aggkey) - 1
-        for lni, ln in enumerate(self.loss_names):
-            o = out[ln]
-            if not hasattr(o, 'row'):
-                # the taxonomy mapping causes the csr format
-                out[ln] = o = o.tocoo()
-            for aid, eid, loss in zip(o.row, o.col, o.data):
-                self[eid, K, lni] += loss
-                # this is the slow part, if aggregate_by is given
-                if kid:
-                    self[eid, kid[aid], lni] += loss
-
-    def to_dframe(self):
-        """
-        Convert the AggLosTable into a DataFrame
-        """
-        out = AccumDict(accum=[])  # col -> values
-        for (eid, kid, lid), loss in self.items():
-            out['event_id'].append(eid)
-            out['agg_id'].append(kid)
-            out['loss_id'].append(lid)
-            out['loss'].append(loss)
-        out['event_id'] = U32(out['event_id'])
-        out['agg_id'] = U32(out['agg_id'])
-        out['loss_id'] = U8(out['loss_id'])
-        return pandas.DataFrame(out)
-
-
 class InsuredLosses(object):
     """
     There is an insured loss for each loss type in the policy dictionary.

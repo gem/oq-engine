@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import copy
 import logging
 import operator
 import itertools
@@ -27,8 +26,7 @@ from scipy import sparse
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
-from openquake.risklib.scientific import (
-    AggLossTable, InsuredLosses, MultiEventRNG)
+from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
 from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
@@ -57,18 +55,21 @@ def event_based_risk(df, param, monitor):
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
+    K = param['K']
     with monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
+        if K:
+            kids = dstore['assetcol/kids'][:]
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = dstore['weights'][()]
-    acc = dict(events_per_sid=numpy.zeros(param['N'], U32))
-    alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
-    aggby = param['aggregate_by']
     AE = len(assets_df), len(rlz_id)
     AR = len(assets_df), len(weights)
+    EK1 = len(rlz_id), param['K'] + 1
+    losses_by_EK1 = {
+        ln: sparse.dok_matrix(EK1) for ln in crmodel.oqparam.loss_names}
     rndgen = MultiEventRNG(
         param['master_seed'], numpy.unique(df.eid), param['asset_correlation'])
     for taxo, asset_df in assets_df.groupby('taxonomy'):
@@ -78,24 +79,42 @@ def event_based_risk(df, param, monitor):
         with mon_risk:
             out = crmodel.get_output(
                 taxo, asset_df, gmf_df, param['sec_losses'], rndgen, AE=AE)
-        with mon_agg:
-            alt.aggregate(out, aggby)
-        if param['avg_losses']:
-            with mon_avg:
-                lba = {}  # loss_name -> losses_by_AR
-                for lni, ln in enumerate(crmodel.oqparam.loss_names):
-                    coo = out[ln]
+
+        lba = {}  # loss_name -> losses_by_AR
+        for lni, ln in enumerate(crmodel.oqparam.loss_names):
+            lbe = losses_by_EK1[ln]
+            coo = out[ln].tocoo()  # shape (A, E)
+            with mon_agg:
+                ldf = pandas.DataFrame(dict(eid=coo.col, loss=coo.data))
+                if K:
+                    ldf['kid'] = kids[coo.row]
+                    tot = ldf.groupby(['eid', 'kid']).sum()
+                    for (eid, kid), loss in zip(tot.index, tot.loss):
+                        lbe[eid, kid] += loss
+                tot = ldf.groupby('eid').loss.sum()
+                for eid, loss in zip(tot.index, tot.to_numpy()):
+                    lbe[eid, K] += loss
+            if param['avg_losses']:
+                with mon_avg:
                     if coo.getnnz():
-                        ldf = pandas.DataFrame(dict(aid=coo.row, loss=coo.data,
-                                                    rlz=rlz_id[coo.col]))
+                        ldf = pandas.DataFrame(
+                            dict(aid=coo.row, loss=coo.data,
+                                 rlz=rlz_id[coo.col]))
                         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
                         aids, rlzs = zip(*tot.index)
                         losses_by_AR = sparse.coo_matrix(
                             (tot.to_numpy(), (aids, rlzs)), AR)
                         lba[ln] = losses_by_AR
-                yield lba
-    acc['alt'] = alt.to_dframe()
-    yield acc
+        yield lba
+    for lni, ln in enumerate(crmodel.oqparam.loss_names):
+        lbe = losses_by_EK1[ln].tocoo()
+        nnz = lbe.getnnz()
+        if nnz:
+            lid = numpy.ones(nnz, U8) * lni
+            alt_df = pandas.DataFrame(
+                dict(event_id=U32(lbe.row), agg_id=U16(lbe.col), loss=lbe.data,
+                     loss_id=lid))
+            yield {ln: alt_df}
 
 
 def start_ebrisk(rgetter, param, monitor):
@@ -195,16 +214,16 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 InsuredLosses(self.policy_name, self.policy_dict))
         if not hasattr(self, 'aggkey'):
             self.aggkey = self.assetcol.tagcol.get_aggkey(oq.aggregate_by)
-        self.param['alt'] = alt = AggLossTable.new(self.aggkey, oq.loss_names)
         self.param['sec_losses'] = sec_losses
         self.param['aggregate_by'] = oq.aggregate_by
         self.param['min_iml'] = oq.min_iml
         self.param['M'] = len(oq.all_imts())
         self.param['N'] = self.N
+        self.param['K'] = len(self.aggkey)
         ct = oq.concurrent_tasks or 1
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
-        self.L = L = len(alt.loss_names)
+        self.L = L = len(oq.loss_names)
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
                 all(val == 0 for val in oq.minimum_asset_loss.values())):
             logging.warning('The calculation is really big; consider setting '
@@ -273,18 +292,15 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             hdf5.extend(self.datastore['gmf_info'], dic.pop('gmf_info'))
             return
         lti = self.oqparam.lti
-        with self.monitor('summing avg_losses'):
-            if 'alt' not in dic:  # for losses_by_AR
-                for ln, ls in dic.items():
-                    self.avg_losses[ls.row, ls.col, lti[ln]] += ls.data
-                return
         self.oqparam.ground_motion_fields = False  # hack
         with self.monitor('saving agg_loss_table'):
-            df = dic['alt']
-            for name in df.columns:
-                dset = self.datastore['agg_loss_table/' + name]
-                hdf5.extend(dset, df[name].to_numpy())
-        self.events_per_sid += dic['events_per_sid']
+            for ln, ls in dic.items():
+                if isinstance(ls, pandas.DataFrame):
+                    for name in ls.columns:
+                        dset = self.datastore['agg_loss_table/' + name]
+                        hdf5.extend(dset, ls[name].to_numpy())
+                else:  # summing avg_losses, fast
+                    self.avg_losses[ls.row, ls.col, lti[ln]] += ls.data
 
     def post_execute(self, dummy):
         """
@@ -299,7 +315,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             stats.set_rlzs_stats(self.datastore, 'avg_losses',
                                  asset_id=self.assetcol['id'],
                                  loss_type=oq.loss_names)
-        logging.info('Events per site: ~%d', self.events_per_sid.mean())
 
         # save agg_losses
         alt = self.datastore.read_df('agg_loss_table', 'event_id')
