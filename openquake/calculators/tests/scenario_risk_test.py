@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import numpy
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
@@ -162,12 +161,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
-        # check losses by taxonomy
-        agglosses = extract(self.calc.datastore, 'agg_losses/structural?'
-                            'taxonomy=*').array  # shape (T, R) = (3, 2)
-        if sys.platform != 'darwin':
-            self.assertEqualFiles('expected/agglosses_taxo.txt',
-                                  gettemp(str(agglosses)), delta=1E-5)
+        # extract losses by taxonomy
+        extract(self.calc.datastore, 'agg_losses/structural?'
+                'taxonomy=*').array  # shape (T, R) = (3, 2)
 
         # extract agglosses with a * and a selection
         obj = extract(self.calc.datastore, 'agg_losses/structural?'
