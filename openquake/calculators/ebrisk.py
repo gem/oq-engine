@@ -22,6 +22,7 @@ import operator
 from datetime import datetime
 import numpy
 import pandas
+from scipy import sparse
 
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
@@ -49,7 +50,7 @@ def event_based_risk(df, param, monitor):
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
     :param param: a dictionary of parameters coming from the job.ini
     :param monitor: a Monitor instance
-    :returns: a dictionary of arrays with keys alt, losses_by_A
+    :returns: a dictionary of arrays
     """
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
@@ -66,10 +67,9 @@ def event_based_risk(df, param, monitor):
     alt = copy.copy(param['alt'])  # avoid issues with OQ_DISTRIBUTE=no
     aggby = param['aggregate_by']
     AE = len(assets_df), len(rlz_id)
-    ARL = len(assets_df), len(weights), len(alt.loss_names)
-    losses_by_A = numpy.zeros(ARL, F32)
+    AR = len(assets_df), len(weights)
     rndgen = MultiEventRNG(
-        param['master_seed'], df.eid, param['asset_correlation'])
+        param['master_seed'], numpy.unique(df.eid), param['asset_correlation'])
     for taxo, asset_df in assets_df.groupby('taxonomy'):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         if len(gmf_df) == 0:
@@ -81,18 +81,20 @@ def event_based_risk(df, param, monitor):
             alt.aggregate(out, aggby)
         if param['avg_losses']:
             with mon_avg:
-                for lni, ln in enumerate(alt.loss_names):
+                lba = {}  # loss_name -> losses_by_AR
+                for lni, ln in enumerate(crmodel.oqparam.loss_names):
                     coo = out[ln]
-                    ldf = pandas.DataFrame(dict(aid=coo.row, loss=coo.data,
-                                                rlz=rlz_id[coo.col]))
-                    tot = ldf.groupby(['aid', 'rlz']).sum()
-                    for (aid, rlz), loss in zip(tot.index, tot.loss):
-                        losses_by_A[aid, rlz, lni] = loss
-
+                    if coo.getnnz():
+                        ldf = pandas.DataFrame(dict(aid=coo.row, loss=coo.data,
+                                                    rlz=rlz_id[coo.col]))
+                        tot = ldf.groupby(['aid', 'rlz']).loss.sum()
+                        aids, rlzs = zip(*tot.index)
+                        losses_by_AR = sparse.coo_matrix(
+                            (tot.to_numpy(), (aids, rlzs)), AR)
+                        lba[ln] = losses_by_AR
+                yield lba
     acc['alt'] = alt.to_dframe()
-    if param['avg_losses']:
-        acc['losses_by_A'] = losses_by_A
-    return acc
+    yield acc
 
 
 def start_ebrisk(rgetter, param, monitor):
@@ -110,7 +112,7 @@ def start_ebrisk(rgetter, param, monitor):
             print(msg)
         yield ebrisk, rg, param
     if rgetters:
-        yield ebrisk(rgetters[-1], param, monitor)
+        yield from ebrisk(rgetters[-1], param, monitor)
 
 
 def ebrisk(rupgetter, param, monitor):
@@ -118,7 +120,7 @@ def ebrisk(rupgetter, param, monitor):
     :param rupgetter: RuptureGetter with multiple ruptures
     :param param: dictionary of parameters coming from oqparam
     :param monitor: a Monitor instance
-    :returns: a dictionary with keys alt, losses_by_A
+    :returns: a dictionary of arrays
     """
     mon_rup = monitor('getting ruptures', measuremem=False)
     mon_haz = monitor('getting hazard', measuremem=True)
@@ -144,10 +146,9 @@ def ebrisk(rupgetter, param, monitor):
             alldata[key] = U32(alldata[key])
         else:
             alldata[key] = F32(alldata[key])
-    res = event_based_risk(pandas.DataFrame(alldata), param, monitor)
+    yield from event_based_risk(pandas.DataFrame(alldata), param, monitor)
     if gmf_info:
-        res['gmf_info'] = numpy.array(gmf_info, gmf_info_dt)
-    return res
+        yield {'gmf_info': numpy.array(gmf_info, gmf_info_dt)}
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -263,20 +264,25 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     def agg_dicts(self, dummy, dic):
         """
         :param dummy: unused parameter
-        :param dic: dictionary with keys alt, losses_by_A
+        :param dic: dictionary or tuple (lni, losses_by_AR)
         """
-        if 'gmf_info' in dic:
-            hdf5.extend(self.datastore['gmf_info'], dic.pop('gmf_info'))
         if not dic:
             return
+        if 'gmf_info' in dic:
+            hdf5.extend(self.datastore['gmf_info'], dic.pop('gmf_info'))
+            return
+        lti = self.oqparam.lti
+        with self.monitor('summing avg_losses'):
+            if 'alt' not in dic:  # for losses_by_AR
+                for ln, ls in dic.items():
+                    self.avg_losses[ls.row, ls.col, lti[ln]] += ls.data
+                return
         self.oqparam.ground_motion_fields = False  # hack
         with self.monitor('saving agg_loss_table'):
             df = dic['alt']
             for name in df.columns:
                 dset = self.datastore['agg_loss_table/' + name]
                 hdf5.extend(dset, df[name].to_numpy())
-        if self.oqparam.avg_losses:
-            self.avg_losses += dic['losses_by_A']
         self.events_per_sid += dic['events_per_sid']
 
     def post_execute(self, dummy):
