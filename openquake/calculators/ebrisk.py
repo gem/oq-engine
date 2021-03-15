@@ -99,22 +99,25 @@ def event_based_risk(df, param, monitor):
             if param['avg_losses']:
                 with mon_avg:
                     ldf = pandas.DataFrame(
-                        dict(aid=coo.row, loss=coo.data,
-                             rlz=rlz_id[coo.col]))
+                        dict(aid=coo.row, loss=coo.data, rlz=rlz_id[coo.col]))
                     tot = ldf.groupby(['aid', 'rlz']).loss.sum()
                     aids, rlzs = zip(*tot.index)
                     losses_by_AR[ln].append(
                         sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR))
-    yield losses_by_AR
+    if losses_by_AR:
+        yield losses_by_AR
+        losses_by_AR.clear()
+    alt = {}
     for lni, ln in enumerate(crmodel.oqparam.loss_names):
         lbe = losses_by_EK1[ln].tocoo()
         nnz = lbe.getnnz()
         if nnz:
             lid = numpy.ones(nnz, U8) * lni
-            alt_df = pandas.DataFrame(
+            alt[ln] = pandas.DataFrame(
                 dict(event_id=U32(lbe.row), agg_id=U16(lbe.col), loss=lbe.data,
                      loss_id=lid))
-            yield {ln: alt_df}
+    if alt:
+        yield alt
 
 
 def start_ebrisk(rgetter, param, monitor):
