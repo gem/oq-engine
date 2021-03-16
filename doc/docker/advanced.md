@@ -10,16 +10,6 @@ Authentication support for the WebUI/API can be enabled passing the `LOCKDOWN` e
 $ docker run -e LOCKDOWN=enabled --name myoqcontainer -d -p 8800:8800 openquake/engine
 ```
 
-### Docker compose (cluster)
-
-Uncomment the following lines in the `docker-compose.yml`:
-
-```yaml
-# Uncomment to enable auth in WebUI/API
-environment:
-  - LOCKDOWN=true
-```
-
 ### Docker
 
 - [Introduction](../installing/docker.md)
