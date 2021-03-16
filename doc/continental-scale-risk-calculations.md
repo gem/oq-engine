@@ -5,27 +5,6 @@ Since version 3.3 the OpenQuake engine is able to handle continental
 scale (event based) risk calculations, a feat previously impossible due
 to memory limitations. Here I will document the new feature.
 
-First of all, the recommended way to run large event based risk
-calculations is to use a single `job.ini` file with
-`calculation_mode=ebrisk`. This is the opposite of the previous
-recommendation of using two files, one for hazard (`job_hazard.ini`)
-and one for risk (`job_risk.ini`). In the past using a single file was
-discouraged since a single computation was performed and the engine
-had to transfer the generated ground motion fields, thus causing
-RabbitMQ to run out of memory if the calculation was large
-enough. Instead, with two files two separated calculations were
-performed, and the GMFs could be read from the hazard datastore,
-provided the hazard was stored on a shared file system. In a
-non-cluster situation the data transfer does not use RabbitMQ, however
-it is still slow, inefficient and memory consuming, so the
-recommendation was to use two files even in that situation.
-
-In recent versions of the engine the GMFs are never transferred, just
-read, which is a lot more efficient.  Having a single `job.ini` is
-more convenient and less error-prone, so you should always do that,
-even if the old approach of using two files will still work and will
-work forever to keep compatibility with the past.
-
 Continental scale calculations use typically multiple exposure files, one
 per country. Since version 3.3 the OpenQuake engine is able to manage
 multiple exposures, it is enough to list the files in the `exposure_file`
