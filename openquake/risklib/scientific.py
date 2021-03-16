@@ -81,31 +81,33 @@ class Sampler(object):
         self.lratios = lratios  # for the PM distribution
         self.cols = cols  # for the PM distribution
         self.minloss = minloss
-        self.get_losses = getattr(self, 'sample' + distname)
 
-    def cutoff(self, losses):
+    def get_losses(self, df, covs):
+        vals = df['val'].to_numpy()
+        if not covs:  # fast lane for zero CoVs
+            losses = vals * df['mean'].to_numpy()
+        else:  # slow lane
+            losses = vals * getattr(self, 'sample' + self.distname)(df)
         losses[losses < self.minloss] = 0
         return losses
 
-    def sampleLN(self, eid, df):
+    def sampleLN(self, df):
         means = df['mean'].to_numpy()
-        vals = df['val'].to_numpy()
         covs = df['cov'].to_numpy()
-        sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-        div = numpy.sqrt(1 + covs ** 2)
-        eps = self.rng.normal(eid, len(df))
-        return self.cutoff(means * vals * numpy.exp(eps * sigma) / div)
+        eids = df['eid'].to_numpy()
+        return self.rng.normal(eids, means, covs)
 
-    def sampleBT(self, eid, df):
+    def sampleBT(self, df):
         means = df['mean'].to_numpy()
-        vals = df['val'].to_numpy()
-        stddevs = means * df['cov'].to_numpy()
-        return self.cutoff(vals * self.rng.beta(eid, means, stddevs))
+        covs = df['cov'].to_numpy()
+        eids = df['eid'].to_numpy()
+        return self.rng.beta(eids, means, covs)
 
-    def samplePM(self, eid, df):
-        vals = df['val'].to_numpy()
+    def samplePM(self, df):
+        eids = df['eid'].to_numpy()
+        allprobs = df[self.cols].to_numpy()
         pmf = []
-        for probs in df[self.cols].to_numpy():  # probs by asset
+        for eid, probs in zip(eids, allprobs):  # probs by asset
             if probs.sum() == 0:  # oq-risk-tests/case_1g
                 # means are zeros for events below the threshold
                 continue
@@ -113,7 +115,7 @@ class Sampler(object):
                 name='pmf', values=(self.arange, probs),
                 seed=self.rng.master_seed + eid).rvs())
         if pmf:
-            return self.cutoff(self.lratios[pmf] * vals)
+            return self.lratios[pmf]
         else:
             return numpy.zeros(len(df.aid))
 
@@ -266,23 +268,11 @@ class VulnerabilityFunction(object):
         else:
             lratios = ()
             cols = None
+        df = ratio_df.join(asset_df, how='inner')
         sampler = Sampler(self.distribution_name, rng, lratios, cols, minloss)
-        if not hasattr(self, 'covs') or self.covs.any():  # slow lane
-            loss_matrix = sparse.dok_matrix(AE)
-            df = asset_df.join(ratio_df)
-            # print(df.memory_usage().sum())
-            for eid, df in df.groupby('eid'):
-                loss_matrix[df.aid, eid] = sampler.get_losses(eid, df)
-            loss_matrix = loss_matrix.tocoo()
-        else:  # fast lane for zero CoVs
-            df = ratio_df.join(asset_df, how='inner')
-            # print(df.memory_usage().sum())
-            aids = df['aid'].to_numpy()
-            eids = df['eid'].to_numpy()
-            means = df['mean'].to_numpy()
-            vals = df['val'].to_numpy()
-            losses = sampler.cutoff(means * vals)
-            loss_matrix = sparse.coo_matrix((losses, (aids, eids)), AE)
+        covs = not hasattr(self, 'covs') or self.covs.any()
+        losses = sampler.get_losses(df, covs)
+        loss_matrix = sparse.coo_matrix((losses, (df.aid, df.eid)), AE)
         if testmode:
             loss_matrix = loss_matrix.todense()
         return loss_matrix
@@ -767,9 +757,12 @@ class MultiEventRNG(object):
 
     >>> rng = MultiEventRNG(
     ...     master_seed=42, eids=[0, 1, 2], asset_correlation=1)
-    >>> rng.normal(eid=1, size=3)
-    array([-2.46861114, -2.46861114, -2.46861114])
-    >>> rng.beta(1, means=numpy.array([.5]*3), stddevs=numpy.array([.05]*3))
+    >>> eids = numpy.array([1] * 3)
+    >>> means = numpy.array([.5] * 3)
+    >>> covs = numpy.array([.1] * 3)
+    >>> rng.normal(eids, means, covs)
+    array([0.38892466, 0.38892466, 0.38892466])
+    >>> rng.beta(eids, means, covs)
     array([0.4372343 , 0.57308132, 0.56392573])
     """
     def __init__(self, master_seed, eids, asset_correlation=0):
@@ -780,37 +773,48 @@ class MultiEventRNG(object):
             ph = numpy.random.Philox(self.master_seed + eid)
             self.rng[eid] = numpy.random.Generator(ph)
 
-    def normal(self, eid, size):
+    def normal(self, eids, means, covs):
         """
-        :param eid: event ID
-        :param size: number of assets affected by the given event
-        :returns: array of dtype float32
-        """
-        rng = self.rng[eid]
-        if self.asset_correlation:
-            return numpy.ones(size) * rng.normal()
-        else:
-            return rng.normal(size=size)
-
-    def beta(self, eid, means, stddevs):
-        """
-        :param eid: event ID
+        :param eids: event IDs
         :param means: array of floats in the range 0..1
-        :param stddevs: array of floats in the range 0..1 with the same shape
+        :param covs: array of floats with the same shape
+        :returns: array of floats
+        """
+        corrcache = {}
+        eps = numpy.array([self._get_eps(eid, corrcache) for eid in eids])
+        sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
+        div = numpy.sqrt(1 + covs ** 2)
+        return means * numpy.exp(eps * sigma) / div
+
+    def _get_eps(self, eid, corrcache):
+        if self.asset_correlation:
+            try:
+                return corrcache[eid]
+            except KeyError:
+                corrcache[eid] = eps = self.rng[eid].normal()
+                return eps
+        return self.rng[eid].normal()
+
+    def beta(self, eids, means, covs):
+        """
+        :param eids: event IDs
+        :param means: array of floats in the range 0..1
+        :param covs: array of floats with the same shape
         :returns: array of floats following the beta distribution
 
         This function works properly even when some or all of the stddevs
         are zero: in that case it returns the means since the distribution
-        becomes extremelyn peaked. It also works properly when some one or
+        becomes extremely peaked. It also works properly when some one or
         all of the means are zero, returning zero in that case.
         """
-        # NB: you should not expect a smooth limit for the case of stddev->0
+        # NB: you should not expect a smooth limit for the case of on cov->0
         # since the random number generator will advance of a different number
-        # of steps with stddev == 0 and stddev != 0
+        # of steps with cov == 0 and cov != 0
         res = numpy.array(means)
-        ok = (means != 0) & (stddevs != 0)  # nonsingular values
-        alpha, beta = _alpha_beta(means[ok], stddevs[ok])
-        res[ok] = self.rng[eid].beta(alpha, beta)
+        ok = (means != 0) & (covs != 0)  # nonsingular values
+        alpha, beta = _alpha_beta(means[ok], means[ok] * covs[ok])
+        res[ok] = [self.rng[eid].beta(alpha[i], beta[i])
+                   for i, eid in enumerate(eids[ok])]
         return res
 
 
