@@ -45,7 +45,6 @@ $ docker pull docker.io/openquake/engine:latest
 ## Deployment
 
 - [Single node deployment](../docker/single.md)
-- [Cluster deployment](../docker/cluster.md)
 - [Advanced options](../docker/advanced.md)
 
 ***
