@@ -757,11 +757,11 @@ class MultiEventRNG(object):
 
     >>> rng = MultiEventRNG(
     ...     master_seed=42, eids=[0, 1, 2], asset_correlation=1)
-    >>> eids = [1] * 3
+    >>> eids = numpy.array([1] * 3)
     >>> means = numpy.array([.5] * 3)
     >>> covs = numpy.array([.1] * 3)
     >>> rng.normal(eids, means, covs)
-    array([-2.46861114, -2.46861114, -2.46861114])
+    array([0.38892466, 0.38892466, 0.38892466])
     >>> rng.beta(eids, means, covs)
     array([0.4372343 , 0.57308132, 0.56392573])
     """
