@@ -22,7 +22,7 @@ Each container includes:
 
 Currently two different set of *TAGS* are provided. Images are hosted on [Docker Hub](https://hub.docker.com/r/openquake/engine/tags/).
 
-### master
+### nightly
 
 This container is updated on daily basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what's the next stable version will have. It is not recommended for production.
 
@@ -47,7 +47,6 @@ $ docker pull docker.io/openquake/engine:latest
 - [Single node deployment](../docker/single.md)
 - [Advanced options](../docker/advanced.md)
 
-***
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
