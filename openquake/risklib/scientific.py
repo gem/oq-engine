@@ -806,9 +806,9 @@ class MultiEventRNG(object):
         becomes extremelyn peaked. It also works properly when some one or
         all of the means are zero, returning zero in that case.
         """
-        # NB: you should not expect a smooth limit for the case of stddev->0
+        # NB: you should not expect a smooth limit for the case of on cov->0
         # since the random number generator will advance of a different number
-        # of steps with stddev == 0 and stddev != 0
+        # of steps with cov == 0 and cov != 0
         res = numpy.array(means)
         ok = (means != 0) & (covs != 0)  # nonsingular values
         alpha, beta = _alpha_beta(means[ok], means[ok] * covs[ok])
