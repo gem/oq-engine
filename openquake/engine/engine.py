@@ -242,7 +242,6 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
     setproctitle('oq-job-%d' % job_id)
     logs.init(job_id, getattr(logging, log_level.upper()))
     with logs.handle(job_id, log_level, log_file):
-        oqparam.validate()
         calc = base.calculators(oqparam, calc_id=job_id)
         logging.info('%s running %s [--hc=%s]',
                      getpass.getuser(),
