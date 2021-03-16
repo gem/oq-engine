@@ -91,16 +91,13 @@ class Sampler(object):
         means = df['mean'].to_numpy()
         vals = df['val'].to_numpy()
         covs = df['cov'].to_numpy()
-        sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
-        div = numpy.sqrt(1 + covs ** 2)
-        eps = self.rng.normal(eid, len(df))
-        return self.cutoff(means * vals * numpy.exp(eps * sigma) / div)
+        return self.cutoff(vals * self.rng.normal(eid, means, covs))
 
     def sampleBT(self, eid, df):
         means = df['mean'].to_numpy()
         vals = df['val'].to_numpy()
-        stddevs = means * df['cov'].to_numpy()
-        return self.cutoff(vals * self.rng.beta(eid, means, stddevs))
+        covs = df['cov'].to_numpy()
+        return self.cutoff(vals * self.rng.beta(eid, means, covs))
 
     def samplePM(self, eid, df):
         vals = df['val'].to_numpy()
@@ -780,23 +777,28 @@ class MultiEventRNG(object):
             ph = numpy.random.Philox(self.master_seed + eid)
             self.rng[eid] = numpy.random.Generator(ph)
 
-    def normal(self, eid, size):
-        """
-        :param eid: event ID
-        :param size: number of assets affected by the given event
-        :returns: array of dtype float32
-        """
-        rng = self.rng[eid]
-        if self.asset_correlation:
-            return numpy.ones(size) * rng.normal()
-        else:
-            return rng.normal(size=size)
-
-    def beta(self, eid, means, stddevs):
+    def normal(self, eid, means, covs):
         """
         :param eid: event ID
         :param means: array of floats in the range 0..1
-        :param stddevs: array of floats in the range 0..1 with the same shape
+        :param covs: array of floats with the same shape
+        :returns: array of floats
+        """
+        size = len(means)
+        rng = self.rng[eid]
+        if self.asset_correlation:
+            eps = numpy.ones(size) * rng.normal()
+        else:
+            eps = rng.normal(size=size)
+        sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
+        div = numpy.sqrt(1 + covs ** 2)
+        return means * numpy.exp(eps * sigma) / div
+
+    def beta(self, eid, means, covs):
+        """
+        :param eid: event ID
+        :param means: array of floats in the range 0..1
+        :param covs: array of floats with the same shape
         :returns: array of floats following the beta distribution
 
         This function works properly even when some or all of the stddevs
@@ -808,8 +810,8 @@ class MultiEventRNG(object):
         # since the random number generator will advance of a different number
         # of steps with stddev == 0 and stddev != 0
         res = numpy.array(means)
-        ok = (means != 0) & (stddevs != 0)  # nonsingular values
-        alpha, beta = _alpha_beta(means[ok], stddevs[ok])
+        ok = (means != 0) & (covs != 0)  # nonsingular values
+        alpha, beta = _alpha_beta(means[ok], means[ok] * covs[ok])
         res[ok] = self.rng[eid].beta(alpha, beta)
         return res
 
