@@ -30,7 +30,7 @@ jobs:
           docker image ls
       - name: Run calcs on single docker
         run: |
-          time docker run openquake/engine:nightly "oq engine --run /usr/src/oq-engine/demos/hazard/AreaSourceClassicalPSHA/job.ini"
+          time docker run openquake/engine:nightly "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
       - name: Run docker compose to build up cluster
         run: |
           cd docker

@@ -1012,10 +1012,27 @@ class OqParam(valid.ParamSet):
             raise InvalidFile('%s: The soil_intensities must be defined'
                               % job_ini)
 
+    def validate(self):
+        """
+        Set self.loss_names
+        """
+        # set all_cost_types
+        # rt has the form 'vulnerability/structural', 'fragility/...', ...
+        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        if not costtypes and self.hazard_calculation_id:
+            with util.read(self.hazard_calculation_id) as ds:
+                parent = ds['oqparam']
+            self._risk_files = get_risk_files(parent.inputs)
+            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        self.all_cost_types = sorted(costtypes)
+
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
             ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
             for ln in self.loss_names}
+
+        super().validate()
+        self.check_source_model()
 
     def check_gsims(self, gsims):
         """
@@ -1079,21 +1096,6 @@ class OqParam(valid.ParamSet):
         """
         imtls = self.hazard_imtls or self.risk_imtls
         return DictArray(imtls) if imtls else {}
-
-    @property
-    def all_cost_types(self):
-        """
-        Return the cost types of the computation (including `occupants`
-        if it is there) in order.
-        """
-        # rt has the form 'vulnerability/structural', 'fragility/...', ...
-        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
-        if not costtypes and self.hazard_calculation_id:
-            with util.read(self.hazard_calculation_id) as ds:
-                parent = ds['oqparam']
-            self._risk_files = get_risk_files(parent.inputs)
-            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
-        return sorted(costtypes)
 
     @property
     def min_iml(self):
