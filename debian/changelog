@@ -1,3 +1,10 @@
+  [Nicolas Schmid]
+  * Use numpy functions in spatial covariance calculations for shakemaps to improve
+    performance more than 10x
+  * Adjust logic in cross correlation matrix for shakemaps so calculations are
+    skipped for corr='no'
+  * Use numpy functions in cholesky function for shakemaps to reshape LLT matrix
+  
   [Michele Simionato]
   * Added a `cholesky_limit` to forbid large Cholesky decompositions in ShakeMap
     calculations
