@@ -19,15 +19,6 @@ jobs:
       - name: List Image
         run: |
           docker image ls
-      - name: Build image engine master with tag nightly
-        id: docker_master
-        run: docker build --build-arg oq_branch=master -t openquake/engine-master-zmq:nightly -f docker/zmq/Dockerfile.dev_master docker/zmq
-      - name: Builds image engine worker with tags nightly
-        id: docker_worker
-        run: docker build --build-arg oq_branch=master -t openquake/engine-worker-zmq:nightly -f docker/zmq/Dockerfile.dev_worker docker/zmq
-      - name: List Image
-        run: |
-          docker image ls
       - name: Run calcs on single docker
         run: |
           time docker run openquake/engine:nightly "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
