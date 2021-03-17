@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a `cholesky_limit` to forbid large Cholesky decompositions in ShakeMap
+    calculations
   * Weighted the heavy sources in parallel in event based calculations
   * Suppported zero coefficient of variations with the beta distribution
   * Fixed a bug in the agg_curves exporter with aggregate_by=id

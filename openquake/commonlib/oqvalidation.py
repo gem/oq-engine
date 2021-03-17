@@ -123,6 +123,15 @@ float_dmg_dist:
   Example: *float_dmg_dist = true*.
   Default: False
 
+cholesky_limit:
+  When generating the GMFs from a ShakeMap the engine needs to perform a
+  Cholesky decomposition of a matrix of size (M x N)^2, being M the number
+  of intensity measure types and N the number of sites. The decomposition
+  can become ultra-slow, run out of memory, or produce bogus negative
+  eigenvalues, therefore there is a limit on the maximum size of M x N.
+  Example: *cholesky_limit = 1000*.
+  Default: 10,000
+
 continuous_fragility_discretization:
   Used when discretizing continuuos fragility functions.
   Example: *continuous_fragility_discretization = 10*.
@@ -694,6 +703,7 @@ class OqParam(valid.ParamSet):
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
+    cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
