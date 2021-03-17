@@ -25,11 +25,10 @@ import numpy
 from scipy.stats import truncnorm, norm
 from scipy import interpolate
 
+from openquake.baselib import config
 from openquake.hazardlib import geo, site, imt, correlation
 from openquake.hazardlib.shakemapconverter import get_shakemap_array
 
-US_GOV = 'https://earthquake.usgs.gov'
-SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
 MAX_GMV = 5.  # 5 g
@@ -66,12 +65,15 @@ def urlextract(url, fname):
                 raise
 
 
-def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
+def download_array(shakemap_id_or_url):
     """
-    :param shakemap_id: USGS Shakemap ID
+    :param shakemap_id_or_url: ShakeMap id or full URL
     :returns: an array with the shakemap
     """
-    url = shakemap_url.format(shakemap_id)
+    if '://' in shakemap_id_or_url:
+        url = shakemap_id_or_url
+    else:  # an ID was passed, convert it into an URL
+        url = config.extra.shakemap_url.format(shakemap_id_or_url)
     logging.info('Downloading %s', url)
     contents = json.loads(urlopen(url).read())[
         'properties']['products']['shakemap'][-1]['contents']
@@ -89,20 +91,20 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
             return get_shakemap_array(f1, f2)
 
 
-def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
+def get_sitecol_shakemap(array_or_url, imts, sitecol=None,
                          assoc_dist=None, discard_assets=False):
     """
-    :param array_or_id: shakemap array or shakemap ID
+    :param array_or_url: shakemap array or shakemap url
     :param imts: required IMTs as a list of strings
     :param sitecol: SiteCollection used to reduce the shakemap
     :param assoc_dist: association distance
     :param discard_assets: set to zero the risk on assets with missing IMTs
     :returns: a pair (filtered site collection, filtered shakemap)
     """
-    if isinstance(array_or_id, str):  # shakemap ID
-        array = download_array(array_or_id)
+    if isinstance(array_or_url, str):  # shakemap ID
+        array = download_array(array_or_url)
     else:  # shakemap array
-        array = array_or_id
+        array = array_or_url
     available_imts = set(array['val'].dtype.names)
     missing = set(imts) - available_imts
     if missing:
