@@ -110,14 +110,12 @@ class Sampler(object):
         for eid, probs in zip(eids, allprobs):  # probs by asset
             if probs.sum() == 0:  # oq-risk-tests/case_1g
                 # means are zeros for events below the threshold
-                continue
-            pmf.append(stats.rv_discrete(
-                name='pmf', values=(self.arange, probs),
-                seed=self.rng.master_seed + eid).rvs())
-        if pmf:
-            return self.lratios[pmf]
-        else:
-            return numpy.zeros(len(df.aid))
+                pmf.append(0)
+            else:
+                pmf.append(stats.rv_discrete(
+                    name='pmf', values=(self.arange, probs),
+                    seed=self.rng.master_seed + eid).rvs())
+        return self.lratios[pmf]
 
 #
 # Input models
