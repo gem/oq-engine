@@ -142,9 +142,9 @@ def set_array(longarray, shortarray):
 
 MAXSITES = 1000
 CORRELATION_MATRIX_TOO_LARGE = '''\
-You have a correlation matrix which is too large: %%d sites > %d.
+You have a correlation matrix which is too large: %s > %d.
 To avoid that, set a proper `region_grid_spacing` so that your exposure
-takes less sites.''' % MAXSITES
+involves less sites.'''
 
 
 class BaseCalculator(metaclass=abc.ABCMeta):
@@ -759,12 +759,6 @@ class HazardCalculator(BaseCalculator):
                     self, haz_sitecol, assetcol)
                 self.datastore['sitecol'] = self.sitecol
                 self.datastore['assetcol'] = self.assetcol
-                logging.info('Extracted %d/%d assets',
-                             len(self.assetcol), len(assetcol))
-                nsites = len(self.sitecol)
-                if (oq.spatial_correlation != 'no' and
-                        nsites > MAXSITES):  # hard-coded, heuristic
-                    raise ValueError(CORRELATION_MATRIX_TOO_LARGE % nsites)
             elif hasattr(self, 'sitecol') and general.not_equal(
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
@@ -1187,6 +1181,19 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         if len(discarded):
             calc.datastore['discarded'] = discarded
         assetcol.reduce_also(sitecol)
+
+    # checks
+    M = len(oq.imtls)
+    N = len(sitecol)
+    A = len(assetcol)
+    logging.info('Extracted %d assets', A)
+    if oq.spatial_correlation != 'no' and N > MAXSITES:
+        # hard-coded, heuristic
+        raise ValueError(CORRELATION_MATRIX_TOO_LARGE %
+                         (N, MAXSITES))
+    elif oq.spatial_correlation == 'no' and N * M > oq.cholesky_limit:
+        raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
+            '%d x %d' % (M, N), oq.cholesky_limit))
 
     logging.info('Building GMFs')
     with calc.monitor('building/saving GMFs'):
