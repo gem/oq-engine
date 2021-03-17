@@ -115,6 +115,7 @@ class EngineServerTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         assert get_status() == 'running'
+        dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
