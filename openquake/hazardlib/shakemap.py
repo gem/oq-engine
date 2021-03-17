@@ -110,20 +110,23 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
                'please change the risk model otherwise you will have '
                'incorrect zero losses for the associated taxonomies' %
                (missing.pop(), ', '.join(available_imts)))
-        if discard_assets:
+
+        imts = available_imts.intersection(imts)
+
+        if discard_assets and imts:
             logging.error(msg)
         else:
             raise RuntimeError(msg)
 
     # build a copy of the ShakeMap with only the relevant IMTs
-    dt = [(imt, F32) for imt in sorted(available_imts)]
+    dt = [(imt, F32) for imt in sorted(imts)]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(array), dtlist)
     for name in ('lon',  'lat', 'vs30'):
         data[name] = array[name]
     for name in ('val', 'std'):
-        for im in available_imts:
+        for im in imts:
             data[name][im] = array[name][im]
 
     if sitecol is None:  # extract the sites from the shakemap
