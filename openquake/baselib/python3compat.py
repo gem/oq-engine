@@ -52,12 +52,11 @@ def decode(val):
     """
     if isinstance(val, (list, tuple, numpy.ndarray)):
         return [decode(v) for v in val]
-    elif isinstance(val, str):
-        # it was an already decoded unicode object
-        return val
-    else:
+    elif hasattr(val, 'decode'):
         # assume it is an encoded bytes object
         return val.decode('utf-8')
+    else:
+        return str(val)
 
 
 def zip(arg, *args):

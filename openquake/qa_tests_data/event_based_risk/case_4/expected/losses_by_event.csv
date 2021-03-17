@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.12.0-gitd05489ba84', start_date='2021-03-09T07:47:09', checksum=3250063751, investigation_time=10.0, risk_investigation_time=10.0"
+#,,,,"generated_by='OpenQuake engine 3.12.0-git8ca653b59f', start_date='2021-03-15T07:28:30', checksum=3250063751, investigation_time=10.0, risk_investigation_time=10.0"
 event_id,structural,rlz_id,rup_id,year
 4,3.47877E+04,1,4,4
 5,2.76321E+04,1,5,3

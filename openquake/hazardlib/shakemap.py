@@ -289,8 +289,7 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     cross_corr = cross_correlation_matrix(imts_, crosscorr)
     mu = numpy.array([numpy.ones(num_gmfs) * val[str(imt)][j]
                       for imt in imts_ for j in range(N)])
-    dmatrix = geo.geodetic.distance_matrix(
-        shakemap['lon'], shakemap['lat'])
+    dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts_, spatialcorr)
     stddev = [std[str(imt)] for imt in imts_]
     for im, std in zip(imts_, stddev):

@@ -123,6 +123,15 @@ float_dmg_dist:
   Example: *float_dmg_dist = true*.
   Default: False
 
+cholesky_limit:
+  When generating the GMFs from a ShakeMap the engine needs to perform a
+  Cholesky decomposition of a matrix of size (M x N)^2, being M the number
+  of intensity measure types and N the number of sites. The decomposition
+  can become ultra-slow, run out of memory, or produce bogus negative
+  eigenvalues, therefore there is a limit on the maximum size of M x N.
+  Example: *cholesky_limit = 1000*.
+  Default: 10,000
+
 continuous_fragility_discretization:
   Used when discretizing continuuos fragility functions.
   Example: *continuous_fragility_discretization = 10*.
@@ -694,6 +703,7 @@ class OqParam(valid.ParamSet):
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
+    cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
@@ -1007,10 +1017,32 @@ class OqParam(valid.ParamSet):
             check_same_levels(self.imtls)
 
         if ('amplification' in self.inputs and
-            self.amplification_method == 'convolution' and
-            not self.soil_intensities):
-                raise InvalidFile('%s: The soil_intensities must be defined'
-                     % job_ini)
+            self.amplification_method == 'convolution' and not
+                self.soil_intensities):
+            raise InvalidFile('%s: The soil_intensities must be defined'
+                              % job_ini)
+
+    def validate(self):
+        """
+        Set self.loss_names
+        """
+        # set all_cost_types
+        # rt has the form 'vulnerability/structural', 'fragility/...', ...
+        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        if not costtypes and self.hazard_calculation_id:
+            with util.read(self.hazard_calculation_id) as ds:
+                parent = ds['oqparam']
+            self._risk_files = get_risk_files(parent.inputs)
+            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        self.all_cost_types = sorted(costtypes)
+
+        # fix minimum_asset_loss
+        self.minimum_asset_loss = {
+            ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
+            for ln in self.loss_names}
+
+        super().validate()
+        self.check_source_model()
 
     def check_gsims(self, gsims):
         """
@@ -1074,21 +1106,6 @@ class OqParam(valid.ParamSet):
         """
         imtls = self.hazard_imtls or self.risk_imtls
         return DictArray(imtls) if imtls else {}
-
-    @property
-    def all_cost_types(self):
-        """
-        Return the cost types of the computation (including `occupants`
-        if it is there) in order.
-        """
-        # rt has the form 'vulnerability/structural', 'fragility/...', ...
-        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
-        if not costtypes and self.hazard_calculation_id:
-            with util.read(self.hazard_calculation_id) as ds:
-                parent = ds['oqparam']
-            self._risk_files = get_risk_files(parent.inputs)
-            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
-        return sorted(costtypes)
 
     @property
     def min_iml(self):

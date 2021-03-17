@@ -95,9 +95,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # this is a case with insured losses and tags
         self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4')
 
-        shp = self.calc.datastore['avg_gmf'].shape
-        self.assertEqual(shp, (2, 3, 5))  # 3 sites x 5 IMTs
-
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
@@ -209,19 +206,19 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_2_correlation(self):
         self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation='1')
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/agg_losses.csv', fname)
+        self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
 
         # test losses_by_tag with a single realization
         [fname] = export(
             ('aggregate_by/avg_losses?tag=taxonomy&kind=rlz-0', 'csv'),
             self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_tag.csv', fname)
+        self.assertEqualFiles('expected/losses_by_tag.csv', fname, delta=1E-5)
 
         # losses by taxonomy for loss_type=structural
         [fname] = export(
             ('aggregate_by/avg_losses?tag=taxonomy&kind=rlz-0&'
              'loss_type=structural', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_taxo.csv', fname)
+        self.assertEqualFiles('expected/losses_by_taxo.csv', fname, delta=1E-5)
 
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
@@ -272,7 +269,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-5)
 
-    def test_case_master1(self):
+    def test_case_master(self):
         # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
         # it looks like the cholesky decomposition is OS-dependent, so
         # the GMFs are different of macOS/Ubuntu20/Ubuntu18
@@ -300,7 +297,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check losses_by_tag
         fnames = export(
-            ('aggregate_by/avg_losses?tag=occupancy&kind=mean', 'csv'),
+            ('aggregate_by/avg_losses?tag=occupancy&kind=quantile-0.5', 'csv'),
             self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0],
                               delta=1E-4)
@@ -314,20 +311,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         df2 = self.calc.datastore.read_df('agg_curves-stats', 'assets')
         aae(df2.columns, ['agg_id', 'stat', 'lti', 'return_period', 'value'])
 
-    def test_case_master2(self):
-        self.run_calc(case_master.__file__, 'job.ini',
-                      calculation_mode='ebrisk', exports='',
-                      concurrent_tasks='4')
-
         fname = export(('agg_curves-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
-
-        fname = export(('avg_losses-stats', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/avg_losses-mean.csv',
-                              fname, delta=1E-4)
-
-        fname = export(('agg_loss_table', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/elt.csv', fname, delta=1E-4)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
@@ -337,8 +322,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # aggregate by all loss types
         fnames = export(
-            ('aggregate_by/avg_losses?tag=taxonomy&tag=occupancy&kind=mean',
-             'csv'),
+            ('aggregate_by/avg_losses?tag=taxonomy&tag=occupancy&'
+             'kind=quantile-0.5', 'csv'),
             dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
