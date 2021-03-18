@@ -2,10 +2,12 @@ import os.path
 import unittest
 import numpy
 from openquake.hazardlib import geo, imt
-from openquake.hazardlib.shakemap import (
-    get_shakemap_array, get_sitecol_shakemap, to_gmfs, amplify_ground_shaking,
-    spatial_correlation_array, spatial_covariance_array,
-    cross_correlation_matrix, cholesky)
+from openquake.hazardlib.shakemap import (to_gmfs, amplify_ground_shaking,
+                                          spatial_correlation_array,
+                                          spatial_covariance_array,
+                                          cross_correlation_matrix, cholesky)
+from openquake.hazardlib.groundmotion.maps import ShakeMap
+from openquake.hazardlib.groundmotion.parsers import ShakemapParser
 
 aae = numpy.testing.assert_almost_equal
 F64 = numpy.float64
@@ -28,8 +30,10 @@ class ShakemapTestCase(unittest.TestCase):
     def test_gmfs(self):
         f1 = os.path.join(CDIR, 'ghorka_grid.xml')
         f2 = os.path.join(CDIR, 'ghorka_uncertainty.xml')
-        array = get_shakemap_array(f1, f2)
-        sitecol, shakemap = get_sitecol_shakemap(array, imt_dt.names)
+        array = ShakemapParser()._get_shakemap_array(f1, f2)
+        gm_map = ShakeMap(array)
+        gm_map.set_required_imts(imt_dt.names)
+        sitecol, shakemap = gm_map.associate_site_collection()
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, _ = mean_std(shakemap, site_effects=True)
@@ -118,8 +122,10 @@ class ShakemapTestCase(unittest.TestCase):
         # files provided by Vitor Silva, without site amplification
         f1 = os.path.join(CDIR, 'test_shaking.xml')
         f2 = os.path.join(CDIR, 'test_uncertainty.xml')
-        array = get_shakemap_array(f1, f2)
-        sitecol, shakemap = get_sitecol_shakemap(array, imt_dt.names)
+        array = ShakemapParser()._get_shakemap_array(f1, f2)
+        gm_map = ShakeMap(array)
+        gm_map.set_required_imts(imt_dt.names)
+        sitecol, shakemap = gm_map.associate_site_collection()
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, std_by_imt = mean_std(shakemap, site_effects=False)
