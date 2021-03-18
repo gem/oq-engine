@@ -90,13 +90,12 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
 
 
 def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
-                         assoc_dist=None, discard_assets=False):
+                         assoc_dist=None):
     """
     :param array_or_id: shakemap array or shakemap ID
     :param imts: required IMTs as a list of strings
     :param sitecol: SiteCollection used to reduce the shakemap
     :param assoc_dist: association distance
-    :param discard_assets: set to zero the risk on assets with missing IMTs
     :returns: a pair (filtered site collection, filtered shakemap)
     """
     if isinstance(array_or_id, str):  # shakemap ID
@@ -110,13 +109,7 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
                'please change the risk model otherwise you will have '
                'incorrect zero losses for the associated taxonomies' %
                (missing.pop(), ', '.join(available_imts)))
-
-        imts = available_imts.intersection(imts)
-
-        if discard_assets and imts:
-            logging.error(msg)
-        else:
-            raise RuntimeError(msg)
+        raise RuntimeError(msg)
 
     # build a copy of the ShakeMap with only the relevant IMTs
     dt = [(imt, F32) for imt in sorted(imts)]
