@@ -226,14 +226,10 @@ class PostRiskCalculator(base.RiskCalculator):
             return
         logging.info('Sanity check on agg_losses')
         for kind in 'rlzs', 'stats':
+            avg = 'avg_losses-' + kind
             agg = 'agg_losses-' + kind
             if agg not in self.datastore:
                 return
-            avg = 'avg_losses-' + kind
-            try:
-                avg_losses = self.datastore[avg][:]
-            except KeyError:
-                avg_losses = None
             if kind == 'rlzs':
                 kinds = ['rlz-%d' % rlz for rlz in range(self.R)]
             else:
@@ -249,10 +245,14 @@ class PostRiskCalculator(base.RiskCalculator):
                             logging.warning(
                                 'Inconsistent total losses for %s, %s: '
                                 '%s != %s', ln, k, agg_losses, tot_losses)
-                        if avg_losses is not None and kind == 'rlzs':
-                            sum_losses = avg_losses[:, r, li].sum(axis=0)
-                            if not numpy.allclose(
-                                    sum_losses, tot_losses, rtol=.001):
-                                logging.warning(
-                                    'Inconsistent sum_losses for %s, %s: '
-                                    '%s != %s', ln, k, sum_losses, tot_losses)
+                        try:
+                            avg_losses = self.datastore[avg][:, r, li]
+                        except KeyError:
+                            continue
+                        # check on the sum of the average losses
+                        sum_losses = avg_losses.sum()
+                        if not numpy.allclose(
+                                sum_losses, tot_losses, rtol=.001):
+                            logging.warning(
+                                'Inconsistent sum_losses for %s, %s: '
+                                '%s != %s', ln, k, sum_losses, tot_losses)
