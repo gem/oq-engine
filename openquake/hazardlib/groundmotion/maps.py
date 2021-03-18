@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Any
 import logging
+import numpy
 
+from openquake.hazardlib import geo
 from openquake.hazardlib.site import SiteCollection
 
 
@@ -138,3 +140,43 @@ class GroundMotionMap(ABC):
         :return: filtered site collection, filtered objects (map),
                  discarded objects
         """
+
+
+class ShakeMap(GroundMotionMap):
+    """
+    Class to interact with a ground motion map parsed from a ShakeMap format.
+    """
+
+    def _calculate_available_imts(self) -> list:
+        return list(self._ground_motion_map['val'].dtype.names)
+
+    def _calculate_reduced_map(self) -> None:
+        F32 = numpy.float32
+
+        # build a copy of the ShakeMap with only the relevant IMTs
+        dt = [(imt, F32) for imt in sorted(self._required_imts)]
+        dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
+                  ('val', dt), ('std', dt)]
+        data = numpy.zeros(len(self._ground_motion_map), dtlist)
+        for name in ('lon',  'lat', 'vs30'):
+            data[name] = self._ground_motion_map[name]
+        for name in ('val', 'std'):
+            for im in self._required_imts:
+                if im in self._ground_motion_map[name].dtype.names:
+                    data[name][im] = self._ground_motion_map[name][im]
+
+        return data
+
+    def extract_site_collection(self) -> SiteCollection:
+        return SiteCollection.from_shakemap(self._ground_motion_map)
+
+    def _calculate_bounding_box(self) -> set:
+        bbox = (self._ground_motion_map['lon'].min(),
+                self._ground_motion_map['lat'].min(),
+                self._ground_motion_map['lon'].max(),
+                self._ground_motion_map['lat'].max())
+        return bbox
+
+    def _associate_sites(self, sitecol, assoc_distance, mode) -> Any:
+        return geo.utils.assoc(self._ground_motion_map, sitecol,
+                               assoc_distance, mode)
