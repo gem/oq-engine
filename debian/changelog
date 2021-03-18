@@ -1,4 +1,15 @@
   [Michele Simionato]
+  * Fixed `readinput.get_ruptures` to be able to read ruptures in engine 3.11
+    format
+  * scenario_risk calculations starting from ruptures in CSV format now
+    honor the parameter number_of_ground_motion_fields
+
+  [Nicolas Schmid]
+  * Optimized spatial covariance calculations for ShakeMaps (more than 10x)
+  * Adjusted logic in cross correlation matrix for ShakeMaps; now calculations
+    are skipped for corr='no'
+
+  [Michele Simionato]
   * Added a `cholesky_limit` to forbid large Cholesky decompositions in ShakeMap
     calculations
   * Weighted the heavy sources in parallel in event based calculations

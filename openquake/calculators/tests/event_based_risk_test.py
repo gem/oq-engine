@@ -22,7 +22,7 @@ import numpy
 
 from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
-from openquake.commonlib import logs
+from openquake.commonlib import logs, readinput
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
@@ -31,6 +31,8 @@ from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_5, case_6c, case_master,
     case_miriam, occupants, case_1f, case_1g, case_7a, recompute)
+
+aac = numpy.testing.assert_allclose
 
 
 def aae(data, expected):
@@ -373,10 +375,16 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-4)
 
         # check that the IDs in agg_loss_table.csv exist in ruptures.csv
+        # this is using extract/rupture_info internally
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         rupids = set(read_csv(fname, {None: '<S50'})['rup_id'])
         self.assertTrue(rup_ids <= rupids, 'There are non-existing rupture IDs'
                         ' in the event loss table!')
+
+        # check that the exported ruptures can be re-imported
+        text = extract(self.calc.datastore, 'ruptures').array
+        rups = readinput.get_ruptures(gettemp(text))
+        aac(rups['n_occ'], [1, 1, 1, 1])
 
     def test_case_4_hazard(self):
         # Turkey with SHARE logic tree; TODO: add site model
@@ -437,11 +445,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_recompute(self):
         # test recomputing aggregate loss curves with post_risk
+        # this is starting from a ruptures.csv file
         out = self.run_calc(recompute.__file__, 'job.ini', exports='csv')
         [fname] = out['agg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
+
         parent = self.calc.datastore
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
@@ -451,7 +461,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         oq.hazard_calculation_id = parent.calc_id
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             prc.run()
-
         [fname] = export(('agg_losses-rlzs', 'csv'), prc.datastore)
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,
                               delta=1E-5)
+
+    def test_scenario_from_ruptures(self):
+        # same files as in test_recompute, but performing a scenario
+        with mock.patch('logging.warning') as warn:
+            self.run_calc(recompute.__file__, 'job_scenario.ini')
+        self.assertIsNone(warn.call_args)  # no inconsistent sums

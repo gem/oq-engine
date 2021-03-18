@@ -190,13 +190,24 @@ and exposures::
 Importing a remote calculation
 --------------------------------
 
-Here is the command::
+The use-case is importing on your laptop a calculation that was executed
+on a remote server/cluster. For that to work you need to create a file
+a file called ``openquake.cfg`` in the virtualenv of the engine (the
+output of the command `oq info venv`, normally it is in $HOME/openquake)
+with the following section::
+
+  [webapi]
+  server = https://oq1.wilson.openquake.org/  # change this
+  username = michele  # change this
+  password = PWD # change this
+
+Then you can import any calculation by simply giving its ID::
 
   $ oq importcalc --help
   usage: oq importcalc [-h] calc_id
   
-  Import a remote calculation into the local database. server, username and
-  password must be specified in an openquake.cfg file.
+  Import a remote calculation into the local database. Server, username and
+  password must be specified in the openquake.cfg file.
   NB: calc_id can be a local pathname to a datastore not already present in
   the database: in that case it is imported in the db.
   
