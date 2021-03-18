@@ -18,22 +18,22 @@ class GroundMotionMap(ABC):
     methods defined at the end.
     """
 
-    def __init__(self, map=None) -> None:
+    def __init__(self, gmm=None) -> None:
         self._available_imts = []
         self._required_imts = []
         self._ground_motion_map = None
         self._discard_assets = False
 
-        self.set_ground_motion_map(map)
+        self.set_ground_motion_map(gmm)
 
-    def set_ground_motion_map(self, map) -> None:
+    def set_ground_motion_map(self, gmm) -> None:
         """
         Save a new ground motion map.
 
         :param map: ground motion map
         """
-        if map is not None:
-            self._ground_motion_map = map
+        if gmm is not None:
+            self._ground_motion_map = gmm
             self._available_imts = self._calculate_available_imts()
             self.set_required_imts(self._required_imts, self._discard_assets)
 
@@ -49,10 +49,10 @@ class GroundMotionMap(ABC):
         """
         self._discard_assets = discard_assets
 
-        if map is None:
+        if self._ground_motion_map is None:
             raise IMTsNotAvailable(
                 'You need to assign a map before setting required IMTs.')
-        elif self.check_available_imts(imts):
+        if self.check_available_imts(imts):
             self._required_imts = imts
         else:
             msg = 'The list of the available IMTs is {} ' \
@@ -62,11 +62,13 @@ class GroundMotionMap(ABC):
                     self._available_imts, imts
                 )
             if self._discard_assets:
-                self._required_imts = imts
+                self._required_imts = set(
+                    imts).intersection(self._available_imts)
                 logging.error(msg)
             else:
                 raise IMTsNotAvailable(msg)
 
+        # allow _required_imts to be reset
         if len(self._required_imts) > 0:
             self._ground_motion_map = self._calculate_reduced_map()
             self._available_imts = self._calculate_available_imts()
@@ -106,7 +108,6 @@ class GroundMotionMap(ABC):
 
         :returns: List of strings with the names of the available imts
         """
-        pass
 
     @abstractmethod
     def _calculate_reduced_map(self) -> Any:
@@ -115,7 +116,6 @@ class GroundMotionMap(ABC):
 
         :returns: Map with only the IMTs specified in '_required_imts'
         """
-        pass
 
     @abstractmethod
     def _calculate_bounding_box(self) -> set:
@@ -123,7 +123,6 @@ class GroundMotionMap(ABC):
         Calculate bounding box of current ground motion map.
         :returns: set of coordinates (min(lon), min(lat), max(lon), max(lat))
         """
-        pass
 
     @abstractmethod
     def extract_site_collection(self) -> SiteCollection:
@@ -131,7 +130,6 @@ class GroundMotionMap(ABC):
         Create a site collection out of the ground motion map.
         :returns: A valid SiteCollection
         """
-        pass
 
     @abstractmethod
     def _associate_sites(self, sitecol, assoc_distance, mode) -> Any:
@@ -140,4 +138,3 @@ class GroundMotionMap(ABC):
         :return: filtered site collection, filtered objects (map),
                  discarded objects
         """
-        pass
