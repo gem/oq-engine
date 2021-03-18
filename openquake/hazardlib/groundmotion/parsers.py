@@ -41,7 +41,7 @@ def parse_ground_motion_input(request):
 
     :param request: a shakemap grid file
     :param uncertainty_file: a shakemap uncertainty_file file
-    :returns: array with fields lon, lat, vs30, val, std
+    :returns: an object which implements the interface GroundMotionMap
     """
     # instantiate parsers
     usgs_parser = UsgsShakemapIdParser()
