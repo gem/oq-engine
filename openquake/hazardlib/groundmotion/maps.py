@@ -84,14 +84,18 @@ class GroundMotionMap(ABC):
         """
         return set(requested_imts).issubset(set(self._available_imts))
 
-    def associate_site_collection(self, sitecol: SiteCollection,
-                                  assoc_distance: int, mode: str) -> Any:
+    def associate_site_collection(self, sitecol: SiteCollection = None,
+                                  assoc_distance: int = None,
+                                  mode: str = 'warn') -> Any:
         """
         :param sitecol: a site collection
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
         :returns: filtered site collection, filtered objects, discarded
         """
+        if sitecol is None:  # extract the sites from the shakemap
+            return self.extract_site_collection(), self._ground_motion_map
+
         bbox = self._calculate_bounding_box()
         indices = sitecol.within_bbox(bbox)
         if len(indices) == 0:
