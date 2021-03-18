@@ -1176,8 +1176,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
             oq.inputs['shakemap'])
         sitecol, shakemap, discarded = get_sitecol_shakemap(
             smap, oq.imtls, haz_sitecol,
-            oq.asset_hazard_distance['default'],
-            oq.discard_assets)
+            oq.asset_hazard_distance['default'])
         if len(discarded):
             calc.datastore['discarded'] = discarded
         assetcol.reduce_also(sitecol)
