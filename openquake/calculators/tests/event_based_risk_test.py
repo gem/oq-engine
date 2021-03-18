@@ -456,3 +456,9 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('agg_losses-rlzs', 'csv'), prc.datastore)
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,
                               delta=1E-5)
+
+    def test_scenario_from_ruptures(self):
+        # same files as in test_recompute, but performing a scenario
+        with mock.patch('logging.warning') as warn:
+            self.run_calc(recompute.__file__, 'job_scenario.ini')
+        self.assertIsNone(warn.call_args)  # no inconsistent sums
