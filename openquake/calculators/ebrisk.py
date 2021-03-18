@@ -348,7 +348,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         # sanity check on the agg_losses and sum_losses
         sumlosses = self.avg_losses.sum(axis=0)
-        if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
+        if not numpy.allclose(agglosses[K], sumlosses, rtol=1E-6):
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
             logging.warning(

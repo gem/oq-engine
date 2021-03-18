@@ -3,9 +3,9 @@
     honor the parameter number_of_ground_motion_fields
 
   [Nicolas Schmid]
-  * Optimize spatial covariance calculations for ShakeMaps (more than 10x)
-  * Adjust logic in cross correlation matrix for ShakeMaps so calculations are
-    skipped for corr='no'
+  * Optimized spatial covariance calculations for ShakeMaps (more than 10x)
+  * Adjusted logic in cross correlation matrix for ShakeMaps; now calculations
+    are skipped for corr='no'
 
   [Michele Simionato]
   * Added a `cholesky_limit` to forbid large Cholesky decompositions in ShakeMap
