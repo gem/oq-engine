@@ -437,11 +437,13 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_recompute(self):
         # test recomputing aggregate loss curves with post_risk
+        # this is starting from a ruptures.csv file
         out = self.run_calc(recompute.__file__, 'job.ini', exports='csv')
         [fname] = out['agg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=1E-5)
+
         parent = self.calc.datastore
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
@@ -451,7 +453,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         oq.hazard_calculation_id = parent.calc_id
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             prc.run()
-
         [fname] = export(('agg_losses-rlzs', 'csv'), prc.datastore)
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,
                               delta=1E-5)
+
+    def test_scenario_from_ruptures(self):
+        # same files as in test_recompute, but performing a scenario
+        with mock.patch('logging.warning') as warn:
+            self.run_calc(recompute.__file__, 'job_scenario.ini')
+        self.assertIsNone(warn.call_args)  # no inconsistent sums

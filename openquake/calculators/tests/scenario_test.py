@@ -138,7 +138,7 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_13(self):
         # multi-rupture scenario
         self.run_calc(case_13.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 50)
+        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 10)
 
     def test_case_14(self):
         # new Swiss GMPEs

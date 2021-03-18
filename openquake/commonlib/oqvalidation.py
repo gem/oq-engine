@@ -971,14 +971,8 @@ class OqParam(valid.ParamSet):
                     '%s: conditional_loss_poes are not defined '
                     'for classical_damage calculations' % job_ini)
 
-        # checks for event_based_risk
-        if (self.calculation_mode == 'event_based_risk' and not
-                self.ground_motion_fields):
-            raise ValueError('ground_motion_fields must be set to true in %s'
-                             % job_ini)
-
         # checks for ebrisk
-        if self.calculation_mode == 'ebrisk':
+        if self.calculation_mode in ('ebrisk', 'event_based_risk'):
             if self.risk_investigation_time is None:
                 raise InvalidFile('Please set the risk_investigation_time in'
                                   ' %s' % job_ini)

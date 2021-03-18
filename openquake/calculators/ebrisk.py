@@ -324,7 +324,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         alt = self.datastore.read_df('agg_loss_table', 'event_id')
         K = self.datastore['agg_loss_table'].attrs.get('K', 0)
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
-        if oq.investigation_time is None:  # scenario, compute agg_losses
+        if oq.calculation_mode == 'scenario_risk':  # compute agg_losses
             alt['rlz_id'] = self.rlzs[alt.index.to_numpy()]
             agglosses = numpy.zeros((K + 1, self.R, self.L), F32)
             for (agg_id, rlz_id, loss_id), df in alt.groupby(
@@ -348,7 +348,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         # sanity check on the agg_losses and sum_losses
         sumlosses = self.avg_losses.sum(axis=0)
-        if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
+        if not numpy.allclose(agglosses[K], sumlosses, rtol=1E-6):
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
             logging.warning(

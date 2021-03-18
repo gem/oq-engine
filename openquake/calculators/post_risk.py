@@ -226,6 +226,7 @@ class PostRiskCalculator(base.RiskCalculator):
             return
         logging.info('Sanity check on agg_losses')
         for kind in 'rlzs', 'stats':
+            avg = 'avg_losses-' + kind
             agg = 'agg_losses-' + kind
             if agg not in self.datastore:
                 return
@@ -233,14 +234,25 @@ class PostRiskCalculator(base.RiskCalculator):
                 kinds = ['rlz-%d' % rlz for rlz in range(self.R)]
             else:
                 kinds = self.oqparam.hazard_stats()
-            for l in range(self.L):
-                ln = self.oqparam.loss_names[l]
+            for li in range(self.L):
+                ln = self.oqparam.loss_names[li]
                 for r, k in enumerate(kinds):
-                    tot_losses = self.datastore[agg][-1, r, l]
-                    agg_losses = self.datastore[agg][:-1, r, l].sum()
+                    tot_losses = self.datastore[agg][-1, r, li]
+                    agg_losses = self.datastore[agg][:-1, r, li].sum()
                     if kind == 'rlzs' or k == 'mean':
-                        ok = numpy.allclose(agg_losses, tot_losses, rtol=.001)
-                        if not ok:
+                        if not numpy.allclose(
+                                agg_losses, tot_losses, rtol=.001):
                             logging.warning(
                                 'Inconsistent total losses for %s, %s: '
                                 '%s != %s', ln, k, agg_losses, tot_losses)
+                        try:
+                            avg_losses = self.datastore[avg][:, r, li]
+                        except KeyError:
+                            continue
+                        # check on the sum of the average losses
+                        sum_losses = avg_losses.sum()
+                        if not numpy.allclose(
+                                sum_losses, tot_losses, rtol=.001):
+                            logging.warning(
+                                'Inconsistent sum_losses for %s, %s: '
+                                '%s != %s', ln, k, sum_losses, tot_losses)
