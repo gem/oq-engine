@@ -125,7 +125,6 @@ def rescale_n_occ(rup_array, n_gmfs, n_gsims):
             'number_of_ground_motion_fields=%d must be a multiple of %d'
             % (n_gmfs, n_occ))
     rescale = int(n_gmfs * n_gsims / n_occ)
-    import pdb; pdb.set_trace()
     rup_array['n_occ'] *= rescale
 
 
