@@ -69,7 +69,8 @@ def to_csv_array(ruptures):
         code2cls.update(BaseRupture.init())
     arr = numpy.zeros(len(ruptures), rupture_dt)
     for rec, rup in zip(arr, ruptures):
-        arrays = surface_to_arrays(rup.surface)  # shape (3, s1, s2)
+        # s0=number of multi surfaces, s1=number of rows, s2=number of columns
+        arrays = surface_to_arrays(rup.surface)  # shape (s0, 3, s1, s2)
         rec['seed'] = rup.rup_id
         rec['mag'] = rup.mag
         rec['rake'] = rup.rake

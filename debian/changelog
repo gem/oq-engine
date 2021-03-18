@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed `readinput.get_ruptures` to be able to read ruptures in engine 3.11
+    format
   * scenario_risk calculations starting from ruptures in CSV format now
     honor the parameter number_of_ground_motion_fields
 

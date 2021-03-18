@@ -475,9 +475,9 @@ class RuptureConverter(object):
            :class:`openquake.hazardlib.geo.GriddedSurface` instance
         4. there is a list of PlanarSurface nodes; returns a
            :class:`openquake.hazardlib.geo.MultiSurface` instance
-        5. there is either a single a kiteSurface or a list of kiteSurface
+        5. there is either a single kiteSurface or a list of kiteSurface
            nodes; returns a
-           :class:`openquake.hazardlib.geo.MultiSurface` instance
+           :class:`openquake.hazardlib.geo.KiteSurface` instance
            or a :class:`openquake.hazardlib.geo.MultiSurface` instance,
            respectively
 

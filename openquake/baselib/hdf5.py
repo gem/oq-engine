@@ -542,7 +542,10 @@ class ArrayWrapper(object):
             lst = ['%s=%d' % (descr, size)
                    for descr, size in zip(self.shape_descr, self.shape)]
             return '<%s(%s)>' % (self.__class__.__name__, ', '.join(lst))
-        return '<%s%s>' % (self.__class__.__name__, self.shape)
+        elif hasattr(self, 'shape'):
+            return '<%s%s>' % (self.__class__.__name__, self.shape)
+        else:
+            return '<%s %d bytes>' % (self.__class__.__name__, len(self.array))
 
     @property
     def dtype(self):

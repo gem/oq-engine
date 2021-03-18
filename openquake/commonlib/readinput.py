@@ -589,14 +589,27 @@ def get_ruptures(fname_csv):
     for u, row in enumerate(aw.array):
         hypo = row['lon'], row['lat'], row['dep']
         dic = json.loads(row['extra'])
-        mesh = F32(json.loads(row['mesh']))
-        s1, s2 = mesh.shape[1:]
+        meshes = F32(json.loads(row['mesh']))  # num_surfaces 3D arrays
+        num_surfaces = len(meshes)
+        shapes = []
+        points = []
+        minlons = []
+        maxlons = []
+        minlats = []
+        maxlats = []
+        for mesh in meshes:
+            shapes.extend(mesh.shape[1:])
+            points.extend(mesh.flatten())  # lons + lats + deps
+            minlons.append(mesh[0].min())
+            minlats.append(mesh[1].min())
+            maxlons.append(mesh[0].max())
+            maxlats.append(mesh[1].max())
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['seed'] = row['seed']
-        rec['minlon'] = minlon = mesh[0].min()
-        rec['minlat'] = minlat = mesh[1].min()
-        rec['maxlon'] = maxlon = mesh[0].max()
-        rec['maxlat'] = maxlat = mesh[1].max()
+        rec['minlon'] = minlon = min(minlons)
+        rec['minlat'] = minlat = min(minlats)
+        rec['maxlon'] = maxlon = max(maxlons)
+        rec['maxlat'] = maxlat = max(maxlats)
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
         rate = dic.get('occurrence_rate', numpy.nan)
@@ -604,9 +617,7 @@ def get_ruptures(fname_csv):
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, 0)
         rups.append(tup)
-        points = mesh.flatten()  # lons + lats + deps
-        # FIXME: extend to MultiSurfaces
-        geoms.append(numpy.concatenate([[1], [s1, s2], points]))
+        geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
     if not rups:
         return ()
     dic = dict(geom=numpy.array(geoms, object))

@@ -22,6 +22,7 @@ import unittest
 import numpy
 from openquake.baselib import parallel, general, config
 from openquake.hazardlib import lt
+from openquake.commonlib import readinput
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -479,10 +480,14 @@ hazard_uhs-std.csv
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
 
-        # first test the serialization of the ruptures
+        # first test that the exported ruptures can be re-imported
         self.run_calc(case_29.__file__, 'job.ini',
                       calculation_mode='event_based',
-                      ses_per_logic_tree_path='1000')
+                      ses_per_logic_tree_path='10')
+        csv = extract(self.calc.datastore, 'ruptures').array
+        rups = readinput.get_ruptures(general.gettemp(csv))
+        self.assertEqual(len(rups), 1)
+
         # check what QGIS will be seeing
         aw = extract(self.calc.datastore, 'rupture_info')
         poly = gzip.decompress(aw.boundaries).decode('ascii')
