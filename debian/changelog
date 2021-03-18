@@ -1,3 +1,7 @@
+  [Nicolas Schmid]
+  * Fixes for discard_assets if used together with shakemap
+  * Add test for shakemap calculations with discard_assets
+
   [Michele Simionato]
   * Fixed `readinput.get_ruptures` to be able to read ruptures in engine 3.11
     format
