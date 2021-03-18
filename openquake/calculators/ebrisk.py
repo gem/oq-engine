@@ -354,7 +354,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.warning(
                 'Due to rounding errors inherent in floating-point arithmetic,'
                 ' agg_losses != sum(avg_losses): %s != %s\nsee %s',
-                agglosses.mean(), sumlosses.mean(), url)
+                agglosses[K].mean(), sumlosses.mean(), url)
 
     def gen_args(self):
         """
