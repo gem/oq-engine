@@ -36,7 +36,8 @@ from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
+from openquake.hazardlib.shakemap import to_gmfs
+from openquake.hazardlib.groundmotion.parsers import parse_ground_motion_input
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, util
 from openquake.calculators.export import export as exp
@@ -400,6 +401,7 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+
     def src_filter(self):
         """
         :returns: a SourceFilter
@@ -920,6 +922,7 @@ class RiskCalculator(HazardCalculator):
     attributes .crmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
+
     def build_riskinputs(self, kind):
         """
         :param kind:
@@ -1174,10 +1177,11 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         # and the reduced assetcol has 9 assets on the reduced sites
         smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
             oq.inputs['shakemap'])
-        sitecol, shakemap, discarded = get_sitecol_shakemap(
-            smap, oq.imtls, haz_sitecol,
-            oq.asset_hazard_distance['default'],
-            oq.discard_assets)
+        gm_map = parse_ground_motion_input(smap)
+        gm_map.set_required_imts(oq.imtls, oq.discard_assets)
+        sitecol, shakemap, discarded = gm_map.associate_site_collection(
+            haz_sitecol,
+            oq.asset_hazard_distance['default'])
         if len(discarded):
             calc.datastore['discarded'] = discarded
         assetcol.reduce_also(sitecol)
