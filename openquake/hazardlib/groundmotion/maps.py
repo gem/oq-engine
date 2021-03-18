@@ -20,15 +20,14 @@ class GroundMotionMap(ABC):
     methods defined at the end.
     """
 
-    def __init__(self, gmm=None) -> None:
+    def __init__(self, gmm=None, required_imts=None) -> None:
         self._available_imts = []
         self._required_imts = []
         self._ground_motion_map = None
-        self._discard_assets = False
 
-        self.set_ground_motion_map(gmm)
+        self.set_ground_motion_map(gmm, required_imts=required_imts)
 
-    def set_ground_motion_map(self, gmm) -> None:
+    def set_ground_motion_map(self, gmm, required_imts=None) -> None:
         """
         Save a new ground motion map.
 
@@ -37,19 +36,17 @@ class GroundMotionMap(ABC):
         if gmm is not None:
             self._ground_motion_map = gmm
             self._available_imts = self._calculate_available_imts()
-            self.set_required_imts(self._required_imts, self._discard_assets)
+            self.set_required_imts(required_imts or self._required_imts)
 
-    def set_required_imts(self, imts, discard_assets=False) -> None:
+    def set_required_imts(self, imts) -> None:
         """
         Set required imts for this map. The rest of the IMT information will
         be discarded.
 
         :param imts: required IMTs as a list of strings
-        :param discard_assets: set to zero the risk on assets with missing IMTs
         :raises IMTsNotAvailable: If the required imts are not available
         in the current map.
         """
-        self._discard_assets = discard_assets
 
         if self._ground_motion_map is None:
             raise IMTsNotAvailable(
@@ -63,12 +60,7 @@ class GroundMotionMap(ABC):
                 'incorrect zero losses for the associated taxonomies'.format(
                     self._available_imts, imts
                 )
-            if self._discard_assets:
-                self._required_imts = set(
-                    imts).intersection(self._available_imts)
-                logging.error(msg)
-            else:
-                raise IMTsNotAvailable(msg)
+            raise IMTsNotAvailable(msg)
 
         # allow _required_imts to be reset
         if len(self._required_imts) > 0:

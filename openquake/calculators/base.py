@@ -1178,7 +1178,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
             oq.inputs['shakemap'])
         gm_map = parse_ground_motion_input(smap)
-        gm_map.set_required_imts(oq.imtls, oq.discard_assets)
+        gm_map.set_required_imts(oq.imtls)
         sitecol, shakemap, discarded = gm_map.associate_site_collection(
             haz_sitecol,
             oq.asset_hazard_distance['default'])
