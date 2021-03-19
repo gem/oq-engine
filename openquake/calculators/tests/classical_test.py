@@ -485,7 +485,8 @@ hazard_uhs-std.csv
                       calculation_mode='event_based',
                       ses_per_logic_tree_path='10')
         csv = extract(self.calc.datastore, 'ruptures').array
-        rups = readinput.get_ruptures(general.gettemp(csv))
+        trts = ["Active Shallow Crust"]
+        rups = readinput.get_ruptures(general.gettemp(csv), trts)
         self.assertEqual(len(rups), 1)
 
         # check what QGIS will be seeing

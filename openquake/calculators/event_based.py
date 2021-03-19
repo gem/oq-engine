@@ -101,33 +101,6 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
     return dic
 
 
-def rescale_n_occ(rup_array, n_gmfs, n_gsims):
-    """
-    :param rup_array: an array of ruptures of the same TRT
-    :param n_gmfs: number of samples of the GMF
-    :param n_gsims: number of GSIMs
-
-    Works by rescaling rup_array['n_occ'] so that the formula
-    rup_array['n_occ'].sum() == n_gmfs * n_gsims holds.
-    """
-    try:
-        [et_id] = numpy.unique(rup_array['et_id'])
-    except ValueError:
-        raise RuntimeError('Cannot run a scenario starting from ruptures of '
-                           'different TRTs or something like that')
-    n_occ = rup_array['n_occ'].sum()
-    if n_gmfs < n_occ:
-        raise ValueError(
-            'number_of_ground_motion_fields=%d is too small since'
-            ' there are at least %d occurrences' % (n_gmfs, n_occ))
-    if n_gmfs % n_occ:
-        raise ValueError(
-            'number_of_ground_motion_fields=%d must be a multiple of %d'
-            % (n_gmfs, n_occ))
-    rescale = int(n_gmfs * n_gsims / n_occ)
-    rup_array['n_occ'] *= rescale
-
-
 @base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
 class EventBasedCalculator(base.HazardCalculator):
     """
@@ -305,9 +278,13 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(aw) == 0:
                 raise RuntimeError('The rupture is too far from the sites!')
         elif oq.inputs['rupture_model'].endswith('.csv'):
-            aw = readinput.get_ruptures(oq.inputs['rupture_model'])
+            aw = readinput.get_ruptures(
+                oq.inputs['rupture_model'], list(gsim_lt.values))
+            num_gsims = numpy.array(
+                [len(gsim_lt.values[trt]) for trt in gsim_lt.values], U32)
             if oq.calculation_mode.startswith('scenario'):
-                rescale_n_occ(aw, ngmfs, G)
+                # rescale n_occ
+                aw['n_occ'] *= ngmfs * num_gsims[aw['et_id']]
         rup_array = aw.array
         hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
