@@ -1172,10 +1172,14 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         # [8, 9, 10, 11, 13, 15, 16, 17, 18];
         # the total assetcol has 26 assets on the total sites
         # and the reduced assetcol has 9 assets on the reduced sites
-        smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
-            oq.inputs['shakemap'])
+        if oq.shakemap_id:
+            uridict = {'kind': 'usgs_id', 'id': oq.shakemap_id}
+        elif 'shakemap' in oq.inputs:
+            uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
+        else:
+            uridict = oq.shakemap_uri
         sitecol, shakemap, discarded = get_sitecol_shakemap(
-            smap, oq.imtls, haz_sitecol,
+            uridict, oq.imtls, haz_sitecol,
             oq.asset_hazard_distance['default'])
         if len(discarded):
             calc.datastore['discarded'] = discarded

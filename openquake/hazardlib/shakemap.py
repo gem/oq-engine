@@ -25,6 +25,7 @@ import numpy
 from scipy.stats import truncnorm, norm
 from scipy import interpolate
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, site, imt, correlation
 from openquake.hazardlib.shakemapconverter import get_shakemap_array
 
@@ -66,12 +67,23 @@ def urlextract(url, fname):
                 raise
 
 
-def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
-    """
-    :param shakemap_id: USGS Shakemap ID
-    :returns: an array with the shakemap
-    """
-    url = shakemap_url.format(shakemap_id)
+get_array = CallableDict()
+
+
+@get_array.add('usgs_xml')
+def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
+    if uncertainty_url is None:
+        with urlopen(grid_url) as f:
+            return get_shakemap_array(f)
+    else:
+        with urlopen(grid_url) as f1, urlextract(
+                uncertainty_url, 'uncertainty.xml') as f2:
+            return get_shakemap_array(f1, f2)
+
+
+@get_array.add('usgs_id')
+def get_array_usgs_id(kind, shakemap_id):
+    url = SHAKEMAP_URL.format(shakemap_id)
     logging.info('Downloading %s', url)
     contents = json.loads(urlopen(url).read())[
         'properties']['products']['shakemap'][-1]['contents']
@@ -80,28 +92,25 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
         raise MissingLink('Could not find grid.xml link in %s' % url)
     uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
         'download/uncertainty.xml')
-    if uncertainty is None:
-        with urlopen(grid['url']) as f:
-            return get_shakemap_array(f)
-    else:
-        with urlopen(grid['url']) as f1, urlextract(
-                uncertainty['url'], 'uncertainty.xml') as f2:
-            return get_shakemap_array(f1, f2)
+    return get_array('usgs_xml', grid['url'],
+                     uncertainty['url'] if uncertainty else None)
 
 
-def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
+@get_array.add('file_npy')
+def get_array_file_npy(kind, fname):
+    return numpy.load(fname)
+
+
+def get_sitecol_shakemap(uridict, imts, sitecol=None,
                          assoc_dist=None):
     """
-    :param array_or_id: shakemap array or shakemap ID
+    :param uridict: a dictionary specifying the ShakeMap resource
     :param imts: required IMTs as a list of strings
     :param sitecol: SiteCollection used to reduce the shakemap
     :param assoc_dist: association distance
     :returns: a pair (filtered site collection, filtered shakemap)
     """
-    if isinstance(array_or_id, str):  # shakemap ID
-        array = download_array(array_or_id)
-    else:  # shakemap array
-        array = array_or_id
+    array = get_array(uridict.pop('kind'), **uridict)
     available_imts = set(array['val'].dtype.names)
     missing = set(imts) - available_imts
     if missing:

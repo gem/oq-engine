@@ -531,6 +531,15 @@ shakemap_id:
   Example: *shakemap_id = usp000fjta*.
   Default: no default
 
+shakemap_uri:
+  Dictionary used in ShakeMap calculations to specify a ShakeMap. Must contain
+  a key named "kind" with values "usgs_id", "usgs_xml" or "file_npy".
+  Example: *shakemap_uri = {
+     "kind": "usgs_xml",
+     "grid_url": "file:///home/michele/usp000fjta/grid.xml",
+     "uncertainty_url": "file:///home/michele/usp000fjta/uncertainty.xml"*.
+  Default: empty dictionary
+
 shift_hypo:
   Used in classical calculations to shift the rupture hypocenter.
   Example: *shift_hypo = true*.
@@ -794,6 +803,7 @@ class OqParam(valid.ParamSet):
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
     shakemap_id = valid.Param(valid.nice_string, None)
+    shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
     site_effects = valid.Param(valid.boolean, False)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
