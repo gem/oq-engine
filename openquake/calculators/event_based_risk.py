@@ -71,8 +71,12 @@ def event_based_risk(df, param, monitor):
     losses_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
     losses_by_EK1 = {
         ln: sparse.dok_matrix(EK1) for ln in crmodel.oqparam.loss_names}
-    rndgen = MultiEventRNG(
-        param['master_seed'], numpy.unique(df.eid), param['asset_correlation'])
+    if crmodel.oqparam.estimate_uncertainty_on:
+        rndgen = None
+    else:
+        rndgen = MultiEventRNG(
+            param['master_seed'], numpy.unique(df.eid),
+            param['asset_correlation'])
     for taxo, asset_df in assets_df.groupby('taxonomy'):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         if len(gmf_df) == 0:
@@ -82,7 +86,7 @@ def event_based_risk(df, param, monitor):
                 taxo, asset_df, gmf_df, param['sec_losses'], rndgen, AE=AE)
 
         for lni, ln in enumerate(crmodel.oqparam.loss_names):
-            coo = out[ln].tocoo()  # shape (A, E)
+            coo = out[ln]['losses'].tocoo()  # shape (A, E)
             if coo.getnnz() == 0:
                 continue
             lbe = losses_by_EK1[ln]
@@ -96,6 +100,7 @@ def event_based_risk(df, param, monitor):
                 tot = ldf.groupby('eid').loss.sum()
                 for eid, loss in zip(tot.index, tot.to_numpy()):
                     lbe[eid, K] += loss
+
             if param['avg_losses']:
                 with mon_avg:
                     ldf = pandas.DataFrame(

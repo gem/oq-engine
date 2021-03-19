@@ -30,7 +30,7 @@ import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats, sparse
 
-from openquake.baselib.general import CallableDict, AccumDict
+from openquake.baselib.general import CallableDict
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -84,7 +84,7 @@ class Sampler(object):
 
     def get_losses(self, df, covs):
         vals = df['val'].to_numpy()
-        if not covs:  # fast lane for zero CoVs
+        if not self.rng or not covs:  # fast lane
             losses = vals * df['mean'].to_numpy()
         else:  # slow lane
             losses = vals * getattr(self, 'sample' + self.distname)(df)
@@ -253,7 +253,7 @@ class VulnerabilityFunction(object):
         :param gmf_df: a DataFrame of GMFs for the given assets
         :param rng: a MultiEventRNG or None
         :param AE: a pair of integers (A, E)
-        :returns: a matrix of losses of shape (A, E)
+        :returns: losses of shape (A, E) and variances of shape (A, E)
         """
         testmode = asset_df is None and AE is None
         if testmode:  # in the tests
@@ -272,8 +272,13 @@ class VulnerabilityFunction(object):
         losses = sampler.get_losses(df, covs)
         loss_matrix = sparse.coo_matrix((losses, (df.aid, df.eid)), AE)
         if testmode:
-            loss_matrix = loss_matrix.todense()
-        return loss_matrix
+            return loss_matrix.todense()
+        if self.distribution_name == 'PM':  # special case
+            var_matrix = 0
+        else:
+            variances = (losses * df['cov'].to_numpy())**2
+            var_matrix = sparse.coo_matrix((variances, (df.aid, df.eid)), AE)
+        return loss_matrix, var_matrix
 
     def strictly_increasing(self):
         """
@@ -1328,11 +1333,11 @@ class InsuredLosses(object):
 
     def update(self, out, asset_df):
         """
-        :param out: a dictionary of sparse matrices keyed by loss_type
+        :param out: a dictionary loss_type -> losses -> sparse matrix
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
         for lt in self.policy_dict:
-            o = out[lt]
+            o = out[lt]['losses']
             ins = sparse.dok_matrix(o.shape)
             policy = self.policy_dict[lt]
             for aid, eid, loss in zip(o.row, o.col, o.data):
@@ -1342,7 +1347,7 @@ class InsuredLosses(object):
                 ded, lim = policy[policy_idx]
                 ins[aid, eid] = insured_losses(
                     loss, ded * avalue, lim * avalue)
-            out[lt + '_ins'] = ins.tocoo()
+            out[lt + '_ins'] = dict(losses=ins.tocoo(), variances=0)
 
 
 # not used anymore

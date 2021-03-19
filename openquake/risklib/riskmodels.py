@@ -350,9 +350,9 @@ class RiskModel(object):
             val = assets['value-' + loss_type].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        losses = vf(asset_df, gmf_df, col, rndgen, AE,
-                    self.minimum_asset_loss[loss_type])
-        return losses
+        losses, variances = vf(asset_df, gmf_df, col, rndgen, AE,
+                               self.minimum_asset_loss[loss_type])
+        return AccumDict(dict(losses=losses, variances=variances))
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
@@ -681,22 +681,22 @@ class CompositeRiskModel(collections.abc.Mapping):
         dic = dict(eids=eids, assets=assets.to_records(), rlzi=rlz,
                    loss_types=self.loss_types, haz=haz)
         for lt in self.loss_types:
-            arrays = []
+            outs = []
             rmodels, weights = self.get_rmodels_weights(lt, taxo)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    arrays.append(rm(lt, assets, haz, col, rndgen, AE))
+                    outs.append(rm(lt, assets, haz, col, rndgen, AE))
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
-                    arrays.append(rm(lt, assets, hcurve))
+                    outs.append(rm(lt, assets, hcurve))
 
             # average on the risk models (unsupported for classical_risk)
-            dic[lt] = arrays[0]
+            dic[lt] = outs[0]
             if weights[0] != 1:
                 dic[lt] *= weights[0]
-            for arr, w in zip(arrays[1:], weights[1:]):
+            for arr, w in zip(outs[1:], weights[1:]):
                 dic[lt] += arr * w
 
         # compute secondary losses, if any
