@@ -16,7 +16,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+
+import os
+import re
+import inspect
+import logging
+import functools
+import multiprocessing
+import numpy
+
 from openquake.baselib import __version__
+from openquake.baselib.general import DictArray, AccumDict
+from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import correlation, stats, calc
+from openquake.hazardlib import valid, InvalidFile, shakemap
+from openquake.sep.classes import SecondaryPeril
+from openquake.commonlib import logictree, util
+from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
 Full list of configuration parameters
@@ -613,20 +629,6 @@ width_of_mfd_bin:
   Example: *width_of_mfd_bin = 0.2*.
   Default: None
 """ % __version__
-import os
-import re
-import logging
-import functools
-import multiprocessing
-import numpy
-
-from openquake.baselib.general import DictArray, AccumDict
-from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation, stats, calc
-from openquake.hazardlib import valid, InvalidFile
-from openquake.sep.classes import SecondaryPeril
-from openquake.commonlib import logictree, util
-from openquake.risklib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
@@ -1379,7 +1381,16 @@ class OqParam(valid.ParamSet):
         """
         hazard_calculation_id must be set if shakemap_id is set
         """
-        return self.hazard_calculation_id if self.shakemap_id else True
+        if self.shakemap_uri:
+            kind = self.shakemap_uri['kind']
+            sig = inspect.signature(shakemap.get_array[kind])
+            params = list(sig.parameters)
+            if params != list(self.shakemap_uri):
+                raise ValueError(
+                    'Expected parameters %s in shakemap_uri, got %s' %
+                    (params, list(self.shakemap_uri)))
+        return self.hazard_calculation_id if (
+            self.shakemap_id or self.shakemap_uri) else True
 
     def is_valid_truncation_level(self):
         """

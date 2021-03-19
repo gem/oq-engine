@@ -3,7 +3,7 @@ import unittest
 import numpy
 from openquake.hazardlib import geo, imt
 from openquake.hazardlib.shakemap import (
-    get_shakemap_array, get_sitecol_shakemap, to_gmfs, amplify_ground_shaking,
+    get_sitecol_shakemap, to_gmfs, amplify_ground_shaking,
     spatial_correlation_array, spatial_covariance_array,
     cross_correlation_matrix, cholesky)
 

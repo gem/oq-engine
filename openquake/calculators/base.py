@@ -754,7 +754,7 @@ class HazardCalculator(BaseCalculator):
             if oq.region:
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
-            if oq.shakemap_id or 'shakemap' in oq.inputs:
+            if oq.shakemap_id or 'shakemap' in oq.inputs or oq.shakemap_uri:
                 self.sitecol, self.assetcol = read_shakemap(
                     self, haz_sitecol, assetcol)
                 self.datastore['sitecol'] = self.sitecol
