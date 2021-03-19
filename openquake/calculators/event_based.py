@@ -261,8 +261,9 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(self.oqparam)
         G = gsim_lt.get_num_paths()
-        if oq.inputs['rupture_model'].endswith('.xml'):
+        if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
+        if oq.inputs['rupture_model'].endswith('.xml'):
             self.gsims = [gsim_rlz.value[0] for gsim_rlz in gsim_lt]
             self.cmaker = ContextMaker(
                 '*', self.gsims, {'maximum_distance': oq.maximum_distance,
@@ -277,8 +278,13 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(aw) == 0:
                 raise RuntimeError('The rupture is too far from the sites!')
         elif oq.inputs['rupture_model'].endswith('.csv'):
-            aw = readinput.get_ruptures(oq.inputs['rupture_model'])
-            aw.array['n_occ'] = G
+            aw = readinput.get_ruptures(
+                oq.inputs['rupture_model'], list(gsim_lt.values))
+            num_gsims = numpy.array(
+                [len(gsim_lt.values[trt]) for trt in gsim_lt.values], U32)
+            if oq.calculation_mode.startswith('scenario'):
+                # rescale n_occ
+                aw['n_occ'] *= ngmfs * num_gsims[aw['et_id']]
         rup_array = aw.array
         hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 

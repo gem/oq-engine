@@ -67,10 +67,9 @@ def event_based_risk(df, param, monitor):
         weights = dstore['weights'][()]
     AE = len(assets_df), len(rlz_id)
     AR = len(assets_df), len(weights)
-    EK1 = len(rlz_id), param['K'] + 1
-    losses_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
-    losses_by_EK1 = {
-        ln: sparse.dok_matrix(EK1) for ln in crmodel.oqparam.loss_names}
+    loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
+    loss_by_EK1 = {ln: general.AccumDict(accum=0)
+                   for ln in crmodel.oqparam.loss_names}
     rndgen = MultiEventRNG(
         param['master_seed'], numpy.unique(df.eid), param['asset_correlation'])
     for taxo, asset_df in assets_df.groupby('taxonomy'):
@@ -85,7 +84,7 @@ def event_based_risk(df, param, monitor):
             coo = out[ln].tocoo()  # shape (A, E)
             if coo.getnnz() == 0:
                 continue
-            lbe = losses_by_EK1[ln]
+            lbe = loss_by_EK1[ln]
             with mon_agg:
                 ldf = pandas.DataFrame(dict(eid=coo.col, loss=coo.data))
                 if K:
@@ -102,20 +101,25 @@ def event_based_risk(df, param, monitor):
                         dict(aid=coo.row, loss=coo.data, rlz=rlz_id[coo.col]))
                     tot = ldf.groupby(['aid', 'rlz']).loss.sum()
                     aids, rlzs = zip(*tot.index)
-                    losses_by_AR[ln].append(
+                    loss_by_AR[ln].append(
                         sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR))
-    if losses_by_AR:
-        yield losses_by_AR
-        losses_by_AR.clear()
+    if loss_by_AR:
+        yield loss_by_AR
+        loss_by_AR.clear()
     alt = {}
     for lni, ln in enumerate(crmodel.oqparam.loss_names):
-        lbe = losses_by_EK1[ln].tocoo()
-        nnz = lbe.getnnz()
+        nnz = len(loss_by_EK1[ln])
         if nnz:
+            eid = numpy.zeros(nnz, U32)
+            kid = numpy.zeros(nnz, U16)
+            loss = numpy.zeros(nnz, F64)
             lid = numpy.ones(nnz, U8) * lni
+            for i, ((e, k), ls) in enumerate(loss_by_EK1[ln].items()):
+                eid[i] = e
+                kid[i] = k
+                loss[i] = ls
             alt[ln] = pandas.DataFrame(
-                dict(event_id=U32(lbe.row), agg_id=U16(lbe.col), loss=lbe.data,
-                     loss_id=lid))
+                dict(event_id=eid, agg_id=kid, loss=loss, loss_id=lid))
     if alt:
         yield alt
 
@@ -287,7 +291,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     def agg_dicts(self, dummy, dic):
         """
         :param dummy: unused parameter
-        :param dic: dictionary or tuple (lni, losses_by_AR)
+        :param dic: dictionary of losses keyed by loss type
         """
         if not dic:
             return
@@ -324,7 +328,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         alt = self.datastore.read_df('agg_loss_table', 'event_id')
         K = self.datastore['agg_loss_table'].attrs.get('K', 0)
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
-        if oq.investigation_time is None:  # scenario, compute agg_losses
+        if oq.calculation_mode == 'scenario_risk':  # compute agg_losses
             alt['rlz_id'] = self.rlzs[alt.index.to_numpy()]
             agglosses = numpy.zeros((K + 1, self.R, self.L), F32)
             for (agg_id, rlz_id, loss_id), df in alt.groupby(
@@ -348,13 +352,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         # sanity check on the agg_losses and sum_losses
         sumlosses = self.avg_losses.sum(axis=0)
-        if not numpy.allclose(agglosses, sumlosses, rtol=1E-6):
+        if not numpy.allclose(agglosses[K], sumlosses, rtol=1E-6):
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
             logging.warning(
                 'Due to rounding errors inherent in floating-point arithmetic,'
                 ' agg_losses != sum(avg_losses): %s != %s\nsee %s',
-                agglosses.mean(), sumlosses.mean(), url)
+                agglosses[K].mean(), sumlosses.mean(), url)
 
     def gen_args(self):
         """

@@ -1322,7 +1322,7 @@ def extract_rupture_info(dstore, what):
 @extract.add('ruptures')
 def extract_ruptures(dstore, what):
     """
-    Extract some information about the ruptures, including the boundary.
+    Extract the ruptures with their geometry as a big CSV string
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/ruptures?min_mag=6
     """

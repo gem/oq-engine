@@ -44,8 +44,8 @@ def sqrt(array):
 
 def surface_to_arrays(surface):
     """
-    :param surface: a Surface object
-    :returns: a list of arrays of shape (3, N, M)
+    :param surface: a (Multi)Surface object
+    :returns: a list of S arrays of shape (3, N, M)
     """
     if hasattr(surface, 'surfaces'):  # multiplanar surfaces
         lst = []

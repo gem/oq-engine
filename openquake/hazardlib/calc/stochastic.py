@@ -106,7 +106,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
     geoms = []
     for ebrupture in ebruptures:
         rup = ebrupture.rupture
-        arrays = surface_to_arrays(rup.surface)
+        arrays = surface_to_arrays(rup.surface)  # one array per surface
         points = []
         shapes = []
         for array in arrays:

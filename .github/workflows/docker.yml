@@ -3,11 +3,14 @@ name: docker
 on:
   schedule:
     - cron: "0 2 * * *"
+  push: 
+    branches:
+      - docker_build
 
 jobs:
   docker:
     name: Build image and run calc
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
   # This Checkout is necessary when using a context in docker/build-push-action
@@ -16,15 +19,6 @@ jobs:
       - name: Build image engine with tag nightly
         id: docker_engine
         run: docker build --build-arg oq_branch=master -t openquake/engine:nightly -f docker/Dockerfile.dev docker
-      - name: List Image
-        run: |
-          docker image ls
-      - name: Build image engine master with tag nightly
-        id: docker_master
-        run: docker build --build-arg oq_branch=master -t openquake/engine-master-zmq:nightly -f docker/zmq/Dockerfile.dev_master docker/zmq
-      - name: Builds image engine worker with tags nightly
-        id: docker_worker
-        run: docker build --build-arg oq_branch=master -t openquake/engine-worker-zmq:nightly -f docker/zmq/Dockerfile.dev_worker docker/zmq
       - name: List Image
         run: |
           docker image ls
