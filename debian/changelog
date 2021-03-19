@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
+    thus breaking the QGIS plugin on Windows
   * Fixed `readinput.get_ruptures` to be able to read ruptures in engine 3.11
     format
   * scenario_risk calculations starting from ruptures in CSV format now

@@ -406,7 +406,7 @@ def array_of_vstr(lst):
 
 def dumps(dic):
     """
-    Dump in json
+    Dump a dictionary in json. Extend json.dumps to work on numpy objects.
     """
     new = {}
     for k, v in dic.items():
@@ -433,10 +433,8 @@ def dumps(dic):
             new[k] = {cls2dotname(v.__class__): dumps(vars(v))}
         elif isinstance(v, dict):
             new[k] = dumps(v)
-        elif isinstance(v, str):
-            new[k] = '"%s"' % v
         else:
-            new[k] = v
+            new[k] = json.dumps(v)
     return "{%s}" % ','.join('\n"%s": %s' % it for it in new.items())
 
 
