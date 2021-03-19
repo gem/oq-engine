@@ -82,8 +82,8 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
 
 
 @get_array.add('usgs_id')
-def get_array_usgs_id(kind, shakemap_id):
-    url = SHAKEMAP_URL.format(shakemap_id)
+def get_array_usgs_id(kind, id):
+    url = SHAKEMAP_URL.format(id)
     logging.info('Downloading %s', url)
     contents = json.loads(urlopen(url).read())[
         'properties']['products']['shakemap'][-1]['contents']
