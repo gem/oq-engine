@@ -574,15 +574,25 @@ def get_gsim_lt(oqparam, trts=('*',)):
     return gsim_lt
 
 
-def get_ruptures(fname_csv):
+def get_ruptures(fname_csv, trts):
     """
-    Read ruptures in CSV format and return an ArrayWrapper
+    Read ruptures in CSV format and return an ArrayWrapper.
+
+    :param fname_csv: path to the CSV file
+    :param trts: list of known tectonic region types
     """
     if not rupture.BaseRupture._code:
         rupture.BaseRupture.init()  # initialize rupture codes
     code = rupture.BaseRupture.str2code
     aw = hdf5.read_csv(fname_csv, rupture.rupture_dt)
-    trts = aw.trts
+    if trts == ['*']:
+        trts = aw.trts
+    else:
+        missing = set(aw.trts) - set(trts)
+        if missing:
+            raise RuntimeError(
+                '%s contain a TRT missing in the logic tree: %s' %
+                (fname_csv, missing))
     rups = []
     geoms = []
     n_occ = 1
