@@ -406,7 +406,7 @@ def array_of_vstr(lst):
 
 def dumps(dic):
     """
-    Dump in json
+    Dump a dictionary in json. Extend json.dumps to work on numpy objects.
     """
     new = {}
     for k, v in dic.items():
