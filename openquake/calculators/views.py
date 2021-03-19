@@ -968,3 +968,20 @@ def view_zero_losses(token, dstore):
 
 def _get(df, sid):
     return df.loc[sid].to_dict()
+
+
+@view.add('gsim_for_event')
+def view_gsim_for_event(token, dstore):
+    """
+    Display the GSIM used when computing the GMF for the given event
+
+    $ oq show gsim_for_event:123 -1
+    [BooreAtkinson2008]
+    """
+    eid = int(token.split(':')[1])
+    full_lt = dstore['full_lt']
+    rup_id, rlz_id = dstore['events'][eid][['rup_id', 'rlz_id']]
+    et_id = dstore['ruptures'][rup_id]['et_id']
+    trti = et_id // len(full_lt.sm_rlzs)
+    gsim = full_lt.get_realizations()[rlz_id].gsim_rlz.value[trti]
+    return gsim

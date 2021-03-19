@@ -316,6 +316,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         fname = export(('agg_curves-stats', 'csv'), self.calc.datastore)[0]
         self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
 
+        # test the view gsim_for_event
+        gsim = view('gsim_for_event:0', self.calc.datastore)
+        self.assertEqual(str(gsim), "[BooreAtkinson2008]")
+        gsim = view('gsim_for_event:10', self.calc.datastore)
+        self.assertEqual(str(gsim), "[ChiouYoungs2008]")
+
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
