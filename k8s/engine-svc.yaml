@@ -1,0 +1,31 @@
+#NodePort with Port Mappings
+#https://kind.sigs.k8s.io/docs/user/configuration/#networking
+kind: Pod
+apiVersion: v1
+metadata:
+  name: oq-pod
+  labels:
+    app: oqengine
+    env: latest
+spec:
+  containers:
+  - name: oqengine
+    image: openquake/engine:latest
+    ports:
+      - containerPort: 8800
+        name: calc
+        protocol: TCP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: engine-service
+spec:
+  type: NodePort
+  ports:
+  - name: webui
+    protocol: TCP
+    nodePort: 30950 #must same of containerPort on extraMappings
+    port: 8800 #must same of containerPort
+  selector:
+    app: oqengine
