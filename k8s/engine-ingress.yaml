@@ -9,7 +9,7 @@ spec:
   rules:
   - http:
       paths: 
-      - path: "/engine"
-        backend:
+      - backend:
           serviceName: engine-service
           servicePort: 8800
+        path: /
