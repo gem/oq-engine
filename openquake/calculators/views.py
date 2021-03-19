@@ -973,9 +973,10 @@ def _get(df, sid):
 @view.add('gsim_for_event')
 def view_gsim_for_event(token, dstore):
     """
-    Display the GSIM used when computing the GMF for the given event.
+    Display the GSIM used when computing the GMF for the given event
 
-     $ oq show gsim_for_event:123
+    $ oq show gsim_for_event:123 -1
+    [BooreAtkinson2008]
     """
     eid = int(token.split(':')[1])
     full_lt = dstore['full_lt']
