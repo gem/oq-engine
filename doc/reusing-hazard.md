@@ -57,7 +57,7 @@ old hazard calculations.
 Another difficulty would arise if the association between asset and
 hazard sites changed, causing different losses to be computed. This
 has not happened intentionally, but it has happened several times
-unintentionally, since there is a tricky part. Bug fixes have change
+unintentionally, since it is a tricky part. Bug fixes have changed
 the *asset<->site association* logic several times in the past.
 
 Reusing an old *exposure* would also also be problematic,
@@ -74,39 +74,23 @@ calculation, thus paying a performance penalty.
 
 In the future, it is expected that both the site collection and the events
 table will be stored differently in the datastore, in a pandas-friendly
-way, for consistency with the way many other objects are stored, and
+way, for consistency with the way other objects are stored, and
 also for memory efficiency. That means that work will be needed to be
 able to read both the old and the new versions of such objects. This is
 actually the least of the problems mentioned until now.
 
-The elephant in the room
-------------------------
-
-We have not talked of the biggest issue of all: the sheer size of the
-GMFs dataset. Reusing the GMFs is never going to be practical if we
-need to store hundreds of GB of data. The only real solution for
-commercial applications would be to store a reduced set of GMFs,
-corresponding to a single effective realization, small but still
-reproducing with decent accurary the mean results of the full
-calculation. Then the risk part of the calculation would be like a
-scenario starting from a CSV file.
-
-We could even export three CSV files for the GMFs: one for the mean
-field, one for a pessimistic case and one for an optimistic case, thus
-allowing the users to explore alternative hazard scenarios.
-
-Copying with the version-dependency
------------------------------------
+Copying with version-dependency
+-------------------------------
 
 The fact that old hazard cannot be reused is a minor issue for GEM people,
 since we are using the git version of the engine. Here is a workflow that
 works.
 
 1. First of all, run the hazard part of the calculation on a big remote machine
-   which is at version X of the code.
+   which is at version X of the code (usually an old version).
 
-2. The run on the user laptop the command `oq importcalc` to dowload the remote
-calculation; here is an example:
+2. Then run on the user machine the command `oq importcalc` to dowload the
+remote calculation; here is an example:
 ```
 $ oq importcalc 41214
 INFO:root:POST https://oq2.wilson.openquake.org//accounts/ajax_login/
@@ -118,7 +102,7 @@ Downloaded 58,118,085 bytes
  'engine_version': '3.12.0-gita399903317'}
 INFO:root:Imported calculation 41214 successfully
 ```
-3. Got to version X of the code so that the risk part of the calculation
+3. Go back to version X of the code so that the risk part of the calculation
 can be done locally without issues:
 ```bash
 $ git checkout a399903317
@@ -126,3 +110,19 @@ $ oq engine --run job.ini --hc 41214
 ```
 That's it. This guarantees consistency and reproducibility, since both
 parts of the calculation are performed with the same version of the code.
+
+The elephant in the room
+------------------------
+
+We have not talked about the biggest issue of all: the sheer size of the
+GMFs dataset. Reusing the GMFs is never going to be practical if we
+need to store hundreds of GB of data. The only real solution for
+commercial applications would be to store a reduced set of GMFs,
+corresponding to a single effective realization, small but still
+reproducing with decent accurary the mean results of the full
+calculation. Then the risk part of the calculation would be like a
+scenario starting from a CSV file.
+
+We could even export three CSV files for the GMFs: one for the mean
+field, one for a pessimistic case and one for an optimistic case, thus
+allowing the users to explore alternative hazard scenarios.
