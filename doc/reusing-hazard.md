@@ -2,9 +2,9 @@ Reusing hazard across engine versions
 =====================================
 
 The OpenQuake engine has always had the capability to reuse old hazard
-calculations when performing new risk calculations by using the `--hc`
+calculations when performing new risk calculations, thanks to the `--hc`
 command-line option. However such capability never extended across
-different versions of the engine. Here I will document the reasons
+different versions of the engine. Here we will document the reasons
 for such restriction.
 
 Reusing the GMFs
@@ -48,13 +48,13 @@ reusing an old hazard calculations.
 
 The same would happen if the *weighting algorithm* of the realizations
 changed (and this happened a couple of times in the past). Moreover at
-nearly each release of the engine the details of the algorithm used to
-generate the ruptures and/or the *rupture seeds changes*, therefore
-again starting a calculation from scratch in the new version of the
-engine would give different results than reusing an old hazard
-calculations.
+nearly each release of the engine thedoc/reusing-hazard.md details of
+the algorithm used to generate the ruptures and/or the *rupture seeds
+changes*, therefore again starting a calculation from scratch in the
+new version of the engine would give different results than reusing an
+old hazard calculations.
 
-Another difficulty would happen if the association between asset and
+Another difficulty would arise if the association between asset and
 hazard sites changed, causing different losses to be computed. This
 has not happened intentionally, but it has happened several times
 unintentionally, since there is a tricky part. Bug fixes have change
@@ -63,10 +63,14 @@ the *asset<->site association* logic several times in the past.
 Reusing an old *exposure* would also also be problematic,
 assuming the new exposure had more fields. Changes to the exposure
 happened several time in the past, so the problem is not academic.
+The solution is to not reuse old exposure and to re-import the exposure
+at each risk calculation, thus paying a performance penalty.
 
-The same can be said for *vulnerability/fragility functions*: any change
-there would make reusing them across versions very hard. Notice that such
-change happened few months ago already, so it is not unlikely.
+The same can be said for *vulnerability/fragility functions*: any
+change there would make reusing them across versions very hard. Notice
+that such change happened few months ago already. The solution is to
+not reuse old risk models and to re-parse them at each new risk
+calculation, thus paying a performance penalty.
 
 In the future, it is expected that both the site collection and the events
 table will be stored differently in the datastore, in a pandas-friendly
@@ -90,3 +94,35 @@ scenario starting from a CSV file.
 We could even export three CSV files for the GMFs: one for the mean
 field, one for a pessimistic case and one for an optimistic case, thus
 allowing the users to explore alternative hazard scenarios.
+
+Copying with the version-dependency
+-----------------------------------
+
+The fact that old hazard cannot be reused is a minor issue for GEM people,
+since we are using the git version of the engine. Here is a workflow that
+works.
+
+1. First of all, run the hazard part of the calculation on a big remote machine
+   which is at version X of the code.
+
+2. The run on the user laptop the command `oq importcalc` to dowload the remote
+calculation; here is an example:
+```
+$ oq importcalc 41214
+INFO:root:POST https://oq2.wilson.openquake.org//accounts/ajax_login/
+INFO:root:GET https://oq2.wilson.openquake.org//v1/calc/41214/extract/oqparam
+INFO:root:Saving /home/michele/oqdata/calc_41214.hdf5
+Downloaded 58,118,085 bytes
+{'checksum32': 1949258781,
+ 'date': '2021-03-18T15:25:11',
+ 'engine_version': '3.12.0-gita399903317'}
+INFO:root:Imported calculation 41214 successfully
+```
+3. Got to version X of the code so that the risk part of the calculation
+can be done locally without issues:
+```bash
+$ git checkout a399903317
+$ oq engine --run job.ini --hc 41214
+```
+That's it. This guarantees consistency and reproducibility, since both
+parts of the calculation are performed with the same version of the code.
