@@ -57,7 +57,7 @@ engine would give different results than reusing an old hazard.
 hazard sites changed, causing different losses to be computed. This
 has neved happened intentionally, but it has happened several times
 unintentionally, due to tricky bugs. Bug fixes have changed
-the *asset<->site association* logic several times in the past.
+the *asset<->site* association logic several times in the past.
 
 6. Reusing an old *exposure* would also also be problematic,
 assuming the new exposure had more fields. Changes to the exposure
@@ -125,3 +125,5 @@ scenario starting from a CSV file.
 We could even export three CSV files for the GMFs: one for the mean
 field, one for a pessimistic case and one for an optimistic case, thus
 allowing the users to explore alternative hazard scenarios.
+
+All this requires internal discussion as it is not easy to achieve.
