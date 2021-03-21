@@ -339,7 +339,11 @@ class AlAtikSigmaModel(GMPE):
             if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
                 highest_period = 2.0
                 periods = [p for p in periods if p <= highest_period]
-            set_highest = periods[-5:]
+                set_highest = periods[-5:]
+            elif gmpe.__class__.__name__ == 'RietbrockEdwards2019Low':
+                set_highest = periods[-2:]
+            else:
+                set_highest = periods
         except AttributeError:
             coeffs = gmpe.TAB2.sa_coeffs
             imts = [*coeffs]
@@ -347,7 +351,11 @@ class AlAtikSigmaModel(GMPE):
             if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
                 highest_period = 2.0
                 periods = [p for p in periods if p <= highest_period]
-            set_highest = periods[-5:]
+                set_highest = periods[-5:]
+            elif gmpe.__class__.__name__ == 'RietbrockEdwards2019Low':
+                set_highest = periods[-2:]
+            else:
+                set_highest = periods
 
         return set_highest
 
@@ -418,6 +426,7 @@ class AlAtikSigmaModel(GMPE):
         sp = self.get_capping_period(cornerp, self.gmpe, imt)
         hp = sp[-1]
 
+
         # 1 - if imt.period < cornerp, no changes needed
         if extr and imt.period <= cornerp and imt.period <= hp:
             mean, _ = self.gmpe.get_mean_and_stddevs(
@@ -434,7 +443,7 @@ class AlAtikSigmaModel(GMPE):
         elif extr and cornerp > hp and imt.period >= hp and imt.period < cornerp:
             mean, _ = self.extrapolate_in_PSA(sites, rup, dists,
                                 hp, sp, stds_types, imt.period)
-        elif extr and cornerp > hp and imt.period >= cornerp:
+        elif extr and cornerp > hp and imt.period > cornerp:
             mean, _ = self.extrapolate_in_PSA(sites, rup, dists,
                                 hp, sp, stds_types, cornerp)
             disp = self.get_disp_from_acc(mean, cornerp)
@@ -444,6 +453,9 @@ class AlAtikSigmaModel(GMPE):
             print('using regular computation! check if meant to extrapolate')
             mean, _ = self.gmpe.get_mean_and_stddevs(
                 sites, rup, dists, imt, stds_types)
+
+#        if imt.period == 10:
+#            import pdb; pdb.set_trace()
 
 
         kappa = 1
