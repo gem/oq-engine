@@ -38,7 +38,7 @@ engine. If the SiteCollection has changed (for instance new fields have
 been added) this has to be managed in some way and this is not necessarily
 easy or event possible.
 
-3.Moreover there is the *events* table which associates event IDs to
+3. Moreover there is the *events* table which associates event IDs to
 realization IDs and to rupture IDs; if the form of the events table
 changes across versions (for instance if new fields are added) then we
 have an issue. Also, if the management of the logic tree changes and
