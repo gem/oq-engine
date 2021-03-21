@@ -450,7 +450,6 @@ class AlAtikSigmaModel(GMPE):
             mean = self.get_acc_from_disp(disp, imt.period)
 
         else:
-            print('using regular computation! check if meant to extrapolate')
             mean, _ = self.gmpe.get_mean_and_stddevs(
                 sites, rup, dists, imt, stds_types)
 
