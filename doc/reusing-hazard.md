@@ -15,14 +15,14 @@ While the `--hc` option works for all kind of calculations,
 less used: what is really important is to reuse the hazard for
 scenario and for event based calculations, i.e. to reuse the GMFs.
 
-Reusing the hazard for scenario calculations is relatively straighforward:
-it is enough to keep the GMFs in CSV format and to start from there by
-using the `gmfs_csv` option in the job.ini. This works across versions
-already. The reason why this is simple is that the logic is trivial in
-this case, the engine assumes that there is a single realization and
-it automatically creates a fake logic tree object.
+Reusing the hazard for scenario calculations is relatively
+straighforward: it is enough to keep the GMFs in CSV format and to
+start from there by using the `gmfs_file` option in the job.ini. This
+works across versions already. The reason is that the logic tress is
+trivial in this case: internally, the engine assumes that there is a single
+realization and automatically creates a fake logic tree object.
 
-The difficulty is for event based calculations. The details of the
+1. The difficulty is for event based calculations. The details of the
 *logic tree* implementation change frequently. Therefore an apparently
 simple question such as "tell me which GMPE was used when computing
 the ground motion field for event number 123" is actually very hard to
@@ -30,49 +30,48 @@ answer across versions. This is by far the biggest difficulty, since
 the logic tree part is expected to change again and in unpredictable
 ways, due to the requests of the hazard team.
 
-This not the only difficulty. When using the ``--hc`` option the engine
+2. This not the only difficulty. When using the ``--hc`` option the engine
 has also to match the risk sites with the hazard sites; this means
 that it has to match a *SiteCollection* object coming from an old version
 of the engine with a SiteCollection coming from a new version of the
 engine. If the SiteCollection has changed (for instance new fields have
 been added) this has to be managed in some way and this is not necessarily
-always possible.
+easy or event possible.
 
-Moreover there is the *events* table which associates event IDs to
+3.Moreover there is the *events* table which associates event IDs to
 realization IDs and to rupture IDs; if the form of the events table
-changes across versions (for instance if new fields are added) this
-is an issue. Also, if the management of the logic tree changes and
+changes across versions (for instance if new fields are added) then we
+have an issue. Also, if the management of the logic tree changes and
 the associations are different, starting a calculation from scratch
 in the new version of the engine will give different results than
 reusing an old hazard calculations.
 
-The same would happen if the *weighting algorithm* of the realizations
+4. The same would happen if the *weighting algorithm* of the realizations
 changed (and this happened a couple of times in the past). Moreover at
-nearly each release of the engine thedoc/reusing-hazard.md details of
-the algorithm used to generate the ruptures and/or the *rupture seeds
-changes*, therefore again starting a calculation from scratch in the
-new version of the engine would give different results than reusing an
-old hazard calculations.
+nearly each release of the engine the details of the algorithm used to
+generate the ruptures and/or the *rupture seeds changes*, therefore
+again starting a calculation from scratch in the new version of the
+engine would give different results than reusing an old hazard.
 
-Another difficulty would arise if the association between asset and
+5. Another difficulty would arise if the association between asset and
 hazard sites changed, causing different losses to be computed. This
-has not happened intentionally, but it has happened several times
-unintentionally, since it is a tricky part. Bug fixes have changed
+has neved happened intentionally, but it has happened several times
+unintentionally, due to tricky bugs. Bug fixes have changed
 the *asset<->site association* logic several times in the past.
 
-Reusing an old *exposure* would also also be problematic,
+6. Reusing an old *exposure* would also also be problematic,
 assuming the new exposure had more fields. Changes to the exposure
 happened several time in the past, so the problem is not academic.
-The solution is to not reuse old exposure and to re-import the exposure
-at each risk calculation, thus paying a performance penalty.
+The solution is to NOT reuse old exposures and to re-import the exposure
+at each new risk calculation, thus paying a performance penalty.
 
-The same can be said for *vulnerability/fragility functions*: any
+7. The same can be said for *vulnerability/fragility functions*: any
 change there would make reusing them across versions very hard. Notice
 that such change happened few months ago already. The solution is to
 not reuse old risk models and to re-parse them at each new risk
 calculation, thus paying a performance penalty.
 
-In the future, it is expected that both the site collection and the events
+8. In the future, it is expected that both the site collection and the events
 table will be stored differently in the datastore, in a pandas-friendly
 way, for consistency with the way other objects are stored, and
 also for memory efficiency. That means that work will be needed to be
