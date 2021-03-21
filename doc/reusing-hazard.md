@@ -41,10 +41,10 @@ easy or event possible.
 3. Moreover there is the *events* table which associates event IDs to
 realization IDs and to rupture IDs; if the form of the events table
 changes across versions (for instance if new fields are added) then we
-have an issue. Also, if the management of the logic tree changes and
-the associations are different, starting a calculation from scratch
-in the new version of the engine will give different results than
-reusing an old hazard calculations.
+have an issue. Also, if the management of the logic tree changes (this
+is very common) and the associations are different, starting a
+calculation from scratch in the new version of the engine will give
+different results than reusing an old hazard calculations.
 
 4. The same would happen if the *weighting algorithm* of the realizations
 changed (and this happened a couple of times in the past). Moreover at
