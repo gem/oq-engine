@@ -40,5 +40,5 @@ ADD scripts/oq-start.sh ${HOME}
 #ADD oq-engine-master ${HOME}
 EXPOSE 8800:8800
 STOPSIGNAL SIGINT
-#ENTRYPOINT ["/bin/bash", "-c"]
+ENTRYPOINT ["/bin/bash"]
 #CMD ["./oq-start.sh"]  
