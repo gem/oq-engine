@@ -695,9 +695,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             # average on the risk models (unsupported for classical_risk)
             dic[lt] = arrays[0]
             if weights[0] != 1:
-                dic[lt] *= weights[0]
-            for arr, w in zip(arrays[1:], weights[1:]):
-                dic[lt] += arr * w
+                dic[lt].loss *= weights[0]
+            for alt, w in zip(arrays[1:], weights[1:]):
+                dic[lt].loss += alt.loss * w
 
         # compute secondary losses, if any
         # FIXME: it should be moved up, before the computation of the mean

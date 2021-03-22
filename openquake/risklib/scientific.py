@@ -28,9 +28,9 @@ from functools import lru_cache
 import numpy
 import pandas
 from numpy.testing import assert_equal
-from scipy import interpolate, stats, sparse
+from scipy import interpolate, stats
 
-from openquake.baselib.general import CallableDict, AccumDict
+from openquake.baselib.general import CallableDict
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -1325,21 +1325,25 @@ class InsuredLosses(object):
 
     def update(self, out, asset_df):
         """
-        :param out: a dictionary of sparse matrices keyed by loss_type
+        :param out: a dictionary of dataframes keyed by loss_type
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
         for lt in self.policy_dict:
             o = out[lt]
-            ins = sparse.dok_matrix(o.shape)
             policy = self.policy_dict[lt]
-            for aid, eid, loss in zip(o.row, o.col, o.data):
+            eids, aids, ilosses = [], [], []
+            for aid, df in o.groupby('aid'):
                 asset = asset_df.loc[aid]
                 avalue = asset['value-' + lt]
                 policy_idx = asset[self.policy_name]
                 ded, lim = policy[policy_idx]
-                ins[aid, eid] = insured_losses(
-                    loss, ded * avalue, lim * avalue)
-            out[lt + '_ins'] = ins.tocoo()
+                ins = insured_losses(
+                    df.loss.to_numpy(), ded * avalue, lim * avalue)
+                eids.extend(df.eid)
+                aids.extend([aid] * len(df))
+                ilosses.extend(ins)
+            out[lt + '_ins'] = pandas.DataFrame(
+                dict(eid=U32(eids), aid=U32(aids), loss=ilosses))
 
 
 # not used anymore

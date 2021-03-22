@@ -100,7 +100,7 @@ def event_based_risk(df, param, monitor):
             with mon_agg:
                 ldf = pandas.DataFrame(dict(eid=alt.eid, loss=alt.loss))
                 if K:
-                    ldf['kid'] = kids[alt.aid]
+                    ldf['kid'] = kids[alt.aid.to_numpy()]
                     tot = ldf.groupby(['eid', 'kid']).loss.sum()
                     for (eid, kid), loss in zip(tot.index, tot.to_numpy()):
                         lbe[eid, kid] += loss
@@ -110,7 +110,7 @@ def event_based_risk(df, param, monitor):
             if param['avg_losses']:
                 with mon_avg:
                     ldf = pandas.DataFrame(
-                        dict(aid=alt.aid, loss=alt.loss,
+                        dict(aid=alt.aid.to_numpy(), loss=alt.loss,
                              rlz=rlz_id[alt.eid.to_numpy()]))
                     tot = ldf.groupby(['aid', 'rlz']).loss.sum()
                     aids, rlzs = zip(*tot.index)
