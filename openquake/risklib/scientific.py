@@ -28,7 +28,7 @@ from functools import lru_cache
 import numpy
 import pandas
 from numpy.testing import assert_equal
-from scipy import interpolate, stats, sparse
+from scipy import interpolate, stats
 
 from openquake.baselib.general import CallableDict
 
@@ -247,18 +247,15 @@ class VulnerabilityFunction(object):
         else:
             raise NotImplementedError(self.distribution_name)
 
-    def __call__(self, asset_df, gmf_df, col, rng=None, AE=None, minloss=0):
+    def __call__(self, asset_df, gmf_df, col, rng=None, minloss=0):
         """
         :param asset_df: a DataFrame with A assets
         :param gmf_df: a DataFrame of GMFs for the given assets
         :param rng: a MultiEventRNG or None
-        :param AE: a pair of integers (A, E)
-        :returns: losses of shape (A, E) and variances of shape (A, E)
+        :returns: a DataFrame with columns eid, aid, loss
         """
-        testmode = asset_df is None and AE is None
-        if testmode:  # in the tests
+        if asset_df is None:  # in the tests
             asset_df = pandas.DataFrame(dict(aid=0, val=1), [0])
-            AE = len(asset_df), len(gmf_df)
         ratio_df = self.interpolate(gmf_df, col)  # really fast
         if self.distribution_name == 'PM':  # special case
             lratios = F64(self.loss_ratios)
@@ -270,15 +267,12 @@ class VulnerabilityFunction(object):
         sampler = Sampler(self.distribution_name, rng, lratios, cols, minloss)
         covs = not hasattr(self, 'covs') or self.covs.any()
         losses = sampler.get_losses(df, covs)
-        loss_matrix = sparse.coo_matrix((losses, (df.aid, df.eid)), AE)
-        if testmode:
-            return loss_matrix.todense()
         if self.distribution_name == 'PM':  # special case
-            var_matrix = 0
+            variances = numpy.zeros(len(losses))
         else:
             variances = (losses * df['cov'].to_numpy())**2
-            var_matrix = sparse.coo_matrix((variances, (df.aid, df.eid)), AE)
-        return loss_matrix, var_matrix
+        return pandas.DataFrame(dict(eid=df.eid, aid=df.aid, loss=losses,
+                                     variance=variances))
 
     def strictly_increasing(self):
         """
@@ -1333,21 +1327,25 @@ class InsuredLosses(object):
 
     def update(self, out, asset_df):
         """
-        :param out: a dictionary loss_type -> losses -> sparse matrix
+        :param out: a dictionary of dataframes keyed by loss_type
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
         for lt in self.policy_dict:
-            o = out[lt]['losses']
-            ins = sparse.dok_matrix(o.shape)
+            o = out[lt]
             policy = self.policy_dict[lt]
-            for aid, eid, loss in zip(o.row, o.col, o.data):
+            eids, aids, ilosses = [], [], []
+            for aid, df in o.groupby('aid'):
                 asset = asset_df.loc[aid]
                 avalue = asset['value-' + lt]
                 policy_idx = asset[self.policy_name]
                 ded, lim = policy[policy_idx]
-                ins[aid, eid] = insured_losses(
-                    loss, ded * avalue, lim * avalue)
-            out[lt + '_ins'] = dict(losses=ins.tocoo(), variances=0)
+                ins = insured_losses(
+                    df.loss.to_numpy(), ded * avalue, lim * avalue)
+                eids.extend(df.eid)
+                aids.extend([aid] * len(df))
+                ilosses.extend(ins)
+            out[lt + '_ins'] = pandas.DataFrame(
+                dict(eid=U32(eids), aid=U32(aids), loss=ilosses))
 
 
 # not used anymore

@@ -70,7 +70,7 @@ is a Python package containing several modules or event
 subpackages. The stack is a dependency tower where the higher levels
 depend on the lower levels but not vice versa:
 
-- level 9: commands (commands for oq script)
+- level 9: commands (subcommands of oq)
 - level 8: server (database and Web UI)
 - level 7: engine (command-line tool, export, logs)
 - level 6: calculators (hazard and risk calculators)
