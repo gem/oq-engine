@@ -270,10 +270,11 @@ class VulnerabilityFunction(object):
         sampler = Sampler(self.distribution_name, rng, lratios, cols, minloss)
         covs = not hasattr(self, 'covs') or self.covs.any()
         losses = sampler.get_losses(df, covs)
-        loss_matrix = sparse.coo_matrix((losses, (df.aid, df.eid)), AE)
-        if testmode:
-            loss_matrix = loss_matrix.todense()
-        return loss_matrix
+        loss_dict = AccumDict(accum=numpy.zeros(len(asset_df)))
+        idx = {aid: i for i, aid in enumerate(asset_df.aid)}
+        for eid, aid, loss in zip(df.eid, df.aid, losses):
+            loss_dict[eid][idx[aid]] = loss
+        return loss_dict
 
     def strictly_increasing(self):
         """

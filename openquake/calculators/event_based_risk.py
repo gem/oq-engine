@@ -44,6 +44,18 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
+def get_eids_aids_losses(dic, asset_ids):
+    eids = []
+    aids = []
+    losses = []
+    for eid, loss_array in dic.items():
+        for aid, loss in zip(asset_ids, loss_array):
+            eids.append(eid)
+            aids.append(aid)
+            losses.append(loss)
+    return U32(eids), U32(aids), F64(losses)
+
+
 def event_based_risk(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
@@ -80,15 +92,17 @@ def event_based_risk(df, param, monitor):
             out = crmodel.get_output(
                 taxo, asset_df, gmf_df, param['sec_losses'], rndgen, AE=AE)
 
+        aids = asset_df.index.to_numpy()
         for lni, ln in enumerate(crmodel.oqparam.loss_names):
-            coo = out[ln].tocoo()  # shape (A, E)
-            if coo.getnnz() == 0:
+            dic = out[ln]
+            if not dic:
                 continue
+            eids, aids, losses = get_eids_aids_losses(dic, aids)
             lbe = loss_by_EK1[ln]
             with mon_agg:
-                ldf = pandas.DataFrame(dict(eid=coo.col, loss=coo.data))
+                ldf = pandas.DataFrame(dict(eid=eids, loss=losses))
                 if K:
-                    ldf['kid'] = kids[coo.row]
+                    ldf['kid'] = kids[aids]
                     tot = ldf.groupby(['eid', 'kid']).loss.sum()
                     for (eid, kid), loss in zip(tot.index, tot.to_numpy()):
                         lbe[eid, kid] += loss
@@ -98,7 +112,7 @@ def event_based_risk(df, param, monitor):
             if param['avg_losses']:
                 with mon_avg:
                     ldf = pandas.DataFrame(
-                        dict(aid=coo.row, loss=coo.data, rlz=rlz_id[coo.col]))
+                        dict(aid=aids, loss=losses, rlz=rlz_id[eids]))
                     tot = ldf.groupby(['aid', 'rlz']).loss.sum()
                     aids, rlzs = zip(*tot.index)
                     loss_by_AR[ln].append(
