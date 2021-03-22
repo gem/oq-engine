@@ -358,6 +358,7 @@ def get_mesh(oqparam, h5=None):
                         fname, i, row['site_id']))
                 data.append(' '.join([row['lon'], row['lat']]))
         elif 'gmfs' in oqparam.inputs:
+            1/0
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
             data = [line.replace(',', ' ')
