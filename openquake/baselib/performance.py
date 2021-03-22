@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -81,8 +81,12 @@ def performance_view(dstore):
             mem = max(mem, rec['memory_mb'])
         out.append((operation, time, mem, counts))
     out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
-    operation = ('calc_%d' % dstore.calc_id if hasattr(dstore, 'calc_id')
-                 else 'operation')
+    mems = dstore['task_info']['mem_gb']
+    maxmem = ', maxmem=%.1f GB' % mems.max() if len(mems) else ''
+    if hasattr(dstore, 'calc_id'):
+        operation = 'calc_%d%s' % (dstore.calc_id, maxmem)
+    else:
+        operation = 'operation'
     dtlist = [(operation, perf_dt['operation'])]
     dtlist.extend((n, perf_dt[n]) for n in perf_dt.names[1:-1])
     return numpy.array(out, dtlist)
@@ -269,14 +273,18 @@ class Monitor(object):
         """
         :param key: key in the _tmp.hdf5 file
         :param obj: big object to store in pickle format
+        :returns: True is saved, False if not because the key was taken
         """
         tmp = self.filename[:-5] + '_tmp.hdf5'
         f = hdf5.File(tmp, 'a') if os.path.exists(tmp) else hdf5.File(tmp, 'w')
         with f:
+            if key in f:  # already saved
+                return False
             if isinstance(obj, numpy.ndarray):
                 f[key] = obj
             else:
                 f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
+        return True
 
     def read(self, key):
         """

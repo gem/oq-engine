@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,10 +45,10 @@ def classical_damage(riskinputs, param, monitor):
         D = len(crmodel.damage_states)
         result = AccumDict(accum=numpy.zeros((R, L, D), F32))
         for out in ri.gen_outputs(crmodel, monitor):
-            r = out.rlzi
-            for l, loss_type in enumerate(crmodel.loss_types):
-                for a, frac in zip(ri.assets['ordinal'], out[loss_type]):
-                    result[a][r, l] = frac
+            r = out['rlzi']
+            for li, loss_type in enumerate(crmodel.loss_types):
+                for a, frac in zip(out['assets']['ordinal'], out[loss_type]):
+                    result[a][r, li] = frac
         yield result
 
 

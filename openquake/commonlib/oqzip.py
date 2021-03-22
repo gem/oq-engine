@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2020 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -97,7 +97,7 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
     oq = oq or readinput.get_oqparam(job_ini, validate=False)
     if risk_ini:
         risk_ini = os.path.normpath(os.path.abspath(risk_ini))
-        risk_inputs = readinput.get_params([risk_ini])['inputs']
+        risk_inputs = readinput.get_params(risk_ini)['inputs']
         del risk_inputs['job_ini']
         oq.inputs.update(risk_inputs)
     files = readinput.get_input_files(oq)

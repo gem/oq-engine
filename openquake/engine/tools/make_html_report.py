@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,8 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
-import cgi
+import html
 import time
 from datetime import date, datetime, timedelta
 import itertools
@@ -31,7 +30,7 @@ from openquake.commonlib.logs import dbcmd
 tablecounter = itertools.count(0)
 
 
-def html(header_rows):
+def htmltable(header_rows):
     """
     Convert a list of tuples describing a table into a HTML string
     """
@@ -70,7 +69,7 @@ class HtmlTable(object):
     def render(self, dummy_ctxt=None):
         out = "\n%s\n" % "".join(list(self._gen_table()))
         if not self.rows:
-            out += '<em>%s</em>' % cgi.escape(self.empty_table, quote=True)
+            out += '<em>%s</em>' % html.escape(self.empty_table, quote=True)
         return out
 
     def _gen_table(self):
@@ -106,9 +105,14 @@ PAGE_TEMPLATE = '''\
 <html>
 <head>
 <meta charset="UTF-8">
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
-<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js">
+</script>
+<link rel="stylesheet"
+ href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css"
+/>
+<script
+ src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js">
+</script>
 <script>
 $(function() {
 $("#tabs").tabs();
@@ -175,11 +179,11 @@ def make_report(isodate='today'):
             report = html_parts(txt)
         except Exception as exc:
             report = dict(
-                html_title='Could not generate report: %s' % cgi.escape(
+                html_title='Could not generate report: %s' % html.escape(
                     str(exc), quote=True),
                 fragment='')
         page = report['html_title']
-        page += html([stats._fields, stats])
+        page += htmltable([stats._fields, stats])
         page += report['fragment']
         tag_contents.append(page)
 

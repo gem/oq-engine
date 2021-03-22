@@ -2,7 +2,7 @@ Source: python3-oq-engine
 Section: python
 Priority: extra
 Maintainer: Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>
-Build-Depends: debhelper (>= 7.0.50~), lsb-release, quilt, oq-python3.6, zip, dh-python,dh-systemd (>= 1.5), rsync
+Build-Depends: debhelper (>= 7.0.50~), lsb-release, quilt, zip, dh-python,dh-systemd (>= 1.5), rsync, oq-python3.8
 Standards-Version: 3.9.3
 X-Python3-Version: >= 3.6
 Homepage: http://github.com/gem/oq-engine
@@ -10,12 +10,13 @@ Homepage: http://github.com/gem/oq-engine
 Package: python3-oq-engine
 Architecture: amd64
 X-Python-Version: >= 3.6
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}, python3-oq-libs (>=2.5.3~), python3-oq-libs-extra (>= 2.5.3~)
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}, python3-oq-libs (>=3.0.0~)
 Conflicts: python-noq, python-oq, python-nhlib
 Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine (<< ${binary:Version})
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
 Breaks: python-oq-risklib, python-oq-hazardlib, python-oq-engine (<< ${binary:Version})
 Recommends: ${dist:Recommends}
+Suggests: python3-oq-libs-extra (>=3.0.0~)
 Description: computes seismic hazard and physical risk
  based on the hazard and risk libraries developed by the GEM foundation
  (http://www.globalquakemodel.org/)

@@ -1,0 +1,43 @@
+name: macos pyapp
+'on':
+  push:
+    branches:
+      - macos
+  schedule:
+    - cron: "0 1 * * *"
+
+jobs:
+
+  Matrix-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        #os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-10.15]
+        python-version: [3.7, 3.8]
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v2
+      - name: Set up Python3 
+        uses: actions/setup-python@v2
+        with:
+          python-version:  ${{ matrix.python-version }}
+      - name: Install pytest to use with oqengine
+        run: pip3 install pytest
+      - name: Run Installation of oq-engine in devel mode 
+        run: |
+            PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
+            echo $PY_VER
+            pip3 install -r requirements-$PY_VER-macos.txt
+            pip3 install -e .\[osgeo\]
+            pip3 list
+      - name: Run tests
+        run: |
+            oq dbserver start &
+            echo " pytest openquake"
+            pytest openquake
+      - name: Run demos
+        run: |
+            oq reset -y
+            oq dbserver start &
+            ./bin/run-demos.sh demos

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -85,6 +85,9 @@ class AbrahamsonEtAl2015SInter(GMPE):
     #: Required distance measure is closest distance to rupture, for
     #: interface events
     REQUIRES_DISTANCES = {'rrup'}
+
+    #: Reference soil conditions (bottom of page 29)
+    DEFINED_FOR_REFERENCE_VELOCITY = 1000
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

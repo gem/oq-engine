@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -81,7 +81,6 @@ class BooreEtAl1997GeometricMean(GMPE):
                 self._compute_magnitude_scaling(rup.mag, C) +
                 self._compute_distance_scaling(dists.rjb, C) +
                 self._compute_site_term(sites.vs30, C))
-
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
         return mean, stddevs

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -99,7 +99,7 @@ xmlns="http://openquake.org/xmlns/nrml/0.4"
 
 
 class WriteCsvTestCase(unittest.TestCase):
-    def assert_export(self, array, expected, header=None):
+    def assert_export(self, array, expected, header=()):
         fname = tempfile.NamedTemporaryFile().name
         write_csv(fname, array, header=header)
         with open(fname) as f:

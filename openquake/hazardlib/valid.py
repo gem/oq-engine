@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -236,31 +236,6 @@ class Choices(Choice):
 export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz')
 
 
-def hazard_id(value):
-    """
-    >>> hazard_id('')
-    ()
-    >>> hazard_id('-1')
-    (-1,)
-    >>> hazard_id('42')
-    (42,)
-    >>> hazard_id('42,3')
-    (42, 3)
-    >>> hazard_id('42,3,4')
-    (42, 3, 4)
-    >>> hazard_id('42:3')
-    Traceback (most recent call last):
-       ...
-    ValueError: Invalid hazard_id '42:3'
-    """
-    if not value:
-        return ()
-    try:
-        return tuple(map(int, value.split(',')))
-    except Exception:
-        raise ValueError('Invalid hazard_id %r' % value)
-
-
 class Regex(object):
     """
     Compare the value with the given regex
@@ -311,6 +286,7 @@ MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
 ASSET_ID_LENGTH = 50  # length that makes Murray happy
 
 simple_id = SimpleId(MAX_ID_LENGTH)
+branch_id = SimpleId(MAX_ID_LENGTH, r'^[\w\:\#_\-\.]+$')
 asset_id = SimpleId(ASSET_ID_LENGTH)
 source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\-_]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML

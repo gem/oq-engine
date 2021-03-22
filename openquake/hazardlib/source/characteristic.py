@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -72,6 +72,15 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1
+
+    def get_fault_surface_area(self):
+        """
+        Computes the area covered by the surface of the fault.
+
+        :returns:
+            A float defining the area of the surface of the fault [km^2]
+        """
+        return self.surface.get_area()
 
     def iter_ruptures(self, **kwargs):
         """

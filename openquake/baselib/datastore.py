@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,9 +27,10 @@ import numpy
 import h5py
 import pandas
 
-from openquake.baselib import hdf5, config, performance, python3compat, general
+from openquake.baselib import hdf5, config, performance, general
 
 
+MAX_ROWS = 10_000_000
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 
 
@@ -137,61 +138,87 @@ def read(calc_id, mode='r', datadir=None):
     return dstore
 
 
-def _range(value):
-    if hasattr(value, '__len__'):
-        return list(value)
-    else:
-        return list(range(value))
-
-
 def sel(dset, filterdict):
     """
     Select a dataset with shape_descr. For instance
     dstore.sel('hcurves', imt='PGA', sid=2)
     """
-    assert 'shape_descr' in dset.attrs, 'Missing %s.shape_descr' % dset.name
+    dic = hdf5.get_shape_descr(dset.attrs['json'])
     lst = []
-    for dim in python3compat.decode(dset.attrs['shape_descr']):
+    for dim in dic['shape_descr']:
         if dim in filterdict:
             val = filterdict[dim]
-            values = _range(dset.attrs[dim])
-            idx = values.index(val)
+            values = dic[dim]
+            if isinstance(val, hdf5.INT) and val < 0:
+                # for instance sid=-1 means the last sid
+                idx = values[val]
+            else:
+                idx = values.index(val)
             lst.append(slice(idx, idx + 1))
         else:
             lst.append(slice(None))
     return dset[tuple(lst)]
 
 
-def dset2df(dset, index, filterdict):
+def dset2df(dset, indexfield, filterdict):
     """
     Converts an HDF5 dataset with an attribute shape_descr into a Pandas
     dataframe. NB: this is very slow for large datasets.
     """
     arr = sel(dset, filterdict)
-    shape_descr = python3compat.decode(dset.attrs['shape_descr'])
-    out = []
+    dic = hdf5.get_shape_descr(dset.attrs['json'])
     tags = []
     idxs = []
-    dtlist = []
-    for dim in shape_descr:
-        values = _range(dset.attrs[dim])
+    for dim in dic['shape_descr']:
+        values = dic[dim]
         if dim in filterdict:
             val = filterdict[dim]
             idx = values.index(val)
             idxs.append([idx])
             values = [val]
+        elif hasattr(values, 'stop'):  # a range object already
+            idxs.append(values)
         else:
             idxs.append(range(len(values)))
-        if isinstance(values[0], str):  # like the loss_type
-            dt = '<S16'
-        else:
-            dt = type(values[0])
-        dtlist.append((dim, dt))
         tags.append(values)
-    dtlist.append(('value', dset.dtype))
+    acc = general.AccumDict(accum=[])
+    index = []
     for idx, vals in zip(itertools.product(*idxs), itertools.product(*tags)):
-        out.append(vals + (arr[idx],))
-    return pandas.DataFrame.from_records(numpy.array(out, dtlist), index)
+        for field, val in zip(dic['shape_descr'], vals):
+            if field == indexfield:
+                index.append(val)
+            else:
+                acc[field].append(val)
+        acc['value'].append(arr[idx])
+    return pandas.DataFrame(acc, index or None)
+
+
+def extract_cols(datagrp, sel, slc, columns):
+    """
+    :param datagrp: something like and HDF5 data group
+    :param sel: dictionary column name -> value specifying a selection
+    :param slc: a slice object specifying the rows considered
+    :param columns: the full list of column names
+    :returns: a dictionary col -> array of values
+    """
+    first = columns[0]
+    nrows = len(datagrp[first])
+    if slc.start is None and slc.stop is None:  # split in slices
+        slcs = general.gen_slices(0, nrows, MAX_ROWS)
+    else:
+        slcs = [slc]
+    acc = general.AccumDict(accum=[])  # col -> arrays
+    for slc in slcs:
+        ok = slice(None)
+        dic = {col: datagrp[col][slc] for col in sel}
+        for col in sel:
+            if isinstance(ok, slice):  # first selection
+                ok = dic[col] == sel[col]
+            else:  # other selections
+                ok &= dic[col] == sel[col]
+        for col in columns:
+            acc[col].append(datagrp[col][slc][ok])
+    return {k: numpy.concatenate(vs) for k, vs in acc.items()}
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -285,6 +312,8 @@ class DataStore(collections.abc.MutableMapping):
             return h5py.File.__getitem__(self.hdf5, name)
         except KeyError:
             if self.parent != ():
+                if not self.parent.hdf5:
+                    self.parent.open('r')
                 return self.parent.getitem(name)
             else:
                 raise
@@ -306,11 +335,11 @@ class DataStore(collections.abc.MutableMapping):
         """
         self.hdf5.save_attrs(key, kw)
 
-    def set_shape_attrs(self, key, **kw):
+    def set_shape_descr(self, key, **kw):
         """
         Set shape attributes
         """
-        hdf5.set_shape_attrs(self.hdf5, key, kw)
+        hdf5.set_shape_descr(self.hdf5, key, kw)
 
     def get_attr(self, key, name, default=None):
         """
@@ -360,6 +389,41 @@ class DataStore(collections.abc.MutableMapping):
         """
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
+
+    def create_dframe(self, key, nametypes, compression=None, **kw):
+        """
+        Create a HDF5 datagroup readable as a pandas DataFrame
+
+        :param key:
+            name of the dataset
+        :param nametypes:
+            list of pairs (name, dtype) or (name, array) or DataFrame
+        :param compression:
+            the kind of HDF5 compression to use
+        :param kw:
+            extra attributes to store
+        """
+        if isinstance(nametypes, pandas.DataFrame):
+            nametypes = {name: nametypes[name].to_numpy()
+                         for name in nametypes.columns}.items()
+        names = []
+        for name, value in nametypes:
+            is_array = isinstance(value, numpy.ndarray)
+            if is_array and isinstance(value[0], str):
+                dt = hdf5.vstr
+            elif is_array:
+                dt = value.dtype
+            else:
+                dt = value
+            dset = hdf5.create(self.hdf5, f'{key}/{name}', dt, (None,),
+                               compression)
+            if is_array:
+                hdf5.extend(dset, value)
+            names.append(name)
+        attrs = self.hdf5[key].attrs
+        attrs['__pdcolumns__'] = ' '.join(names)
+        for k, v in kw.items():
+            attrs[k] = v
 
     def save(self, key, kw):
         """
@@ -427,15 +491,21 @@ class DataStore(collections.abc.MutableMapping):
         self.close()
         os.remove(self.filename)
 
-    def getsize(self, key=None):
+    def getsize(self, key='/'):
         """
         Return the size in byte of the output associated to the given key.
         If no key is given, returns the total size of all files.
         """
-        if key is None:
+        if key == '/':
             return os.path.getsize(self.filename)
-        return hdf5.ByteCounter.get_nbytes(
-            h5py.File.__getitem__(self.hdf5, key))
+        try:
+            dset = self.getitem(key)
+        except KeyError:
+            if self.parent != ():
+                dset = self.parent.getitem(key)
+            else:
+                raise
+        return hdf5.ByteCounter.get_nbytes(dset)
 
     def get(self, key, default):
         """
@@ -476,7 +546,7 @@ class DataStore(collections.abc.MutableMapping):
     def read_df(self, key, index=None, sel=(), slc=slice(None)):
         """
         :param key: name of the structured dataset
-        :param index: if given, name of the "primary key" field
+        :param index: pandas index (or multi-index), possibly None
         :param sel: dictionary used to select subsets of the dataset
         :param slc: slice object to extract a slice of the dataset
         :returns: pandas DataFrame associated to the dataset
@@ -484,14 +554,16 @@ class DataStore(collections.abc.MutableMapping):
         dset = self.getitem(key)
         if len(dset) == 0:
             raise self.EmptyDataset('Dataset %s is empty' % key)
-        elif 'shape_descr' in dset.attrs:
+        elif 'json' in dset.attrs:
             return dset2df(dset, index, sel)
         elif '__pdcolumns__' in dset.attrs:
             columns = dset.attrs['__pdcolumns__'].split()
-            dic = {col: dset[col][slc] for col in columns if col != index}
-            if index is not None:
-                index = dset[index][slc]
-            return pandas.DataFrame(dic, index=index)
+            dic = extract_cols(dset, sel, slc, columns)
+            if index is None:
+                return pandas.DataFrame(dic)
+            else:
+                return pandas.DataFrame(dic).set_index(index)
+
         dtlist = []
         for name in dset.dtype.names:
             dt = dset.dtype[name]

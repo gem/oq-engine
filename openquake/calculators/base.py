@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,38 +16,34 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import re
 import sys
 import abc
 import pdb
 import logging
 import operator
-import itertools
 import traceback
 from datetime import datetime
 from shapely import wkt
 import numpy
+import pandas
 
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
-from openquake.baselib import parallel
+from openquake.baselib import parallel, python3compat
 from openquake.baselib.performance import Monitor, init_performance
-from openquake.hazardlib import InvalidFile, site
-
+from openquake.hazardlib import InvalidFile, site, stats
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, util
-from openquake.calculators.ucerf_base import UcerfFilter
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
-get_trt = operator.attrgetter('grp_id')
 get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
@@ -56,8 +52,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
-
-NUM_SOURCES, CALC_TIME, NUM_SITES, EFF_RUPTURES = 3, 4, 5, 6
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
@@ -125,7 +119,7 @@ def fix_ones(pmap):
     return pmap
 
 
-def build_weights(realizations, imt_dt):
+def build_weights(realizations):
     """
     :returns: an array with the realization weights of shape R
     """
@@ -148,9 +142,9 @@ def set_array(longarray, shortarray):
 
 MAXSITES = 1000
 CORRELATION_MATRIX_TOO_LARGE = '''\
-You have a correlation matrix which is too large: %%d sites > %d.
+You have a correlation matrix which is too large: %s > %d.
 To avoid that, set a proper `region_grid_spacing` so that your exposure
-takes less sites.''' % MAXSITES
+involves less sites.'''
 
 
 class BaseCalculator(metaclass=abc.ABCMeta):
@@ -167,6 +161,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, calc_id):
+        oqparam.validate()
         self.datastore = datastore.DataStore(calc_id)
         init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
@@ -175,8 +170,11 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
         self.oqparam = oqparam
-        if oqparam.num_cores:
-            parallel.CT = oqparam.num_cores * 2
+
+    def pre_checks(self):
+        """
+        Checks to run after the pre_execute but before the execute
+        """
 
     def monitor(self, operation='', **kw):
         """
@@ -321,7 +319,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         Export all the outputs in the datastore in the given export formats.
         Individual outputs are not exported if there are multiple realizations.
         """
-        self.exported = getattr(self.precalc, 'exported', {})
+        self.exported = getattr(self, 'exported', {})
         if isinstance(exports, tuple):
             fmts = exports
         elif exports:  # is a string
@@ -330,7 +328,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             fmts = self.oqparam.exports
         else:  # is a string
             fmts = self.oqparam.exports.split(',')
-        keys = set(self.datastore)
+        keys = set(self.datastore) | {'fullreport'}
         has_hcurves = ('hcurves-stats' in self.datastore or
                        'hcurves-rlzs' in self.datastore)
         if has_hcurves:
@@ -404,15 +402,13 @@ class HazardCalculator(BaseCalculator):
     """
     def src_filter(self):
         """
-        :returns: a SourceFilter/UcerfFilter
+        :returns: a SourceFilter
         """
         oq = self.oqparam
         if getattr(self, 'sitecol', None):
             sitecol = self.sitecol.complete
         else:  # can happen to the ruptures-only calculator
             sitecol = None
-        if oq.is_ucerf():
-            return UcerfFilter(sitecol, oq.maximum_distance)
         return SourceFilter(sitecol, oq.maximum_distance)
 
     @property
@@ -430,7 +426,9 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: the total number of sites
         """
-        return len(self.sitecol.complete) if self.sitecol else None
+        if hasattr(self, 'sitecol'):
+            return len(self.sitecol.complete) if self.sitecol else None
+        return len(self.datastore['sitecol'])
 
     @property
     def few_sites(self):
@@ -474,23 +472,19 @@ class HazardCalculator(BaseCalculator):
             raise ValueError(
                 'Please set max_sites_disagg=%d in %s' % (
                     len(self.sitecol), oq.inputs['job_ini']))
-        elif oq.disagg_by_src and len(self.sitecol) > oq.max_sites_disagg:
-            raise ValueError(
-                'There are too many sites to use disagg_by_src=true')
         if ('source_model_logic_tree' in oq.inputs and
                 oq.hazard_calculation_id is None):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore.hdf5)
-                srcs = [src for sg in csm.src_groups for src in sg]
-                if not srcs:
-                    raise RuntimeError('All sources were discarded!?')
-                logging.info('Checking the sources bounding box')
-                sids = self.src_filter().within_bbox(srcs)
-                if len(sids) == 0:
-                    raise RuntimeError('All sources were discarded!?')
+                mags_by_trt = csm.get_mags_by_trt()
+                oq.maximum_distance.interp(mags_by_trt)
+                for trt in mags_by_trt:
+                    self.datastore['source_mags/' + trt] = numpy.array(
+                        mags_by_trt[trt])
                 self.full_lt = csm.full_lt
         self.init()  # do this at the end of pre-execute
+        self.pre_checks()
 
         if (not oq.hazard_calculation_id
                 and oq.calculation_mode != 'preclassical'
@@ -503,7 +497,7 @@ class HazardCalculator(BaseCalculator):
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
                                  gsim_lt.values)
 
-    def save_multi_peril(self):
+    def import_perils(self):
         """Defined in MultiRiskCalculator"""
 
     def pre_execute(self):
@@ -523,7 +517,8 @@ class HazardCalculator(BaseCalculator):
                 if not oq.inputs['gmfs'].endswith('.csv'):
                     raise NotImplementedError(
                         'Importer for %s' % oq.inputs['gmfs'])
-                E = len(import_gmfs(self.datastore, oq.inputs['gmfs'],
+                self.datastore['full_lt'] = logictree.FullLogicTree.fake()
+                E = len(import_gmfs(self.datastore, oq,
                                     self.sitecol.complete.sids))
                 if hasattr(oq, 'number_of_ground_motion_fields'):
                     if oq.number_of_ground_motion_fields != E:
@@ -533,7 +528,7 @@ class HazardCalculator(BaseCalculator):
                 else:  # set the number of GMFs from the file
                     oq.number_of_ground_motion_fields = E
             else:
-                self.save_multi_peril()
+                self.import_perils()
             self.save_crmodel()
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
@@ -541,16 +536,17 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.datastore['poes/grp-00'] = fix_ones(readinput.pmap)
-            self.datastore['sitecol'] = self.sitecol
+            poes = fix_ones(readinput.pmap).array(len(haz_sitecol))
+            self.datastore['_poes'] = poes.transpose(2, 0, 1)  # shape GNL
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
+            self.datastore['rlzs_by_g'] = sum(
+                fake.get_rlzs_by_grp().values(), [])
             with hdf5.File(self.datastore.tempname, 'a') as t:
                 t['oqparam'] = oq
-                t['rlzs_by_grp'] = fake.get_rlzs_by_grp()
-                t['poes/grp-00'] = fix_ones(readinput.pmap)
             self.realizations = fake.get_realizations()
             self.save_crmodel()
+            self.datastore.swmr_on()
         elif oq.hazard_calculation_id:
             parent = util.read(oq.hazard_calculation_id)
             self.check_precalc(parent['oqparam'].calculation_mode)
@@ -570,10 +566,6 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation was using investigation_time=%s'
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
-            if not consistent(oqp.minimum_intensity, oq.minimum_intensity):
-                raise ValueError(
-                    'The parent calculation was using minimum_intensity=%s'
-                    ' != %s' % (oqp.minimum_intensity, oq.minimum_intensity))
             hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
             if hstats != rstats:
                 raise ValueError(
@@ -589,9 +581,10 @@ class HazardCalculator(BaseCalculator):
             calc = calculators[self.__class__.precalc](
                 self.oqparam, self.datastore.calc_id)
             calc.from_engine = self.from_engine
+            calc.pre_checks = lambda: self.__class__.pre_checks(calc)
             calc.run(remove=False)
             for name in ('csm param sitecol assetcol crmodel realizations '
-                         'policy_name policy_dict full_lt').split():
+                         'policy_name policy_dict full_lt exported').split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
         else:
@@ -608,9 +601,7 @@ class HazardCalculator(BaseCalculator):
             if self.datastore.parent:
                 oq.risk_imtls = (
                     self.datastore.parent['oqparam'].risk_imtls)
-        if 'precalc' in vars(self):
-            self.realizations = self.precalc.realizations
-        elif 'full_lt' in self.datastore:
+        if 'full_lt' in self.datastore:
             full_lt = self.datastore['full_lt']
             self.realizations = full_lt.get_realizations()
             if oq.hazard_calculation_id and 'gsim_logic_tree' in oq.inputs:
@@ -630,6 +621,8 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: the number of realizations
         """
+        if 'weights' in self.datastore:
+            return len(self.datastore['weights'])
         try:
             return self.csm.full_lt.get_num_rlzs()
         except AttributeError:  # no self.csm
@@ -645,6 +638,7 @@ class HazardCalculator(BaseCalculator):
             self.sitecol, self.assetcol, discarded = (
                 readinput.get_sitecol_assetcol(
                     oq, haz_sitecol, self.crmodel.loss_types))
+            self.datastore['sitecol'] = self.sitecol
             if len(discarded):
                 self.datastore['discarded'] = discarded
                 if 'scenario' in oq.calculation_mode:
@@ -654,14 +648,11 @@ class HazardCalculator(BaseCalculator):
                                  'to show them and `oq plot_assets` to plot '
                                  'them' % len(discarded))
                 elif not oq.discard_assets:  # raise an error
-                    self.datastore['sitecol'] = self.sitecol
                     self.datastore['assetcol'] = self.assetcol
                     raise RuntimeError(
                         '%d assets were discarded; use `oq show discarded` to'
                         ' show them and `oq plot_assets` to plot them' %
                         len(discarded))
-        self.policy_name = ''
-        self.policy_dict = {}
         if oq.inputs.get('insurance'):
             k, v = zip(*oq.inputs['insurance'].items())
             self.load_insurance_data(k, v)
@@ -697,14 +688,15 @@ class HazardCalculator(BaseCalculator):
         The crmodel can be empty for hazard calculations.
         Save the loss ratios (if any) in the datastore.
         """
+        oq = self.oqparam
         logging.info('Reading the risk model if present')
-        self.crmodel = readinput.get_crmodel(self.oqparam)
+        self.crmodel = readinput.get_crmodel(oq)
         if not self.crmodel:
             parent = self.datastore.parent
-            if 'risk_model' in parent:
-                self.crmodel = riskmodels.CompositeRiskModel.read(parent)
+            if 'crm' in parent:
+                self.crmodel = riskmodels.CompositeRiskModel.read(parent, oq)
             return
-        if self.oqparam.ground_motion_fields and not self.oqparam.imtls:
+        if oq.ground_motion_fields and not oq.imtls:
             raise InvalidFile('No intensity_measure_types specified in %s' %
                               self.oqparam.inputs['job_ini'])
         self.save_params()  # re-save oqparam
@@ -715,16 +707,19 @@ class HazardCalculator(BaseCalculator):
         """
         if len(self.crmodel):
             logging.info('Storing risk model')
-            self.datastore['risk_model'] = rm = self.crmodel
-            attrs = self.datastore.getitem('risk_model').attrs
-            attrs['min_iml'] = hdf5.array_of_vstr(sorted(rm.min_iml.items()))
+            attrs = self.crmodel.get_attrs()
+            self.datastore.create_dframe('crm', self.crmodel.to_dframe(),
+                                         'gzip', **attrs)
 
     def _read_risk_data(self):
-        # read the exposure (if any), the risk model (if any) and then the
+        # read the risk model (if any), the exposure (if any) and then the
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-
+        if (not oq.imtls and 'shakemap' not in oq.inputs
+                and oq.ground_motion_fields):
+            raise InvalidFile('There are no intensity measure types in %s' %
+                              oq.inputs['job_ini'])
         if oq.hazard_calculation_id:
             with util.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
@@ -745,6 +740,8 @@ class HazardCalculator(BaseCalculator):
 
         oq_hazard = (self.datastore.parent['oqparam']
                      if self.datastore.parent else None)
+        self.policy_name = ''
+        self.policy_dict = {}
         if 'exposure' in oq.inputs:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
@@ -758,15 +755,10 @@ class HazardCalculator(BaseCalculator):
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
             if oq.shakemap_id or 'shakemap' in oq.inputs:
-                self.sitecol, self.assetcol = self.read_shakemap(
-                    haz_sitecol, assetcol)
+                self.sitecol, self.assetcol = read_shakemap(
+                    self, haz_sitecol, assetcol)
+                self.datastore['sitecol'] = self.sitecol
                 self.datastore['assetcol'] = self.assetcol
-                logging.info('Extracted %d/%d assets',
-                             len(self.assetcol), len(assetcol))
-                nsites = len(self.sitecol)
-                if (oq.spatial_correlation != 'no' and
-                        nsites > MAXSITES):  # hard-coded, heuristic
-                    raise ValueError(CORRELATION_MATRIX_TOO_LARGE % nsites)
             elif hasattr(self, 'sitecol') and general.not_equal(
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
@@ -777,9 +769,9 @@ class HazardCalculator(BaseCalculator):
                 self.assetcol = assetcol
         else:  # no exposure
             self.sitecol = haz_sitecol
-            if self.sitecol:
+            if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
-                             len(self.sitecol), len(oq.imtls.array))
+                             len(self.sitecol), oq.imtls.size)
 
         if oq_hazard:
             parent = self.datastore.parent
@@ -794,14 +786,15 @@ class HazardCalculator(BaseCalculator):
                         oq.time_event, oq_hazard.time_event))
 
         if oq.job_type == 'risk':
-            tmap_arr, tmap_lst = logictree.taxonomy_mapping(
-                self.oqparam.inputs.get('taxonomy_mapping'),
-                self.assetcol.tagcol.taxonomy)
-            self.crmodel.tmap = tmap_lst
-            if len(tmap_arr):
-                self.datastore['taxonomy_mapping'] = tmap_arr
-            taxonomies = set(taxo for items in self.crmodel.tmap
-                             for taxo, weight in items if taxo != '?')
+            tmap = readinput.taxonomy_mapping(
+                self.oqparam, self.assetcol.tagcol.taxonomy)
+            self.crmodel.tmap = tmap
+            taxonomies = set()
+            for ln in oq.loss_names:
+                for items in self.crmodel.tmap[ln]:
+                    for taxo, weight in items:
+                        if taxo != '?':
+                            taxonomies.add(taxo)
             # check that we are covering all the taxonomies in the exposure
             missing = taxonomies - set(self.crmodel.taxonomies)
             if self.crmodel and missing:
@@ -811,8 +804,8 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Reducing risk model from %d to %d taxonomies',
                              len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
-                self.crmodel.tmap = tmap_lst
-            self.crmodel.vectorize_cons_model(self.assetcol.tagcol)
+                self.crmodel.tmap = tmap
+            self.crmodel.reduce_cons_model(self.assetcol.tagcol)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs:
@@ -820,7 +813,7 @@ class HazardCalculator(BaseCalculator):
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq)
                 self.sitecol.complete.assoc(sm, assoc_dist)
-            self.datastore['sitecol'] = self.sitecol.complete
+                self.datastore['sitecol'] = self.sitecol
 
         # store amplification functions if any
         self.af = None
@@ -843,20 +836,29 @@ class HazardCalculator(BaseCalculator):
         for sp in sec_perils:
             sp.prepare(self.sitecol)  # add columns as needed
 
+        mal = {lt: getdefault(oq.minimum_asset_loss, lt)
+               for lt in oq.loss_names}
+        if mal:
+            logging.info('minimum_asset_loss=%s', mal)
         self.param = dict(individual_curves=oq.individual_curves,
+                          ps_grid_spacing=oq.ps_grid_spacing,
                           collapse_level=oq.collapse_level,
+                          split_sources=oq.split_sources,
                           avg_losses=oq.avg_losses,
                           amplifier=self.amplifier,
-                          sec_perils=sec_perils)
+                          sec_perils=sec_perils,
+                          ses_seed=oq.ses_seed)
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):
-            save_exposed_values(
+            save_agg_values(
                 self.datastore, self.assetcol, oq.loss_names, oq.aggregate_by)
 
-    def store_rlz_info(self, eff_ruptures):
+    def store_rlz_info(self, rel_ruptures):
         """
         Save info about the composite source model inside the full_lt dataset
+
+        :param rel_ruptures: dictionary TRT -> number of relevant ruptures
         """
         oq = self.oqparam
         if hasattr(self, 'full_lt'):  # no scenario
@@ -871,8 +873,7 @@ class HazardCalculator(BaseCalculator):
         logging.info('There are %d realization(s)', R)
 
         if oq.imtls:
-            self.datastore['weights'] = arr = build_weights(
-                self.realizations, oq.imt_dt())
+            self.datastore['weights'] = arr = build_weights(self.realizations)
             self.datastore.set_attrs('weights', nbytes=arr.nbytes)
 
         if ('event_based' in oq.calculation_mode and R >= TWO16
@@ -888,7 +889,7 @@ class HazardCalculator(BaseCalculator):
         # check for gsim logic tree reduction
         discard_trts = []
         for trt in self.full_lt.gsim_lt.values:
-            if eff_ruptures.get(trt, 0) == 0:
+            if rel_ruptures.get(trt, 0) == 0:
                 discard_trts.append(trt)
         if (discard_trts and 'scenario' not in oq.calculation_mode
                 and 'event_based' not in oq.calculation_mode
@@ -899,20 +900,15 @@ class HazardCalculator(BaseCalculator):
                                                   oq.inputs['job_ini'])
             logging.warning(msg)
 
-    def store_source_info(self, calc_times):
+    def store_source_info(self, calc_times, nsites=False):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        for src_id, arr in calc_times.items():
-            src_id = re.sub(r':\d+$', '', src_id)
-            row = self.csm.source_info[src_id]
-            row[EFF_RUPTURES] += arr[0]
-            row[NUM_SITES] += arr[1]
-            row[CALC_TIME] += arr[2]
-        rows = self.csm.source_info.values()
-        recs = [tuple(row) for row in rows]
+        self.csm.update_source_info(calc_times, nsites)
+        recs = [tuple(row) for row in self.csm.source_info.values()]
         hdf5.extend(self.datastore['source_info'],
                     numpy.array(recs, readinput.source_info_dt))
+        return [rec[0] for rec in recs]  # return source_ids
 
     def post_process(self):
         """For compatibility with the engine"""
@@ -924,42 +920,6 @@ class RiskCalculator(HazardCalculator):
     attributes .crmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
-    def read_shakemap(self, haz_sitecol, assetcol):
-        """
-        Enabled only if there is a shakemap_id parameter in the job.ini.
-        Download, unzip, parse USGS shakemap files and build a corresponding
-        set of GMFs which are then filtered with the hazard site collection
-        and stored in the datastore.
-        """
-        oq = self.oqparam
-        E = oq.number_of_ground_motion_fields
-        oq.risk_imtls = oq.imtls or self.datastore.parent['oqparam'].imtls
-        logging.info('Getting/reducing shakemap')
-        with self.monitor('getting/reducing shakemap'):
-            # for instance for the test case_shakemap the haz_sitecol
-            # has sids in range(0, 26) while sitecol.sids is
-            # [8, 9, 10, 11, 13, 15, 16, 17, 18];
-            # the total assetcol has 26 assets on the total sites
-            # and the reduced assetcol has 9 assets on the reduced sites
-            smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
-                oq.inputs['shakemap'])
-            sitecol, shakemap, discarded = get_sitecol_shakemap(
-                smap, oq.imtls, haz_sitecol,
-                oq.asset_hazard_distance['default'],
-                oq.discard_assets)
-            if len(discarded):
-                self.datastore['discarded'] = discarded
-            assetcol.reduce_also(sitecol)
-
-        logging.info('Building GMFs')
-        with self.monitor('building/saving GMFs'):
-            imts, gmfs = to_gmfs(
-                shakemap, oq.spatial_correlation, oq.cross_correlation,
-                oq.site_effects, oq.truncation_level, E, oq.random_seed,
-                oq.imtls)
-            save_gmf_data(self.datastore, sitecol, gmfs, imts)
-        return sitecol, assetcol
-
     def build_riskinputs(self, kind):
         """
         :param kind:
@@ -968,79 +928,78 @@ class RiskCalculator(HazardCalculator):
             a list of RiskInputs objects, sorted by IMT.
         """
         logging.info('Building risk inputs from %d realization(s)', self.R)
-        imtls = self.oqparam.imtls
-        if not set(self.oqparam.risk_imtls) & set(imtls):
+        imtset = set(self.oqparam.imtls) | set(self.oqparam.get_sec_imts())
+        if not set(self.oqparam.risk_imtls) & imtset:
             rsk = ', '.join(self.oqparam.risk_imtls)
-            haz = ', '.join(imtls)
+            haz = ', '.join(imtset)
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         if not hasattr(self.crmodel, 'tmap'):
-            _, self.crmodel.tmap = logictree.taxonomy_mapping(
-                self.oqparam.inputs.get('taxonomy_mapping'),
-                self.assetcol.tagcol.taxonomy)
+            self.crmodel.tmap = readinput.taxonomy_mapping(
+                self.oqparam, self.assetcol.tagcol.taxonomy)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
-            elif kind == 'poe':
-                dstore = self.datastore.tempname
             else:
                 dstore = self.datastore
-            meth = getattr(self, '_gen_riskinputs_' + kind)
-            riskinputs = list(meth(dstore))
+            riskinputs = getattr(self, '_gen_riskinputs_' + kind)(dstore)
         assert riskinputs
         if all(isinstance(ri.hazard_getter, getters.ZeroGetter)
                for ri in riskinputs):
             raise RuntimeError(f'the {kind}s are all zeros on the assets')
         logging.info('Built %d risk inputs', len(riskinputs))
+        self.acc = None
         return riskinputs
 
     def _gen_riskinputs_gmf(self, dstore):
+        out = []
         if 'gmf_data' not in dstore:  # needed for case_shakemap
             dstore.close()
             dstore = self.datastore
         if 'gmf_data' not in dstore:
-            raise InvalidFile('Did you forget gmfs_csv in %s?'
+            raise InvalidFile('No gmf_data: did you forget gmfs_csv in %s?'
                               % self.oqparam.inputs['job_ini'])
-        with self.monitor('reading GMFs'):
-            rlzs = dstore['events']['rlz_id']
-            gmf_df = dstore.read_df('gmf_data', 'sid')
-            by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
-        logging.info('Grouped the GMFs by site ID')
-        for sid, assets in enumerate(self.assetcol.assets_by_site()):
-            if len(assets) == 0:
-                continue
+        rlzs = dstore['events']['rlz_id']
+        gmf_df = dstore.read_df('gmf_data', 'sid')
+        logging.info('Events per site: ~%d', len(gmf_df) / self.N)
+        logging.info('Grouping the GMFs by site ID')
+        by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
+        asset_df = self.assetcol.to_dframe('site_id')
+        for sid, assets in asset_df.groupby(asset_df.index):
             try:
                 df = by_sid[sid]
             except KeyError:
-                getter = getters.ZeroGetter(sid, self.R)
+                getter = getters.ZeroGetter(
+                    sid, rlzs, self.R, gmf_df.columns[1:])  # strip eid
             else:
-                df['rlzs'] = rlzs[df.eid.to_numpy()]
+                df['rlz'] = rlzs[df.eid.to_numpy()]
                 getter = getters.GmfDataGetter(sid, df, len(rlzs), self.R)
-            if len(dstore['gmf_data/gmv_0']) == 0:
+            if len(dstore['gmf_data/eid']) == 0:
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '
                     'ground_motion_fields=False or a large minimum_intensity')
-            for block in general.block_splitter(
-                    assets, self.oqparam.assets_per_site_limit):
-                yield riskinput.RiskInput(sid, getter, numpy.array(block))
-            if len(block) >= TWO16:
+            for slc in general.split_in_slices(
+                    len(assets), self.oqparam.assets_per_site_limit):
+                out.append(riskinput.RiskInput(getter, assets[slc]))
+            if slc.stop - slc.start >= TWO16:
                 logging.error('There are %d assets on site #%d!',
-                              len(block), sid)
+                              slc.stop - slc.start, sid)
+        return out
 
     def _gen_riskinputs_poe(self, dstore):
-        assets_by_site = self.assetcol.assets_by_site()
-        for sid, assets in enumerate(assets_by_site):
-            if len(assets) == 0:
-                continue
+        out = []
+        asset_df = self.assetcol.to_dframe('site_id')
+        for sid, assets in asset_df.groupby(asset_df.index):
             # hcurves, shape (R, N)
             ws = [rlz.weight for rlz in self.realizations]
             getter = getters.PmapGetter(dstore, ws, [sid], self.oqparam.imtls)
-            for block in general.block_splitter(
-                    assets, self.oqparam.assets_per_site_limit):
-                yield riskinput.RiskInput(sid, getter, numpy.array(block))
-            if len(block) >= TWO16:
+            for slc in general.split_in_slices(
+                    len(assets), self.oqparam.assets_per_site_limit):
+                out.append(riskinput.RiskInput(getter, assets[slc]))
+            if slc.stop - slc.start >= TWO16:
                 logging.error('There are %d assets on site #%d!',
-                              len(block), sid)
+                              slc.stop - slc.start, sid)
+        return out
 
     def execute(self):
         """
@@ -1052,6 +1011,7 @@ class RiskCalculator(HazardCalculator):
             return
         ct = self.oqparam.concurrent_tasks or 1
         maxw = sum(ri.weight for ri in self.riskinputs) / ct
+        self.datastore.swmr_on()
         smap = parallel.Starmap(
             self.core_task.__func__, h5=self.datastore.hdf5)
         smap.monitor.save('crmodel', self.crmodel)
@@ -1065,74 +1025,41 @@ class RiskCalculator(HazardCalculator):
                 if not isinstance(ri.hazard_getter, getters.PmapGetter):
                     ri.hazard_getter.init()
             smap.submit((block, self.param))
-        return smap.reduce(self.combine)
+        return smap.reduce(self.combine, self.acc)
 
     def combine(self, acc, res):
+        """
+        Combine the outputs assuming acc and res are dictionaries
+        """
+        if res is None:
+            raise MemoryError('You ran out of memory!')
         return acc + res
 
 
-def save_gmf_data(dstore, sitecol, gmfs, imts, events=()):
-    """
-    :param dstore: a :class:`openquake.baselib.datastore.DataStore` instance
-    :param sitecol: a :class:`openquake.hazardlib.site.SiteCollection` instance
-    :param gmfs: an array of shape (N, E, M)
-    :param imts: a list of IMT strings
-    :param events: E event IDs or the empty tuple
-    """
-    if len(events) == 0:
-        E = gmfs.shape[1]
-        events = numpy.zeros(E, rupture.events_dt)
-        events['id'] = numpy.arange(E, dtype=U32)
-    dstore['events'] = events
-    offset = 0
-    # convert an array of shape (N, E, M) into an array of type gmv_data_dt
-    N, E, M = gmfs.shape
-    lst = [(sitecol.sids[s], ei, gmfs[s, ei])
-           for s in numpy.arange(N, dtype=U32)
-           for ei, event in enumerate(events)]
-    gmfa = numpy.array(lst, dstore['oqparam'].gmf_data_dt())
-    dstore['gmf_data/sid'] = gmfa['sid']
-    dstore['gmf_data/eid'] = gmfa['eid']
-    cols = ['sid', 'eid']
-    for m in range(M):
-        col = f'gmv_{m}'
-        cols.append(col)
-        dstore['gmf_data/' + col] = gmfa['gmv'][:, m]
-    dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
-    dic = general.group_array(gmfa, 'sid')
-    lst = []
-    all_sids = sitecol.complete.sids
-    for sid in all_sids:
-        rows = dic.get(sid, ())
-        n = len(rows)
-        lst.append((offset, offset + n))
-        offset += n
-    dstore['gmf_data/imts'] = ' '.join(imts)
-
-
-def import_gmfs(dstore, fname, sids):
+def import_gmfs(dstore, oqparam, sids):
     """
     Import in the datastore a ground motion field CSV file.
 
     :param dstore: the datastore
-    :param fname: the CSV file
-    :param sids: the site IDs (complete)
-    :returns: event_ids, num_rlzs
+    :param oqparam: an OqParam instance
+    :param sids: the complete site IDs
+    :returns: event_ids
     """
+    fname = oqparam.inputs['gmfs']
     array = hdf5.read_csv(fname, {'sid': U32, 'eid': U32, None: F32},
                           renamedict=dict(site_id='sid', event_id='eid',
                                           rlz_id='rlzi')).array
-    names = array.dtype.names
-    if names[0] == 'rlzi':  # backward compatbility
+    names = array.dtype.names  # rlz_id, sid, ...
+    if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
-    imts = [name[4:] for name in names[2:]]
-    oq = dstore['oqparam']
-    missing = set(oq.imtls) - set(imts)
+    imts = [name.lstrip('gmv_') for name in names[2:]]
+    oqparam.hazard_imtls = {imt: [0] for imt in imts}
+    missing = set(oqparam.imtls) - set(imts)
     if missing:
         raise ValueError('The calculation needs %s which is missing from %s' %
                          (', '.join(missing), fname))
-    imt2idx = {imt: i for i, imt in enumerate(oq.imtls)}
-    arr = numpy.zeros(len(array), oq.gmf_data_dt())
+    imt2idx = {imt: i for i, imt in enumerate(oqparam.imtls)}
+    arr = numpy.zeros(len(array), oqparam.gmf_data_dt())
     for name in names:
         if name.startswith('gmv_'):
             try:
@@ -1140,7 +1067,7 @@ def import_gmfs(dstore, fname, sids):
             except KeyError:  # the file contains more than enough IMTs
                 pass
             else:
-                arr['gmv'][:, m] = array[name]
+                arr[f'gmv_{m}'][:] = array[name]
         else:
             arr[name] = array[name]
 
@@ -1167,46 +1094,121 @@ def import_gmfs(dstore, fname, sids):
             gmvs = dic[sid]
             gmvlst.append(gmvs)
     data = numpy.concatenate(gmvlst)
-    create_gmf_data(dstore, len(oq.imtls), data=data)
+    data.sort(order='eid')
+    create_gmf_data(dstore, len(oqparam.get_primary_imtls()),
+                    oqparam.get_sec_imts(), data=data)
     dstore['weights'] = numpy.ones(1)
     return eids
 
 
-def create_gmf_data(dstore, M, secperils=(), data=None):
-    dstore.create_dset('gmf_data/sid', U32)
-    dstore.create_dset('gmf_data/eid', U32)
-    cols = ['sid', 'eid']
-    if data is not None:
-        dstore['gmf_data/sid'] = data['sid']
-        dstore['gmf_data/eid'] = data['eid']
+def create_gmf_data(dstore, M, sec_imts=(), data=None):
+    """
+    Create and possibly populate the datasets in the gmf_data group
+    """
+    n = 0 if data is None else len(data['sid'])
+    items = [('sid', U32 if n == 0 else data['sid']),
+             ('eid', U32 if n == 0 else data['eid'])]
     for m in range(M):
         col = f'gmv_{m}'
-        cols.append(col)
-        dstore.create_dset('gmf_data/' + col, F32)
-        if data is not None:
-            dstore[f'gmf_data/' + col] = data['gmv'][:, m]
-        for peril in secperils:
-            for out in peril.outputs:
-                dstore.create_dset(f'gmf_data/{out}_{m}', F32)
-                cols.append(f'{out}_{m}')
-    dstore.getitem('gmf_data').attrs['__pdcolumns__'] = ' '.join(cols)
+        items.append((col, F32 if data is None else data[col]))
+    for imt in sec_imts:
+        items.append((str(imt), F32 if n == 0 else data[imt]))
+    dstore.create_dframe('gmf_data', items, 'gzip')
+    if data is not None:
+        df = pandas.DataFrame(dict(items))
+        avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)
+        for sid, df in df.groupby(df.sid):
+            df.pop('eid')
+            df.pop('sid')
+            avg_gmf[:, sid] = stats.avg_std(df.to_numpy())
+        dstore['avg_gmf'] = avg_gmf
 
 
-def save_exposed_values(dstore, assetcol, lossnames, tagnames):
+def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
-    Store 2^n arrays where n is the number of tagNames. For instance with
-    the tags country, occupancy it stores 2^2 = 4 arrays:
-
-    exposed_values/agg_country_occupancy  # shape (T1, T2, L)
-    exposed_values/agg_country            # shape (T1, L)
-    exposed_values/agg_occupancy          # shape (T2, L)
-    exposed_values/agg                    # shape (L,)
+    Store agg_keys, agg_values.
+    :returns: the aggkey dictionary key -> tags
     """
-    aval = assetcol.arr_value(lossnames)  # shape (A, L)
-    for n in range(len(tagnames) + 1, -1, -1):
-        for names in itertools.combinations(tagnames, n):
-            name = 'exposed_values/' + '_'.join(('agg',) + names)
-            dstore[name] = assetcol.aggregate_by(list(names), aval)
-            attrs = {tagname: getattr(assetcol.tagcol, tagname)[1:]
-                     for tagname in names}
-            dstore.set_shape_attrs(name, **attrs, loss_name=lossnames)
+    lst = []
+    if aggby:
+        aggkey = assetcol.tagcol.get_aggkey(aggby)
+        logging.info('Storing %d aggregation keys', len(aggkey))
+        dt = [(name + '_', U16) for name in aggby] + [
+            (name, hdf5.vstr) for name in aggby]
+        kvs = []
+        for key, val in aggkey.items():
+            val = tuple(python3compat.decode(val))
+            kvs.append(key + val)
+            lst.append(' '.join(val))
+        dstore['agg_keys'] = numpy.array(kvs, dt)
+        if aggby == ['id']:
+            kids = assetcol['ordinal']
+        elif aggby == ['site_id']:
+            kids = assetcol['site_id']
+        else:
+            key2i = {key: i for i, key in enumerate(aggkey)}
+            kids = [key2i[tuple(t)] for t in assetcol[aggby]]
+        dstore['assetcol/kids'] = U16(kids)
+    lst.append('*total*')
+    dstore['agg_values'] = assetcol.get_agg_values(lossnames, aggby)
+    dstore.set_shape_descr('agg_values', aggregation=lst, loss_type=lossnames)
+    return aggkey if aggby else {}
+
+
+def read_shakemap(calc, haz_sitecol, assetcol):
+    """
+    Enabled only if there is a shakemap_id parameter in the job.ini.
+    Download, unzip, parse USGS shakemap files and build a corresponding
+    set of GMFs which are then filtered with the hazard site collection
+    and stored in the datastore.
+    """
+    oq = calc.oqparam
+    E = oq.number_of_ground_motion_fields
+    oq.risk_imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
+    logging.info('Getting/reducing shakemap')
+    with calc.monitor('getting/reducing shakemap'):
+        # for instance for the test case_shakemap the haz_sitecol
+        # has sids in range(0, 26) while sitecol.sids is
+        # [8, 9, 10, 11, 13, 15, 16, 17, 18];
+        # the total assetcol has 26 assets on the total sites
+        # and the reduced assetcol has 9 assets on the reduced sites
+        smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
+            oq.inputs['shakemap'])
+        sitecol, shakemap, discarded = get_sitecol_shakemap(
+            smap, oq.imtls, haz_sitecol,
+            oq.asset_hazard_distance['default'])
+        if len(discarded):
+            calc.datastore['discarded'] = discarded
+        assetcol.reduce_also(sitecol)
+
+    # checks
+    M = len(oq.imtls)
+    N = len(sitecol)
+    A = len(assetcol)
+    logging.info('Extracted %d assets', A)
+    if oq.spatial_correlation != 'no' and N > MAXSITES:
+        # hard-coded, heuristic
+        raise ValueError(CORRELATION_MATRIX_TOO_LARGE %
+                         (N, MAXSITES))
+    elif oq.spatial_correlation == 'no' and N * M > oq.cholesky_limit:
+        raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
+            '%d x %d' % (M, N), oq.cholesky_limit))
+
+    logging.info('Building GMFs')
+    with calc.monitor('building/saving GMFs'):
+        imts, gmfs = to_gmfs(
+            shakemap, oq.spatial_correlation, oq.cross_correlation,
+            oq.site_effects, oq.truncation_level, E, oq.random_seed,
+            oq.imtls)
+        N, E, M = gmfs.shape
+        events = numpy.zeros(E, rupture.events_dt)
+        events['id'] = numpy.arange(E, dtype=U32)
+        calc.datastore['events'] = events
+        # convert into an array of dtype gmv_data_dt
+        lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
+               for s in numpy.arange(N, dtype=U32)
+               for ei, event in enumerate(events)]
+        oq.hazard_imtls = {imt: [0] for imt in imts}
+        data = numpy.array(lst, oq.gmf_data_dt())
+        create_gmf_data(calc.datastore, len(imts), data=data)
+    return sitecol, assetcol

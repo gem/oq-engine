@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,12 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os.path
-from openquake.baselib import sap
 from openquake.commonlib import shapefileparser
 
 
-@sap.script
-def from_shapefile(output, input_shp_files, validate):
+def main(input_shp_files, validate=False, *, output=None):
     """
     Convert multiple ESRI Shapefile(s) into a single NRML source model file.
     """
@@ -34,7 +32,7 @@ def from_shapefile(output, input_shp_files, validate):
     shapefileparser.SourceModelParser().write(output + '.xml', source_model)
 
 
-from_shapefile.opt('output', 'output path (no extension)')
-from_shapefile.arg('input_shp_files',
-                   'path(s) to source model ESRI shapefile(s)', nargs='+')
-from_shapefile.flg('validate', 'Apply validation to input model (can be slow)')
+main.input_shp_files = dict(
+    help='path(s) to source model ESRI shapefile(s)', nargs='+')
+main.validate = 'Apply validation to input model (can be slow)'
+main.output = 'output path (no extension)'

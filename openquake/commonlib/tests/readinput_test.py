@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,6 @@ from io import BytesIO
 from openquake.baselib import general, datastore
 from openquake.hazardlib import InvalidFile, site_amplification
 from openquake.risklib import asset
-from openquake.risklib.riskmodels import ValidationError
 from openquake.commonlib import readinput, logictree
 from openquake.qa_tests_data.classical import case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
@@ -62,7 +61,7 @@ investigation_time = 50
 export_dir = %s
         """ % (site_model_input, TMP))
         with self.assertRaises(ValueError) as ctx:
-            readinput.get_params(job_config)
+            readinput.get_params(job_config, {})
         self.assertIn('is an absolute path', str(ctx.exception))
 
     def test_get_oqparam_with_sites_csv(self):
@@ -88,6 +87,7 @@ export_dir = %s
             exp_base_path = os.path.dirname(
                 os.path.join(os.path.abspath('.'), source))
             expected_params = {
+                'all_cost_types': [],
                 'export_dir': TMP,
                 'base_path': exp_base_path,
                 'calculation_mode': 'scenario',
@@ -104,9 +104,9 @@ export_dir = %s
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
                 'risk_investigation_time': None,
+                'minimum_asset_loss': {},
             }
-
-            params = getparams(readinput.get_oqparam(source))
+            params = getparams(readinput.get_oqparam(source, validate=1))
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
@@ -502,26 +502,15 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
             error.call_args[0][0], 'source SFLT2: too large: 84 km')
 
 
-class GetCompositeRiskModelTestCase(unittest.TestCase):
-    def tearDown(self):
-        # cleanup evil global
-        readinput.exposure = None
-
-    def test_missing_vulnerability_function(self):
-        oq = readinput.get_oqparam('job.ini', case_caracas)
-        with self.assertRaises(ValidationError):
-            readinput.get_crmodel(oq)
-
-
 class SitecolAssetcolTestCase(unittest.TestCase):
 
-    def tearDown(self):
+    def setUp(self):
         # cleanup evil global
         readinput.exposure = None
 
     def test_grid_site_model_exposure(self):
-        oq = readinput.get_oqparam(
-            'job.ini', case_16, region_grid_spacing='15')
+        oq = readinput.get_oqparam('job.ini', case_16)
+        oq.region_grid_spacing = 15
         sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
@@ -542,7 +531,3 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             site_amplification.Amplifier(oq.imtls, df)
         self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
-
-    def test_site_model_sites(self):
-        # you can set them at the same time
-        readinput.get_oqparam('job.ini', case_16, sites='0 0')

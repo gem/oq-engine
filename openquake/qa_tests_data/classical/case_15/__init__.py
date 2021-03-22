@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,7 +28,7 @@ produces 2 pairs of identical GMPE realizations for that model.
 Such realizations are managed by a single effective realization with double
 weight.
 
-The associations (grp_id, gsim) -> rlzs are:
+The associations (et_id, gsim) -> rlzs are:
 {
 0,BooreAtkinson2008: ['<0,SM1,BA2008_C2003,w=0.125>', '<1,SM1,BA2008_T2002,w=0.125>']
 0,CampbellBozorgnia2008: ['<2,SM1,CB2008_C2003,w=0.125>', '<3,SM1,CB2008_T2002,w=0.125>']

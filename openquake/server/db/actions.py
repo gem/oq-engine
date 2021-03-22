@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2020 GEM Foundation
+# Copyright (C) 2016-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -98,6 +98,8 @@ def create_job(db, datadir):
         the job ID
     """
     calc_id = get_calc_id(db, datadir) + 1
+    # HACK: just created jobs should not have is_running=1, but we
+    # need that to make views_test.py happy on Jenkins :-(
     job = dict(id=calc_id, is_running=1, description='just created',
                user_name=getpass.getuser(), calculation_mode='to be set',
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
@@ -261,7 +263,7 @@ DISPLAY_NAME = {
     'damages-rlzs': 'Asset Damage Distributions',
     'damages-stats': 'Asset Damage Statistics',
     'dmg_by_event': 'Aggregate Event Damages',
-    'losses_by_event': 'Aggregate Event Losses',
+    'agg_loss_table': 'Aggregate Event Losses',
     'events': 'Events',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
@@ -275,10 +277,7 @@ DISPLAY_NAME = {
     'agg_losses-stats': 'Aggregate Losses Statistics',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
-    'tot_losses-rlzs': 'Total Losses',
-    'tot_losses-stats': 'Total Losses Statistics',
-    'tot_curves-rlzs': 'Total Loss Curves',
-    'tot_curves-stats': 'Total Loss Curves Statistics',
+    'avg_gmf': 'Average Ground Motion Field',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'ruptures': 'Earthquake Ruptures',

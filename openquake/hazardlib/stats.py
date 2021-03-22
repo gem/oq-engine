@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2020 GEM Foundation
+# Copyright (c) 2016-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -44,6 +44,59 @@ def norm_cdf(x, a, s):
         return numpy.heaviside(x - a, .5)
     else:
         return norm.cdf(x, loc=a, scale=s)
+
+
+def calc_momenta(array, weights):
+    """
+    :param array: an array of shape E, ...
+    :param weights: an array of length E
+    :returns: an array of shape (2, ...) with the first two statistical moments
+    """
+    momenta = numpy.zeros((2,) + array.shape[1:])
+    momenta[0] = numpy.einsum('i,i...', weights, array)
+    momenta[1] = numpy.einsum('i,i...', weights, array**2)
+    return momenta
+
+
+def calc_avg_std(momenta, totweight):
+    """
+    :param momenta: an array of shape (2, ...) obtained via calc_momenta
+    :param totweight: total weight to divide for
+    :returns: an array of shape (2, ...) with average and standard deviation
+
+    >>> arr = numpy.array([[2, 4, 6], [3, 5, 7]])
+    >>> weights = numpy.ones(2)
+    >>> calc_avg_std(calc_momenta(arr, weights), weights.sum())
+    array([[2.5, 4.5, 6.5],
+           [0.5, 0.5, 0.5]])
+    """
+    avgstd = numpy.zeros_like(momenta)
+    avgstd[0] = avg = momenta[0] / totweight
+    avgstd[1] = numpy.sqrt(numpy.maximum(momenta[1] / totweight - avg ** 2, 0))
+    return avgstd
+
+
+def avg_std(array, weights=None):
+    """
+    :param array: an array of shape E, ...
+    :param weights: an array of length E (or None for equal weights)
+    :returns: an array of shape (2, ...) with average and standard deviation
+
+    >>> avg_std(numpy.array([[2, 4, 6], [3, 5, 7]]))
+    array([[2.5, 4.5, 6.5],
+           [0.5, 0.5, 0.5]])
+    """
+    if weights is None:
+        weights = numpy.ones(len(array))
+    return calc_avg_std(calc_momenta(array, weights), weights.sum())
+
+
+def geom_avg_std(array, weights=None):
+    """
+    :returns: geometric mean and geometric stddev (see
+              https://en.wikipedia.org/wiki/Log-normal_distribution)
+    """
+    return numpy.exp(avg_std(numpy.log(array), weights))
 
 
 def mean_curve(values, weights=None):
@@ -229,7 +282,7 @@ def set_rlzs_stats(dstore, prefix, **attrs):
     R = arrayNR.shape[1]
     pairs = list(attrs.items())
     pairs.insert(1, ('rlz', numpy.arange(R)))
-    dstore.set_shape_attrs(prefix + '-rlzs', **dict(pairs))
+    dstore.set_shape_descr(prefix + '-rlzs', **dict(pairs))
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
         if not stats:
@@ -240,4 +293,4 @@ def set_rlzs_stats(dstore, prefix, **attrs):
         dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
         pairs = list(attrs.items())
         pairs.insert(1, ('stat', statnames))
-        dstore.set_shape_attrs(name, **dict(pairs))
+        dstore.set_shape_descr(name, **dict(pairs))

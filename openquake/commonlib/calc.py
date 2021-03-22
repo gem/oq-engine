@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,7 +28,7 @@ NB: parallelization would kill the performance::
     oq = dstore['oqparam']
     N = len(dstore['sitecol'])
     M = len(oq.imtls)
-    L1 = len(oq.imtls.array) // M
+    L1 = oq.imtls.size // M
     gmf_df = dstore.read_df('gmf_data', 'sid')
     mean = numpy.zeros((N, 1, M, L1))
     for sid, df in gmf_df.groupby(gmf_df.index):
@@ -41,12 +41,13 @@ NB: parallelization would kill the performance::
 import itertools
 import warnings
 import logging
+from unittest.mock import Mock
 import numpy
 
 from openquake.baselib import parallel
-from openquake.baselib.general import get_indices
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
+from openquake.hazardlib.source.rupture import EBRupture, events_dt
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
@@ -188,19 +189,19 @@ def _gmvs_to_haz_curve(gmvs, imls, ses_per_logic_tree_path):
     return poes
 
 
-def gmvs_to_poes(gmvs, imtls, ses_per_logic_tree_path):
+def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
     """
-    :param gmvs: an array of GMVs of shape (M, E)
+    :param df: a DataFrame with fields gmv_0, .. gmv_{M-1}
     :param imtls: a dictionary imt -> imls with M IMTs and L levels
     :param ses_per_logic_tree_path: a positive integer
     :returns: an array of PoEs of shape (M, L)
     """
     M = len(imtls)
-    assert len(gmvs) == M, (len(gmvs), M)
     L = len(imtls[next(iter(imtls))])
     arr = numpy.zeros((M, L))
-    for m, imls in enumerate(imtls.values()):
-        arr[m] = _gmvs_to_haz_curve(gmvs[m], imls, ses_per_logic_tree_path)
+    for m, imt in enumerate(imtls):
+        arr[m] = _gmvs_to_haz_curve(
+            df[f'gmv_{m}'].to_numpy(), imtls[imt], ses_per_logic_tree_path)
     return arr
 
 
@@ -262,24 +263,34 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
-        full_lt = dstore['full_lt']
-        self.trt_by_grp = full_lt.trt_by_grp
-        self.rlzs_by_gsim_grp = full_lt.get_rlzs_by_gsim_grp()
-        self.samples_by_grp = full_lt.get_samples_by_grp()
-        self.num_rlzs_by_grp = {
-            grp_id:
-            sum(len(rlzs) for rlzs in self.rlzs_by_gsim_grp[grp_id].values())
-            for grp_id in self.rlzs_by_gsim_grp}
+
+    def get_eid_rlz(self, proxies, rlzs_by_gsim):
+        """
+        :returns: a composite array with the associations eid->rlz
+        """
+        eid_rlz = []
+        for rup in proxies:
+            ebr = EBRupture(Mock(rup_id=rup['seed']), rup['source_id'],
+                            rup['et_id'], rup['n_occ'], e0=rup['e0'])
+            ebr.scenario = 'scenario' in self.oqparam.calculation_mode
+            for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
+                for eid in eids:
+                    eid_rlz.append((eid, rup['id'], rlz_id))
+        return numpy.array(eid_rlz, events_dt)
 
     def import_rups(self, rup_array):
         """
         Import an array of ruptures in the proper format
         """
         logging.info('Reordering the ruptures and storing the events')
-        # order the ruptures by serial
-        rup_array.sort(order='serial')
+        # order the ruptures by seed
+        rup_array.sort(order='seed')
         nr = len(rup_array)
-        assert len(numpy.unique(rup_array['serial'])) == nr  # sanity
+        seeds, counts = numpy.unique(rup_array['seed'], return_counts=True)
+        if len(seeds) != nr:
+            dupl = seeds[counts > 1]
+            logging.info('The following %d rupture seeds are duplicated: %s',
+                         len(dupl), dupl)
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
         self.datastore['ruptures'] = rup_array
@@ -287,11 +298,10 @@ class RuptureImporter(object):
 
     def save_events(self, rup_array):
         """
-        :param rup_array: an array of ruptures with fields grp_id
+        :param rup_array: an array of ruptures with fields et_id
         :returns: a list of RuptureGetters
         """
-        from openquake.calculators.getters import (
-            get_eid_rlz, gen_rupture_getters)
+        from openquake.calculators.getters import gen_rupture_getters
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
         self.check_overflow(E)  # check the number of events
@@ -306,10 +316,10 @@ class RuptureImporter(object):
                      'and {:_d} ruptures'.format(len(events), len(rup_array)))
         iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
         if len(events) < 1E5:
-            it = itertools.starmap(get_eid_rlz, iterargs)
+            it = itertools.starmap(self.get_eid_rlz, iterargs)
         else:
             it = parallel.Starmap(
-                get_eid_rlz, iterargs, progress=logging.debug,
+                self.get_eid_rlz, iterargs, progress=logging.debug,
                 h5=self.datastore.hdf5)
         i = 0
         for eid_rlz in it:
@@ -332,10 +342,9 @@ class RuptureImporter(object):
             extra['year'] = numpy.random.choice(itime, len(events)) + 1
         extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
-        eindices = get_indices(events['rup_id'])
-        arr = numpy.array(list(eindices.values()))[:, 0, :]
-        self.datastore['ruptures']['e0'] = arr[:, 0]
-        self.datastore['ruptures']['e1'] = arr[:, 1]
+        cumsum = self.datastore['ruptures']['n_occ'].cumsum()
+        rup_array['e0'][1:] = cumsum[:-1]
+        self.datastore['ruptures']['e0'] = rup_array['e0']
 
     def check_overflow(self, E):
         """

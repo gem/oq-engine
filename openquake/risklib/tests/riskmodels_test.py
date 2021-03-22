@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,10 +21,11 @@ import pickle
 import unittest
 import unittest.mock as mock
 import numpy
+import pandas
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.risklib import riskmodels, nrml_examples
+from openquake.risklib import riskmodels, nrml_examples, scientific
 from openquake.qa_tests_data.scenario_damage import case_4b
 
 FF_DIR = os.path.dirname(case_4b.__file__)
@@ -135,8 +136,8 @@ class ParseCompositeRiskModelTestCase(unittest.TestCase):
 """)
         with self.assertRaises(ValueError) as ar:
             nrml.to_python(vuln_content)
-        self.assertIn('It is not valid to define a loss ratio = 0.0 with a '
-                      'corresponding coeff. of variation > 0.0',
+        self.assertIn('It is not valid to define a mean loss ratio = 0 '
+                      'with a corresponding coefficient of variation > 0',
                       str(ar.exception))
 
     def test_missing_minIML(self):
@@ -296,12 +297,12 @@ lossCategory="contents">
 
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
-    expected_ratios = numpy.array([   # shape (2, 5)
-        [0.3458312, 0.34684792, 0.3478676, 0.3488903, 0.34991604],
-        [0.3449187, 0.34501997, 0.34512126, 0.3452226, 0.34532395]])
+    expected_losses = numpy.array(  # shape (2, 5)
+        [[0.249337, 0.167056, 0.374337, 0.483821, 0.605163],
+         [0.364503, 0.294082, 0.285084, 0.350432, 0.413865]])
 
     def test_splittable_events(self):
-        # split the events in two blocks and check that the ratios are
+        # split the events in two blocks and check that the losses are
         # same: there is no randomness in VulnerabilityFunction.sample
         vuln_model = gettemp("""\
 <?xml version='1.0' encoding='utf-8'?>
@@ -323,28 +324,34 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 </nrml>""")
         vfs = {('structural', 'vulnerability'):
                nrml.to_python(vuln_model)['PGA', 'RC/A']}
-        vfs['structural', 'vulnerability'].seed = 42
         vfs['structural', 'vulnerability'].init()
         rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs,
-                                  ignore_covs=False)
-        assets = [0, 1]
-        eids = numpy.array([1, 2, 3, 4, 5])
+                                  minimum_asset_loss=dict(structural=0))
+        assets = pandas.DataFrame(
+            {'site_id': [0, 0], 'value-structural': numpy.array([1, 1])})
+        eids = numpy.array([0, 1, 2, 3, 4])
+        AE = len(assets), len(eids)
         gmvs = numpy.array([.1, .2, .3, .4, .5])
-        epsilons = numpy.array(
-            [[.01, .02, .03, .04, .05], [.001, .002, .003, .004, .005]])
+        gmf_df = pandas.DataFrame(dict(gmv_0=gmvs, eid=eids, sid=[0]*5))
 
-        # compute the ratios by considering all the events
-        ratios = rm('structural', assets, gmvs, eids, epsilons)
-        numpy.testing.assert_allclose(ratios, self.expected_ratios)
+        # compute the losses by considering all the events
+        rndgen = scientific.MultiEventRNG(42, eids)
+        losses = rm('structural', assets, gmf_df, 'gmv_0', rndgen, AE)
+        numpy.testing.assert_allclose(
+            losses.todense(), self.expected_losses, rtol=1E-5)
 
         # split the events in two blocks
-        eids1 = numpy.array([1, 2])
-        eids2 = numpy.array([3, 4, 5])
+        eids1 = numpy.array([0, 1])
+        eids2 = numpy.array([2, 3, 4])
         gmvs1 = numpy.array([.1, .2])
         gmvs2 = numpy.array([.3, .4, .5])
-        eps1 = numpy.array([[.01, .02], [.001, .002]])
-        eps2 = numpy.array([[.03, .04, .05], [.003, .004, .005]])
-        ratios1 = rm('structural', assets, gmvs1, eids1, eps1)
-        ratios2 = rm('structural', assets, gmvs2, eids2, eps2)
-        numpy.testing.assert_allclose(ratios1, self.expected_ratios[:, :2])
-        numpy.testing.assert_allclose(ratios2, self.expected_ratios[:, 2:])
+        gmf1_df = pandas.DataFrame(dict(gmv_0=gmvs1, eid=eids1, sid=[0]*2))
+        gmf2_df = pandas.DataFrame(dict(gmv_0=gmvs2, eid=eids2, sid=[0]*3))
+        rndgen = scientific.MultiEventRNG(42, eids1)
+        losses1 = rm('structural', assets, gmf1_df, 'gmv_0', rndgen, AE)
+        rndgen = scientific.MultiEventRNG(42, eids2)
+        losses2 = rm('structural', assets, gmf2_df, 'gmv_0', rndgen, AE)
+        numpy.testing.assert_allclose(
+            losses1.todense()[:, :2], self.expected_losses[:, :2], rtol=1E-5)
+        numpy.testing.assert_allclose(
+            losses2.todense()[:, 2:], self.expected_losses[:, 2:], rtol=1E-5)

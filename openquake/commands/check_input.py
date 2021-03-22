@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2020 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,6 @@ import os
 import sys
 import logging
 from unittest import mock
-from openquake.baselib import sap
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import readinput, logs
 from openquake.calculators import base
@@ -27,8 +26,7 @@ from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml  # this is necessary
 
 
-@sap.script
-def check_input(job_ini_or_zip_or_nrmls):
+def main(job_ini_or_zip_or_nrmls):
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     for job_ini_or_zip_or_nrml in job_ini_or_zip_or_nrmls:
@@ -51,4 +49,4 @@ def check_input(job_ini_or_zip_or_nrmls):
                 calc.read_inputs()
 
 
-check_input.arg('job_ini_or_zip_or_nrmls', 'Check the input', nargs='+')
+main.job_ini_or_zip_or_nrmls = dict(help='Check the input', nargs='+')

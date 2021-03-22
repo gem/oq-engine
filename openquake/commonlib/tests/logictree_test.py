@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2020 GEM Foundation
+# Copyright (C) 2010-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -1302,15 +1302,15 @@ class BranchSetEnumerateTestCase(unittest.TestCase):
         b10 = logictree.Branch('BS3', '1.0', 1.0, '1.0')
         b100 = logictree.Branch('BS4', '1.0.0', 0.1, '1.0.0')
         b101 = logictree.Branch('BS4', '1.0.1', 0.9, '1.0.1')
-        bs_root = logictree.BranchSet(None, None)
+        bs_root = logictree.BranchSet(None)
         bs_root.branches = [b0, b1]
-        bs0 = logictree.BranchSet(None, None)
+        bs0 = logictree.BranchSet(None)
         bs0.branches = [b00, b01, b02]
-        bs1 = logictree.BranchSet(None, None)
+        bs1 = logictree.BranchSet(None)
         bs1.branches = [b10]
         b0.bset = bs0
         b1.bset = bs1
-        bs10 = logictree.BranchSet(None, None)
+        bs10 = logictree.BranchSet(None)
         bs10.branches = [b100, b101]
         b10.bset = bs10
 
@@ -1334,7 +1334,7 @@ class BranchSetEnumerateTestCase(unittest.TestCase):
 
 class BranchSetGetBranchByIdTestCase(unittest.TestCase):
     def test(self):
-        bs = logictree.BranchSet(None, None)
+        bs = logictree.BranchSet(None)
         b1 = logictree.Branch('BS', '1', 0.33, None)
         b2 = logictree.Branch('BS', '2', 0.33, None)
         bbzz = logictree.Branch('BS', 'bzz', 0.34, None)
@@ -1344,7 +1344,7 @@ class BranchSetGetBranchByIdTestCase(unittest.TestCase):
         self.assertIs(bs['bzz'], bbzz)
 
     def test_nonexistent_branch(self):
-        bs = logictree.BranchSet(None, None)
+        bs = logictree.BranchSet(None)
         br = logictree.Branch('BS', 'br', 1.0, None)
         bs.branches.append(br)
         self.assertRaises(KeyError, bs.__getitem__, 'bz')
@@ -1413,7 +1413,7 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         self.assertEqual(inc_point_source.mfd.occurrence_rates[1], 0.1)
         uncertainty, value = ('incrementalMFDAbsolute',
                               (8.5, 0.1, [0.05, 0.01]))
-        branchset = logictree.BranchSet(uncertainty, {})
+        branchset = logictree.BranchSet(uncertainty)
         lt.apply_uncertainty(
             branchset.uncertainty_type, inc_point_source, value)
         self.assertEqual(inc_point_source.mfd.min_mag, 8.5)
@@ -1695,41 +1695,41 @@ class BranchSetFilterTestCase(unittest.TestCase):
                 temporal_occurrence_model=PoissonTOM(50.))
 
     def test_unknown_filter(self):
-        bs = logictree.BranchSet(None, {'applyToSources': [1], 'foo': 'bar'})
+        bs = logictree.BranchSet(
+            None, filters={'applyToSources': [1], 'foo': 'bar'})
         self.assertRaises(AssertionError, bs.filter_source, None)
 
     def test_source_type(self):
-        bs = logictree.BranchSet(None, {'applyToSourceType': 'area'})
+        bs = logictree.BranchSet(
+            None, filters={'applyToSourceType': 'area'})
         for src in (self.simple_fault, self.complex_fault, self.point,
                     self.characteristic_fault):
             self.assertEqual(bs.filter_source(src), False)
         self.assertEqual(bs.filter_source(self.area), True)
 
-        bs = logictree.BranchSet(None, {'applyToSourceType': 'point'})
+        bs = logictree.BranchSet(
+            None, filters={'applyToSourceType': 'point'})
         for source in (self.simple_fault, self.complex_fault, self.area,
                        self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.point), True)
 
         bs = logictree.BranchSet(
-            None, {'applyToSourceType': 'simpleFault'}
-        )
+            None, filters={'applyToSourceType': 'simpleFault'})
         for source in (self.complex_fault, self.point, self.area,
                        self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.simple_fault), True)
 
         bs = logictree.BranchSet(
-            None, {'applyToSourceType': 'complexFault'}
-        )
+            None, filters={'applyToSourceType': 'complexFault'})
         for source in (self.simple_fault, self.point, self.area,
                        self.characteristic_fault):
             self.assertEqual(bs.filter_source(source), False)
         self.assertEqual(bs.filter_source(self.complex_fault), True)
 
         bs = logictree.BranchSet(
-            None, {'applyToSourceType': 'characteristicFault'}
-        )
+            None, filters={'applyToSourceType': 'characteristicFault'})
         for source in (self.simple_fault, self.point, self.area,
                        self.complex_fault):
             self.assertEqual(bs.filter_source(source), False)
@@ -1737,8 +1737,9 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
     def test_tectonic_region_type(self):
         test = lambda trt, source: \
-            logictree.BranchSet(None, {'applyToTectonicRegionType': trt}) \
-                     .filter_source(source)
+            logictree.BranchSet(
+                None, filters={'applyToTectonicRegionType': trt}
+            ).filter_source(source)
 
         asc = 'Active Shallow Crust'
         vlc = 'Volcanic'
@@ -1774,12 +1775,13 @@ class BranchSetFilterTestCase(unittest.TestCase):
         self.assertEqual(test(asc, source), True)
 
     def test_sources(self):
-        test = lambda sources, source, expected_result: self.assertEqual(
-            logictree.BranchSet(
-                None, {'applyToSources': [s.source_id for s in sources]}
-            ).filter_source(source),
-            expected_result
-        )
+        def test(sources, source, expected_result):
+            return self.assertEqual(
+                logictree.BranchSet(
+                    None,
+                    filters={'applyToSources': [s.source_id for s in sources]}
+                ).filter_source(source),
+                expected_result)
 
         test([self.simple_fault, self.area], self.point, False)
         test([self.simple_fault, self.area], self.area, True)
@@ -2074,7 +2076,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
     def test_sample_source_model(self):
         [rlz] = self.source_model_lt
         self.assertEqual(rlz.value, 'example-source-model.xml')
-        self.assertEqual(('b1', 'b4', 'b7'), rlz.lt_path)
+        self.assertEqual(('b1', 'b5', 'b7'), rlz.lt_path)
 
     def test_sample_gmpe(self):
         probs = lt.random(1, self.seed, 'early_weights')
@@ -2152,43 +2154,39 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     def test_sampling_early_weights(self):
         fname_ini = os.path.join(
             os.path.join(DATADIR, 'source_specific_uncertainty'), 'job.ini')
-        oqparam = readinput.get_oqparam(
-            fname_ini, number_of_logic_tree_samples='10',
-            sampling_method='early_weights')
+        oqparam = readinput.get_oqparam(fname_ini)
+        oqparam.number_of_logic_tree_samples = 10
+        oqparam.sampling_method = 'early_weights'
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b1_b22', 'b1_b22', 'b1_b22', 'b1_b23', 'b1_b23', 'b1_b23',
-                 'b1_b24', 'b1_b24', 'b2', 'b3']
-        # b1_b21, b1_b25 and b1_b26 are missing having small weights
+        paths = ['b1_b22', 'b1_b23', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
+                 'b1_b26', 'b2', 'b2', 'b2']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
-        weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+
         # the weights are all equal
+        weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
-
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.105)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.106)
 
     def test_sampling_late_weights(self):
         fname_ini = os.path.join(
             os.path.join(DATADIR, 'source_specific_uncertainty'), 'job.ini')
-        oqparam = readinput.get_oqparam(
-            fname_ini, number_of_logic_tree_samples='10',
-            sampling_method='late_weights')
+        oqparam = readinput.get_oqparam(fname_ini)
+        oqparam.number_of_logic_tree_samples = 10
+        oqparam.sampling_method = 'late_weights'
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
-        paths = ['b1_b22', 'b1_b22', 'b1_b22', 'b2', 'b2', 'b2', 'b2',
-                 'b3', 'b3', 'b3']
-        # b1_b21, b1_b25 and b1_b26 are missing
+        paths = ['b1_b22', 'b1_b23', 'b1_b25', 'b1_b26',
+                 'b2', 'b2', 'b2', 'b3', 'b3', 'b3']
         self.assertEqual(['_'.join(rlz.sm_lt_path) for rlz in rlzs], paths)
-        weights = [0.07868744328694431, 0.07868744328694431,
-                   0.07868744328694431, 0.1490610088076424,
-                   0.1490610088076424, 0.1490610088076424,
-                   0.1490610088076424, 0.055897878302865904,
-                   0.055897878302865904, 0.055897878302865904]
+        weights = [0.04438889044, 0.05861275966, 0.031712341,
+                   0.01389718817, 0.18919751558, 0.189197515,
+                   0.18919751558, 0.09459875780, 0.094598757,
+                   0.09459875779]
         numpy.testing.assert_almost_equal(
             weights, [rlz.weight['weight'] for rlz in rlzs])
-
-        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.116955689752)
+        numpy.testing.assert_almost_equal(self.mean(rlzs), 0.119865739)
 
     def test_smlt_bad(self):
         # apply to a source that does not exist in the given branch
@@ -2301,7 +2299,9 @@ taxo2,taxo2,1
 taxo3,taxo3,1
 '''
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
-            logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+            inp = dict(taxonomy_mapping=gettemp(xml))
+            oq = unittest.mock.Mock(inputs=inp, loss_names=['structural'])
+            readinput.taxonomy_mapping(oq, self.taxonomies)
         self.assertIn("{'taxo4'} are in the exposure but not in",
                       str(ctx.exception))
 
@@ -2314,7 +2314,9 @@ taxo4,taxo1,.5
 taxo4,taxo2,.4
 '''
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
-            logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+            inp = dict(taxonomy_mapping=gettemp(xml))
+            oq = unittest.mock.Mock(inputs=inp, loss_names=['structural'])
+            readinput.taxonomy_mapping(oq, self.taxonomies)
         self.assertIn("the weights do not sum up to 1 for taxo4",
                       str(ctx.exception))
 
@@ -2326,11 +2328,13 @@ taxo4,taxo2,.5
 taxo3,taxo3,1
 taxo4,taxo1,.5
 '''
-        arr, lst = logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+        inp = dict(taxonomy_mapping=gettemp(xml))
+        oq = unittest.mock.Mock(inputs=inp, loss_names=['structural'])
+        lst = readinput.taxonomy_mapping(oq, self.taxonomies)['structural']
         self.assertEqual(lst, [[('?', 1)],
-                               [('taxo1', 1.0)],
-                               [('taxo2', 1.0)],
-                               [('taxo3', 1.0)],
+                               [('taxo1', 1)],
+                               [('taxo2', 1)],
+                               [('taxo3', 1)],
                                [('taxo2', 0.5), ('taxo1', 0.5)]])
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -115,8 +115,7 @@ class CalculatorTestCase(unittest.TestCase):
         """
         self.testdir = os.path.dirname(testfile) if os.path.isfile(testfile) \
             else testfile
-        params = readinput.get_params(
-            os.path.join(self.testdir, job_ini), **kw)
+        params = readinput.get_params(os.path.join(self.testdir, job_ini), kw)
 
         oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
             base.calculators)
@@ -134,7 +133,8 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc = self.get_calc(testfile, inis[0], **kw)
         self.edir = tempfile.mkdtemp()
         with self.calc._monitor:
-            result = self.calc.run(export_dir=self.edir)
+            result = self.calc.run(export_dir=self.edir,
+                                   exports=kw.get('exports', ''))
         self.calc.datastore.close()
         duration = {inis[0]: self.calc._monitor.duration}
         if len(inis) == 2:
@@ -142,7 +142,8 @@ class CalculatorTestCase(unittest.TestCase):
             calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
             with calc._monitor:
-                exported = calc.run(export_dir=self.edir)
+                exported = calc.run(export_dir=self.edir,
+                                    exports=kw.get('exports', ''))
                 result.update(exported)
             duration[inis[1]] = calc._monitor.duration
             self.calc = calc

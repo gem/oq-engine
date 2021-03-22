@@ -18,8 +18,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import h5py
-import numpy
 from openquake.baselib import sap, general, parallel
 from openquake.hazardlib import nrml, sourcewriter
 
@@ -34,8 +32,7 @@ def convert_gridded(fname):
         after = os.path.getsize(fname) + os.path.getsize(out[1])
     return dict(before=before, after=after)
 
-    
-@sap.Script
+
 def gridded2hdf5(fnames):
     """
     Convert gridded sources from XML to HDF5 format
@@ -51,8 +48,8 @@ def gridded2hdf5(fnames):
     print('Reduced size %s -> %s, %dx' % (before, after, factor))
     
 
-gridded2hdf5.arg('fnames', 'source model file in XML format', nargs='+')
+gridded2hdf5.fnames = dict(help='source model file in XML format', nargs='+')
 
 
 if __name__ == '__main__':
-    gridded2hdf5.callfunc()
+    sap.run(gridded2hdf5)

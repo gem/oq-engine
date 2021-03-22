@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,9 +20,11 @@ import io
 import os
 import re
 import math
+import pandas
 
 import numpy.testing
 
+from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import countby, gettemp
 from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml, InvalidFile
@@ -34,7 +36,7 @@ from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.getters import get_gmfgetter
-from openquake.calculators.event_based import get_mean_curves
+from openquake.calculators.event_based import get_mean_curves, compute_avg_gmf
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import case_18 as gmpe_tables
 from openquake.qa_tests_data.event_based import (
@@ -45,7 +47,7 @@ from openquake.qa_tests_data.event_based import (
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
-aae = numpy.testing.assert_almost_equal
+aac = numpy.testing.assert_allclose
 
 
 def strip_calc_id(fname):
@@ -90,6 +92,32 @@ def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,
 
 class EventBasedTestCase(CalculatorTestCase):
 
+    def check_avg_gmf(self):
+        # checking avg_gmf with a single site
+        min_iml = self.calc.oqparam.min_iml
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
+        weights = self.calc.datastore['weights'][:]
+        rlzs = self.calc.datastore['events']['rlz_id']
+        [(sid, avgstd)] = compute_avg_gmf(df, weights[rlzs], min_iml).items()
+        avg_gmf = self.calc.datastore['avg_gmf'][:]  # 2, N, M
+        aac(avg_gmf[:, 0], avgstd)
+
+    def test_compute_avg_gmf(self):
+        numpy.random.seed(42)
+        E = 1000
+        eids = numpy.arange(E)
+        min_iml = numpy.array([.05])
+        gmvs = numpy.random.lognormal(mean=-2.0, sigma=.5, size=E)
+        ok = gmvs >= min_iml
+        self.assertEqual(ok.sum(), 983)
+        gmf_df = pandas.DataFrame(dict(eid=eids[ok], gmv_0=gmvs[ok]),
+                                  numpy.zeros(E, int)[ok])
+        weights = numpy.ones(E)
+        [(sid, avgstd)] = compute_avg_gmf(gmf_df, weights, min_iml).items()
+        # aac(avgstd, [[0.13664978], [1.63127694]]) without cutting min_iml
+        # aac(avgstd, [[0.14734], [1.475266]], atol=1E-6)  # cutting at .10
+        aac(avgstd, [[0.137023], [1.620616]], atol=1E-6)
+
     def test_spatial_correlation(self):
         expected = {sc1: [0.99, 0.41],
                     sc2: [0.99, 0.64],
@@ -111,8 +139,8 @@ class EventBasedTestCase(CalculatorTestCase):
                 oq.ses_per_logic_tree_path)
 
             p05, p10 = expected[case]
-            aae(joint_prob_0_5, p05, decimal=1)
-            aae(joint_prob_1_0, p10, decimal=1)
+            aac(joint_prob_0_5, p05, atol=.1)
+            aac(joint_prob_1_0, p10, atol=.1)
 
     def test_blocksize(self):
         out = self.run_calc(blocksize.__file__, 'job.ini',
@@ -129,6 +157,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
+        self.check_avg_gmf()
 
         # make sure ses_id >= 65536 is valid
         high_ses = (self.calc.datastore['events']['ses_id'] >= 65536).sum()
@@ -147,17 +176,16 @@ class EventBasedTestCase(CalculatorTestCase):
             'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
 
         # compute hcurves in postprocessing and compare with inprocessing
-        df = self.calc.datastore.read_df('gmf_data', 'sid').loc[0]
-        gmvs = [df[col].to_numpy() for col in df.columns
-                if col.startswith('gmv_')]
+        # take advantage of the fact that there is a single site
+        df = self.calc.datastore.read_df('gmf_data', 'sid')
         oq = self.calc.datastore['oqparam']
-        poes = gmvs_to_poes(gmvs, oq.imtls, oq.ses_per_logic_tree_path)
+        poes = gmvs_to_poes(df, oq.imtls, oq.ses_per_logic_tree_path)
         hcurve = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L)
-        aae(poes, hcurve)
+        aac(poes, hcurve)
 
         # test gsim_by_imt
         out = self.run_calc(case_1.__file__, 'job.ini',
-                            ses_per_logic_tree_path='20',
+                            ses_per_logic_tree_path='30',
                             gsim_logic_tree_file='gsim_by_imt_logic_tree.xml',
                             exports='csv')
 
@@ -167,14 +195,14 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(einfo['rupture_class'],
                          'ParametricProbabilisticRupture')
         self.assertEqual(einfo['surface_class'], 'PlanarSurface')
-        self.assertEqual(einfo['serial'], 1066)
+        self.assertEqual(einfo['seed'], 1483155045)
         self.assertEqual(str(einfo['gsim']),
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
         self.assertEqual(einfo['rlzi'], 0)
-        self.assertEqual(einfo['grp_id'], 0)
-        aae(einfo['occurrence_rate'], 0.6)
-        aae(einfo['hypo'], [0., 0., 4.])
+        self.assertEqual(einfo['et_id'], 0)
+        aac(einfo['occurrence_rate'], 0.6)
+        aac(einfo['hypo'], [0., 0., 4.])
 
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gsim_by_imt.csv', fname)
@@ -249,9 +277,9 @@ class EventBasedTestCase(CalculatorTestCase):
         # check MFD
         aw = extract(self.calc.datastore, 'event_based_mfd?kind=mean')
         self.assertEqual(aw.duration, 30)  # 30 years
-        aae(aw.magnitudes, [4.6, 4.7, 5., 5.1, 5.3], decimal=6)
-        aae(aw.mean_frequency, [0.01, 0.063333, 0.01, 0.043333, 0.006667],
-            decimal=6)
+        aac(aw.magnitudes, [4.6, 4.7, 4.9, 5.1, 5.3, 5.7], atol=1E-6)
+        aac(aw.mean_frequency, [0.02, 0.013333, 0.03, 0.016667, 0.006667,
+                                0.006667], atol=1E-4)
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
@@ -267,6 +295,10 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
+        # comparing with the full calculation
+        # weights = [0.3 , 0.18, 0.12, 0.2 , 0.12, 0.08] for 6 realizations
+        self.check_avg_gmf()
+
     def test_case_7(self):
         # 2 models x 3 GMPEs, 1000 samples * 10 SES
         expected = [
@@ -275,12 +307,12 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
-        self.assertEqual({b'b11~BA': 308,  # w = .6 * .5 = .30
-                          b'b11~CB': 173,  # w = .6 * .3 = .18
-                          b'b11~CY': 119,  # w = .6 * .2 = .12
-                          b'b12~BA': 192,  # w = .4 * .5 = .20
-                          b'b12~CB': 127,  # w = .4 * .3 = .12
-                          b'b12~CY': 81},  # w = .4 * .2 = .08
+        self.assertEqual({b'0~0': 308,  # w = .6 * .5 = .30
+                          b'0~1': 173,  # w = .6 * .3 = .18
+                          b'0~2': 119,  # w = .6 * .2 = .12
+                          b'1~0': 192,  # w = .4 * .5 = .20
+                          b'1~1': 127,  # w = .4 * .3 = .12
+                          b'1~2': 81},  # w = .4 * .2 = .08
                          dic)
 
         fnames = out['hcurves', 'csv']
@@ -299,13 +331,17 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # test get_gmfgetter
         gg = get_gmfgetter(self.calc.datastore, rup_id=0)
-        self.assertEqual(len(gg.get_hazard()), 1)  # 1 rlz
+        self.assertEqual(str(gg.get_hazard()), '''\
+   sid  eid  rlz     gmv_0
+0    0    0    0  0.730127
+1    1    0    0  0.998477
+2    2    0    0  0.876034''')
 
     def test_case_9(self):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
-        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 51)
+        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 14)
 
     def test_case_10(self):
         # this is a case with multiple files in the smlt uncertaintyModel
@@ -394,7 +430,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # a test with grid and site model
         self.run_calc(case_19.__file__, 'job_grid.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 1)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 2)
 
         # error for missing intensity_measure_types
         with self.assertRaises(InvalidFile) as ctx:
@@ -413,7 +449,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # check the relevant_events
         E = extract(self.calc.datastore, 'num_events')['num_events']
         e = len(extract(self.calc.datastore, 'events'))
-        self.assertAlmostEqual(e/E, 0.1607843137)
+        self.assertAlmostEqual(e/E, 0.22633744856)
 
         # run again the GMF calculation, but this time from stored ruptures
         hid = str(self.calc.datastore.calc_id)
@@ -424,7 +460,7 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_21(self):
         self.run_calc(case_21.__file__, 'job.ini', exports='csv,xml')
         self.run_calc(case_21.__file__, 'job.ini',
-                      ses_per_logic_tree_path='10',
+                      ses_per_logic_tree_path='900',
                       number_of_logic_tree_samples='0')
 
     def test_case_22(self):
@@ -438,7 +474,7 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_23.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                              delta=1E-6)
+                              delta=1E-4)
         sio = io.StringIO()
         write_csv(sio, self.calc.datastore.getitem('sitecol'))
         tmp = gettemp(sio.getvalue())
@@ -474,17 +510,21 @@ class EventBasedTestCase(CalculatorTestCase):
         # cali landslide simplified
         self.run_calc(case_26.__file__, 'job_land.ini')
         df = self.calc.datastore.read_df('gmf_data', 'sid')
-        pd_mean = df[df.prob_disp_0 > 0].prob_disp_0.mean()
-        nd_mean = df[df.newmark_disp_0 > 0].newmark_disp_0.mean()
+        pd_mean = df[df.DispProb > 0].DispProb.mean()
+        nd_mean = df[df.Disp > 0].Disp.mean()
         self.assertGreater(pd_mean, 0)
         self.assertGreater(nd_mean, 0)
+        [fname, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
+        arr = read_csv(fname)[:2]
+        self.assertEqual(arr.dtype.names,
+                         ('site_id', 'event_id', 'gmv_PGA',
+                          'sep_Disp', 'sep_DispProb'))
 
     def test_case_26_liq(self):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
-        df = self.calc.datastore.read_df('gmf_data', 'sid')
-        pd_mean = df[df.liq_prob_0 > 0].liq_prob_0.mean()
-        self.assertGreater(pd_mean, 0)
+        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('avg_gmf.csv', fname)
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,7 @@ from numpy.testing import assert_almost_equal as aae
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
-    case_9, case_10, case_11, case_12, case_13, case_14)
+    case_9, case_10, case_11, case_12, case_13, case_14, case_15)
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase
@@ -63,10 +63,9 @@ class ScenarioTestCase(CalculatorTestCase):
                 median[imt].append(numpy.median(gmvs))
         return median
 
-    def test_case_1bis(self):
-        # 2 out of 3 sites were filtered out
-        out = self.run_calc(case_1.__file__, 'job.ini',
-                            maximum_distance='5.0', exports='csv')
+    def test_case_1(self):
+        # 2 out of 3 sites filtered out by maximum_distance=5.0
+        out = self.run_calc(case_1.__file__, 'job.ini', exports='csv')
         self.assertEqualFiles(
             'BooreAtkinson2008_gmf.csv', out['gmf_data', 'csv'][0])
 
@@ -139,9 +138,16 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_13(self):
         # multi-rupture scenario
         self.run_calc(case_13.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 50)
+        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 340)
 
     def test_case_14(self):
         # new Swiss GMPEs
         self.run_calc(case_14.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 1000)
+
+    def test_case_15(self):
+        # choosing invalid GMPE
+        with self.assertRaises(RuntimeError) as ctx:
+            self.run_calc(case_15.__file__, 'job.ini')
+        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id='0')"
+                      " CorrelationButNoInterIntraStdDevs", str(ctx.exception))

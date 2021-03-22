@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,11 +20,12 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 import numpy
+from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib.general import (
     split_in_blocks, not_equal, get_duplicates)
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects, geohash)
+    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
@@ -123,7 +124,6 @@ site_param_dt = {
     'z1pt4': numpy.float64,
     'backarc': numpy.bool,
     'xvf': numpy.float64,
-    'backarc_distance': numpy.float64,
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
@@ -152,9 +152,11 @@ site_param_dt = {
     'dwb': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
+    'fpeak': numpy.float64,
 
     # other parameters
     'custom_site_id': numpy.uint32,
+    'region': numpy.uint32
 }
 
 
@@ -286,6 +288,17 @@ class SiteCollection(object):
         new.complete = self.complete
         return new
 
+    def reduce(self, nsites):
+        """
+        :returns: a filtered SiteCollection with around nsites (if nsites<=N)
+        """
+        N = len(self.complete)
+        n = N // nsites + 1
+        if n == 1:
+            return self
+        sids, = numpy.where(self.complete.sids % n == 0)
+        return self.filtered(sids)
+
     def add_col(self, colname, dtype, values=None):
         """
         Add a column to the underlying array
@@ -317,6 +330,19 @@ class SiteCollection(object):
         else:
             idx = 0
         return self.filtered([self.sids[idx]])
+
+    # used for debugging purposes
+    def get_cdist(self, rec_or_loc):
+        """
+        :param rec_or_loc: a record with field 'hypo' or a Point instance
+        :returns: array of N euclidean distances from rec['hypo']
+        """
+        try:
+            lon, lat, dep = rec_or_loc['hypo']
+        except TypeError:
+            lon, lat, dep = rec_or_loc.x, rec_or_loc.y, rec_or_loc.z
+        xyz = spherical_to_cartesian(lon, lat, dep).reshape(1, 3)
+        return distance.cdist(self.xyz, xyz)[:, 0]
 
     def __init__(self, sites):
         """
@@ -385,14 +411,11 @@ class SiteCollection(object):
             tiles.append(sc)
         return tiles
 
-    def split(self, location, distance):
+    def count_close(self, location, distance):
         """
-        :returns: (close_sites, far_sites)
+        :returns: the number of sites within the distance from the location
         """
-        if distance is None:  # all close
-            return self, None
-        close = location.distance_to_mesh(self) < distance
-        return self.filter(close), self.filter(~close)
+        return (self.get_cdist(location) < distance).sum()
 
     def __iter__(self):
         """

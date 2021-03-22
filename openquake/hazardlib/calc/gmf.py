@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,7 @@ import time
 import numpy
 import scipy.stats
 
+from openquake.baselib.general import AccumDict
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.gsim.multi import MultiGMPE
@@ -99,16 +100,16 @@ class GmfComputer(object):
     # a matrix of size (I, N, E) is returned, where I is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
-    def __init__(self, rupture, sitecol, imts, cmaker,
+    def __init__(self, rupture, sitecol, cmaker,
                  truncation_level=None, correlation_model=None,
                  amplifier=None, sec_perils=()):
         if len(sitecol) == 0:
             raise ValueError('No sites')
-        elif len(imts) == 0:
+        elif len(cmaker.imtls) == 0:
             raise ValueError('No IMTs')
         elif len(cmaker.gsims) == 0:
             raise ValueError('No GSIMs')
-        self.imts = [from_string(imt) for imt in imts]
+        self.imts = [from_string(imt) for imt in cmaker.imtls]
         self.gsims = sorted(cmaker.gsims)
         self.truncation_level = truncation_level
         self.correlation_model = correlation_model
@@ -138,59 +139,55 @@ class GmfComputer(object):
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
-        :returns: [(sid, eid, gmv), ...], dt
+        :returns: (dict with fields eid, sid, gmv_...), dt
         """
         t0 = time.time()
         sids = self.sids
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
-        data = []
-        No = sum(len(sp.outputs) for sp in self.sec_perils)
+        data = AccumDict(accum=[])
         for gs, rlzs in rlzs_by_gsim.items():
             num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
+            if num_events == 0:  # it may happen
+                continue
             # NB: the trick for performance is to keep the call to
-            # compute.compute outside of the loop over the realizations
+            # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
             array, sig, eps = self.compute(gs, num_events)
+            M, N, E = array.shape
+            for n in range(N):
+                for e in range(E):
+                    if (array[:, n, e] < min_iml).all():
+                        array[:, n, e] = 0
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
-            for i, miniml in enumerate(min_iml):  # gmv < minimum
-                arr = array[:, i, :]
-                arr[arr < miniml] = 0
             n = 0
             for rlz in rlzs:
                 eids = eids_by_rlz[rlz]
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
-                    tot = gmfa.sum(axis=0)  # shape (M,)
-                    if not tot.sum():
-                        continue
                     if sig_eps is not None:
                         tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
                                     list(eps[:, n + ei]))
                         sig_eps.append(tup)
-                    sp_out = numpy.zeros((No,) + gmfa.shape)  # No, N, M
-                    for m, imt in enumerate(self.imts):
-                        o = 0
-                        for sp in self.sec_perils:
-                            o1 = o + len(sp.outputs)
-                            sp_out[o:o1, :, m] = sp.compute(
-                                mag, imt, gmfa[:, m], self.sctx)
-                            o = o1
+                    items = []
+                    for sp in self.sec_perils:
+                        o = sp.compute(mag, zip(self.imts, gmfa.T), self.sctx)
+                        for outkey, outarr in zip(sp.outputs, o):
+                            items.append((outkey, outarr))
                     for i, gmv in enumerate(gmfa):
-                        if gmv.sum():
-                            if No:
-                                data.append((sids[i], eid, rlz, gmv) +
-                                            tuple(sp_out[:, i, :]))
-                            else:
-                                data.append((sids[i], eid, rlz, gmv))
+                        if gmv.sum() == 0:
+                            continue
+                        data['sid'].append(sids[i])
+                        data['eid'].append(eid)
+                        data['rlz'].append(rlz)  # used in compute_gmfs_curves
+                        for m in range(M):
+                            data[f'gmv_{m}'].append(gmv[m])
+                        for outkey, outarr in items:
+                            data[outkey].append(outarr[i])
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += len(eids)
-        dt = F32, (len(min_iml),)
-        dtlist = [('sid', U32), ('eid', U32), ('rlz', U32), ('gmv', dt)] + [
-            (out, dt) for sp in self.sec_perils for out in sp.outputs]
-        d = numpy.array(data, dtlist)
-        return d, time.time() - t0
+        return data, time.time() - t0
 
     def compute(self, gsim, num_events):
         """
@@ -214,9 +211,10 @@ class GmfComputer(object):
                 result[imti], sig[imti], eps[imti] = self._compute(
                      gs, num_events, imt)
             except Exception as exc:
-                raise exc.__class__(
-                    '%s for %s, %s, source_id=%s' %
-                    (exc, gs, imt, self.source_id)
+                raise RuntimeError(
+                    '(%s, %s, source_id=%r) %s: %s' %
+                    (gs, imt, self.source_id.decode('utf8'),
+                     exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
@@ -337,9 +335,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
-    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim])
+    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim],
+                          dict(imtls={str(imt): [1] for imt in imts}))
     rupture.rup_id = seed
-    gc = GmfComputer(rupture, sites, [str(imt) for imt in imts],
-                     cmaker, truncation_level, correlation_model)
+    gc = GmfComputer(rupture, sites, cmaker, truncation_level,
+                     correlation_model)
     res, _sig, _eps = gc.compute(gsim, realizations)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}

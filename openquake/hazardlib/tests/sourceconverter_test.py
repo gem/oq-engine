@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2020 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -259,6 +259,11 @@ class SourceConverterTestCase(unittest.TestCase):
             nrml.to_python(testfile)
         self.assertEqual(
             'There were repeated values %s in %s:%s', w.call_args[0][0])
+
+    def test_mfd_with_slip_rate(self):
+        testfile = os.path.join(testdir, 'source_with_slip_rate.xml')
+        src = nrml.to_python(testfile).src_groups[0][0]
+        self.assertAlmostEqual(src.mfd.a_val, 3.97184573434)
 
 
 class SourceGroupHDF5TestCase(unittest.TestCase):

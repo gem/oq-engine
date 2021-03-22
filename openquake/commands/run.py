@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,7 @@ import os.path
 import cProfile
 import pstats
 
-from openquake.baselib import performance, general, sap, datastore, parallel
+from openquake.baselib import performance, general, datastore, parallel
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput, oqvalidation, logs
 from openquake.calculators import base, views
@@ -72,26 +72,29 @@ def get_pstats(pstatfile, n):
     return views.rst_table(rows, header='ncalls cumtime path'.split())
 
 
-def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, loglevel,
-         exports, params):
+def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, reuse_input,
+         loglevel, exports, params):
     """
     Run both hazard and risk, one after the other
     """
-    hcalc = base.calculators(readinput.get_oqparam(job_haz), calc_id)
-    hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
-              exports=exports, **params)
+    oq = readinput.get_oqparam(job_haz, kw=params)
+    hcalc = base.calculators(oq, calc_id)
+    hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
     hcalc.datastore.close()
     hc_id = hcalc.datastore.calc_id
     rcalc_id = logs.init(level=getattr(logging, loglevel.upper()))
-    oq = readinput.get_oqparam(job_risk, hc_id=hc_id)
+    params['hazard_calculation_id'] = str(hc_id)
+    oq = readinput.get_oqparam(job_risk, kw=params)
     rcalc = base.calculators(oq, rcalc_id)
-    rcalc.run(pdb=pdb, exports=exports, **params)
+    if reuse_input:  # enable caching
+        oq.cachedir = datastore.get_datadir()
+    rcalc.run(pdb=pdb, exports=exports)
     return rcalc
 
 
 # run with processpool unless OQ_DISTRIBUTE is set to something else
-def _run(job_inis, concurrent_tasks, calc_id, pdb, loglevel, hc, exports,
-         params):
+def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
+         exports, params):
     global calc_path
     assert len(job_inis) in (1, 2), job_inis
     # set the logs first of all
@@ -102,31 +105,28 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, loglevel, hc, exports,
         if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
             os.environ['OQ_DISTRIBUTE'] = 'processpool'
         if len(job_inis) == 1:  # run hazard or risk
-            if hc:
-                hc_id = hc[0]
-                rlz_ids = hc[1:]
+            if 'hazard_calculation_id' in params:
+                hc_id = int(params['hazard_calculation_id'])
             else:
                 hc_id = None
-                rlz_ids = ()
-            oqparam = readinput.get_oqparam(job_inis[0], hc_id=hc_id)
-            if not oqparam.cachedir:  # enable caching
-                oqparam.cachedir = datastore.get_datadir()
             if hc_id and hc_id < 0:  # interpret negative calculation ids
                 calc_ids = datastore.get_calc_ids()
                 try:
-                    hc_id = calc_ids[hc_id]
+                    params['hazard_calculation_id'] = str(calc_ids[hc_id])
                 except IndexError:
                     raise SystemExit(
                         'There are %d old calculations, cannot '
                         'retrieve the %s' % (len(calc_ids), hc_id))
+            oqparam = readinput.get_oqparam(job_inis[0], kw=params)
             calc = base.calculators(oqparam, calc_id)
+            if reuse_input:  # enable caching
+                oqparam.cachedir = datastore.get_datadir()
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
-                     exports=exports, hazard_calculation_id=hc_id,
-                     rlz_ids=rlz_ids, **params)
+                     exports=exports)
         else:  # run hazard + risk
             calc = run2(
                 job_inis[0], job_inis[1], calc_id, concurrent_tasks, pdb,
-                loglevel, exports, params)
+                reuse_input, loglevel, exports, params)
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
@@ -135,22 +135,31 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, loglevel, hc, exports,
     return calc
 
 
-@sap.script
-def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
-        exports='', loglevel='info', calc_id='nojob', pdb=None):
+def main(job_ini,
+         pdb=False,
+         reuse_input=False,
+         *,
+         slowest: int = None,
+         hc: int = None,
+         param='',
+         concurrent_tasks: int = None,
+         exports: valid.export_formats = '',
+         loglevel='info',
+         calc_id='nojob'):
     """
     Run a calculation bypassing the database layer
     """
     dbserver.ensure_on()
     if param:
-        params = oqvalidation.OqParam.check(
-            dict(p.split('=', 1) for p in param.split(',')))
+        params = dict(p.split('=', 1) for p in param.split(','))
     else:
         params = {}
+    if hc:
+        params['hazard_calculation_id'] = str(hc)
     if slowest:
         prof = cProfile.Profile()
-        stmt = ('_run(job_ini, concurrent_tasks, calc_id, pdb, loglevel, hc, '
-                'exports, params)')
+        stmt = ('_run(job_ini, concurrent_tasks, calc_id, pdb, reuse_input, '
+                'loglevel, exports, params)')
         prof.runctx(stmt, globals(), locals())
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
@@ -158,22 +167,21 @@ def run(job_ini, slowest=False, hc=None, param='', concurrent_tasks=None,
         print(get_pstats(pstat, slowest))
         return
     try:
-        return _run(job_ini, concurrent_tasks, calc_id, pdb, loglevel,
-                    hc, exports, params)
+        return _run(job_ini, concurrent_tasks, calc_id, pdb,
+                    reuse_input, loglevel, exports, params)
     finally:
         parallel.Starmap.shutdown()
 
 
-run.arg('job_ini', 'calculation configuration file '
-        '(or files, space-separated)', nargs='+')
-run.opt('slowest', 'profile and show the slowest operations', type=int)
-run.opt('hc', 'previous calculation ID', type=valid.hazard_id)
-run.opt('param', 'override parameter with the syntax NAME=VALUE,...')
-run.opt('concurrent_tasks', 'hint for the number of tasks to spawn',
-        type=int)
-run.opt('exports', 'export formats as a comma-separated string',
-        type=valid.export_formats)
-run.opt('loglevel', 'logging level',
-        choices='debug info warn error critical'.split())
-run.opt('calc_id', 'calculation ID (if "nojob" infer it)')
-run.flg('pdb', 'enable post mortem debugging', '-d')
+main.job_ini = dict(help='calculation configuration file '
+                    '(or files, space-separated)', nargs='+')
+main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
+main.reuse_input = dict(help='reuse source model and exposure')
+main.slowest = dict(help='profile and show the slowest operations')
+main.hc = dict(help='previous calculation ID')
+main.param = dict(help='override parameter with the syntax NAME=VALUE,...')
+main.concurrent_tasks = dict(help='hint for the number of tasks to spawn')
+main.exports = dict(help='export formats as a comma-separated string')
+main.loglevel = dict(help='logging level',
+                     choices='debug info warn error critical'.split())
+main.calc_id = dict(help='calculation ID (if "nojob" infer it)')

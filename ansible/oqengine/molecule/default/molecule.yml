@@ -1,0 +1,27 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: instance
+    #image: ${MOLECULE_DISTRO:-'centos:7'}
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-centos7}-ansible:latest"
+    command: /sbin/init 
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      stdout_callback: yaml
+      ansible_verbosity: 1
+  lint:
+    ansible-lint
+verifier:
+  name: ansible
+#lint: |
+#  set -e
+#  yamllint .
+#  ansible-lint

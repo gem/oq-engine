@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2020 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -90,13 +90,12 @@ def download_array(shakemap_id, shakemap_url=SHAKEMAP_URL):
 
 
 def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
-                         assoc_dist=None, discard_assets=False):
+                         assoc_dist=None):
     """
     :param array_or_id: shakemap array or shakemap ID
     :param imts: required IMTs as a list of strings
     :param sitecol: SiteCollection used to reduce the shakemap
     :param assoc_dist: association distance
-    :param discard_assets: set to zero the risk on assets with missing IMTs
     :returns: a pair (filtered site collection, filtered shakemap)
     """
     if isinstance(array_or_id, str):  # shakemap ID
@@ -110,20 +109,17 @@ def get_sitecol_shakemap(array_or_id, imts, sitecol=None,
                'please change the risk model otherwise you will have '
                'incorrect zero losses for the associated taxonomies' %
                (missing.pop(), ', '.join(available_imts)))
-        if discard_assets:
-            logging.error(msg)
-        else:
-            raise RuntimeError(msg)
+        raise RuntimeError(msg)
 
     # build a copy of the ShakeMap with only the relevant IMTs
-    dt = [(imt, F32) for imt in sorted(available_imts)]
+    dt = [(imt, F32) for imt in sorted(imts)]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(array), dtlist)
     for name in ('lon',  'lat', 'vs30'):
         data[name] = array[name]
     for name in ('val', 'std'):
-        for im in available_imts:
+        for im in imts:
             data[name][im] = array[name][im]
 
     if sitecol is None:  # extract the sites from the shakemap
@@ -180,12 +176,11 @@ def spatial_covariance_array(stddev, corrmatrices):
     # this depends on sPGA, sSa03, sSa10, sSa30
     M, N = corrmatrices.shape[:2]
     matrices = []
+
     for i, std in enumerate(stddev):
-        covmatrix = numpy.zeros((N, N))
-        for j in range(N):
-            for k in range(N):
-                covmatrix[j, k] = corrmatrices[i, j, k] * std[j] * std[k]
+        covmatrix = numpy.multiply(corrmatrices[i], numpy.outer(std, std))
         matrices.append(covmatrix)
+
     return numpy.array(matrices)
 
 
@@ -198,25 +193,24 @@ def cross_correlation_matrix(imts, corr='yes'):
     assert corr in 'yes no full', corr
     # if there is only PGA this is a 1x1 identity matrix
     M = len(imts)
-    cross_matrix = numpy.zeros((M, M))
-    for i, im in enumerate(imts):
-        T1 = im.period or 0.05
+    cross_matrix = numpy.eye(M)
+    if corr == 'full':
+        cross_matrix = numpy.full((M, M), 0.99999)
+        numpy.fill_diagonal(cross_matrix, 1)
+    elif corr == 'yes':
+        for i, im in enumerate(imts):
+            T1 = im.period or 0.05
 
-        for j in range(M):
-            T2 = imts[j].period or 0.05
-            if i == j:
-                cross_matrix[i, j] = 1
-            else:
+            for j in range(M):
+                if i == j:
+                    continue
+                T2 = imts[j].period or 0.05
                 Tmax = max(T1, T2)
                 Tmin = min(T1, T2)
                 II = 1 if Tmin < 0.189 else 0
-                if corr == 'full':
-                    cross_matrix[i, j] = 0.99999
-                elif corr == 'yes':
-                    cross_matrix[i, j] = 1 - math.cos(math.pi / 2 - (
-                        0.359 + 0.163 * II * math.log(Tmin / 0.189)
-                    ) * math.log(Tmax / Tmin))
-
+                cross_matrix[i, j] = 1 - math.cos(math.pi / 2 - (
+                    0.359 + 0.163 * II * math.log(Tmin / 0.189)
+                ) * math.log(Tmax / Tmin))
     return cross_matrix
 
 
@@ -270,11 +264,7 @@ def cholesky(spatial_cov, cross_corr):
     LLT = []
     for i in range(M):
         row = [L[i] @ L[j].T * cross_corr[i, j] for j in range(M)]
-        for j in range(N):
-            singlerow = numpy.zeros(M * N)
-            for i in range(M):
-                singlerow[i * N:(i + 1) * N] = row[i][j]
-            LLT.append(singlerow)
+        LLT.extend(numpy.array(row).transpose(1, 0, 2).reshape(N, M*N))
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
@@ -295,8 +285,7 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     cross_corr = cross_correlation_matrix(imts_, crosscorr)
     mu = numpy.array([numpy.ones(num_gmfs) * val[str(imt)][j]
                       for imt in imts_ for j in range(N)])
-    dmatrix = geo.geodetic.distance_matrix(
-        shakemap['lon'], shakemap['lat'])
+    dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
     spatial_corr = spatial_correlation_array(dmatrix, imts_, spatialcorr)
     stddev = [std[str(imt)] for imt in imts_]
     for im, std in zip(imts_, stddev):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib.source.rupture import BaseRupture, EBRupture
-from openquake.hazardlib.geo.mesh import surface_to_array
+from openquake.hazardlib.geo.mesh import surface_to_arrays
 
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
@@ -86,12 +86,11 @@ def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
 # ######################## rupture calculator ############################ #
 
 rupture_dt = numpy.dtype([
-    ('id', U32), ('serial', U32), ('source_id', '<S16'), ('grp_id', U16),
+    ('id', U32), ('seed', U32), ('source_id', '<S16'), ('et_id', U16),
     ('code', U8), ('n_occ', U32), ('mag', F32), ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
-    ('hypo', (F32, 3)), ('geom_id', U32), ('s1', U16), ('s2', U16),
-    ('e0', U32), ('e1', U32)])
+    ('hypo', (F32, 3)), ('geom_id', U32), ('e0', U32)])
 
 
 # this is really fast
@@ -105,36 +104,54 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
 
     rups = []
     geoms = []
-    nbytes = 0
     for ebrupture in ebruptures:
         rup = ebrupture.rupture
-        mesh = surface_to_array(rup.surface)
-        sy, sz = mesh.shape[1:]  # sanity checks;  sx == 3
-        assert sy < TWO16, 'Too many multisurfaces: %d' % sy
-        assert sz < TWO16, 'The rupture mesh spacing is too small'
+        arrays = surface_to_arrays(rup.surface)  # one array per surface
+        points = []
+        shapes = []
+        for array in arrays:
+            s0, s1, s2 = array.shape
+            assert s0 == 3, s0
+            assert s1 < TWO16, 'Too many lines'
+            assert s2 < TWO16, 'The rupture mesh spacing is too small'
+            shapes.append(s1)
+            shapes.append(s2)
+            points.extend(array.flat)
+            # example of points: [25.0, 25.1, 25.1, 25.0,
+            #                     -24.0, -24.0, -24.1, -24.1,
+            #                      5.0, 5.0, 5.0, 5.0]
+        points = F32(points)
+        shapes = U32(shapes)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-        points = mesh.reshape(3, -1).T   # shape (n, 3)
         rec = numpy.zeros(1, rupture_dt)[0]
-        rec['serial'] = rup.rup_id
-        rec['minlon'] = minlon = points[:, 0].min()
-        rec['minlat'] = minlat = points[:, 1].min()
-        rec['maxlon'] = maxlon = points[:, 0].max()
-        rec['maxlat'] = maxlat = points[:, 1].max()
+        rec['seed'] = rup.rup_id
+        n = len(points) // 3
+        lons = points[0:n]
+        lats = points[n:2*n]
+        rec['minlon'] = minlon = lons.min()
+        rec['minlat'] = minlat = lats.min()
+        rec['maxlon'] = maxlon = lons.max()
+        rec['maxlat'] = maxlat = lats.max()
         rec['mag'] = rup.mag
         rec['hypo'] = hypo
         if srcfilter.integration_distance and len(
                 srcfilter.close_sids(rec, rup.tectonic_region_type)) == 0:
             continue
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (0, ebrupture.rup_id, ebrupture.source_id, ebrupture.grp_id,
+        tup = (0, ebrupture.rup_id, ebrupture.source_id, ebrupture.et_id,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
-               minlon, minlat, maxlon, maxlat, hypo, 0, sy, sz, 0, 0)
+               minlon, minlat, maxlon, maxlat, hypo, 0, 0)
         rups.append(tup)
-        geoms.append(points.flatten())
-        nbytes += rupture_dt.itemsize + mesh.nbytes
+        # we are storing the geometries as arrays of 32 bit floating points;
+        # the first element is the number of surfaces, then there are
+        # 2 * num_surfaces integers describing the first and second
+        # dimension of each surface, and then the lons, lats and deps of
+        # the underlying meshes of points.
+        geom = numpy.concatenate([[len(shapes) // 2], shapes, points])
+        geoms.append(geom)
     if not rups:
         return ()
-    dic = dict(geom=numpy.array(geoms, object), nbytes=nbytes)
+    dic = dict(geom=numpy.array(geoms, object))
     # NB: PMFs for nonparametric ruptures are not saved since they
     # are useless for the GMF computation
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
@@ -155,8 +172,9 @@ def sample_cluster(sources, srcfilter, num_ses, param):
         dictionaries with keys rup_array, calc_times, eff_ruptures
     """
     eb_ruptures = []
-    numpy.random.seed(sources[0].serial)
-    [grp_id] = set(src.grp_id for src in sources)
+    ses_seed = param['ses_seed']
+    numpy.random.seed(sources[0].serial(ses_seed))
+    [et_id] = set(src.et_id for src in sources)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Set the parameters required to compute the number of occurrences
@@ -185,7 +203,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
             for src, _ in srcfilter.filter(sources):
                 # Track calculation time
                 t0 = time.time()
-                rup = src.get_one_rupture()
+                rup = src.get_one_rupture(ses_seed)
                 # The problem here is that we do not know a-priori the
                 # number of occurrences of a given rupture.
                 if src.id not in rup_counter:
@@ -193,21 +211,21 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                     rup_data[src.id] = {}
                 if rup.idx not in rup_counter[src.id]:
                     rup_counter[src.id][rup.idx] = 1
-                    rup_data[src.id][rup.idx] = [rup, src.id, grp_id]
+                    rup_data[src.id][rup.idx] = [rup, src.id, et_id]
                 else:
                     rup_counter[src.id][rup.idx] += 1
                 # Store info
                 dt = time.time() - t0
-                calc_times[src.source_id] += numpy.array(
+                calc_times[src.id] += numpy.array(
                     [len(rup_data[src.id]), src.nsites, dt])
         elif param['src_interdep'] == 'mutex':
             raise NotImplementedError('src_interdep == mutex')
     # Create event based ruptures
     for src_key in rup_data:
         for rup_key in rup_data[src_key]:
-            rup, source_id, grp_id = rup_data[src_key][rup_key]
+            rup, source_id, et_id = rup_data[src_key][rup_key]
             cnt = rup_counter[src_key][rup_key]
-            ebr = EBRupture(rup, source_id, grp_id, cnt)
+            ebr = EBRupture(rup, source_id, et_id, cnt)
             eb_ruptures.append(ebr)
 
     return eb_ruptures, calc_times
@@ -260,11 +278,12 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                                      calc_times={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
-            for rup, grp_id, n_occ in src.sample_ruptures(samples * num_ses):
-                ebr = EBRupture(rup, src.source_id, grp_id, n_occ)
+            for rup, et_id, n_occ in src.sample_ruptures(
+                    samples * num_ses, param['ses_seed']):
+                ebr = EBRupture(rup, src.source_id, et_id, n_occ)
                 eb_ruptures.append(ebr)
             dt = time.time() - t0
-            calc_times[src.source_id] += numpy.array([nr, src.nsites, dt])
+            calc_times[src.id] += numpy.array([nr, src.nsites, dt])
         rup_array = get_rup_array(eb_ruptures, srcfilter)
         yield AccumDict(dict(rup_array=rup_array, calc_times=calc_times,
                              eff_ruptures={trt: eff_ruptures}))

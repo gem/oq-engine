@@ -11,8 +11,7 @@ For more information about operating system support (which includes Linux, macOS
 
 Each container includes:
 
-- CentOS 8
-- Python 3.6
+- Python 3.8 from official docker image
 - Python dependencies (numpy, scipy, h5py...)
 - OpenQuake Engine and Hazardlib
 - The `oq` command line tool
@@ -23,30 +22,31 @@ Each container includes:
 
 Currently two different set of *TAGS* are provided. Images are hosted on [Docker Hub](https://hub.docker.com/r/openquake/engine/tags/).
 
-### master
+### nightly
 
-This container is updated on weekly basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what's the next stable version will have. It is not recommended for production.
+This container is updated on daily basis and contains the latest code with the latest features. As the nightly binary packages is only recommended for testing and to see what's the next stable version will have. It is not recommended for production.
 
 ```bash
-$ docker pull docker.io/openquake/engine:latest
+$ docker pull docker.io/openquake/engine:nightly
 ```
 
 ### X.Y
 
-For each stable release (starting with 2.2) a container is published and tagged with its release version. This contains the stable release of the OpenQuake Engine and its software stack.
+For each stable release (starting with 2.2) a container is published and tagged with its release version. This contains the stable release of the OpenQuake Engine and its software stack. For the last stable release is also available the latest tag
 
 ```bash
-$ docker pull docker.io/openquake/engine:2.9
+$ docker pull docker.io/openquake/engine:3.11
 ```
+```bash
+$ docker pull docker.io/openquake/engine:latest
+```
+
 
 ## Deployment
 
 - [Single node deployment](../docker/single.md)
-- [Cluster deployment](../docker/cluster.md)
 - [Advanced options](../docker/advanced.md)
-- [Build from sources](../../docker.md#build-openquake-docker-images)
 
-***
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,7 @@
 """
 This is an example with a simple source model logic tree
 sampled 5 times (one path is sampled four times).
-The associations (grp_id, gsim) -> rlzs are:
+The associations (et_id, gsim) -> rlzs are:
 {
 0,SadighEtAl1997: ['<0,b2,b1,w=0.2>']
 1,SadighEtAl1997: ['<1,b2,b1,w=0.2>']

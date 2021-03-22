@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -47,8 +47,8 @@ def make_area_source(polygon, discretization, **kwargs):
     source = AreaSource(**kwargs)
     return source
 
-
 class AreaSourceIterRupturesTestCase(unittest.TestCase):
+
     def make_area_source(self, polygon, discretization, **kwargs):
         source = make_area_source(polygon, discretization, **kwargs)
         for key in kwargs:

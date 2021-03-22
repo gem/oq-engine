@@ -1,8 +1,8 @@
 import os
 import sys
-import time
 import signal
 import shutil
+import getpass
 import logging
 import tempfile
 import subprocess
@@ -24,7 +24,7 @@ class TimeoutError(RuntimeError):
 def _streamer():
     # streamer for zmq workers running on the master node
     port = int(config.zworkers.ctrl_port)
-    task_input_url = 'tcp://127.0.0.1:%d' % (port + 2)
+    task_input_url = 'tcp://0.0.0.0:%d' % (port + 2)
     task_output_url = 'tcp://%s:%s' % (config.dbserver.listen, port + 1)
     try:
         z.zmq.proxy(z.bind(task_input_url, z.zmq.PULL),
@@ -33,30 +33,17 @@ def _streamer():
         pass  # killed cleanly by SIGINT/SIGTERM
 
 
-def check_status(**kw):
-    """
-    :returns: a non-empty error string if the streamer or worker pools are down
-    """
-    c = config.zworkers.copy()
-    c.update(kw)
-    hostport = config.dbserver.listen, int(c['ctrl_port']) + 1
-    errors = []
-    if not general.socket_ready(hostport):
-        errors.append('The task streamer on %s:%s is down' % hostport)
-    for host, status in WorkerMaster(**c).status():
-        if status != 'running':
-            errors.append('The workerpool on %s is down' % host)
-    return '\n'.join(errors)
-
-
 class WorkerMaster(object):
     """
     :param ctrl_port: port on which the worker pools listen
     :param host_cores: names of the remote hosts and number of cores to use
     :param remote_python: path of the Python executable on the remote hosts
     """
-    def __init__(self, ctrl_port=config.zworkers.ctrl_port, host_cores=None,
-                 remote_python=None, receiver_ports=None):
+    def __init__(self, ctrl_port=config.zworkers.ctrl_port,
+                 host_cores=config.zworkers.host_cores,
+                 remote_user=config.zworkers.remote_user,
+                 remote_python=config.zworkers.remote_python,
+                 receiver_ports=None):
         # NB: receiver_ports is not used but needed for compliance
         self.ctrl_port = int(ctrl_port)
         self.host_cores = ([hc.split() for hc in host_cores.split(',')]
@@ -66,34 +53,8 @@ class WorkerMaster(object):
                 raise InvalidFile('openquake.cfg: found %s %s' %
                                   (host, cores))
         self.remote_python = remote_python or sys.executable
+        self.remote_user = remote_user or getpass.getuser()
         self.popens = []
-
-    def wait(self, seconds=30):
-        """
-        Wait until all workerpools start
-        """
-        for _ in range(seconds):
-            time.sleep(1)
-            status = self.status()
-            if all(st == 'running' for host, st in status):
-                break
-        else:
-            raise TimeoutError(status)
-        return status
-
-    def status(self, host=None):
-        """
-        :returns: a list of pairs (hostname, 'running'|'not-running')
-        """
-        if host is None:
-            host_cores = self.host_cores
-        else:
-            host_cores = [hc for hc in self.host_cores if hc[0] == host]
-        lst = []
-        for host, _ in host_cores:
-            ready = general.socket_ready((host, self.ctrl_port))
-            lst.append((host, 'running' if ready else 'not-running'))
-        return lst
 
     def start(self):
         """
@@ -102,14 +63,15 @@ class WorkerMaster(object):
         """
         starting = []
         for host, cores in self.host_cores:
-            if self.status(host)[0][1] == 'running':
+            if general.socket_ready((host, self.ctrl_port)):
                 print('%s:%s already running' % (host, self.ctrl_port))
                 continue
-            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            ctrl_url = 'tcp://0.0.0.0:%s' % self.ctrl_port
             if host == '127.0.0.1':  # localhost
                 args = [sys.executable]
             else:
-                args = ['ssh', host, self.remote_python]
+                args = ['ssh', '-f', '-T', f'{self.remote_user}@{host}',
+                        self.remote_python]
             args += ['-m', 'openquake.baselib.workerpool', ctrl_url,
                      '-n', cores]
             if host != '127.0.0.1':
@@ -125,8 +87,7 @@ class WorkerMaster(object):
         """
         stopped = []
         for host, _ in self.host_cores:
-            if self.status(host)[0][1] == 'not-running':
-                print('%s not running' % host)
+            if not general.socket_ready((host, self.ctrl_port)):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
@@ -148,8 +109,7 @@ class WorkerMaster(object):
         """
         killed = []
         for host, _ in self.host_cores:
-            if self.status(host)[0][1] == 'not-running':
-                print('%s not running' % host)
+            if not general.socket_ready((host, self.ctrl_port)):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
@@ -160,16 +120,19 @@ class WorkerMaster(object):
         self.popens = []
         return 'killed %s' % killed
 
-    def inspect(self):
+    def status(self):
+        """
+        :returns: a list [(host, running, total), ...]
+        """
         executing = []
-        for host, _ in self.host_cores:
-            if self.status(host)[0][1] == 'not-running':
-                print('%s not running' % host)
+        for host, _cores in self.host_cores:
+            if not general.socket_ready((host, self.ctrl_port)):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                tasks = sock.send('get_executing')
-                executing.append((host, tasks))
+                running = len(sock.send('get_executing').split())
+                total = sock.send('get_num_workers')
+                executing.append((host, running, total))
         return executing
 
     def restart(self):
@@ -190,6 +153,8 @@ def worker(sock, executing):
     with sock:
         for cmd, args, taskno, mon in sock:
             fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
+            # NB: very hackish way of keeping track of the running tasks,
+            # used in get_executing, could litter the file system
             open(fname, 'w').close()
             parallel.safely_call(cmd, args, taskno, mon)
             os.remove(fname)
@@ -269,14 +234,14 @@ class WorkerPool(object):
         return 'WorkerPool %s killed' % self.ctrl_url
 
 
-@sap.Script
-def workerpool(worker_url='tcp://0.0.0.0:1909', num_workers=-1):
+def workerpool(worker_url='tcp://0.0.0.0:1909', *, num_workers: int = -1):
     # start a workerpool without a streamer
     WorkerPool(worker_url, num_workers).start()
 
 
-workerpool.arg('worker_url', 'ZMQ address (tcp:///w.x.y.z:port) of the worker')
-workerpool.opt('num_workers', 'number of cores to use', type=int)
+workerpool.worker_url = dict(
+    help='ZMQ address (tcp:///w.x.y.z:port) of the worker')
+workerpool.num_workers = dict(help='number of cores to use')
 
 if __name__ == '__main__':
-    workerpool.callfunc()
+    sap.run(workerpool)

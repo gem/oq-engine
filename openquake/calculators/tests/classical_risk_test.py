@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,7 +69,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini')
 
         # check the cutoff in classical.fix_ones
-        poes = self.calc.datastore['poes/grp-00'].array
+        poes = self.calc.datastore['_poes'][()]
         num_ones = (poes == 1.).sum()
         self.assertEqual(num_ones, 0)
 

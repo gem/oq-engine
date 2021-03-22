@@ -16,10 +16,10 @@
 | case_13 | | 
 | case_14 | | 
 | case_15 | | 
-| case_16 | | 
+| case_16 | Sampling 10 logic tree paths out of 759_375 |
 | case_17 | | 
 | case_18 | | 
-| case_19 | | 
+| case_19 | Test AvgGMPE | 
 | case_20 | | 
 | case_21 | | 
 | case_22 | | 
@@ -29,7 +29,7 @@
 | case_26 | |
 | case_27 | |
 | case_28 | |
-| case_29 | |
+| case_29 | Non-parametric source with one rupture represente by 2 kite surfaces |
 | case_30 | |
 | case_31 | |
 | case_32 | |
@@ -43,7 +43,7 @@
 | case_40 | |
 | case_41 | |
 | case_42 | |
-| case_43 | |
+| case_43 | Test for ps_grid_spacing |
 | case_44 | |
 | case_45 | |
 | case_46 | |
@@ -56,3 +56,9 @@
 | case_53 | Tests the modifiable GMPE with imt-independent linear scaling factors on median and standard deviation |
 | case_54 | Tests the modifiable GMPE with imt-dependent linear scaling factors on median and standard deviation |
 | case_55 | Tests the use of amplification functions |
+| case_56 | Another test for oversampling (10 samples out of 6) |
+| case_57 | Test for sampling AvgPoeGMPE |
+| case_58 | Test for the truncatedGRFromSlipAbsolute epistemic uncertainty |
+| case_59 | Test for NRCan15SiteTerm |
+| case_60 | |
+| case_61 | Test the Kite Fault with info for Simple Fault |

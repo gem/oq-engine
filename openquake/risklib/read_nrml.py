@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4#
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -122,9 +122,7 @@ def get_vulnerability_functions_05(node, fname):
                 len(loss_ratios), len(imls))
             vmodel[imt, vf_id] = (
                 scientific.VulnerabilityFunctionWithPMF(
-                    vf_id, imt, imls, numpy.array(loss_ratios),
-                    all_probs))
-            # the seed will be set by readinput.get_crmodel
+                    vf_id, imt, imls, F64(loss_ratios), all_probs))
         else:
             with context(fname, vfun):
                 loss_ratios = ~vfun.meanLRs
@@ -141,7 +139,7 @@ def get_vulnerability_functions_05(node, fname):
                                  vfun.covLRs.lineno))
             with context(fname, vfun):
                 vmodel[imt, vf_id] = scientific.VulnerabilityFunction(
-                    vf_id, imt, imls, loss_ratios, coefficients,
+                    vf_id, imt, imls, F64(loss_ratios), coefficients,
                     vfun['dist'])
     return vmodel
 
@@ -189,14 +187,14 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
             minIML = min_iml
         attrs['minIML'] = minIML
         attrs['maxIML'] = float(imls['maxIML'])
-        array = numpy.zeros(LS, [('mean', F64), ('stddev', F64)])
+        array = numpy.zeros((LS, 2), F64)
         for i, ls, node in zip(range(LS), limit_states, ff[1:]):
             if ls != node['ls']:
                 with context(fname, node):
-                    raise InvalidFile('expected %s, found' %
+                    raise InvalidFile('expected %s, found %s' %
                                       (ls, node['ls']))
-            array['mean'][i] = node['mean']
-            array['stddev'][i] = node['stddev']
+            array[i, 0] = node['mean']
+            array[i, 1] = node['stddev']
     elif ff['format'] == 'discrete':
         attrs['imls'] = ~imls
         valid.check_levels(attrs['imls'], attrs['imt'], min_iml)
@@ -205,12 +203,12 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
         for i, ls, node in zip(range(LS), limit_states, ff[1:]):
             with context(fname, node):
                 if ls != node['ls']:
-                    raise InvalidFile('expected %s, found' %
+                    raise InvalidFile('expected %s, found %s' %
                                       (ls, node['ls']))
                 poes = (~node if isinstance(~node, list)
                         else valid.probabilities(~node))
                 if len(poes) != num_poes:
-                    raise InvalidFile('expected %s, found' %
+                    raise InvalidFile('expected %s, found %s' %
                                       (num_poes, len(poes)))
                 array[i, :] = poes
     # NB: the format is constrained in nrml.FragilityNode to be either

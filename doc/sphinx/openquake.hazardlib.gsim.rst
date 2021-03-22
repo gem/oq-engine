@@ -394,6 +394,14 @@ cauzzi_faccioli_2008_swiss_coeffs
     :undoc-members:
     :show-inheritance:
 
+chao_2020
+-------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.chao_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 chiou_youngs_2008
 -------------------------------------------------
 
@@ -530,6 +538,14 @@ edwards_fah_2013f_coeffs
     :undoc-members:
     :show-inheritance:
 
+eshm20_craton
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.eshm20_craton
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 faccioli_2010
 ---------------------------------------------
 
@@ -618,6 +634,14 @@ gupta_2010
     :undoc-members:
     :show-inheritance:
 
+hassani_atkinson_2020
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.hassani_atkinson_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 hong_goda_2007
 ----------------------------------------------
 
@@ -662,6 +686,22 @@ kotha_2020
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.kotha_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lanzano_2016
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_2016
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+lanzano_2019
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_2019
     :members:
     :undoc-members:
     :show-inheritance:
@@ -827,6 +867,14 @@ pezeshk_2011
     :undoc-members:
     :show-inheritance:
 
+phung_2020
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.phung_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 raghukanth_iyengar_2007
 -------------------------------------------------------
 
@@ -863,14 +911,6 @@ sera_amplification_models
 -------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.sera_amplification_models
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-sera_2019_craton
--------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.sera_2020_craton
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,7 +22,6 @@ import numpy
 
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture_collection import split
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -163,6 +162,18 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.edges = edges
         self.rake = rake
 
+    def get_fault_surface_area(self):
+        """
+        Computes the area covered by the surface of the fault.
+
+        :returns:
+            A float defining the area of the surface of the fault [km^2]
+        """
+        # The mesh spacing is hardcoded to guarantee stability in the values
+        # computed
+        sfc = ComplexFaultSurface.from_fault_data(self.edges, 2.0)
+        return sfc.get_area()
+
     def iter_ruptures(self, **kwargs):
         """
         See :meth:
@@ -235,17 +246,18 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.rupture_mesh_spacing = spacing
 
     def __iter__(self):
-        if self.num_ruptures <= MINWEIGHT:
-            yield self  # not splittable
-            return
         mag_rates = self.get_annual_occurrence_rates()
+        if len(mag_rates) == 1:  # not splittable
+            yield self
+            return
+        if not hasattr(self, '_nr'):
+            self.count_ruptures()
         for i, (mag, rate) in enumerate(mag_rates):
             src = copy.copy(self)
-            del src._nr
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]
-            for s in split(src):
-                yield s
+            src.source_id = '%s:%d' % (self.source_id, i)
+            yield src
 
     @property
     def polygon(self):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,9 +45,9 @@ def classical_bcr(riskinputs, param, monitor):
     for ri in riskinputs:
         for out in ri.gen_outputs(crmodel, monitor):
             for asset, (eal_orig, eal_retro, bcr) in zip(
-                    ri.assets, out['structural']):
+                    out['assets'], out['structural']):
                 aval = asset['value-structural']
-                result[asset['ordinal']][out.rlzi] = numpy.array([
+                result[asset['ordinal']][out['rlzi']] = numpy.array([
                     eal_orig * aval, eal_retro * aval, bcr])
     return {'bcr_data': result}
 

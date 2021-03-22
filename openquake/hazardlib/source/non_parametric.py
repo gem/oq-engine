@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,6 +18,9 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 :class:`NonParametricSeismicSource`
 """
 import numpy
+
+from openquake.hazardlib.geo.surface.base import _get_finite_mesh
+
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -85,7 +88,8 @@ class NonParametricSeismicSource(BaseSeismicSource):
             src = self.__class__(source_id, self.name,
                                  self.tectonic_region_type, [rup_pmf])
             src.num_ruptures = 1
-            src.grp_id = self.grp_id
+            src.et_id = self.et_id
+            src.id = self.id
             yield src
 
     def count_ruptures(self):
@@ -186,15 +190,27 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         The convex hull of the underlying mesh of points
         """
-        lons = numpy.concatenate(
-            [rup.surface.mesh.lons.flatten() for rup, pmf in self.data])
-        lats = numpy.concatenate(
-            [rup.surface.mesh.lats.flatten() for rup, pmf in self.data])
+        lons, lats = [], []
+        for rup, pmf in self.data:
+
+            if isinstance(rup.surface, MultiSurface):
+                for sfc in rup.surface.surfaces:
+                    lons.extend(sfc.mesh.lons.flat)
+                    lats.extend(sfc.mesh.lats.flat)
+            else:
+                lons.extend(rup.surface.mesh.lons.flat)
+                lats.extend(rup.surface.mesh.lats.flat)
+
+        condition = numpy.isfinite(lons).astype(int)
+        lons = numpy.extract(condition, lons)
+        lats = numpy.extract(condition, lats)
+
         points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
         points['lon'] = numpy.round(lons, 5)
         points['lat'] = numpy.round(lats, 5)
         points = numpy.unique(points)
         mesh = Mesh(points['lon'], points['lat'])
+
         return mesh.get_convex_hull()
 
     def wkt(self):
@@ -203,7 +219,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         return self.polygon.wkt
 
-    def get_one_rupture(self, rupture_mutex=False):
+    def get_one_rupture(self, ses_seed, rupture_mutex=False):
         """
         Yields one random rupture from a source
         """
@@ -211,10 +227,11 @@ class NonParametricSeismicSource(BaseSeismicSource):
         if rupture_mutex:
             weights = numpy.array([rup.weight for rup in self.iter_ruptures()])
         else:
-            weights = numpy.ones((num_ruptures))*1./num_ruptures
+            weights = numpy.ones((num_ruptures)) / num_ruptures
         idx = numpy.random.choice(range(num_ruptures), p=weights)
+        serial = self.serial(ses_seed)
         for i, rup in enumerate(self.iter_ruptures()):
             if i == idx:
-                rup.rup_id = self.serial + i
+                rup.rup_id = serial + i
                 rup.idx = idx
                 return rup

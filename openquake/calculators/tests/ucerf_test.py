@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2020 GEM Foundation
+# Copyright (C) 2016-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,11 +28,6 @@ class UcerfTestCase(CalculatorTestCase):
     def test_event_based(self):
         self.run_calc(ucerf.__file__, 'job.ini')
         gmv_uc = view('global_gmfs', self.calc.datastore)
-        # check the distribution of the events
-        self.assertEventsByRlz(
-            [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0,
-             1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-             0, 0, 0, 0])
 
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=2E-5)
@@ -58,7 +53,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
         # check the distribution of the events
-        self.assertEventsByRlz([15, 18])
+        self.assertEventsByRlz([22, 13])
 
     def test_classical(self):
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini',

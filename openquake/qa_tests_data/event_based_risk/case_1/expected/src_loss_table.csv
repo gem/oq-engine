@@ -1,8 +1,8 @@
-#,,,"generated_by='OpenQuake engine 3.10.0-git1c42946541', start_date='2020-09-28T08:09:04', checksum=3475928021, investigation_time=50.0, risk_investigation_time=50.0"
-source,loss_type,loss_value,trt
-1,nonstructural,8.75830E+02,Active Shallow Crust
-1,structural,2.47443E+03,Active Shallow Crust
-2,nonstructural,3.83548E+02,Active Shallow Crust
-2,structural,9.94991E+02,Active Shallow Crust
-3,nonstructural,1.66642E+03,Active Shallow Crust
-3,structural,9.18059E+03,Active Shallow Crust
+#,,"generated_by='OpenQuake engine 3.12.0-gitc9e80184af', start_date='2021-03-05T08:03:21', checksum=4077124359, investigation_time=50.0, risk_investigation_time=50.0"
+source,loss_type,loss_value
+1,nonstructural,1.01681E+03
+1,structural,2.54919E+03
+2,nonstructural,4.15937E+02
+2,structural,1.00282E+03
+3,nonstructural,3.19915E+03
+3,structural,1.02065E+04

@@ -19,7 +19,7 @@ git clone https://github.com/gem/oq-platform-taxonomy.git
 pip install -e oq-platform-standalone
 pip install -e oq-platform-ipt
 pip install -e oq-platform-taxtweb
-pip install -e oq-platform-taxonomy
+PYBUILD_NAME=oq-taxonomy pip install -e oq-platform-taxonomy
 ```
 
 ## Start the server
