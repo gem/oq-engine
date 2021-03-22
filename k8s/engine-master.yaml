@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: openquake
+  name: oqmaster
+  labels:
+    app: oqmaster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oqmaster
+  template:
+    metadata:
+      labels:
+        app: oqmaster
+        version: "latest"
+    spec:
+      containers:
+        - name: engine
+          image: openquake/engine:nightly
+          ports:
+          #set port of openquake.cfg of dbserver (contact on this??? )
+          - containerPort: 8800
+          #command: ["oq", "db", "start"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/openquake
+      volumes:
+        - name: config
+          configMap:
+            name: oqcfg
