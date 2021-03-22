@@ -64,7 +64,8 @@ TIMESPAN = 50.
 def call(vf, gmvs, eids, rng=None):
     gmf_df = pandas.DataFrame(
         dict(eid=eids, gmv_0=gmvs, sid=numpy.zeros(len(eids))))
-    return vf(None, gmf_df, 'gmv_0', rng)
+    alt = vf(None, gmf_df, 'gmv_0', rng)
+    return [alt.loss.to_numpy()]
 
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
@@ -145,7 +146,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_an_empty_gmf_produces_an_empty_set(self):
         [res] = call(self.vulnerability_function1, [], [])
-        self.assertEqual(res.shape, (1, 0))
+        self.assertEqual(res.shape, (0,))
 
     def test_sampling_lr_gmf_inside_range_vulnimls(self):
         # Sampling loss ratios (covs greater than zero), Ground Motion Fields

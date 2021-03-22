@@ -44,18 +44,6 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def get_eids_aids_losses(dic, asset_ids):
-    eids = []
-    aids = []
-    losses = []
-    for eid, loss_array in dic.items():
-        for aid, loss in zip(asset_ids, loss_array):
-            eids.append(eid)
-            aids.append(aid)
-            losses.append(loss)
-    return U32(eids), U32(aids), F64(losses)
-
-
 def event_based_risk(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...

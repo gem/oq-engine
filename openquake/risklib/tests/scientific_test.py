@@ -31,7 +31,7 @@ def call(vf, gmvs, eids):
     rng = scientific.MultiEventRNG(42, eids)
     gmf_df = pandas.DataFrame(
         dict(eid=eids, gmv_0=gmvs, sid=numpy.zeros(len(eids))))
-    return vf(None, gmf_df, 'gmv_0', rng)
+    return [vf(None, gmf_df, 'gmv_0', rng).loss.to_numpy()]
 
 
 class VulnerabilityFunctionTestCase(unittest.TestCase):
