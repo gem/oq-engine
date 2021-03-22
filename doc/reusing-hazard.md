@@ -71,7 +71,11 @@ that such change happened few months ago already. The solution is to
 not reuse old risk models and to re-parse them at each new risk
 calculation, thus paying a performance penalty.
 
-8. In the future, it is expected that both the site collection and the events
+8. Clearly a bug fix in a GMPE will change the values of the generated
+GMFs. Depending on the circumstances, a user may want to use the old GMFs
+or not.
+
+9. In the future, it is expected that both the site collection and the events
 table will be stored differently in the datastore, in a pandas-friendly
 way, for consistency with the way other objects are stored, and
 also for memory efficiency. That means that work will be needed to be
@@ -127,3 +131,19 @@ field, one for a pessimistic case and one for an optimistic case, thus
 allowing the users to explore alternative hazard scenarios.
 
 All this requires internal discussion as it is not easy to achieve.
+
+Starting from the ruptures
+--------------------------
+
+Starting from engine 3.10 it is possible to start an event based risk
+calculation from a set of ruptures saved in CSV format. While the
+feature is still experimental and probably not working properly in all
+situations, it is an approach that solves the issue of the sheer size
+of the GMFs. The issue with the GMFs is that, as soon as you have a
+fine grid for the site model, you may get hundreds of thousands of
+sites and hundreds of gigabytes of GMFs. The size of the ruptures
+instead is independent from the number of sites and normally around a
+few gigabytes. The downside is that starting from the ruptures
+requires recomputing the GMFs everytime, so it is computationally
+expensive. Also, changes between versions might render the approach
+infeasible, for the same reasons reusing the GMFs is problematic.
