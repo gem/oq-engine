@@ -57,7 +57,7 @@ engine would give different results than reusing an old hazard.
 hazard sites changed, causing different losses to be computed. This
 has neved happened intentionally, but it has happened several times
 unintentionally, due to tricky bugs. Bug fixes have changed
-the *asset<->site* association logic several times in the past.
+the *asset<->site* association logic several times.
 
 6. Reusing an old *exposure* would also also be problematic,
 assuming the new exposure had more fields. Changes to the exposure
@@ -66,8 +66,8 @@ The solution is to NOT reuse old exposures and to re-import the exposure
 at each new risk calculation, thus paying a performance penalty.
 
 7. The same can be said for *vulnerability/fragility functions*: any
-change there would make reusing them across versions very hard. Notice
-that such change happened few months ago already. The solution is to
+change there would make reusing them across versions very hard.
+Such a change happened few months ago already. The solution is to
 not reuse old risk models and to re-parse them at each new risk
 calculation, thus paying a performance penalty.
 
