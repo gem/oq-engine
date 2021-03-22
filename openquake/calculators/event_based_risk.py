@@ -65,7 +65,6 @@ def event_based_risk(df, param, monitor):
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = dstore['weights'][()]
-    AE = len(assets_df), len(rlz_id)
     AR = len(assets_df), len(weights)
     loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
     loss_by_EK1 = {ln: general.AccumDict(accum=0)
@@ -78,7 +77,7 @@ def event_based_risk(df, param, monitor):
             continue
         with mon_risk:
             out = crmodel.get_output(
-                taxo, asset_df, gmf_df, param['sec_losses'], rndgen, AE=AE)
+                taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
 
         for lni, ln in enumerate(crmodel.oqparam.loss_names):
             alt = out[ln]

@@ -236,10 +236,9 @@ class RiskModel(object):
         """
         return sorted(lt for (lt, kind) in self.risk_functions)
 
-    def __call__(self, loss_type, assets, gmf_df,
-                 col=None, rndgen=None, AE=None):
+    def __call__(self, loss_type, assets, gmf_df, col=None, rndgen=None):
         meth = getattr(self, self.calcmode)
-        res = meth(loss_type, assets, gmf_df, col, rndgen, AE)
+        res = meth(loss_type, assets, gmf_df, col, rndgen)
         return res
 
     def __toh5__(self):
@@ -255,7 +254,7 @@ class RiskModel(object):
     # ######################## calculation methods ######################### #
 
     def classical_risk(self, loss_type, assets, hazard_curve,
-                       col=None, rng=None, AE=None):
+                       col=None, rng=None):
         """
         :param str loss_type:
             the loss type considered
@@ -279,7 +278,7 @@ class RiskModel(object):
         return rescale(lrcurves, values)
 
     def classical_bcr(self, loss_type, assets, hazard,
-                      col=None, rng=None, AE=None):
+                      col=None, rng=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -319,7 +318,7 @@ class RiskModel(object):
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
     def classical_damage(self, loss_type, assets, hazard_curve,
-                         col=None, rng=None, AE=None):
+                         col=None, rng=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -339,9 +338,9 @@ class RiskModel(object):
         res = numpy.array([a['number'] * damage for a in assets.to_records()])
         return res
 
-    def event_based_risk(self, loss_type, assets, gmf_df, col, rndgen, AE):
+    def event_based_risk(self, loss_type, assets, gmf_df, col, rndgen):
         """
-        :returns: an array of shape (A, E)
+        :returns: a DataFrame with columns eid, eid, loss
         """
         sid = assets['site_id']
         if loss_type == 'occupants' and self.time_event:
@@ -350,14 +349,14 @@ class RiskModel(object):
             val = assets['value-' + loss_type].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        losses = vf(asset_df, gmf_df, col, rndgen, AE,
+        losses = vf(asset_df, gmf_df, col, rndgen,
                     self.minimum_asset_loss[loss_type])
         return losses
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
     def scenario_damage(self, loss_type, assets, gmf_df, col,
-                        rng=None, AE=None):
+                        rng=None):
         """
         :param loss_type: the loss type
         :param assets: a list of A assets of the same taxonomy
@@ -663,7 +662,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         return self._riskmodels[taxo]
 
     def get_output(self, taxo, assets, haz, sec_losses=(), rndgen=None,
-                   rlz=None, AE=None):
+                   rlz=None):
         """
         :param taxo: a taxonomy index
         :param assets: a DataFrame of assets of the given taxonomy
@@ -671,7 +670,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param sec_losses: a list of SecondaryLoss instances
         :param rndgen: a MultiEventRNG instance
         :param rlz: a realization index (or None)
-        :param AE: a shape (A, E) or None
         :returns: a dictionary of arrays
         """
         primary = self.primary_imtls
@@ -687,7 +685,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    arrays.append(rm(lt, assets, haz, col, rndgen, AE))
+                    arrays.append(rm(lt, assets, haz, col, rndgen))
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
                     arrays.append(rm(lt, assets, hcurve))
