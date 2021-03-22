@@ -92,17 +92,15 @@ def event_based_risk(df, param, monitor):
             out = crmodel.get_output(
                 taxo, asset_df, gmf_df, param['sec_losses'], rndgen, AE=AE)
 
-        aids = asset_df.index.to_numpy()
         for lni, ln in enumerate(crmodel.oqparam.loss_names):
-            dic = out[ln]
-            if not dic:
+            alt = out[ln]
+            if len(alt) == 0:
                 continue
-            eids, aids, losses = get_eids_aids_losses(dic, aids)
             lbe = loss_by_EK1[ln]
             with mon_agg:
-                ldf = pandas.DataFrame(dict(eid=eids, loss=losses))
+                ldf = pandas.DataFrame(dict(eid=alt.eid, loss=alt.loss))
                 if K:
-                    ldf['kid'] = kids[aids]
+                    ldf['kid'] = kids[alt.aid]
                     tot = ldf.groupby(['eid', 'kid']).loss.sum()
                     for (eid, kid), loss in zip(tot.index, tot.to_numpy()):
                         lbe[eid, kid] += loss
@@ -112,7 +110,8 @@ def event_based_risk(df, param, monitor):
             if param['avg_losses']:
                 with mon_avg:
                     ldf = pandas.DataFrame(
-                        dict(aid=aids, loss=losses, rlz=rlz_id[eids]))
+                        dict(aid=alt.aid, loss=alt.loss,
+                             rlz=rlz_id[alt.eid.to_numpy()]))
                     tot = ldf.groupby(['aid', 'rlz']).loss.sum()
                     aids, rlzs = zip(*tot.index)
                     loss_by_AR[ln].append(
