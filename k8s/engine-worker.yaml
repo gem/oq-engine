@@ -19,6 +19,7 @@ spec:
       containers:
         - name: engine
           image: openquake/engine:nightly
+          imagePullPolicy: Always
           ports:
           #set port of openquake.cfg of dbserver (contact on this??? )
           #[zworkers]
@@ -26,3 +27,4 @@ spec:
           #ctrl_port = 1909
           - containerPort: 1909
           command: ["python3", "-m", "openquake.baselib.workerpool"]
+

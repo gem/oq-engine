@@ -19,6 +19,7 @@ spec:
       containers:
         - name: engine
           image: openquake/engine:nightly
+          imagePullPolicy: Always
           ports:
           #set port of openquake.cfg of dbserver (contact on this??? )
           - containerPort: 8800
