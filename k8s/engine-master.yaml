@@ -14,7 +14,7 @@ spec:
     metadata:
       labels:
         app: oqmaster
-        version: "latest"
+        version: "nightly"
     spec:
       containers:
         - name: engine
@@ -22,7 +22,7 @@ spec:
           ports:
           #set port of openquake.cfg of dbserver (contact on this??? )
           - containerPort: 8800
-          #command: ["oq", "db", "start"]
+          command: ["./oq-start.sh"]
           volumeMounts:
             - name: config
               mountPath: /etc/openquake

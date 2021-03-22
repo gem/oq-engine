@@ -23,7 +23,7 @@ data:
     file = /home/openquake/oqdata/db.sqlite3
     listen = 0.0.0.0
     # example: master.hpc
-    host = 10.244.1.11
+    host = 10.244.1.14
     # port 1908 has a good reputation:
     # https://isc.sans.edu/port.html?port=1908
     port = 1908
@@ -38,7 +38,7 @@ data:
     password =
 
     [zworkers]
-    host_cores = engine-worker -1
+    host_cores = 10.244.1.15 -1
     ctrl_port = 1909
     remote_python =
 

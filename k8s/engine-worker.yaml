@@ -14,11 +14,11 @@ spec:
     metadata:
       labels:
         app: oqworker
-        version: "latest"
+        version: "nightly"
     spec:
       containers:
         - name: engine
-          image: openquake/engine:latest
+          image: openquake/engine:nightly
           ports:
           #set port of openquake.cfg of dbserver (contact on this??? )
           #[zworkers]
