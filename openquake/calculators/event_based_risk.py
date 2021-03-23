@@ -44,6 +44,29 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
+def aggregate_losses(alt, lbe, kids, correl):
+    """
+    Aggregate losses and variances for each event by using the formulae
+
+    sigma^2 = sum(sigma_i)^2 for correl=1
+    sigma^2 = sum(sigma_i^2) for correl=0
+    """
+    x = numpy.sqrt(alt.variance) if correl else alt.variance
+    ldf = pandas.DataFrame(dict(eid=alt.eid, loss=alt.loss, x=x))
+    if len(kids):
+        K = kids.max() + 1
+        ldf['kid'] = kids[alt.aid.to_numpy()]
+        tot = ldf.groupby(['eid', 'kid']).sum()
+        for (eid, kid), loss, x in zip(
+                tot.index, tot.loss, tot.x):
+            lbe[eid, kid] += F32([loss, x])
+    else:
+        K = 0
+    tot = ldf.groupby('eid').sum()
+    for eid, loss, x in zip(tot.index, tot.loss, tot.x):
+        lbe[eid, K] += F32([loss, x ** 2 if correl else x])
+
+
 def event_based_risk(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
@@ -60,8 +83,7 @@ def event_based_risk(df, param, monitor):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        if K:
-            kids = dstore['assetcol/kids'][:]
+        kids = dstore['assetcol/kids'][:] if K else ()
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = dstore['weights'][()]
@@ -87,20 +109,9 @@ def event_based_risk(df, param, monitor):
             alt = out[ln]
             if len(alt) == 0:
                 continue
-            lbe = loss_by_EK1[ln]
             with mon_agg:
-                ldf = pandas.DataFrame(
-                    dict(eid=alt.eid, loss=alt.loss, variance=alt.variance))
-                if K:
-                    ldf['kid'] = kids[alt.aid.to_numpy()]
-                    tot = ldf.groupby(['eid', 'kid']).sum()
-                    for (eid, kid), loss, var in zip(
-                            tot.index, tot.loss, tot.variance):
-                        lbe[eid, kid] += F32([loss, var])
-                tot = ldf.groupby('eid').sum()
-                for eid, loss, var in zip(tot.index, tot.loss, tot.variance):
-                    lbe[eid, K] += F32([loss, var])
-
+                aggregate_losses(alt, loss_by_EK1[ln], kids,
+                                 param['asset_correlation'])
             if param['avg_losses']:
                 with mon_avg:
                     ldf = pandas.DataFrame(

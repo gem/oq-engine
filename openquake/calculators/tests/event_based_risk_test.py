@@ -297,7 +297,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         del elt_df['loss_id']
         del elt_df['variance']
         fname = gettemp(str(elt_df))
-        self.assertEqualFiles('expected/variances.txt', fname, delta=1E-4)
+        self.assertEqualFiles('expected/stddevs.txt', fname, delta=1E-4)
 
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
@@ -443,6 +443,17 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=5E-5)
+
+        # check total stddev
+        elt_df = self.calc.datastore.read_df(
+            'agg_loss_table', 'event_id', dict(agg_id=0))
+        elt_df['cov'] = numpy.sqrt(elt_df.variance) / elt_df.loss
+        elt_df.sort_index(inplace=True)
+        del elt_df['agg_id']
+        del elt_df['loss_id']
+        del elt_df['variance']
+        fname = gettemp(str(elt_df))
+        self.assertEqualFiles('expected/stddevs.txt', fname, delta=1E-4)
 
     # NB: big difference between Ubuntu 18 and 20
     def test_asset_loss_table(self):
