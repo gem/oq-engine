@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a flag `ignore_master_seed` (false by default)
   * Estimated the uncertainty on the losses due to the uncertainty in the
     vulnerability functions in event_based_risk and scenario_risk calculations
   * Extended the engine to read XML ShakeMaps from arbitrary sources (in

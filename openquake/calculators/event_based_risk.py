@@ -69,7 +69,7 @@ def event_based_risk(df, param, monitor):
     loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
     loss_by_EK1 = {ln: general.AccumDict(accum=numpy.zeros(2, F32))
                    for ln in crmodel.oqparam.loss_names}
-    if crmodel.oqparam.estimate_uncertainty_on:
+    if crmodel.oqparam.ignore_master_seed:
         rndgen = None
     else:
         rndgen = MultiEventRNG(
