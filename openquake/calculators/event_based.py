@@ -278,8 +278,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(aw) == 0:
                 raise RuntimeError('The rupture is too far from the sites!')
         elif oq.inputs['rupture_model'].endswith('.csv'):
-            aw = readinput.get_ruptures(
-                oq.inputs['rupture_model'], list(gsim_lt.values))
+            aw = readinput.get_ruptures(oq.inputs['rupture_model'])
             num_gsims = numpy.array(
                 [len(gsim_lt.values[trt]) for trt in gsim_lt.values], U32)
             if oq.calculation_mode.startswith('scenario'):
