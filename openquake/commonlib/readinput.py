@@ -254,7 +254,7 @@ def get_params(job_ini, kw={}):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
+def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=False):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -268,7 +268,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
     :param kw:
         Dictionary of strings to override the job parameters
     :param validate:
-        Flag. By default it is true and the parameters are validated
+        Flag. By default it is false and the parameters are not validated
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
         containing the validate and casted parameters/values parsed from
@@ -306,7 +306,6 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
         job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
     if validate and '_job_id' not in job_ini:
-        oqparam.check_source_model()
         oqparam.validate()
     return oqparam
 
@@ -577,37 +576,49 @@ def get_gsim_lt(oqparam, trts=('*',)):
 
 def get_ruptures(fname_csv):
     """
-    Read ruptures in CSV format and return an ArrayWrapper
+    Read ruptures in CSV format and return an ArrayWrapper.
+
+    :param fname_csv: path to the CSV file
     """
     if not rupture.BaseRupture._code:
         rupture.BaseRupture.init()  # initialize rupture codes
     code = rupture.BaseRupture.str2code
     aw = hdf5.read_csv(fname_csv, rupture.rupture_dt)
-    trts = aw.trts
     rups = []
     geoms = []
     n_occ = 1
     for u, row in enumerate(aw.array):
         hypo = row['lon'], row['lat'], row['dep']
         dic = json.loads(row['extra'])
-        mesh = F32(json.loads(row['mesh']))
-        s1, s2 = mesh.shape[1:]
+        meshes = F32(json.loads(row['mesh']))  # num_surfaces 3D arrays
+        num_surfaces = len(meshes)
+        shapes = []
+        points = []
+        minlons = []
+        maxlons = []
+        minlats = []
+        maxlats = []
+        for mesh in meshes:
+            shapes.extend(mesh.shape[1:])
+            points.extend(mesh.flatten())  # lons + lats + deps
+            minlons.append(mesh[0].min())
+            minlats.append(mesh[1].min())
+            maxlons.append(mesh[0].max())
+            maxlats.append(mesh[1].max())
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['seed'] = row['seed']
-        rec['minlon'] = minlon = mesh[0].min()
-        rec['minlat'] = minlat = mesh[1].min()
-        rec['maxlon'] = maxlon = mesh[0].max()
-        rec['maxlat'] = maxlat = mesh[1].max()
+        rec['minlon'] = minlon = min(minlons)
+        rec['minlat'] = minlat = min(minlats)
+        rec['maxlon'] = maxlon = max(maxlons)
+        rec['maxlat'] = maxlat = max(maxlats)
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
         rate = dic.get('occurrence_rate', numpy.nan)
-        tup = (u, row['seed'], 'no-source', trts.index(row['trt']),
+        tup = (u, row['seed'], 'no-source', aw.trts.index(row['trt']),
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, 0)
         rups.append(tup)
-        points = mesh.flatten()  # lons + lats + deps
-        # FIXME: extend to MultiSurfaces
-        geoms.append(numpy.concatenate([[1], [s1, s2], points]))
+        geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
     if not rups:
         return ()
     dic = dict(geom=numpy.array(geoms, object))
@@ -909,8 +920,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != asset_hazard_distance:
-            logging.info('Using asset_hazard_distance=%d km instead of %d km',
-                         haz_distance, asset_hazard_distance)
+            logging.debug('Using asset_hazard_distance=%d km instead of %d km',
+                          haz_distance, asset_hazard_distance)
     else:
         haz_distance = asset_hazard_distance
 
@@ -923,8 +934,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         for sid, assets in zip(sitecol.sids, assets_by):
             assets_by_site[sid] = assets
             num_assets += len(assets)
-        logging.info(
-            'Associated %d assets to %d sites', num_assets, len(sitecol))
+        logging.info('Associated {:_d} assets to {:_d} sites'.format(
+            num_assets, len(sitecol)))
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol

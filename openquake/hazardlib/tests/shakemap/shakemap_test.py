@@ -3,7 +3,7 @@ import unittest
 import numpy
 from openquake.hazardlib import geo, imt
 from openquake.hazardlib.shakemap import (
-    get_shakemap_array, get_sitecol_shakemap, to_gmfs, amplify_ground_shaking,
+    get_sitecol_shakemap, to_gmfs, amplify_ground_shaking,
     spatial_correlation_array, spatial_covariance_array,
     cross_correlation_matrix, cholesky)
 
@@ -26,10 +26,10 @@ def mean_std(shakemap, site_effects):
 class ShakemapTestCase(unittest.TestCase):
 
     def test_gmfs(self):
-        f1 = os.path.join(CDIR, 'ghorka_grid.xml')
-        f2 = os.path.join(CDIR, 'ghorka_uncertainty.xml')
-        array = get_shakemap_array(f1, f2)
-        sitecol, shakemap = get_sitecol_shakemap(array, imt_dt.names)
+        f1 = 'file://' + os.path.join(CDIR, 'ghorka_grid.xml')
+        f2 = 'file://' + os.path.join(CDIR, 'ghorka_uncertainty.xml')
+        uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
+        sitecol, shakemap = get_sitecol_shakemap(uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, _ = mean_std(shakemap, site_effects=True)
@@ -116,10 +116,10 @@ class ShakemapTestCase(unittest.TestCase):
 
     def test_from_files(self):
         # files provided by Vitor Silva, without site amplification
-        f1 = os.path.join(CDIR, 'test_shaking.xml')
-        f2 = os.path.join(CDIR, 'test_uncertainty.xml')
-        array = get_shakemap_array(f1, f2)
-        sitecol, shakemap = get_sitecol_shakemap(array, imt_dt.names)
+        f1 = 'file://' + os.path.join(CDIR, 'test_shaking.xml')
+        f2 = 'file://' + os.path.join(CDIR, 'test_uncertainty.xml')
+        uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
+        sitecol, shakemap = get_sitecol_shakemap(uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, std_by_imt = mean_std(shakemap, site_effects=False)

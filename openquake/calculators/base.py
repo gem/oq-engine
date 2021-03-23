@@ -29,7 +29,7 @@ import pandas
 
 from openquake.baselib import (
     general, hdf5, datastore, __version__ as engine_version)
-from openquake.baselib import parallel
+from openquake.baselib import parallel, python3compat
 from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile, site, stats
 from openquake.hazardlib.site_amplification import Amplifier
@@ -55,7 +55,6 @@ TWO32 = 2 ** 32
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
-task_dt = numpy.dtype([('task_no', U16), ('start', U32), ('stop', U32)])
 
 
 def get_calc(job_ini, calc_id):
@@ -143,9 +142,9 @@ def set_array(longarray, shortarray):
 
 MAXSITES = 1000
 CORRELATION_MATRIX_TOO_LARGE = '''\
-You have a correlation matrix which is too large: %%d sites > %d.
+You have a correlation matrix which is too large: %s > %d.
 To avoid that, set a proper `region_grid_spacing` so that your exposure
-takes less sites.''' % MAXSITES
+involves less sites.'''
 
 
 class BaseCalculator(metaclass=abc.ABCMeta):
@@ -162,6 +161,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, calc_id):
+        oqparam.validate()
         self.datastore = datastore.DataStore(calc_id)
         init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
@@ -754,17 +754,11 @@ class HazardCalculator(BaseCalculator):
             if oq.region:
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
-            if oq.shakemap_id or 'shakemap' in oq.inputs:
+            if oq.shakemap_id or 'shakemap' in oq.inputs or oq.shakemap_uri:
                 self.sitecol, self.assetcol = read_shakemap(
                     self, haz_sitecol, assetcol)
                 self.datastore['sitecol'] = self.sitecol
                 self.datastore['assetcol'] = self.assetcol
-                logging.info('Extracted %d/%d assets',
-                             len(self.assetcol), len(assetcol))
-                nsites = len(self.sitecol)
-                if (oq.spatial_correlation != 'no' and
-                        nsites > MAXSITES):  # hard-coded, heuristic
-                    raise ValueError(CORRELATION_MATRIX_TOO_LARGE % nsites)
             elif hasattr(self, 'sitecol') and general.not_equal(
                     self.sitecol.sids, haz_sitecol.sids):
                 self.assetcol = assetcol.reduce(self.sitecol)
@@ -853,8 +847,7 @@ class HazardCalculator(BaseCalculator):
                           avg_losses=oq.avg_losses,
                           amplifier=self.amplifier,
                           sec_perils=sec_perils,
-                          ses_seed=oq.ses_seed,
-                          minimum_asset_loss=mal)
+                          ses_seed=oq.ses_seed)
 
         # compute exposure stats
         if hasattr(self, 'assetcol'):
@@ -1101,6 +1094,7 @@ def import_gmfs(dstore, oqparam, sids):
             gmvs = dic[sid]
             gmvlst.append(gmvs)
     data = numpy.concatenate(gmvlst)
+    data.sort(order='eid')
     create_gmf_data(dstore, len(oqparam.get_primary_imtls()),
                     oqparam.get_sec_imts(), data=data)
     dstore['weights'] = numpy.ones(1)
@@ -1120,7 +1114,6 @@ def create_gmf_data(dstore, M, sec_imts=(), data=None):
     for imt in sec_imts:
         items.append((str(imt), F32 if n == 0 else data[imt]))
     dstore.create_dframe('gmf_data', items, 'gzip')
-    by_task = dstore.create_dset('gmf_data/by_task', task_dt)
     if data is not None:
         df = pandas.DataFrame(dict(items))
         avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)
@@ -1129,30 +1122,37 @@ def create_gmf_data(dstore, M, sec_imts=(), data=None):
             df.pop('sid')
             avg_gmf[:, sid] = stats.avg_std(df.to_numpy())
         dstore['avg_gmf'] = avg_gmf
-        hdf5.extend(by_task, numpy.array([(0, 0, len(data))], task_dt))
 
 
-def save_agg_values(dstore, assetcol, lossnames, tagnames):
+def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
     Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
     lst = []
-    if tagnames:
-        aggkey = assetcol.tagcol.get_aggkey(tagnames)
+    if aggby:
+        aggkey = assetcol.tagcol.get_aggkey(aggby)
         logging.info('Storing %d aggregation keys', len(aggkey))
-        dt = [(name + '_', U16) for name in tagnames] + [
-            (name, hdf5.vstr) for name in tagnames]
+        dt = [(name + '_', U16) for name in aggby] + [
+            (name, hdf5.vstr) for name in aggby]
         kvs = []
         for key, val in aggkey.items():
+            val = tuple(python3compat.decode(val))
             kvs.append(key + val)
-            lst.append(' '.join(map(str, val)))
+            lst.append(' '.join(val))
         dstore['agg_keys'] = numpy.array(kvs, dt)
+        if aggby == ['id']:
+            kids = assetcol['ordinal']
+        elif aggby == ['site_id']:
+            kids = assetcol['site_id']
+        else:
+            key2i = {key: i for i, key in enumerate(aggkey)}
+            kids = [key2i[tuple(t)] for t in assetcol[aggby]]
+        dstore['assetcol/kids'] = U16(kids)
     lst.append('*total*')
-    loss_names = dstore['oqparam'].loss_names
-    dstore['agg_values'] = assetcol.get_agg_values(lossnames, tagnames)
-    dstore.set_shape_descr('agg_values', aggregation=lst, loss_type=loss_names)
-    return aggkey if tagnames else {}
+    dstore['agg_values'] = assetcol.get_agg_values(lossnames, aggby)
+    dstore.set_shape_descr('agg_values', aggregation=lst, loss_type=lossnames)
+    return aggkey if aggby else {}
 
 
 def read_shakemap(calc, haz_sitecol, assetcol):
@@ -1172,15 +1172,31 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         # [8, 9, 10, 11, 13, 15, 16, 17, 18];
         # the total assetcol has 26 assets on the total sites
         # and the reduced assetcol has 9 assets on the reduced sites
-        smap = oq.shakemap_id if oq.shakemap_id else numpy.load(
-            oq.inputs['shakemap'])
+        if oq.shakemap_id:
+            uridict = {'kind': 'usgs_id', 'id': oq.shakemap_id}
+        elif 'shakemap' in oq.inputs:
+            uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
+        else:
+            uridict = oq.shakemap_uri
         sitecol, shakemap, discarded = get_sitecol_shakemap(
-            smap, oq.imtls, haz_sitecol,
-            oq.asset_hazard_distance['default'],
-            oq.discard_assets)
+            uridict, oq.imtls, haz_sitecol,
+            oq.asset_hazard_distance['default'])
         if len(discarded):
             calc.datastore['discarded'] = discarded
         assetcol.reduce_also(sitecol)
+
+    # checks
+    M = len(oq.imtls)
+    N = len(sitecol)
+    A = len(assetcol)
+    logging.info('Extracted %d assets', A)
+    if oq.spatial_correlation != 'no' and N > MAXSITES:
+        # hard-coded, heuristic
+        raise ValueError(CORRELATION_MATRIX_TOO_LARGE %
+                         (N, MAXSITES))
+    elif oq.spatial_correlation == 'no' and N * M > oq.cholesky_limit:
+        raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
+            '%d x %d' % (M, N), oq.cholesky_limit))
 
     logging.info('Building GMFs')
     with calc.monitor('building/saving GMFs'):

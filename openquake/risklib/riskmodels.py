@@ -29,7 +29,6 @@ from openquake.baselib import hdf5
 from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property, groupby
 from openquake.hazardlib import valid, nrml, InvalidFile
-from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
@@ -180,18 +179,6 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
     return rlist
 
 
-def get_values(loss_type, assets, time_event=None):
-    """
-    :returns:
-        a numpy array with the values for the given assets, depending on the
-        loss_type.
-    """
-    if loss_type == 'occupants' and time_event:
-        return assets['occupants_%s' % time_event]
-    else:
-        return assets['value-' + loss_type]
-
-
 loss_poe_dt = numpy.dtype([('loss', F64), ('poe', F64)])
 
 
@@ -249,10 +236,9 @@ class RiskModel(object):
         """
         return sorted(lt for (lt, kind) in self.risk_functions)
 
-    def __call__(self, loss_type, assets, gmf_df,
-                 col=None, rndgen=None, AE=None):
+    def __call__(self, loss_type, assets, gmf_df, col=None, rndgen=None):
         meth = getattr(self, self.calcmode)
-        res = meth(loss_type, assets, gmf_df, col, rndgen, AE)
+        res = meth(loss_type, assets, gmf_df, col, rndgen)
         return res
 
     def __toh5__(self):
@@ -268,7 +254,7 @@ class RiskModel(object):
     # ######################## calculation methods ######################### #
 
     def classical_risk(self, loss_type, assets, hazard_curve,
-                       col=None, rng=None, AE=None):
+                       col=None, rng=None):
         """
         :param str loss_type:
             the loss type considered
@@ -286,13 +272,13 @@ class RiskModel(object):
         vf = self.risk_functions[loss_type, 'vulnerability']
         lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
-        values = get_values(loss_type, assets)
+        values = assets['value-' + loss_type].to_numpy()
         lrcurves = numpy.array(
             [scientific.classical(vf, imls, hazard_curve, lratios)] * n)
         return rescale(lrcurves, values)
 
     def classical_bcr(self, loss_type, assets, hazard,
-                      col=None, rng=None, AE=None):
+                      col=None, rng=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -332,7 +318,7 @@ class RiskModel(object):
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
     def classical_damage(self, loss_type, assets, hazard_curve,
-                         col=None, rng=None, AE=None):
+                         col=None, rng=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -343,31 +329,34 @@ class RiskModel(object):
         """
         ffl = self.risk_functions[loss_type, 'fragility']
         hazard_imls = self.hazard_imtls[ffl.imt]
-        debug = False  # assets['id'] == b'a5' to debug case_master
         rtime = self.risk_investigation_time or self.investigation_time
         damage = scientific.classical_damage(
             ffl, hazard_imls, hazard_curve,
             investigation_time=self.investigation_time,
             risk_investigation_time=rtime,
-            steps_per_interval=self.steps_per_interval, debug=debug)
+            steps_per_interval=self.steps_per_interval)
         res = numpy.array([a['number'] * damage for a in assets.to_records()])
         return res
 
-    def event_based_risk(self, loss_type, assets, gmf_df, col, rndgen, AE):
+    def event_based_risk(self, loss_type, assets, gmf_df, col, rndgen):
         """
-        :returns: an array of shape (A, E)
+        :returns: a DataFrame with columns eid, eid, loss
         """
-        values = get_values(loss_type, assets, self.time_event)
+        sid = assets['site_id']
+        if loss_type == 'occupants' and self.time_event:
+            val = assets['occupants_%s' % self.time_event].to_numpy()
+        else:
+            val = assets['value-' + loss_type].to_numpy()
+        asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        losses = vf(values, gmf_df[col].to_numpy(),
-                    gmf_df.eid.to_numpy(), rndgen, AE)
-        losses[losses < self.minimum_asset_loss[loss_type]] = 0
+        losses = vf(asset_df, gmf_df, col, rndgen,
+                    self.minimum_asset_loss[loss_type])
         return losses
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
     def scenario_damage(self, loss_type, assets, gmf_df, col,
-                        rng=None, AE=None):
+                        rng=None):
         """
         :param loss_type: the loss type
         :param assets: a list of A assets of the same taxonomy
@@ -673,7 +662,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         return self._riskmodels[taxo]
 
     def get_output(self, taxo, assets, haz, sec_losses=(), rndgen=None,
-                   rlz=None, AE=None):
+                   rlz=None):
         """
         :param taxo: a taxonomy index
         :param assets: a DataFrame of assets of the given taxonomy
@@ -681,7 +670,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param sec_losses: a list of SecondaryLoss instances
         :param rndgen: a MultiEventRNG instance
         :param rlz: a realization index (or None)
-        :param AE: a shape (A, E) or None
         :returns: a dictionary of arrays
         """
         primary = self.primary_imtls
@@ -697,7 +685,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    arrays.append(rm(lt, assets, haz, col, rndgen, AE))
+                    arrays.append(rm(lt, assets, haz, col, rndgen))
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
                     arrays.append(rm(lt, assets, hcurve))
@@ -705,16 +693,14 @@ class CompositeRiskModel(collections.abc.Mapping):
             # average on the risk models (unsupported for classical_risk)
             dic[lt] = arrays[0]
             if weights[0] != 1:
-                dic[lt] *= weights[0]
-            for arr, w in zip(arrays[1:], weights[1:]):
-                dic[lt] += arr * w
+                dic[lt].loss *= weights[0]
+            for alt, w in zip(arrays[1:], weights[1:]):
+                dic[lt].loss += alt.loss * w
 
         # compute secondary losses, if any
         # FIXME: it should be moved up, before the computation of the mean
         for sec_loss in sec_losses:
-            for sec_lt in sec_loss.outputs:
-                dic[sec_lt] = scipy.sparse.dok_matrix(AE)
-            sec_loss.update(dic)
+            sec_loss.update(dic, assets)
         return dic
 
     def get_rmodels_weights(self, loss_type, taxidx):

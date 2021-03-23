@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2019-2021 GEM Foundation
+# Copyright (C) 2021, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -12,14 +14,17 @@
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-FROM openquake/engine
-LABEL maintainer="GEM Foundation <devops@openquake.org>" \
-      vendor="GEM Foundation"
+import unittest
+import numpy
+from openquake.baselib.hdf5 import dumps
 
-ADD ./openquake.cfg /opt/openquake/openquake.cfg
 
-EXPOSE 8800:8800
-ENTRYPOINT ["/bin/bash"]
-CMD ["./oq-start.sh"]
+class DumpsTestCase(unittest.TestCase):
+    def test(self):
+        dic = dict(imts=numpy.array([0.1, 0.2, 0.3]))
+        self.assertEqual(dumps(dic), '{\n"imts": [0.1, 0.2, 0.3]}')
+
+        dic = dict(base_path=r"C:\Users\test")
+        self.assertEqual(dumps(dic), '{\n"base_path": "C:\\\\Users\\\\test"}')

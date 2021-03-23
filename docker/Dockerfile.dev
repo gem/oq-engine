@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-FROM python:3.8.6 AS compile-image
+FROM python:3.8 AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
 RUN apt-get update &&  \
@@ -22,8 +22,7 @@ ARG oq_branch
 ENV LANG en_US.UTF-8
 WORKDIR /usr/src
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
-    pip install "dask[complete]" && \
-    pip --disable-pip-version-check install -e .[cluster,osgeo] -r requirements-py38-linux64.txt --no-warn-script-location
+    pip --disable-pip-version-check install -e . -r requirements-py38-linux64.txt --no-warn-script-location
 #
 #
 ENV OQ_CONFIG_FILE /etc/openquake/openquake.cfg

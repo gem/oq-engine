@@ -16,7 +16,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+
+import os
+import re
+import inspect
+import logging
+import functools
+import multiprocessing
+import numpy
+
 from openquake.baselib import __version__
+from openquake.baselib.general import DictArray, AccumDict
+from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import correlation, stats, calc
+from openquake.hazardlib import valid, InvalidFile, shakemap
+from openquake.sep.classes import SecondaryPeril
+from openquake.commonlib import logictree, util
+from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
 Full list of configuration parameters
@@ -122,6 +138,15 @@ float_dmg_dist:
   and not as integers (uint32).
   Example: *float_dmg_dist = true*.
   Default: False
+
+cholesky_limit:
+  When generating the GMFs from a ShakeMap the engine needs to perform a
+  Cholesky decomposition of a matrix of size (M x N)^2, being M the number
+  of intensity measure types and N the number of sites. The decomposition
+  can become ultra-slow, run out of memory, or produce bogus negative
+  eigenvalues, therefore there is a limit on the maximum size of M x N.
+  Example: *cholesky_limit = 1000*.
+  Default: 10,000
 
 continuous_fragility_discretization:
   Used when discretizing continuuos fragility functions.
@@ -522,6 +547,15 @@ shakemap_id:
   Example: *shakemap_id = usp000fjta*.
   Default: no default
 
+shakemap_uri:
+  Dictionary used in ShakeMap calculations to specify a ShakeMap. Must contain
+  a key named "kind" with values "usgs_id", "usgs_xml" or "file_npy".
+  Example: *shakemap_uri = {
+     "kind": "usgs_xml",
+     "grid_url": "file:///home/michele/usp000fjta/grid.xml",
+     "uncertainty_url": "file:///home/michele/usp000fjta/uncertainty.xml"*.
+  Default: empty dictionary
+
 shift_hypo:
   Used in classical calculations to shift the rupture hypocenter.
   Example: *shift_hypo = true*.
@@ -595,20 +629,6 @@ width_of_mfd_bin:
   Example: *width_of_mfd_bin = 0.2*.
   Default: None
 """ % __version__
-import os
-import re
-import logging
-import functools
-import multiprocessing
-import numpy
-
-from openquake.baselib.general import DictArray, AccumDict
-from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation, stats, calc
-from openquake.hazardlib import valid, InvalidFile
-from openquake.sep.classes import SecondaryPeril
-from openquake.commonlib import logictree, util
-from openquake.risklib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
@@ -694,6 +714,7 @@ class OqParam(valid.ParamSet):
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
+    cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
@@ -784,6 +805,7 @@ class OqParam(valid.ParamSet):
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
     shakemap_id = valid.Param(valid.nice_string, None)
+    shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
     site_effects = valid.Param(valid.boolean, False)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
@@ -961,14 +983,8 @@ class OqParam(valid.ParamSet):
                     '%s: conditional_loss_poes are not defined '
                     'for classical_damage calculations' % job_ini)
 
-        # checks for event_based_risk
-        if (self.calculation_mode == 'event_based_risk' and not
-                self.ground_motion_fields):
-            raise ValueError('ground_motion_fields must be set to true in %s'
-                             % job_ini)
-
         # checks for ebrisk
-        if self.calculation_mode == 'ebrisk':
+        if self.calculation_mode in ('ebrisk', 'event_based_risk'):
             if self.risk_investigation_time is None:
                 raise InvalidFile('Please set the risk_investigation_time in'
                                   ' %s' % job_ini)
@@ -1012,10 +1028,27 @@ class OqParam(valid.ParamSet):
             raise InvalidFile('%s: The soil_intensities must be defined'
                               % job_ini)
 
+    def validate(self):
+        """
+        Set self.loss_names
+        """
+        # set all_cost_types
+        # rt has the form 'vulnerability/structural', 'fragility/...', ...
+        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        if not costtypes and self.hazard_calculation_id:
+            with util.read(self.hazard_calculation_id) as ds:
+                parent = ds['oqparam']
+            self._risk_files = get_risk_files(parent.inputs)
+            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        self.all_cost_types = sorted(costtypes)
+
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
             ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
             for ln in self.loss_names}
+
+        super().validate()
+        self.check_source_model()
 
     def check_gsims(self, gsims):
         """
@@ -1079,21 +1112,6 @@ class OqParam(valid.ParamSet):
         """
         imtls = self.hazard_imtls or self.risk_imtls
         return DictArray(imtls) if imtls else {}
-
-    @property
-    def all_cost_types(self):
-        """
-        Return the cost types of the computation (including `occupants`
-        if it is there) in order.
-        """
-        # rt has the form 'vulnerability/structural', 'fragility/...', ...
-        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
-        if not costtypes and self.hazard_calculation_id:
-            with util.read(self.hazard_calculation_id) as ds:
-                parent = ds['oqparam']
-            self._risk_files = get_risk_files(parent.inputs)
-            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
-        return sorted(costtypes)
 
     @property
     def min_iml(self):
@@ -1363,7 +1381,16 @@ class OqParam(valid.ParamSet):
         """
         hazard_calculation_id must be set if shakemap_id is set
         """
-        return self.hazard_calculation_id if self.shakemap_id else True
+        if self.shakemap_uri:
+            kind = self.shakemap_uri['kind']
+            sig = inspect.signature(shakemap.get_array[kind])
+            params = list(sig.parameters)
+            if params != list(self.shakemap_uri):
+                raise ValueError(
+                    'Expected parameters %s in shakemap_uri, got %s' %
+                    (params, list(self.shakemap_uri)))
+        return self.hazard_calculation_id if (
+            self.shakemap_id or self.shakemap_uri) else True
 
     def is_valid_truncation_level(self):
         """
