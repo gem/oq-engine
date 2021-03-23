@@ -276,7 +276,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]
             aw = get_rup_array(ebrs, self.srcfilter)
             if len(aw) == 0:
-                raise RuntimeError('The rupture is too far from the sites!')
+                raise RuntimeError(
+                    'The rupture is too far from the sites! Please check the '
+                    'maximum_distance and the position of the rupture')
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
             num_gsims = numpy.array(
