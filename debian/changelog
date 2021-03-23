@@ -3,7 +3,7 @@ python3-oq-engine (3.11.3-1~xenial01) xenial; urgency=low
   [Michele Simionato]
   * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
     thus breaking the QGIS plugin on Windows
-  * Fix a bug when reusing a hazard calculation without `aggregate_by` for a
+  * Fixed a bug when reusing a hazard calculation without `aggregate_by` for a
     risk calculation with `aggregate_by`
   * Fixed the aggregate curves exporter for `aggregate_by=id`: it was exporting
     b'asset_id' instead of asset_id
