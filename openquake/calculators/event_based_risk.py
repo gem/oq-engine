@@ -44,7 +44,7 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def aggregate_losses(alt, lbe, kids, correl):
+def aggregate_losses(alt, lbe, K, kids, correl):
     """
     Aggregate losses and variances for each event by using the formulae
 
@@ -54,14 +54,11 @@ def aggregate_losses(alt, lbe, kids, correl):
     x = numpy.sqrt(alt.variance) if correl else alt.variance
     ldf = pandas.DataFrame(dict(eid=alt.eid, loss=alt.loss, x=x))
     if len(kids):
-        K = kids.max() + 1
         ldf['kid'] = kids[alt.aid.to_numpy()]
         tot = ldf.groupby(['eid', 'kid']).sum()
         for (eid, kid), loss, x in zip(
                 tot.index, tot.loss, tot.x):
             lbe[eid, kid] += F32([loss, x])
-    else:
-        K = 0
     tot = ldf.groupby('eid').sum()
     for eid, loss, x in zip(tot.index, tot.loss, tot.x):
         lbe[eid, K] += F32([loss, x ** 2 if correl else x])
@@ -110,7 +107,7 @@ def event_based_risk(df, param, monitor):
             if len(alt) == 0:
                 continue
             with mon_agg:
-                aggregate_losses(alt, loss_by_EK1[ln], kids,
+                aggregate_losses(alt, loss_by_EK1[ln], K, kids,
                                  param['asset_correlation'])
             if param['avg_losses']:
                 with mon_avg:

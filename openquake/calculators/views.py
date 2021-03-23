@@ -985,3 +985,21 @@ def view_gsim_for_event(token, dstore):
     trti = et_id // len(full_lt.sm_rlzs)
     gsim = full_lt.get_realizations()[rlz_id].gsim_rlz.value[trti]
     return gsim
+
+
+@view.add('event_loss_table')
+def view_event_loss_table(token, dstore):
+    """
+    Display the top 20 losses of the event loss table for the first loss type
+
+    $ oq show event_loss_table
+    """
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    df = dstore.read_df('agg_loss_table', 'event_id',
+                        dict(agg_id=K, loss_id=0))
+    df['std'] = numpy.sqrt(df.variance)
+    df.sort_values('loss', ascending=False, inplace=True)
+    del df['agg_id']
+    del df['loss_id']
+    del df['variance']
+    return df[:20]
