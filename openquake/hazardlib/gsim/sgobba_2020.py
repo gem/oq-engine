@@ -92,10 +92,13 @@ class SgobbaEtAl2020(GMPE):
 
     def __init__(self, event_id=None, directionality=False, cluster=None,
                  site=False, **kwargs):
+
         super().__init__(event_id=event_id,
                          directionality=directionality,
                          cluster=cluster,
                          **kwargs)
+
+        # Set general information
         self.event_id = event_id
         self.directionality = directionality
         self.cluster = cluster
@@ -105,8 +108,12 @@ class SgobbaEtAl2020(GMPE):
         self.be = 0.0
         self.be_std = 0.0
 
+        # Load the table with the between event coefficients
         if event_id is not None:
+            self.event_id = event_id
             fname = os.path.join(DATA_FOLDER, 'event.csv')
+
+            # Create dataframe with events
             df = pd.read_csv(fname, sep=';', index_col='id',
                              dtype={'id': 'string'})
             self.df = df
@@ -117,16 +124,18 @@ class SgobbaEtAl2020(GMPE):
         Eq.1 - page 2
         """
 
-        # Get site indexes. They are used for the site correction and the
-        # cluster (path) correction
-        if self.cluster != 0 or self.event_id is not None:
-
+        # Set the between event correction
+        if self.event_id is not None:
             label = "dBe_{:s}".format(imt.__str__())
             self.be = self.df.loc[self.event_id][label]
             # TODO
             # self.be_std = self.df.loc[self.event_id]['be_std']
 
-            # Load the coordinate of the grid
+        # Get site indexes. They are used for the site correction and the
+        # cluster (path) correction
+        if self.cluster != 0 or self.event_id is not None:
+
+            # Load the coordinates of the nodes grid
             fname = os.path.join(DATA_FOLDER, 'grid.csv')
             coo = np.fliplr(np.loadtxt(fname, delimiter=";"))
 
@@ -152,6 +161,7 @@ class SgobbaEtAl2020(GMPE):
 
         # To natural logarithm and fraction of g
         mean = np.log(10.0**mean/(gravity_acc*100))
+        #mean = np.log(10.0**mean)
 
         # Get stds
         stds = []
@@ -168,11 +178,12 @@ class SgobbaEtAl2020(GMPE):
         fname = os.path.join(DATA_FOLDER, "S_model.csv")
         data = np.loadtxt(fname, delimiter=",")
 
-        # Compute the coefficients
+        # Compute the site coefficients
         correction = np.zeros(shape)
         per = 0
         if re.search('SA', imt.__str__()):
             per = imt.period
+
         for idx in np.unique(self.idxs):
             tmp = data[int(idx)]
             correction[self.idxs == idx] = np.interp(per, self.PERIODS,
@@ -181,7 +192,7 @@ class SgobbaEtAl2020(GMPE):
 
     def _get_cluster_correction(self, C, sites, rup, imt):
         """
-        Get cluster correction. The use can specify various options through
+        Get cluster correction. The user can specify various options through
         the cluster parameter. The available options are:
         - self.cluster = None
             In this case the code finds the most appropriate correction using

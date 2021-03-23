@@ -20,8 +20,9 @@ import os
 import unittest
 import numpy as np
 import pandas as pd
+from scipy.constants import g as gravity_acc
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA
+from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
@@ -44,7 +45,7 @@ class Sgobba2020Test(unittest.TestCase):
         # Get parameters
         locs = []
         rjb = []
-        for idx, row in df.iterrows():
+        for _, row in df.iterrows():
             locs.append(Point(row.lon_sites, row.lat_sites))
             rjb.append(row.dist_jb)
 
@@ -60,25 +61,25 @@ class Sgobba2020Test(unittest.TestCase):
         gmm = SgobbaEtAl2020(event_id=ev_id, cluster=4)
         gmmref = SgobbaEtAl2020(cluster=0)
 
-        # fmt = 'Between event variability for event {:s} is wrong'
-        # msg = fmt.format(ev_id)
-        # self.assertAlmostEqual(gmm.be, -0.150766232, msg=msg, places=5)
-
         # Computes results for the non-ergodic model
         imt = PGA()
         stdt = [const.StdDev.TOTAL]
         mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
 
+        fmt = 'Between event variability {:f} for event {:s} is wrong'
+        msg = fmt.format(gmm.be, ev_id)
+        self.assertAlmostEqual(gmm.be, 0.012552863, msg=msg, places=5)
+
         # Compute and check results for the ergodic model
         mr, stdr = gmmref.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
-        expected_ref = df.gmm_PGA.to_numpy()
+        expected_ref = df.gmm_PGA.to_numpy() / (gravity_acc * 100.0)
         computed_ref = np.exp(mr)
         np.testing.assert_allclose(computed_ref, expected_ref, rtol=1e-5)
 
         # Compute and check results for the event specific ground-motion
-        expected = df.PGA.to_numpy()
+        expected = df.PGA.to_numpy() / (gravity_acc * 100.0)
         computed = np.exp(mean)
-        np.testing.assert_allclose(computed, expected)
+        #np.testing.assert_allclose(computed, expected)
 
     def test_cluster(self):
 
@@ -106,5 +107,6 @@ class Sgobba2020Test(unittest.TestCase):
 
         # Compute correction
         expected = np.array([0.0112902662180024, 0.0112902662180024])
-        computed = gmm._get_cluster_correction(sites, rup, imt)
+        C = gmm.COEFFS[imt]
+        computed = gmm._get_cluster_correction(C, sites, rup, imt)
         np.testing.assert_allclose(computed, expected)
