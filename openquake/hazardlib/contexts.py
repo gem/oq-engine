@@ -851,6 +851,10 @@ class RuptureContext(BaseContext):
             return len(self.mag)
         return 1
 
+    # used in acme_2019
+    def __len__(self):
+        return len(self.vs30)
+
     def roundup(self, minimum_distance):
         """
         If the minimum_distance is nonzero, returns a copy of the
