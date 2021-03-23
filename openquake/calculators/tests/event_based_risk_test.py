@@ -287,6 +287,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-4)
 
+        # check total variance
+        K = self.calc.datastore['agg_loss_table'].attrs.get('K', 0)
+        elt_df = self.calc.datastore.read_df(
+            'agg_loss_table', 'event_id', dict(agg_id=K, loss_id=4))
+        elt_df['cov'] = numpy.sqrt(elt_df.variance) / elt_df.loss
+        elt_df.sort_index(inplace=True)
+        del elt_df['agg_id']
+        del elt_df['loss_id']
+        del elt_df['variance']
+        fname = gettemp(str(elt_df))
+        self.assertEqualFiles('expected/variances.txt', fname, delta=1E-4)
+
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-4)

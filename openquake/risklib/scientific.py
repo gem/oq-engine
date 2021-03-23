@@ -74,13 +74,12 @@ def fine_graining(points, steps):
 
 # sampling functions
 class Sampler(object):
-    def __init__(self, distname, rng, lratios=(), cols=None, minloss=0):
+    def __init__(self, distname, rng, lratios=(), cols=None):
         self.distname = distname
         self.rng = rng
         self.arange = numpy.arange(len(lratios))  # for the PM distribution
         self.lratios = lratios  # for the PM distribution
         self.cols = cols  # for the PM distribution
-        self.minloss = minloss
 
     def get_losses(self, df, covs):
         vals = df['val'].to_numpy()
@@ -88,7 +87,6 @@ class Sampler(object):
             losses = vals * df['mean'].to_numpy()
         else:  # slow lane
             losses = vals * getattr(self, 'sample' + self.distname)(df)
-        losses[losses < self.minloss] = 0
         return losses
 
     def sampleLN(self, df):
@@ -264,15 +262,16 @@ class VulnerabilityFunction(object):
             lratios = ()
             cols = None
         df = ratio_df.join(asset_df, how='inner')
-        sampler = Sampler(self.distribution_name, rng, lratios, cols, minloss)
+        sampler = Sampler(self.distribution_name, rng, lratios, cols)
         covs = not hasattr(self, 'covs') or self.covs.any()
         losses = sampler.get_losses(df, covs)
+        ok = losses > minloss
         if self.distribution_name == 'PM':  # special case
             variances = numpy.zeros(len(losses))
         else:
             variances = (losses * df['cov'].to_numpy())**2
-        return pandas.DataFrame(dict(eid=df.eid, aid=df.aid, loss=losses,
-                                     variance=variances))
+        return pandas.DataFrame(dict(eid=df.eid[ok], aid=df.aid[ok],
+                                     loss=losses[ok], variance=variances[ok]))
 
     def strictly_increasing(self):
         """
