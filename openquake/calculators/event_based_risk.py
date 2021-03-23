@@ -44,13 +44,14 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
-def aggregate_losses(alt, lbe, K, kids, correl):
+def aggregate_losses(alt, K, kids, correl):
     """
     Aggregate losses and variances for each event by using the formulae
 
     sigma^2 = sum(sigma_i)^2 for correl=1
     sigma^2 = sum(sigma_i^2) for correl=0
     """
+    lbe = general.AccumDict(accum=numpy.zeros(2, F32))
     x = numpy.sqrt(alt.variance) if correl else alt.variance
     ldf = pandas.DataFrame(dict(eid=alt.eid, loss=alt.loss, x=x))
     if len(kids):
@@ -62,6 +63,7 @@ def aggregate_losses(alt, lbe, K, kids, correl):
     tot = ldf.groupby('eid').sum()
     for eid, loss, x in zip(tot.index, tot.loss, tot.x):
         lbe[eid, K] += F32([loss, x ** 2 if correl else x])
+    return lbe
 
 
 def event_based_risk(df, param, monitor):
@@ -88,12 +90,12 @@ def event_based_risk(df, param, monitor):
     loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
     loss_by_EK1 = {ln: general.AccumDict(accum=numpy.zeros(2, F32))
                    for ln in crmodel.oqparam.loss_names}
+    correl = param['asset_correlation']
     if crmodel.oqparam.ignore_master_seed:
         rndgen = None
     else:
         rndgen = MultiEventRNG(
-            param['master_seed'], numpy.unique(df.eid),
-            param['asset_correlation'])
+            param['master_seed'], numpy.unique(df.eid), correl)
     for taxo, asset_df in assets_df.groupby('taxonomy'):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         if len(gmf_df) == 0:
@@ -107,8 +109,7 @@ def event_based_risk(df, param, monitor):
             if len(alt) == 0:
                 continue
             with mon_agg:
-                aggregate_losses(alt, loss_by_EK1[ln], K, kids,
-                                 param['asset_correlation'])
+                loss_by_EK1[ln] += aggregate_losses(alt, K, kids, correl)
             if param['avg_losses']:
                 with mon_avg:
                     ldf = pandas.DataFrame(
