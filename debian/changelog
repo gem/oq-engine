@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Estimated the uncertainty on the losses due to the uncertainty in the
+    vulnerability functions in event_based_risk and scenario_risk calculations
   * Extended the engine to read XML ShakeMaps from arbitrary sources (in
     particular local path names and web sites different from the USGS site)
   * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
