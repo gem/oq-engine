@@ -1345,7 +1345,8 @@ class InsuredLosses(object):
                 aids.extend([aid] * len(df))
                 ilosses.extend(ins)
             out[lt + '_ins'] = pandas.DataFrame(
-                dict(eid=U32(eids), aid=U32(aids), loss=ilosses))
+                dict(eid=U32(eids), aid=U32(aids), loss=ilosses,
+                     variance=numpy.zeros_like(ilosses)))
 
 
 # not used anymore

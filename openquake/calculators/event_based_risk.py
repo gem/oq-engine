@@ -67,7 +67,7 @@ def event_based_risk(df, param, monitor):
         weights = dstore['weights'][()]
     AR = len(assets_df), len(weights)
     loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
-    loss_by_EK1 = {ln: general.AccumDict(accum=0)
+    loss_by_EK1 = {ln: general.AccumDict(accum=numpy.zeros(2, F32))
                    for ln in crmodel.oqparam.loss_names}
     if crmodel.oqparam.estimate_uncertainty_on:
         rndgen = None
@@ -89,15 +89,17 @@ def event_based_risk(df, param, monitor):
                 continue
             lbe = loss_by_EK1[ln]
             with mon_agg:
-                ldf = pandas.DataFrame(dict(eid=alt.eid, loss=alt.loss))
+                ldf = pandas.DataFrame(
+                    dict(eid=alt.eid, loss=alt.loss, variance=alt.variance))
                 if K:
                     ldf['kid'] = kids[alt.aid.to_numpy()]
-                    tot = ldf.groupby(['eid', 'kid']).loss.sum()
-                    for (eid, kid), loss in zip(tot.index, tot.to_numpy()):
-                        lbe[eid, kid] += loss
-                tot = ldf.groupby('eid').loss.sum()
-                for eid, loss in zip(tot.index, tot.to_numpy()):
-                    lbe[eid, K] += loss
+                    tot = ldf.groupby(['eid', 'kid']).sum()
+                    for (eid, kid), loss, var in zip(
+                            tot.index, tot.loss, tot.variance):
+                        lbe[eid, kid] += F32([loss, var])
+                tot = ldf.groupby('eid').sum()
+                for eid, loss, var in zip(tot.index, tot.loss, tot.variance):
+                    lbe[eid, K] += F32([loss, var])
 
             if param['avg_losses']:
                 with mon_avg:
@@ -117,14 +119,17 @@ def event_based_risk(df, param, monitor):
         if nnz:
             eid = numpy.zeros(nnz, U32)
             kid = numpy.zeros(nnz, U16)
-            loss = numpy.zeros(nnz, F64)
+            loss = numpy.zeros(nnz, F32)
+            var = numpy.zeros(nnz, F32)
             lid = numpy.ones(nnz, U8) * lni
-            for i, ((e, k), ls) in enumerate(loss_by_EK1[ln].items()):
+            for i, ((e, k), lv) in enumerate(loss_by_EK1[ln].items()):
                 eid[i] = e
                 kid[i] = k
-                loss[i] = ls
+                loss[i] = lv[0]
+                var[i] = lv[1]
             alt[ln] = pandas.DataFrame(
-                dict(event_id=eid, agg_id=kid, loss=loss, loss_id=lid))
+                dict(event_id=eid, agg_id=kid, loss=loss, variance=var,
+                     loss_id=lid))
     if alt:
         yield alt
 
@@ -242,7 +247,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
 
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
-                 ('loss', F64)]
+                 ('loss', F32), ('variance', F32)]
         self.datastore.create_dframe(
             'agg_loss_table', descr, K=len(self.aggkey), L=len(oq.loss_names))
         R = len(self.datastore['weights'])
