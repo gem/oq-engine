@@ -710,11 +710,11 @@ class SourceConverter(RuptureConverter):
                 rigidity = mfd_node.get('rigidity')
                 if slip_rate:
                     assert rigidity
-                    # instantiate with a NaN area, to be fixed later on
+                    # instantiate with an area of 1, to be fixed later on
                     gr_mfd = mfd.TruncatedGRMFD.from_slip_rate(
                         mfd_node['minMag'], mfd_node['maxMag'],
                         self.width_of_mfd_bin, mfd_node['bValue'],
-                        slip_rate, rigidity, area=numpy.nan)
+                        slip_rate, rigidity, area=1)
                 else:
                     gr_mfd = mfd.TruncatedGRMFD(
                         a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],
