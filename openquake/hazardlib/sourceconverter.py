@@ -700,6 +700,7 @@ class SourceConverter(RuptureConverter):
         with context(self.fname, node):
             [mfd_node] = [subnode for subnode in node
                           if subnode.tag.endswith(KNOWN_MFDS)]
+        with context(self.fname, mfd_node):
             if mfd_node.tag.endswith('incrementalMFD'):
                 return mfd.EvenlyDiscretizedMFD(
                     min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
