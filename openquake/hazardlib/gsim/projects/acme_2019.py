@@ -24,6 +24,7 @@ from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.gsim.projects.acme_base import (CoeffsTableACME,
                                             get_phi_ss_at_quantile_ACME)
 from openquake.hazardlib.imt import SA, PGA
+from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
         YenierAtkinson2015BSSA
@@ -390,7 +391,6 @@ class AlAtikSigmaModel(GMPE):
 
         extrap_mean = []
         t_log10 = np.log10([im for im in set_imt])
-        from openquake.hazardlib.contexts import DistancesContext
         for d in np.arange(0,len(dists.rjb)):
             dist = DistancesContext()
             if hasattr(dists, 'rjb'):
@@ -407,10 +407,8 @@ class AlAtikSigmaModel(GMPE):
             mb = np.polyfit(t_log10, means_log10, 1)
             mean_imt_log10 = mb[0] * np.log10(imt) + mb[1]
             extrap_mean.append(np.log(10**mean_imt_log10))
-            _ = np.zeros_like(extrap_mean)
 
-
-        return extrap_mean, _
+        return extrap_mean
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types, 
                              extr=True):
@@ -441,10 +439,10 @@ class AlAtikSigmaModel(GMPE):
         # if the corner period is longer than highest and imt is above
         # highets but below corner
         elif extr and cornerp > hp and imt.period >= hp and imt.period < cornerp:
-            mean, _ = self.extrapolate_in_PSA(sites, rup, dists,
+            mean = self.extrapolate_in_PSA(sites, rup, dists,
                                 hp, sp, stds_types, imt.period)
         elif extr and cornerp > hp and imt.period > cornerp:
-            mean, _ = self.extrapolate_in_PSA(sites, rup, dists,
+            mean = self.extrapolate_in_PSA(sites, rup, dists,
                                 hp, sp, stds_types, cornerp)
             disp = self.get_disp_from_acc(mean, cornerp)
             mean = self.get_acc_from_disp(disp, imt.period)
@@ -457,9 +455,6 @@ class AlAtikSigmaModel(GMPE):
 
         kappa = 1
         if self.kappa_file:
-        #    with self.open(self.kappa_file) as myfile:
-        #        data = myfile.read().decode('utf-8')
-        #    self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
 
             if imt.period == 0:
                 kappa = self.KAPPATAB[SA(0.01)][self.kappa_val]
@@ -467,6 +462,7 @@ class AlAtikSigmaModel(GMPE):
                 kappa = self.KAPPATAB[SA(2.0)][self.kappa_val]
             else:
                 kappa = self.KAPPATAB[imt][self.kappa_val]
+
         return mean + np.log(kappa), stddevs
 
 
