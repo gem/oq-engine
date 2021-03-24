@@ -58,7 +58,6 @@ def spatial_covariance_array(stddev, corrmatrices):
     :returns: an array of shape (M, N, N)
     """
     # this depends on sPGA, sSa03, sSa10, sSa30
-    M, N = corrmatrices.shape[:2]
     matrices = []
 
     for i, std in enumerate(stddev):
