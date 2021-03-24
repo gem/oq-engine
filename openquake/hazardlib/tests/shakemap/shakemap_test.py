@@ -2,8 +2,10 @@ import os.path
 import unittest
 import numpy
 from openquake.hazardlib import geo, imt
-from openquake.hazardlib.shakemap import (
-    get_sitecol_shakemap, to_gmfs, amplify_ground_shaking,
+from openquake.hazardlib.shakemap.maps import \
+    get_sitecol_shakemap
+from openquake.hazardlib.shakemap.gmfs import (
+    to_gmfs, amplify_ground_shaking,
     spatial_correlation_array, spatial_covariance_array,
     cross_correlation_matrix, cholesky)
 
@@ -29,7 +31,7 @@ class ShakemapTestCase(unittest.TestCase):
         f1 = 'file://' + os.path.join(CDIR, 'ghorka_grid.xml')
         f2 = 'file://' + os.path.join(CDIR, 'ghorka_uncertainty.xml')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
-        sitecol, shakemap, discarded = get_sitecol_shakemap(
+        sitecol, shakemap, *_ = get_sitecol_shakemap(
             uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
@@ -120,7 +122,7 @@ class ShakemapTestCase(unittest.TestCase):
         f1 = 'file://' + os.path.join(CDIR, 'test_shaking.xml')
         f2 = 'file://' + os.path.join(CDIR, 'test_uncertainty.xml')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
-        sitecol, shakemap, discarded = get_sitecol_shakemap(
+        sitecol, shakemap, *_ = get_sitecol_shakemap(
             uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)

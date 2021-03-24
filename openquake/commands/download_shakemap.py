@@ -18,7 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import numpy
 from openquake.baselib import performance
-from openquake.hazardlib.shakemap import get_array
+from openquake.hazardlib.shakemap.parsers import get_array
 
 
 def main(id):
