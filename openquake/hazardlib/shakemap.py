@@ -108,7 +108,7 @@ def get_sitecol_shakemap(uridict, imts, sitecol=None,
     :param imts: required IMTs as a list of strings
     :param sitecol: SiteCollection used to reduce the shakemap
     :param assoc_dist: association distance
-    :returns: a pair (filtered site collection, filtered shakemap)
+    :returns: filtered site collection, filtered shakemap, discarded
     """
     array = get_array(uridict.pop('kind'), **uridict)
     available_imts = set(array['val'].dtype.names)
@@ -125,14 +125,14 @@ def get_sitecol_shakemap(uridict, imts, sitecol=None,
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]
     data = numpy.zeros(len(array), dtlist)
-    for name in ('lon',  'lat', 'vs30'):
+    for name in ('lon', 'lat', 'vs30'):
         data[name] = array[name]
     for name in ('val', 'std'):
         for im in imts:
             data[name][im] = array[name][im]
 
     if sitecol is None:  # extract the sites from the shakemap
-        return site.SiteCollection.from_shakemap(data), data
+        return site.SiteCollection.from_shakemap(data), data, []
 
     # associate the shakemap to the (filtered) site collection
     bbox = (data['lon'].min(), data['lat'].min(),
@@ -273,7 +273,7 @@ def cholesky(spatial_cov, cross_corr):
     LLT = []
     for i in range(M):
         row = [L[i] @ L[j].T * cross_corr[i, j] for j in range(M)]
-        LLT.extend(numpy.array(row).transpose(1, 0, 2).reshape(N, M*N))
+        LLT.extend(numpy.array(row).transpose(1, 0, 2).reshape(N, M * N))
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 

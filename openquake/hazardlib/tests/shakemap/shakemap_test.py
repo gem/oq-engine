@@ -29,7 +29,8 @@ class ShakemapTestCase(unittest.TestCase):
         f1 = 'file://' + os.path.join(CDIR, 'ghorka_grid.xml')
         f2 = 'file://' + os.path.join(CDIR, 'ghorka_uncertainty.xml')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
-        sitecol, shakemap = get_sitecol_shakemap(uridict, imt_dt.names)
+        sitecol, shakemap, discarded = get_sitecol_shakemap(
+            uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, _ = mean_std(shakemap, site_effects=True)
@@ -119,7 +120,8 @@ class ShakemapTestCase(unittest.TestCase):
         f1 = 'file://' + os.path.join(CDIR, 'test_shaking.xml')
         f2 = 'file://' + os.path.join(CDIR, 'test_uncertainty.xml')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
-        sitecol, shakemap = get_sitecol_shakemap(uridict, imt_dt.names)
+        sitecol, shakemap, discarded = get_sitecol_shakemap(
+            uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, std_by_imt = mean_std(shakemap, site_effects=False)
