@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: openquake
+  name: oqworker
+  labels:
+    app: oqworker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oqworker
+  template:
+    metadata:
+      labels:
+        app: oqworker
+        version: "nightly"
+    spec:
+      containers:
+        - name: engine
+          image: openquake/engine:nightly
+          imagePullPolicy: Always
+          ports:
+          #set port of openquake.cfg of dbserver (contact on this??? )
+          #[zworkers]
+          #host_cores = oqworker -1
+          #ctrl_port = 1909
+          - containerPort: 1909
+          command: ["python3", "-m", "openquake.baselib.workerpool"]
+
