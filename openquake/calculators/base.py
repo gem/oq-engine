@@ -1215,7 +1215,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
                for s in numpy.arange(N, dtype=U32)
                for ei, event in enumerate(events)]
-        oq.hazard_imtls = {imt: [0] for imt in imts}
+        oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.array(lst, oq.gmf_data_dt())
         create_gmf_data(calc.datastore, len(imts), data=data)
     return sitecol, assetcol

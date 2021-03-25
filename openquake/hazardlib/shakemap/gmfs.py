@@ -22,6 +22,7 @@ import numpy
 from scipy.stats import truncnorm, norm
 from scipy import interpolate
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, imt, correlation
 
 F32 = numpy.float32
@@ -151,42 +152,81 @@ def cholesky(spatial_cov, cross_corr):
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
+sample_gmfs = CallableDict()
+
+
+@sample_gmfs.add('Silva&Horspool')
+def sample_gmfs_SH(kind, shakemap, imts, spatialcorr, crosscorr):
+
+    # Cross Correlation
+    cross_corr = cross_correlation_matrix(imts, crosscorr)
+
+    # Spatial Correlation and Covariance
+    dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
+    spatial_corr = spatial_correlation_array(dmatrix, imts, spatialcorr)
+
+    stddev = [shakemap['std'][str(imt)] for imt in imts]
+    for im, std in zip(imts, stddev):
+        if std.sum() == 0:
+            raise ValueError('Cannot decompose the spatial covariance '
+                             'because stddev==0 for IMT=%s' % im)
+    spatial_cov = spatial_covariance_array(stddev, spatial_corr)
+
+    # Cholesky Decomposition
+    L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
+
+    def generate_gmfs(Z, mu):
+        mu = numpy.log(mu)
+        return numpy.exp(L @ Z + mu) / PCTG
+
+    return generate_gmfs
+
+
+@sample_gmfs.add('basic')
+def sample_gmfs_basic(kind, shakemap, imts):
+    sig = 1
+
+    def generate_gmfs(Z, mu):
+        return sig @ Z + mu
+
+    return generate_gmfs
+
+
 def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
             num_gmfs, seed, imts=None):
     """
     :returns: (IMT-strings, array of GMFs of shape (R, N, E, M)
     """
-    N = len(shakemap)  # number of sites
-    std = shakemap['std']
+
     if imts is None or len(imts) == 0:
-        imts = std.dtype.names
+        imts = [imt.from_string(name) for name in shakemap['std'].dtype.names]
     else:
-        imts = [imt for imt in imts if imt in std.dtype.names]
-    val = {imt: numpy.log(shakemap['val'][imt]) for imt in imts}
-    imts_ = [imt.from_string(name) for name in imts]
-    M = len(imts_)
-    cross_corr = cross_correlation_matrix(imts_, crosscorr)
-    mu = numpy.array([numpy.ones(num_gmfs) * val[str(imt)][j]
-                      for imt in imts_ for j in range(N)])
-    dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
-    spatial_corr = spatial_correlation_array(dmatrix, imts_, spatialcorr)
-    stddev = [std[str(imt)] for imt in imts_]
-    for im, std in zip(imts_, stddev):
-        if std.sum() == 0:
-            raise ValueError('Cannot decompose the spatial covariance '
-                             'because stddev==0 for IMT=%s' % im)
-    spatial_cov = spatial_covariance_array(stddev, spatial_corr)
-    L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
+        imts = [imt.from_string(i)
+                for i in imts if i in shakemap['std'].dtype.names]
+
+    M = len(imts)       # Number of imts
+    N = len(shakemap)   # number of sites
+
+    mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
+                      for imt in imts for j in range(N)])
+
+    generate_gmfs = sample_gmfs_SH(
+        'Silva&Horspool', shakemap, imts, spatialcorr, crosscorr)
+
     if trunclevel:
         Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                           size=(M * N, num_gmfs), random_state=seed)
     else:
         Z = norm.rvs(loc=0, scale=1, size=(M * N, num_gmfs), random_state=seed)
+
+    # mean=mu, stdd=sig, normal_rand_variables=Z, =>>> var = sig*Z + mu
     # Z has shape (M * N, E)
-    gmfs = numpy.exp(L @ Z + mu) / PCTG
+    gmfs = generate_gmfs(Z, mu)
+
     if site_effects:
-        gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs)
+        gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs)
     if gmfs.max() > MAX_GMV:
         logging.warning('There are suspiciously large GMVs of %.2fg',
                         gmfs.max())
+    print('everything good')
     return imts, gmfs.reshape((M, N, num_gmfs)).transpose(1, 2, 0)
