@@ -145,10 +145,20 @@ def export_hcurves_by_imt_csv(
     lst = [('lon', F32), ('lat', F32), ('depth', F32)]
     for iml in imls:
         lst.append(('poe-%.7f' % iml, F32))
+    custom = 'custom_site_id' in sitecol.array.dtype.names
+    if custom:
+        lst.insert(0, ('custom_site_id', U32))
     hcurves = numpy.zeros(nsites, lst)
-    for sid, lon, lat, dep in zip(
-            range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
-        hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, :])
+    if custom:
+        for sid, csi, lon, lat, dep in zip(
+                range(nsites), sitecol.custom_site_id,
+                sitecol.lons, sitecol.lats, sitecol.depths):
+            hcurves[sid] = (csi, lon, lat, dep) + tuple(array[sid, 0, :])
+    else:
+        hcurves = numpy.zeros(nsites, lst)
+        for sid, lon, lat, dep in zip(
+                range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
+            hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, :])
     comment.update(imt=imt)
     return writers.write_csv(dest, hcurves, comment=comment,
                              header=[name for (name, dt) in lst])

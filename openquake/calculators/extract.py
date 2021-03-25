@@ -334,20 +334,16 @@ def get_mesh(sitecol, complete=True):
     """
     :returns:
         a lon-lat or lon-lat-depth array depending if the site collection
-        is at sea level or not
+        is at sea level or not; if there is a custom_site_id, prepend it
     """
     sc = sitecol.complete if complete else sitecol
     if sc.at_sea_level():
-        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
-        mesh['lon'] = sc.lons
-        mesh['lat'] = sc.lats
+        fields = ['lon', 'lat']
     else:
-        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64),
-                                     ('depth', F64)])
-        mesh['lon'] = sc.lons
-        mesh['lat'] = sc.lats
-        mesh['depth'] = sc.depths
-    return mesh
+        fields = ['lon', 'lat', 'depth']
+    if 'custom_site_id' in sitecol.array.dtype.names:
+        fields.insert(0, 'custom_site_id')
+    return sitecol[fields]
 
 
 def hazard_items(dic, mesh, *extras, **kw):
