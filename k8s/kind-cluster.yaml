@@ -18,7 +18,7 @@ nodes:
     hostPort: 8080
     #listenAddress: "0.0.0.0" # Optional, defaults to "0.0.0.0"
     #protocol: tcp # Optional, defaults to tcp
-  - containerPort: 8080
+  - containerPort: 30950
     hostPort: 8800
   - containerPort: 443 
     hostPort: 443 
