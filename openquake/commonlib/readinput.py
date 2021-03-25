@@ -358,7 +358,6 @@ def get_mesh(oqparam, h5=None):
                         fname, i, row['site_id']))
                 data.append(' '.join([row['lon'], row['lat']]))
         elif 'gmfs' in oqparam.inputs:
-            1/0
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
             data = [line.replace(',', ' ')
@@ -575,25 +574,16 @@ def get_gsim_lt(oqparam, trts=('*',)):
     return gsim_lt
 
 
-def get_ruptures(fname_csv, trts):
+def get_ruptures(fname_csv):
     """
     Read ruptures in CSV format and return an ArrayWrapper.
 
     :param fname_csv: path to the CSV file
-    :param trts: list of known tectonic region types
     """
     if not rupture.BaseRupture._code:
         rupture.BaseRupture.init()  # initialize rupture codes
     code = rupture.BaseRupture.str2code
     aw = hdf5.read_csv(fname_csv, rupture.rupture_dt)
-    if trts == ['*']:
-        trts = aw.trts
-    else:
-        missing = set(aw.trts) - set(trts)
-        if missing:
-            raise RuntimeError(
-                '%s contain a TRT missing in the logic tree: %s' %
-                (fname_csv, missing))
     rups = []
     geoms = []
     n_occ = 1
@@ -624,7 +614,7 @@ def get_ruptures(fname_csv, trts):
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
         rate = dic.get('occurrence_rate', numpy.nan)
-        tup = (u, row['seed'], 'no-source', trts.index(row['trt']),
+        tup = (u, row['seed'], 'no-source', aw.trts.index(row['trt']),
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, 0)
         rups.append(tup)

@@ -38,7 +38,7 @@
 | case_35 | |
 | case_36 | |
 | case_37 | |
-| case_38 | |
+| case_38 | Example with custom_site_id|
 | case_39 | |
 | case_40 | |
 | case_41 | |

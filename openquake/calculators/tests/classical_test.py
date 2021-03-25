@@ -485,8 +485,7 @@ hazard_uhs-std.csv
                       calculation_mode='event_based',
                       ses_per_logic_tree_path='10')
         csv = extract(self.calc.datastore, 'ruptures').array
-        trts = ["Active Shallow Crust"]
-        rups = readinput.get_ruptures(general.gettemp(csv), trts)
+        rups = readinput.get_ruptures(general.gettemp(csv))
         self.assertEqual(len(rups), 1)
 
         # check what QGIS will be seeing
@@ -554,9 +553,7 @@ hazard_uhs-std.csv
     def test_case_38(self):
         # BC Hydro GMPEs with epistemic adjustments
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
-                               "quantile_curve-0.16-PGA.csv",
-                               "quantile_curve-0.5-PGA.csv",
-                               "quantile_curve-0.84-PGA.csv"],
+                               "hazard_uhs-mean.csv"],
                               case_38.__file__)
 
     def test_case_39(self):
