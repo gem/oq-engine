@@ -28,6 +28,8 @@ from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
 from openquake.hazardlib.geo.mesh import Mesh
 
+from openquake.baselib.general import CallableDict
+
 U32LIMIT = 2 ** 32
 ampcode_dt = (numpy.string_, 4)
 
@@ -56,6 +58,7 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
+
     def __init__(self, location, vs30=numpy.nan,
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
@@ -187,7 +190,7 @@ class SiteCollection(object):
                     if item[0] not in ('lon', 'lat'))
 
     @classmethod
-    def from_shakemap(cls, shakemap_array):
+    def from_usgs_shakemap(cls, shakemap_array):
         """
         Build a site collection from a shakemap array
         """
