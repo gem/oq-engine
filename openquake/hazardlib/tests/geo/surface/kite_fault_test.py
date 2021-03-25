@@ -87,6 +87,18 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
             title = 'Test mesh creation'
             ppp(self.prf, srfc, title)
 
+    def test_ztor(self):
+        """ Create the mesh: two parallel profiles - no top alignment """
+        hsmpl = 4
+        vsmpl = 2
+        idl = False
+        alg = False
+        srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+
+        ztor = srfc.get_top_edge_depth()
+        msg = 'ztor value is wrong'
+        self.assertAlmostEqual(20.0, ztor, msg)
+
 
 class KiteSurfaceTestCase(unittest.TestCase):
     """ Test the construction of a Kite fault surface. """
