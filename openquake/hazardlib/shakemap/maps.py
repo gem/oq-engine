@@ -71,6 +71,13 @@ def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
 
 
 def check_required_imts(required_imts, available_imts):
+    """
+    Check if the list of required imts is present in the list of available imts
+
+    :param required_imts: list of strings of required imts
+    :param available_imts: set of available imts
+    :raises RuntimeError: if required imts are not present
+    """
     missing = set(required_imts) - available_imts
     if missing:
         msg = ('The IMT %s is required but not in the available set %s, '
@@ -81,6 +88,13 @@ def check_required_imts(required_imts, available_imts):
 
 
 def apply_bounding_box(sitecol, bbox):
+    """
+    Filter out sites which are not in the bounding box.
+
+    :param sitecol: SiteCollection of sites from exposed assets
+    :param bbox: Bounding Box (lon.min, lat.min, lon.max, lat.max)
+    :raises RuntimeError: if no sites are found within the Bounding Box
+    """
     indices = sitecol.within_bbox(bbox)
 
     if len(indices) == 0:
