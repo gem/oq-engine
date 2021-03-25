@@ -430,10 +430,7 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         fname = os.path.join(DATADIR, 'exposure.xml')
         with self.assertRaises(InvalidFile) as ctx:
             asset.Exposure.read([fname])
-        self.assertIn('''\
-Expected: ['id', 'lat', 'lon', 'number', 'structural', 'taxonomy']
-Got: ['Lon', 'id', 'lat', 'number', 'structural', 'taxonomy']
-Missing: {'lon'}''', str(ctx.exception))
+        self.assertIn("missing {'lon'}", str(ctx.exception))
 
     def test_case_similar(self):
         fname = os.path.join(DATADIR, 'exposure2.xml')
