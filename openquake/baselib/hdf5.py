@@ -687,9 +687,24 @@ def build_dt(dtypedict, names):
     return numpy.dtype(lst)
 
 
+def check_length(col, size):
+    def check(val):
+        if len(val) > size:
+            raise ValueError('%s=%r has length %d > %d' %
+                             (col, val, len(val), size))
+        return val
+    return check
+
+
 def _read_csv(fileobj, compositedt):
-    dic = {name: compositedt[name] for name in compositedt.names}
-    df = pandas.read_csv(fileobj, names=compositedt.names, dtype=dic)
+    dic = {}
+    conv = {}
+    for name in compositedt.names:
+        dic[name] = dt = compositedt[name]
+        if dt.kind == 'S':  # limit of the length of byte-fields
+            conv[name] = check_length(name, dt.itemsize)
+    df = pandas.read_csv(fileobj, names=compositedt.names, dtype=dic,
+                         converters=conv)
     arr = numpy.zeros(len(df), compositedt)
     for col in df.columns:
         arr[col] = df[col].to_numpy()
