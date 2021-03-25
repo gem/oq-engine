@@ -24,8 +24,13 @@ nodes:
     hostPort: 443 
   - containerPort: 80
     hostPort: 80
-    #extraMounts:
-    #- containerPath: /lib/containerd
-    #hostPath: /kind-data/data
 - role: worker
   image: kindest/node:v1.19.4
+  extraMounts:
+  - hostPath: /kind_pvc
+    containerPath: /data
+- role: worker
+  image: kindest/node:v1.19.4
+  extraMounts:
+  - hostPath: /kind_pvc
+    containerPath: /data
