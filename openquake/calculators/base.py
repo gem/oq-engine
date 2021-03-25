@@ -570,9 +570,8 @@ class HazardCalculator(BaseCalculator):
                     ' != %s' % (oqp.investigation_time, oq.investigation_time))
             hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
             if hstats != rstats:
-                raise ValueError(
-                    'The parent calculation had stats %s != %s' %
-                    (hstats, rstats))
+                logging.warning('The parent calculation had stats %s != %s',
+                                hstats, rstats)
             missing_imts = set(oq.risk_imtls) - set(oqp.imtls)
             if missing_imts:
                 raise ValueError(

@@ -58,7 +58,10 @@ def event_based_risk(df, param, monitor):
     K = param['K']
     with monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
-            df = dstore.read_df('gmf_data', slc=df)
+            if 'data' in dstore['gmf_data']:  # version < 3.11
+                df = dstore.read_df('gmf_data/data', slc=df)
+            else:
+                df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
         if K:
             kids = dstore['assetcol/kids'][:]
@@ -365,7 +368,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         :yields: pairs (gmf_df, param)
         """
         ct = self.oqparam.concurrent_tasks or 1
-        eids = self.datastore['gmf_data/eid'][:]
+        if 'data' in self.datastore['gmf_data']:  # engine < 3.11
+            eids = self.datastore['gmf_data/data']['eid']
+        else:
+            eids = self.datastore['gmf_data/eid'][:]
         maxweight = len(eids) / ct
         start = stop = weight = 0
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
