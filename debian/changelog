@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Honored `custom_site_id` in the hazard curves and UHS CSV exporters
   * Added a check for the case of `aValue=-Inf` in the truncatedGR MFD
   * Extended the engine to read XML ShakeMaps from arbitrary sources (in
     particular local path names and web sites different from the USGS site)
