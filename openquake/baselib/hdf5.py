@@ -687,27 +687,33 @@ def build_dt(dtypedict, names):
     return numpy.dtype(lst)
 
 
+def check_length(field, size):
+    """
+    :param field: a bytes field in the exposure
+    :param size: maximum size of the field
+    :returns: a function checking that the value is below the size
+    """
+    def check(val):
+        if len(val) > size:
+            raise ValueError('%s=%r has length %d > %d' %
+                             (field, val, len(val), size))
+        return val
+    return check
+
+
 def _read_csv(fileobj, compositedt):
-    itemsize = [0] * len(compositedt)
-    dt = []
-    for i, name in enumerate(compositedt.names):
-        dt.append(compositedt[name])
-        if compositedt[name].kind == 'S':  # limit of the length of byte-fields
-            itemsize[i] = compositedt[name].itemsize
-    rows = []
-    for lineno, row in enumerate(csv.reader(fileobj), 3):
-        cols = []
-        for i, col in enumerate(row):
-            if itemsize[i] and len(col) > itemsize[i]:
-                raise ValueError(
-                    'line %d: %s=%r has length %d > %d' %
-                    (lineno, compositedt.names[i], col, len(col), itemsize[i]))
-            if dt[i].kind == 'b':  # boolean
-                cols.append(int(col))
-            else:
-                cols.append(col)
-        rows.append(tuple(cols))
-    return numpy.array(rows, compositedt)
+    dic = {}
+    conv = {}
+    for name in compositedt.names:
+        dic[name] = dt = compositedt[name]
+        if dt.kind == 'S':  # limit of the length of byte-fields
+            conv[name] = check_length(name, dt.itemsize)
+    df = pandas.read_csv(fileobj, names=compositedt.names, dtype=dic,
+                         converters=conv)
+    arr = numpy.zeros(len(df), compositedt)
+    for col in df.columns:
+        arr[col] = df[col].to_numpy()
+    return arr
 
 
 # NB: it would be nice to use numpy.loadtxt(
