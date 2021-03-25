@@ -79,6 +79,10 @@ read_shakemap = CallableDict()
 
 @read_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')
 def read_shakemap_usgs(kind, imts, shakemap):
+    """
+    :param imts: list of imts required
+    :param shakemap: shakemap data
+    """
     available_imts = set(shakemap['val'].dtype.names)
 
     bbox = (shakemap['lon'].min(), shakemap['lat'].min(),
@@ -98,7 +102,7 @@ def read_shakemap_usgs(kind, imts, shakemap):
     return available_imts, bbox, data
 
 
-# if no site collection was passed generate one from the shakemap
+# if no site collection was passed ro function, generate one from the shakemap
 create_site_collection = CallableDict()
 
 
