@@ -28,8 +28,6 @@ from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
 from openquake.hazardlib.geo.mesh import Mesh
 
-from openquake.baselib.general import CallableDict
-
 U32LIMIT = 2 ** 32
 ampcode_dt = (numpy.string_, 4)
 
