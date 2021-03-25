@@ -688,26 +688,12 @@ def build_dt(dtypedict, names):
 
 
 def _read_csv(fileobj, compositedt):
-    itemsize = [0] * len(compositedt)
-    dt = []
-    for i, name in enumerate(compositedt.names):
-        dt.append(compositedt[name])
-        if compositedt[name].kind == 'S':  # limit of the length of byte-fields
-            itemsize[i] = compositedt[name].itemsize
-    rows = []
-    for lineno, row in enumerate(csv.reader(fileobj), 3):
-        cols = []
-        for i, col in enumerate(row):
-            if itemsize[i] and len(col) > itemsize[i]:
-                raise ValueError(
-                    'line %d: %s=%r has length %d > %d' %
-                    (lineno, compositedt.names[i], col, len(col), itemsize[i]))
-            if dt[i].kind == 'b':  # boolean
-                cols.append(int(col))
-            else:
-                cols.append(col)
-        rows.append(tuple(cols))
-    return numpy.array(rows, compositedt)
+    dic = {name: compositedt[name] for name in compositedt.names}
+    df = pandas.read_csv(fileobj, names=compositedt.names, dtype=dic)
+    arr = numpy.zeros(len(df), compositedt)
+    for col in df.columns:
+        arr[col] = df[col].to_numpy()
+    return arr
 
 
 # NB: it would be nice to use numpy.loadtxt(
@@ -721,7 +707,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :param renamedict: aliases for the fields to rename
     :param sep: separator (default comma)
     :param index: if not None, returns a pandas DataFrame
-    :returns: an ArrayWrapper, unless there is an index
+    :returns: an ArrayWrapper, undf[col].to_numpy()less there is an index
     """
     attrs = {}
     with open(fname, encoding='utf-8-sig') as f:

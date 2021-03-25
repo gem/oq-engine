@@ -979,17 +979,15 @@ class Exposure(object):
                         (fname, header))
                 elif missing:
                     raise InvalidFile('%s: missing %s' % (fname, missing))
-        conv = {None: object}
-        for ff in floatfields:
-            conv[ff] = float
+        conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
+                'retrofitted': float, None: object}
         rename = self.fieldmap.copy()
-        revmap = {oq: inp for inp, oq in self.fieldmap.items()}
         for field in self.cost_types['name']:
-            conv[revmap[field]] = float
-            rename[revmap[field]] = 'value-' + field
+            conv[field] = float
+            rename[field] = 'value-' + field
         for field in self.occupancy_periods.split():
-            conv[revmap[field]] = float
-            rename[revmap[field]] = 'occupants_' + field
+            conv[field] = float
+            rename[field] = 'occupants_' + field
         for fname in self.datafiles:
             array = hdf5.read_csv(fname, conv, rename).array
             array['lon'] = numpy.round(array['lon'], 5)
