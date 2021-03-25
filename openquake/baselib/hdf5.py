@@ -707,7 +707,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :param renamedict: aliases for the fields to rename
     :param sep: separator (default comma)
     :param index: if not None, returns a pandas DataFrame
-    :returns: an ArrayWrapper, undf[col].to_numpy()less there is an index
+    :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
     with open(fname, encoding='utf-8-sig') as f:
