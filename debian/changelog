@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Supported exposures with generic CSV fields thanks to the `exposureFields`
+    mapping
   * Added a check for the case of `aValue=-Inf` in the truncatedGR MFD
   * Extended the engine to read XML ShakeMaps from arbitrary sources (in
     particular local path names and web sites different from the USGS site)

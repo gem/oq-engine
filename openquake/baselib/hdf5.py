@@ -687,11 +687,16 @@ def build_dt(dtypedict, names):
     return numpy.dtype(lst)
 
 
-def check_length(col, size):
+def check_length(field, size):
+    """
+    :param field: a bytes field in the exposure
+    :param size: maximum size of the field
+    :returns: a function checking that the value is below the size
+    """
     def check(val):
         if len(val) > size:
             raise ValueError('%s=%r has length %d > %d' %
-                             (col, val, len(val), size))
+                             (field, val, len(val), size))
         return val
     return check
 
