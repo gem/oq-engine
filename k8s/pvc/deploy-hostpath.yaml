@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hostpath
+  namespace: default
+  labels:
+    app: engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: engine
+  template:
+    metadata:
+      labels:
+        app: engine
+        version: "latest"
+    spec:
+      containers:
+      - name: engine
+        image: openquake/engine:latest
+        ports:
+        - containerPort: 8800
+        volumeMounts:
+        - mountPath: /home/openquake/oqdata  # in the container filesystem
+          name: kinddata
+      volumes:
+        - name: kinddata
+          hostPath:
+            path: /data #  matches kind containerPath:

@@ -27,10 +27,10 @@ nodes:
 - role: worker
   image: kindest/node:v1.19.4
   extraMounts:
-  - hostPath: /kind_pvc
+  - hostPath: /kind_pvc #match FS on host
     containerPath: /data
 - role: worker
   image: kindest/node:v1.19.4
   extraMounts:
-  - hostPath: /kind_pvc
+  - hostPath: /kind_pvc #match FS on host
     containerPath: /data
