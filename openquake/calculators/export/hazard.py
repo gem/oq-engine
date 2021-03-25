@@ -29,7 +29,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.views import view
-from openquake.calculators.extract import extract, get_mesh, get_info
+from openquake.calculators.extract import extract, get_sites, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import gen_rupture_getters
 from openquake.commonlib import writers, hazard_writers, calc, util
@@ -205,7 +205,7 @@ def export_hcurves_csv(ekey, dstore):
     info = get_info(dstore)
     R = dstore['full_lt'].get_num_rlzs()
     sitecol = dstore['sitecol']
-    sitemesh = get_mesh(sitecol)
+    sitemesh = get_sites(sitecol)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
     comment = dstore.metadata
@@ -279,7 +279,7 @@ def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
     rlzs = dstore['full_lt'].get_realizations()
     R = len(rlzs)
-    sitemesh = get_mesh(dstore['sitecol'].complete)
+    sitemesh = get_sites(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
     periods = [imt.period for imt in oq.imt_periods()]
@@ -315,7 +315,7 @@ def export_hcurves_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
     len_ext = len(fmt) + 1
     oq = dstore['oqparam']
-    sitemesh = get_mesh(dstore['sitecol'])
+    sitemesh = get_sites(dstore['sitecol'])
     rlzs = dstore['full_lt'].get_realizations()
     R = len(rlzs)
     fnames = []
@@ -353,7 +353,7 @@ def export_hmaps_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    sitemesh = get_mesh(sitecol)
+    sitemesh = get_sites(sitecol)
     rlzs = dstore['full_lt'].get_realizations()
     R = len(rlzs)
     fnames = []
