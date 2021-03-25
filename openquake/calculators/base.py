@@ -1182,7 +1182,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             uridict = oq.shakemap_uri
         sitecol, shakemap, discarded = get_sitecol_shakemap(
-            uridict, oq.imtls, haz_sitecol,
+            uridict.pop('kind'), uridict, oq.imtls, haz_sitecol,
             oq.asset_hazard_distance['default'])
         if len(discarded):
             calc.datastore['discarded'] = discarded
