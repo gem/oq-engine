@@ -22,7 +22,6 @@ import operator
 import functools
 import collections
 import numpy
-import scipy
 import pandas
 
 from openquake.baselib import hdf5

@@ -334,6 +334,37 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         gsim = view('gsim_for_event:10', self.calc.datastore)
         self.assertEqual(str(gsim), "[ChiouYoungs2008]")
 
+        # test with correlation
+        self.run_calc(case_master.__file__, 'job.ini',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id),
+                      asset_correlation='1')
+        alt = self.calc.datastore.read_df(
+            'agg_loss_table', 'agg_id', dict(event_id=0, loss_id=0)
+        ).sort_index()
+        self.assertEqual(len(alt), 8)  # 7 assets + total
+        del alt['loss_id']
+        del alt['event_id']
+        tot = alt.loc[7]
+        alt = alt[:-1]
+        asset_df = self.calc.datastore.read_df('assetcol/array', 'ordinal')
+        alt['taxonomy'] = asset_df['taxonomy'].to_numpy()
+        alt.sort_values('taxonomy', inplace=True)
+        """
+              loss   variance  taxonomy
+agg_id                                 
+0        25.252846    0.983858         1
+2        46.164463   11.750128         1
+4        71.196510   72.775536         1
+6        35.656673    4.039829         1
+1        68.550377   41.666348         2
+5        36.430618    3.587823         2
+3       113.847435  229.427109         3
+"""
+        sig1 = numpy.sqrt(alt[alt.taxonomy==1].variance.to_numpy()).sum()
+        sig2 = numpy.sqrt(alt[alt.taxonomy==2].variance.to_numpy()).sum()
+        sig3 = numpy.sqrt(alt[alt.taxonomy==3].variance.to_numpy()).sum()
+        aac(sig1 ** 2 + sig2 ** 2 + sig3 ** 2, tot.variance)
+
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'

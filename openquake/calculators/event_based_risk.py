@@ -62,7 +62,10 @@ def aggregate_losses(alt, K, kids, correl):
             lbe[eid, kid] += F32([loss, x])
     tot = ldf.groupby('eid').sum()
     for eid, loss, x in zip(tot.index, tot.loss, tot.x):
-        lbe[eid, K] += F32([loss, x ** 2 if correl else x])
+        lbe[eid, K] += F32([loss, x])
+    if correl:  # restore the variances
+        for k in lbe:
+            lbe[k][1] = lbe[k][1] ** 2
     return lbe
 
 
