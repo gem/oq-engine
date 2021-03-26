@@ -203,11 +203,11 @@ def gmfs_calculation_methods_SH(kind, shakemap, imts, spatialcorr,
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
 
     # mu has unit (pctg), L has unit ln(pctg)
-    def generate_gmfs(Z, mu):
+    def calculate_gmfs(Z, mu):
         mu = numpy.log(mu)
         return numpy.exp(L @ Z + mu) / PCTG
 
-    return generate_gmfs
+    return calculate_gmfs
 
 
 @gmfs_calculation_methods.add('basic')
@@ -217,26 +217,30 @@ def gmfs_calculation_methods_basic(kind, shakemap, imts):
 
     :param shakemap: site coordinates with shakemap values
     :param imts: list of required imts
-    :param spatialcorr: 'no', 'yes' or 'full'
-    :param crosscorr: 'no', 'yes' or 'full' 
     :returns: F(Z, mu) to calculate gmfs
     """
     # create diag matrix with std values
     std = numpy.array([shakemap['std'][str(im)] for im in imts])
     sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
 
-    # mu has unit (pctg), L has unit ln(pctg)
-    def generate_gmfs(Z, mu):
+    # mu has unit (pctg), sig has unit ln(pctg)
+    def calculate_gmfs(Z, mu):
         mu = numpy.log(mu)
         return numpy.exp(sig @ Z + mu) / PCTG
 
-    return generate_gmfs
+    return calculate_gmfs
 
 
 def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
             num_gmfs, seed, imts=None):
     """
-    :returns: IMT-strings, array of GMFs of shape (R, N, E, M)
+    :param shakemap: site coordinates with shakemap values
+    :param gmf_dict: dictionary with info about the gmf calculation method
+    :param site_effects: whether to apply site effects or not
+    :param num_gmfs: E, amount of gmfs to generate
+    :param seed: seed for generating numbers
+    :param imts: list of IMT-strings for which gmfs are generated
+    :returns: list of IMT-objects, array of GMFs of shape (R, N, E, M)
     """
     # create list of imts
     if imts is None or len(imts) == 0:

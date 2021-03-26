@@ -1180,6 +1180,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         if len(discarded):
             calc.datastore['discarded'] = discarded
         assetcol.reduce_also(sitecol)
+        logging.info('Extracted %d assets', len(assetcol))
 
     # assemble dictionary to decide on the calculation method for the gmfs
     if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
