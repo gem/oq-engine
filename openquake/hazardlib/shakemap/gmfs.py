@@ -15,143 +15,18 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-from urllib.request import urlopen
-import io
+
 import math
-import json
-import zipfile
 import logging
 import numpy
 from scipy.stats import truncnorm, norm
 from scipy import interpolate
 
-from openquake.baselib.general import CallableDict
-from openquake.hazardlib import geo, site, imt, correlation
-from openquake.hazardlib.shakemapconverter import get_shakemap_array
+from openquake.hazardlib import geo, imt, correlation
 
-US_GOV = 'https://earthquake.usgs.gov'
-SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
 F32 = numpy.float32
 PCTG = 100  # percent of g, the gravity acceleration
 MAX_GMV = 5.  # 5 g
-
-
-class DownloadFailed(Exception):
-    """Raised by shakemap.download"""
-
-
-class MissingLink(Exception):
-    """Could not find link in web page"""
-
-
-def urlextract(url, fname):
-    """
-    Download and unzip an archive and extract the underlying fname
-    """
-    if not url.endswith('.zip'):
-        return urlopen(url)
-    with urlopen(url) as f:
-        data = io.BytesIO(f.read())
-    with zipfile.ZipFile(data) as z:
-        try:
-            return z.open(fname)
-        except KeyError:
-            # for instance the ShakeMap ci3031111 has inside a file
-            # data/verified_atlas2.0/reviewed/19920628115739/output/
-            # uncertainty.xml
-            # instead of just uncertainty.xml
-            zinfo = z.filelist[0]
-            if zinfo.filename.endswith(fname):
-                return z.open(zinfo)
-            else:
-                raise
-
-
-get_array = CallableDict()
-
-
-@get_array.add('usgs_xml')
-def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
-    if uncertainty_url is None:
-        with urlopen(grid_url) as f:
-            return get_shakemap_array(f)
-    else:
-        with urlopen(grid_url) as f1, urlextract(
-                uncertainty_url, 'uncertainty.xml') as f2:
-            return get_shakemap_array(f1, f2)
-
-
-@get_array.add('usgs_id')
-def get_array_usgs_id(kind, id):
-    url = SHAKEMAP_URL.format(id)
-    logging.info('Downloading %s', url)
-    contents = json.loads(urlopen(url).read())[
-        'properties']['products']['shakemap'][-1]['contents']
-    grid = contents.get('download/grid.xml')
-    if grid is None:
-        raise MissingLink('Could not find grid.xml link in %s' % url)
-    uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
-        'download/uncertainty.xml')
-    return get_array('usgs_xml', grid['url'],
-                     uncertainty['url'] if uncertainty else None)
-
-
-@get_array.add('file_npy')
-def get_array_file_npy(kind, fname):
-    return numpy.load(fname)
-
-
-def get_sitecol_shakemap(uridict, imts, sitecol=None,
-                         assoc_dist=None):
-    """
-    :param uridict: a dictionary specifying the ShakeMap resource
-    :param imts: required IMTs as a list of strings
-    :param sitecol: SiteCollection used to reduce the shakemap
-    :param assoc_dist: association distance
-    :returns: a pair (filtered site collection, filtered shakemap)
-    """
-    array = get_array(uridict.pop('kind'), **uridict)
-    available_imts = set(array['val'].dtype.names)
-    missing = set(imts) - available_imts
-    if missing:
-        msg = ('The IMT %s is required but not in the available set %s, '
-               'please change the risk model otherwise you will have '
-               'incorrect zero losses for the associated taxonomies' %
-               (missing.pop(), ', '.join(available_imts)))
-        raise RuntimeError(msg)
-
-    # build a copy of the ShakeMap with only the relevant IMTs
-    dt = [(imt, F32) for imt in sorted(imts)]
-    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
-              ('val', dt), ('std', dt)]
-    data = numpy.zeros(len(array), dtlist)
-    for name in ('lon',  'lat', 'vs30'):
-        data[name] = array[name]
-    for name in ('val', 'std'):
-        for im in imts:
-            data[name][im] = array[name][im]
-
-    if sitecol is None:  # extract the sites from the shakemap
-        return site.SiteCollection.from_shakemap(data), data
-
-    # associate the shakemap to the (filtered) site collection
-    bbox = (data['lon'].min(), data['lat'].min(),
-            data['lon'].max(), data['lat'].max())
-    indices = sitecol.within_bbox(bbox)
-    if len(indices) == 0:
-        raise RuntimeError('There are no sites within the boundind box %s'
-                           % str(bbox))
-    sites = sitecol.filtered(indices)
-    logging.info('Associating %d GMVs to %d sites', len(data), len(sites))
-    return geo.utils.assoc(data, sites, assoc_dist, 'warn')
-
-
-# Here is the explanation of USGS for the units they are using:
-# PGA = peak ground acceleration (percent-g)
-# PSA03 = spectral acceleration at 0.3 s period, 5% damping (percent-g)
-# PSA10 = spectral acceleration at 1.0 s period, 5% damping (percent-g)
-# PSA30 = spectral acceleration at 3.0 s period, 5% damping (percent-g)
-# STDPGA = the standard deviation of PGA (natural log of percent-g)
 
 
 def spatial_correlation_array(dmatrix, imts, correl='yes',
@@ -183,7 +58,6 @@ def spatial_covariance_array(stddev, corrmatrices):
     :returns: an array of shape (M, N, N)
     """
     # this depends on sPGA, sSa03, sSa10, sSa30
-    M, N = corrmatrices.shape[:2]
     matrices = []
 
     for i, std in enumerate(stddev):
@@ -273,7 +147,7 @@ def cholesky(spatial_cov, cross_corr):
     LLT = []
     for i in range(M):
         row = [L[i] @ L[j].T * cross_corr[i, j] for j in range(M)]
-        LLT.extend(numpy.array(row).transpose(1, 0, 2).reshape(N, M*N))
+        LLT.extend(numpy.array(row).transpose(1, 0, 2).reshape(N, M * N))
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
