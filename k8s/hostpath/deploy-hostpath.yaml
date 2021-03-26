@@ -16,6 +16,8 @@ spec:
         app: engine
         version: "latest"
     spec:
+      securityContext:
+        fsGroup: 1000
       containers:
       - name: engine
         image: openquake/engine:latest
