@@ -184,10 +184,14 @@ def sample_gmfs_SH(kind, shakemap, imts, spatialcorr, crosscorr):
 
 @sample_gmfs.add('basic')
 def sample_gmfs_basic(kind, shakemap, imts):
-    sig = 1
+
+    std = numpy.array([shakemap['std'][str(im)] for im in imts])
+    sig = numpy.diag(std.flatten())
+    print(sig)
 
     def generate_gmfs(Z, mu):
-        return sig @ Z + mu
+        mu = numpy.log(mu)
+        return numpy.exp(sig @ Z + mu) / PCTG
 
     return generate_gmfs
 
@@ -195,14 +199,14 @@ def sample_gmfs_basic(kind, shakemap, imts):
 def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
             num_gmfs, seed, imts=None):
     """
-    :returns: (IMT-strings, array of GMFs of shape (R, N, E, M)
+    :returns: IMT-strings, array of GMFs of shape (R, N, E, M)
     """
 
     if imts is None or len(imts) == 0:
-        imts = [imt.from_string(name) for name in shakemap['std'].dtype.names]
+        imts = [imt.from_string(im) for im in shakemap['std'].dtype.names]
     else:
-        imts = [imt.from_string(i)
-                for i in imts if i in shakemap['std'].dtype.names]
+        imts = [imt.from_string(im)
+                for im in imts if im in shakemap['std'].dtype.names]
 
     M = len(imts)       # Number of imts
     N = len(shakemap)   # number of sites
@@ -210,8 +214,10 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
                       for imt in imts for j in range(N)])
 
-    generate_gmfs = sample_gmfs_SH(
-        'Silva&Horspool', shakemap, imts, spatialcorr, crosscorr)
+    # generate_gmfs = sample_gmfs(
+    #     'Silva&Horspool', shakemap, imts, spatialcorr, crosscorr)
+
+    generate_gmfs = sample_gmfs('basic', shakemap, imts)
 
     if trunclevel:
         Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
@@ -228,5 +234,4 @@ def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
     if gmfs.max() > MAX_GMV:
         logging.warning('There are suspiciously large GMVs of %.2fg',
                         gmfs.max())
-    print('everything good')
     return imts, gmfs.reshape((M, N, num_gmfs)).transpose(1, 2, 0)
