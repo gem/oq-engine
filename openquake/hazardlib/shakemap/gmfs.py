@@ -152,7 +152,7 @@ def cholesky(spatial_cov, cross_corr):
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
-gmfs_calculation_methods = CallableDict()
+calculate_gmfs = CallableDict()
 
 MAXSITES = 1000
 CORRELATION_MATRIX_TOO_LARGE = '''\
@@ -161,9 +161,9 @@ To avoid that, set a proper `region_grid_spacing` so that your exposure
 involves less sites.'''
 
 
-@gmfs_calculation_methods.add('Silva&Horspool')
-def gmfs_calculation_methods_SH(kind, shakemap, imts, spatialcorr,
-                                crosscorr, cholesky_limit):
+@calculate_gmfs.add('Silva&Horspool')
+def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
+                      crosscorr, cholesky_limit):
     """
     Implementation of paper by Silva and Horspool 2019
     https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154?af=R
@@ -203,15 +203,12 @@ def gmfs_calculation_methods_SH(kind, shakemap, imts, spatialcorr,
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
 
     # mu has unit (pctg), L has unit ln(pctg)
-    def calculate_gmfs(Z, mu):
-        mu = numpy.log(mu)
-        return numpy.exp(L @ Z + mu) / PCTG
-
-    return calculate_gmfs
+    mu = numpy.log(mu)
+    return numpy.exp(L @ Z + mu) / PCTG
 
 
-@gmfs_calculation_methods.add('basic')
-def gmfs_calculation_methods_basic(kind, shakemap, imts):
+@calculate_gmfs.add('basic')
+def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     """
     Basic calculation method to sample data from shakemap values
 
@@ -224,11 +221,8 @@ def gmfs_calculation_methods_basic(kind, shakemap, imts):
     sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
 
     # mu has unit (pctg), sig has unit ln(pctg)
-    def calculate_gmfs(Z, mu):
-        mu = numpy.log(mu)
-        return numpy.exp(sig @ Z + mu) / PCTG
-
-    return calculate_gmfs
+    mu = numpy.log(mu)
+    return numpy.exp(sig @ Z + mu) / PCTG
 
 
 def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
@@ -253,12 +247,6 @@ def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
     M = len(imts)       # Number of imts
     N = len(shakemap)   # number of sites
 
-    # assemble dictionary to decide on the calculation method for the gmfs
-    gmf_dict.update({'shakemap': shakemap, 'imts': imts})
-
-    # returns calculation method
-    calculate_gmfs = gmfs_calculation_methods(gmf_dict.pop('kind'), **gmf_dict)
-
     # generate standard normal random variables of shape (M*N, E)
     if trunclevel:
         Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
@@ -271,8 +259,13 @@ def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
     mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
                       for imt in imts for j in range(N)])
 
+    # assemble dictionary to decide on the calculation method for the gmfs
+    gmf_dict.update({'shakemap': shakemap, 'imts': imts, 'Z': Z, 'mu': mu})
+
+    # returns calculation method
+    gmfs = calculate_gmfs(gmf_dict.pop('kind'), **gmf_dict)
+
     # execute the calculation
-    gmfs = calculate_gmfs(Z, mu)
 
     # apply site effects
     if site_effects:
