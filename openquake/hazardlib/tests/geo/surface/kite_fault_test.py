@@ -76,7 +76,7 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         self.prf, _ = _read_profiles(path)
 
     def test_mesh_creation(self):
-        """ Create the mesh: two parallel profiles - no top alignment """
+        # Create the mesh: two parallel profiles - no top alignment
         hsmpl = 4
         vsmpl = 2
         idl = False
@@ -86,6 +86,16 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         if PLOTTING:
             title = 'Test mesh creation'
             ppp(self.prf, srfc, title)
+
+    def test_ztor(self):
+        # Create the mesh: two parallel profiles - no top alignment
+        hsmpl = 4
+        vsmpl = 2
+        idl = False
+        alg = False
+        srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+        ztor = srfc.get_top_edge_depth()
+        self.assertAlmostEqual(20.0, ztor)
 
 
 class KiteSurfaceTestCase(unittest.TestCase):
@@ -122,7 +132,7 @@ class KiteSurfaceTestCase(unittest.TestCase):
         self.profiles2.append(Line(tmp))
 
     def test_build_mesh_01(self):
-        """ Trivial case - Fault dipping at about 45 degrees """
+        # Trivial case - Fault dipping at about 45 degrees
 
         # Build the fault surface
         p_sd = 2.0
@@ -154,7 +164,7 @@ class KiteSurfaceTestCase(unittest.TestCase):
             ppp(self.profiles1, msh, title)
 
     def test_build_mesh_02(self):
-        """ Trivial case - Vertical fault """
+        # Trivial case - Vertical fault
 
         # Build the fault surface
         p_sd = 2.5
@@ -199,7 +209,7 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         self.prf, _ = _read_profiles(path)
 
     def test_mesh_creation(self):
-        """ Create the mesh: two parallel profiles - no top alignment """
+        # Create the mesh: two parallel profiles - no top alignment
         hsmpl = 4
         vsmpl = 4
         idl = False
@@ -259,7 +269,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
                                              self.h_sampl, idl, alg)
 
     def test_h_spacing(self):
-        """ Check v-spacing: two misaligned profiles - no top alignment """
+        # Check v-spacing: two misaligned profiles - no top alignment
         srfc = self.smsh
         smsh = srfc.mesh
         #
@@ -283,7 +293,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
             ppp(self.profiles, srfc, title)
 
     def test__spacing(self):
-        """ Check v-spacing: two misaligned profiles - no top alignment """
+        # Check v-spacing: two misaligned profiles - no top alignment
         srfc = self.smsh
         smsh = srfc.mesh
         computed = []
@@ -307,7 +317,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         self.profiles, _ = _read_profiles(path)
 
     def test_mesh_creation(self):
-        """ Test construction of the mesh """
+        # Test construction of the mesh
         h_sampl = 5
         v_sampl = 5
         idl = False
@@ -323,7 +333,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
             ppp(self.profiles, srfc, title)
 
     def test_mesh_creation_with_alignment(self):
-        """ Test construction of the mesh """
+        # Test construction of the mesh
         h_sampl = 2.5
         v_sampl = 2.5
         idl = False
@@ -338,7 +348,6 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
             ppp(self.profiles, srfc, title)
 
     def test_get_surface_projection(self):
-        """ """
         h_sampl = 2.5
         v_sampl = 2.5
         idl = False
@@ -346,8 +355,9 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                          idl, alg)
         lons, lats = srfc.surface_projection
+
     def test_get_width(self):
-        """ Test the calculation of the width """
+        # Test the calculation of the width
         h_sampl = 2.5
         v_sampl = 2.5
         idl = False
@@ -365,7 +375,7 @@ class IdealizedATest(unittest.TestCase):
         self.profiles, _ = _read_profiles(path)
 
     def test_mesh_creation_no_alignment(self):
-        """ Test construction of the mesh """
+        # Test construction of the mesh
         h_sampl = 4
         v_sampl = 4
         idl = False
@@ -379,7 +389,7 @@ class IdealizedATest(unittest.TestCase):
             ppp(self.profiles, smsh, title)
 
     def test_mesh_creation_with_alignment(self):
-        """ Test construction of the mesh """
+        # Test construction of the mesh
         h_sampl = 4
         v_sampl = 4
         idl = False
@@ -400,7 +410,7 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         self.profiles, _ = _read_profiles(path)
 
     def test_mesh_creation(self):
-        """ Create mesh from profiles for SA """
+        # Create mesh from profiles for SA
         sampling = 40
         idl = False
         alg = False
