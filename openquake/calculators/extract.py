@@ -1094,13 +1094,14 @@ def extract_disagg(dstore, what):
     Extract a disaggregation output
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1
+    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&conditional=1
     """
     qdict = parse(what)
     label = qdict['kind'][0]
     imt = qdict['imt'][0]
     poe_id = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
+    conditional = qdict.get('conditional')
     z = int(qdict['z'][0]) if 'z' in qdict else None
 
     def get(v, sid):
@@ -1110,7 +1111,9 @@ def extract_disagg(dstore, what):
     oq = dstore['oqparam']
     imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
-    out = dstore['disagg/' + label][sid, imt2m[imt], poe_id]
+    m = imt2m[imt]
+    out = dstore['disagg/' + label][sid, m, poe_id]
+    poe_agg = dstore['poe4'][sid, m, poe_id]
     if z is None:  # compute stats
         best = dstore['best_rlzs'][sid]
         rlzs = [rlz for rlz in dstore['full_lt'].get_realizations()
@@ -1124,6 +1127,8 @@ def extract_disagg(dstore, what):
         return ArrayWrapper(matrix, attrs)
 
     matrix = out[..., z]
+    if conditional and conditional != '0':
+        matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg[z])
 
     # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))

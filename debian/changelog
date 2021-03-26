@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added support for conditional disaggregation
   * Supported exposures with generic CSV fields thanks to the `exposureFields`
     mapping
   * Honored `custom_site_id` in the hazard curves and UHS CSV exporters
