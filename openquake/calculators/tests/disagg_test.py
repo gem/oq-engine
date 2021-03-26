@@ -174,11 +174,11 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
         self.assertEqual(haz[1], 0.18757115242025785)
 
-        # test conditional disaggregation
+        # test normal disaggregation
         [fname] = export(('disagg', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/rlz-0-PGA-sid-0-poe-1_TRT.csv', fname)
 
-        # test normal disaggregation
+        # test conditional disaggregation
         [fname] = export(('disagg_cond', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/rlz-0-PGA-sid-0-poe-1-cond_TRT.csv',
                               fname)
