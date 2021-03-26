@@ -259,13 +259,11 @@ def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
     mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
                       for imt in imts for j in range(N)])
 
-    # assemble dictionary to decide on the calculation method for the gmfs
+    # assemble dictionary for the calculation of the gmfs
     gmf_dict.update({'shakemap': shakemap, 'imts': imts, 'Z': Z, 'mu': mu})
 
-    # returns calculation method
-    gmfs = calculate_gmfs(gmf_dict.pop('kind'), **gmf_dict)
-
     # execute the calculation
+    gmfs = calculate_gmfs(gmf_dict.pop('kind'), **gmf_dict)
 
     # apply site effects
     if site_effects:
