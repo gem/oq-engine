@@ -478,7 +478,7 @@ class CompositeRiskModel(collections.abc.Mapping):
     def init(self):
         oq = self.oqparam
         if self.risklist:
-            oq.set_risk_imts(self.risklist)
+            oq.set_risk_imtls(self.risklist)
         # extract the consequences from the risk models, if any
         if 'losses_by_taxonomy' not in self.consdict:
             self.consdict['losses_by_taxonomy'] = {}

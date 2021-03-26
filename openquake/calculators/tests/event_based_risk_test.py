@@ -322,6 +322,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         gsim = view('gsim_for_event:10', self.calc.datastore)
         self.assertEqual(str(gsim), "[ChiouYoungs2008]")
 
+    def test_from_old(self):
+        # test we can use an old hazard
+        self.run_calc(case_master.__file__, 'job_from_old.ini')
+
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'

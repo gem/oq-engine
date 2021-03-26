@@ -516,19 +516,25 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
             if 'gmfs' in oq.inputs:
-                if not oq.inputs['gmfs'].endswith('.csv'):
-                    raise NotImplementedError(
-                        'Importer for %s' % oq.inputs['gmfs'])
-                self.datastore['full_lt'] = logictree.FullLogicTree.fake()
-                E = len(import_gmfs(self.datastore, oq,
-                                    self.sitecol.complete.sids))
-                if hasattr(oq, 'number_of_ground_motion_fields'):
-                    if oq.number_of_ground_motion_fields != E:
-                        raise RuntimeError(
-                            'Expected %d ground motion fields, found %d' %
-                            (oq.number_of_ground_motion_fields, E))
-                else:  # set the number of GMFs from the file
-                    oq.number_of_ground_motion_fields = E
+                path = oq.inputs['gmfs']
+                if path.endswith('.csv'):
+                    self.datastore['full_lt'] = logictree.FullLogicTree.fake()
+                    E = len(import_gmfs(self.datastore, oq,
+                                        self.sitecol.complete.sids))
+                    if hasattr(oq, 'number_of_ground_motion_fields'):
+                        if oq.number_of_ground_motion_fields != E:
+                            raise RuntimeError(
+                                'Expected %d ground motion fields, found %d' %
+                                (oq.number_of_ground_motion_fields, E))
+                    else:  # set the number of GMFs from the file
+                        oq.number_of_ground_motion_fields = E
+                elif path.endswith('hdf5'):
+                    parent = datastore.read(path)
+                    # engine.expose_outputs(parent, status='complete')
+                    self.datastore.parent = parent
+                    oq.hazard_calculation_id = parent.calc_id
+                else:
+                    raise NotImplementedError('Importer for %s' % path)
             else:
                 self.import_perils()
             self.save_crmodel()

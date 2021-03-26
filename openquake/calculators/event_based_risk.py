@@ -58,10 +58,12 @@ def event_based_risk(df, param, monitor):
     K = param['K']
     with monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
-            if 'data' in dstore['gmf_data']:  # version < 3.11
-                df = dstore.read_df('gmf_data/data', slc=df)
+            import pdb; pdb.set_trace()
+            ds = dstore.parent if dstore.parent else dstore
+            if 'data' in ds['gmf_data']:  # version < 3.11
+                df = ds.read_df('gmf_data/data', slc=df)
             else:
-                df = dstore.read_df('gmf_data', slc=df)
+                df = ds.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
         if K:
             kids = dstore['assetcol/kids'][:]

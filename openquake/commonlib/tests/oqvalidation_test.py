@@ -297,7 +297,7 @@ class OqParamTestCase(unittest.TestCase):
                 intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
                 uniform_hazard_spectra='1',
                 inputs=fakeinputs,
-            ).set_risk_imts({})
+            ).set_risk_imtls({})
         self.assertIn("The `uniform_hazard_spectra` can be True only if "
                       "the IMT set contains SA(...) or PGA",
                       str(ctx.exception))
@@ -313,7 +313,7 @@ class OqParamTestCase(unittest.TestCase):
                 intensity_measure_types_and_levels="{'PGA': [0.1, 0.2, 0.3]}",
                 uniform_hazard_spectra='1',
                 inputs=fakeinputs,
-            ).set_risk_imts({})
+            ).set_risk_imtls({})
         self.assertIn("There is a single IMT, the uniform_hazard_spectra plot "
                       "will contain a single point", w.call_args[0][0])
 

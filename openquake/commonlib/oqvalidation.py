@@ -1136,7 +1136,7 @@ class OqParam(valid.ParamSet):
         """
         return self.imtls.size // len(self.imtls)
 
-    def set_risk_imts(self, risklist):
+    def set_risk_imtls(self, risklist):
         """
         :param risklist:
             a list of risk functions with attributes .id, .loss_type, .kind

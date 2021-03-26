@@ -281,7 +281,7 @@ class DataStore(collections.abc.MutableMapping):
 
     def open(self, mode):
         """
-        Open the underlying .hdf5 file and the parent, if any
+        Open the underlying .hdf5 file, if any
         """
         if self.hdf5 == ():  # not already open
             try:
