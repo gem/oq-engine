@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hostpath-master
+  namespace: default
+  labels:
+    app: engine-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: master
+  template:
+    metadata:
+      labels:
+        app: master
+        version: "latest"
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+      - name: engine-master
+        image: openquake/engine:nightly
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8800
+        command: ["/bin/sh", "-c"] 
+        args: 
+          - echo start > /home/openquake/avvio.log;
+            sudo chown -R 1000:1000 /home/openquake/oqdata;
+            /home/openquake/oq-start.sh;
+        volumeMounts:
+        - mountPath: /etc/openquake
+          name: config
+        - mountPath: /home/openquake/oqdata  # in the container filesystem
+          name: kinddata        #name as defined in volumes
+      volumes:
+        - name: kinddata # name of volume
+          hostPath:
+            path: /data #  matches kind containerPath:
+        - name: config
+          configMap:
+            name: oqcfg
