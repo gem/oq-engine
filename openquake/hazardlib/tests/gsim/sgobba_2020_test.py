@@ -70,16 +70,53 @@ class Sgobba2020Test(unittest.TestCase):
         msg = fmt.format(gmm.be, ev_id)
         self.assertAlmostEqual(gmm.be, 0.012552863, msg=msg, places=5)
 
+        # Compute and check results for the event specific ground-motion
+        expected = df.PGA.to_numpy() / (gravity_acc * 100.0)
+        computed = np.exp(mean)
+        np.testing.assert_allclose(computed, expected)
+
+    def test_amatrice_eqk_ergodic(self):
+
+        ev_id = '160824013632'
+
+        # Read dataframe with information
+        fname = 'check_{:s}_mean.csv'.format(ev_id)
+        df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
+
+        # Get parameters
+        locs = []
+        rjb = []
+        for _, row in df.iterrows():
+            locs.append(Point(row.lon_sites, row.lat_sites))
+            rjb.append(row.dist_jb)
+
+        # Create the sites
+        sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
+
+        # Create distance and rupture contexts
+        rup = Dummy.get_rupture(mag=row.rup_mag)
+        dists = DistancesContext()
+        dists.rjb = np.array(rjb)
+
+        # Instantiate the GMM
+        gmm = SgobbaEtAl2020(event_id=ev_id, cluster=4)
+        gmmref = SgobbaEtAl2020(cluster=0)
+
+        # Computes results for the non-ergodic model
+        imt = PGA()
+        stdt = [const.StdDev.TOTAL]
+        mean, stds = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+
+        fmt = 'Between event variability {:f} for event {:s} is wrong'
+        msg = fmt.format(gmm.be, ev_id)
+        self.assertAlmostEqual(gmm.be, 0.012552863, msg=msg, places=5)
+
         # Compute and check results for the ergodic model
         mr, stdr = gmmref.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
         expected_ref = df.gmm_PGA.to_numpy() / (gravity_acc * 100.0)
         computed_ref = np.exp(mr)
         np.testing.assert_allclose(computed_ref, expected_ref, rtol=1e-5)
 
-        # Compute and check results for the event specific ground-motion
-        expected = df.PGA.to_numpy() / (gravity_acc * 100.0)
-        computed = np.exp(mean)
-        #np.testing.assert_allclose(computed, expected)
 
     def test_cluster(self):
 
