@@ -30,7 +30,7 @@ spec:
             sudo chown -R 1000:1000 /oqdata;
             /home/openquake/oq-start.sh;
         volumeMounts:
-        - mountPath: /opt/openquake
+        - mountPath: /etc/openquake
           name: config
         - mountPath: /oqdata  # in the container filesystem
           name: kinddata        #name as defined in volumes
