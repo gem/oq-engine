@@ -22,9 +22,9 @@ data:
     # enable multi_user if you have a multiple user installation
     multi_user = true
     file = /oqdata/db.sqlite3
-    listen = 10.244.1.16
+    listen = 0.0.0.0
     # example: master.hc
-    host = 10.244.1.16
+    host = 0.0.0.0
     # port 1908 has a good reputation:
     # https://isc.sans.edu/port.html?port=1908
     port = 1908
@@ -39,7 +39,7 @@ data:
     password =
 
     [zworkers]
-    host_cores = 10.244.1.18 -1
+    host_cores = 10.244.1.19 -1
     ctrl_port = 1909
     remote_python =
 

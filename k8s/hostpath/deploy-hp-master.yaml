@@ -21,6 +21,9 @@ spec:
       containers:
       - name: engine-master
         image: openquake/engine:nightly
+        env:
+        - name: OQ_CONFIG_FILE
+          value: /opt/openquake/openquake.cfg
         imagePullPolicy: Always
         ports:
         - containerPort: 8800
