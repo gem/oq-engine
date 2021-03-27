@@ -28,8 +28,9 @@ import numpy
 from openquake.baselib import __version__
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.shakemap.maps import get_array
 from openquake.hazardlib import correlation, stats, calc
-from openquake.hazardlib import valid, InvalidFile, shakemap
+from openquake.hazardlib import valid, InvalidFile
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree, util
 from openquake.risklib.riskmodels import get_risk_files
@@ -1383,7 +1384,7 @@ class OqParam(valid.ParamSet):
         """
         if self.shakemap_uri:
             kind = self.shakemap_uri['kind']
-            sig = inspect.signature(shakemap.get_array[kind])
+            sig = inspect.signature(get_array[kind])
             params = list(sig.parameters)
             if params != list(self.shakemap_uri):
                 raise ValueError(

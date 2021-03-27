@@ -696,6 +696,12 @@ def _get_exposure(fname, stop=None):
         conversions = exposure.conversions
     except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
+    fieldmap = {}  # input_field -> oq_field
+    try:
+        for node in exposure.exposureFields:
+            fieldmap[node['input']] = node['oq']
+    except AttributeError:
+        pass  # no fieldmap
     try:
         area = conversions.area
     except AttributeError:
@@ -750,7 +756,7 @@ def _get_exposure(fname, stop=None):
     exp = Exposure(
         exposure['id'], exposure['category'],
         description.text, cost_types, occupancy_periods, retrofitted,
-        area.attrib, [], cc, TagCollection(tagnames))
+        area.attrib, [], cc, TagCollection(tagnames), fieldmap)
     assets_text = exposure.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -828,7 +834,7 @@ class Exposure(object):
     """
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'retrofitted',
-              'area', 'assets', 'cost_calculator', 'tagcol']
+              'area', 'assets', 'cost_calculator', 'tagcol', 'fieldmap']
 
     @staticmethod
     def check(fname):
@@ -957,29 +963,38 @@ class Exposure(object):
         :yields: asset nodes
         """
         expected_header = set(self._csv_header('', ''))
+        floatfields = set()
+        strfields = self.tagcol.tagnames + self.occupancy_periods.split()
         for fname in self.datafiles:
             with open(fname, encoding='utf-8-sig') as f:
                 fields = next(csv.reader(f))
-                header = set(fields)
+                header = set(self.fieldmap.get(f, f) for f in fields)
+                for field in fields:
+                    if field not in strfields:
+                        floatfields.add(field)
                 missing = expected_header - header - {'exposure', 'country'}
                 if len(header) < len(fields):
                     raise InvalidFile(
                         '%s: The header %s contains a duplicated field' %
                         (fname, header))
                 elif missing:
-                    msg = ('Unexpected header in %s\nExpected: %s\nGot: %s\n'
-                           'Missing: %s')
-                    raise InvalidFile(msg % (fname, sorted(expected_header),
-                                             sorted(header), missing))
+                    raise InvalidFile('%s: missing %s' % (fname, missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
                 'retrofitted': float, None: object}
-        rename = {}
+        revmap = {}  # oq -> inp
+        for inp, oq in self.fieldmap.items():
+            revmap[oq] = inp
+            if oq in conv:
+                conv[inp] = conv[oq]
+        rename = self.fieldmap.copy()
         for field in self.cost_types['name']:
-            conv[field] = float
-            rename[field] = 'value-' + field
+            f = revmap.get(field, field)
+            conv[f] = float
+            rename[f] = 'value-' + field
         for field in self.occupancy_periods.split():
-            conv[field] = float
-            rename[field] = 'occupants_' + field
+            f = revmap.get(field, field)
+            conv[f] = float
+            rename[f] = 'occupants_' + field
         for fname in self.datafiles:
             array = hdf5.read_csv(fname, conv, rename).array
             array['lon'] = numpy.round(array['lon'], 5)

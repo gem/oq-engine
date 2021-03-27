@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Supported exposures with generic CSV fields thanks to the `exposureFields`
+    mapping
+  * Honored `custom_site_id` in the hazard curves and UHS CSV exporters
+  * Added a check for the case of `aValue=-Inf` in the truncatedGR MFD
+  * Extended the engine to read XML ShakeMaps from arbitrary sources (in
+    particular local path names and web sites different from the USGS site)
   * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
     thus breaking the QGIS plugin on Windows
   * Fixed `readinput.get_ruptures` to be able to read ruptures in engine 3.11

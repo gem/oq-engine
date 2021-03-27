@@ -389,8 +389,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # check that the exported ruptures can be re-imported
         text = extract(self.calc.datastore, 'ruptures').array
-        trts = ["Active Shallow Crust"]
-        rups = readinput.get_ruptures(gettemp(text), trts)
+        rups = readinput.get_ruptures(gettemp(text))
         aac(rups['n_occ'], [1, 1, 1, 1])
 
     def test_case_4_hazard(self):

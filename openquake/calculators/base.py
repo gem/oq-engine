@@ -36,7 +36,8 @@ from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib.shakemap import get_sitecol_shakemap, to_gmfs
+from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
+from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
 from openquake.commonlib import readinput, logictree, util
 from openquake.calculators.export import export as exp
@@ -400,6 +401,7 @@ class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
     """
+
     def src_filter(self):
         """
         :returns: a SourceFilter
@@ -920,6 +922,7 @@ class RiskCalculator(HazardCalculator):
     attributes .crmodel, .sitecol, .assetcol, .riskinputs in the
     pre_execute phase.
     """
+
     def build_riskinputs(self, kind):
         """
         :param kind:
@@ -1179,7 +1182,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             uridict = oq.shakemap_uri
         sitecol, shakemap, discarded = get_sitecol_shakemap(
-            uridict, oq.imtls, haz_sitecol,
+            uridict.pop('kind'), uridict, oq.imtls, haz_sitecol,
             oq.asset_hazard_distance['default'])
         if len(discarded):
             calc.datastore['discarded'] = discarded
