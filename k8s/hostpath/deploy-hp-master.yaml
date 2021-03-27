@@ -27,12 +27,12 @@ spec:
         command: ["/bin/sh", "-c"] 
         args: 
           - echo start > /home/openquake/avvio.log;
-            sudo chown -R 1000:1000 /home/openquake/oqdata;
+            sudo chown -R 1000:1000 /oqdata;
             /home/openquake/oq-start.sh;
         volumeMounts:
         - mountPath: /etc/openquake
           name: config
-        - mountPath: /home/openquake/oqdata  # in the container filesystem
+        - mountPath: /oqdata  # in the container filesystem
           name: kinddata        #name as defined in volumes
       volumes:
         - name: kinddata # name of volume

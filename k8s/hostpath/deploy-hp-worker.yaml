@@ -30,9 +30,14 @@ spec:
             sudo chown -R 1000:1000 /home/openquake/oqdata;
             python3 -m openquake.baselib.workerpool;
         volumeMounts:
-        - mountPath: /home/openquake/oqdata  # in the container filesystem
+        - mountPath: /etc/openquake
+          name: config
+        - mountPath: /oqdata  # in the container filesystem
           name: kinddata        #name as defined in volumes
       volumes:
         - name: kinddata # name of volume
           hostPath:
             path: /data #  matches kind containerPath:
+        - name: config
+          configMap:
+            name: oqcfg

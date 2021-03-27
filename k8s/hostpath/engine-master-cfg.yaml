@@ -9,18 +9,19 @@ data:
     strict = false
 
     [distribution]
+    multi_node = true
     oq_distribute = zmq
     terminate_workers_on_revoke = true
-    serialize_jobs = true
+    serialize_jobs = 1
 
     [memory]
     soft_mem_limit = 90
-    hard_mem_limit = 99
+    hard_mem_limit = 98
 
     [dbserver]
     # enable multi_user if you have a multiple user installation
-    multi_user = false
-    file = /home/openquake/oqdata/db.sqlite3
+    multi_user = true
+    file = /oqdata/db.sqlite3
     listen = 0.0.0.0
     # example: master.hpc
     host = 0.0.0.0
@@ -29,7 +30,7 @@ data:
     port = 1908
     # port range used by workers to send back results
     # to the master node
-    receiver_ports = 1912-1920
+    receiver_ports = 1921-1930
     authkey = changeme
 
     [webapi]
@@ -38,10 +39,10 @@ data:
     password =
 
     [zworkers]
-    host_cores = 10.244.1.27 -1
+    host_cores = 10.244.1.13 -1, 10.244.2.7 -1
     ctrl_port = 1909
     remote_python =
 
     [directory]
-    shared_dir = /home
+    shared_dir = /oqdata
     custom_tmp =
