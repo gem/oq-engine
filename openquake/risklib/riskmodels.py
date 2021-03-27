@@ -697,7 +697,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     dic[lt].loss *= weights[0]
                 for alt, w in zip(arrays[1:], weights[1:]):
                     dic[lt].loss += alt.loss * w
-            else:  # scenario_damage
+            elif len(weights) > 1:  # scenario_damage
                 dic[lt] = numpy.average(arrays, weights=weights, axis=0)
         # compute secondary losses, if any
         # FIXME: it should be moved up, before the computation of the mean
