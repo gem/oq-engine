@@ -19,24 +19,66 @@
 import logging
 import numpy
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, site
 from openquake.hazardlib.shakemap.parsers import get_array
 
 F32 = numpy.float32
 
+get_sitecol_shakemap = CallableDict()
 
-def get_sitecol_shakemap(uridict, imts, sitecol=None,
-                         assoc_dist=None):
+
+@get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')
+def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
+                     assoc_dist=None, mode='warn'):
     """
     :param uridict: a dictionary specifying the ShakeMap resource
     :param imts: required IMTs as a list of strings
     :param sitecol: SiteCollection used to reduce the shakemap
-    :param assoc_dist: association distance
+    :param assoc_dist: the maximum distance for association
+    :param mode: 'strict', 'warn' or 'filter'
     :returns: filtered site collection, filtered shakemap, discarded
     """
-    array = get_array(uridict.pop('kind'), **uridict)
-    available_imts = set(array['val'].dtype.names)
-    missing = set(imts) - available_imts
+    shakemap = get_array(kind, **uridict)
+
+    available_imts = set(shakemap['val'].dtype.names)
+
+    bbox = (shakemap['lon'].min(), shakemap['lat'].min(),
+            shakemap['lon'].max(), shakemap['lat'].max())
+
+    # build a copy of the ShakeMap with only the relevant IMTs
+    dt = [(imt, F32) for imt in sorted(required_imts)]
+    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
+              ('val', dt), ('std', dt)]
+    data = numpy.zeros(len(shakemap), dtlist)
+    for name in ('lon', 'lat', 'vs30'):
+        data[name] = shakemap[name]
+    for name in ('val', 'std'):
+        for im in required_imts:
+            data[name][im] = shakemap[name][im]
+
+    check_required_imts(required_imts, available_imts)
+
+    if sitecol is None:
+        return site.SiteCollection.from_usgs_shakemap(shakemap), shakemap, []
+
+    sitecol = apply_bounding_box(sitecol, bbox)
+
+    logging.info('Associating %d GMVs to %d sites',
+                 len(shakemap), len(sitecol))
+
+    return geo.utils.assoc(shakemap, sitecol, assoc_dist, mode)
+
+
+def check_required_imts(required_imts, available_imts):
+    """
+    Check if the list of required imts is present in the list of available imts
+
+    :param required_imts: list of strings of required imts
+    :param available_imts: set of available imts
+    :raises RuntimeError: if required imts are not present
+    """
+    missing = set(required_imts) - available_imts
     if missing:
         msg = ('The IMT %s is required but not in the available set %s, '
                'please change the risk model otherwise you will have '
@@ -44,35 +86,18 @@ def get_sitecol_shakemap(uridict, imts, sitecol=None,
                (missing.pop(), ', '.join(available_imts)))
         raise RuntimeError(msg)
 
-    # build a copy of the ShakeMap with only the relevant IMTs
-    dt = [(imt, F32) for imt in sorted(imts)]
-    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
-              ('val', dt), ('std', dt)]
-    data = numpy.zeros(len(array), dtlist)
-    for name in ('lon', 'lat', 'vs30'):
-        data[name] = array[name]
-    for name in ('val', 'std'):
-        for im in imts:
-            data[name][im] = array[name][im]
 
-    if sitecol is None:  # extract the sites from the shakemap
-        return site.SiteCollection.from_shakemap(data), data, []
+def apply_bounding_box(sitecol, bbox):
+    """
+    Filter out sites which are not in the bounding box.
 
-    # associate the shakemap to the (filtered) site collection
-    bbox = (data['lon'].min(), data['lat'].min(),
-            data['lon'].max(), data['lat'].max())
+    :param sitecol: SiteCollection of sites from exposed assets
+    :param bbox: Bounding Box (lon.min, lat.min, lon.max, lat.max)
+    :raises RuntimeError: if no sites are found within the Bounding Box
+    """
     indices = sitecol.within_bbox(bbox)
+
     if len(indices) == 0:
-        raise RuntimeError('There are no sites within the boundind box %s'
-                           % str(bbox))
-    sites = sitecol.filtered(indices)
-    logging.info('Associating %d GMVs to %d sites', len(data), len(sites))
-    return geo.utils.assoc(data, sites, assoc_dist, 'warn')
-
-
-# Here is the explanation of USGS for the units they are using:
-# PGA = peak ground acceleration (percent-g)
-# PSA03 = spectral acceleration at 0.3 s period, 5% damping (percent-g)
-# PSA10 = spectral acceleration at 1.0 s period, 5% damping (percent-g)
-# PSA30 = spectral acceleration at 3.0 s period, 5% damping (percent-g)
-# STDPGA = the standard deviation of PGA (natural log of percent-g)
+        raise RuntimeError('There are no sites within '
+                           'the bounding box %s' % str(bbox))
+    return sitecol.filtered(indices)

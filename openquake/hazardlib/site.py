@@ -56,6 +56,7 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
+
     def __init__(self, location, vs30=numpy.nan,
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
@@ -187,7 +188,7 @@ class SiteCollection(object):
                     if item[0] not in ('lon', 'lat'))
 
     @classmethod
-    def from_shakemap(cls, shakemap_array):
+    def from_usgs_shakemap(cls, shakemap_array):
         """
         Build a site collection from a shakemap array
         """

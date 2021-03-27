@@ -27,7 +27,8 @@ from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
-        YenierAtkinson2015BSSA
+        YenierAtkinson2015BSSA, get_fs_SeyhanStewart2014
+
 from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
                                                get_tau_at_quantile,
                                                #get_phi_ss_at_quantile,
@@ -84,6 +85,8 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
     :class:`openquake.hazardlib.gsim.yenier_atkinson_2015.YenierAtkinson2015BSSA`
     which incorporates a correction of the median ground motion based on the
     focal mechanism.
+
+    It also fixes vs30 to 760 m/s
     """
 
     adapted = True
@@ -97,13 +100,29 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
         self.REQUIRES_RUPTURE_PARAMETERS = frozenset(_previous + ['rake'])
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+
         # Compute mean and std
-        mean, stddevs = super().get_mean_and_stddevs(sctx, rctx, dctx, imt,
-                                                     stddev_types)
+        mean = self._get_mean_on_soil(sctx, rctx, dctx, imt, stddev_types)
+
         # Get SoF correction
         famp = get_sof_adjustment(rctx.rake, imt)
         mean += np.log(famp)
+        stddevs = np.zeros_like(mean)
         return mean, stddevs
+
+    def _get_mean_on_soil(self, sctx, rctx, dctx, imt, stddev_types):
+        # Get PGA on rock
+        tmp = PGA()
+        pga_rock = super()._get_mean_on_rock(sctx, rctx, dctx, tmp, stddev_types)
+        pga_rock = np.exp(pga_rock)
+        # Site-effect model: always evaluated for 760 (see HID 2.6.2)
+        vs30_760 = np.zeros_like(sctx.vs30)
+        vs30_760[:] = 760
+        f_s = get_fs_SeyhanStewart2014(imt, pga_rock, vs30_760)
+        # Compute the mean on soil
+        mean = super()._get_mean_on_rock(sctx, rctx, dctx, imt, stddev_types)
+        mean += f_s
+        return mean
 
 
 class ChiouYoungs2014ACME2019(ChiouYoungs2014):
