@@ -21,12 +21,13 @@ RUN apt-get update &&  \
 ARG oq_branch
 ENV LANG en_US.UTF-8
 WORKDIR /usr/src
-RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
+RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \ 
+    python3 -m venv /opt/openquake && source /opt/openquake/bin/activate && \
     pip --disable-pip-version-check install -e . -r requirements-py38-linux64.txt --no-warn-script-location
 #
 #
-ENV OQ_CONFIG_FILE /etc/openquake/openquake.cfg
-ADD openquake.cfg /etc/openquake/openquake.cfg
+ENV OQ_CONFIG_FILE /opt/openquake/openquake.cfg
+ADD openquake.cfg /opt/openquake/openquake.cfg
 #
 USER openquake
 ENV HOME /home/openquake
