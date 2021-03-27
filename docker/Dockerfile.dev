@@ -29,6 +29,8 @@ RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch
 ENV OQ_CONFIG_FILE /opt/openquake/openquake.cfg
 ADD openquake.cfg /opt/openquake/openquake.cfg
 #
+ENV PATH="/opt/openquake/bin:${PATH}"
+#
 USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
