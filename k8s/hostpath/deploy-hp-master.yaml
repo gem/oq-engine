@@ -16,8 +16,6 @@ spec:
         app: master
         version: "latest"
     spec:
-      securityContext:
-        fsGroup: 1000
       containers:
       - name: engine-master
         image: openquake/engine:nightly
@@ -31,7 +29,7 @@ spec:
         args: 
           - echo start > /home/openquake/avvio.log;
             sudo chown -R openquake:openquake /oqdata;
-            /home/openquake/oq-start.sh;
+            oq webui start;
         volumeMounts:
         - mountPath: /etc/openquake
           name: config

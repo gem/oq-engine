@@ -16,8 +16,6 @@ spec:
         app: workers
         version: "latest"
     spec:
-      securityContext:
-        fsGroup: 1000
       containers:
       - name: engine-worker
         image: openquake/engine:nightly
