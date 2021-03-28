@@ -165,12 +165,12 @@ class PmapGetter(object):
                 pcurves[rlzi] |= c
         return pcurves
 
-    def get_hcurves(self, pmap, rlzs_by_gsim):  # in disagg_by_src
+    def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
         """
-        :param pmap_by_et_id: a dictionary of ProbabilityMaps by group ID
+        :param pmap: a ProbabilityMap
+        :param rlzs_by_gsim: a dictionary gsim -> rlz IDs
         :returns: an array of PoEs of shape (N, R, M, L)
         """
-        self.init()
         res = numpy.zeros((self.N, self.R, self.L))
         for sid, pc in pmap.items():
             for gsim_idx, rlzis in enumerate(rlzs_by_gsim.values()):
