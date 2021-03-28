@@ -23,14 +23,14 @@ spec:
         image: openquake/engine:nightly
         env:
         - name: OQ_CONFIG_FILE
-          value: /opt/openquake/openquake.cfg
+          value: /etc/openquake/openquake.cfg
         imagePullPolicy: Always
         ports:
         - containerPort: 8800
         command: ["/bin/sh", "-c"] 
         args: 
           - echo start > /home/openquake/avvio.log;
-            sudo chown -R 1000:1000 /oqdata;
+            sudo chown -R openquake:openquake /oqdata;
             /home/openquake/oq-start.sh;
         volumeMounts:
         - mountPath: /etc/openquake
