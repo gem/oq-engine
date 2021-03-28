@@ -472,26 +472,27 @@ class ClassicalCalculator(base.HazardCalculator):
         weights = [rlz.weight for rlz in self.realizations]
         pgetter = getters.PmapGetter(
             self.datastore, weights, self.sitecol.sids, oq.imtls)
-        srcidx = {rec[0]: i for i, rec in enumerate(
-            self.csm.source_info.values())}
+        srcidx = {
+            rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
-        blocks = list(block_splitter(grp_ids, len(self.grp_ids)))
-        for b, block in enumerate(blocks, 1):
-            args = self.get_args(block, self.haz)
-            logging.info('Sending %d tasks', len(args))
-            smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
-            smap.monitor.save('srcfilter', self.src_filter())
-            self.datastore.swmr_on()
-            smap.h5 = self.datastore.hdf5
-            pmaps = smap.reduce(self.agg_dicts)
-            logging.debug("busy time: %s", smap.busytime)
-            self.haz.store_disagg(pmaps)
+        args = self.get_args(grp_ids, self.haz)
+        logging.info('Sending %d tasks', len(args))
+        smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
+        smap.monitor.save('srcfilter', self.src_filter())
+        self.datastore.swmr_on()
+        smap.h5 = self.datastore.hdf5
+        pmaps = smap.reduce(self.agg_dicts)
+        logging.debug("busy time: %s", smap.busytime)
+        self.haz.store_disagg(pmaps)
         if not oq.hazard_calculation_id:
             self.haz.store_disagg()
         self.store_info(psd)
         return True
 
     def store_info(self, psd):
+        """
+        Store full_lt, source_info and by_task
+        """
         self.store_rlz_info(self.rel_ruptures)
         source_ids = self.store_source_info(self.calc_times)
         if self.by_task:
