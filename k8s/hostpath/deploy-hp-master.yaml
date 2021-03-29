@@ -38,7 +38,8 @@ spec:
           - echo startmaster > /home/openquake/avvio.log;
             sudo chown -R openquake:openquake /oqdata;
             sed -i 's,127.0.0.1,'"$OQ_MASTER_IP"',' /opt/openquake/openquake.cfg;
-            cat /opt/openquake/openquake.cfg
+            cat /opt/openquake/openquake.cfg;
+            sleep 360;
         volumeMounts:
                 #- mountPath: /etc/openquake
                 #name: config
