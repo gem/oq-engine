@@ -367,7 +367,7 @@ def view_portfolio_loss(token, dstore):
     ws = weights[rlzs]
     eids = df.pop('event_id').to_numpy()
     arr = df.to_numpy()
-    E, L = arr.shape
+    E = len(rlzs)
     avg = ws[eids] @ arr / ws.sum() * E / R
     # err = [avg[li] * binning_error(arr[:, li], eids) for li in range(L)]
     rows = [['avg'] + list(avg)]  # , ['err'] + err]
