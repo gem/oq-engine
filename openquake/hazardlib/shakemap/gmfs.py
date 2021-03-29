@@ -234,7 +234,8 @@ def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
         std = numpy.array(shakemap['std']['MMI'])
         sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
     except ValueError as e:
-        raise ValueError('No stds for MMI intensities supplied.') from e
+        raise ValueError('No stds for MMI intensities supplied, only %s' %
+                         ', '.join(shakemap['std'].dtype.names)) from e
     return sig @ Z + mu
 
 

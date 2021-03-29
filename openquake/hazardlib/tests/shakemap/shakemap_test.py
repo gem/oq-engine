@@ -28,7 +28,7 @@ def mean_std(shakemap, site_effects):
                      'spatialcorr': 'yes', 'crosscorr': 'yes'})
     _, gmfs = to_gmfs(
         shakemap, gmf_dict, site_effects, trunclevel=3,
-        num_gmfs=1000, seed=42)
+        num_gmfs=1000, seed=42, imts=['PGA', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)'])
     return gmfs.mean(axis=1), numpy.log(gmfs).std(axis=1)
 
 
