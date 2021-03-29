@@ -22,9 +22,9 @@ data:
     # enable multi_user if you have a multiple user installation
     multi_user = true
     file = /oqdata/db.sqlite3
-    listen = $(OQ_MASTER_IP)
+    listen = 127.0.0.1
     # example: master.hc
-    host = $(OQ_MASTER_IP)
+    host = 127.0.0.1
     # port 1908 has a good reputation:
     # https://isc.sans.edu/port.html?port=1908
     port = 1908

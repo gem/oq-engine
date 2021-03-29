@@ -31,13 +31,12 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \ 
     pip --disable-pip-version-check install -e . -r requirements-py38-linux64.txt --no-warn-script-location
 #
+USER openquake
+ENV HOME /home/openquake
 #
 ENV OQ_CONFIG_FILE /opt/openquake/openquake.cfg
 ADD openquake.cfg /opt/openquake/openquake.cfg
 #
-#
-USER openquake
-ENV HOME /home/openquake
 WORKDIR ${HOME}
 RUN mkdir oqdata 
 #
