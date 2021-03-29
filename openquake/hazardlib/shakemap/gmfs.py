@@ -173,6 +173,8 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     :param crosscorr: 'no', 'yes' or 'full'
     :returns: F(Z, mu) to calculate gmfs
     """
+    # make sure all imts used have a period (basically that its not MMI)
+    imts = [im for im in imts if hasattr(im, 'period')]
     # checks
     N = len(shakemap)
     M = len(imts)
@@ -215,6 +217,25 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
     # mu has unit (pctg), sig has unit ln(pctg)
     return numpy.exp(sig @ Z + numpy.log(mu)) / PCTG
+
+
+@ calculate_gmfs.add('mmi')
+def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
+    """
+    Basic calculation method to sample data from shakemap values
+    given mmi intensities.
+
+    :param shakemap: site coordinates with shakemap values
+    :param imts: list of required imts
+    :returns: F(Z, mu) to calculate gmfs
+    """
+    try:
+        # create diag matrix with std values
+        std = numpy.array(shakemap['std']['MMI'])
+        sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
+    except ValueError as e:
+        raise ValueError('No stds for MMI intensities supplied.') from e
+    return sig @ Z + mu
 
 
 def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
