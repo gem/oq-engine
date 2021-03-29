@@ -26,3 +26,6 @@ nodes:
     hostPort: 80
 - role: worker
   image: kindest/node:v1.19.4
+  extraMounts:
+  - hostPath: /kind_pvc/data #match FS on host
+    containerPath: /data

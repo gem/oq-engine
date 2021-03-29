@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hostpath-master
+  namespace: default
+  labels:
+    app: engine-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: engine-master
+  template:
+    metadata:
+      labels:
+        app: engine-master
+        version: "latest"
+    spec:
+      containers:
+      - name: engine-master
+        image: openquake/engine:nightly
+        env:
+        #- name: OQ_CONFIG_FILE
+          #value: /etc/openquake/openquake.cfg
+        - name: OQ_MASTER_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: OQ_MASTER_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8800
+        command: ["/bin/sh", "-c"] 
+        args: 
+          - echo startmaster > /home/openquake/avvio.log;
+            sed -i 's,127.0.0.1,'"$OQ_MASTER_IP"',' /opt/openquake/openquake.cfg;
+            cat /opt/openquake/openquake.cfg;
+            sleep 720;
+        volumeMounts:
+                #- mountPath: /etc/openquake
+                #name: config
+        - mountPath: /oqdata  # in the container filesystem
+          name: kinddata        #name as defined in volumes
+      volumes:
+        - name: kinddata # name of volume
+          hostPath:
+            path: /data #  matches kind containerPath:
+        - name: config
+          configMap:
+            name: oqcfg

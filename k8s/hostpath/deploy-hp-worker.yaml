@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hostpath-worker
+  namespace: default
+  labels:
+    app: engine-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: engine-workers
+  template:
+    metadata:
+      labels:
+        app: engine-workers
+        version: "latest"
+    spec:
+      containers:
+      - name: engine-worker
+        image: openquake/engine:nightly
+        env:
+        - name: OQ_WORKER_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: OQ_WORKER_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 1909
+        command: ["/bin/sh", "-c"] 
+        args: 
+          - echo startworker > /home/openquake/avvio.log;
+            python3 -m openquake.baselib.workerpool;
+        volumeMounts:
+        - mountPath: /oqdata  # in the container filesystem
+          name: kinddata        #name as defined in volumes
+      volumes:
+        - name: kinddata # name of volume
+          hostPath:
+            path: /data #  matches kind containerPath:
