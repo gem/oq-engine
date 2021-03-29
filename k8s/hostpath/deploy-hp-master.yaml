@@ -22,6 +22,14 @@ spec:
         env:
         - name: OQ_CONFIG_FILE
           value: /etc/openquake/openquake.cfg
+        - name: OQ_MASTER_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: OQ_MASTER_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         imagePullPolicy: Always
         ports:
         - containerPort: 8800
@@ -29,7 +37,7 @@ spec:
         args: 
           - echo start > /home/openquake/avvio.log;
             sudo chown -R openquake:openquake /oqdata;
-            oq webui start;
+            oq dbserver start;
         volumeMounts:
         - mountPath: /etc/openquake
           name: config
