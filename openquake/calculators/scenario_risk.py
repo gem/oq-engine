@@ -163,15 +163,15 @@ class EventBasedRiskCalculator(base.RiskCalculator):
 
         with self.monitor('saving agg_loss_table'):
             logging.info('Saving the agg_loss_table')
-            K = len(result.aggkey)
+            K = len(result.aggkey) - 1
             alt = result.to_dframe()
-            self.datastore.create_dframe('agg_loss_table', alt)
+            self.datastore.create_dframe('agg_loss_table', alt, K=K, L=L)
 
         # save agg_losses
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         if oq.investigation_time is None:  # scenario, compute agg_losses
             alt['rlz_id'] = self.rlzs[alt.event_id.to_numpy()]
-            agglosses = numpy.zeros((K, self.R, L), F32)
+            agglosses = numpy.zeros((K+1, self.R, L), F32)
             for (agg_id, rlz_id), df in alt.groupby(['agg_id', 'rlz_id']):
                 agglosses[agg_id, rlz_id] = numpy.array(
                     [df[ln].sum() for ln in oq.loss_names]
@@ -187,7 +187,7 @@ class EventBasedRiskCalculator(base.RiskCalculator):
                 prc.exported = self.exported
             prc.run(exports='')
             try:
-                agglosses = self.datastore['agg_losses-rlzs'][K - 1]
+                agglosses = self.datastore['agg_losses-rlzs'][K]
             except KeyError:  # not enough events in post_risk
                 logging.error('No agg_losses-rlzs')
                 return
