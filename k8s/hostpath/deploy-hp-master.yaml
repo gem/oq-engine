@@ -40,8 +40,8 @@ spec:
             sed -i 's,127.0.0.1,'"$OQ_MASTER_IP"',' /opt/openquake/openquake.cfg;
             cat /opt/openquake/openquake.cfg
         volumeMounts:
-        - mountPath: /etc/openquake
-          name: config
+                #- mountPath: /etc/openquake
+                #name: config
         - mountPath: /oqdata  # in the container filesystem
           name: kinddata        #name as defined in volumes
       volumes:
