@@ -412,6 +412,10 @@ class Result(object):
                     'The master is at version %s while the worker %s is at '
                     'version %s' % (mon.version, socket.gethostname(),
                                     version))
+            if mon.config.dbserver.host != config.dbserver.host:
+                raise RuntimeError(
+                    'The master has dbserver.host=%s while the worker has %s'
+                    % (mon.config.dbserver.host, config.dbserver.host))
             with mon:
                 val = func(*args)
         except StopIteration:
@@ -444,6 +448,7 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 
 dummy_mon = Monitor()
 dummy_mon.version = version
+dummy_mon.config = config
 dummy_mon.backurl = None
 
 
@@ -780,6 +785,7 @@ class Starmap(object):
             monitor.backurl = 'tcp://%s:%s' % (
                 config.dbserver.host, self.socket.port)
             monitor.version = version
+            monitor.config = config
         OQ_TASK_NO = os.environ.get('OQ_TASK_NO')
         if OQ_TASK_NO is not None and self.task_no != int(OQ_TASK_NO):
             self.task_no += 1
