@@ -9,19 +9,19 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: master
+      app: engine-master
   template:
     metadata:
       labels:
-        app: master
+        app: engine-master
         version: "latest"
     spec:
       containers:
       - name: engine-master
         image: openquake/engine:nightly
         env:
-                #- name: OQ_CONFIG_FILE
-                #value: /etc/openquake/openquake.cfg
+        #- name: OQ_CONFIG_FILE
+          #value: /etc/openquake/openquake.cfg
         - name: OQ_MASTER_NAME
           valueFrom:
             fieldRef:
@@ -38,7 +38,7 @@ spec:
           - echo startmaster > /home/openquake/avvio.log;
             sed -i 's,127.0.0.1,'"$OQ_MASTER_IP"',' /opt/openquake/openquake.cfg;
             cat /opt/openquake/openquake.cfg;
-            sleep 360;
+            sleep 720;
         volumeMounts:
                 #- mountPath: /etc/openquake
                 #name: config
