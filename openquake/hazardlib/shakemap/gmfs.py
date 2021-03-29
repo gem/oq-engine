@@ -173,7 +173,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     :param crosscorr: 'no', 'yes' or 'full'
     :returns: F(Z, mu) to calculate gmfs
     """
-    # make sure all imts used have a period (basically that its not MMI)
+    # make sure all imts used have a period, needed for correlation
     imts = [im for im in imts if hasattr(im, 'period')]
     # checks
     N = len(shakemap)

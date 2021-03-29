@@ -161,7 +161,6 @@ class ShakemapTestCase(unittest.TestCase):
                          [0.5815353, 0.6460007, 0.6491335, 0.6603457]])
 
     def test_for_mmi(self):
-        # files provided by Vitor Silva, without site amplification
         f1 = 'file://' + os.path.join(CDIR, 'ghorka_grid.xml')
         f2 = 'file://' + os.path.join(CDIR, 'ghorka_uncertainty.xml')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
