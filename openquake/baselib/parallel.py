@@ -448,6 +448,7 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 
 dummy_mon = Monitor()
 dummy_mon.version = version
+dummy_mon.config = config
 dummy_mon.backurl = None
 
 
