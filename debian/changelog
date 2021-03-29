@@ -1,3 +1,7 @@
+  [Nicolas Schmid]
+  * Improve performance for ShakeMap calculations when spatialcorr and crosscorr
+    are both set to 'no'
+
   [Michele Simionato]
   * Supported exposures with generic CSV fields thanks to the `exposureFields`
     mapping
