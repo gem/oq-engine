@@ -154,7 +154,6 @@ def cholesky(spatial_cov, cross_corr):
 
 calculate_gmfs = CallableDict()
 
-MAXSITES = 1000
 CORRELATION_MATRIX_TOO_LARGE = '''\
 You have a correlation matrix which is too large: %s > %d.
 To avoid that, set a proper `region_grid_spacing` so that your exposure
@@ -177,10 +176,6 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     # checks
     N = len(shakemap)
     M = len(imts)
-    if spatialcorr != 'no' and N > MAXSITES:
-        # hard-coded, heuristic
-        raise ValueError(CORRELATION_MATRIX_TOO_LARGE %
-                         (N, MAXSITES))
     if N * M > cholesky_limit:
         raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
             '%d x %d' % (M, N), cholesky_limit))
@@ -203,8 +198,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
 
     # mu has unit (pctg), L has unit ln(pctg)
-    mu = numpy.log(mu)
-    return numpy.exp(L @ Z + mu) / PCTG
+    return numpy.exp(L @ Z + numpy.log(mu)) / PCTG
 
 
 @calculate_gmfs.add('basic')
@@ -219,10 +213,8 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     # create diag matrix with std values
     std = numpy.array([shakemap['std'][str(im)] for im in imts])
     sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
-
     # mu has unit (pctg), sig has unit ln(pctg)
-    mu = numpy.log(mu)
-    return numpy.exp(sig @ Z + mu) / PCTG
+    return numpy.exp(sig @ Z + numpy.log(mu)) / PCTG
 
 
 def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
