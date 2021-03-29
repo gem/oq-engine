@@ -32,11 +32,13 @@ spec:
               fieldPath: status.podIP
         imagePullPolicy: Always
         ports:
-        - containerPort: 8800
+        - name: webui
+          containerPort: 8800
         command: ["/bin/sh", "-c"] 
         args: 
           - echo startmaster > /home/openquake/avvio.log;
             sed -i 's,127.0.0.1,'"$OQ_MASTER_IP"',' /opt/openquake/openquake.cfg;
+            oq --version;
             cat /opt/openquake/openquake.cfg;
             sleep 720;
         volumeMounts:

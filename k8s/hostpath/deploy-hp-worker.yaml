@@ -34,6 +34,7 @@ spec:
         command: ["/bin/sh", "-c"] 
         args: 
           - echo startworker > /home/openquake/avvio.log;
+            oq --version;
             python3 -m openquake.baselib.workerpool;
         volumeMounts:
         - mountPath: /oqdata  # in the container filesystem
