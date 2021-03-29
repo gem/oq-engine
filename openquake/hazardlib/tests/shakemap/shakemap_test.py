@@ -28,7 +28,7 @@ def mean_std(shakemap, site_effects):
                      'spatialcorr': 'yes', 'crosscorr': 'yes'})
     _, gmfs = to_gmfs(
         shakemap, gmf_dict, site_effects, trunclevel=3,
-        num_gmfs=1000, seed=42)
+        num_gmfs=1000, seed=42, imts=['PGA', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)'])
     return gmfs.mean(axis=1), numpy.log(gmfs).std(axis=1)
 
 
@@ -159,3 +159,26 @@ class ShakemapTestCase(unittest.TestCase):
                          [0.6077153, 0.6661571, 0.6296381, 0.668559],
                          [0.6146356, 0.6748830, 0.6714424, 0.6613612],
                          [0.5815353, 0.6460007, 0.6491335, 0.6603457]])
+
+    def test_for_mmi(self):
+        f1 = 'file://' + os.path.join(CDIR, 'ghorka_grid.xml')
+        f2 = 'file://' + os.path.join(CDIR, 'ghorka_uncertainty.xml')
+        uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
+        sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
+                                                     uridict, imt_dt.names)
+        n = 4  # number of sites
+        self.assertEqual(len(sitecol), n)
+
+        _, gmfs = to_gmfs(shakemap, {'kind': 'mmi'}, False,
+                          trunclevel=3, num_gmfs=1000, seed=42, imts=['MMI'])
+
+        gmf_by_imt = gmfs.mean(axis=1)
+        std_by_imt = gmfs.std(axis=1)
+        aae(gmf_by_imt, [[3.80704848],
+                         [3.89791949],
+                         [3.88040454],
+                         [3.93584243]])
+        aae(std_by_imt, [[0.71068558],
+                         [0.72233552],
+                         [0.72033749],
+                         [0.69906908]])

@@ -1,6 +1,7 @@
   [Nicolas Schmid]
   * Improve performance for ShakeMap calculations when spatialcorr and crosscorr
     are both set to 'no'
+  * Add feature to do ShakeMap calculations for vulnerability models using MMI.
 
   [Michele Simionato]
   * Supported exposures with generic CSV fields thanks to the `exposureFields`

@@ -1183,15 +1183,33 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         logging.info('Extracted %d assets', len(assetcol))
 
     # assemble dictionary to decide on the calculation method for the gmfs
-    if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
-        # cross correlation and/or spatial correlation after S&H
-        gmf_dict = {'kind': 'Silva&Horspool',
-                    'spatialcorr': oq.spatial_correlation,
-                    'crosscorr': oq.cross_correlation,
-                    'cholesky_limit': oq.cholesky_limit}
+    if 'MMI' in oq.imtls:
+        # calculations with MMI should be executed
+        if len(oq.imtls) == 1:
+            # only MMI intensities
+            if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
+                logging.warning('Calculations with MMI intensities do not '
+                                'support correlation. No correlations '
+                                'are applied.')
+
+            gmf_dict = {'kind': 'mmi'}
+        else:
+            # there are also other intensities than MMI
+            raise RuntimeError(
+                'There are the following intensities in your model: %s '
+                'Models mixing MMI and other intensities are not supported. '
+                % ', '.join(oq.imtls.keys()))
     else:
-        # no correlation required, basic calculation is faster
-        gmf_dict = {'kind': 'basic'}
+        # no MMI intensities, calculation with or without correlation
+        if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
+            # cross correlation and/or spatial correlation after S&H
+            gmf_dict = {'kind': 'Silva&Horspool',
+                        'spatialcorr': oq.spatial_correlation,
+                        'crosscorr': oq.cross_correlation,
+                        'cholesky_limit': oq.cholesky_limit}
+        else:
+            # no correlation required, basic calculation is faster
+            gmf_dict = {'kind': 'basic'}
 
     logging.info('Building GMFs')
     with calc.monitor('building/saving GMFs'):
