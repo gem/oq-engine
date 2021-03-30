@@ -35,11 +35,11 @@ spec:
         args: 
           - echo "workerIP $OQ_WORKER_IP"  > /home/openquake/avvio.log;
             sed -i 's,127.0.0.1,'"$OQ_MASTER_IP"',' /opt/openquake/openquake.cfg;
-            cp -a /opt/openquake /oqdata;
-            /oqdata/openquake/bin/python3 -m  openquake.commands dbserver start;
+            cp -a /opt/openquake /oqshared;
+            /oqshared/openquake/bin/python3 -m  openquake.commands dbserver start;
             sleep 3600;
         volumeMounts:
-        - mountPath: /oqdata  # in the container filesystem
+        - mountPath: /oqshared  # in the container filesystem
           name: kinddata        #name as defined in volumes
 
       - name: worker
@@ -59,9 +59,9 @@ spec:
         command: ["/bin/sh", "-c"] 
         args: 
           - echo startworker > /home/openquake/avvio.log;
-            /oqdata/openquake/bin/python3 -m openquake.baselib.workerpool;
+            /oqshared/openquake/bin/python3 -m openquake.baselib.workerpool;
         volumeMounts:
-        - mountPath: /oqdata  # in the container filesystem
+        - mountPath: /oqshared  # in the container filesystem
           name: kinddata        #name as defined in volumes
 #
 

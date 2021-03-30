@@ -21,9 +21,9 @@ spec:
         image: openquake/engine:nightly
         env:
         - name: OQ_CONFIG_FILE
-          value: /oqdata/openquake/openquake.cfg
+          value: /oqshared/openquake/openquake.cfg
         - name: PATH
-          value: /oqdata/openquake/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+          value: /oqshared/openquake/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         - name: OQ_WORKER_NAME
           valueFrom:
             fieldRef:
@@ -42,7 +42,7 @@ spec:
             python3 -m openquake.baselib.workerpool;
             sleep 720;
         volumeMounts:
-        - mountPath: /oqdata  # in the container filesystem
+        - mountPath: /oqshared  # in the container filesystem
           name: kinddata        #name as defined in volumes
       volumes:
         - name: kinddata # name of volume

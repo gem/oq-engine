@@ -20,8 +20,8 @@ data:
 
     [dbserver]
     # enable multi_user if you have a multiple user installation
-    multi_user = true
-    file = /oqdata/db.sqlite3
+    multi_user = false
+    file = /oqshared/oqdata/db.sqlite3
     listen = 127.0.0.1
     # example: master.hc
     host = 127.0.0.1
@@ -39,10 +39,10 @@ data:
     password =
 
     [zworkers]
-    host_cores = 10.244.1.16 -1
+    host_cores = engine-workers -1
     ctrl_port = 1909
     remote_python =
 
     [directory]
-    shared_dir = /oqdata
+    shared_dir = /oqshared/oqdata
     custom_tmp =

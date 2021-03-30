@@ -1,18 +1,12 @@
-#NodePort with Port Mappings
-#https://kind.sigs.k8s.io/docs/user/configuration/#networking
-kind: Service
 apiVersion: v1
+kind: Service
 metadata:
-  namespace: openquake
-  name: engine-service
+  name: engine-webui
   labels:
-    app: oqmaster
+    run: engine-webui
 spec:
-  type: ClusterIP 
-  clusterIP: None
   ports:
-  - name: webui
+  - port: 8800
     protocol: TCP
-    port: 8800 #must same of containerPort
   selector:
-    app: oqmaster
+    app: engine-master
