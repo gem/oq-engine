@@ -145,7 +145,7 @@ def _make_pmap(ctxs, cmaker):
 
 def read_ctxs(dstore, slc=slice(None), req_site_params=None):
     """
-     :returns: a list of contexts
+     :returns: a list of contexts plus a list of lists of contexts
     """
     sitecol = dstore['sitecol'].complete
     site_params = {par: sitecol[par]
