@@ -18,26 +18,25 @@
 
 import os
 import math
+import warnings
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.gsim.projects.acme_base import (CoeffsTableACME,
-                                            get_phi_ss_at_quantile_ACME)
+from openquake.hazardlib.gsim.projects.acme_base import (
+    CoeffsTableACME, get_phi_ss_at_quantile_ACME)
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
         YenierAtkinson2015BSSA, get_fs_SeyhanStewart2014
-
 from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
                                                get_tau_at_quantile,
-                                               #get_phi_ss_at_quantile,
                                                get_phi_ss,
                                                TAU_SETUP,
                                                PHI_SETUP,
                                                PHI_S2SS_MODEL,
                                                TAU_EXECUTION)
-
+warnings.filterwarnings("ignore", category=np.RankWarning)
 PATH = os.path.join(os.path.dirname(__file__), "..", "nga_east_tables")
 
 

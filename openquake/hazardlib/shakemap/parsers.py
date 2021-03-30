@@ -36,16 +36,19 @@ US_GOV = 'https://earthquake.usgs.gov'
 SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
 F32 = numpy.float32
 SHAKEMAP_FIELDS = set(
-    'LON LAT SVEL PGA PSA03 PSA10 PSA30 STDPGA STDPSA03 STDPSA10 STDPSA30'
+    'LON LAT SVEL MMI PGA PSA03 PSA10 PSA30 '
+    'STDMMI STDPGA STDPSA03 STDPSA10 STDPSA30'
     .split())
 FIELDMAP = {
     'LON': 'lon',
     'LAT': 'lat',
     'SVEL': 'vs30',
+    'MMI': ('val', 'MMI'),
     'PGA': ('val', 'PGA'),
     'PSA03': ('val', 'SA(0.3)'),
     'PSA10': ('val', 'SA(1.0)'),
     'PSA30': ('val', 'SA(3.0)'),
+    'STDMMI': ('std', 'MMI'),
     'STDPGA': ('std', 'PGA'),
     'STDPSA03': ('std', 'SA(0.3)'),
     'STDPSA10': ('std', 'SA(1.0)'),
