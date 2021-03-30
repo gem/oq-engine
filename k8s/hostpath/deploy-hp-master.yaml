@@ -42,6 +42,7 @@ spec:
             sed -i 's,127.0.0.1,'"$OQ_MASTER_IP"',' /oqdata/openquake/openquake.cfg;
             oq --version;
             cat /oqdata/openquake/openquake.cfg;
+            python3 -m openquake.commands dbserver start;
             sleep 720;
         volumeMounts:
                 #- mountPath: /etc/openquake

@@ -6,7 +6,7 @@ metadata:
   labels:
     app: engine-worker
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: engine-workers
@@ -33,12 +33,13 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         imagePullPolicy: Always
-        #ports:
-        #- containerPort: 1909
+        ports: # need for svc
+        - containerPort: 1909
         command: ["/bin/sh", "-c"] 
         args: 
           - oq --version;
             which python3;
+            python3 -m openquake.baselib.workerpool;
             sleep 720;
         volumeMounts:
         - mountPath: /oqdata  # in the container filesystem
