@@ -606,9 +606,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.counts[grp_id] += 1
                 allargs.append((sg, rlzs_by_gsim, self.params))
             else:  # regroup the sources in blocks
-                blks = (groupby(sg, get_source_id).values() if oq.disagg_by_src
-                        else block_splitter(
-                                sg, max_weight, get_weight, sort=True))
+                blks = (groupby(sg, get_source_id).values()
+                        if oq.disagg_by_src else
+                        block_splitter(sg, max_weight, get_weight, sort=True))
                 blocks = list(blks)
                 self.counts[grp_id] += len(blocks)
                 for block in blocks:

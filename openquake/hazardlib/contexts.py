@@ -853,7 +853,7 @@ class RuptureContext(BaseContext):
 
     # used in acme_2019
     def __len__(self):
-        return len(self.vs30)
+        return len(self.sites)
 
     def roundup(self, minimum_distance):
         """
