@@ -44,10 +44,12 @@ def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
         a slice of ruptures
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
+    :param grp_id:
+        the group of ruptures currently considered
     :param monitor:
         monitor of the currently running job
     :returns:
-        a dictionary sid -> poes for each IMT
+        dictionary grp_id -> poes of shape (N, L, G)
     """
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         cmaker.investigation_time)
@@ -72,8 +74,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
     def pre_checks(self):
         """
-        Checks on the number of sites, atomic groups and size of the
-        disaggregation matrix.
+        Check the number of sites and the absence of atomic groups
         """
         if self.N >= 32768:
             raise ValueError('You can disaggregate at max 32,768 sites')
