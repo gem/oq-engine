@@ -20,6 +20,10 @@ spec:
       - name: engine-worker
         image: openquake/engine:nightly
         env:
+        - name: OQ_CONFIG_FILE
+          value: /oqshared/openquake/openquake.cfg
+        - name: PATH
+          value: /oqshared/openquake/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         - name: OQ_WORKER_NAME
           valueFrom:
             fieldRef:
@@ -29,14 +33,16 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         imagePullPolicy: Always
-        ports:
+        ports: # need for svc
         - containerPort: 1909
         command: ["/bin/sh", "-c"] 
         args: 
-          - echo startworker > /home/openquake/avvio.log;
+          - oq --version;
+            which python3;
             python3 -m openquake.baselib.workerpool;
+            sleep 720;
         volumeMounts:
-        - mountPath: /oqdata  # in the container filesystem
+        - mountPath: /oqshared  # in the container filesystem
           name: kinddata        #name as defined in volumes
       volumes:
         - name: kinddata # name of volume
