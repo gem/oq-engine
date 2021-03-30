@@ -1,45 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hostpath-master
+  name: oq-cluster
   namespace: default
   labels:
-    app: engine-master
+    app: cluster
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: master
+      app: cluster
   template:
     metadata:
       labels:
-        app: master
+        app: cluster
         version: "latest"
     spec:
       containers:
-      - name: engine-worker
-        image: openquake/engine:nightly
-        env:
-        - name: OQ_WORKER_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: OQ_WORKER_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 1909
-        command: ["/bin/sh", "-c"] 
-        args: 
-          - echo startworker > /home/openquake/avvio.log;
-            python3 -m openquake.baselib.workerpool;
-        volumeMounts:
-        - mountPath: /oqdata  # in the container filesystem
-          name: kinddata        #name as defined in volumes
-#
-      - name: engine-master
+      - name: master
         image: openquake/engine:nightly
         env:
         - name: OQ_MASTER_NAME
@@ -57,11 +35,35 @@ spec:
         args: 
           - echo "workerIP $OQ_WORKER_IP"  > /home/openquake/avvio.log;
             sed -i 's,127.0.0.1,'"$OQ_MASTER_IP"',' /opt/openquake/openquake.cfg;
-            oq dbserver start;
-            sleep 360;
+            cp -a /opt/openquake /oqdata;
+            /oqdata/openquake/bin/python3 -m  openquake.commands dbserver start;
+            sleep 3600;
         volumeMounts:
         - mountPath: /oqdata  # in the container filesystem
           name: kinddata        #name as defined in volumes
+
+      - name: worker
+        image: openquake/engine:nightly
+        env:
+        - name: OQ_WORKER_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: OQ_WORKER_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 1909
+        command: ["/bin/sh", "-c"] 
+        args: 
+          - echo startworker > /home/openquake/avvio.log;
+            /oqdata/openquake/bin/python3 -m openquake.baselib.workerpool;
+        volumeMounts:
+        - mountPath: /oqdata  # in the container filesystem
+          name: kinddata        #name as defined in volumes
+#
 
       volumes:
         - name: kinddata # name of volume

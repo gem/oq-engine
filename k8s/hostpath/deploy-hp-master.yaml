@@ -20,8 +20,10 @@ spec:
       - name: engine-master
         image: openquake/engine:nightly
         env:
-        #- name: OQ_CONFIG_FILE
-          #value: /etc/openquake/openquake.cfg
+        - name: OQ_CONFIG_FILE
+          value: /oqdata/openquake/openquake.cfg
+        - name: PATH
+          value: /oqdata/openquake/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         - name: OQ_MASTER_NAME
           valueFrom:
             fieldRef:
@@ -36,10 +38,10 @@ spec:
           containerPort: 8800
         command: ["/bin/sh", "-c"] 
         args: 
-          - echo startmaster > /home/openquake/avvio.log;
-            sed -i 's,127.0.0.1,'"$OQ_MASTER_IP"',' /opt/openquake/openquake.cfg;
+          - cp -a /opt/openquake /oqdata;
+            sed -i 's,127.0.0.1,'"$OQ_MASTER_IP"',' /oqdata/openquake/openquake.cfg;
             oq --version;
-            cat /opt/openquake/openquake.cfg;
+            cat /oqdata/openquake/openquake.cfg;
             sleep 720;
         volumeMounts:
                 #- mountPath: /etc/openquake
