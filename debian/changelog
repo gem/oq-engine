@@ -1,3 +1,7 @@
+  [Pablo Heresi]
+  * Implemented Idini et al (2017) GSIM.
+  * Included 'soiltype' into site.py and adds it in site_test.py and oqvalidation.py
+  
   [Michele Simionato]
   * Supported exposures with generic CSV fields thanks to the `exposureFields`
     mapping
