@@ -36,6 +36,7 @@ class SiteModelParam(object):
         self.reference_depth_to_2pt5km_per_sec = 5.6
         self.reference_siteclass = b'C'
         self.reference_backarc = False
+        self.reference_soiltype = 3
 
 
 class SiteTestCase(unittest.TestCase):

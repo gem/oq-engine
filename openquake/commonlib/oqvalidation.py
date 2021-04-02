@@ -461,6 +461,13 @@ reference_siteclass:
   Example: *reference_siteclass = "A"*.
   Default: "D"
 
+reference_soiltype:
+  Used when there is no site model to specify a global soil type.
+  The soiltype is an integer between 1 (rock) and 6, and it is used in some 
+  GMPEs, like Idini (2017).
+  Example: *reference_soiltype = 3*.
+  Default: 1
+  
 reference_vs30_type:
   Used when there is no site model to specify a global vs30 type.
   The choices are "inferred" or "measured"
@@ -693,7 +700,8 @@ class OqParam(valid.ParamSet):
         z1pt0='reference_depth_to_1pt0km_per_sec',
         z2pt5='reference_depth_to_2pt5km_per_sec',
         siteclass='reference_siteclass',
-        backarc='reference_backarc')
+        backarc='reference_backarc',
+        soiltype='reference_soiltype')
     aggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), None)
@@ -784,6 +792,7 @@ class OqParam(valid.ParamSet):
         valid.positivefloat, numpy.nan)
     reference_siteclass = valid.Param(valid.Choice('A', 'B', 'C', 'D'), 'D')
     reference_backarc = valid.Param(valid.boolean, False)
+    reference_soiltype = valid.Param(valid.positiveints, 1)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
