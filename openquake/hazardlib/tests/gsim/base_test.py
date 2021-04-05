@@ -26,7 +26,7 @@ from copy import deepcopy
 from openquake.hazardlib.imt import SA
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
-from openquake.hazardlib.cross_correlation import (BakerJayaram2008, 
+from openquake.hazardlib.cross_correlation import (BakerJayaram2008,
         get_correlation_mtx)
 from openquake.hazardlib.contexts import RuptureContext
 
@@ -381,11 +381,9 @@ class GsimCS(unittest.TestCase):
 
     def test_cs01(self):
 
-        stds_types = [const.StdDev.TOTAL] 
         eps = 1.86
         imts = [SA(0.1), SA(0.2), SA(0.3)]
         cv = numpy.squeeze(get_correlation_mtx(self.com, SA(0.2), imts, 1))
-        print(cv)
         cmea, cstd = self.gmm.get_cs_mean_std([self.ctx], imts, cv, eps)
 
         # Testing CS mean

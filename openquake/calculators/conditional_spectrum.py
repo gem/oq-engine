@@ -24,9 +24,7 @@ import operator
 import numpy
 
 from openquake.baselib import parallel
-from openquake.baselib.general import (
-    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs,
-    block_splitter, groupby)
+from openquake.baselib.general import block_splitter
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.contexts import read_ctxs, RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
@@ -57,11 +55,31 @@ def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
         dstore.open('r')
         allctxs, _close = read_ctxs(
             dstore, slc, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
-    N, L, G = len(_close), cmaker.imtls.size, len(cmaker.gsims)
-    acc = numpy.ones((N, L, G))
-    for ctx, poes in cmaker.gen_ctx_poes(allctxs):
-        acc *= ctx.get_probability_no_exceedance(poes)
-    return {grp_id: 1 - acc}
+
+    # ------------------------------------------------------------------------
+    # TODO This should be taken from input!
+    from openquake.hazardlib.cross_correlation import BakerJayaram2008, \
+        get_correlation_mtx
+    com = BakerJayaram2008()
+    from openquake.hazardlib.imt import SA, from_string
+    imts = [from_string(key) for key in cmaker.imtls]
+    cvec = numpy.squeeze(get_correlation_mtx(com, SA(0.2), imts, 1))
+    eps = 1.55
+    # ------------------------------------------------------------------------
+
+    # Get site list
+    sids = set()
+    for c in allctxs:
+        sids = sids | set(c.sids)
+
+    # Collector for CS
+    spectra = {i: [] for i in list(sids)}
+
+    # Compute CS
+    for ctx, mean_std in cmaker.gen_ctx_cs_mean_and_stds(allctxs, cvec, eps):
+        for i, idx in enumerate(ctx.sids):
+            spectra[idx].append(mean_std[:, i, :, :])
+    return {grp_id: spectra}
 
 
 @base.calculators.add('conditional_spectrum')
@@ -150,22 +168,27 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         results = smap.reduce(self.agg_result)
         return results
 
-    def agg_result(self, acc, result):
+    def agg_result(self, css, result):
         """
-        Collect the results coming from compute_disagg into self.results.
+        Collect the results coming from conditional_spectrum into self.results.
 
-        :param acc: dictionary grp_id -> NLG
-        :param result: dictionary grp_id -> NLG
+        :param acc: dictionary grp_id -> list
+        :param result: dictionary grp_id -> list
+
         """
         with self.monitor('aggregating results'):
-            [(grp_id, poes)] = result.items()
-            if grp_id not in acc:
-                acc[grp_id] = poes
-            else:
-                acc[grp_id] = 1 - (1 - acc[grp_id]) * (1 - poes)
-        return acc
+            [(grp_id, cs_mea_std)] = result.items()
+            for sid in cs_mea_std:
+                if grp_id in css:
+                    if sid in css[grp_id].keys():
+                        css[grp_id][sid].extend = cs_mea_std[sid]
+                    else:
+                        css[grp_id] = {sid: cs_mea_std[sid]}
+                else:
+                    css[grp_id] = {sid: cs_mea_std[sid]}
+        return css
 
-    def post_execute(self, acc):
-        for grp_id, poes in acc.items():
-            poes = poes.transpose(2, 0, 1)  # NLG -> GNL
-            self.datastore['poes'][self.slice_by_g[grp_id]] = poes
+    def post_execute(self, results):
+        for grp_id, css in results.items():
+            # TODO poes is wrong and should be changed
+            self.datastore['poes'][self.slice_by_g[grp_id]] = css
