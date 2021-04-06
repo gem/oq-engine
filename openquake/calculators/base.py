@@ -962,6 +962,7 @@ class RiskCalculator(HazardCalculator):
         by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
         asset_df = self.assetcol.to_dframe('site_id')
         for sid, assets in asset_df.groupby(asset_df.index):
+            print(sid)
             try:
                 df = by_sid[sid]
             except KeyError:
@@ -974,12 +975,7 @@ class RiskCalculator(HazardCalculator):
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '
                     'ground_motion_fields=False or a large minimum_intensity')
-            for slc in general.split_in_slices(
-                    len(assets), self.oqparam.assets_per_site_limit):
-                out.append(riskinput.RiskInput(getter, assets[slc]))
-            if slc.stop - slc.start >= TWO16:
-                logging.error('There are %d assets on site #%d!',
-                              slc.stop - slc.start, sid)
+            out.append(riskinput.RiskInput(getter, assets))
         return out
 
     def _gen_riskinputs_poe(self, dstore):
