@@ -962,7 +962,6 @@ class RiskCalculator(HazardCalculator):
         by_sid = dict(list(gmf_df.groupby(gmf_df.index)))
         asset_df = self.assetcol.to_dframe('site_id')
         for sid, assets in asset_df.groupby(asset_df.index):
-            print(sid)
             try:
                 df = by_sid[sid]
             except KeyError:
