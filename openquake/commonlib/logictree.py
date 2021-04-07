@@ -651,7 +651,7 @@ class SourceModelLogicTree(object):
         for brid, br in self.branches.items():
             dic = self.bsetdict[br.bs_id].copy()
             utype = dic.pop('uncertaintyType')
-            tbl.append((br.bs_id, brid, utype, br.value, br.weight))
+            tbl.append((br.bs_id, brid, utype, str(br.value), br.weight))
         attrs = self._tomldict()
         attrs['seed'] = self.seed
         attrs['num_samples'] = self.num_samples

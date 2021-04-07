@@ -206,6 +206,7 @@ except ImportError:
         "Do nothing"
 
 from openquake.baselib import config, hdf5, workerpool, version
+from openquake.baselib.python3compat import decode
 from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
@@ -561,7 +562,7 @@ class IterResult(object):
                 # measure only the memory used by the main process
                 mem_gb = memory_rss(os.getpid()) / GB
             if result.msg == 'TASK_ENDED':
-                task_sent = ast.literal_eval(self.h5['task_sent'][()])
+                task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
                 task_sent.update(self.sent)
                 del self.h5['task_sent']
                 self.h5['task_sent'] = str(task_sent)

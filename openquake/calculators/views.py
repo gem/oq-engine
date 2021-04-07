@@ -283,7 +283,7 @@ def view_job_info(token, dstore):
     """
     data = [['task', 'sent', 'received']]
     task_info = dstore['task_info'][()]
-    task_sent = ast.literal_eval(dstore['task_sent'][()])
+    task_sent = ast.literal_eval(decode(dstore['task_sent'][()]))
     for task, dic in task_sent.items():
         sent = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
