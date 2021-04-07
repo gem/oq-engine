@@ -22,7 +22,6 @@ import operator
 import functools
 import collections
 import numpy
-import scipy
 import pandas
 
 from openquake.baselib import hdf5
@@ -349,9 +348,8 @@ class RiskModel(object):
             val = assets['value-' + loss_type].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type, 'vulnerability']
-        losses = vf(asset_df, gmf_df, col, rndgen,
-                    self.minimum_asset_loss[loss_type])
-        return losses
+        return vf(asset_df, gmf_df, col, rndgen,
+                  self.minimum_asset_loss[loss_type])
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
@@ -679,23 +677,23 @@ class CompositeRiskModel(collections.abc.Mapping):
         dic = dict(eids=eids, assets=assets.to_records(), rlzi=rlz,
                    loss_types=self.loss_types, haz=haz)
         for lt in self.loss_types:
-            arrays = []
+            outs = []
             rmodels, weights = self.get_rmodels_weights(lt, taxo)
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    arrays.append(rm(lt, assets, haz, col, rndgen))
+                    outs.append(rm(lt, assets, haz, col, rndgen))
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
-                    arrays.append(rm(lt, assets, hcurve))
+                    outs.append(rm(lt, assets, hcurve))
 
             # average on the risk models (unsupported for classical_risk)
-            dic[lt] = arrays[0]
+            dic[lt] = outs[0]
             if hasattr(dic[lt], 'loss'):  # event_based_risk
                 if weights[0] != 1:
                     dic[lt].loss *= weights[0]
-                for alt, w in zip(arrays[1:], weights[1:]):
+                for alt, w in zip(outs[1:], weights[1:]):
                     dic[lt].loss += alt.loss * w
             elif len(weights) > 1:  # scenario_damage
                 dic[lt] = numpy.average(arrays, weights=weights, axis=0)
