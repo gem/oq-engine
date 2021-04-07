@@ -23,6 +23,13 @@ import unittest.mock as mock
 import numpy
 from copy import deepcopy
 
+from openquake.hazardlib.imt import SA
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib.cross_correlation import (BakerJayaram2008,
+        get_correlation_mtx)
+from openquake.hazardlib.contexts import RuptureContext
+
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
     GMPE, CoeffsTable, SitesContext, RuptureContext,
@@ -356,3 +363,39 @@ class CoeffsTableTestCase(unittest.TestCase):
         self.assertEqual(str(te.exception),
                          "CoeffsTable cannot be constructed with "
                          "inputs of the form 'int'")
+
+
+class GsimCS(unittest.TestCase):
+
+    def setUp(self):
+
+        self.gmm = BooreAtkinson2008()
+        self.com = BakerJayaram2008()
+        self.ctx = RuptureContext()
+        self.ctx.rjb = numpy.array([1., 30.])
+        self.ctx.vs30 = numpy.array([760., 760.])
+        self.ctx.mag = 6.0
+        self.ctx.rake = 90.0
+        self.ctx.sids = numpy.array([0, 1])
+        self.imt = PGA()
+
+    def test_cs01(self):
+
+        eps = 1.86
+        imts = [SA(0.1), SA(0.2), SA(0.3)]
+        cv = numpy.squeeze(get_correlation_mtx(self.com, SA(0.2), imts, 1))
+        cmea, cstd = self.gmm.get_cs_mean_std([self.ctx], imts, cv, eps)
+
+        # Testing CS mean
+        cmea_expected = numpy.array([[ 0.60726573,  0.82988379,  0.45029107],    
+                                     [-1.19302969, -0.78783741, -1.09319389]])
+        numpy.testing.assert_almost_equal(cmea, cmea_expected, decimal=6)
+
+        # Testing CS std
+        cstd_expected = numpy.array([[0.37941040, 0.0, 0.31817101],    
+                                     [0.37941040, 0.0, 0.31817101]])
+        numpy.testing.assert_almost_equal(cstd, cstd_expected, decimal=6)
+
+        
+        
+        

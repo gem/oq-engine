@@ -548,6 +548,7 @@ class GMPE(GroundShakingIntensityModel):
         """
         :returns: an array of shape (2, N, M) with means and stddevs
         """
+
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(imts)
         arr = numpy.zeros((2, N, M))
@@ -567,6 +568,46 @@ class GMPE(GroundShakingIntensityModel):
                                        self.__class__.__name__)
             start = stop
         return arr
+
+    def get_cs_mean_std(self, ctxs, imts, c_vector, epsilon):
+        """
+        :returns: 
+            An array of shape (2, N, M) with means and stddevs where N is the
+            number of rupture-site combinations and M the number of IMTs
+        """
+        N = sum(len(ctx.sids) for ctx in ctxs)
+        M = len(imts)
+        arr = numpy.zeros((2, N, M))
+
+        num_tables = CoeffsTable.num_instances
+        start = 0
+        for ctx in ctxs:
+            stop = start + len(ctx.sids)
+            new = ctx.roundup(self.minimum_distance)
+            for m, imt in enumerate(imts):
+
+                # Computing mean and std 
+                mean, [std] = self.get_mean_and_stddevs(ctx, ctx, new, imt,
+                    [const.StdDev.TOTAL])
+
+                # From Lin et al. (2013)
+                cs_mean = mean + c_vector[m] * epsilon * std 
+
+                if abs(1-c_vector[m]) < 1e-10: 
+                    cs_std = numpy.zeros_like(ctx.sids) 
+                else:
+                    cs_std = std * (1-c_vector[m]**2)**0.5 
+
+                arr[0, start:stop, m] = cs_mean
+                arr[1, start:stop, m] = cs_std
+
+                if CoeffsTable.num_instances > num_tables:
+                    raise RuntimeError('Instantiating CoeffsTable inside '
+                                       '%s.get_mean_and_stddevs' %
+                                       self.__class__.__name__)
+            start = stop
+        return arr
+
 
     def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctxs=()):
         """

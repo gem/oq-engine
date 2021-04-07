@@ -244,6 +244,52 @@ class ContextMaker(object):
         ctx.ctxs = ctxs
         return ctx
 
+    def gen_ctx_cs_mean_and_stds(self, ctxs: list, cvec, eps):
+        """
+        Computes for each site the conditional mean and standard deviation.
+        Yields for each context an array with CS mean and std.
+
+        :param ctxs:
+            A list of C context objects
+        :yields:
+            C pairs (ctx, mean and std (N, L, G, 2)) where N is the number of
+            site-rupture combinations, L is the number of IMTs considered
+            in the analysis and G the number of GMMs
+        """
+        # Array with the number of sites for each context
+        nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
+
+        # Total number of 'rupture-site' combinations analyzed
+        N = nsites.sum()
+
+        # This is the matrix where we store the output
+        mstd = numpy.zeros((2, N, len(self.imtls), len(self.gsims)))
+
+        # TODO - Not sure what to do here at the moment
+        if self.single_site_opt.any():
+            ctx = self.multi(ctxs)
+
+        # Processing the GMMs
+        for g, gsim in enumerate(self.gsims):
+            with self.gmf_mon:
+
+                # Compute mean and std for the set of rup-site combinations N
+                # and IMTs. Shape of the output is 2 x N x <num. IMTs>
+                cs_mean_std = gsim.get_cs_mean_std(ctxs, self.imts, cvec, eps)
+
+                # builds mean_std of shape (2, N, M)
+                #if self.single_site_opt[g] and C > 1 and (nsites == 1).all():
+                #    mean_std = gsim.get_mean_std1(ctx, self.imts)
+                #else:
+                #    mean_std = gsim.get_mean_std(ctxs, self.imts)
+
+                mstd[:, :, :, g] = cs_mean_std
+
+        s = 0
+        for ctx, n in zip(ctxs, nsites):
+            yield ctx, mstd[:, s:s+n]
+            s += n
+
     def gen_ctx_poes(self, ctxs):
         """
         :param ctxs: a list of C context objects
