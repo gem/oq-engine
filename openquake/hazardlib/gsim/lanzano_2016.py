@@ -198,8 +198,7 @@ class LanzanoEtAl2016_RJB(GMPE):
         and the correction is applied.
         """
         delta = np.zeros(len(sites.vs30))
-        idx = (sites.bas == 1.0)
-        delta[idx] = 1.0
+        delta[sites.bas == 1] = 1.0
 
         return C['dbas'] * delta
 

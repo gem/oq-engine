@@ -1,3 +1,6 @@
+  [Claudia Mascandola]
+  * Fix to LanzanoEtAl2016 in presence of a "bas" term in the site model
+
   [Nicolas Schmid]
   * Improve performance for ShakeMap calculations when spatialcorr and crosscorr
     are both set to 'no'
