@@ -93,7 +93,7 @@ class Sampler(object):
         means = df['mean'].to_numpy()
         covs = df['cov'].to_numpy()
         eids = df['eid'].to_numpy()
-        return self.rng.normal(eids, means, covs)
+        return self.rng.lognormal(eids, means, covs)
 
     def sampleBT(self, df):
         means = df['mean'].to_numpy()
@@ -756,7 +756,7 @@ class MultiEventRNG(object):
     >>> eids = numpy.array([1] * 3)
     >>> means = numpy.array([.5] * 3)
     >>> covs = numpy.array([.1] * 3)
-    >>> rng.normal(eids, means, covs)
+    >>> rng.lognormal(eids, means, covs)
     array([0.38892466, 0.38892466, 0.38892466])
     >>> rng.beta(eids, means, covs)
     array([0.4372343 , 0.57308132, 0.56392573])
@@ -769,7 +769,7 @@ class MultiEventRNG(object):
             ph = numpy.random.Philox(self.master_seed + eid)
             self.rng[eid] = numpy.random.Generator(ph)
 
-    def normal(self, eids, means, covs):
+    def lognormal(self, eids, means, covs):
         """
         :param eids: event IDs
         :param means: array of floats in the range 0..1
