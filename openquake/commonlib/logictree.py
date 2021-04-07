@@ -83,6 +83,15 @@ branch_dt = [('branchset', hdf5.vstr), ('branch', hdf5.vstr),
              ('utype', hdf5.vstr), ('uvalue', hdf5.vstr), ('weight', float)]
 
 
+def fix_bytes(record):
+    # convert a record with bytes fields into a dictionary of strings
+    dic = {}
+    for n in record.dtype.names:
+        v = record[n]
+        dic[n] = v.decode('utf-8') if isinstance(v, bytes) else v
+    return dic
+
+
 def unique(objects, key=None):
     """
     Raise a ValueError if there is a duplicated object, otherwise
@@ -669,6 +678,7 @@ class SourceModelLogicTree(object):
         self.shortener = {}
         acc = AccumDict(accum=[])  # bsid -> rows
         for rec in array:
+            rec = fix_bytes(rec)
             # NB: it is important to keep the order of the branchsets
             acc[rec['branchset']].append(rec)
         for ordinal, (bsid, rows) in enumerate(acc.items()):
@@ -887,6 +897,7 @@ class GsimLogicTree(object):
         self.shortener = {}
         self.values = collections.defaultdict(list)
         for no, branch in enumerate(array):
+            branch = fix_bytes(branch)
             br_id = branch['branch']
             gsim = valid.gsim(branch['uncertainty'])
             for k, v in gsim.kwargs.items():
@@ -897,7 +908,7 @@ class GsimLogicTree(object):
             self.values[branch['trt']].append(gsim)
             weight = object.__new__(ImtWeight)
             # branch has dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
-            weight.dic = {w: branch[w] for w in branch.dtype.names[3:]}
+            weight.dic = {w: branch[w] for w in array.dtype.names[3:]}
             if len(weight.dic) > 1:
                 gsim.weight = weight
             bt = BranchTuple(branch['trt'], br_id, gsim, weight, True)
