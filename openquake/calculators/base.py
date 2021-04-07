@@ -538,7 +538,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['rlzs_by_g'] = sum(
                 fake.get_rlzs_by_grp().values(), [])
             with hdf5.File(self.datastore.tempname, 'a') as t:
-                t['oqparam'] = hdf5.dumps(vars(oq))
+                t['oqparam'] = oq
             self.realizations = fake.get_realizations()
             self.save_crmodel()
             self.datastore.swmr_on()
