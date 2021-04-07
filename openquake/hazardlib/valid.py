@@ -1129,7 +1129,7 @@ class MetaParamSet(type):
 
 
 # used in commonlib.oqvalidation
-class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
+class ParamSet(metaclass=MetaParamSet):
     """
     A set of valid interrelated parameters. Here is an example
     of usage:
