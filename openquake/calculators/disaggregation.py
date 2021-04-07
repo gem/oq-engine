@@ -138,8 +138,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
     for magi, ctxs in groupby(allctxs, operator.attrgetter('magi')).items():
         res = {'trti': trti, 'magi': magi}
         with ms_mon:
-            # compute mean and std for a single IMT to save memory
-            # the size is N * U * G * 16 bytes
+            # compute mean and std (N * U * M * G * 16 bytes)
             disagg.set_mean_std(ctxs, imts, cmaker.gsims)
 
         # disaggregate by site, IMT
@@ -336,7 +335,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         U = 0
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
-        # ABSURDLY IMPORTANT!! we rely on the fact that the classical part
+        # IMPORTANT!! we rely on the fact that the classical part
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices;
         # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
@@ -366,7 +365,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info('Maximum mean_std per task:\n%s', msg)
 
         s = self.shapedic
-        Ta = numpy.ceil(len(task_inputs))
+        Ta = len(task_inputs)
         nbytes = s['N'] * s['M'] * s['P'] * s['Z'] * Ta * 8
         data_transfer = (s['dist'] * s['eps'] + s['lon'] * s['lat']) * nbytes
         if data_transfer > oq.max_data_transfer:

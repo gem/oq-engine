@@ -22,6 +22,7 @@ import numpy
 from scipy.stats import truncnorm, norm
 from scipy import interpolate
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, imt, correlation
 
 F32 = numpy.float32
@@ -151,41 +152,136 @@ def cholesky(spatial_cov, cross_corr):
     return numpy.linalg.cholesky(numpy.array(LLT))
 
 
-def to_gmfs(shakemap, spatialcorr, crosscorr, site_effects, trunclevel,
-            num_gmfs, seed, imts=None):
+calculate_gmfs = CallableDict()
+
+CORRELATION_MATRIX_TOO_LARGE = '''\
+You have a correlation matrix which is too large: %s > %d.
+To avoid that, set a proper `region_grid_spacing` so that your exposure
+involves less sites.'''
+
+
+@calculate_gmfs.add('Silva&Horspool')
+def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
+                      crosscorr, cholesky_limit):
     """
-    :returns: (IMT-strings, array of GMFs of shape (R, N, E, M)
+    Implementation of paper by Silva and Horspool 2019
+    https://onlinelibrary.wiley.com/doi/abs/10.1002/eqe.3154?af=R
+
+    :param shakemap: site coordinates with shakemap values
+    :param imts: list of required imts
+    :param spatialcorr: 'no', 'yes' or 'full'
+    :param crosscorr: 'no', 'yes' or 'full'
+    :returns: F(Z, mu) to calculate gmfs
     """
-    N = len(shakemap)  # number of sites
-    std = shakemap['std']
-    if imts is None or len(imts) == 0:
-        imts = std.dtype.names
-    else:
-        imts = [imt for imt in imts if imt in std.dtype.names]
-    val = {imt: numpy.log(shakemap['val'][imt]) for imt in imts}
-    imts_ = [imt.from_string(name) for name in imts]
-    M = len(imts_)
-    cross_corr = cross_correlation_matrix(imts_, crosscorr)
-    mu = numpy.array([numpy.ones(num_gmfs) * val[str(imt)][j]
-                      for imt in imts_ for j in range(N)])
+    # make sure all imts used have a period, needed for correlation
+    imts = [im for im in imts if hasattr(im, 'period')]
+    # checks
+    N = len(shakemap)
+    M = len(imts)
+    if N * M > cholesky_limit:
+        raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
+            '%d x %d' % (M, N), cholesky_limit))
+
+    # Cross Correlation
+    cross_corr = cross_correlation_matrix(imts, crosscorr)
+
+    # Spatial Correlation and Covariance
     dmatrix = geo.geodetic.distance_matrix(shakemap['lon'], shakemap['lat'])
-    spatial_corr = spatial_correlation_array(dmatrix, imts_, spatialcorr)
-    stddev = [std[str(imt)] for imt in imts_]
-    for im, std in zip(imts_, stddev):
+    spatial_corr = spatial_correlation_array(dmatrix, imts, spatialcorr)
+
+    stddev = [shakemap['std'][str(imt)] for imt in imts]
+    for im, std in zip(imts, stddev):
         if std.sum() == 0:
             raise ValueError('Cannot decompose the spatial covariance '
                              'because stddev==0 for IMT=%s' % im)
     spatial_cov = spatial_covariance_array(stddev, spatial_corr)
+
+    # Cholesky Decomposition
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
+
+    # mu has unit (pctg), L has unit ln(pctg)
+    return numpy.exp(L @ Z + numpy.log(mu)) / PCTG
+
+
+@calculate_gmfs.add('basic')
+def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
+    """
+    Basic calculation method to sample data from shakemap values
+
+    :param shakemap: site coordinates with shakemap values
+    :param imts: list of required imts
+    :returns: F(Z, mu) to calculate gmfs
+    """
+    # create diag matrix with std values
+    std = numpy.array([shakemap['std'][str(im)] for im in imts])
+    sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
+    # mu has unit (pctg), sig has unit ln(pctg)
+    return numpy.exp(sig @ Z + numpy.log(mu)) / PCTG
+
+
+@ calculate_gmfs.add('mmi')
+def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
+    """
+    Basic calculation method to sample data from shakemap values
+    given mmi intensities.
+
+    :param shakemap: site coordinates with shakemap values
+    :param imts: list of required imts
+    :returns: F(Z, mu) to calculate gmfs
+    """
+    try:
+        # create diag matrix with std values
+        std = numpy.array(shakemap['std']['MMI'])
+        sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
+    except ValueError as e:
+        raise ValueError('No stds for MMI intensities supplied, only %s' %
+                         ', '.join(shakemap['std'].dtype.names)) from e
+    return sig @ Z + mu
+
+
+def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
+            num_gmfs, seed, imts=None):
+    """
+    :param shakemap: site coordinates with shakemap values
+    :param gmf_dict: dictionary with info about the gmf calculation method
+    :param site_effects: whether to apply site effects or not
+    :param num_gmfs: E, amount of gmfs to generate
+    :param seed: seed for generating numbers
+    :param imts: list of IMT-strings for which gmfs are generated
+    :returns: list of IMT-objects, array of GMFs of shape (R, N, E, M)
+    """
+    # create list of imts
+    if imts is None or len(imts) == 0:
+        imts = [imt.from_string(im) for im in shakemap['std'].dtype.names]
+    else:
+        imts = [imt.from_string(im)
+                for im in imts if im in shakemap['std'].dtype.names]
+
+    # assign iterators
+    M = len(imts)       # Number of imts
+    N = len(shakemap)   # number of sites
+
+    # generate standard normal random variables of shape (M*N, E)
     if trunclevel:
         Z = truncnorm.rvs(-trunclevel, trunclevel, loc=0, scale=1,
                           size=(M * N, num_gmfs), random_state=seed)
     else:
-        Z = norm.rvs(loc=0, scale=1, size=(M * N, num_gmfs), random_state=seed)
-    # Z has shape (M * N, E)
-    gmfs = numpy.exp(L @ Z + mu) / PCTG
+        Z = norm.rvs(loc=0, scale=1, size=(
+            M * N, num_gmfs), random_state=seed)
+
+    # build array of mean values of shape (M*N, E)
+    mu = numpy.array([numpy.ones(num_gmfs) * shakemap['val'][str(imt)][j]
+                      for imt in imts for j in range(N)])
+
+    # assemble dictionary for the calculation of the gmfs
+    gmf_dict.update({'shakemap': shakemap, 'imts': imts, 'Z': Z, 'mu': mu})
+
+    # execute the calculation
+    gmfs = calculate_gmfs(gmf_dict.pop('kind'), **gmf_dict)
+
+    # apply site effects
     if site_effects:
-        gmfs = amplify_gmfs(imts_, shakemap['vs30'], gmfs)
+        gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs)
     if gmfs.max() > MAX_GMV:
         logging.warning('There are suspiciously large GMVs of %.2fg',
                         gmfs.max())

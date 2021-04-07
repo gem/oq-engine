@@ -1,3 +1,8 @@
+  [Nicolas Schmid]
+  * Improve performance for ShakeMap calculations when spatialcorr and crosscorr
+    are both set to 'no'
+  * Add feature to do ShakeMap calculations for vulnerability models using MMI.
+
   [Michele Simionato]
   * Added a flag `ignore_master_seed` (false by default)
   * Estimated the uncertainty on the losses due to the uncertainty in the

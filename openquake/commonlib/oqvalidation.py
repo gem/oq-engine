@@ -19,13 +19,14 @@
 
 import os
 import re
+import json
 import inspect
 import logging
 import functools
 import multiprocessing
 import numpy
 
-from openquake.baselib import __version__
+from openquake.baselib import __version__, hdf5, python3compat
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.shakemap.maps import get_array
@@ -1630,3 +1631,9 @@ class OqParam(valid.ParamSet):
             name = name.split()[-1]
             dic[name] = doc
         return dic
+
+    def __toh5__(self):
+        return hdf5.dumps(vars(self)), {}
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(json.loads(python3compat.decode(array)))

@@ -391,6 +391,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         maxweight = len(eids) / ct
         start = stop = weight = 0
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
+        # IMPORTANT!! we rely on the fact that the hazard part
+        # of the calculation stores the GMFs in chunks of constant eid
         for eid, group in itertools.groupby(eids):
             nsites = sum(1 for _ in group)
             stop += nsites

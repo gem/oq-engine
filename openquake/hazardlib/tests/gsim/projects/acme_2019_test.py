@@ -31,6 +31,27 @@ class AlAtikSigmaModelTest(unittest.TestCase):
                                                                 dists, imt,
                                                                 stdt)
 
+    def test02(self):
+        # checks if gmpe is always being evaluated at vs30=760
+        # see HID 2.6.2
+        filename = os.path.join(DATA_PATH, 'kappa.txt')
+        gmm = AlAtikSigmaModel(gmpe_name='YenierAtkinson2015ACME2019',
+                               kappa_file=filename,
+                               kappa_val='high')
+        sites = Dummy.get_site_collection(4, vs30=760.)
+        rup = Dummy.get_rupture(mag=6.0)
+        dists = DistancesContext()
+        dists.rjb = np.array([1., 10., 30., 70.])
+        dists.rrup = np.array([1., 10., 30., 70.])
+        imt = SA(0.1)
+        stdt = [const.StdDev.TOTAL]
+        mean_760, _ = gmm.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
+
+        sites2 = Dummy.get_site_collection(4, vs30=1500.)
+        mean_1500, _ = gmm.get_mean_and_stddevs(sites2, rup, dists, imt, stdt)
+
+        self.assertAlmostEqual(mean_760[-1], mean_1500[-1], 4)
+
 
 class GetSoFTestCase(unittest.TestCase):
     MSG = 'Wrong style-of-faulting coefficient'

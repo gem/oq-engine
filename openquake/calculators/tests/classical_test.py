@@ -21,6 +21,7 @@ import gzip
 import unittest
 import numpy
 from openquake.baselib import parallel, general, config
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib import lt
 from openquake.commonlib import readinput
 from openquake.calculators.views import view
@@ -306,7 +307,7 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
-        ids = self.calc.datastore['source_info']['source_id']
+        ids = decode(self.calc.datastore['source_info']['source_id'])
         numpy.testing.assert_equal(ids, ['A;0', 'B', 'A;1'])
 
     def test_case_18(self):  # GMPEtable
