@@ -1258,6 +1258,11 @@ class ParamSet(metaclass=MetaParamSet):
         for item in sorted(vars(self).items()):
             yield item
 
+    def __repr__(self):
+        names = sorted(n for n in vars(self) if not n.startswith('_'))
+        nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
+        return '<%s %s>' % (self.__class__.__name__, nameval)
+
 
 class RjbEquivalent(object):
     """
