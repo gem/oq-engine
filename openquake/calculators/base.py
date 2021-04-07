@@ -187,7 +187,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 kw['hazard_calculation_id'] is None):
             del kw['hazard_calculation_id']
         vars(self.oqparam).update(**kw)
-        self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
+        self.datastore['oqparam'] = self.oqparam
         attrs = self.datastore['/'].attrs
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
