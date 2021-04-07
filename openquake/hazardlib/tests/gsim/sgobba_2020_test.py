@@ -113,7 +113,7 @@ class Sgobba2020Test(unittest.TestCase):
 
         # Compute and check results for the ergodic model
         mr, stdr = gmmref.get_mean_and_stddevs(sites, rup, dists, imt, stdt)
-        expected_ref = df.gmm_PGA.to_numpy() / (gravity_acc * 100.0)
+        expected_ref = df.gmm_PGA.to_numpy()
         computed_ref = np.exp(mr)
         np.testing.assert_allclose(computed_ref, expected_ref, rtol=1e-5)
 
