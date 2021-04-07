@@ -404,7 +404,7 @@ class AlAtikSigmaModel(GMPE):
         acc = np.log(disp * (2 * np.pi / imt)**2)
         return acc
 
-    def extrapolate_in_PSA(self, sites, rup, dists, imt_high, 
+    def extrapolate_in_PSA(self, sites, rup, dists, imt_high,
                            set_imt, stds_types, imt):
 
         extrap_mean = []
@@ -456,7 +456,7 @@ class AlAtikSigmaModel(GMPE):
             mean = self.get_acc_from_disp(disp, imt.period)
         # if the corner period is longer than highest and imt is above
         # highets but below corner
-        elif extr and cornerp > hp and imt.period >= hp and imt.period < cornerp:
+        elif extr and cornerp > hp and hp <= imt.period < cornerp:
             mean = self.extrapolate_in_PSA(sites, rup, dists,
                                 hp, sp, stds_types, imt.period)
         elif extr and cornerp > hp and imt.period > cornerp:
@@ -469,8 +469,6 @@ class AlAtikSigmaModel(GMPE):
             mean, _ = self.gmpe.get_mean_and_stddevs(
                 sites, rup, dists, imt, stds_types)
 
-
-
         kappa = 1
         if self.kappa_file:
 
@@ -482,7 +480,6 @@ class AlAtikSigmaModel(GMPE):
                 kappa = self.KAPPATAB[imt][self.kappa_val]
 
         return mean + np.log(kappa), stddevs
-
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
         """
