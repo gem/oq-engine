@@ -685,7 +685,8 @@ class OqParam(valid.ParamSet):
                     'business_interruption_fragility',
                     'business_interruption_consequence',
                     'structural_vulnerability_retrofitted',
-                    'occupants_vulnerability'}
+                    'occupants_vulnerability',
+                    'rupture_occurrence_rate_adjustments'}
     hazard_imtls = {}
     siteparam = dict(
         vs30measured='reference_vs30_type',
@@ -1028,6 +1029,16 @@ class OqParam(valid.ParamSet):
                 self.soil_intensities):
             raise InvalidFile('%s: The soil_intensities must be defined'
                               % job_ini)
+
+        # aftershock rupture occurrence rates adjustments
+        if "rupture_occurrence_rate_adjustments" in names_vals:
+            self.rup_occ_file = names_vals[
+                'rupture_occurrence_rate_adjustments']
+            logging.warning(f"detected rupture adjustment file: {self.rup_occ_file}")
+        else:
+            logging.warning("NOT detected rupture adjustment file")
+
+
 
     def validate(self):
         """

@@ -452,6 +452,11 @@ class ClassicalCalculator(base.HazardCalculator):
             self.calc_stats()  # post-processing
             return {}
 
+        if hasattr(oq, "rup_occ_file"):
+            logging.warning("params have rup occ file")
+        else:
+            logging.warning("params have NO rup occ file")
+
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
             oq.max_sites_per_tile, oq.max_sites_disagg)
         psd = self.set_psd()  # must go before to set the pointsource_distance
@@ -577,6 +582,15 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         :returns: a list of Starmap arguments
         """
+
+        if hasattr(self.oqparam, 'rup_occ_file'):
+            self.params['rup_occ_file'] = self.oqparam.rup_occ_file
+            logging.warning("added rup occ file to params")
+        else:
+            logging.warning("NO rup occ file here bro")
+
+        self.params['split_sources'] = False
+
         oq = self.oqparam
         allargs = []
         src_groups = self.csm.src_groups
@@ -601,7 +615,8 @@ class ClassicalCalculator(base.HazardCalculator):
         for grp_id in grp_ids:
             rlzs_by_gsim = hazard.rlzs_by_gsim_list[grp_id]
             sg = src_groups[grp_id]
-            if sg.atomic:
+            if True:
+            #if sg.atomic:
                 # do not split atomic groups
                 self.counts[grp_id] += 1
                 allargs.append((sg, rlzs_by_gsim, self.params))
