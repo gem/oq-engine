@@ -84,7 +84,7 @@ def urlextract(url, fname):
                 raise
 
 
-def parse_url_path(url):
+def path2url(url):
     """
     If a relative path is given for the file, parse it so it can be
     read with 'urlopen'.
@@ -95,7 +95,7 @@ def parse_url_path(url):
         if file.is_file():
             return 'file:{}'.format(pathname2url(str(file.absolute())))
         else:
-            raise RuntimeError(
+            raise FileNotFoundError(
                 'The following path could not be found: %s' % url)
     return url
 
@@ -106,14 +106,14 @@ get_array = CallableDict()
 @get_array.add('usgs_xml')
 def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
 
-    grid_url = parse_url_path(grid_url)
+    grid_url = path2url(grid_url)
 
     if uncertainty_url is None:
         with urlopen(grid_url) as f:
             return get_shakemap_array(f)
     else:
         with urlopen(grid_url) as f1, urlextract(
-                parse_url_path(uncertainty_url), 'uncertainty.xml') as f2:
+                path2url(uncertainty_url), 'uncertainty.xml') as f2:
             return get_shakemap_array(f1, f2)
 
 
