@@ -286,7 +286,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 if oq.investigation_time:  # event_based
                     self.avg_ratio = numpy.array([oq.ses_ratio / len(ws)])
                 else:  # scenario
-                    self.avg_ratio = 1. / self.num_events.sum()
+                    self.avg_ratio = numpy.array([1. / self.num_events.sum()])
             else:
                 if oq.investigation_time:  # event_based
                     self.avg_ratio = numpy.array([oq.ses_ratio] * R)
