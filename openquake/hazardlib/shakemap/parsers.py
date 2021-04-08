@@ -106,8 +106,6 @@ get_array = CallableDict()
 
 @get_array.add('shapefile')
 def get_array_shapefile(kind, fname):
-    if not fname.startswith('http'):
-        fname = 'file:' + pathname2url(str(pathlib.Path(fname).absolute()))
     return shapefile_to_shakemap(fname)
 
 

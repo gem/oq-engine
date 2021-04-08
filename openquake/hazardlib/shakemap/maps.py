@@ -18,7 +18,6 @@
 
 import logging
 import numpy
-import pathlib
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, site
