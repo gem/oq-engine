@@ -203,7 +203,16 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_2_sampling(self):
         self.run_calc(case_2.__file__, 'job_sampling.ini')
         self.assertEqual(len(self.calc.datastore['events']), 22)
-        # TODO: improve this test
+        # shape (K=1, R=2, L=1, P=4)
+        curve0 = self.calc.datastore['agg_curves-rlzs'][0, 0, 0]
+        curve1 = self.calc.datastore['agg_curves-rlzs'][0, 1, 0]
+        calc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_2.__file__, 'job_sampling.ini',
+                      collect_rlzs='true', hazard_calculation_id=calc_id)
+
+        # agg_curves-rlzs has shape (K=1, R=1, L=1, P=4)
+        curve = self.calc.datastore['agg_curves-rlzs'][0, 0, 0]
+        aac(curve, (curve0 + curve1) / 2, atol=170)
 
     def test_case_2_correlation(self):
         self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation='1')

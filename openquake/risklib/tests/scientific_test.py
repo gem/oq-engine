@@ -23,7 +23,7 @@ import numpy
 import pandas
 from openquake.risklib import scientific
 
-aaae = numpy.testing.assert_array_almost_equal
+aae = numpy.testing.assert_allclose
 eids = numpy.arange(3)
 
 
@@ -211,7 +211,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             [0.000, 0.000, 0.000, 0.000, 0.917],
             [0.000, 0.000, 0.000, 0.000, 0.480],
         ])
-        aaae(lrem, expected_lrem, decimal=3)
+        aae(lrem, expected_lrem, atol=1E-3)
 
 
 
@@ -490,8 +490,8 @@ class ClassicalDamageTestCase(unittest.TestCase):
         poos = scientific.classical_damage(
             fragility_functions, hazard_imls, hazard_poes,
             investigation_time, risk_investigation_time)
-        aaae(poos, [1.0415184E-09, 1.4577245E-06, 1.9585762E-03, 6.9677521E-02,
-                    9.2836244E-01])
+        aae(poos, [1.0415184E-09, 1.4577245E-06, 1.9585762E-03, 6.9677521E-02,
+                   9.2836244E-01], atol=1E-5)
 
     def test_continuous(self):
         hazard_imls = numpy.array(
@@ -545,4 +545,22 @@ class ClassicalDamageTestCase(unittest.TestCase):
         poos = scientific.classical_damage(
             fragility_functions, hazard_imls, hazard_poes,
             investigation_time, risk_investigation_time)
-        aaae(poos, [0.56652127, 0.12513401, 0.1709355, 0.06555033, 0.07185889])
+        aae(poos, [0.56652127, 0.12513401, 0.1709355, 0.06555033, 0.07185889])
+
+
+class LossesByEventTestCase(unittest.TestCase):
+    def test(self):
+        # testing convergency of the mean curve
+        periods = [10, 20, 50, 100, 150, 200, 250]
+        eff_time = 500
+        losses = 10**numpy.random.default_rng(42).random(2000)
+        losses0 = losses[:1000]
+        losses1 = losses[1000:]
+        curve0 = scientific.losses_by_period(
+            losses0, periods, eff_time=eff_time)
+        curve1 = scientific.losses_by_period(
+            losses1, periods, eff_time=eff_time)
+        mean = (curve0 + curve1) / 2
+        full = scientific.losses_by_period(
+            losses, periods, eff_time=2*eff_time)
+        aae(mean, full, rtol=1E-2)
