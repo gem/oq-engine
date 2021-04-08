@@ -112,6 +112,12 @@ collapse_gsim_logic_tree:
 collapse_level:
   INTERNAL
 
+collect_rlzs:
+  Collect all realizations into a single effective realizations. Used in
+  event_based_risk calculations with sampling.
+  Example: *collect_rlzs=true*.
+  Default: False
+
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
   so that the hazard curves can be compared.
@@ -715,6 +721,7 @@ class OqParam(valid.ParamSet):
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), 0)
+    collect_rlzs = valid.Param(valid.boolean, False)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
