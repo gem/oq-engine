@@ -203,12 +203,20 @@ class EventBasedRiskTestCase(CalculatorTestCase):
     def test_case_2_sampling(self):
         self.run_calc(case_2.__file__, 'job_sampling.ini')
         self.assertEqual(len(self.calc.datastore['events']), 22)
+
+        losses0 = self.calc.datastore['avg_losses-stats'][:, 0, 0]  # shape ARL
+        losses1 = self.calc.datastore['avg_losses-stats'][:, 0, 0]  # shape ARL
+        avg = (losses0 + losses1).sum() / 2
+
         # shape (K=1, R=2, L=1, P=4)
         curve0 = self.calc.datastore['agg_curves-rlzs'][0, 0, 0]
         curve1 = self.calc.datastore['agg_curves-rlzs'][0, 1, 0]
         calc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_2.__file__, 'job_sampling.ini',
                       collect_rlzs='true', hazard_calculation_id=calc_id)
+
+        tot = self.calc.datastore['avg_losses-rlzs'][:, 0, 0].sum()  # A1L
+        aac(avg, tot)
 
         # agg_curves-rlzs has shape (K=1, R=1, L=1, P=4)
         curve = self.calc.datastore['agg_curves-rlzs'][0, 0, 0]

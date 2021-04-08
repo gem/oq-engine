@@ -277,14 +277,21 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                  ('loss', F32), ('variance', F32)]
         self.datastore.create_dframe(
             'agg_loss_table', descr, K=len(self.aggkey), L=len(oq.loss_names))
-        R = 1 if oq.collect_rlzs else len(self.datastore['weights'])
+        ws = self.datastore['weights']
+        R = 1 if oq.collect_rlzs else len(ws)
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
         if oq.avg_losses:
-            if oq.investigation_time:  # event_based
-                self.avg_ratio = numpy.array([oq.ses_ratio] * R)
-            else:  # scenario
-                self.avg_ratio = 1. / self.num_events
+            if oq.collect_rlzs:
+                if oq.investigation_time:  # event_based
+                    self.avg_ratio = numpy.array([oq.ses_ratio / len(ws)])
+                else:  # scenario
+                    self.avg_ratio = 1. / self.num_events.sum()
+            else:
+                if oq.investigation_time:  # event_based
+                    self.avg_ratio = numpy.array([oq.ses_ratio] * R)
+                else:  # scenario
+                    self.avg_ratio = 1. / self.num_events
             self.avg_losses = numpy.zeros((A, R, L), F32)
             self.datastore.create_dset('avg_losses-rlzs', F32, (A, R, L))
             self.datastore.set_shape_descr(
