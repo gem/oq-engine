@@ -563,4 +563,4 @@ class LossesByEventTestCase(unittest.TestCase):
         mean = (curve0 + curve1) / 2
         full = scientific.losses_by_period(
             losses, periods, eff_time=2*eff_time)
-        aae(mean, full, rtol=1E-2)
+        aae(mean, full, rtol=1E-2)  # converges only at 1%

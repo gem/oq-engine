@@ -213,6 +213,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # agg_curves-rlzs has shape (K=1, R=1, L=1, P=4)
         curve = self.calc.datastore['agg_curves-rlzs'][0, 0, 0]
         aac(curve, (curve0 + curve1) / 2, atol=170)
+        # NB: in theory the curve computed with a single effective
+        # realization and a long effective investigation time should be
+        # the same as the average curve; in reality the convergency is not
+        # that good for few losses, as in this test with 20 events, so
+        # we need a large tolerance; see also LossesByEventTestCase which
+        # converges a lot better having 2000 losses
 
     def test_case_2_correlation(self):
         self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation='1')
