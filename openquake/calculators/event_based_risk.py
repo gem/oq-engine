@@ -88,7 +88,7 @@ def event_based_risk(df, param, monitor):
         kids = dstore['assetcol/kids'][:] if K else ()
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
-        weights = dstore['weights'][()]
+        weights = [1] if param['collect_rlzs'] else dstore['weights'][()]
     AR = len(assets_df), len(weights)
     loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
     loss_by_EK1 = {ln: general.AccumDict(accum=numpy.zeros(2, F32))
@@ -113,7 +113,15 @@ def event_based_risk(df, param, monitor):
                 continue
             with mon_agg:
                 loss_by_EK1[ln] += aggregate_losses(alt, K, kids, correl)
-            if param['avg_losses']:
+            if param['collect_rlzs']:
+                with mon_avg:
+                    ldf = pandas.DataFrame(
+                        dict(aid=alt.aid.to_numpy(), loss=alt.loss))
+                    tot = ldf.groupby('aid').loss.sum()
+                    aids, rlzs = tot.index.to_numpy(), numpy.zeros_like(tot)
+                    loss_by_AR[ln].append(
+                        sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR))
+            elif param['avg_losses']:
                 with mon_avg:
                     ldf = pandas.DataFrame(
                         dict(aid=alt.aid.to_numpy(), loss=alt.loss,
@@ -257,6 +265,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.param['K'] = len(self.aggkey)
         ct = oq.concurrent_tasks or 1
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
+        self.param['collect_rlzs'] = oq.collect_rlzs
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_names)
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
@@ -268,7 +277,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                  ('loss', F32), ('variance', F32)]
         self.datastore.create_dframe(
             'agg_loss_table', descr, K=len(self.aggkey), L=len(oq.loss_names))
-        R = len(self.datastore['weights'])
+        R = 1 if oq.collect_rlzs else len(self.datastore['weights'])
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
         if oq.avg_losses:
