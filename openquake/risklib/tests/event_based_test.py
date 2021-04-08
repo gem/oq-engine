@@ -185,8 +185,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.1419, 0.4218, 0.9157, 0.05, 0.9595)
 
         numpy.testing.assert_allclose(
-            numpy.array([[0., 0.175115, 0.297628, 0.181567, 0.344077,
-                          0.091288, 0.165941, 0.300442, 0., 0.25775]]),
+            numpy.array([[0.175115, 0.297628, 0.181567, 0.344077,
+                          0.091288, 0.165941, 0.300442, 0.25775]]),
             call(vuln_function, gmfs, EIDS, self.RNG),
             atol=0.0, rtol=0.01)
 
@@ -226,7 +226,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         # min IML in this case is 0.01
         numpy.testing.assert_allclose(
-            numpy.zeros((1, 3)),
+            numpy.zeros((1, 0)),
             call(self.vulnerability_function1,
                  [0.0001, 0.0002, 0.0003], EIDS[:3], self.RNG))
 
@@ -246,9 +246,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         expected_loss_ratios = numpy.array([[
             0.0605584000000000,
             0.273100266666667, 0.0958560000000000, 0.0184384000000000,
-            0.270366933333333, 0.0,
+            0.270366933333333,
             0.0252480000000000, 0.0795669333333333,
-            0.0529024000000000, 0.0,
+            0.0529024000000000,
         ]])
 
         # the length of the result is the length of the gmf

@@ -200,6 +200,12 @@ distance_bin_width:
 ebrisk_maxsize:
   INTERNAL
 
+ignore_master_seed:
+  If set, estimate analytically the uncertainty on the losses due to the
+  uncertainty on the vulnerability functions.
+  Example: *ignore_master_seed = vulnerability*.
+  Default: None
+
 export_dir:
   Set the export directory.
   Example: *export_dir = /tmp*.
@@ -727,6 +733,7 @@ class OqParam(valid.ParamSet):
     distance_bin_width = valid.Param(valid.positivefloat)
     float_dmg_dist = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
+    ignore_master_seed = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
     ground_motion_correlation_model = valid.Param(
