@@ -1582,6 +1582,15 @@ class OqParam(valid.ParamSet):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
 
+    def is_valid_collect_rlzs(self):
+        """
+        sampling_method must be early_weights
+        """
+        if self.collect_rlzs is False:
+            return True
+        return self.number_of_logic_tree_samples > 1 and (
+            self.sampling_method == 'early_weights')
+
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
                    imt.startswith('SA')]
