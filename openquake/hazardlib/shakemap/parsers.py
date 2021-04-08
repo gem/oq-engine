@@ -31,6 +31,7 @@ import zipfile
 import numpy
 from openquake.baselib.general import CallableDict
 from openquake.baselib.node import node_from_xml
+from openquake.hazardlib.shakemap.shape import shapefile_to_shakemap
 
 
 US_GOV = 'https://earthquake.usgs.gov'
@@ -101,6 +102,13 @@ def path2url(url):
 
 
 get_array = CallableDict()
+
+
+@get_array.add('shapefile')
+def get_array_shapefile(kind, fname):
+    if not fname.startswith('http'):
+        fname = 'file:' + pathname2url(str(pathlib.Path(fname).absolute()))
+    return shapefile_to_shakemap(fname)
 
 
 @get_array.add('usgs_xml')

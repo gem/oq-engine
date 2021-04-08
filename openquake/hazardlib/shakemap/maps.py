@@ -18,6 +18,7 @@
 
 import logging
 import numpy
+import pathlib
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import geo, site
@@ -26,6 +27,22 @@ from openquake.hazardlib.shakemap.parsers import get_array
 F32 = numpy.float32
 
 get_sitecol_shakemap = CallableDict()
+
+
+@get_sitecol_shakemap.add('shapefile')
+def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
+                          assoc_dist=None, mode='warn'):
+    """
+    :param uridict: a dictionary specifying the ShakeMap resource
+    :param imts: required IMTs as a list of strings
+    :param sitecol: SiteCollection used to reduce the shakemap
+    :param assoc_dist: unused for shapefiles
+    :param mode: 'strict', 'warn' or 'filter'
+    :returns: filtered site collection, filtered shakemap, discarded
+    """
+    shakemap = get_array(kind, **uridict)
+
+    return shakemap
 
 
 @get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')
