@@ -24,7 +24,7 @@ import numpy
 import pandas
 from shapely import wkt, geometry
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5, general, config
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
@@ -318,9 +318,9 @@ class TagCollection(object):
         ranges = [range(1, len(tags)) for tags in alltags]
         for i, idxs in enumerate(itertools.product(*ranges)):
             aggkey[idxs] = tuple(tags[idx] for idx, tags in zip(idxs, alltags))
-        if len(aggkey) >= TWO16:
+        if len(aggkey) >= config.memory.max_agg_id:
             raise ValueError('Too many aggregation tags: %d >= %d' %
-                             (len(aggkey), TWO16))
+                             (len(aggkey), config.memory.max_agg_id))
         return aggkey
 
     def gen_tags(self, tagname):

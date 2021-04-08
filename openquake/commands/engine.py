@@ -103,7 +103,7 @@ def main(
     if config_file:
         config.read(os.path.abspath(os.path.expanduser(config_file)),
                     limit=int, soft_mem_limit=int, hard_mem_limit=int,
-                    port=int, multi_user=valid.boolean,
+                    port=int, multi_user=valid.boolean, max_agg_id=int,
                     serialize_jobs=valid.boolean, strict=valid.boolean,
                     code=exec)
 
