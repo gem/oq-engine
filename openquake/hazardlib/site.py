@@ -126,6 +126,7 @@ site_param_dt = {
     'backarc': numpy.bool,
     'xvf': numpy.float64,
     'soiltype': numpy.uint32,
+    'bas': numpy.bool,
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,

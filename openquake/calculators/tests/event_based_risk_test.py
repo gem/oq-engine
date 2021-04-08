@@ -287,6 +287,18 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-4)
 
+        # check total variance
+        K = self.calc.datastore['agg_loss_table'].attrs.get('K', 0)
+        elt_df = self.calc.datastore.read_df(
+            'agg_loss_table', 'event_id', dict(agg_id=K, loss_id=4))
+        elt_df['cov'] = numpy.sqrt(elt_df.variance) / elt_df.loss
+        elt_df.sort_index(inplace=True)
+        del elt_df['agg_id']
+        del elt_df['loss_id']
+        del elt_df['variance']
+        fname = gettemp(str(elt_df))
+        self.assertEqualFiles('expected/stddevs.txt', fname, delta=1E-4)
+
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-4)
@@ -321,6 +333,37 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(str(gsim), "[BooreAtkinson2008]")
         gsim = view('gsim_for_event:10', self.calc.datastore)
         self.assertEqual(str(gsim), "[ChiouYoungs2008]")
+
+        # test with correlation
+        self.run_calc(case_master.__file__, 'job.ini',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id),
+                      asset_correlation='1')
+        alt = self.calc.datastore.read_df(
+            'agg_loss_table', 'agg_id', dict(event_id=0, loss_id=0)
+        ).sort_index()
+        self.assertEqual(len(alt), 8)  # 7 assets + total
+        del alt['loss_id']
+        del alt['event_id']
+        tot = alt.loc[7]
+        alt = alt[:-1]
+        asset_df = self.calc.datastore.read_df('assetcol/array', 'ordinal')
+        alt['taxonomy'] = asset_df['taxonomy'].to_numpy()
+        alt.sort_values('taxonomy', inplace=True)
+        """
+              loss   variance  taxonomy
+agg_id                                 
+0        25.252846    0.983858         1
+2        46.164463   11.750128         1
+4        71.196510   72.775536         1
+6        35.656673    4.039829         1
+1        68.550377   41.666348         2
+5        36.430618    3.587823         2
+3       113.847435  229.427109         3
+"""
+        sig1 = numpy.sqrt(alt[alt.taxonomy==1].variance.to_numpy()).sum()
+        sig2 = numpy.sqrt(alt[alt.taxonomy==2].variance.to_numpy()).sum()
+        sig3 = numpy.sqrt(alt[alt.taxonomy==3].variance.to_numpy()).sum()
+        aac(sig1 ** 2 + sig2 ** 2 + sig3 ** 2, tot.variance)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
@@ -430,6 +473,17 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         [fname] = out['agg_curves-rlzs', 'csv']
         self.assertEqualFiles('expected/agg_curves.csv', fname, delta=5E-5)
+
+        # check total stddev
+        elt_df = self.calc.datastore.read_df(
+            'agg_loss_table', 'event_id', dict(agg_id=0))
+        elt_df['cov'] = numpy.sqrt(elt_df.variance) / elt_df.loss
+        elt_df.sort_index(inplace=True)
+        del elt_df['agg_id']
+        del elt_df['loss_id']
+        del elt_df['variance']
+        fname = gettemp(str(elt_df))
+        self.assertEqualFiles('expected/stddevs.txt', fname, delta=1E-4)
 
     # NB: big difference between Ubuntu 18 and 20
     def test_asset_loss_table(self):

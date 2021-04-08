@@ -137,7 +137,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # of loss ratios (ordinates).
         # This test also ensures that input IML values are 'clipped' to the IML
         # range defined for the vulnerability function.
-        expected_lrs = numpy.array([[0., 0.033077, 0.181509]])
+        expected_lrs = numpy.array([[0.033077, 0.181509]])
         test_input = [0.00049, 0.006, 2.7]
         numpy.testing.assert_allclose(
             expected_lrs, call(self.test_func, test_input, eids), atol=1E-6)
