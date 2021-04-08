@@ -125,8 +125,15 @@ def event_based_risk(df, param, monitor):
     if loss_by_AR:
         yield loss_by_AR
         loss_by_AR.clear()
+    alt = _build_agg_loss_table(loss_by_EK1)
+    if alt:
+        yield alt
+        alt.clear()
+
+
+def _build_agg_loss_table(loss_by_EK1):
     alt = {}
-    for lni, ln in enumerate(crmodel.oqparam.loss_names):
+    for lni, ln in enumerate(loss_by_EK1):
         nnz = len(loss_by_EK1[ln])
         if nnz:
             eid = numpy.zeros(nnz, U32)
@@ -142,8 +149,7 @@ def event_based_risk(df, param, monitor):
             alt[ln] = pandas.DataFrame(
                 dict(event_id=eid, agg_id=kid, loss=loss, variance=var,
                      loss_id=lid))
-    if alt:
-        yield alt
+    return alt
 
 
 def start_ebrisk(rgetter, param, monitor):
