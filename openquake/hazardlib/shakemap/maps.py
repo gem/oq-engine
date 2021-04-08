@@ -39,9 +39,9 @@ def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
     :param mode: 'strict', 'warn' or 'filter'
     :returns: filtered site collection, filtered shakemap, discarded
     """
-    shakemap = get_array(kind, **uridict)
+    polygons, data = get_array(kind, **uridict)
 
-    return shakemap
+    return ''
 
 
 @get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')

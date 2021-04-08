@@ -22,11 +22,16 @@ to numpy composite arrays.
 """
 
 from urllib.request import urlopen, pathname2url
+from urllib.error import URLError
 import io
+import os
 import pathlib
 import logging
 import json
 import zipfile
+
+from shapely.geometry import Polygon
+import shapefile
 
 import numpy
 from openquake.baselib.general import CallableDict
@@ -71,18 +76,10 @@ def urlextract(url, fname):
     with urlopen(url) as f:
         data = io.BytesIO(f.read())
     with zipfile.ZipFile(data) as z:
-        try:
-            return z.open(fname)
-        except KeyError:
-            # for instance the ShakeMap ci3031111 has inside a file
-            # data/verified_atlas2.0/reviewed/19920628115739/output/
-            # uncertainty.xml
-            # instead of just uncertainty.xml
-            zinfo = z.filelist[0]
+        for zinfo in z.filelist:
             if zinfo.filename.endswith(fname):
                 return z.open(zinfo)
-            else:
-                raise
+        raise FileNotFoundError
 
 
 def path2url(url):
@@ -106,7 +103,53 @@ get_array = CallableDict()
 
 @get_array.add('shapefile')
 def get_array_shapefile(kind, fname):
-    return shapefile_to_shakemap(fname)
+    """
+    Download and parse data saved as a shapefile.
+    :param fname: url or filepath for the shapefiles
+    Either a *.zip file containing all the necessary files
+    or the path to one of the files with the rest of them being
+    in the same place.
+    *.shp and *.dbf are necessary, *.prj and *.shx optional
+    """
+
+    fname = path2url(fname)
+
+    NOT_FOUND = 'No file with extension \'.%s\' file found'
+    extensions = ['shp', 'dbf', 'prj', 'shx']
+    f_dict = {}
+
+    if fname.endswith('.zip'):
+        # files are saved in a zip
+        for ext in extensions:
+            try:
+                f_dict[ext] = urlextract(fname, '.' + ext)
+            except FileNotFoundError:
+                f_dict[ext] = None
+                logging.warning(NOT_FOUND % ext)
+    else:
+        # files are saved as plain files
+        fname = os.path.splitext(fname)[0]
+        for ext in extensions:
+            try:
+                f_dict[ext] = urlopen(fname + '.' + ext)
+            except URLError:
+                f_dict[ext] = None
+                logging.warning(NOT_FOUND % ext)
+
+    polygons = []
+    data = []
+    try:
+        sf = shapefile.Reader(**f_dict)
+        fieldnames = [f[0] for f in sf.fields[1:]]
+
+        for rec in sf.shapeRecords():
+            polygons.append(Polygon(rec.shape.points))
+            data.append(dict(zip(fieldnames, rec.record)))
+    except shapefile.ShapefileException as e:
+        raise shapefile.ShapefileException(
+            'Necessary *.shp and/or *.dbf file not found.') from e
+
+    return polygons, data
 
 
 @get_array.add('usgs_xml')

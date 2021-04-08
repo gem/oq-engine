@@ -16,9 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-from shapely.geometry import Point, Polygon
-from shapely.strtree import STRtree
-import shapefile
 
 SPEED_WARN = '''\
     To increase the speed with which the shapefile is parsed,'
