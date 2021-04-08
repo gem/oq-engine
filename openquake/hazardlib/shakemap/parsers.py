@@ -21,8 +21,9 @@ https://earthquake.usgs.gov/scenario/product/shakemap-scenario/sclegacyshakeout2
 to numpy composite arrays.
 """
 
-from urllib.request import urlopen
+from urllib.request import urlopen, pathname2url
 import io
+import pathlib
 import logging
 import json
 import zipfile
@@ -83,17 +84,36 @@ def urlextract(url, fname):
                 raise
 
 
+def path2url(url):
+    """
+    If a relative path is given for the file, parse it so it can be
+    read with 'urlopen'.
+    :param url: path/url to be parsed
+    """
+    if not url.startswith('file:') and not url.startswith('http'):
+        file = pathlib.Path(url)
+        if file.is_file():
+            return 'file:{}'.format(pathname2url(str(file.absolute())))
+        else:
+            raise FileNotFoundError(
+                'The following path could not be found: %s' % url)
+    return url
+
+
 get_array = CallableDict()
 
 
 @get_array.add('usgs_xml')
 def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
+
+    grid_url = path2url(grid_url)
+
     if uncertainty_url is None:
         with urlopen(grid_url) as f:
             return get_shakemap_array(f)
     else:
         with urlopen(grid_url) as f1, urlextract(
-                uncertainty_url, 'uncertainty.xml') as f2:
+                path2url(uncertainty_url), 'uncertainty.xml') as f2:
             return get_shakemap_array(f1, f2)
 
 
