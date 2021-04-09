@@ -253,7 +253,6 @@ class SiteCollection(object):
             self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
             self._set('siteclass', sitemodel.reference_siteclass)
             self._set('backarc', sitemodel.reference_backarc)
-            self._set('soiltype', sitemodel.reference_soiltype)
         else:
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
