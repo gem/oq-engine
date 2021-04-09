@@ -1003,3 +1003,19 @@ def view_event_loss_table(token, dstore):
     del df['loss_id']
     del df['variance']
     return df[:20]
+
+
+@view.add('delta_loss')
+def view_delta_loss(token, dstore):
+    """
+    Return |tot0-tot1| / (tot0 + tot1) where tot0 is the total loss
+    computed from even events and tot1 from odd events, for the first
+    loss type.
+    """
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    df = dstore.read_df('agg_loss_table', 'event_id',
+                        dict(agg_id=K, loss_id=0))
+    mod2 = df.index % 2
+    loss0 = df['loss'][mod2 == 0].sum()
+    loss1 = df['loss'][mod2 == 1].sum()
+    return abs(loss0 - loss1) / (loss0 + loss1)
