@@ -1109,6 +1109,12 @@ def import_gmfs_hdf5(dstore, oqparam):
     """
     dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
     attrs = dict(dstore['gmf_data'].attrs)
+    R = dstore['full_lt'].get_num_rlzs()
+    eff_time = oqparam.investigation_time * oqparam.ses_per_logic_tree_path * R
+    if eff_time != attrs['effective_time']:
+        raise RuntimeError('%s has effective_time=%s, not %s' %
+                           (oqparam.inputs['gmfs'], attrs['effective_time'],
+                            eff_time))
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts'].split()}
 
     # store the events
