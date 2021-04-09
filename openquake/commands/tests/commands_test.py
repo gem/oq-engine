@@ -254,7 +254,7 @@ class RunShowExportTestCase(unittest.TestCase):
             sap.runline(
                 f'openquake.commands show_attrs sitecol {self.calc_id}')
         self.assertEqual('__pdcolumns__ sids lon lat depth vs30 vs30measured '
-                         'z1pt0 z2pt5 siteclass backarc\n__pyclass__ '
+                         'z1pt0 z2pt5 backarc\n__pyclass__ '
                          'openquake.hazardlib.site.SiteCollection',
                          str(p))
 
