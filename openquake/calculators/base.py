@@ -1088,16 +1088,17 @@ def import_gmfs(dstore, oqparam, sids):
             gmvlst.append(gmvs)
     data = numpy.concatenate(gmvlst)
     data.sort(order='eid')
-    create_gmf_data(dstore, len(oqparam.get_primary_imtls()),
+    create_gmf_data(dstore, oqparam.get_primary_imtls(),
                     oqparam.get_sec_imts(), data=data)
     dstore['weights'] = numpy.ones(1)
     return eids
 
 
-def create_gmf_data(dstore, M, sec_imts=(), data=None):
+def create_gmf_data(dstore, imts, sec_imts=(), data=None):
     """
     Create and possibly populate the datasets in the gmf_data group
     """
+    M = len(imts)
     n = 0 if data is None else len(data['sid'])
     items = [('sid', U32 if n == 0 else data['sid']),
              ('eid', U32 if n == 0 else data['eid'])]
@@ -1107,6 +1108,8 @@ def create_gmf_data(dstore, M, sec_imts=(), data=None):
     for imt in sec_imts:
         items.append((str(imt), F32 if n == 0 else data[imt]))
     dstore.create_dframe('gmf_data', items, 'gzip')
+    dstore.set_attrs('gmf_data', num_events=len(dstore['events']),
+                     imts=' '.join(map(str, imts)))
     if data is not None:
         df = pandas.DataFrame(dict(items))
         avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)
@@ -1222,5 +1225,5 @@ def read_shakemap(calc, haz_sitecol, assetcol):
                for ei, event in enumerate(events)]
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.array(lst, oq.gmf_data_dt())
-        create_gmf_data(calc.datastore, len(imts), data=data)
+        create_gmf_data(calc.datastore, imts, data=data)
     return sitecol, assetcol

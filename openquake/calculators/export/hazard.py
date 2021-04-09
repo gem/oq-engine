@@ -26,6 +26,7 @@ import pandas
 
 from openquake.baselib.general import (
     group_array, deprecated, AccumDict, DictArray)
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.views import view
@@ -433,6 +434,17 @@ def export_gmf_data_csv(ekey, dstore):
         return [fname, sig_eps_csv, f]
     else:
         return [fname, f]
+
+
+@export.add(('gmf_data', 'hdf5'))
+def export_gmf_data_hdf5(ekey, dstore):
+    fname = dstore.build_fname('gmf', 'data', 'hdf5')
+    sitecol = dstore['sitecol'].complete
+    with hdf5.File(fname, 'w') as f:
+        f['sitecol/lon'] = sitecol.lons
+        f['sitecol/lat'] = sitecol.lats
+        dstore.hdf5.copy('gmf_data', f)
+    return [fname]
 
 
 @export.add(('avg_gmf', 'csv'))
