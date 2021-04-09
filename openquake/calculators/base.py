@@ -1142,7 +1142,10 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
         items.append((col, F32 if data is None else data[col]))
     for imt in sec_imts:
         items.append((str(imt), F32 if n == 0 else data[imt]))
-    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
+    if oq.investigation_time:
+        eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
+    else:
+        eff_time = 0
     dstore.create_dframe('gmf_data', items, 'gzip')
     dstore.set_attrs('gmf_data', num_events=len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
