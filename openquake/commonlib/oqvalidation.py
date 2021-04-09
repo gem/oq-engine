@@ -1587,7 +1587,7 @@ class OqParam(valid.ParamSet):
         sampling_method must be early_weights and only the mean is available.
         number_of_logic_tree_samples = {number_of_logic_tree_samples}.
         """
-        if self.collect_rlzs is False:
+        if self.collect_rlzs is False or self.hazard_calculation_id:
             return True
         hstats = list(self.hazard_stats())
         nostats = not hstats or hstats == ['mean']
