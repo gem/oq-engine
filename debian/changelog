@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the global site parameter `reference_siteclass`
+  * Internal: storing the SiteCollection in a pandas-friendly way
   * Added HDF5 exporter/importer for the GMFs
   * Replaced XML exposures with CSV exposures in the demos
 
