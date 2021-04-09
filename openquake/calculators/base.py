@@ -616,7 +616,9 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: the number of realizations
         """
-        if 'weights' in self.datastore:
+        if self.oqparam.collect_rlzs:
+            return 1
+        elif 'weights' in self.datastore:
             return len(self.datastore['weights'])
         try:
             return self.csm.full_lt.get_num_rlzs()

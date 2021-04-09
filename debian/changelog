@@ -1,7 +1,10 @@
   [Pablo Heresi]
   * Implemented Idini et al (2017) GSIM.
   * Included 'soiltype' into site.py and adds it in site_test.py and oqvalidation.py
-  
+
+  [Michele Simionato]
+  * Replaced XML exposures with CSV exposures in the demos
+
   [Claudia Mascandola]
   * Fix to LanzanoEtAl2016 in presence of a "bas" term in the site model
 
