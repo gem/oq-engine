@@ -2,8 +2,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  namespace: openquake
-  name: openquake-webui
+  namespace: default
+  name: webui
   annotations:
     kubernetes.io/ingress.class: "nginx"
 spec:
@@ -12,7 +12,7 @@ spec:
       paths: 
       - backend:
           service: 
-            name: engine-service
+            name: engine-webui
             port: 
               number: 8800
         path: /

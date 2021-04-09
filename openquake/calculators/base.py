@@ -141,13 +141,6 @@ def set_array(longarray, shortarray):
     longarray[len(shortarray):] = numpy.nan
 
 
-MAXSITES = 1000
-CORRELATION_MATRIX_TOO_LARGE = '''\
-You have a correlation matrix which is too large: %s > %d.
-To avoid that, set a proper `region_grid_spacing` so that your exposure
-involves less sites.'''
-
-
 class BaseCalculator(metaclass=abc.ABCMeta):
     """
     Abstract base class for all calculators.
@@ -194,7 +187,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 kw['hazard_calculation_id'] is None):
             del kw['hazard_calculation_id']
         vars(self.oqparam).update(**kw)
-        self.datastore['oqparam'] = self.oqparam  # save the updated oqparam
+        self.datastore['oqparam'] = self.oqparam
         attrs = self.datastore['/'].attrs
         attrs['engine_version'] = engine_version
         attrs['date'] = datetime.now().isoformat()[:19]
@@ -628,7 +621,9 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: the number of realizations
         """
-        if 'weights' in self.datastore:
+        if self.oqparam.collect_rlzs:
+            return 1
+        elif 'weights' in self.datastore:
             return len(self.datastore['weights'])
         try:
             return self.csm.full_lt.get_num_rlzs()
@@ -986,12 +981,7 @@ class RiskCalculator(HazardCalculator):
                 raise RuntimeError(
                     'There are no GMFs available: perhaps you did set '
                     'ground_motion_fields=False or a large minimum_intensity')
-            for slc in general.split_in_slices(
-                    len(assets), self.oqparam.assets_per_site_limit):
-                out.append(riskinput.RiskInput(getter, assets[slc]))
-            if slc.stop - slc.start >= TWO16:
-                logging.error('There are %d assets on site #%d!',
-                              slc.stop - slc.start, sid)
+            out.append(riskinput.RiskInput(getter, assets))
         return out
 
     def _gen_riskinputs_poe(self, dstore):
@@ -1192,26 +1182,41 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         if len(discarded):
             calc.datastore['discarded'] = discarded
         assetcol.reduce_also(sitecol)
+        logging.info('Extracted %d assets', len(assetcol))
 
-    # checks
-    M = len(oq.imtls)
-    N = len(sitecol)
-    A = len(assetcol)
-    logging.info('Extracted %d assets', A)
-    if oq.spatial_correlation != 'no' and N > MAXSITES:
-        # hard-coded, heuristic
-        raise ValueError(CORRELATION_MATRIX_TOO_LARGE %
-                         (N, MAXSITES))
-    elif oq.spatial_correlation == 'no' and N * M > oq.cholesky_limit:
-        raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
-            '%d x %d' % (M, N), oq.cholesky_limit))
+    # assemble dictionary to decide on the calculation method for the gmfs
+    if 'MMI' in oq.imtls:
+        # calculations with MMI should be executed
+        if len(oq.imtls) == 1:
+            # only MMI intensities
+            if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
+                logging.warning('Calculations with MMI intensities do not '
+                                'support correlation. No correlations '
+                                'are applied.')
+
+            gmf_dict = {'kind': 'mmi'}
+        else:
+            # there are also other intensities than MMI
+            raise RuntimeError(
+                'There are the following intensities in your model: %s '
+                'Models mixing MMI and other intensities are not supported. '
+                % ', '.join(oq.imtls.keys()))
+    else:
+        # no MMI intensities, calculation with or without correlation
+        if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
+            # cross correlation and/or spatial correlation after S&H
+            gmf_dict = {'kind': 'Silva&Horspool',
+                        'spatialcorr': oq.spatial_correlation,
+                        'crosscorr': oq.cross_correlation,
+                        'cholesky_limit': oq.cholesky_limit}
+        else:
+            # no correlation required, basic calculation is faster
+            gmf_dict = {'kind': 'basic'}
 
     logging.info('Building GMFs')
     with calc.monitor('building/saving GMFs'):
-        imts, gmfs = to_gmfs(
-            shakemap, oq.spatial_correlation, oq.cross_correlation,
-            oq.site_effects, oq.truncation_level, E, oq.random_seed,
-            oq.imtls)
+        imts, gmfs = to_gmfs(shakemap, gmf_dict, oq.site_effects,
+                             oq.truncation_level, E, oq.random_seed, oq.imtls)
         N, E, M = gmfs.shape
         events = numpy.zeros(E, rupture.events_dt)
         events['id'] = numpy.arange(E, dtype=U32)
@@ -1220,7 +1225,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
                for s in numpy.arange(N, dtype=U32)
                for ei, event in enumerate(events)]
-        oq.hazard_imtls = {imt: [0] for imt in imts}
+        oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.array(lst, oq.gmf_data_dt())
         create_gmf_data(calc.datastore, len(imts), data=data)
     return sitecol, assetcol
