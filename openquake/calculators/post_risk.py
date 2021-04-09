@@ -84,7 +84,12 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     oq = dstore['oqparam']
     weights = dstore['weights'][()]
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-    num_events = numpy.bincount(dstore['events']['rlz_id'])
+    if oq.collect_rlzs:
+        eff_time *= len(weights)
+        num_events = numpy.array([len(dstore['events'])])
+        weights = numpy.ones(1)
+    else:
+        num_events = numpy.bincount(dstore['events']['rlz_id'])
     periods = return_periods or oq.return_periods or scientific.return_periods(
         eff_time, num_events.max())
     return scientific.LossCurvesMapsBuilder(
@@ -172,6 +177,8 @@ class PostRiskCalculator(base.RiskCalculator):
         P = len(builder.return_periods)
         # do everything in process since it is really fast
         rlz_id = self.datastore['events']['rlz_id']
+        if oq.collect_rlzs:
+            rlz_id = numpy.zeros_like(rlz_id)
         alt_df = self.datastore.read_df('agg_loss_table')
         if self.reaggreate:
             idxs = numpy.concatenate([
@@ -206,7 +213,9 @@ class PostRiskCalculator(base.RiskCalculator):
             smap.submit((builder, krl_losses))
         for krl, curve in smap.reduce().items():
             agg_curves[krl] = curve
-        self.datastore['agg_losses-rlzs'] = agg_losses * oq.ses_ratio
+        R = len(self.datastore['weights'])
+        ses_ratio = oq.ses_ratio / R if oq.collect_rlzs else oq.ses_ratio
+        self.datastore['agg_losses-rlzs'] = agg_losses * ses_ratio
         set_rlzs_stats(self.datastore, 'agg_losses',
                        agg_id=K + 1, loss_types=oq.loss_names, units=units)
         self.datastore['agg_curves-rlzs'] = agg_curves

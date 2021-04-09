@@ -1584,11 +1584,13 @@ class OqParam(valid.ParamSet):
 
     def is_valid_collect_rlzs(self):
         """
-        sampling_method must be early_weights
+        sampling_method must be early_weights and only the mean is available
         """
         if self.collect_rlzs is False:
             return True
-        return self.number_of_logic_tree_samples > 1 and (
+        hstats = list(self.hazard_stats())
+        nostats = not hstats or hstats == ['mean']
+        return nostats and self.number_of_logic_tree_samples > 1 and (
             self.sampling_method == 'early_weights')
 
     def check_uniform_hazard_spectra(self):
