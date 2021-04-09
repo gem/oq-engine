@@ -387,12 +387,15 @@ class SiteCollection(object):
         cols = ' '.join(names)
         return {n: self.array[n] for n in names}, {'__pdcolumns__': cols}
 
-    def __fromh5__(self, grp, attrs):
-        params = attrs['__pdcolumns__'].split()
-        dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
-        self.array = numpy.zeros(len(grp['sids']), dtype)
-        for p in grp:
-            self.array[p] = grp[p][()]
+    def __fromh5__(self, dic, attrs):
+        if isinstance(dic, dict):  # engine > 3.11
+            params = attrs['__pdcolumns__'].split()
+            dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
+            self.array = numpy.zeros(len(dic['sids']), dtype)
+            for p in dic:
+                self.array[p] = dic[p][()]
+        else:  # old engine, dic is actually a structured array
+            self.array = dic
         self.complete = self
 
     @property
