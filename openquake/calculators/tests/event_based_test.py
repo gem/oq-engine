@@ -485,7 +485,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-4)
         sio = io.StringIO()
-        write_csv(sio, self.calc.datastore.getitem('sitecol'))
+        write_csv(sio, self.calc.datastore['sitecol'].array)
         tmp = gettemp(sio.getvalue())
         self.assertEqualFiles('expected/sitecol.csv', tmp)
 
