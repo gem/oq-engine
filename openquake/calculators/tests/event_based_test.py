@@ -157,6 +157,11 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
+
+        etime = self.calc.datastore.get_attr('gmf_data', 'effective_time')
+        self.assertEqual(etime, 80000.)  # ses_per_logic_tree_path = 80000
+        imts = self.calc.datastore.get_attr('gmf_data', 'imts')
+        self.assertEqual(imts, 'PGA')
         self.check_avg_gmf()
 
         # make sure ses_id >= 65536 is valid
@@ -219,6 +224,10 @@ class EventBasedTestCase(CalculatorTestCase):
 
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/minimum-intensity-gmf-data.csv', fname)
+
+        # test gmf_data.hdf5 exporter
+        [fname] = export(('gmf_data', 'hdf5'), self.calc.datastore)
+        self.assertIn('gmf-data_', fname)
 
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
