@@ -335,9 +335,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 return {}
 
         if oq.ground_motion_fields:
-            M = len(oq.get_primary_imtls())
+            imts = oq.get_primary_imtls()
             nrups = len(self.datastore['ruptures'])
-            base.create_gmf_data(self.datastore, M, oq.get_sec_imts())
+            base.create_gmf_data(self.datastore, imts, oq.get_sec_imts())
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
             self.datastore.create_dset('gmf_data/time_by_rup',

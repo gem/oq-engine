@@ -157,6 +157,9 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
+
+        imts = self.calc.datastore.get_attr('gmf_data', 'imts')
+        self.assertEqual(imts, 'PGA')
         self.check_avg_gmf()
 
         # make sure ses_id >= 65536 is valid
