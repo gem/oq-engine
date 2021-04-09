@@ -213,7 +213,9 @@ class PostRiskCalculator(base.RiskCalculator):
             smap.submit((builder, krl_losses))
         for krl, curve in smap.reduce().items():
             agg_curves[krl] = curve
-        self.datastore['agg_losses-rlzs'] = agg_losses * oq.ses_ratio
+        R = len(self.datastore['weights'])
+        ses_ratio = oq.ses_ratio / R if oq.collect_rlzs else oq.ses_ratio
+        self.datastore['agg_losses-rlzs'] = agg_losses * ses_ratio
         set_rlzs_stats(self.datastore, 'agg_losses',
                        agg_id=K + 1, loss_types=oq.loss_names, units=units)
         self.datastore['agg_curves-rlzs'] = agg_curves
