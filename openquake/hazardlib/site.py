@@ -383,10 +383,16 @@ class SiteCollection(object):
         return not_equal(self.array, other.array)
 
     def __toh5__(self):
-        return self.array, {}
+        names = self.array.dtype.names
+        cols = ' '.join(names)
+        return {n: self.array[n] for n in names}, {'__pdcolumns__': cols}
 
-    def __fromh5__(self, array, attrs):
-        self.array = array
+    def __fromh5__(self, grp, attrs):
+        params = attrs['__pdcolumns__'].split()
+        dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
+        self.array = numpy.zeros(len(grp['sids']), dtype)
+        for p in grp:
+            self.array[p] = grp[p][()]
         self.complete = self
 
     @property

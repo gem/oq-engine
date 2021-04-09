@@ -142,6 +142,9 @@ class ClassicalTestCase(CalculatorTestCase):
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_3.__file__)
 
+        # checking sitecol as DataFrame
+        self.calc.datastore.read_df('sitecol', 'sids')
+
     def test_case_4(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
