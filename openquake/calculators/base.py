@@ -24,6 +24,7 @@ import operator
 import traceback
 from datetime import datetime
 from shapely import wkt
+import h5py
 import numpy
 import pandas
 
@@ -509,12 +510,16 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
             if 'gmfs' in oq.inputs:
-                if not oq.inputs['gmfs'].endswith('.csv'):
+                self.datastore['full_lt'] = logictree.FullLogicTree.fake()
+                if oq.inputs['gmfs'].endswith('.csv'):
+                    eids = import_gmfs_csv(self.datastore, oq,
+                                           self.sitecol.complete.sids)
+                elif oq.inputs['gmfs'].endswith('.hdf5'):
+                    eids = import_gmfs_hdf5(self.datastore, oq)
+                else:
                     raise NotImplementedError(
                         'Importer for %s' % oq.inputs['gmfs'])
-                self.datastore['full_lt'] = logictree.FullLogicTree.fake()
-                E = len(import_gmfs(self.datastore, oq,
-                                    self.sitecol.complete.sids))
+                E = len(eids)
                 if hasattr(oq, 'number_of_ground_motion_fields'):
                     if oq.number_of_ground_motion_fields != E:
                         raise RuntimeError(
@@ -1029,7 +1034,7 @@ class RiskCalculator(HazardCalculator):
         return acc + res
 
 
-def import_gmfs(dstore, oqparam, sids):
+def import_gmfs_csv(dstore, oqparam, sids):
     """
     Import in the datastore a ground motion field CSV file.
 
@@ -1094,11 +1099,35 @@ def import_gmfs(dstore, oqparam, sids):
     return eids
 
 
-def create_gmf_data(dstore, imts, sec_imts=(), data=None):
+def import_gmfs_hdf5(dstore, oqparam):
+    """
+    Import in the datastore a ground motion field HDF5 file.
+
+    :param dstore: the datastore
+    :param oqparam: an OqParam instance
+    :returns: event_ids
+    """
+    dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
+    attrs = dict(dstore['gmf_data'].attrs)
+    oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts'].split()}
+
+    # store the events
+    E = attrs['num_events']
+    events = numpy.zeros(E, rupture.events_dt)
+    events['id'] = numpy.arange(E)
+    dstore['events'] = events
+
+    dstore['weights'] = numpy.ones(1)
+    return events['id']
+
+
+def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
     """
     Create and possibly populate the datasets in the gmf_data group
     """
-    M = len(imts)
+    oq = dstore['oqparam']
+    R = dstore['full_lt'].get_num_rlzs()
+    M = len(prim_imts)
     n = 0 if data is None else len(data['sid'])
     items = [('sid', U32 if n == 0 else data['sid']),
              ('eid', U32 if n == 0 else data['eid'])]
@@ -1107,9 +1136,11 @@ def create_gmf_data(dstore, imts, sec_imts=(), data=None):
         items.append((col, F32 if data is None else data[col]))
     for imt in sec_imts:
         items.append((str(imt), F32 if n == 0 else data[imt]))
+    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     dstore.create_dframe('gmf_data', items, 'gzip')
     dstore.set_attrs('gmf_data', num_events=len(dstore['events']),
-                     imts=' '.join(map(str, imts)))
+                     imts=' '.join(map(str, prim_imts)),
+                     effective_time=eff_time)
     if data is not None:
         df = pandas.DataFrame(dict(items))
         avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)

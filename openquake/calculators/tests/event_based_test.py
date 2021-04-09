@@ -158,6 +158,8 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
 
+        etime = self.calc.datastore.get_attr('gmf_data', 'effective_time')
+        self.assertEqual(etime, 80000.)  # ses_per_logic_tree_path = 80000
         imts = self.calc.datastore.get_attr('gmf_data', 'imts')
         self.assertEqual(imts, 'PGA')
         self.check_avg_gmf()

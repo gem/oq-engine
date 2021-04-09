@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added HDF5 exporter/importer for the GMFs
   * Replaced XML exposures with CSV exposures in the demos
 
   [Claudia Mascandola]
