@@ -874,8 +874,7 @@ hazard_uhs-std.csv
         # test soiltype
         self.run_calc(case_63.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f)    
-        self.assertEqualFiles('expected/hcurve-mean.csv', f)
+        self.assertEqualFiles('expected/hcurve-mean-PGA.csv', f)    
 
     def test_case_64(self):
         # LanzanoEtAl2016 with bas term
