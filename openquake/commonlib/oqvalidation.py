@@ -1584,7 +1584,8 @@ class OqParam(valid.ParamSet):
 
     def is_valid_collect_rlzs(self):
         """
-        sampling_method must be early_weights and only the mean is available
+        sampling_method must be early_weights and only the mean is available.
+        number_of_logic_tree_samples = {number_of_logic_tree_samples}.
         """
         if self.collect_rlzs is False:
             return True
