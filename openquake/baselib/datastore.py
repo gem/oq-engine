@@ -20,7 +20,6 @@ import io
 import os
 import re
 import gzip
-import json
 import getpass
 import itertools
 import collections
@@ -29,7 +28,6 @@ import h5py
 import pandas
 
 from openquake.baselib import hdf5, config, performance, general
-from openquake.baselib.python3compat import decode
 
 MAX_ROWS = 10_000_000
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'

@@ -408,9 +408,9 @@ agg_id
 5        36.430618    3.587823         2
 3       113.847435  229.427109         3
 """
-        sig1 = numpy.sqrt(alt[alt.taxonomy==1].variance.to_numpy()).sum()
-        sig2 = numpy.sqrt(alt[alt.taxonomy==2].variance.to_numpy()).sum()
-        sig3 = numpy.sqrt(alt[alt.taxonomy==3].variance.to_numpy()).sum()
+        sig1 = numpy.sqrt(alt[alt.taxonomy == 1].variance.to_numpy()).sum()
+        sig2 = numpy.sqrt(alt[alt.taxonomy == 2].variance.to_numpy()).sum()
+        sig3 = numpy.sqrt(alt[alt.taxonomy == 3].variance.to_numpy()).sum()
         aac(sig1 ** 2 + sig2 ** 2 + sig3 ** 2, tot.variance)
 
     def check_multi_tag(self, dstore):
