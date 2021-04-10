@@ -1192,7 +1192,7 @@ def return_periods(eff_time, num_losses):
     """
     :param eff_time: ses_per_logic_tree_path * investigation_time
     :param num_losses: used to determine the minimum period
-    :returns: an array of 32 bit periods
+    :returns: an array of periods of dtype uint32
 
     Here are a few examples:
 
@@ -1232,7 +1232,7 @@ def return_periods(eff_time, num_losses):
 
 def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     """
-    :param losses: array of simulated losses
+    :param losses: simulated losses
     :param return_periods: return periods of interest
     :param num_events: the number of events (>= number of losses)
     :param eff_time: investigation_time * ses_per_logic_tree_path
@@ -1268,7 +1268,7 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     num_zeros = num_events - num_losses
     if num_zeros:
         newlosses = numpy.zeros(num_events, losses.dtype)
-        newlosses[num_events-num_losses:num_events] = losses
+        newlosses[num_events - num_losses:num_events] = losses
         losses = newlosses
     periods = eff_time / numpy.arange(num_events, 0., -1)
     num_left = sum(1 for rp in return_periods if rp < periods[0])
@@ -1276,11 +1276,8 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
     curve = numpy.zeros(len(return_periods), losses.dtype)
     logr, logp = numpy.log(rperiods), numpy.log(periods)
-    for idx, _ in numpy.ndenumerate(losses[0]):
-        tup = idx + (slice(num_left, P-num_right),)
-        curve[tup] = numpy.interp(logr, logp, losses[idx])
-        tup = idx + (slice(P-num_right, None),)
-        curve[tup] = numpy.nan
+    curve[num_left:P - num_right] = numpy.interp(logr, logp, losses)
+    curve[P - num_right:] = numpy.nan
     return curve
 
 

@@ -35,12 +35,14 @@ from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util
+from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
 from openquake.calculators.extract import extract
 
 F32 = numpy.float32
 U32 = numpy.uint32
+U8 = numpy.uint8
 
 # a dictionary of views datastore -> array
 view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
@@ -1008,14 +1010,32 @@ def view_event_loss_table(token, dstore):
 @view.add('delta_loss')
 def view_delta_loss(token, dstore):
     """
-    Return |tot0-tot1| / (tot0 + tot1) where tot0 is the total loss
-    computed from even events and tot1 from odd events, for the first
-    loss type.
+    Estimate the stocastic error on the loss curve by splitting the events
+    in odd and even. Example:
+
+    $ oq show delta_loss:1  # consider the second loss type
     """
+    if ':' in token:
+        _, li = token.split(':')
+        li = int(li)
+    else:
+        li = 0
+    oq = dstore['oqparam']
+    efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
+        dstore['weights'])
+    num_events = len(dstore['events'])
+    num_events0 = num_events // 2 + (num_events % 2)
+    num_events1 = num_events // 2
+    periods = return_periods(efftime, num_events)[1:-1]
+
     K = dstore['agg_loss_table'].attrs.get('K', 0)
     df = dstore.read_df('agg_loss_table', 'event_id',
-                        dict(agg_id=K, loss_id=0))
+                        dict(agg_id=K, loss_id=li))
     mod2 = df.index % 2
-    loss0 = df['loss'][mod2 == 0].sum()
-    loss1 = df['loss'][mod2 == 1].sum()
-    return abs(loss0 - loss1) / (loss0 + loss1)
+    losses0 = df['loss'][mod2 == 0]
+    losses1 = df['loss'][mod2 == 1]
+    c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
+    c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
+    dic = dict(loss=losses_by_period(df['loss'], periods, num_events, efftime),
+               even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
+    return pandas.DataFrame(dic, periods)
