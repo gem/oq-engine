@@ -1013,7 +1013,7 @@ def view_delta_loss(token, dstore):
     Estimate the stocastic error on the loss curve by splitting the events
     in odd and even. Example:
 
-    $ oq show delta_loss:1  # consider the second loss type
+    $ oq show delta_loss  # consider the first loss type
     """
     if ':' in token:
         _, li = token.split(':')
