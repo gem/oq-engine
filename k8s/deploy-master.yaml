@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hostpath-master
+  name: master
   namespace: default
   labels:
-    app: engine-master
+    app: engine
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: engine-master
+      app: engine
   template:
     metadata:
       labels:
-        app: engine-master
+        app: engine
         version: "latest"
     spec:
       containers:
@@ -47,11 +47,11 @@ spec:
         - mountPath: /mnt/openquake
           name: config
         - mountPath: /oqshared  # in the container filesystem
-          name: kinddata        #name as defined in volumes
+          name: data        #name as defined in volumes
       volumes:
-        - name: kinddata # name of volume
-          hostPath:
-            path: /data #  matches kind containerPath:
+        - name: data #name of volume
+          persistentVolumeClaim:
+            claimName: datacalc
         - name: config
           configMap:
             name: oqcfg
