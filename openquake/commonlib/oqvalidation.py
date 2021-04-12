@@ -19,13 +19,14 @@
 
 import os
 import re
+import json
 import inspect
 import logging
 import functools
 import multiprocessing
 import numpy
 
-from openquake.baselib import __version__
+from openquake.baselib import __version__, hdf5, python3compat
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.shakemap.maps import get_array
@@ -110,6 +111,12 @@ collapse_gsim_logic_tree:
 
 collapse_level:
   INTERNAL
+
+collect_rlzs:
+  Collect all realizations into a single effective realizations. Used in
+  event_based_risk calculations with sampling.
+  Example: *collect_rlzs=true*.
+  Default: False
 
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
@@ -198,6 +205,12 @@ distance_bin_width:
 
 ebrisk_maxsize:
   INTERNAL
+
+ignore_master_seed:
+  If set, estimate analytically the uncertainty on the losses due to the
+  uncertainty on the vulnerability functions.
+  Example: *ignore_master_seed = vulnerability*.
+  Default: None
 
 export_dir:
   Set the export directory.
@@ -454,13 +467,6 @@ reference_depth_to_2pt5km_per_sec:
   Example: *reference_depth_to_2pt5km_per_sec = 5*.
   Default: no default
 
-reference_siteclass:
-  Used when there is no site model to specify a global site class.
-  The siteclass is a one-character letter used in some GMPEs, like the
-  McVerry (2006), and has values "A", "B", "C" or "D".
-  Example: *reference_siteclass = "A"*.
-  Default: "D"
-
 reference_vs30_type:
   Used when there is no site model to specify a global vs30 type.
   The choices are "inferred" or "measured"
@@ -692,7 +698,6 @@ class OqParam(valid.ParamSet):
         vs30='reference_vs30_value',
         z1pt0='reference_depth_to_1pt0km_per_sec',
         z2pt5='reference_depth_to_2pt5km_per_sec',
-        siteclass='reference_siteclass',
         backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
@@ -708,6 +713,7 @@ class OqParam(valid.ParamSet):
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), 0)
+    collect_rlzs = valid.Param(valid.boolean, False)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -726,6 +732,7 @@ class OqParam(valid.ParamSet):
     distance_bin_width = valid.Param(valid.positivefloat)
     float_dmg_dist = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
+    ignore_master_seed = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
     ground_motion_correlation_model = valid.Param(
@@ -782,7 +789,6 @@ class OqParam(valid.ParamSet):
         valid.Choice('measured', 'inferred'), 'measured')
     reference_vs30_value = valid.Param(
         valid.positivefloat, numpy.nan)
-    reference_siteclass = valid.Param(valid.Choice('A', 'B', 'C', 'D'), 'D')
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
@@ -1076,13 +1082,14 @@ class OqParam(valid.ParamSet):
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
                     if param in ('lon', 'lat'):  # no check
                         continue
-                    param_name = self.siteparam[param]
-                    param_value = getattr(self, param_name)
-                    if (isinstance(param_value, float) and
-                            numpy.isnan(param_value)):
-                        raise ValueError(
-                            'Please set a value for %r, this is required by '
-                            'the GSIM %s' % (param_name, gsim))
+                    elif param in self.siteparam:  # mandatory params
+                        param_name = self.siteparam[param]
+                        param_value = getattr(self, param_name)
+                        if (isinstance(param_value, float) and
+                                numpy.isnan(param_value)):
+                            raise ValueError(
+                                'Please set a value for %r, this is required '
+                                'by the GSIM %s' % (param_name, gsim))
 
     @property
     def tses(self):
@@ -1567,6 +1574,18 @@ class OqParam(valid.ParamSet):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
 
+    def is_valid_collect_rlzs(self):
+        """
+        sampling_method must be early_weights and only the mean is available.
+        number_of_logic_tree_samples = {number_of_logic_tree_samples}.
+        """
+        if self.collect_rlzs is False or self.hazard_calculation_id:
+            return True
+        hstats = list(self.hazard_stats())
+        nostats = not hstats or hstats == ['mean']
+        return nostats and self.number_of_logic_tree_samples > 1 and (
+            self.sampling_method == 'early_weights')
+
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
                    imt.startswith('SA')]
@@ -1623,3 +1642,9 @@ class OqParam(valid.ParamSet):
             name = name.split()[-1]
             dic[name] = doc
         return dic
+
+    def __toh5__(self):
+        return hdf5.dumps(vars(self)), {}
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(json.loads(python3compat.decode(array)))

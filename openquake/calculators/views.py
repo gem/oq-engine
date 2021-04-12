@@ -35,12 +35,14 @@ from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util
+from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
 from openquake.calculators.extract import extract
 
 F32 = numpy.float32
 U32 = numpy.uint32
+U8 = numpy.uint8
 
 # a dictionary of views datastore -> array
 view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
@@ -283,7 +285,7 @@ def view_job_info(token, dstore):
     """
     data = [['task', 'sent', 'received']]
     task_info = dstore['task_info'][()]
-    task_sent = ast.literal_eval(dstore['task_sent'][()])
+    task_sent = ast.literal_eval(decode(dstore['task_sent'][()]))
     for task, dic in task_sent.items():
         sent = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
@@ -985,3 +987,57 @@ def view_gsim_for_event(token, dstore):
     trti = et_id // len(full_lt.sm_rlzs)
     gsim = full_lt.get_realizations()[rlz_id].gsim_rlz.value[trti]
     return gsim
+
+
+@view.add('event_loss_table')
+def view_event_loss_table(token, dstore):
+    """
+    Display the top 20 losses of the event loss table for the first loss type
+
+    $ oq show event_loss_table
+    """
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    df = dstore.read_df('agg_loss_table', 'event_id',
+                        dict(agg_id=K, loss_id=0))
+    df['std'] = numpy.sqrt(df.variance)
+    df.sort_values('loss', ascending=False, inplace=True)
+    del df['agg_id']
+    del df['loss_id']
+    del df['variance']
+    return df[:20]
+
+
+@view.add('delta_loss')
+def view_delta_loss(token, dstore):
+    """
+    Estimate the stocastic error on the loss curve by splitting the events
+    in odd and even. Example:
+
+    $ oq show delta_loss  # consider the first loss type
+    """
+    if ':' in token:
+        _, li = token.split(':')
+        li = int(li)
+    else:
+        li = 0
+    oq = dstore['oqparam']
+    efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
+        dstore['weights'])
+    num_events = len(dstore['events'])
+    num_events0 = num_events // 2 + (num_events % 2)
+    num_events1 = num_events // 2
+    periods = return_periods(efftime, num_events)[1:-1]
+
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    df = dstore.read_df('agg_loss_table', 'event_id',
+                        dict(agg_id=K, loss_id=li))
+    if len(df) == 0:  # for instance no fatalities
+        return {'delta': numpy.zeros(1)}
+    mod2 = df.index % 2
+    losses0 = df['loss'][mod2 == 0]
+    losses1 = df['loss'][mod2 == 1]
+    c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
+    c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
+    dic = dict(loss=losses_by_period(df['loss'], periods, num_events, efftime),
+               even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
+    return pandas.DataFrame(dic, periods)

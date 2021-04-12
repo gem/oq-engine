@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <!--Example site model for testing Bradley2013bChchMaps gsim class-->
+  <siteModel name="Site Model">
+    <site lon="172.63" lat="-43.53" vs30="330" soiltype="3"/>
+  </siteModel>
+</nrml>

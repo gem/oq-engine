@@ -650,6 +650,14 @@ hong_goda_2007
     :undoc-members:
     :show-inheritance:
 
+idini_2017
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.idini_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
 idriss_2014
 -------------------------------------------
 

@@ -82,6 +82,9 @@ also for memory efficiency. That means that work will be needed to be
 able to read both the old and the new versions of such objects. This is
 actually the least of the problems mentioned until now.
 
+10. In engine 3.12 the way the object `oqparam` has changed, to support
+h5py 3.X. This is yet another origin of breaking changes.
+
 Copying with version-dependency
 -------------------------------
 

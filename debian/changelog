@@ -1,9 +1,27 @@
+  [Pablo Heresi]
+  * Implemented Idini et al (2017) GSIM.
+  * Added dynamic site parameter 'soiltype'
+
+  [Michele Simionato]
+  * Added support for traditional disaggregation
+  * Removed the global site parameter `reference_siteclass` and turned
+    `backarc`, `z1pt0` and `z2pt` into dynamic site parameters
+  * Internal: storing the SiteCollection in a pandas-friendly way
+  * Added HDF5 exporter/importer for the GMFs
+  * Replaced XML exposures with CSV exposures in the demos
+
+  [Claudia Mascandola]
+  * Fix to LanzanoEtAl2016 in presence of a "bas" term in the site model
+
   [Nicolas Schmid]
   * Improve performance for ShakeMap calculations when spatialcorr and crosscorr
     are both set to 'no'
   * Add feature to do ShakeMap calculations for vulnerability models using MMI.
 
   [Michele Simionato]
+  * Added a flag `ignore_master_seed` (false by default)
+  * Estimated the uncertainty on the losses due to the uncertainty in the
+    vulnerability functions in event_based_risk and scenario_risk calculations
   * Supported exposures with generic CSV fields thanks to the `exposureFields`
     mapping
   * Honored `custom_site_id` in the hazard curves and UHS CSV exporters

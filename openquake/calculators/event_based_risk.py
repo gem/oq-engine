@@ -44,6 +44,31 @@ gmf_info_dt = numpy.dtype([('rup_id', U32), ('task_no', U16),
                            ('nsites', U16), ('gmfbytes', F32), ('dt', F32)])
 
 
+def aggregate_losses(alt, K, kids, correl):
+    """
+    Aggregate losses and variances for each event by using the formulae
+
+    sigma^2 = sum(sigma_i)^2 for correl=1
+    sigma^2 = sum(sigma_i^2) for correl=0
+    """
+    lbe = general.AccumDict(accum=numpy.zeros(2, F32))
+    x = numpy.sqrt(alt.variance) if correl else alt.variance
+    ldf = pandas.DataFrame(dict(eid=alt.eid, loss=alt.loss, x=x))
+    if len(kids):
+        ldf['kid'] = kids[alt.aid.to_numpy()]
+        tot = ldf.groupby(['eid', 'kid']).sum()
+        for (eid, kid), loss, x in zip(
+                tot.index, tot.loss, tot.x):
+            lbe[eid, kid] += F32([loss, x])
+    tot = ldf.groupby('eid').sum()
+    for eid, loss, x in zip(tot.index, tot.loss, tot.x):
+        lbe[eid, K] += F32([loss, x])
+    if correl:  # restore the variances
+        for k in lbe:
+            lbe[k][1] = lbe[k][1] ** 2
+    return lbe
+
+
 def event_based_risk(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
@@ -60,17 +85,20 @@ def event_based_risk(df, param, monitor):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        if K:
-            kids = dstore['assetcol/kids'][:]
+        kids = dstore['assetcol/kids'][:] if K else ()
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
-        weights = dstore['weights'][()]
+        weights = [1] if param['collect_rlzs'] else dstore['weights'][()]
     AR = len(assets_df), len(weights)
     loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
-    loss_by_EK1 = {ln: general.AccumDict(accum=0)
+    loss_by_EK1 = {ln: general.AccumDict(accum=numpy.zeros(2, F32))
                    for ln in crmodel.oqparam.loss_names}
-    rndgen = MultiEventRNG(
-        param['master_seed'], numpy.unique(df.eid), param['asset_correlation'])
+    correl = param['asset_correlation']
+    if crmodel.oqparam.ignore_master_seed:
+        rndgen = None
+    else:
+        rndgen = MultiEventRNG(
+            param['master_seed'], numpy.unique(df.eid), correl)
     for taxo, asset_df in assets_df.groupby('taxonomy'):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         if len(gmf_df) == 0:
@@ -83,18 +111,17 @@ def event_based_risk(df, param, monitor):
             alt = out[ln]
             if len(alt) == 0:
                 continue
-            lbe = loss_by_EK1[ln]
             with mon_agg:
-                ldf = pandas.DataFrame(dict(eid=alt.eid, loss=alt.loss))
-                if K:
-                    ldf['kid'] = kids[alt.aid.to_numpy()]
-                    tot = ldf.groupby(['eid', 'kid']).loss.sum()
-                    for (eid, kid), loss in zip(tot.index, tot.to_numpy()):
-                        lbe[eid, kid] += loss
-                tot = ldf.groupby('eid').loss.sum()
-                for eid, loss in zip(tot.index, tot.to_numpy()):
-                    lbe[eid, K] += loss
-            if param['avg_losses']:
+                loss_by_EK1[ln] += aggregate_losses(alt, K, kids, correl)
+            if param['collect_rlzs']:
+                with mon_avg:
+                    ldf = pandas.DataFrame(
+                        dict(aid=alt.aid.to_numpy(), loss=alt.loss))
+                    tot = ldf.groupby('aid').loss.sum()
+                    aids, rlzs = tot.index.to_numpy(), numpy.zeros_like(tot)
+                    loss_by_AR[ln].append(
+                        sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR))
+            elif param['avg_losses']:
                 with mon_avg:
                     ldf = pandas.DataFrame(
                         dict(aid=alt.aid.to_numpy(), loss=alt.loss,
@@ -106,22 +133,31 @@ def event_based_risk(df, param, monitor):
     if loss_by_AR:
         yield loss_by_AR
         loss_by_AR.clear()
+    alt = _build_agg_loss_table(loss_by_EK1)
+    if alt:
+        yield alt
+        alt.clear()
+
+
+def _build_agg_loss_table(loss_by_EK1):
     alt = {}
-    for lni, ln in enumerate(crmodel.oqparam.loss_names):
+    for lni, ln in enumerate(loss_by_EK1):
         nnz = len(loss_by_EK1[ln])
         if nnz:
             eid = numpy.zeros(nnz, U32)
             kid = numpy.zeros(nnz, U16)
-            loss = numpy.zeros(nnz, F64)
+            loss = numpy.zeros(nnz, F32)
+            var = numpy.zeros(nnz, F32)
             lid = numpy.ones(nnz, U8) * lni
-            for i, ((e, k), ls) in enumerate(loss_by_EK1[ln].items()):
+            for i, ((e, k), lv) in enumerate(loss_by_EK1[ln].items()):
                 eid[i] = e
                 kid[i] = k
-                loss[i] = ls
+                loss[i] = lv[0]
+                var[i] = lv[1]
             alt[ln] = pandas.DataFrame(
-                dict(event_id=eid, agg_id=kid, loss=loss, loss_id=lid))
-    if alt:
-        yield alt
+                dict(event_id=eid, agg_id=kid, loss=loss, variance=var,
+                     loss_id=lid))
+    return alt
 
 
 def start_ebrisk(rgetter, param, monitor):
@@ -229,6 +265,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.param['K'] = len(self.aggkey)
         ct = oq.concurrent_tasks or 1
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
+        self.param['collect_rlzs'] = oq.collect_rlzs
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_names)
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
@@ -237,17 +274,24 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
 
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
-                 ('loss', F64)]
+                 ('loss', F32), ('variance', F32)]
         self.datastore.create_dframe(
             'agg_loss_table', descr, K=len(self.aggkey), L=len(oq.loss_names))
-        R = len(self.datastore['weights'])
+        ws = self.datastore['weights']
+        R = 1 if oq.collect_rlzs else len(ws)
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
         if oq.avg_losses:
-            if oq.investigation_time:  # event_based
-                self.avg_ratio = numpy.array([oq.ses_ratio] * R)
-            else:  # scenario
-                self.avg_ratio = 1. / self.num_events
+            if oq.collect_rlzs:
+                if oq.investigation_time:  # event_based
+                    self.avg_ratio = numpy.array([oq.ses_ratio / len(ws)])
+                else:  # scenario
+                    self.avg_ratio = numpy.array([1. / self.num_events.sum()])
+            else:
+                if oq.investigation_time:  # event_based
+                    self.avg_ratio = numpy.array([oq.ses_ratio] * R)
+                else:  # scenario
+                    self.avg_ratio = 1. / self.num_events
             self.avg_losses = numpy.zeros((A, R, L), F32)
             self.datastore.create_dset('avg_losses-rlzs', F32, (A, R, L))
             self.datastore.set_shape_descr(
