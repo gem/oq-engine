@@ -9,4 +9,4 @@ spec:
   - port: 1909
     protocol: TCP
   selector:
-    app: engine-workers
+    app: workers
