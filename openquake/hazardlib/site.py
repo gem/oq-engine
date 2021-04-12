@@ -251,7 +251,6 @@ class SiteCollection(object):
                       sitemodel.reference_vs30_type == 'measured')
             self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
             self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
-            self._set('backarc', sitemodel.reference_backarc)
         else:
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
@@ -485,7 +484,7 @@ class SiteCollection(object):
         for name in ok:
             self._set(name, site_model[name])
         for name in set(self.array.dtype.names) - set(site_model.dtype.names):
-            if name in ('vs30measured', 'backarc'):
+            if name == 'vs30measured':
                 self._set(name, 0)  # default
                 # NB: by default reference_vs30_type == 'measured' is 1
                 # but vs30measured is 0 (the opposite!!)
