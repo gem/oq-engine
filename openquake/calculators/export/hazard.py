@@ -439,10 +439,8 @@ def export_gmf_data_csv(ekey, dstore):
 @export.add(('gmf_data', 'hdf5'))
 def export_gmf_data_hdf5(ekey, dstore):
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
-    sitecol = dstore['sitecol'].complete
     with hdf5.File(fname, 'w') as f:
-        f['sitecol/lon'] = sitecol.lons
-        f['sitecol/lat'] = sitecol.lats
+        f['sitecol'] = dstore['sitecol'].complete
         dstore.hdf5.copy('gmf_data', f)
     return [fname]
 

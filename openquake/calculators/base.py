@@ -729,7 +729,11 @@ class HazardCalculator(BaseCalculator):
                         'ampcode' not in haz_sitecol.array.dtype.names):
                     haz_sitecol.add_col('ampcode', site.ampcode_dt)
         else:
-            haz_sitecol = readinput.get_site_collection(oq, self.datastore)
+            if 'gmfs' in oq.inputs and oq.inputs['gmfs'].endswith('.hdf5'):
+                with hdf5.File(oq.inputs['gmfs']) as f:
+                    haz_sitecol = f['sitecol']
+            else:
+                haz_sitecol = readinput.get_site_collection(oq, self.datastore)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
