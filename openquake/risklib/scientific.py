@@ -74,28 +74,26 @@ def fine_graining(points, steps):
 
 # sampling functions
 class Sampler(object):
-    def __init__(self, distname, rng, lratios=(), cols=None, minloss=0):
+    def __init__(self, distname, rng, lratios=(), cols=None):
         self.distname = distname
         self.rng = rng
         self.arange = numpy.arange(len(lratios))  # for the PM distribution
         self.lratios = lratios  # for the PM distribution
         self.cols = cols  # for the PM distribution
-        self.minloss = minloss
 
     def get_losses(self, df, covs):
         vals = df['val'].to_numpy()
-        if not covs:  # fast lane for zero CoVs
+        if not self.rng or not covs:  # fast lane
             losses = vals * df['mean'].to_numpy()
         else:  # slow lane
             losses = vals * getattr(self, 'sample' + self.distname)(df)
-        losses[losses < self.minloss] = 0
         return losses
 
     def sampleLN(self, df):
         means = df['mean'].to_numpy()
         covs = df['cov'].to_numpy()
         eids = df['eid'].to_numpy()
-        return self.rng.normal(eids, means, covs)
+        return self.rng.lognormal(eids, means, covs)
 
     def sampleBT(self, df):
         means = df['mean'].to_numpy()
@@ -264,10 +262,16 @@ class VulnerabilityFunction(object):
             lratios = ()
             cols = None
         df = ratio_df.join(asset_df, how='inner')
-        sampler = Sampler(self.distribution_name, rng, lratios, cols, minloss)
+        sampler = Sampler(self.distribution_name, rng, lratios, cols)
         covs = not hasattr(self, 'covs') or self.covs.any()
         losses = sampler.get_losses(df, covs)
-        return pandas.DataFrame(dict(eid=df.eid, aid=df.aid, loss=losses))
+        ok = losses > minloss
+        if self.distribution_name == 'PM':  # special case
+            variances = numpy.zeros(len(losses))
+        else:
+            variances = (losses * df['cov'].to_numpy())**2
+        return pandas.DataFrame(dict(eid=df.eid[ok], aid=df.aid[ok],
+                                     loss=losses[ok], variance=variances[ok]))
 
     def strictly_increasing(self):
         """
@@ -752,7 +756,7 @@ class MultiEventRNG(object):
     >>> eids = numpy.array([1] * 3)
     >>> means = numpy.array([.5] * 3)
     >>> covs = numpy.array([.1] * 3)
-    >>> rng.normal(eids, means, covs)
+    >>> rng.lognormal(eids, means, covs)
     array([0.38892466, 0.38892466, 0.38892466])
     >>> rng.beta(eids, means, covs)
     array([0.4372343 , 0.57308132, 0.56392573])
@@ -765,7 +769,7 @@ class MultiEventRNG(object):
             ph = numpy.random.Philox(self.master_seed + eid)
             self.rng[eid] = numpy.random.Generator(ph)
 
-    def normal(self, eids, means, covs):
+    def lognormal(self, eids, means, covs):
         """
         :param eids: event IDs
         :param means: array of floats in the range 0..1
@@ -1188,7 +1192,7 @@ def return_periods(eff_time, num_losses):
     """
     :param eff_time: ses_per_logic_tree_path * investigation_time
     :param num_losses: used to determine the minimum period
-    :returns: an array of 32 bit periods
+    :returns: an array of periods of dtype uint32
 
     Here are a few examples:
 
@@ -1228,7 +1232,7 @@ def return_periods(eff_time, num_losses):
 
 def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     """
-    :param losses: array of simulated losses
+    :param losses: simulated losses
     :param return_periods: return periods of interest
     :param num_events: the number of events (>= number of losses)
     :param eff_time: investigation_time * ses_per_logic_tree_path
@@ -1264,7 +1268,7 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     num_zeros = num_events - num_losses
     if num_zeros:
         newlosses = numpy.zeros(num_events, losses.dtype)
-        newlosses[num_events-num_losses:num_events] = losses
+        newlosses[num_events - num_losses:num_events] = losses
         losses = newlosses
     periods = eff_time / numpy.arange(num_events, 0., -1)
     num_left = sum(1 for rp in return_periods if rp < periods[0])
@@ -1272,11 +1276,8 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
     rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
     curve = numpy.zeros(len(return_periods), losses.dtype)
     logr, logp = numpy.log(rperiods), numpy.log(periods)
-    for idx, _ in numpy.ndenumerate(losses[0]):
-        tup = idx + (slice(num_left, P-num_right),)
-        curve[tup] = numpy.interp(logr, logp, losses[idx])
-        tup = idx + (slice(P-num_right, None),)
-        curve[tup] = numpy.nan
+    curve[num_left:P - num_right] = numpy.interp(logr, logp, losses)
+    curve[P - num_right:] = numpy.nan
     return curve
 
 
@@ -1340,7 +1341,8 @@ class InsuredLosses(object):
                 aids.extend([aid] * len(df))
                 ilosses.extend(ins)
             out[lt + '_ins'] = pandas.DataFrame(
-                dict(eid=U32(eids), aid=U32(aids), loss=ilosses))
+                dict(eid=U32(eids), aid=U32(aids), loss=ilosses,
+                     variance=numpy.zeros_like(ilosses)))
 
 
 # not used anymore

@@ -253,7 +253,9 @@ class RunShowExportTestCase(unittest.TestCase):
         with Print.patch() as p:
             sap.runline(
                 f'openquake.commands show_attrs sitecol {self.calc_id}')
-        self.assertEqual('__pyclass__ openquake.hazardlib.site.SiteCollection',
+        self.assertEqual('__pdcolumns__ sids lon lat depth vs30 vs30measured '
+                         'z1pt0 z2pt5 backarc\n__pyclass__ '
+                         'openquake.hazardlib.site.SiteCollection',
                          str(p))
 
     def test_show_oqparam(self):

@@ -18,26 +18,25 @@
 
 import os
 import math
+import warnings
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
-from openquake.hazardlib.gsim.projects.acme_base import (CoeffsTableACME,
-                                            get_phi_ss_at_quantile_ACME)
+from openquake.hazardlib.gsim.projects.acme_base import (
+    CoeffsTableACME, get_phi_ss_at_quantile_ACME)
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
         YenierAtkinson2015BSSA, get_fs_SeyhanStewart2014
-
 from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
                                                get_tau_at_quantile,
-                                               #get_phi_ss_at_quantile,
                                                get_phi_ss,
                                                TAU_SETUP,
                                                PHI_SETUP,
                                                PHI_S2SS_MODEL,
                                                TAU_EXECUTION)
-
+warnings.filterwarnings("ignore", category=np.RankWarning)
 PATH = os.path.join(os.path.dirname(__file__), "..", "nga_east_tables")
 
 
@@ -405,7 +404,7 @@ class AlAtikSigmaModel(GMPE):
         acc = np.log(disp * (2 * np.pi / imt)**2)
         return acc
 
-    def extrapolate_in_PSA(self, sites, rup, dists, imt_high, 
+    def extrapolate_in_PSA(self, sites, rup, dists, imt_high,
                            set_imt, stds_types, imt):
 
         extrap_mean = []
@@ -457,7 +456,7 @@ class AlAtikSigmaModel(GMPE):
             mean = self.get_acc_from_disp(disp, imt.period)
         # if the corner period is longer than highest and imt is above
         # highets but below corner
-        elif extr and cornerp > hp and imt.period >= hp and imt.period < cornerp:
+        elif extr and cornerp > hp and hp <= imt.period < cornerp:
             mean = self.extrapolate_in_PSA(sites, rup, dists,
                                 hp, sp, stds_types, imt.period)
         elif extr and cornerp > hp and imt.period > cornerp:
@@ -470,8 +469,6 @@ class AlAtikSigmaModel(GMPE):
             mean, _ = self.gmpe.get_mean_and_stddevs(
                 sites, rup, dists, imt, stds_types)
 
-
-
         kappa = 1
         if self.kappa_file:
 
@@ -483,7 +480,6 @@ class AlAtikSigmaModel(GMPE):
                 kappa = self.KAPPATAB[imt][self.kappa_val]
 
         return mean + np.log(kappa), stddevs
-
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
         """

@@ -108,9 +108,10 @@ def compute_hazard_maps(curves, imls, poes):
     ``poes``.
 
     :param curves:
-        2D array of floats. Each row represents a curve, where the values
-        in the row are the PoEs (Probabilities of Exceedance) corresponding to
-        ``imls``. Each curve corresponds to a geographical location.
+        Array of floats of shape N x L. Each row represents a curve, where the
+        values in the row are the PoEs (Probabilities of Exceedance)
+        corresponding to the ``imls``.
+        Each curve corresponds to a geographical location.
     :param imls:
         Intensity Measure Levels associated with these hazard ``curves``. Type
         should be an array-like of floats.

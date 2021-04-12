@@ -26,6 +26,7 @@ import pandas
 
 from openquake.baselib.general import (
     group_array, deprecated, AccumDict, DictArray)
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.views import view
@@ -435,6 +436,15 @@ def export_gmf_data_csv(ekey, dstore):
         return [fname, f]
 
 
+@export.add(('gmf_data', 'hdf5'))
+def export_gmf_data_hdf5(ekey, dstore):
+    fname = dstore.build_fname('gmf', 'data', 'hdf5')
+    with hdf5.File(fname, 'w') as f:
+        f['sitecol'] = dstore['sitecol'].complete
+        dstore.hdf5.copy('gmf_data', f)
+    return [fname]
+
+
 @export.add(('avg_gmf', 'csv'))
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
@@ -483,7 +493,7 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
-@export.add(('disagg', 'csv'), ('disagg_cond', 'csv'), ('disagg', 'xml'))
+@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'), ('disagg', 'xml'))
 def export_disagg_csv_xml(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
@@ -495,7 +505,7 @@ def export_disagg_csv_xml(ekey, dstore):
     writercls = hazard_writers.DisaggXMLWriter
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
     ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&z=%d'
-    if ekey[0] == 'disagg_cond':
+    if ekey[0] == 'disagg_traditional':
         ex += '&conditional=1'
         cond = '-cond'
     else:

@@ -179,7 +179,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/rlz-0-PGA-sid-0-poe-1_TRT.csv', fname)
 
         # test conditional disaggregation
-        [fname] = export(('disagg_cond', 'csv'), self.calc.datastore)
+        [fname] = export(('disagg_traditional', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/rlz-0-PGA-sid-0-poe-1-cond_TRT.csv',
                               fname)
 

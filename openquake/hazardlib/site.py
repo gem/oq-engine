@@ -125,6 +125,7 @@ site_param_dt = {
     'z1pt4': numpy.float64,
     'backarc': numpy.bool,
     'xvf': numpy.float64,
+    'bas': numpy.bool,
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
@@ -249,7 +250,6 @@ class SiteCollection(object):
                       sitemodel.reference_vs30_type == 'measured')
             self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
             self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
-            self._set('siteclass', sitemodel.reference_siteclass)
             self._set('backarc', sitemodel.reference_backarc)
         else:
             for name in sitemodel.dtype.names:
@@ -382,10 +382,19 @@ class SiteCollection(object):
         return not_equal(self.array, other.array)
 
     def __toh5__(self):
-        return self.array, {}
+        names = self.array.dtype.names
+        cols = ' '.join(names)
+        return {n: self.array[n] for n in names}, {'__pdcolumns__': cols}
 
-    def __fromh5__(self, array, attrs):
-        self.array = array
+    def __fromh5__(self, dic, attrs):
+        if isinstance(dic, dict):  # engine >= 3.11
+            params = attrs['__pdcolumns__'].split()
+            dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
+            self.array = numpy.zeros(len(dic['sids']), dtype)
+            for p in dic:
+                self.array[p] = dic[p][()]
+        else:  # old engine, dic is actually a structured array
+            self.array = dic
         self.complete = self
 
     @property

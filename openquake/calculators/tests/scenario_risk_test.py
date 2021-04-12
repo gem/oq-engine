@@ -91,7 +91,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
         [fname] = out['agg_losses-rlzs', 'csv']
-        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-6)
+        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-5)
 
     def test_occupants(self):
         out = self.run_calc(occupants.__file__, 'job_haz.ini,job_risk.ini',
