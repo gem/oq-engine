@@ -227,10 +227,16 @@ class PostRiskCalculator(base.RiskCalculator):
 
     def post_execute(self, dummy):
         """
-        Sanity check on tot_losses
+        Sanity checks
         """
         logging.info('Total portfolio loss\n' +
                      views.view('portfolio_loss', self.datastore))
+        for li, ln in enumerate(self.oqparam.loss_names):
+            dloss = views.view('delta_loss:%d' % li, self.datastore)
+            if dloss['delta'].mean() > .1:  # more than 10% variation
+                logging.warning(
+                    'A big variation in the %s loss curve is expected:\n%s',
+                    ln, dloss)
         if not self.aggkey:
             return
         logging.info('Sanity check on agg_losses')
