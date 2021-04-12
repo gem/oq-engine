@@ -1108,17 +1108,21 @@ def get_attrs(hdf5path):
         attrs = f['gmf_data'].attrs
         etime = attrs.get('effective_time')
         num_events = attrs.get('num_events')
-        imts = attrs.get('imts')
         if etime is None:   # engine < 3.12
             R = len(f['weights'])
             num_events = len(f['events'])
-            imts = f['gmf_data']['imts'][()]
             arr = f.getitem('oqparam')
             it = arr['par_name'] == b'investigation_time'
             it = float(arr[it]['par_value'][0])
             ses = arr['par_name'] == b'ses_per_logic_tree_path'
             ses = int(arr[ses]['par_value'][0])
             etime = it * ses * R
+            imts = []
+            for name in arr['par_name']:
+                if name.startswith(b'hazard_imtls.'):
+                    imts.append(name[13:].decode('utf8'))
+        else:  # engine >= 3.12
+            imts = attrs['imts'].split()
     return dict(effective_time=etime, num_events=num_events, imts=imts)
 
 
@@ -1132,7 +1136,7 @@ def import_gmfs_hdf5(dstore, oqparam):
     """
     dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
     attrs = get_attrs(oqparam.inputs['gmfs'])
-    oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts'].split()}
+    oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
     E = attrs['num_events']
