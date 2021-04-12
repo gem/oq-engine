@@ -493,7 +493,7 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
-@export.add(('disagg', 'csv'), ('disagg', 'xml'))
+@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'), ('disagg', 'xml'))
 def export_disagg_csv_xml(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
@@ -505,6 +505,11 @@ def export_disagg_csv_xml(ekey, dstore):
     writercls = hazard_writers.DisaggXMLWriter
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
     ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&z=%d'
+    if ekey[0] == 'disagg_traditional':
+        ex += '&traditional=1'
+        trad = '-traditional'
+    else:
+        trad = ''
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     for s, m, p, z in iproduct(N, M, P, Z):
         dic = {k: dstore['disagg/' + k][s, m, p, ..., z]
@@ -547,7 +552,8 @@ def export_disagg_csv_xml(ekey, dstore):
                        if value is not None and key not in skip_keys}
                 com.update(metadata)
                 fname = dstore.export_path(
-                    'rlz-%d-%s-sid-%d-poe-%d_%s.csv' % (r, imt, s, p, k))
+                    'rlz-%d-%s-sid-%d-poe-%d%s_%s.csv' %
+                    (r, imt, s, p, trad, k))
                 values = extract(dstore, ex % (k, imt, s, p, z))
                 writers.write_csv(fname, values, header=header,
                                   comment=com, fmt='%.5E')

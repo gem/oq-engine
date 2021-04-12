@@ -3,6 +3,7 @@
   * Included 'soiltype' into site.py and adds it in site_test.py and oqvalidation.py
 
   [Michele Simionato]
+  * Added support for traditional disaggregation
   * Removed the global site parameter `reference_siteclass`
   * Internal: storing the SiteCollection in a pandas-friendly way
   * Added HDF5 exporter/importer for the GMFs
