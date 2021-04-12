@@ -35,12 +35,14 @@ from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util
+from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.commonlib.writers import (
     build_header, scientificformat, write_csv)
 from openquake.calculators.extract import extract
 
 F32 = numpy.float32
 U32 = numpy.uint32
+U8 = numpy.uint8
 
 # a dictionary of views datastore -> array
 view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
@@ -283,7 +285,7 @@ def view_job_info(token, dstore):
     """
     data = [['task', 'sent', 'received']]
     task_info = dstore['task_info'][()]
-    task_sent = ast.literal_eval(dstore['task_sent'][()])
+    task_sent = ast.literal_eval(decode(dstore['task_sent'][()]))
     for task, dic in task_sent.items():
         sent = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
@@ -323,15 +325,33 @@ def view_totlosses(token, dstore):
     return rst_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 
+def alt_to_many_columns(alt, loss_names):
+    # convert an agg_loss_table in the format
+    # (event_id, agg_id, loss_id, loss) =>
+    # (event_id, agg_id, structural, nonstructural, ...)
+    dic = dict(event_id=[])
+    for ln in loss_names:
+        dic[ln] = []
+    for (eid, kid), df in alt.groupby(['event_id', 'agg_id']):
+        dic['event_id'].append(eid)
+        arr = numpy.zeros(len(loss_names))
+        arr[df.loss_id.to_numpy()] = df.loss.to_numpy()
+        for li, ln in enumerate(loss_names):
+            dic[ln].append(arr[li])
+    return pandas.DataFrame(dic)
+
+
 def _portfolio_loss(dstore):
+    oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_rlzs()
     K = dstore['agg_loss_table'].attrs.get('K', 0)
-    df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    alt = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    df = alt_to_many_columns(alt, oq.loss_names)
     eids = df.pop('event_id').to_numpy()
     loss = df.to_numpy()
     rlzs = dstore['events']['rlz_id'][eids]
     L = loss.shape[1]
-    data = numpy.zeros((R, L), F32)
+    data = numpy.zeros((R, L))
     for row, rlz in zip(loss, rlzs):
         data[rlz] += row
     return data
@@ -361,17 +381,17 @@ def view_portfolio_loss(token, dstore):
     oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_rlzs()
     K = dstore['agg_loss_table'].attrs.get('K', 0)
-    df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    alt_df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
     weights = dstore['weights'][:]
     rlzs = dstore['events']['rlz_id']
+    E = len(rlzs)
     ws = weights[rlzs]
-    eids = df.pop('event_id').to_numpy()
-    arr = df.to_numpy()
-    E, L = arr.shape
-    avg = ws[eids] @ arr / ws.sum() * E / R
-    # err = [avg[li] * binning_error(arr[:, li], eids) for li in range(L)]
-    rows = [['avg'] + list(avg)]  # , ['err'] + err]
-    return(rst_table(rows, ['loss'] + oq.loss_names))
+    avgs = []
+    for li, ln in enumerate(oq.loss_names):
+        df = alt_df[alt_df.loss_id == li]
+        eids = df.pop('event_id').to_numpy()
+        avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * E / R)
+    return rst_table([['avg'] + avgs], ['loss'] + oq.loss_names)
 
 
 @view.add('portfolio_damage_error')
@@ -950,3 +970,74 @@ def view_zero_losses(token, dstore):
 
 def _get(df, sid):
     return df.loc[sid].to_dict()
+
+
+@view.add('gsim_for_event')
+def view_gsim_for_event(token, dstore):
+    """
+    Display the GSIM used when computing the GMF for the given event
+
+    $ oq show gsim_for_event:123 -1
+    [BooreAtkinson2008]
+    """
+    eid = int(token.split(':')[1])
+    full_lt = dstore['full_lt']
+    rup_id, rlz_id = dstore['events'][eid][['rup_id', 'rlz_id']]
+    et_id = dstore['ruptures'][rup_id]['et_id']
+    trti = et_id // len(full_lt.sm_rlzs)
+    gsim = full_lt.get_realizations()[rlz_id].gsim_rlz.value[trti]
+    return gsim
+
+
+@view.add('event_loss_table')
+def view_event_loss_table(token, dstore):
+    """
+    Display the top 20 losses of the event loss table for the first loss type
+
+    $ oq show event_loss_table
+    """
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    df = dstore.read_df('agg_loss_table', 'event_id',
+                        dict(agg_id=K, loss_id=0))
+    df['std'] = numpy.sqrt(df.variance)
+    df.sort_values('loss', ascending=False, inplace=True)
+    del df['agg_id']
+    del df['loss_id']
+    del df['variance']
+    return df[:20]
+
+
+@view.add('delta_loss')
+def view_delta_loss(token, dstore):
+    """
+    Estimate the stocastic error on the loss curve by splitting the events
+    in odd and even. Example:
+
+    $ oq show delta_loss  # consider the first loss type
+    """
+    if ':' in token:
+        _, li = token.split(':')
+        li = int(li)
+    else:
+        li = 0
+    oq = dstore['oqparam']
+    efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
+        dstore['weights'])
+    num_events = len(dstore['events'])
+    num_events0 = num_events // 2 + (num_events % 2)
+    num_events1 = num_events // 2
+    periods = return_periods(efftime, num_events)[1:-1]
+
+    K = dstore['agg_loss_table'].attrs.get('K', 0)
+    df = dstore.read_df('agg_loss_table', 'event_id',
+                        dict(agg_id=K, loss_id=li))
+    if len(df) == 0:  # for instance no fatalities
+        return {'delta': numpy.zeros(1)}
+    mod2 = df.index % 2
+    losses0 = df['loss'][mod2 == 0]
+    losses1 = df['loss'][mod2 == 1]
+    c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
+    c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
+    dic = dict(loss=losses_by_period(df['loss'], periods, num_events, efftime),
+               even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
+    return pandas.DataFrame(dic, periods)

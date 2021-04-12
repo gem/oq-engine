@@ -56,6 +56,7 @@ class Site(object):
 
         :class:`Sites <Site>` are pickleable
     """
+
     def __init__(self, location, vs30=numpy.nan,
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
@@ -124,6 +125,8 @@ site_param_dt = {
     'z1pt4': numpy.float64,
     'backarc': numpy.bool,
     'xvf': numpy.float64,
+    'soiltype': numpy.uint32,
+    'bas': numpy.bool,
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
@@ -187,7 +190,7 @@ class SiteCollection(object):
                     if item[0] not in ('lon', 'lat'))
 
     @classmethod
-    def from_shakemap(cls, shakemap_array):
+    def from_usgs_shakemap(cls, shakemap_array):
         """
         Build a site collection from a shakemap array
         """
@@ -248,7 +251,6 @@ class SiteCollection(object):
                       sitemodel.reference_vs30_type == 'measured')
             self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
             self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
-            self._set('siteclass', sitemodel.reference_siteclass)
             self._set('backarc', sitemodel.reference_backarc)
         else:
             for name in sitemodel.dtype.names:
@@ -381,10 +383,19 @@ class SiteCollection(object):
         return not_equal(self.array, other.array)
 
     def __toh5__(self):
-        return self.array, {}
+        names = self.array.dtype.names
+        cols = ' '.join(names)
+        return {n: self.array[n] for n in names}, {'__pdcolumns__': cols}
 
-    def __fromh5__(self, array, attrs):
-        self.array = array
+    def __fromh5__(self, dic, attrs):
+        if isinstance(dic, dict):  # engine >= 3.11
+            params = attrs['__pdcolumns__'].split()
+            dtype = numpy.dtype([(p, site_param_dt[p]) for p in params])
+            self.array = numpy.zeros(len(dic['sids']), dtype)
+            for p in dic:
+                self.array[p] = dic[p][()]
+        else:  # old engine, dic is actually a structured array
+            self.array = dic
         self.complete = self
 
     @property

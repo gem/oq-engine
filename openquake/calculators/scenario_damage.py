@@ -95,7 +95,7 @@ def scenario_damage(riskinputs, param, monitor):
     for name in consequences:
         res['avg_' + name] = []
         res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
-        # using F64 here is necessary: with F32 the non-commutativity
+        # using F64 here is necessary: with F32 the non-associativity
         # of addition would hurt too much with multiple tasks
     seed = param['master_seed']
     num_events = param['num_events']  # per realization
@@ -103,39 +103,46 @@ def scenario_damage(riskinputs, param, monitor):
     sec_sims = param['secondary_simulations'].items()
     for ri in riskinputs:
         # here instead F32 floats are ok
+        R = ri.hazard_getter.num_rlzs
         for out in ri.gen_outputs(crmodel, monitor):
-            r = out.rlzi
-            ne = num_events[r]  # total number of events
-            for lti, loss_type in enumerate(crmodel.loss_types):
-                for asset, fractions in zip(ri.assets, out[loss_type]):
-                    aid = asset['ordinal']
-                    if float_dmg_dist:
-                        damages = fractions * asset['number']
-                        if sec_sims:
-                            run_sec_sims(
-                                damages, out.haz, sec_sims, seed + aid)
-                    else:
-                        damages = bin_ddd(
-                            fractions, asset['number'], seed + aid)
-                    # damages has shape E', D with E' == len(out.eids)
-                    for e, ddd in enumerate(damages):
-                        dmg = ddd[1:]
-                        if dmg.sum():
-                            eid = out.eids[e]  # (aid, eid, l) is unique
-                            acc.append((aid, eid, lti) + tuple(dmg))
-                            d_event[eid][lti] += ddd[1:]
-                    tot = damages.sum(axis=0)  # (E', D) -> D
-                    nodamage = asset['number'] * (ne - len(damages))
-                    tot[0] += nodamage
-                    res['d_asset'].append((lti, r, aid, tot))
-                    # TODO: use the ddd, not the fractions in compute_csq
-                    csq = crmodel.compute_csq(asset, fractions, loss_type)
-                    for name, values in csq.items():
-                        res['avg_%s' % name].append(
-                            (lti, r, asset['ordinal'], values.sum(axis=0)))
-                        by_event = res[name + '_by_event']
-                        for eid, value in zip(out.eids, values):
-                            by_event[eid][lti] += value
+            for r in range(R):
+                ne = num_events[r]  # total number of events
+                ok = out['haz'].rlz.to_numpy() == r  # events beloging to rlz r
+                if ok.sum() == 0:
+                    continue
+                eids = out['eids'][ok]
+                for lti, loss_type in enumerate(crmodel.loss_types):
+                    for asset, fractions in zip(
+                            out['assets'], out[loss_type][:, ok]):
+                        aid = asset['ordinal']
+                        if float_dmg_dist:
+                            damages = fractions * asset['number']
+                            if sec_sims:
+                                run_sec_sims(
+                                    damages, out['haz'][ok], sec_sims,
+                                    seed + aid)
+                        else:
+                            damages = bin_ddd(
+                                fractions, asset['number'], seed + aid)
+                        # damages has shape E', D with E' == len(eids)
+                        for e, ddd in enumerate(damages):
+                            dmg = ddd[1:]
+                            if dmg.sum():
+                                eid = eids[e]  # (aid, eid, l) is unique
+                                acc.append((aid, eid, lti) + tuple(dmg))
+                                d_event[eid][lti] += ddd[1:]
+                        tot = damages.sum(axis=0)  # (E', D) -> D
+                        nodamage = asset['number'] * (ne - len(damages))
+                        tot[0] += nodamage
+                        res['d_asset'].append((lti, r, aid, tot))
+                        # TODO: use the ddd, not the fractions in compute_csq
+                        csq = crmodel.compute_csq(asset, fractions, loss_type)
+                        for name, values in csq.items():
+                            res['avg_%s' % name].append(
+                                (lti, r, asset['ordinal'], values.sum(axis=0)))
+                            by_event = res[name + '_by_event']
+                            for eid, value in zip(eids, values):
+                                by_event[eid][lti] += value
     res['aed'] = numpy.array(acc, param['asset_damage_dt'])
     return res
 

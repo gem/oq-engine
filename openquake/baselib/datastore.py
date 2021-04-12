@@ -29,7 +29,6 @@ import pandas
 
 from openquake.baselib import hdf5, config, performance, general
 
-
 MAX_ROWS = 10_000_000
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 
@@ -424,19 +423,6 @@ class DataStore(collections.abc.MutableMapping):
         attrs['__pdcolumns__'] = ' '.join(names)
         for k, v in kw.items():
             attrs[k] = v
-
-    def save(self, key, kw):
-        """
-        Update the object associated to `key` with the `kw` dictionary;
-        works for LiteralAttrs objects and automatically flushes.
-        """
-        if key not in self:
-            obj = hdf5.LiteralAttrs()
-        else:
-            obj = self[key]
-        vars(obj).update(kw)
-        self[key] = obj
-        self.flush()
 
     def export_path(self, relname, export_dir=None):
         """

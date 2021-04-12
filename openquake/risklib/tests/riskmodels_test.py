@@ -21,10 +21,11 @@ import pickle
 import unittest
 import unittest.mock as mock
 import numpy
+import pandas
 from numpy.testing import assert_almost_equal
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.risklib import riskmodels, nrml_examples
+from openquake.risklib import riskmodels, nrml_examples, scientific
 from openquake.qa_tests_data.scenario_damage import case_4b
 
 FF_DIR = os.path.dirname(case_4b.__file__)
@@ -293,57 +294,3 @@ lossCategory="contents">
             nrml.to_python(self.wrong_csq_model_3)
         self.assertIn("node params: Expected 'ds3', got 'ds4', line 12",
                       str(ctx.exception))
-
-
-class ProbabilisticEventBasedTestCase(unittest.TestCase):
-    expected_losses = numpy.array([   # shape (2, 5)
-        [0.3458312, 0.34684792, 0.3478676, 0.3488903, 0.34991604],
-        [0.3449187, 0.34501997, 0.34512126, 0.3452226, 0.34532395]])
-
-    def test_splittable_events(self):
-        # split the events in two blocks and check that the losses are
-        # same: there is no randomness in VulnerabilityFunction.sample
-        vuln_model = gettemp("""\
-<?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
-      xmlns:gml="http://www.opengis.net/gml">
-    <vulnerabilityModel>
-        <discreteVulnerabilitySet vulnerabilitySetID="PAGER"
-                                  assetCategory="Category"
-                                  lossCategory="structural">
-            <IML IMT="PGA">0.005 0.007 0.0098 0.0137</IML>
-            <discreteVulnerability vulnerabilityFunctionID="RC/A"
-                                   probabilisticDistribution="LN">
-                <lossRatio>0.01 0.06 0.18 0.36</lossRatio>
-                <coefficientsVariation>0.30 0.30 0.30 0.30
-         </coefficientsVariation>
-            </discreteVulnerability>
-        </discreteVulnerabilitySet>
-    </vulnerabilityModel>
-</nrml>""")
-        vfs = {('structural', 'vulnerability'):
-               nrml.to_python(vuln_model)['PGA', 'RC/A']}
-        vfs['structural', 'vulnerability'].seed = 42
-        vfs['structural', 'vulnerability'].init()
-        rm = riskmodels.RiskModel('event_based_risk', "RC/A", vfs)
-        assets = numpy.array([1, 1], [('value-structural', float)])
-        eids = numpy.array([1, 2, 3, 4, 5])
-        gmvs = numpy.array([.1, .2, .3, .4, .5])
-        epsilons = numpy.array(
-            [[.01, .02, .03, .04, .05], [.001, .002, .003, .004, .005]])
-
-        # compute the losses by considering all the events
-        losses = rm('structural', assets, gmvs, eids, epsilons)
-        numpy.testing.assert_allclose(losses, self.expected_losses)
-
-        # split the events in two blocks
-        eids1 = numpy.array([1, 2])
-        eids2 = numpy.array([3, 4, 5])
-        gmvs1 = numpy.array([.1, .2])
-        gmvs2 = numpy.array([.3, .4, .5])
-        eps1 = numpy.array([[.01, .02], [.001, .002]])
-        eps2 = numpy.array([[.03, .04, .05], [.003, .004, .005]])
-        losses1 = rm('structural', assets, gmvs1, eids1, eps1)
-        losses2 = rm('structural', assets, gmvs2, eids2, eps2)
-        numpy.testing.assert_allclose(losses1, self.expected_losses[:, :2])
-        numpy.testing.assert_allclose(losses2, self.expected_losses[:, 2:])

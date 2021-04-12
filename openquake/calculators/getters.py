@@ -165,12 +165,12 @@ class PmapGetter(object):
                 pcurves[rlzi] |= c
         return pcurves
 
-    def get_hcurves(self, pmap, rlzs_by_gsim):  # in disagg_by_src
+    def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
         """
-        :param pmap_by_et_id: a dictionary of ProbabilityMaps by group ID
+        :param pmap: a ProbabilityMap
+        :param rlzs_by_gsim: a dictionary gsim -> rlz IDs
         :returns: an array of PoEs of shape (N, R, M, L)
         """
-        self.init()
         res = numpy.zeros((self.N, self.R, self.L))
         for sid, pc in pmap.items():
             for gsim_idx, rlzis in enumerate(rlzs_by_gsim.values()):
@@ -226,18 +226,24 @@ class GmfDataGetter(object):
         :param gsim: ignored
         :returns: the underlying DataFrame
         """
-        return self.df
+        # the order in which the gmfs are stored is random since it depends
+        # on which hazard task ends first; here we reorder
+        # the gmfs by event ID for reproducibility
+        return self.df.sort_values('eid')
 
 
+# used in scenario_damage
 class ZeroGetter(GmfDataGetter):
     """
     An object with an .init() and .get_hazard() method
     """
-    def __init__(self, sid, rlzs, R):
+    def __init__(self, sid, rlzs, R, gmvcolumns):
         nr = len(rlzs)
         self.sids = [sid]
         self.df = pandas.DataFrame({
             'sid': [sid] * nr, 'rlz': rlzs, 'eid': numpy.arange(nr)})
+        for col in gmvcolumns:
+            self.df[col] = numpy.zeros(nr, dtype=F32)
         self.num_rlzs = R
 
 

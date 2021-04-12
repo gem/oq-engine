@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import unittest
 import numpy
 
 from openquake.baselib.hdf5 import read_csv
@@ -66,7 +67,7 @@ RM       4_000
         # test agg_damages, 1 realization x 3 damage states
         [dmg] = extract(self.calc.datastore, 'agg_damages/structural?'
                         'taxonomy=RC&CRESTA=01.1')
-        aac([1528., 444., 28.], dmg, atol=1E-4)
+        aac([1512., 464., 24.], dmg, atol=1E-4)
         # test no intersection
         dmg = extract(self.calc.datastore, 'agg_damages/structural?'
                       'taxonomy=RM&CRESTA=01.1')
@@ -165,8 +166,8 @@ RM       4_000
 
         # check dd_data is readable by pandas
         df = self.calc.datastore.read_df('dd_data', ['aid', 'eid', 'lid'])
-        self.assertEqual(len(df), 221)
-        self.assertEqual(len(df[df.ds1 > 0]), 76)  # only 76/300 are nonzero
+        self.assertEqual(len(df), 224)
+        self.assertEqual(len(df[df.ds1 > 0]), 75)  # only 75/300 are nonzero
 
     def test_case_8(self):
         # case with a shakemap
@@ -286,6 +287,8 @@ aid
         self.assertEqualFiles('expected/avg_damages2.csv', fname)
 
     def test_case_11_risk(self):
+        raise unittest.SkipTest('Not implemented yet')
+
         # losses due to liquefaction
         self.run_calc(case_11.__file__, 'job_risk.ini')
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
@@ -298,7 +301,7 @@ aid
                       secondary_simulations='{}')
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
         aac(losses(0, alt), [4982, 3524, 3235, 1388, 4988, 4999, 4988, 4993])
-        aac(losses(1, alt), [38175, 3, 903, 11122, 28598, 30341, 18978, 0])
+        aac(losses(1, alt), [38175, 3, 903, 11122, 28599, 30341, 18978, 0])
         aac(losses(2, alt), [26412, 0, 21055, 44631, 36447, 0, 0, 0])
 
 

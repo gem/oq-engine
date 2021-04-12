@@ -185,7 +185,7 @@ class AmplifierTestCase(unittest.TestCase):
         with self.assertRaises(InvalidFile) as ctx:
             read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                      index='ampcode')
-        self.assertIn("line 3: ampcode='long_code' has length 9 > 4",
+        self.assertIn("ampcode='long_code' has length 9 > 4",
                       str(ctx.exception))
 
     def test_dupl(self):

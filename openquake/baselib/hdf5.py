@@ -17,8 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import ast
-import csv
 import inspect
 import tempfile
 import warnings
@@ -112,68 +110,6 @@ def extend(dset, array, **attrs):
     for key, val in attrs.items():
         dset.attrs[key] = val
     return newlength
-
-
-class LiteralAttrs(object):
-    """
-    A class to serialize a set of parameters in HDF5 format. The goal is to
-    store simple parameters as an HDF5 table in a readable way. Each
-    parameter can be retrieved as an attribute, given its name. The
-    implementation treats specially dictionary attributes, by storing
-    them as `attrname.keyname` strings, see the example below:
-
-    >>> class Ser(LiteralAttrs):
-    ...     def __init__(self, a, b):
-    ...         self.a = a
-    ...         self.b = b
-    >>> ser = Ser(1, dict(x='xxx', y='yyy'))
-    >>> arr, attrs = ser.__toh5__()
-    >>> for k, v in arr:
-    ...     print('%s=%s' % (k, v))
-    a=1
-    b.x='xxx'
-    b.y='yyy'
-    >>> s = object.__new__(Ser)
-    >>> s.__fromh5__(arr, attrs)
-    >>> s.a
-    1
-    >>> s.b['x']
-    'xxx'
-
-    The implementation is not recursive, i.e. there will be at most
-    one dot in the serialized names (in the example here `a`, `b.x`, `b.y`).
-
-    """
-    def __toh5__(self):
-        info_dt = numpy.dtype([('par_name', vbytes), ('par_value', vbytes)])
-        attrnames = sorted(a for a in vars(self) if not a.startswith('_'))
-        lst = []
-        for attr in attrnames:
-            value = getattr(self, attr)
-            if isinstance(value, dict):
-                for k, v in sorted(value.items()):
-                    key = '%s.%s' % (attr, k)
-                    lst.append((key, repr(v)))
-            else:
-                lst.append((attr, repr(value)))
-        return numpy.array(lst, info_dt), {}
-
-    def __fromh5__(self, array, attrs):
-        dd = collections.defaultdict(dict)
-        for (name_, literal_) in array:
-            name = decode(name_)
-            literal = decode(literal_)
-            if '.' in name:
-                k1, k2 = name.split('.', 1)
-                dd[k1][k2] = ast.literal_eval(literal)
-            else:
-                dd[name] = ast.literal_eval(literal)
-        vars(self).update(dd)
-
-    def __repr__(self):
-        names = sorted(n for n in vars(self) if not n.startswith('_'))
-        nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
-        return '<%s %s>' % (self.__class__.__name__, nameval)
 
 
 def cls2dotname(cls):
@@ -406,7 +342,7 @@ def array_of_vstr(lst):
 
 def dumps(dic):
     """
-    Dump in json
+    Dump a dictionary in json. Extend json.dumps to work on numpy objects.
     """
     new = {}
     for k, v in dic.items():
@@ -429,14 +365,12 @@ def dumps(dic):
                 new[k] = json.dumps(decode_array(v))
             else:
                 new[k] = json.dumps(lst)
-        elif hasattr(v, '__dict__'):
-            new[k] = {cls2dotname(v.__class__): dumps(vars(v))}
         elif isinstance(v, dict):
             new[k] = dumps(v)
-        elif isinstance(v, str):
-            new[k] = '"%s"' % v
+        elif hasattr(v, '__dict__'):
+            new[k] = {cls2dotname(v.__class__): dumps(vars(v))}
         else:
-            new[k] = v
+            new[k] = json.dumps(v)
     return "{%s}" % ','.join('\n"%s": %s' % it for it in new.items())
 
 
@@ -542,7 +476,10 @@ class ArrayWrapper(object):
             lst = ['%s=%d' % (descr, size)
                    for descr, size in zip(self.shape_descr, self.shape)]
             return '<%s(%s)>' % (self.__class__.__name__, ', '.join(lst))
-        return '<%s%s>' % (self.__class__.__name__, self.shape)
+        elif hasattr(self, 'shape'):
+            return '<%s%s>' % (self.__class__.__name__, self.shape)
+        else:
+            return '<%s %d bytes>' % (self.__class__.__name__, len(self.array))
 
     @property
     def dtype(self):
@@ -686,27 +623,33 @@ def build_dt(dtypedict, names):
     return numpy.dtype(lst)
 
 
+def check_length(field, size):
+    """
+    :param field: a bytes field in the exposure
+    :param size: maximum size of the field
+    :returns: a function checking that the value is below the size
+    """
+    def check(val):
+        if len(val) > size:
+            raise ValueError('%s=%r has length %d > %d' %
+                             (field, val, len(val), size))
+        return val
+    return check
+
+
 def _read_csv(fileobj, compositedt):
-    itemsize = [0] * len(compositedt)
-    dt = []
-    for i, name in enumerate(compositedt.names):
-        dt.append(compositedt[name])
-        if compositedt[name].kind == 'S':  # limit of the length of byte-fields
-            itemsize[i] = compositedt[name].itemsize
-    rows = []
-    for lineno, row in enumerate(csv.reader(fileobj), 3):
-        cols = []
-        for i, col in enumerate(row):
-            if itemsize[i] and len(col) > itemsize[i]:
-                raise ValueError(
-                    'line %d: %s=%r has length %d > %d' %
-                    (lineno, compositedt.names[i], col, len(col), itemsize[i]))
-            if dt[i].kind == 'b':  # boolean
-                cols.append(int(col))
-            else:
-                cols.append(col)
-        rows.append(tuple(cols))
-    return numpy.array(rows, compositedt)
+    dic = {}
+    conv = {}
+    for name in compositedt.names:
+        dic[name] = dt = compositedt[name]
+        if dt.kind == 'S':  # limit of the length of byte-fields
+            conv[name] = check_length(name, dt.itemsize)
+    df = pandas.read_csv(fileobj, names=compositedt.names, converters=conv,
+                         dtype=dic)
+    arr = numpy.zeros(len(df), compositedt)
+    for col in df.columns:
+        arr[col] = df[col].to_numpy()
+    return arr
 
 
 # NB: it would be nice to use numpy.loadtxt(

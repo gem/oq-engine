@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
+from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3, case_4
@@ -37,15 +38,20 @@ def check_full_lt(calc1, calc2):
 class GmfEbRiskTestCase(CalculatorTestCase):
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job_risk.ini')
-        num_events = len(self.calc.datastore['agg_loss_table/event_id'])
-        self.assertEqual(num_events, 10)
+        text = view('portfolio_loss', self.calc.datastore)
+        self.assertIn('avg  4_322', text)
+
+        # test the HDF5 importer
+        self.run_calc(case_1.__file__, 'job.ini')
+        text = view('portfolio_loss', self.calc.datastore)
+        self.assertIn('avg  4_322', text)
 
     def test_case_2(self):
         # case with 3 sites but gmvs only on 2 sites
         self.run_calc(case_2.__file__, 'job.ini')
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
         self.assertEqual(len(alt), 3)
-        totloss = alt.structural.sum()
+        totloss = alt.loss.sum()
         aae(totloss, 1.82, decimal=4)
 
     def test_case_3(self):
@@ -53,20 +59,18 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_3.__file__, 'job.ini')
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
         self.assertEqual(len(alt), 10)
-        totloss = alt.structural.sum()
-        val = 60.1378
-        aae(totloss / 1E6, [val], decimal=4)
+        totloss = alt.loss.sum()
 
         # avg_losses-rlzs has shape (A, R, LI)
         avglosses = self.calc.datastore['avg_losses-rlzs'][:, 0, :].sum(axis=0)
-        aae(avglosses / 1E6, [val], decimal=4)
+        aae(avglosses / 1E6, totloss / 1E6, decimal=4)
 
     def test_ebr_2(self):
         self.run_calc(ebr_2.__file__, 'job_ebrisk.ini', exports='csv')
         alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
         self.assertEqual(len(alt), 8)
-        totloss = alt.structural.sum()
-        aae(totloss, 15283.561, decimal=2)
+        totloss = alt.loss.sum()
+        aae(totloss, 15911.156, decimal=2)
 
     def test_case_4(self):
         # a simple test with 1 asset and two source models

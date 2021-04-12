@@ -330,30 +330,26 @@ def extract_asset_tags(dstore, tagname):
         yield tagname, barray(tagcol.gen_tags(tagname))
 
 
-def get_mesh(sitecol, complete=True):
+def get_sites(sitecol, complete=True):
     """
     :returns:
         a lon-lat or lon-lat-depth array depending if the site collection
-        is at sea level or not
+        is at sea level or not; if there is a custom_site_id, prepend it
     """
     sc = sitecol.complete if complete else sitecol
     if sc.at_sea_level():
-        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64)])
-        mesh['lon'] = sc.lons
-        mesh['lat'] = sc.lats
+        fields = ['lon', 'lat']
     else:
-        mesh = numpy.zeros(len(sc), [('lon', F64), ('lat', F64),
-                                     ('depth', F64)])
-        mesh['lon'] = sc.lons
-        mesh['lat'] = sc.lats
-        mesh['depth'] = sc.depths
-    return mesh
+        fields = ['lon', 'lat', 'depth']
+    if 'custom_site_id' in sitecol.array.dtype.names:
+        fields.insert(0, 'custom_site_id')
+    return sitecol[fields]
 
 
-def hazard_items(dic, mesh, *extras, **kw):
+def hazard_items(dic, sites, *extras, **kw):
     """
     :param dic: dictionary of arrays of the same shape
-    :param mesh: a mesh array with lon, lat fields of the same length
+    :param sites: a sites array with lon, lat fields of the same length
     :param extras: optional triples (field, dtype, values)
     :param kw: dictionary of parameters (like investigation_time)
     :returns: a list of pairs (key, value) suitable for storage in .npz format
@@ -373,7 +369,7 @@ def hazard_items(dic, mesh, *extras, **kw):
         array[field] = dic[field]
     for field, dtype, values in extras:
         array[field] = values
-    yield 'all', util.compose_arrays(mesh, array)
+    yield 'all', util.compose_arrays(sites, array)
 
 
 def _get_dict(dstore, name, imtls, stats):
@@ -430,10 +426,10 @@ def extract_hcurves(dstore, what):
     info = get_info(dstore)
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
-        mesh = get_mesh(sitecol, complete=False)
+        sites = get_sites(sitecol, complete=False)
         dic = _get_dict(dstore, 'hcurves-stats', info['imtls'], info['stats'])
         yield from hazard_items(
-            dic, mesh, investigation_time=info['investigation_time'])
+            dic, sites, investigation_time=info['investigation_time'])
         return
     yield from _items(dstore, 'hcurves', what, info)
 
@@ -446,12 +442,12 @@ def extract_hmaps(dstore, what):
     info = get_info(dstore)
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
-        mesh = get_mesh(sitecol, complete=False)
+        sites = get_sites(sitecol, complete=False)
         dic = _get_dict(dstore, 'hmaps-stats',
                         {imt: info['poes'] for imt in info['imtls']},
                         info['stats'])
         yield from hazard_items(
-            dic, mesh, investigation_time=info['investigation_time'])
+            dic, sites, investigation_time=info['investigation_time'])
         return
     yield from _items(dstore, 'hmaps', what, info)
 
@@ -465,13 +461,13 @@ def extract_uhs(dstore, what):
     info = get_info(dstore)
     if what == '':  # npz exports for QGIS
         sitecol = dstore['sitecol']
-        mesh = get_mesh(sitecol, complete=False)
+        sites = get_sites(sitecol, complete=False)
         dic = {}
         for stat, s in info['stats'].items():
             hmap = dstore['hmaps-stats'][:, s]  # shape (N, M, P)
             dic[stat] = calc.make_uhs(hmap, info)
         yield from hazard_items(
-            dic, mesh, investigation_time=info['investigation_time'])
+            dic, sites, investigation_time=info['investigation_time'])
         return
     for k, v in _items(dstore, 'hmaps', what, info):  # shape (N, M, P)
         if hasattr(v, 'shape') and len(v.shape) == 3:
@@ -810,7 +806,7 @@ def extract_aggregate(dstore, what):
 
 @extract.add('losses_by_asset')
 def extract_losses_by_asset(dstore, what):
-    loss_dt = dstore['oqparam'].loss_dt()
+    loss_dt = dstore['oqparam'].loss_dt(F32)
     rlzs = dstore['full_lt'].get_realizations()
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
@@ -855,8 +851,8 @@ def extract_gmf_npz(dstore, what):
     qdict = parse(what)
     [eid] = qdict.get('event_id', [0])  # there must be a single event
     rlzi = dstore['events'][eid]['rlz_id']
-    mesh = get_mesh(dstore['sitecol'])
-    n = len(mesh)
+    sites = get_sites(dstore['sitecol'])
+    n = len(sites)
     try:
         df = dstore.read_df('gmf_data', 'eid').loc[eid]
     except KeyError:
@@ -864,7 +860,7 @@ def extract_gmf_npz(dstore, what):
         yield 'rlz-%03d' % rlzi, []
     else:
         gmfa = _gmf(df, n, oq.imtls)
-        yield 'rlz-%03d' % rlzi, util.compose_arrays(mesh, gmfa)
+        yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
 
 @extract.add('avg_gmf')
@@ -916,8 +912,8 @@ def build_damage_array(data, damage_dt):
     A, L, D = data.shape
     dmg = numpy.zeros(A, damage_dt)
     for a in range(A):
-        for l, lt in enumerate(damage_dt.names):
-            dmg[lt][a] = tuple(data[a, l])
+        for li, lt in enumerate(damage_dt.names):
+            dmg[lt][a] = tuple(data[a, li])
     return dmg
 
 
@@ -1098,13 +1094,14 @@ def extract_disagg(dstore, what):
     Extract a disaggregation output
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1
+    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&traditional=1
     """
     qdict = parse(what)
     label = qdict['kind'][0]
     imt = qdict['imt'][0]
     poe_id = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
+    traditional = qdict.get('traditional')
     z = int(qdict['z'][0]) if 'z' in qdict else None
 
     def get(v, sid):
@@ -1114,7 +1111,9 @@ def extract_disagg(dstore, what):
     oq = dstore['oqparam']
     imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
     bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
-    out = dstore['disagg/' + label][sid, imt2m[imt], poe_id]
+    m = imt2m[imt]
+    out = dstore['disagg/' + label][sid, m, poe_id]
+    poe_agg = dstore['poe4'][sid, m, poe_id]
     if z is None:  # compute stats
         best = dstore['best_rlzs'][sid]
         rlzs = [rlz for rlz in dstore['full_lt'].get_realizations()
@@ -1128,6 +1127,8 @@ def extract_disagg(dstore, what):
         return ArrayWrapper(matrix, attrs)
 
     matrix = out[..., z]
+    if traditional and traditional != '0':
+        matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg[z])
 
     # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
@@ -1322,7 +1323,7 @@ def extract_rupture_info(dstore, what):
 @extract.add('ruptures')
 def extract_ruptures(dstore, what):
     """
-    Extract some information about the ruptures, including the boundary.
+    Extract the ruptures with their geometry as a big CSV string
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/ruptures?min_mag=6
     """

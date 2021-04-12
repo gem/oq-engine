@@ -46,11 +46,11 @@ def classical_risk(riskinputs, param, monitor):
         loss_curves = numpy.zeros((R, L, A), object)
         avg_losses = numpy.zeros((R, L, A))
         for out in ri.gen_outputs(crmodel, monitor):
-            r = out.rlzi
+            r = out['rlzi']
             for li, loss_type in enumerate(crmodel.loss_types):
                 # loss_curves has shape (A, C)
-                for i, asset in enumerate(ri.assets):
-                    loss_curves[out.rlzi, li, i] = lc = out[loss_type][i]
+                for i, asset in enumerate(out['assets']):
+                    loss_curves[r, li, i] = lc = out[loss_type][i]
                     aid = asset['ordinal']
                     avg = scientific.average_loss(lc)
                     avg_losses[r, li, i] = avg
@@ -59,7 +59,7 @@ def classical_risk(riskinputs, param, monitor):
 
         # compute statistics
         for li, loss_type in enumerate(crmodel.loss_types):
-            for i, asset in enumerate(ri.assets):
+            for i, asset in enumerate(out['assets']):
                 avg_stats = compute_stats(avg_losses[:, li, i], stats, weights)
                 losses = loss_curves[0, li, i]['loss']
                 all_poes = numpy.array(
@@ -132,9 +132,9 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         if self.R > 1:  # individual realizations saved only if many
             loss_curves = numpy.zeros((self.A, self.R), self.loss_curve_dt)
             avg_losses = numpy.zeros((self.A, self.R, self.L), F32)
-            for l, r, a, (losses, poes, avg) in result['loss_curves']:
-                lc = loss_curves[a, r][ltypes[l]]
-                avg_losses[a, r, l] = avg
+            for li, r, a, (losses, poes, avg) in result['loss_curves']:
+                lc = loss_curves[a, r][ltypes[li]]
+                avg_losses[a, r, li] = avg
                 base.set_array(lc['losses'], losses)
                 base.set_array(lc['poes'], poes)
             self.datastore['avg_losses-rlzs'] = avg_losses

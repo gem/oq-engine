@@ -87,6 +87,7 @@ export_dir = %s
             exp_base_path = os.path.dirname(
                 os.path.join(os.path.abspath('.'), source))
             expected_params = {
+                'all_cost_types': [],
                 'export_dir': TMP,
                 'base_path': exp_base_path,
                 'calculation_mode': 'scenario',
@@ -103,9 +104,9 @@ export_dir = %s
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
                 'risk_investigation_time': None,
+                'minimum_asset_loss': {},
             }
-
-            params = getparams(readinput.get_oqparam(source))
+            params = getparams(readinput.get_oqparam(source, validate=1))
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
@@ -429,10 +430,7 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         fname = os.path.join(DATADIR, 'exposure.xml')
         with self.assertRaises(InvalidFile) as ctx:
             asset.Exposure.read([fname])
-        self.assertIn('''\
-Expected: ['id', 'lat', 'lon', 'number', 'structural', 'taxonomy']
-Got: ['Lon', 'id', 'lat', 'number', 'structural', 'taxonomy']
-Missing: {'lon'}''', str(ctx.exception))
+        self.assertIn("missing {'lon'}", str(ctx.exception))
 
     def test_case_similar(self):
         fname = os.path.join(DATADIR, 'exposure2.xml')

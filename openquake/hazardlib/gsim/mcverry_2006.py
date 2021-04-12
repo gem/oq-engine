@@ -541,7 +541,7 @@ class McVerry2006AscSC(McVerry2006Asc):
 
     #: Uses NZS1170.5 site classification. Calls of 'A' or 'B' yield the same outputs.
     # 'E' is not a valid option
-    REQUIRES_SITES_PARAMETERS = set(('siteclass', ))
+    REQUIRES_SITES_PARAMETERS = {'siteclass'}
 
     def _get_deltas(self, sites):
         """

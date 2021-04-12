@@ -2,8 +2,10 @@ import os.path
 import unittest
 import numpy
 from openquake.hazardlib import geo, imt
-from openquake.hazardlib.shakemap import (
-    get_shakemap_array, get_sitecol_shakemap, to_gmfs, amplify_ground_shaking,
+from openquake.hazardlib.shakemap.maps import \
+    get_sitecol_shakemap
+from openquake.hazardlib.shakemap.gmfs import (
+    to_gmfs, amplify_ground_shaking,
     spatial_correlation_array, spatial_covariance_array,
     cross_correlation_matrix, cholesky)
 
@@ -15,21 +17,29 @@ shakemap_dt = numpy.dtype([('lon', float), ('lat', float), ('val', imt_dt),
                            ('std', imt_dt), ('vs30', float)])
 CDIR = os.path.dirname(__file__)
 
+gmf_dict = {'kind': 'Silva&Horspool',
+            'spatialcorr': 'yes',
+            'crosscorr': 'yes',
+            'cholesky_limit': 10000}
+
 
 def mean_std(shakemap, site_effects):
+    gmf_dict.update({'kind': 'Silva&Horspool',
+                     'spatialcorr': 'yes', 'crosscorr': 'yes'})
     _, gmfs = to_gmfs(
-        shakemap, 'yes', 'yes', site_effects, trunclevel=3,
-        num_gmfs=1000, seed=42)
+        shakemap, gmf_dict, site_effects, trunclevel=3,
+        num_gmfs=1000, seed=42, imts=['PGA', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)'])
     return gmfs.mean(axis=1), numpy.log(gmfs).std(axis=1)
 
 
 class ShakemapTestCase(unittest.TestCase):
 
     def test_gmfs(self):
-        f1 = os.path.join(CDIR, 'ghorka_grid.xml')
-        f2 = os.path.join(CDIR, 'ghorka_uncertainty.xml')
-        array = get_shakemap_array(f1, f2)
-        sitecol, shakemap = get_sitecol_shakemap(array, imt_dt.names)
+        f1 = 'file://' + os.path.join(CDIR, 'ghorka_grid.xml')
+        f2 = 'file://' + os.path.join(CDIR, 'ghorka_uncertainty.xml')
+        uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
+        sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
+                                                     uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, _ = mean_std(shakemap, site_effects=True)
@@ -82,27 +92,41 @@ class ShakemapTestCase(unittest.TestCase):
         shakemap['vs30'] = numpy.array([301.17] * 9)
         shakemap['val'] = val
         shakemap['std'] = std
+        gmf_dict.update({'kind': 'Silva&Horspool',
+                         'spatialcorr': 'yes', 'crosscorr': 'no'})
         _, gmfs = to_gmfs(
-            shakemap, 'yes', 'no', site_effects=False, trunclevel=3,
+            shakemap, gmf_dict, site_effects=False, trunclevel=3,
             num_gmfs=2, seed=42)
         # shape (N, E, M)
         aae(gmfs[..., 0].sum(axis=0), [0.4202056, 0.6426098])  # PGA
 
+        gmf_dict.update({'kind': 'Silva&Horspool',
+                         'spatialcorr': 'yes', 'crosscorr': 'yes'})
         _, gmfs = to_gmfs(
-            shakemap, 'yes', 'yes', site_effects=True, trunclevel=3,
+            shakemap, gmf_dict, site_effects=True, trunclevel=3,
             num_gmfs=2, seed=42)
         aae(gmfs[..., 0].sum(axis=0), [0.5809818, 0.8790579])  # PGA
         aae(gmfs[..., 2].sum(axis=0), [0.6053580, 0.8245417])  # SA(1.0)
 
         # disable spatial correlation
+        gmf_dict.update({'kind': 'Silva&Horspool',
+                         'spatialcorr': 'no', 'crosscorr': 'no'})
         _, gmfs = to_gmfs(
-            shakemap, 'no', 'no', site_effects=False,
+            shakemap, gmf_dict, site_effects=False,
             trunclevel=3, num_gmfs=2, seed=42)
         # shape (N, E, M)
         aae(gmfs[..., 0].sum(axis=0), [0.4202077, 0.6426078])  # PGA
 
         _, gmfs = to_gmfs(
-            shakemap, 'no', 'yes', site_effects=True,
+            shakemap, {'kind': 'basic'}, site_effects=False,
+            trunclevel=3, num_gmfs=2, seed=42)
+        # shape (N, E, M)
+        aae(gmfs[..., 0].sum(axis=0), [0.4202077, 0.6426078])  # PGA
+
+        gmf_dict.update({'kind': 'Silva&Horspool',
+                         'spatialcorr': 'no', 'crosscorr': 'yes'})
+        _, gmfs = to_gmfs(
+            shakemap, gmf_dict, site_effects=True,
             trunclevel=3, num_gmfs=2, seed=42)
         aae(gmfs[..., 0].sum(axis=0), [0.5809846, 0.8790549])  # PGA
         aae(gmfs[..., 2].sum(axis=0), [0.6053580, 0.8245417])  # SA(1.0)
@@ -110,16 +134,19 @@ class ShakemapTestCase(unittest.TestCase):
         # set stddev to zero
         shakemap['std'] = 0
         with self.assertRaises(ValueError) as ctx:
-            to_gmfs(shakemap, 'no', 'yes', site_effects=True,
+            gmf_dict.update({'kind': 'Silva&Horspool',
+                             'spatialcorr': 'no', 'crosscorr': 'yes'})
+            to_gmfs(shakemap, gmf_dict, site_effects=True,
                     trunclevel=3, num_gmfs=2, seed=42)
         self.assertIn('stddev==0 for IMT=PGA', str(ctx.exception))
 
     def test_from_files(self):
         # files provided by Vitor Silva, without site amplification
-        f1 = os.path.join(CDIR, 'test_shaking.xml')
-        f2 = os.path.join(CDIR, 'test_uncertainty.xml')
-        array = get_shakemap_array(f1, f2)
-        sitecol, shakemap = get_sitecol_shakemap(array, imt_dt.names)
+        f1 = 'file://' + os.path.join(CDIR, 'test_shaking.xml')
+        f2 = 'file://' + os.path.join(CDIR, 'test_uncertainty.xml')
+        uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
+        sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
+                                                     uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, std_by_imt = mean_std(shakemap, site_effects=False)
@@ -132,3 +159,26 @@ class ShakemapTestCase(unittest.TestCase):
                          [0.6077153, 0.6661571, 0.6296381, 0.668559],
                          [0.6146356, 0.6748830, 0.6714424, 0.6613612],
                          [0.5815353, 0.6460007, 0.6491335, 0.6603457]])
+
+    def test_for_mmi(self):
+        f1 = 'file://' + os.path.join(CDIR, 'ghorka_grid.xml')
+        f2 = 'file://' + os.path.join(CDIR, 'ghorka_uncertainty.xml')
+        uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
+        sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
+                                                     uridict, imt_dt.names)
+        n = 4  # number of sites
+        self.assertEqual(len(sitecol), n)
+
+        _, gmfs = to_gmfs(shakemap, {'kind': 'mmi'}, False,
+                          trunclevel=3, num_gmfs=1000, seed=42, imts=['MMI'])
+
+        gmf_by_imt = gmfs.mean(axis=1)
+        std_by_imt = gmfs.std(axis=1)
+        aae(gmf_by_imt, [[3.80704848],
+                         [3.89791949],
+                         [3.88040454],
+                         [3.93584243]])
+        aae(std_by_imt, [[0.71068558],
+                         [0.72233552],
+                         [0.72033749],
+                         [0.69906908]])

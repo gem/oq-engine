@@ -21,7 +21,9 @@ import gzip
 import unittest
 import numpy
 from openquake.baselib import parallel, general, config
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib import lt
+from openquake.commonlib import readinput
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -35,7 +37,7 @@ from openquake.qa_tests_data.classical import (
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
-    case_58, case_59, case_60, case_61, case_62)
+    case_58, case_59, case_60, case_61, case_62, case_63, case_64)
 
 aac = numpy.testing.assert_allclose
 
@@ -139,6 +141,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1-gsimltp_b1.csv'],
             case_3.__file__)
+
+        # checking sitecol as DataFrame
+        self.calc.datastore.read_df('sitecol', 'sids')
 
     def test_case_4(self):
         self.assert_curves_ok(
@@ -305,7 +310,7 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_3.csv',
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
-        ids = self.calc.datastore['source_info']['source_id']
+        ids = decode(self.calc.datastore['source_info']['source_id'])
         numpy.testing.assert_equal(ids, ['A;0', 'B', 'A;1'])
 
     def test_case_18(self):  # GMPEtable
@@ -479,10 +484,14 @@ hazard_uhs-std.csv
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
 
-        # first test the serialization of the ruptures
+        # first test that the exported ruptures can be re-imported
         self.run_calc(case_29.__file__, 'job.ini',
                       calculation_mode='event_based',
-                      ses_per_logic_tree_path='1000')
+                      ses_per_logic_tree_path='10')
+        csv = extract(self.calc.datastore, 'ruptures').array
+        rups = readinput.get_ruptures(general.gettemp(csv))
+        self.assertEqual(len(rups), 1)
+
         # check what QGIS will be seeing
         aw = extract(self.calc.datastore, 'rupture_info')
         poly = gzip.decompress(aw.boundaries).decode('ascii')
@@ -548,9 +557,7 @@ hazard_uhs-std.csv
     def test_case_38(self):
         # BC Hydro GMPEs with epistemic adjustments
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
-                               "quantile_curve-0.16-PGA.csv",
-                               "quantile_curve-0.5-PGA.csv",
-                               "quantile_curve-0.84-PGA.csv"],
+                               "hazard_uhs-mean.csv"],
                               case_38.__file__)
 
     def test_case_39(self):
@@ -865,3 +872,15 @@ hazard_uhs-std.csv
         self.run_calc(case_62.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f)    
+
+    def test_case_63(self):
+        # test soiltype
+        self.run_calc(case_63.__file__, 'job.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f)    
+
+    def test_case_64(self):
+        # LanzanoEtAl2016 with bas term
+        self.run_calc(case_64.__file__, 'job.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f)

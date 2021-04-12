@@ -38,6 +38,10 @@ class TruncatedGRMFDFromMomentTestCase(unittest.TestCase):
         msg = "Scalar Mo rate from MFD does not match the original one"
         self.assertAlmostEqual(moment_rate, computed, msg=msg, delta=1e14)
 
+        # test for a_val = -inf
+        with self.assertRaises(ValueError):
+            TruncatedGRMFD(min_mag, max_mag, bin_width, -np.inf, b_val)
+
 
 class TruncatedGRMFDConstraintsTestCase(BaseMFDTestCase):
     def test_negative_min_mag(self):

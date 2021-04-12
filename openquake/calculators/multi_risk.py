@@ -19,6 +19,7 @@ import csv
 import json
 import logging
 import numpy
+import pandas
 import shapely
 from openquake.baselib import hdf5, general
 from openquake.hazardlib import valid, geo, InvalidFile
@@ -44,12 +45,13 @@ def get_dmg_csq(crm, assets_by_site, gmf):
     D = len(crm.damage_states)
     out = numpy.zeros((A, L, 1, D + 1), F32)
     for assets, gmv in zip(assets_by_site, gmf):
+        df = pandas.DataFrame(dict(peril=[gmv]))
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
             for li, loss_type in enumerate(crm.loss_types):
                 # NB: risk logic trees are not yet supported in multi_risk
                 [rm], [w] = crm.get_rmodels_weights(loss_type, taxonomy)
-                fracs = rm.scenario_damage(loss_type, assets, [gmv])
+                fracs = rm.scenario_damage(loss_type, assets, df, 'peril')
                 for asset, frac in zip(assets, fracs):
                     dmg = asset['number'] * frac  # shape (1, D)
                     csq = crm.compute_csq(asset, frac, loss_type)

@@ -26,10 +26,11 @@ import pandas
 
 from openquake.baselib.general import (
     group_array, deprecated, AccumDict, DictArray)
+from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.views import view
-from openquake.calculators.extract import extract, get_mesh, get_info
+from openquake.calculators.extract import extract, get_sites, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import gen_rupture_getters
 from openquake.commonlib import writers, hazard_writers, calc, util
@@ -145,10 +146,20 @@ def export_hcurves_by_imt_csv(
     lst = [('lon', F32), ('lat', F32), ('depth', F32)]
     for iml in imls:
         lst.append(('poe-%.7f' % iml, F32))
+    custom = 'custom_site_id' in sitecol.array.dtype.names
+    if custom:
+        lst.insert(0, ('custom_site_id', U32))
     hcurves = numpy.zeros(nsites, lst)
-    for sid, lon, lat, dep in zip(
-            range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
-        hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, :])
+    if custom:
+        for sid, csi, lon, lat, dep in zip(
+                range(nsites), sitecol.custom_site_id,
+                sitecol.lons, sitecol.lats, sitecol.depths):
+            hcurves[sid] = (csi, lon, lat, dep) + tuple(array[sid, 0, :])
+    else:
+        hcurves = numpy.zeros(nsites, lst)
+        for sid, lon, lat, dep in zip(
+                range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
+            hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, :])
     comment.update(imt=imt)
     return writers.write_csv(dest, hcurves, comment=comment,
                              header=[name for (name, dt) in lst])
@@ -195,7 +206,7 @@ def export_hcurves_csv(ekey, dstore):
     info = get_info(dstore)
     R = dstore['full_lt'].get_num_rlzs()
     sitecol = dstore['sitecol']
-    sitemesh = get_mesh(sitecol)
+    sitemesh = get_sites(sitecol)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
     comment = dstore.metadata
@@ -269,7 +280,7 @@ def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
     rlzs = dstore['full_lt'].get_realizations()
     R = len(rlzs)
-    sitemesh = get_mesh(dstore['sitecol'].complete)
+    sitemesh = get_sites(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
     fnames = []
     periods = [imt.period for imt in oq.imt_periods()]
@@ -305,7 +316,7 @@ def export_hcurves_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
     len_ext = len(fmt) + 1
     oq = dstore['oqparam']
-    sitemesh = get_mesh(dstore['sitecol'])
+    sitemesh = get_sites(dstore['sitecol'])
     rlzs = dstore['full_lt'].get_realizations()
     R = len(rlzs)
     fnames = []
@@ -343,7 +354,7 @@ def export_hmaps_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    sitemesh = get_mesh(sitecol)
+    sitemesh = get_sites(sitecol)
     rlzs = dstore['full_lt'].get_realizations()
     R = len(rlzs)
     fnames = []
@@ -425,6 +436,15 @@ def export_gmf_data_csv(ekey, dstore):
         return [fname, f]
 
 
+@export.add(('gmf_data', 'hdf5'))
+def export_gmf_data_hdf5(ekey, dstore):
+    fname = dstore.build_fname('gmf', 'data', 'hdf5')
+    with hdf5.File(fname, 'w') as f:
+        f['sitecol'] = dstore['sitecol'].complete
+        dstore.hdf5.copy('gmf_data', f)
+    return [fname]
+
+
 @export.add(('avg_gmf', 'csv'))
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
@@ -473,7 +493,7 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
-@export.add(('disagg', 'csv'), ('disagg', 'xml'))
+@export.add(('disagg', 'csv'), ('disagg_traditional', 'csv'), ('disagg', 'xml'))
 def export_disagg_csv_xml(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
@@ -485,6 +505,11 @@ def export_disagg_csv_xml(ekey, dstore):
     writercls = hazard_writers.DisaggXMLWriter
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
     ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&z=%d'
+    if ekey[0] == 'disagg_traditional':
+        ex += '&traditional=1'
+        trad = '-traditional'
+    else:
+        trad = ''
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     for s, m, p, z in iproduct(N, M, P, Z):
         dic = {k: dstore['disagg/' + k][s, m, p, ..., z]
@@ -527,7 +552,8 @@ def export_disagg_csv_xml(ekey, dstore):
                        if value is not None and key not in skip_keys}
                 com.update(metadata)
                 fname = dstore.export_path(
-                    'rlz-%d-%s-sid-%d-poe-%d_%s.csv' % (r, imt, s, p, k))
+                    'rlz-%d-%s-sid-%d-poe-%d%s_%s.csv' %
+                    (r, imt, s, p, trad, k))
                 values = extract(dstore, ex % (k, imt, s, p, z))
                 writers.write_csv(fname, values, header=header,
                                   comment=com, fmt='%.5E')

@@ -175,9 +175,11 @@ class GmfComputer(object):
                         for outkey, outarr in zip(sp.outputs, o):
                             items.append((outkey, outarr))
                     for i, gmv in enumerate(gmfa):
+                        if gmv.sum() == 0:
+                            continue
                         data['sid'].append(sids[i])
                         data['eid'].append(eid)
-                        data['rlz'].append(rlz)
+                        data['rlz'].append(rlz)  # used in compute_gmfs_curves
                         for m in range(M):
                             data[f'gmv_{m}'].append(gmv[m])
                         for outkey, outarr in items:

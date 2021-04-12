@@ -1,6 +1,13 @@
 # The universal installation script
 
-Since version 3.11 there is an universal installation script that works on any platform, provided you have Python (3.6, 3.7 or 3.8) installed. The script allows to perform three different kind of installations:
+Since version 3.11 there is an universal installation script that works on any platform, provided you have Python (3.6, 3.7 or 3.8) installed. Since the script installs the engine in its own virtual environment, USERS WANTING TO USE PYTHON SOFTWARE (JUPYTER, SPYDER, ETC) WITH THE ENGINE MUST KNOW WHAT A PYTHON VIRTUAL ENVIRONMENT IS, i.e. they must study this page of the Python tutorial first:
+
+https://docs.python.org/3/tutorial/venv.html
+
+Then they will realize that they can use their tools only if they are installed
+in the engine virtualenv.
+
+The script allows to perform three different kind of installations:
 
 1. `devel` installation
 2. `user` installation

@@ -16,7 +16,25 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.baselib import __version__
+
+import os
+import re
+import json
+import inspect
+import logging
+import functools
+import multiprocessing
+import numpy
+
+from openquake.baselib import __version__, hdf5, python3compat
+from openquake.baselib.general import DictArray, AccumDict
+from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.shakemap.maps import get_array
+from openquake.hazardlib import correlation, stats, calc
+from openquake.hazardlib import valid, InvalidFile
+from openquake.sep.classes import SecondaryPeril
+from openquake.commonlib import logictree, util
+from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
 Full list of configuration parameters
@@ -94,6 +112,12 @@ collapse_gsim_logic_tree:
 collapse_level:
   INTERNAL
 
+collect_rlzs:
+  Collect all realizations into a single effective realizations. Used in
+  event_based_risk calculations with sampling.
+  Example: *collect_rlzs=true*.
+  Default: False
+
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
   so that the hazard curves can be compared.
@@ -122,6 +146,15 @@ float_dmg_dist:
   and not as integers (uint32).
   Example: *float_dmg_dist = true*.
   Default: False
+
+cholesky_limit:
+  When generating the GMFs from a ShakeMap the engine needs to perform a
+  Cholesky decomposition of a matrix of size (M x N)^2, being M the number
+  of intensity measure types and N the number of sites. The decomposition
+  can become ultra-slow, run out of memory, or produce bogus negative
+  eigenvalues, therefore there is a limit on the maximum size of M x N.
+  Example: *cholesky_limit = 1000*.
+  Default: 10,000
 
 continuous_fragility_discretization:
   Used when discretizing continuuos fragility functions.
@@ -172,6 +205,12 @@ distance_bin_width:
 
 ebrisk_maxsize:
   INTERNAL
+
+ignore_master_seed:
+  If set, estimate analytically the uncertainty on the losses due to the
+  uncertainty on the vulnerability functions.
+  Example: *ignore_master_seed = vulnerability*.
+  Default: None
 
 export_dir:
   Set the export directory.
@@ -281,7 +320,7 @@ master_seed:
   calculations with vulnerability functions with nonzero coefficients of
   variation.
   Example: *master_seed = 1234*.
-  Default: 0
+  Default: 123456789
 
 max:
   Compute the maximum across realizations. Akin to mean and quantiles.
@@ -428,13 +467,6 @@ reference_depth_to_2pt5km_per_sec:
   Example: *reference_depth_to_2pt5km_per_sec = 5*.
   Default: no default
 
-reference_siteclass:
-  Used when there is no site model to specify a global site class.
-  The siteclass is a one-character letter used in some GMPEs, like the
-  McVerry (2006), and has values "A", "B", "C" or "D".
-  Example: *reference_siteclass = "A"*.
-  Default: "D"
-
 reference_vs30_type:
   Used when there is no site model to specify a global vs30 type.
   The choices are "inferred" or "measured"
@@ -522,6 +554,15 @@ shakemap_id:
   Example: *shakemap_id = usp000fjta*.
   Default: no default
 
+shakemap_uri:
+  Dictionary used in ShakeMap calculations to specify a ShakeMap. Must contain
+  a key named "kind" with values "usgs_id", "usgs_xml" or "file_npy".
+  Example: *shakemap_uri = {
+     "kind": "usgs_xml",
+     "grid_url": "file:///home/michele/usp000fjta/grid.xml",
+     "uncertainty_url": "file:///home/michele/usp000fjta/uncertainty.xml"*.
+  Default: empty dictionary
+
 shift_hypo:
   Used in classical calculations to shift the rupture hypocenter.
   Example: *shift_hypo = true*.
@@ -595,20 +636,6 @@ width_of_mfd_bin:
   Example: *width_of_mfd_bin = 0.2*.
   Default: None
 """ % __version__
-import os
-import re
-import logging
-import functools
-import multiprocessing
-import numpy
-
-from openquake.baselib.general import DictArray, AccumDict
-from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import correlation, stats, calc
-from openquake.hazardlib import valid, InvalidFile
-from openquake.sep.classes import SecondaryPeril
-from openquake.commonlib import logictree, util
-from openquake.risklib.riskmodels import get_risk_files
 
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
@@ -671,7 +698,6 @@ class OqParam(valid.ParamSet):
         vs30='reference_vs30_value',
         z1pt0='reference_depth_to_1pt0km_per_sec',
         z2pt5='reference_depth_to_2pt5km_per_sec',
-        siteclass='reference_siteclass',
         backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
@@ -687,6 +713,7 @@ class OqParam(valid.ParamSet):
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), 0)
+    collect_rlzs = valid.Param(valid.boolean, False)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
@@ -694,6 +721,7 @@ class OqParam(valid.ParamSet):
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
     cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
+    cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
     description = valid.Param(valid.utf8_not_empty)
     disagg_by_src = valid.Param(valid.boolean, False)
@@ -704,6 +732,7 @@ class OqParam(valid.ParamSet):
     distance_bin_width = valid.Param(valid.positivefloat)
     float_dmg_dist = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
+    ignore_master_seed = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
     ground_motion_correlation_model = valid.Param(
@@ -727,7 +756,7 @@ class OqParam(valid.ParamSet):
     investigation_time = valid.Param(valid.positivefloat, None)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
-    master_seed = valid.Param(valid.positiveint, 0)
+    master_seed = valid.Param(valid.positiveint, 123456789)
     maximum_distance = valid.Param(valid.MagDepDistance.new)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
@@ -760,7 +789,6 @@ class OqParam(valid.ParamSet):
         valid.Choice('measured', 'inferred'), 'measured')
     reference_vs30_value = valid.Param(
         valid.positivefloat, numpy.nan)
-    reference_siteclass = valid.Param(valid.Choice('A', 'B', 'C', 'D'), 'D')
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
@@ -784,6 +812,7 @@ class OqParam(valid.ParamSet):
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
     shakemap_id = valid.Param(valid.nice_string, None)
+    shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
     site_effects = valid.Param(valid.boolean, False)  # shakemap amplification
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
@@ -961,14 +990,8 @@ class OqParam(valid.ParamSet):
                     '%s: conditional_loss_poes are not defined '
                     'for classical_damage calculations' % job_ini)
 
-        # checks for event_based_risk
-        if (self.calculation_mode == 'event_based_risk' and
-              not self.ground_motion_fields):
-            raise ValueError('ground_motion_fields must be set to true in %s'
-                             % job_ini)
-
         # checks for ebrisk
-        if self.calculation_mode == 'ebrisk':
+        if self.calculation_mode in ('ebrisk', 'event_based_risk'):
             if self.risk_investigation_time is None:
                 raise InvalidFile('Please set the risk_investigation_time in'
                                   ' %s' % job_ini)
@@ -1007,10 +1030,32 @@ class OqParam(valid.ParamSet):
             check_same_levels(self.imtls)
 
         if ('amplification' in self.inputs and
-            self.amplification_method == 'convolution' and
-            not self.soil_intensities):
-                raise InvalidFile('%s: The soil_intensities must be defined'
-                     % job_ini)
+            self.amplification_method == 'convolution' and not
+                self.soil_intensities):
+            raise InvalidFile('%s: The soil_intensities must be defined'
+                              % job_ini)
+
+    def validate(self):
+        """
+        Set self.loss_names
+        """
+        # set all_cost_types
+        # rt has the form 'vulnerability/structural', 'fragility/...', ...
+        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        if not costtypes and self.hazard_calculation_id:
+            with util.read(self.hazard_calculation_id) as ds:
+                parent = ds['oqparam']
+            self._risk_files = get_risk_files(parent.inputs)
+            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        self.all_cost_types = sorted(costtypes)
+
+        # fix minimum_asset_loss
+        self.minimum_asset_loss = {
+            ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
+            for ln in self.loss_names}
+
+        super().validate()
+        self.check_source_model()
 
     def check_gsims(self, gsims):
         """
@@ -1037,13 +1082,14 @@ class OqParam(valid.ParamSet):
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
                     if param in ('lon', 'lat'):  # no check
                         continue
-                    param_name = self.siteparam[param]
-                    param_value = getattr(self, param_name)
-                    if (isinstance(param_value, float) and
-                            numpy.isnan(param_value)):
-                        raise ValueError(
-                            'Please set a value for %r, this is required by '
-                            'the GSIM %s' % (param_name, gsim))
+                    elif param in self.siteparam:  # mandatory params
+                        param_name = self.siteparam[param]
+                        param_value = getattr(self, param_name)
+                        if (isinstance(param_value, float) and
+                                numpy.isnan(param_value)):
+                            raise ValueError(
+                                'Please set a value for %r, this is required '
+                                'by the GSIM %s' % (param_name, gsim))
 
     @property
     def tses(self):
@@ -1076,21 +1122,6 @@ class OqParam(valid.ParamSet):
         return DictArray(imtls) if imtls else {}
 
     @property
-    def all_cost_types(self):
-        """
-        Return the cost types of the computation (including `occupants`
-        if it is there) in order.
-        """
-        # rt has the form 'vulnerability/structural', 'fragility/...', ...
-        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
-        if not costtypes and self.hazard_calculation_id:
-            with util.read(self.hazard_calculation_id) as ds:
-                parent = ds['oqparam']
-            self._risk_files = get_risk_files(parent.inputs)
-            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
-        return sorted(costtypes)
-
-    @property
     def min_iml(self):
         """
         :returns: a dictionary of intensities, one per IMT
@@ -1101,9 +1132,7 @@ class OqParam(valid.ParamSet):
                 try:
                     mini[imt] = calc.filters.getdefault(mini, imt)
                 except KeyError:
-                    raise ValueError(
-                        'The parameter `minimum_intensity` in the job.ini '
-                        'file is missing the IMT %r' % imt)
+                    mini[imt] = 0
         if 'default' in mini:
             del mini['default']
         return numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
@@ -1215,13 +1244,13 @@ class OqParam(valid.ParamSet):
             names.append(lt + '_ins')
         return names
 
-    def loss_dt(self, dtype=F32):
+    def loss_dt(self, dtype=F64):
         """
         :returns: a composite dtype based on the loss types including occupants
         """
         return numpy.dtype(self.loss_dt_list(dtype))
 
-    def loss_dt_list(self, dtype=F32):
+    def loss_dt_list(self, dtype=F64):
         """
         :returns: a data type list [(loss_name, dtype), ...]
         """
@@ -1360,7 +1389,16 @@ class OqParam(valid.ParamSet):
         """
         hazard_calculation_id must be set if shakemap_id is set
         """
-        return self.hazard_calculation_id if self.shakemap_id else True
+        if self.shakemap_uri:
+            kind = self.shakemap_uri['kind']
+            sig = inspect.signature(get_array[kind])
+            params = list(sig.parameters)
+            if params != list(self.shakemap_uri):
+                raise ValueError(
+                    'Expected parameters %s in shakemap_uri, got %s' %
+                    (params, list(self.shakemap_uri)))
+        return self.hazard_calculation_id if (
+            self.shakemap_id or self.shakemap_uri) else True
 
     def is_valid_truncation_level(self):
         """
@@ -1536,6 +1574,18 @@ class OqParam(valid.ParamSet):
             self.complex_fault_mesh_spacing = self.rupture_mesh_spacing
         return True
 
+    def is_valid_collect_rlzs(self):
+        """
+        sampling_method must be early_weights and only the mean is available.
+        number_of_logic_tree_samples = {number_of_logic_tree_samples}.
+        """
+        if self.collect_rlzs is False or self.hazard_calculation_id:
+            return True
+        hstats = list(self.hazard_stats())
+        nostats = not hstats or hstats == ['mean']
+        return nostats and self.number_of_logic_tree_samples > 1 and (
+            self.sampling_method == 'early_weights')
+
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
                    imt.startswith('SA')]
@@ -1592,3 +1642,9 @@ class OqParam(valid.ParamSet):
             name = name.split()[-1]
             dic[name] = doc
         return dic
+
+    def __toh5__(self):
+        return hdf5.dumps(vars(self)), {}
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(json.loads(python3compat.decode(array)))

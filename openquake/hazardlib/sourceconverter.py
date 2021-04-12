@@ -475,9 +475,9 @@ class RuptureConverter(object):
            :class:`openquake.hazardlib.geo.GriddedSurface` instance
         4. there is a list of PlanarSurface nodes; returns a
            :class:`openquake.hazardlib.geo.MultiSurface` instance
-        5. there is either a single a kiteSurface or a list of kiteSurface
+        5. there is either a single kiteSurface or a list of kiteSurface
            nodes; returns a
-           :class:`openquake.hazardlib.geo.MultiSurface` instance
+           :class:`openquake.hazardlib.geo.KiteSurface` instance
            or a :class:`openquake.hazardlib.geo.MultiSurface` instance,
            respectively
 
@@ -700,6 +700,7 @@ class SourceConverter(RuptureConverter):
         with context(self.fname, node):
             [mfd_node] = [subnode for subnode in node
                           if subnode.tag.endswith(KNOWN_MFDS)]
+        with context(self.fname, mfd_node):
             if mfd_node.tag.endswith('incrementalMFD'):
                 return mfd.EvenlyDiscretizedMFD(
                     min_mag=mfd_node['minMag'], bin_width=mfd_node['binWidth'],
@@ -709,11 +710,11 @@ class SourceConverter(RuptureConverter):
                 rigidity = mfd_node.get('rigidity')
                 if slip_rate:
                     assert rigidity
-                    # instantiate with a NaN area, to be fixed later on
+                    # instantiate with an area of 1, to be fixed later on
                     gr_mfd = mfd.TruncatedGRMFD.from_slip_rate(
                         mfd_node['minMag'], mfd_node['maxMag'],
                         self.width_of_mfd_bin, mfd_node['bValue'],
-                        slip_rate, rigidity, area=numpy.nan)
+                        slip_rate, rigidity, area=1)
                 else:
                     gr_mfd = mfd.TruncatedGRMFD(
                         a_val=mfd_node['aValue'], b_val=mfd_node['bValue'],

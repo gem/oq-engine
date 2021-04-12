@@ -19,7 +19,6 @@
 import os.path
 import logging
 import numpy
-import psutil
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
@@ -61,6 +60,13 @@ def get_mean_curves(dstore, imt):
     return arr[:, 0, 0, :]
 
 # ########################################################################## #
+
+
+def count_ruptures(src, monitor):
+    """
+    Count the number of ruptures on a heavy source
+    """
+    return {src.source_id: src.count_ruptures()}
 
 
 def compute_gmfs(rupgetter, param, monitor):
@@ -130,9 +136,17 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
-        logging.info('Building ruptures')
-        for src in self.csm.get_sources():
+        sources = self.csm.get_sources()
+        # weighting the heavy sources
+        nrups = parallel.Starmap(
+            count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
+            h5=self.datastore.hdf5).reduce()
+        for src in sources:
             src.nsites = 1  # avoid 0 weight
+            try:
+                src.num_ruptures = nrups[src.source_id]
+            except KeyError:
+                src.num_ruptures = src.count_ruptures()
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
@@ -146,6 +160,7 @@ class EventBasedCalculator(base.HazardCalculator):
             srcfilter = nofilter  # otherwise it would be ultra-slow
         else:
             srcfilter = self.srcfilter
+        logging.info('Building ruptures')
         for sg in self.csm.src_groups:
             if not sg.sources:
                 continue
@@ -200,10 +215,12 @@ class EventBasedCalculator(base.HazardCalculator):
         with sav_mon:
             df = result.pop('gmfdata')
             if len(df):
+                dset = self.datastore['gmf_data/sid']
                 times = result.pop('times')
+                [task_no] = numpy.unique(times['task_no'])
                 rupids = list(times['rup_id'])
                 self.datastore['gmf_data/time_by_rup'][rupids] = times
-                hdf5.extend(self.datastore['gmf_data/sid'], df.sid.to_numpy())
+                hdf5.extend(dset, df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
                 for m in range(len(primary)):
                     hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
@@ -244,8 +261,9 @@ class EventBasedCalculator(base.HazardCalculator):
         oq = self.oqparam
         gsim_lt = readinput.get_gsim_lt(self.oqparam)
         G = gsim_lt.get_num_paths()
-        if oq.inputs['rupture_model'].endswith('.xml'):
+        if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
+        if oq.inputs['rupture_model'].endswith('.xml'):
             self.gsims = [gsim_rlz.value[0] for gsim_rlz in gsim_lt]
             self.cmaker = ContextMaker(
                 '*', self.gsims, {'maximum_distance': oq.maximum_distance,
@@ -258,10 +276,16 @@ class EventBasedCalculator(base.HazardCalculator):
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, rup.rup_id)]
             aw = get_rup_array(ebrs, self.srcfilter)
             if len(aw) == 0:
-                raise RuntimeError('The rupture is too far from the sites!')
+                raise RuntimeError(
+                    'The rupture is too far from the sites! Please check the '
+                    'maximum_distance and the position of the rupture')
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
-            aw.array['n_occ'] = G
+            num_gsims = numpy.array(
+                [len(gsim_lt.values[trt]) for trt in gsim_lt.values], U32)
+            if oq.calculation_mode.startswith('scenario'):
+                # rescale n_occ
+                aw['n_occ'] *= ngmfs * num_gsims[aw['et_id']]
         rup_array = aw.array
         hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
@@ -309,14 +333,13 @@ class EventBasedCalculator(base.HazardCalculator):
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
-        N = len(self.sitecol.complete)
+
         if oq.ground_motion_fields:
-            M = len(oq.get_primary_imtls())
+            imts = oq.get_primary_imtls()
             nrups = len(self.datastore['ruptures'])
-            base.create_gmf_data(self.datastore, M, oq.get_sec_imts())
+            base.create_gmf_data(self.datastore, imts, oq.get_sec_imts())
             self.datastore.create_dset('gmf_data/sigma_epsilon',
                                        sig_eps_dt(oq.imtls))
-            self.datastore.create_dset('gmf_data/events_by_sid', U32, (N,))
             self.datastore.create_dset('gmf_data/time_by_rup',
                                        time_dt, (nrups,), fillvalue=None)
 
@@ -342,13 +365,14 @@ class EventBasedCalculator(base.HazardCalculator):
         return acc
 
     def save_avg_gmf(self):
+        """
+        Compute and save avg_gmf, unless there are too many GMFs
+        """
         size = self.datastore.getsize('gmf_data')
         logging.info(f'Stored {humansize(size)} of GMFs')
-        avail = psutil.virtual_memory().available
-        if avail < size:
+        if size > 1024**3:
             logging.warning(
-                f'There is not enough free RAM ({humansize(avail)}) to read '
-                f'the GMFs, not computing avg_gmf')
+                'There are more than 1 GB of GMFs, not computing avg_gmf')
             return numpy.unique(self.datastore['gmf_data/eid'][:])
 
         rlzs = self.datastore['events']['rlz_id']

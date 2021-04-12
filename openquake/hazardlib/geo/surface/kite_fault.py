@@ -197,7 +197,7 @@ class KiteSurface(BaseSurface):
             and the shallowest point in surface's top edge in km.
         """
         ok = np.isfinite(self.mesh.lons[0, :])
-        return self.mesh.depths[0, ok]
+        return np.amin(self.mesh.depths[0, ok])
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,

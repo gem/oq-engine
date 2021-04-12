@@ -1,3 +1,76 @@
+  [Pablo Heresi]
+  * Implemented Idini et al (2017) GSIM.
+  * Included 'soiltype' into site.py and adds it in site_test.py and oqvalidation.py
+
+  [Michele Simionato]
+  * Added support for traditional disaggregation
+  * Removed the global site parameter `reference_siteclass`
+  * Internal: storing the SiteCollection in a pandas-friendly way
+  * Added HDF5 exporter/importer for the GMFs
+  * Replaced XML exposures with CSV exposures in the demos
+
+  [Claudia Mascandola]
+  * Fix to LanzanoEtAl2016 in presence of a "bas" term in the site model
+
+  [Nicolas Schmid]
+  * Improve performance for ShakeMap calculations when spatialcorr and crosscorr
+    are both set to 'no'
+  * Add feature to do ShakeMap calculations for vulnerability models using MMI.
+
+  [Michele Simionato]
+  * Added a flag `ignore_master_seed` (false by default)
+  * Estimated the uncertainty on the losses due to the uncertainty in the
+    vulnerability functions in event_based_risk and scenario_risk calculations
+  * Supported exposures with generic CSV fields thanks to the `exposureFields`
+    mapping
+  * Honored `custom_site_id` in the hazard curves and UHS CSV exporters
+  * Added a check for the case of `aValue=-Inf` in the truncatedGR MFD
+  * Extended the engine to read XML ShakeMaps from arbitrary sources (in
+    particular local path names and web sites different from the USGS site)
+  * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
+    thus breaking the QGIS plugin on Windows
+  * Fixed `readinput.get_ruptures` to be able to read ruptures in engine 3.11
+    format
+  * scenario_risk calculations starting from ruptures in CSV format now
+    honor the parameter number_of_ground_motion_fields
+
+  [Nicolas Schmid]
+  * Optimized spatial covariance calculations for ShakeMaps (more than 10x)
+  * Adjusted logic in cross correlation matrix for ShakeMaps; now calculations
+    are skipped for corr='no'
+
+  [Michele Simionato]
+  * Added a `cholesky_limit` to forbid large Cholesky decompositions in ShakeMap
+    calculations
+  * Weighted the heavy sources in parallel in event based calculations
+  * Suppported zero coefficient of variations with the beta distribution
+  * Fixed a bug in the agg_curves exporter with aggregate_by=id
+  * Internal: changed how the agg_loss_table is stored
+  * Fixed the avg_losses exporter when aggregate_by=id
+  * Fully merged the calculators scenario_risk, event_based_risk and ebrisk and
+    ensured independency from the number of tasks even for the "BT" and "PM"
+    distributions
+  * Storing the agg_loss_table as 64 bit floats instead of 32 bit floats
+  * Changed the algorithm used to generate the epsilons to avoid storing the
+    epsilon matrix
+
+python3-oq-engine (3.11.2-1~xenial01) xenial; urgency=low
+
+  [Matteo Nastasi]
+  * Fixed setup.py 'pyproj' dependency
+
+  [Antonio Ettorre]
+  * Fixed docker builder
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 02 Mar 2021 09:22:59 +0000
+
+python3-oq-engine (3.11.1-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed memory regression in ebrisk calculations
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 01 Mar 2021 09:30:46 +0000
+
 python3-oq-engine (3.11.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]

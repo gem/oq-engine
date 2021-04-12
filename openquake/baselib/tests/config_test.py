@@ -30,8 +30,8 @@ class ConfigPathsTestCase(unittest.TestCase):
         if venv:
             self.assertIn(os.path.join(venv, 'openquake.cfg'), config.paths)
         else:
-            logging.warn('To run the tests, you should use a '
-                         'development installation with a virtualenv')
+            logging.warning('To run the tests, you should use a '
+                            'development installation with a virtualenv')
 
     def test_config_file(self):
         cfgfile = os.environ.get('OQ_CONFIG_FILE')
