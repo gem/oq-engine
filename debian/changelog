@@ -1,10 +1,11 @@
   [Pablo Heresi]
   * Implemented Idini et al (2017) GSIM.
-  * Included 'soiltype' into site.py and adds it in site_test.py and oqvalidation.py
+  * Added dynamic site parameter 'soiltype'
 
   [Michele Simionato]
   * Added support for traditional disaggregation
-  * Removed the global site parameter `reference_siteclass`
+  * Removed the global site parameter `reference_siteclass` and turned
+    `backarc`, `z1pt0` and `z2pt` into dynamic site parameters
   * Internal: storing the SiteCollection in a pandas-friendly way
   * Added HDF5 exporter/importer for the GMFs
   * Replaced XML exposures with CSV exposures in the demos
