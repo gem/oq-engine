@@ -249,8 +249,12 @@ class SiteCollection(object):
             self._set('vs30', sitemodel.reference_vs30_value)
             self._set('vs30measured',
                       sitemodel.reference_vs30_type == 'measured')
-            self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
-            self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
+            if 'z1pt0' in req_site_params:
+                self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
+            if 'z2pt5' in req_site_params:
+                self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
+            if 'backarc' in req_site_params:
+                self._set('backarc', sitemodel.reference_backarc)
         else:
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
