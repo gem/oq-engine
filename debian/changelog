@@ -1,3 +1,7 @@
+  [Pablo Heresi]
+  * Implemented Idini et al (2017) GSIM.
+  * Included 'soiltype' into site.py and adds it in site_test.py and oqvalidation.py
+
   [Michele Simionato]
   * Removed the global site parameter `reference_siteclass`
   * Internal: storing the SiteCollection in a pandas-friendly way

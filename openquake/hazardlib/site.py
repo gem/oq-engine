@@ -125,6 +125,7 @@ site_param_dt = {
     'z1pt4': numpy.float64,
     'backarc': numpy.bool,
     'xvf': numpy.float64,
+    'soiltype': numpy.uint32,
     'bas': numpy.bool,
 
     # Parameters for site amplification
