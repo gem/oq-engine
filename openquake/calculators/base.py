@@ -1108,7 +1108,7 @@ def get_attrs(hdf5path):
         attrs = f['gmf_data'].attrs
         etime = attrs.get('effective_time')
         num_events = attrs.get('num_events')
-        if etime is None:   # engine < 3.12
+        if etime is None:   # engine == 3.11
             R = len(f['weights'])
             num_events = len(f['events'])
             arr = f.getitem('oqparam')
