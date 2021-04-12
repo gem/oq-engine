@@ -1103,7 +1103,10 @@ def import_gmfs_csv(dstore, oqparam, sids):
     return eids
 
 
-def getset_attrs(oq):
+def _getset_attrs(oq):
+    # read effective_time, num_events and imts from oq.inputs['gmfs']
+    # if the format of the file is old (v3.11) also sets the attributes
+    # investigation_time and ses_per_logic_tree_path on `oq`
     with hdf5.File(oq.inputs['gmfs'], 'r') as f:
         attrs = f['gmf_data'].attrs
         etime = attrs.get('effective_time')
@@ -1137,7 +1140,7 @@ def import_gmfs_hdf5(dstore, oqparam):
     :returns: event_ids
     """
     dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
-    attrs = getset_attrs(oqparam)
+    attrs = _getset_attrs(oqparam)
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
