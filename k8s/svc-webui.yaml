@@ -6,7 +6,8 @@ metadata:
     run: engine-webui
 spec:
   ports:
-  - port: 8800
+  - name: engine-webui
+    port: 8800
     protocol: TCP
   selector:
-    app: engine-master
+    app: engine
