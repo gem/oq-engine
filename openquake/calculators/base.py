@@ -729,7 +729,11 @@ class HazardCalculator(BaseCalculator):
                         'ampcode' not in haz_sitecol.array.dtype.names):
                     haz_sitecol.add_col('ampcode', site.ampcode_dt)
         else:
-            haz_sitecol = readinput.get_site_collection(oq, self.datastore)
+            if 'gmfs' in oq.inputs and oq.inputs['gmfs'].endswith('.hdf5'):
+                with hdf5.File(oq.inputs['gmfs']) as f:
+                    haz_sitecol = f['sitecol']
+            else:
+                haz_sitecol = readinput.get_site_collection(oq, self.datastore)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
@@ -1099,6 +1103,34 @@ def import_gmfs_csv(dstore, oqparam, sids):
     return eids
 
 
+def _getset_attrs(oq):
+    # read effective_time, num_events and imts from oq.inputs['gmfs']
+    # if the format of the file is old (v3.11) also sets the attributes
+    # investigation_time and ses_per_logic_tree_path on `oq`
+    with hdf5.File(oq.inputs['gmfs'], 'r') as f:
+        attrs = f['gmf_data'].attrs
+        etime = attrs.get('effective_time')
+        num_events = attrs.get('num_events')
+        if etime is None:   # engine == 3.11
+            R = len(f['weights'])
+            num_events = len(f['events'])
+            arr = f.getitem('oqparam')
+            it = arr['par_name'] == b'investigation_time'
+            it = float(arr[it]['par_value'][0])
+            oq.investigation_time = it
+            ses = arr['par_name'] == b'ses_per_logic_tree_path'
+            ses = int(arr[ses]['par_value'][0])
+            oq.ses_per_logic_tree_path = ses
+            etime = it * ses * R
+            imts = []
+            for name in arr['par_name']:
+                if name.startswith(b'hazard_imtls.'):
+                    imts.append(name[13:].decode('utf8'))
+        else:  # engine >= 3.12
+            imts = attrs['imts'].split()
+    return dict(effective_time=etime, num_events=num_events, imts=imts)
+
+
 def import_gmfs_hdf5(dstore, oqparam):
     """
     Import in the datastore a ground motion field HDF5 file.
@@ -1108,14 +1140,8 @@ def import_gmfs_hdf5(dstore, oqparam):
     :returns: event_ids
     """
     dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
-    attrs = dict(dstore['gmf_data'].attrs)
-    R = dstore['full_lt'].get_num_rlzs()
-    eff_time = oqparam.investigation_time * oqparam.ses_per_logic_tree_path * R
-    if eff_time != attrs['effective_time']:
-        raise RuntimeError('%s has effective_time=%s, not %s' %
-                           (oqparam.inputs['gmfs'], attrs['effective_time'],
-                            eff_time))
-    oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts'].split()}
+    attrs = _getset_attrs(oqparam)
+    oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
     E = attrs['num_events']
