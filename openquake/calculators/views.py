@@ -1031,6 +1031,8 @@ def view_delta_loss(token, dstore):
     K = dstore['agg_loss_table'].attrs.get('K', 0)
     df = dstore.read_df('agg_loss_table', 'event_id',
                         dict(agg_id=K, loss_id=li))
+    if len(df) == 0:  # for instance no fatalities
+        return {}
     mod2 = df.index % 2
     losses0 = df['loss'][mod2 == 0]
     losses1 = df['loss'][mod2 == 1]
