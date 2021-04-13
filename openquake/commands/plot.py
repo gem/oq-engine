@@ -579,7 +579,7 @@ def make_figure_agg_curves(extractors, what):
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
         aw = ex.get(what + '&absolute=1')
-        if isinstance(aw.json, numpy.ndarray):  # old engine
+        if isinstance(aw.json, numpy.ndarray):  # from webui
             js = bytes(aw.json).decode('utf8')
         else:
             js = aw.json
@@ -603,17 +603,7 @@ def make_figure_tot_curves(extractors, what):
     """
     $ oq plot "tot_curves?loss_type=structural&kind=rlz-000&absolute=1"
     """
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    [ex] = extractors
-    tot = ex.get(what)
-    ax = fig.add_subplot(1, 1, 1)
-    ax.set_xlabel('return periods')
-    ax.set_ylabel('PoE')
-    ax.loglog(tot.return_period, tot[:, 0], '-', label='tot_curves')
-    ax.grid(True)
-    ax.legend()
-    return plt
+    return make_figure_agg_curves(extractors, what)
 
 
 def plot_wkt(wkt_string):

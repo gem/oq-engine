@@ -73,10 +73,7 @@ def get_info(dstore):
     stats = {stat: s for s, stat in enumerate(oq.hazard_stats())}
     loss_types = {lt: li for li, lt in enumerate(oq.loss_dt().names)}
     imt = {imt: i for i, imt in enumerate(oq.imtls)}
-    try:
-        num_rlzs = dstore['full_lt'].get_num_rlzs()
-    except KeyError:  # engine version < 3.9
-        num_rlzs = len(dstore['weights'])
+    num_rlzs = len(dstore['weights'])
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
@@ -649,9 +646,14 @@ def extract_tot_curves(dstore, what):
     if qdic['rlzs']:
         kinds = ['rlz-%d' % r for r in k]
         name = 'agg_curves-rlzs'
-    else:
+    elif 'agg_curves-stats' in dstore:
         kinds = list(info['stats'])
         name = 'agg_curves-stats'
+    elif info['num_rlzs'] == 1:
+        kinds = ['mean']
+        name = 'agg_curves-rlzs'
+    else:
+        raise RuntimeError  # cannot happen
     shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
     units = dstore.get_attr(name, 'units')
     rps = shape_descr['return_period']
