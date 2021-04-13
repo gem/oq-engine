@@ -579,13 +579,14 @@ def make_figure_agg_curves(extractors, what):
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
         aw = ex.get(what + '&absolute=1')
+        vars(aw).update(json.loads(aw.json))
         agg_curve = aw.array.squeeze()
         got[ex.calc_id, aw.kind[0]] = agg_curve
     oq = ex.oqparam
     periods = aw.return_period
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlabel('risk_inv_time=%dy' % oq.risk_investigation_time)
-    ax.set_ylabel('PoE')
+    ax.set_ylabel('loss')
     for ck, arr in got.items():
         ax.loglog(periods, agg_curve, '-', label='%s_%s' % ck)
         ax.loglog(periods, agg_curve, '.')
