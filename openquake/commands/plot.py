@@ -579,7 +579,11 @@ def make_figure_agg_curves(extractors, what):
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
         aw = ex.get(what + '&absolute=1')
-        vars(aw).update(json.loads(aw.json))
+        if isinstance(aw.json, numpy.ndarray):  # old engine
+            js = bytes(aw.json).decode('utf8')
+        else:
+            js = aw.json
+        vars(aw).update(json.loads(js))
         agg_curve = aw.array.squeeze()
         got[ex.calc_id, aw.kind[0]] = agg_curve
     oq = ex.oqparam
