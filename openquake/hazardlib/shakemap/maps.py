@@ -39,6 +39,38 @@ def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
     :param mode: 'strict', 'warn' or 'filter'
     :returns: filtered site collection, filtered shakemap, discarded
     """
+    polygons, shakemap = get_array(kind, **uridict)
+
+    available_imts = set(shakemap['val'].dtype.names)
+
+    bbox = (shakemap['bbox']['minx'].min(), shakemap['bbox']['miny'].min(),
+            shakemap['bbox']['maxx'].max(), shakemap['bbox']['maxy'].max())
+
+    check_required_imts(required_imts, available_imts)
+
+    # build a copy of the ShakeMap with only the relevant IMTs
+    dt = [(imt, F32) for imt in sorted(required_imts)]
+    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
+              ('val', dt), ('std', dt)]
+    data = numpy.zeros(len(shakemap), dtlist)
+    data['vs30'] = shakemap['vs30']
+    for name in ('val', 'std'):
+        for im in required_imts:
+            data[name][im] = shakemap[name][im]
+
+    if sitecol is None:
+        sitecol, coords = site.SiteCollection.from_polygons(polygons, data)
+        # set coordinates to centroids
+        for name in ('lon', 'lat'):
+            data[name] = coords[name]
+        return sitecol, data, []
+
+    sitecol = apply_bounding_box(sitecol, bbox)
+
+    logging.info('Associating %d GMVs to %d sites',
+                 len(shakemap), len(sitecol))
+
+    # TODO: Associate and add lon and lat to data
     return ''
 
 
