@@ -1,0 +1,128 @@
+apiVersion: batch.volcano.sh/v1alpha1
+kind: Job
+metadata:
+  name: oqjob
+spec:
+  minAvailable: 3
+  schedulerName: volcano
+  plugins:
+    ssh: ["--ssh-key-file-path=/home/openquake/.ssh"]
+    svc: []
+    env: []
+  tasks:
+    - replicas: 1
+      name: oqmaster
+      policies:
+        - event: TaskCompleted
+          action: CompleteJob
+      template:
+        spec:
+          hostNetwork: true
+          dnsPolicy: ClusterFirstWithHostNet
+          hostIPC: true
+          containers:
+            - name: master
+              image: openquake/engine:nightly
+              imagePullPolicy: Always
+              env:
+              - name: OQ_CONFIG_FILE
+                value: /oqshared/openquake/openquake.cfg
+              - name: PATH
+                value: /oqshared/openquake/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+              - name: OQ_MASTER_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              - name: OQ_MASTER_IP
+                valueFrom:
+                  fieldRef:
+                    fieldPath: status.podIP
+              #resources:
+              #  limits:
+              #    memory: "8Gi"
+              #    cpu: "8"
+              #  requests:
+              #    memory: "4Gi"
+              #    cpu: "4"
+              ports:
+                - name: webui
+                  containerPort: 8800
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  cp -a /opt/openquake /oqshared;
+                  /bin/sed 's,127.0.0.1,'"$OQ_MASTER_IP"',' /mnt/openquake/openquake.cfg | /usr/bin/tee $OQ_CONFIG_FILE;
+                  oq dbserver start;
+                  exec oq webui start 0.0.0.0:8800 -s;
+                  sleep 20;
+                  oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
+              workingDir: /oqshared
+              volumeMounts:
+              - mountPath: /mnt/openquake
+                name: config
+              - mountPath: /oqshared  # in the container filesystem
+                name: kinddata        #name as defined in volumes
+                readOnly: false
+          volumes:
+            - name: kinddata # name of volume
+              hostPath:
+                path: /data #  matches kind containerPath:
+            - name: config
+              configMap:
+                name: oqcfg
+          restartPolicy: Never
+
+    - replicas: 2
+      name: oqworker
+      template:
+        spec:
+          containers:
+            - name: workers
+              image: openquake/engine:nightly
+              env:
+              - name: OQ_CONFIG_FILE
+                value: /oqshared/openquake/openquake.cfg
+              - name: PATH
+                value: /oqshared/openquake/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+              - name: OQ_WORKER_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              - name: OQ_WORKER_IP
+                valueFrom:
+                  fieldRef:
+                    fieldPath: status.podIP
+              imagePullPolicy: Always
+              #resources:
+              #  limits:
+              #    memory: "8Gi"
+              #    cpu: "8"
+              #  requests:
+              #    memory: "4Gi"
+              #    cpu: "4"
+              ports:
+                - name: zmq
+                  containerPort: 1909
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  python3 -m openquake.baselib.workerpool;
+                  sleep 720;
+              workingDir: /oqshared
+              volumeMounts:
+              - mountPath: /mnt/openquake
+                name: config
+              - mountPath: /oqshared  # in the container filesystem
+                name: kinddata        #name as defined in volumes
+                readOnly: true
+          volumes:
+            - name: kinddata # name of volume
+              hostPath:
+                path: /data #  matches kind containerPath:
+            - name: config
+              configMap:
+                name: oqcfg
+          restartPolicy: OnFailure
+---
