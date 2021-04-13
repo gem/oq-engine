@@ -39,8 +39,6 @@ def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
     :param mode: 'strict', 'warn' or 'filter'
     :returns: filtered site collection, filtered shakemap, discarded
     """
-    polygons, data = get_array(kind, **uridict)
-
     return ''
 
 
@@ -62,6 +60,8 @@ def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
     bbox = (shakemap['lon'].min(), shakemap['lat'].min(),
             shakemap['lon'].max(), shakemap['lat'].max())
 
+    check_required_imts(required_imts, available_imts)
+
     # build a copy of the ShakeMap with only the relevant IMTs
     dt = [(imt, F32) for imt in sorted(required_imts)]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
@@ -72,8 +72,6 @@ def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
     for name in ('val', 'std'):
         for im in required_imts:
             data[name][im] = shakemap[name][im]
-
-    check_required_imts(required_imts, available_imts)
 
     if sitecol is None:
         return site.SiteCollection.from_usgs_shakemap(shakemap), shakemap, []
