@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hostpath-worker
+  name: worker
   namespace: default
   labels:
-    app: engine-worker
+    app: workers
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: engine-workers
+      app: workers
   template:
     metadata:
       labels:
-        app: engine-workers
-        version: "latest"
+        app: workers
+        version: "nightly"
     spec:
       containers:
       - name: engine-worker
@@ -43,8 +43,8 @@ spec:
             sleep 720;
         volumeMounts:
         - mountPath: /oqshared  # in the container filesystem
-          name: kinddata        #name as defined in volumes
+          name: data        #name as defined in volumes
       volumes:
-        - name: kinddata # name of volume
-          hostPath:
-            path: /data #  matches kind containerPath:
+        - name: data #name of volume
+          persistentVolumeClaim:
+            claimName: datacalc
