@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: worker
+  name: oqworker
   namespace: default
   labels:
-    app: workers
+    app: oqworkers
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: workers
+      app: oqworkers
   template:
     metadata:
       labels:
-        app: workers
+        app: oqworkers
         version: "nightly"
     spec:
       containers:

@@ -17,6 +17,10 @@ spec:
           action: CompleteJob
       template:
         spec:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
           hostNetwork: true
           dnsPolicy: ClusterFirstWithHostNet
           hostIPC: true
@@ -51,13 +55,14 @@ spec:
                 - /bin/sh
                 - -c
                 - |
+                  sudo chown -R openquake:openquake /oqshared;
                   cp -a /opt/openquake /oqshared;
                   /bin/sed 's,127.0.0.1,'"$OQ_MASTER_IP"',' /mnt/openquake/openquake.cfg | /usr/bin/tee $OQ_CONFIG_FILE;
                   oq dbserver start;
-                  exec oq webui start 0.0.0.0:8800 -s;
-                  sleep 20;
+                  #exec oq webui start 0.0.0.0:8800 -s;
+                  sleep 120;
                   oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
-              workingDir: /oqshared
+                  #workingDir: /oqshared
               volumeMounts:
               - mountPath: /mnt/openquake
                 name: config
@@ -75,8 +80,19 @@ spec:
 
     - replicas: 2
       name: oqworker
+      selector:
+        matchLabels:
+          app: oqworkers
       template:
+        metadata:
+          labels:
+            app: oqworkers
+            version: "latest"
         spec:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
           containers:
             - name: workers
               image: openquake/engine:nightly
@@ -84,7 +100,7 @@ spec:
               - name: OQ_CONFIG_FILE
                 value: /oqshared/openquake/openquake.cfg
               - name: PATH
-                value: /oqshared/openquake/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+                value: /oqshared/openquake/bin
               - name: OQ_WORKER_NAME
                 valueFrom:
                   fieldRef:
@@ -110,7 +126,7 @@ spec:
                 - |
                   python3 -m openquake.baselib.workerpool;
                   sleep 720;
-              workingDir: /oqshared
+                  #workingDir: /oqshared
               volumeMounts:
               - mountPath: /mnt/openquake
                 name: config
