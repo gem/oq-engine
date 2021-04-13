@@ -106,14 +106,14 @@ def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
             data[name][im] = shakemap[name][im]
 
     if sitecol is None:
-        return site.SiteCollection.from_usgs_shakemap(shakemap), shakemap, []
+        return site.SiteCollection.from_usgs_shakemap(data), data, []
 
     sitecol = apply_bounding_box(sitecol, bbox)
 
     logging.info('Associating %d GMVs to %d sites',
-                 len(shakemap), len(sitecol))
+                 len(data), len(sitecol))
 
-    return geo.utils.assoc(shakemap, sitecol, assoc_dist, mode)
+    return geo.utils.assoc(data, sitecol, assoc_dist, mode)
 
 
 def check_required_imts(required_imts, available_imts):
