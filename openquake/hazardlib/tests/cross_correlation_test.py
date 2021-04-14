@@ -1,9 +1,26 @@
+# The Hazard Library
+# Copyright (C) 2012-2021 GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Module :mod:`openquake.hazardlib.cross_correlation` defines correlation models
+between different intensity measure types
+"""
 
-import numpy as np
 import unittest
 from openquake.hazardlib.imt import SA
-from conditional import get_conditional_mean_stds, _get_correlation_mtx
-from cross_correlation import BakerJayaram2008
+from openquake.hazardlib.cross_correlation import BakerJayaram2008
 
 
 class BakerJayaram2008Test(unittest.TestCase):

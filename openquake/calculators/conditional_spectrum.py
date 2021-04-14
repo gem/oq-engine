@@ -34,7 +34,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 
 
-def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
+def conditional_spectrum(dstore, slc, cmaker, grp_id, rlzs_by_gsim, monitor):
     """
     :param dstore:
         a DataStore instance
@@ -44,6 +44,8 @@ def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param grp_id:
         the group of ruptures currently considered
+    :param rlzs_by_gsim:
+        id of the realizations for each gsim for the current group
     :param monitor:
         monitor of the currently running job
     :returns:
@@ -51,6 +53,7 @@ def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
     """
     RuptureContext.temporal_occurrence_model = PoissonTOM(
         cmaker.investigation_time)
+
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         allctxs, _close = read_ctxs(
@@ -65,6 +68,7 @@ def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
     imts = [from_string(key) for key in cmaker.imtls]
     cvec = numpy.squeeze(get_correlation_mtx(com, SA(0.2), imts, 1))
     eps = 1.55
+    contr_tot = 0.1
     # ------------------------------------------------------------------------
 
     # Get site list
@@ -75,9 +79,23 @@ def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
     # Collector for CS
     spectra = {i: [] for i in list(sids)}
 
-    # Compute CS
-    for ctx, mean_std in cmaker.gen_ctx_cs_mean_and_stds(allctxs, cvec, eps):
+    # Cmaker has the gsims attribute with the list of gsims and the associated
+    # group. The weights for each group are in the datastore and can be
+    # obtained this way: dstore['weights'][:]
+
+    print(grp_id)
+    print(dstore['weights'][:])
+    print(rlzs_by_gsim)
+
+    # We need to multiply each spectrum obtained below by the contribution to
+    # the exceedance of the IML of iterest. This corresponds to the POE
+    # divided by the total POE times the weight of the current realization.
+
+    # Compute CS. This CS is for a given group!
+    for ctx, mean_std in cmaker.gen_ctx_cs_mean_and_stds(allctxs, cvec, eps,
+                                                         contr_tot):
         for i, idx in enumerate(ctx.sids):
+            # We need to multiply this spectrum by the contribution
             spectra[idx].append(mean_std[:, i, :, :])
     return {grp_id: spectra}
 
@@ -114,6 +132,19 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         """
         Compute the conditional spectrum
         """
+
+        # ---------------------------------------------------------------------
+        # This is copied from the classical init in order to make this
+        # information available to the conditional_spectrum function
+        if self.oqparam.hazard_calculation_id:
+            full_lt = self.datastore.parent['full_lt']
+            et_ids = self.datastore.parent['et_ids'][:]
+        else:
+            full_lt = self.csm.full_lt
+            et_ids = self.csm.get_et_ids()
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(et_ids)
+        # ---------------------------------------------------------------------
+
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt']
         self.trts = list(self.full_lt.gsim_lt.values)
@@ -136,6 +167,11 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         L = oq.imtls.size
         poes_shape = (sum(len(rbg) for rbg in rlzs_by_gsim), self.N, L)
         self.datastore.create_dset('poes', float, poes_shape)
+
+        # Creating dataset for spectra
+        cs_shape = (totrups, L, 2)
+        self.datastore.create_dset('cs', float, cs_shape)
+
         G = max(len(rbg) for rbg in rlzs_by_gsim)
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
@@ -164,7 +200,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
                  'imtls': oq.imtls})
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, grp_id))
+            rlzs_by_gsim = rlzs_by_gsim_list[grp_id]
+            smap.submit((dstore, slc, cmaker, grp_id, rlzs_by_gsim))
         results = smap.reduce(self.agg_result)
         return results
 
@@ -189,6 +226,13 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         return css
 
     def post_execute(self, results):
+
         for grp_id, css in results.items():
             # TODO poes is wrong and should be changed
-            self.datastore['poes'][self.slice_by_g[grp_id]] = css
+            # import pdb; pdb.set_trace()
+
+            # check rlzs_by_gsim mi dice le realizzazioni che sono associate
+            # ad un gruppo. Controlla dentro calculators getters
+            pass
+            # The datastore has shape (6, 2, 100)
+            #self.datastore['poes'][self.slice_by_g[grp_id]] = css

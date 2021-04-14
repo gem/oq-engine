@@ -244,13 +244,19 @@ class ContextMaker(object):
         ctx.ctxs = ctxs
         return ctx
 
-    def gen_ctx_cs_mean_and_stds(self, ctxs: list, cvec, eps):
+    def gen_ctx_cs_mean_and_stds(self, ctxs: list, cvec, eps, contr_tot):
         """
         Computes for each site the conditional mean and standard deviation.
         Yields for each context an array with CS mean and std.
 
         :param ctxs:
             A list of C context objects
+        :param cvec:
+            Vector with the correlation coefficients
+        :param eps:
+            The epsilon value
+        :param contr_tot:
+            The total contribution used to compute (i.e. normalize) the weight
         :yields:
             C pairs (ctx, mean and std (N, L, G, 2)) where N is the number of
             site-rupture combinations, L is the number of IMTs considered
@@ -262,7 +268,11 @@ class ContextMaker(object):
         # Total number of 'rupture-site' combinations analyzed
         N = nsites.sum()
 
-        # This is the matrix where we store the output
+        # This is the matrix where we store the output. Dimensions:
+        # - mean and std
+        # - number of sites
+        # - number of intensity measure levels composing the CS
+        # - number of gsims
         mstd = numpy.zeros((2, N, len(self.imtls), len(self.gsims)))
 
         # TODO - Not sure what to do here at the moment

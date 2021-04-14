@@ -4,8 +4,6 @@
       xmlns="http://openquake.org/xmlns/nrml/0.4">
     <logicTree logicTreeID='lt1'>
 
-        <logicTreeBranchingLevel branchingLevelID="bl1">
-
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                     applyToTectonicRegionType="Active Shallow Crust">
                 <logicTreeBranch branchID="A">
@@ -22,7 +20,17 @@
                 </logicTreeBranch>
             </logicTreeBranchSet>
 
-        </logicTreeBranchingLevel>
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                    applyToTectonicRegionType="Subduction Slab">
+                <logicTreeBranch branchID="D">
+                    <uncertaintyModel>ParkerEtAl2020SSlab</uncertaintyModel>
+                    <uncertaintyWeight>0.65</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="E">
+                    <uncertaintyModel>AbrahamsonEtAl2018SSlab</uncertaintyModel>
+                    <uncertaintyWeight>0.35</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
 
     </logicTree>
 </nrml>
