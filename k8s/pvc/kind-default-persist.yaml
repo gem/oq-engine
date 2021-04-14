@@ -6,7 +6,7 @@ networking:
   serviceSubnet: "10.96.0.0/12"
 nodes:
 - role: control-plane
-  image: kindest/node:v1.19.4
+  image: kindest/node:v1.18.14
   kubeadmConfigPatches:
   - |
     kind: InitConfiguration
@@ -25,12 +25,12 @@ nodes:
   - containerPort: 80
     hostPort: 80
 - role: worker
-  image: kindest/node:v1.19.4
+  image: kindest/node:v1.18.14
   extraMounts:
   - hostPath: /kind_pvc/pvc_local #match FS on host
     containerPath: /pvc_local
 - role: worker
-  image: kindest/node:v1.19.4
+  image: kindest/node:v1.18.14
   extraMounts:
   - hostPath: /kind_pvc/pvc_local #match FS on host
     containerPath: /pvc_local
