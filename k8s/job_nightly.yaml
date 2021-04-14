@@ -1,0 +1,143 @@
+apiVersion: batch.volcano.sh/v1alpha1
+kind: Job
+metadata:
+  name: oqjob
+spec:
+  minAvailable: 3
+  schedulerName: volcano
+  plugins:
+    ssh: []
+    svc: []
+    env: []
+  tasks:
+    - replicas: 1
+      name: oqmaster
+      policies:
+        - event: TaskCompleted
+          action: CompleteJob
+      template:
+        spec:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+          hostNetwork: true
+          dnsPolicy: ClusterFirstWithHostNet
+          hostIPC: true
+          containers:
+            - name: master
+              image: openquake/engine:nightly
+              imagePullPolicy: Always
+              env:
+              - name: OQ_CONFIG_FILE
+                value: /oqshared/openquake/openquake.cfg
+              - name: PATH
+                value: /oqshared/openquake/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+              - name: OQ_MASTER_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              - name: OQ_MASTER_IP
+                valueFrom:
+                  fieldRef:
+                    fieldPath: status.podIP
+              #resources:
+              #  limits:
+              #    memory: "8Gi"
+              #    cpu: "8"
+              #  requests:
+              #    memory: "4Gi"
+              #    cpu: "4"
+              #workingDir: /oqshared
+              ports:
+                - name: webui
+                  containerPort: 8800
+              command:
+                - /bin/sh
+                - -c
+                - |
+                 #/usr/bin/sudo chown -R openquake:openquake /oqshared;
+                  /bin/cp -a /opt/openquake /oqshared;
+                  /bin/sed 's,127.0.0.1,'"$OQ_MASTER_IP"',' /mnt/openquake/openquake.cfg | /usr/bin/tee $OQ_CONFIG_FILE;
+                  oq dbserver start;
+                  #wait workers be ready....
+                  /bin/sleep 30;
+                  oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
+              volumeMounts:
+              - mountPath: /mnt/openquake
+                name: config
+              - mountPath: /oqshared  # in the container filesystem
+                name: data        #name as defined in volumes
+                readOnly: false
+          volumes:
+            - name: data #name of volume
+              persistentVolumeClaim:
+                claimName: datacalc
+            - name: config
+              configMap:
+                name: oqcfg
+          restartPolicy: Never
+
+    - replicas: 2
+      name: oqworker
+      selector:
+        matchLabels:
+          app: oqworkers
+      template:
+        metadata:
+          labels:
+            app: oqworkers
+            version: "latest"
+        spec:
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+          containers:
+            - name: workers
+              image: openquake/engine:nightly
+              env:
+              - name: OQ_CONFIG_FILE
+                value: /oqshared/openquake/openquake.cfg
+              - name: PATH
+                value: /oqshared/openquake/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+              - name: OQ_WORKER_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              - name: OQ_WORKER_IP
+                valueFrom:
+                  fieldRef:
+                    fieldPath: status.podIP
+              imagePullPolicy: Always
+              #resources:
+              #  limits:
+              #    memory: "8Gi"
+              #    cpu: "8"
+              #  requests:
+              #    memory: "4Gi"
+              #    cpu: "4"
+              #workingDir: /oqshared
+              ports:
+                - name: zmq
+                  containerPort: 1909
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  /oqshared/openquake/bin/python3 -m openquake.baselib.workerpool;
+              volumeMounts:
+              - mountPath: /mnt/openquake
+                name: config
+              - mountPath: /oqshared  # in the container filesystem
+                name: data        #name as defined in volumes
+                readOnly: true
+          volumes:
+            - name: data #name of volume
+              persistentVolumeClaim:
+                claimName: datacalc
+            - name: config
+              configMap:
+                name: oqcfg
+          restartPolicy: OnFailure
+---
