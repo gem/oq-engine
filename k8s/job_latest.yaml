@@ -26,7 +26,7 @@ spec:
           hostIPC: true
           containers:
             - name: master
-              image: openquake/engine:nightly
+              image: openquake/engine:latest
               imagePullPolicy: Always
               env:
               - name: OQ_CONFIG_FILE
@@ -95,7 +95,7 @@ spec:
             fsGroup: 1000
           containers:
             - name: workers
-              image: openquake/engine:nightly
+              image: openquake/engine:latest
               env:
               - name: OQ_CONFIG_FILE
                 value: /oqshared/openquake/openquake.cfg
