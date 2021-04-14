@@ -273,10 +273,19 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
 
-        descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
-                 ('loss', F32), ('variance', F32)]
-        self.datastore.create_dframe(
-            'agg_loss_table', descr, K=len(self.aggkey), L=len(oq.loss_names))
+        if 'risk' in oq.calculation_mode:
+            descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
+                     ('loss', F32), ('variance', F32)]
+            self.datastore.create_dframe(
+                'agg_loss_table', descr,
+                K=len(self.aggkey), L=len(oq.loss_names))
+        else:  # damage
+            D = len(self.crmodel.damage_states)
+            descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8)] + \
+                [('dmg_%d' % d, F32) for d in range(D)]
+            self.datastore.create_dframe(
+                'agg_damage_table', descr,
+                K=len(self.aggkey), L=len(oq.loss_names))
         ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
         self.rlzs = self.datastore['events']['rlz_id']
