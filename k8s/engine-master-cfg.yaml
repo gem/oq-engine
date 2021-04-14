@@ -44,5 +44,5 @@ data:
     remote_python =
 
     [directory]
-    shared_dir = /oqshared/oqdata
+    shared_dir = /oqshared/
     custom_tmp =
