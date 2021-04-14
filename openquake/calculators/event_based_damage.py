@@ -90,12 +90,12 @@ def event_based_damage(df, param, monitor):
             dic['event_id'].append(eid)
             dic['agg_id'].append(kid)
             dic['loss_id'].append(lti)
-            for dsi in range(D):
+            for dsi in range(1, D):
                 dic['dmg_%d' % dsi].append(dd[lti, dsi])
     fix_dtype(dic, U32, ['event_id'])
     fix_dtype(dic, U16, ['agg_id'])
     fix_dtype(dic, U8, ['loss_id'])
-    fix_dtype(dic, F32, ['dmg_%d' % d for d in range(D)])
+    fix_dtype(dic, F32, ['dmg_%d' % d for d in range(1, D)])
     return pandas.DataFrame(dic)
 
 
