@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: dataengine
+  labels:
+    app: dataengine
+spec:
+  storageClassName: azurefile
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteMany
+  claimRef: # the claimRef is here to provide a "connection" between this pv and the pvc.
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: dataengine      # must match the name of PVC that is to be define
+    namespace: default
+  azureFile:
+    secretName: azure-secret
+    shareName: dataengine
+    readOnly: false

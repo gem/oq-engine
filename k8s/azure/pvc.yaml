@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dataengine # must match the claimRef defined on PersistenVolume
+  namespace: default
+  labels:
+    volume: dataengine
+spec:
+  storageClassName: azure-file
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
