@@ -30,7 +30,7 @@ get_sitecol_shakemap = CallableDict()
 
 @get_sitecol_shakemap.add('shapefile')
 def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
-                          assoc_dist=None, mode='warn'):
+                          assoc_dist=None, mode='filter'):
     """
     :param uridict: a dictionary specifying the ShakeMap resource
     :param imts: required IMTs as a list of strings
@@ -67,7 +67,7 @@ def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
     logging.info('Associating %d GMVs to %d sites',
                  len(shakemap), len(sitecol))
 
-    return ''
+    return geo.utils.assoc_to_polygons(polygons, shakemap, sitecol, assoc_dist, mode)
 
 
 @get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')

@@ -29,6 +29,8 @@ import numpy
 from scipy.spatial import cKDTree
 import shapely.geometry
 
+from shapely.strtree import STRtree
+
 from openquake.baselib.hdf5 import vstr
 from openquake.hazardlib.geo import geodetic
 
@@ -72,6 +74,7 @@ class _GeographicObjects(object):
     It is possible to extract the closest object to a given location by
     calling the method .get_closest(lon, lat).
     """
+
     def __init__(self, objects):
         self.objects = objects
         if hasattr(objects, 'lons'):
@@ -197,6 +200,71 @@ def assoc(objects, sitecol, assoc_dist, mode):
     else:  # objects is the list assets_by_site
         return _GeographicObjects(sitecol).assoc2(
             objects, assoc_dist, mode)
+
+
+def assoc_to_polygons(polygons, data, sitecol, assoc_dist, mode):
+    """
+    Associate data from a shapefile with polygons to a site collection
+    :param polygons: polygon shape data
+    :param data: rest of the data belonging to the shapes
+    :param sitecol: a (filtered) site collection
+    :param assoc_dist: the maximum distance for association
+    :param mode: 'strict', 'warn' or 'filter'
+    :returns: filtered site collection, filtered objects, discarded
+    """
+    assert mode in 'strict warn filter', mode
+    dic = {}
+    discarded = []
+    tree = STRtree(polygons)
+    index_by_id = dict((id(pl), i) for i, pl in enumerate(polygons))
+
+    for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
+        point = shapely.geometry.Point(lon, lat)
+        # associate inside
+        result = next((index_by_id[id(o)]
+                       for o in tree.query(point) if o.contains(point)), None)
+        if result is None and mode == 'warn':
+            # associate outside
+            result = index_by_id[id(tree.nearest(point))]
+            logging.warning(
+                'The site (%.1f %.1f) is outside of any vs30 area.', lon, lat)
+        if result is not None:
+            dic[sid] = data[result]
+        # elif mode == 'filter':
+            # discarded.append(numpy.array(data[result], copy=True))
+            # discarded[-1]['lon'] = lon
+            # discarded[-1]['lat'] = lat
+        elif mode == 'strict':
+            raise SiteAssociationError(
+                'Site (%s %s) is not inside of a vs30 area.' % (lon, lat))
+    if not dic:
+        raise SiteAssociationError(
+            'No sites could be associated within %s km' % assoc_dist)
+    sids = sorted(dic)
+
+    sitecol = sitecol.filtered(sids)
+
+    data = numpy.array([dic[s] for s in sids])
+
+    for lon, lat, row in zip(sitecol.lons, sitecol.lats, data):
+        row['lon'] = lon
+        row['lat'] = lat
+
+    print(data)
+
+    raise RuntimeError('you are here')
+    return (sitecol, data, discarded)
+
+
+def copy_and_replace(arr, sitecol):
+    dtlist = arr[0].dtype
+    new_array = numpy.zeros(len(arr), dtlist)
+    for name in dtlist.names:
+        new_array[name] = arr[name]
+    for lon, lat, row in zip(sitecol.lons, sitecol.lats, new_array):
+        row['lon'] = lon
+        row['lat'] = lat
+    return new_array
 
 
 def clean_points(points):

@@ -124,7 +124,7 @@ def get_array_shapefile(kind, fname):
                 f_dict[ext] = urlextract(fname, '.' + ext)
             except FileNotFoundError:
                 f_dict[ext] = None
-                logging.warning(NOT_FOUND % ext)
+                logging.warning(NOT_FOUND, ext)
     else:
         # files are saved as plain files
         fname = os.path.splitext(fname)[0]
@@ -133,7 +133,7 @@ def get_array_shapefile(kind, fname):
                 f_dict[ext] = urlopen(fname + '.' + ext)
             except URLError:
                 f_dict[ext] = None
-                logging.warning(NOT_FOUND % ext)
+                logging.warning(NOT_FOUND, ext)
 
     polygons = []
     data = defaultdict(list)
