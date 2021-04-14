@@ -54,4 +54,4 @@ spec:
             name: oqcfg
         - name: azure #name of volume
           persistentVolumeClaim:
-            claimName: dataengine
+            claimName: dataengine-claim

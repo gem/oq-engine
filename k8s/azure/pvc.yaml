@@ -1,14 +1,18 @@
-apiVersion: v1
 kind: PersistentVolumeClaim
+apiVersion: v1
 metadata:
-  name: dataengine # must match the claimRef defined on PersistenVolume
-  namespace: default
-  labels:
-    volume: dataengine
+  name: dataengine-claim
+  # Set this annotation to NOT let Kubernetes automatically create
+  # a persistent volume for this volume claim.
+  annotations:
+    volume.beta.kubernetes.io/storage-class: ""
 spec:
-  storageClassName: azure-file
   accessModes:
     - ReadWriteMany
   resources:
     requests:
       storage: 50Gi
+  selector:
+    # To make sure we match the claim with the exact volume, match the label
+    matchLabels:
+      usage: dataengine
