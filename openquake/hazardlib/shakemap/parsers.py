@@ -107,10 +107,8 @@ get_array = CallableDict()
 def get_array_shapefile(kind, fname):
     """
     Download and parse data saved as a shapefile.
-    :param fname: url or filepath for the shapefiles
-    Either a *.zip file containing all the necessary files
-    or the path to one of the files with the rest of them being
-    in the same place.
+    :param fname: url or filepath for the shapefiles,
+    either a zip or the location of one of the files,
     *.shp and *.dbf are necessary, *.prj and *.shx optional
     """
 

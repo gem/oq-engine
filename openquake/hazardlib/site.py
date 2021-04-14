@@ -205,31 +205,8 @@ class SiteCollection(object):
         arr['lat'] = shakemap_array['lat']
         arr['depth'] = numpy.zeros(n)
         arr['vs30'] = shakemap_array['vs30']
-        arr.flags.writeable = False
+        arr.flags.writeable = True
         return self
-
-    @classmethod
-    def from_polygons(cls, polygons, data):
-        """
-        Build a site collection from an array of polygons
-        """
-        self = object.__new__(cls)
-        self.complete = self
-        n = len(polygons)
-        centroids = numpy.array([tuple(*p.centroid.coords)
-                                 for p in polygons],
-                                dtype=[('lon', numpy.float32),
-                                       ('lat', numpy.float32)])
-        dtype = numpy.dtype([(p, site_param_dt[p])
-                             for p in 'sids lon lat depth vs30'.split()])
-        self.array = arr = numpy.zeros(n, dtype)
-        arr['sids'] = numpy.arange(n, dtype=numpy.uint32)
-        arr['lon'] = centroids['lon']
-        arr['lat'] = centroids['lat']
-        arr['depth'] = numpy.zeros(n)
-        arr['vs30'] = data['vs30']
-        arr.flags.writeable = False
-        return self, centroids
 
     @classmethod  # this is the method used by the engine
     def from_points(cls, lons, lats, depths=None, sitemodel=None,
