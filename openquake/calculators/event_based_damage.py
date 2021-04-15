@@ -32,18 +32,6 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-# AED -> KED
-def aggregate_damages(ddd, K, kids):
-    """
-    Aggregate damages for each event
-    """
-    A, E, D = ddd.shape
-    res = numpy.zeros((K + 1, E, D), U32)
-    assert len(kids) == 0
-    res[0] = ddd.sum(axis=0)
-    return res
-
-
 def fix_dtype(dic, dtype, names):
     for name in names:
         dic[name] = dtype(dic[name])
@@ -63,7 +51,8 @@ def event_based_damage(df, param, monitor):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = dstore['assetcol/kids'][:] if K else ()
+        kids = (dstore['assetcol/kids'][:] if K
+                else numpy.zeros(len(assets_df), U16))
         crmodel = monitor.read('crmodel')
     rndgen = scientific.MultiEventRNG(
         param['master_seed'], numpy.unique(df.eid), param['asset_correlation'])
@@ -77,13 +66,19 @@ def event_based_damage(df, param, monitor):
         with mon_risk:
             out = crmodel.get_output(taxo, asset_df, gmf_df)
             eids = out['eids']
+            taxkids = kids[asset_df.index]
+            ukids = numpy.unique(taxkids)
             numbers = U32(out['assets']['number'])
             for lti, lt in enumerate(out['loss_types']):
                 ddd = rndgen.discrete_dmg_dist(eids, out[lt], numbers)
-                res = aggregate_damages(ddd, K, kids)
+                if K:
+                    tot = ddd.sum(axis=0)  # shape AED -> ED
+                res = general.fast_agg(taxkids, ddd)  # shape KED
                 for e, eid in enumerate(eids):
-                    for k, kid in enumerate(range(K + 1)):
+                    for k, kid in enumerate(ukids):
                         dddict[eid, kid][lti] += res[k, e]
+                    if K:
+                        dddict[eid, K][lti] += tot[e]
     dic = general.AccumDict(accum=[])
     for (eid, kid), dd in dddict.items():
         for lti in range(L):
@@ -133,49 +128,4 @@ class DamageCalculator(EventBasedRiskCalculator):
                 hdf5.extend(dset, res[name].to_numpy())
 
     def post_execute(self, result):
-        """
-        Compute stats for the aggregated distributions and save
-        the results on the datastore.
-        """
-        if not result:
-            self.collapsed()
-            return
-        dstates = self.crmodel.damage_states
-        ltypes = self.crmodel.loss_types
-        L = self.L = len(ltypes)
-        R = self.R
-        D = len(dstates)
-        A = len(self.assetcol)
-        E = len(self.datastore['events'])
-
-        # reduction factor
-        matrixsize = A * E * L * 4
-        realsize = self.datastore.getsize('dd_data')
-        logging.info('Saving %s in dd_data (instead of %s)',
-                     general.humansize(realsize),
-                     general.humansize(matrixsize))
-
-        # avg_ratio = ratio used when computing the averages
-        oq = self.oqparam
-        if oq.investigation_time:  # event_based_damage
-            avg_ratio = numpy.array([oq.ses_ratio] * R)
-        else:  # scenario_damage
-            avg_ratio = 1. / self.param['num_events']
-
-        # damage by event: make sure the sum of the buildings is consistent
-        rlz = self.datastore['events']['rlz_id']
-        weights = self.datastore['weights'][:][rlz]
-        tot = self.assetcol['number'].sum()
-        dt = F32 if self.param['float_dmg_dist'] else U32
-        dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
-        dbe[:, :, 0] = tot
-        for e, dmg_by_lt in result['d_event'].items():
-            for li, dmg in enumerate(dmg_by_lt):
-                dbe[e, li,  0] = tot - dmg.sum()
-                dbe[e, li,  1:] = dmg
-        self.datastore['dmg_by_event'] = dbe
-        self.datastore['avg_portfolio_damage'] = avg_std(
-            dbe.astype(float), weights)
-        self.datastore.set_shape_descr(
-            'avg_portfolio_damage',
-            kind=['avg', 'std'], loss_type=ltypes, dmg_state=dstates)
+        pass

@@ -939,10 +939,18 @@ def group_array(array, *kfields):
 
 def multi_index(shape, axis=None):
     """
-    :param shape: a shape of lenght L with P = S1 * S2 * ... * SL
+    :param shape: a shape of lenght L
     :param axis: None or an integer in the range 0 .. L -1
     :yields:
-        P tuples of indices with a slice(None) at the axis position (if any)
+        tuples of indices with a slice(None) at the axis position (if any)
+
+    >>> for slc in multi_index((2, 3), 0): print(slc)
+    (slice(None, None, None), 0, 0)
+    (slice(None, None, None), 0, 1)
+    (slice(None, None, None), 0, 2)
+    (slice(None, None, None), 1, 0)
+    (slice(None, None, None), 1, 1)
+    (slice(None, None, None), 1, 2)
     """
     if any(s >= TWO16 for s in shape):
         raise ValueError('Shape too big: ' + str(shape))
@@ -955,10 +963,12 @@ def multi_index(shape, axis=None):
         yield tuple(lst)
 
 
-def fast_agg(indices, values=None, axis=0, factor=None):
+def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     """
     :param indices: N indices in the range 0 ... M - 1 with M < N
     :param values: N values (can be arrays)
+    :param factor: if given, a multiplicate factor (or weight) for the values
+    :param M: maximum index; if None, use max(indices) + 1
     :returns: M aggregated values (can be arrays)
 
     >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
@@ -973,15 +983,16 @@ def fast_agg(indices, values=None, axis=0, factor=None):
         raise ValueError('There are %d values but %d indices' %
                          (N, len(indices)))
     shp = values.shape[1:]
+    if M is None:
+        M = max(indices) + 1
     if not shp:
-        return numpy.bincount(indices, values)
-    M = max(indices) + 1
+        return numpy.bincount(indices, values, M)
     lst = list(shp)
     lst.insert(axis, M)
     res = numpy.zeros(lst, values.dtype)
     for mi in multi_index(shp, axis):
         vals = values[mi] if factor is None else values[mi] * factor
-        res[mi] = numpy.bincount(indices, vals)
+        res[mi] = numpy.bincount(indices, vals, M)
     return res
 
 
