@@ -83,16 +83,6 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('src_loss_table', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
-        # test event_based_damage
-        self.run_calc(case_1.__file__, 'job_damage.ini',
-                      hazard_calculation_id=str(self.calc.datastore.calc_id))
-        fnames = export(('damages-rlzs', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
-        fnames = export(('dmg_by_event', 'csv'), self.calc.datastore)
-        for fname in fnames:
-            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
-
     def test_case_1_eb(self):
         # this is a case with insured losses and tags
         self.run_calc(case_1.__file__, 'job_eb.ini', concurrent_tasks='4')
