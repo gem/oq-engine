@@ -86,9 +86,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # test event_based_damage
         self.run_calc(case_1.__file__, 'job_damage.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
-        df = self.calc.datastore.read_df('agg_damage_table').sort_index()
-        self.assertEqualFiles(
-            'expected/agg_damage_table.txt', gettemp(str(df)))
+        df = self.calc.datastore.read_df(
+            'agg_damage_table', 'event_id').sort_index()
+        fname = gettemp(str(df))
+        self.assertEqualFiles('expected/agg_damage_table.txt', fname)
 
         """
         fnames = export(('damages-rlzs', 'csv'), self.calc.datastore)
