@@ -1,0 +1,40 @@
+---
+name: Python Applicaton Windows
+
+on:
+  push:
+    branches: [ windows ]
+
+jobs:
+  install:
+    runs-on: windows-latest
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+      GITHUB_REF:  ${{ github.ref }}
+      GITHUB_HD_REF:  ${{ github.head_ref }}
+      GITHUB_BS_REF:  ${{ github.base_ref }}
+        #more $GITHUB_EVENT_PATH
+    strategy:
+      matrix:
+        python-version: [3.6, 3.8]
+
+    steps:
+      - name: Check out the codebase.
+        uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+    # You can test your matrix by printing the current Python version
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+        - name: Set up Python 3.8
+          uses: actions/setup-python@v2
+          with:
+            python-version: '3.8'
+      - name: Upgrade pip and install requirements
+        run: |
+          pip install -U pip
+      - name: Install oq engine 
+        run: pip install -e . 
