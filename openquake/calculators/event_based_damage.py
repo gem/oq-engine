@@ -128,6 +128,15 @@ class DamageCalculator(EventBasedRiskCalculator):
             for name in res.columns:
                 dset = self.datastore['agg_damage_table/' + name]
                 hdf5.extend(dset, res[name].to_numpy())
+        return 1
 
-    def post_execute(self, result):
-        pass
+    def post_execute(self, dummy):
+        K = self.datastore['agg_damage_table'].attrs['K']
+        df = self.datastore.read_df(
+            'agg_damage_table', 'agg_id', dict(agg_id=K))
+        cols = ['loss_id'] + [
+            col for col in df.columns if col.startswith('dmg_')]
+        d = df[cols].groupby('loss_id').sum() / self.E
+        tot_number = self.assetcol['number'].sum()
+        d['dmg_0'] = tot_number - d.to_numpy().sum()
+        logging.info('Average portfolio_damage:\n%s', d)
