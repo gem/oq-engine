@@ -1,4 +1,3 @@
-
 | Test ID | Description |
 |---------|-------------|
 | case_1  | Checks .npz export, raises error when all source are discarded and checks wrong .ini | 

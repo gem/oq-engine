@@ -26,7 +26,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8, case_9, case_10, case_11)
+    case_6, case_7, case_8, case_9, case_10, case_11, case_12)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -303,6 +303,14 @@ aid
         aac(losses(0, alt), [4982, 3524, 3235, 1388, 4988, 4999, 4988, 4993])
         aac(losses(1, alt), [38175, 3, 903, 11122, 28599, 30341, 18978, 0])
         aac(losses(2, alt), [26412, 0, 21055, 44631, 36447, 0, 0, 0])
+
+    def test_case_12(self):
+        # test event_based_damage, no aggregate_by
+        self.run_calc(case_12.__file__, 'job.ini')
+        df = self.calc.datastore.read_df(
+            'agg_damage_table', 'event_id').sort_index()
+        fname = gettemp(str(df))
+        self.assertEqualFiles('expected/agg_damage_table.txt', fname)
 
 
 def losses(aid, alt):
