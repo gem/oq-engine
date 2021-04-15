@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
+        with:
+          ref: $GITHUB_REF
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
