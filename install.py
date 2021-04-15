@@ -31,7 +31,11 @@ You have to remove the data directories manually, if you so wish.
 """
 import os
 import sys
-import pwd
+#import pwd
+try:
+    import pwd
+except ImportError:
+    import winpwd as pwd
 import shutil
 import socket
 import getpass
