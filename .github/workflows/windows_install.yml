@@ -32,10 +32,8 @@ jobs:
       - name: Upgrade pip and install requirements
         run: |
           pip install -U pip
-      - name: Install oq engine on dev mode as on documentation
-        run: |
-          #pip install -e . 
-          pip install -e oq-engine/[dev]
-          python -m compileall .
+    # Use script to install engine and not the pip install .
+      - name: Install engine with install script
+        run: python3 install.py devel
       - name: Run demos to test installation
         run: oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
