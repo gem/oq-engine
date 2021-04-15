@@ -166,7 +166,6 @@ class VulnerabilityFunction(object):
         else:
             self.covs = numpy.zeros(self.imls.shape)
 
-        anycovs = self.covs.any()
         for lr, cov in zip(self.mean_loss_ratios, self.covs):
             if lr == 0 and cov > 0:
                 msg = ("It is not valid to define a mean loss ratio = 0 "
@@ -182,10 +181,6 @@ class VulnerabilityFunction(object):
                 elif lr > 1:
                     raise ValueError(
                         'The meanLRs must be below 1, got %s' % lr)
-                elif cov == 0 and anycovs:
-                    raise ValueError(
-                        'Found a zero coefficient of variation in %s' %
-                        self.covs)
                 elif cov ** 2 > 1 / lr - 1:
                     # see https://github.com/gem/oq-engine/issues/4841
                     raise ValueError(
@@ -760,6 +755,9 @@ class MultiEventRNG(object):
     array([0.38892466, 0.38892466, 0.38892466])
     >>> rng.beta(eids, means, covs)
     array([0.4372343 , 0.57308132, 0.56392573])
+    >>> fractions = numpy.array([[[.8, .1, .1]]])
+    >>> rng.discrete_dmg_dist([0], fractions, [10])
+    array([[[8, 2, 0]]], dtype=uint32)
     """
     def __init__(self, master_seed, eids, asset_correlation=0):
         self.master_seed = master_seed
@@ -768,6 +766,15 @@ class MultiEventRNG(object):
         for eid in eids:
             ph = numpy.random.Philox(self.master_seed + eid)
             self.rng[eid] = numpy.random.Generator(ph)
+
+    def _get_eps(self, eid, corrcache):
+        if self.asset_correlation:
+            try:
+                return corrcache[eid]
+            except KeyError:
+                corrcache[eid] = eps = self.rng[eid].normal()
+                return eps
+        return self.rng[eid].normal()
 
     def lognormal(self, eids, means, covs):
         """
@@ -781,15 +788,6 @@ class MultiEventRNG(object):
         sigma = numpy.sqrt(numpy.log(1 + covs ** 2))
         div = numpy.sqrt(1 + covs ** 2)
         return means * numpy.exp(eps * sigma) / div
-
-    def _get_eps(self, eid, corrcache):
-        if self.asset_correlation:
-            try:
-                return corrcache[eid]
-            except KeyError:
-                corrcache[eid] = eps = self.rng[eid].normal()
-                return eps
-        return self.rng[eid].normal()
 
     def beta(self, eids, means, covs):
         """
@@ -812,6 +810,29 @@ class MultiEventRNG(object):
         res[ok] = [self.rng[eid].beta(alpha[i], beta[i])
                    for i, eid in enumerate(eids[ok])]
         return res
+
+    def discrete_dmg_dist(self, eids, fractions, numbers):
+        """
+        Converting fractions into discrete damage distributions using bincount
+        and rng.choice.
+
+        :param eids: E event IDs
+        :param fractions: array of shape (A, E, D)
+        :param numbers: A asset numbers
+        :returns: array of integers of shape (A, E, D)
+        """
+        A, E, D = fractions.shape
+        assert len(eids) == E, (len(eids), E)
+        assert len(numbers) == A, (len(eids), A)
+        ddd = numpy.zeros(fractions.shape, U32)
+        for e, eid in enumerate(eids):
+            choice = self.rng[eid].choice
+            for a, n in enumerate(numbers):
+                frac = fractions[a, e]  # shape D
+                states = choice(D, n, p=frac/frac.sum())  # n states
+                # ex. [0, 0, 0, 1, 0, 0, 0, 1, 0, 0], 8 times 0, 2 times 1
+                ddd[a, e] = numpy.bincount(states, minlength=D)
+        return ddd
 
 
 #
