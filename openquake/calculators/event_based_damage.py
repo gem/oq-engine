@@ -71,14 +71,16 @@ def event_based_damage(df, param, monitor):
             numbers = U32(out['assets']['number'])
             for lti, lt in enumerate(out['loss_types']):
                 ddd = rndgen.discrete_dmg_dist(eids, out[lt], numbers)
+                tot = ddd.sum(axis=0)  # shape AED -> ED
                 if K:
-                    tot = ddd.sum(axis=0)  # shape AED -> ED
-                res = general.fast_agg(taxkids, ddd)  # shape KED
+                    res = general.fast_agg(taxkids, ddd)  # shape KED
+                else:
+                    res = tot
                 for e, eid in enumerate(eids):
-                    for k, kid in enumerate(ukids):
-                        dddict[eid, kid][lti] += res[k, e]
                     if K:
-                        dddict[eid, K][lti] += tot[e]
+                        for k, kid in enumerate(ukids):
+                            dddict[eid, kid][lti] += res[k, e]
+                    dddict[eid, K][lti] += tot[e]
     dic = general.AccumDict(accum=[])
     for (eid, kid), dd in dddict.items():
         for lti in range(L):
