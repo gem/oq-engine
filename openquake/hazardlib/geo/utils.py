@@ -202,6 +202,9 @@ def assoc(objects, sitecol, assoc_dist, mode):
             objects, assoc_dist, mode)
 
 
+ERROR_OUTSIDE = 'The site (%.1f %.1f) is outside of any vs30 area.'
+
+
 def assoc_to_polygons(polygons, data, sitecol, assoc_dist, mode):
     """
     Associate data from a shapefile with polygons to a site collection
@@ -213,58 +216,38 @@ def assoc_to_polygons(polygons, data, sitecol, assoc_dist, mode):
     :returns: filtered site collection, filtered objects, discarded
     """
     assert mode in 'strict warn filter', mode
-    dic = {}
+    sites = {}
     discarded = []
     tree = STRtree(polygons)
     index_by_id = dict((id(pl), i) for i, pl in enumerate(polygons))
 
     for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
         point = shapely.geometry.Point(lon, lat)
-        # associate inside
         result = next((index_by_id[id(o)]
                        for o in tree.query(point) if o.contains(point)), None)
-        if result is None and mode == 'warn':
-            # associate outside
-            result = index_by_id[id(tree.nearest(point))]
-            logging.warning(
-                'The site (%.1f %.1f) is outside of any vs30 area.', lon, lat)
         if result is not None:
-            dic[sid] = data[result]
-        # elif mode == 'filter':
-            # discarded.append(numpy.array(data[result], copy=True))
-            # discarded[-1]['lon'] = lon
-            # discarded[-1]['lat'] = lat
+            # associate inside
+            sites[sid] = data[result].copy()
+            # use site coords for further calculation
+            sites[sid]['lon'] = lon
+            sites[sid]['lat'] = lat
         elif mode == 'strict':
-            raise SiteAssociationError(
-                'Site (%s %s) is not inside of a vs30 area.' % (lon, lat))
-    if not dic:
+            raise SiteAssociationError(ERROR_OUTSIDE, lon, lat)
+        elif mode == 'warn':
+            discarded.append((lon, lat))
+            logging.warning(ERROR_OUTSIDE, lon, lat)
+        elif mode == 'filter':
+            discarded.append((lon, lat))
+
+    if not sites:
         raise SiteAssociationError(
-            'No sites could be associated within %s km' % assoc_dist)
-    sids = sorted(dic)
+            'No sites could be associated within a shape.')
 
-    sitecol = sitecol.filtered(sids)
+    sorted_sids = sorted(sites)
+    discarded = numpy.array(discarded, dtype=[('lon', F32), ('lat', F32)])
 
-    data = numpy.array([dic[s] for s in sids])
-
-    for lon, lat, row in zip(sitecol.lons, sitecol.lats, data):
-        row['lon'] = lon
-        row['lat'] = lat
-
-    print(data)
-
-    raise RuntimeError('you are here')
-    return (sitecol, data, discarded)
-
-
-def copy_and_replace(arr, sitecol):
-    dtlist = arr[0].dtype
-    new_array = numpy.zeros(len(arr), dtlist)
-    for name in dtlist.names:
-        new_array[name] = arr[name]
-    for lon, lat, row in zip(sitecol.lons, sitecol.lats, new_array):
-        row['lon'] = lon
-        row['lat'] = lat
-    return new_array
+    return (sitecol.filtered(sorted_sids),
+            numpy.array([sites[s] for s in sorted_sids]), discarded)
 
 
 def clean_points(points):
@@ -474,7 +457,7 @@ class OrthographicProjection(object):
     can be also used for measuring distance to an extent of around 700
     kilometers (error doesn't exceed 1 km up until then).
     """
-    @classmethod
+    @ classmethod
     def from_lons_lats(cls, lons, lats):
         return cls(*get_spherical_bounding_box(lons, lats))
 
