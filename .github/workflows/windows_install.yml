@@ -1,5 +1,5 @@
 ---
-name: Python Applicaton Windows
+name: Installation Script for Windows
 
 on:
   push:
