@@ -94,9 +94,8 @@ def path2url(url):
         file = pathlib.Path(url)
         if file.is_file():
             return 'file:{}'.format(pathname2url(str(file.absolute())))
-        else:
-            raise FileNotFoundError(
-                'The following path could not be found: %s' % url)
+        raise FileNotFoundError(
+            'The following path could not be found: %s' % url)
     return url
 
 
@@ -104,7 +103,7 @@ get_array = CallableDict()
 
 
 @get_array.add('shapefile')
-def get_array_shapefile(kind, fname):
+def get_array_shapefile(_kind, fname):
     """
     Download and parse data saved as a shapefile.
     :param fname: url or filepath for the shapefiles,
@@ -158,7 +157,7 @@ def get_array_shapefile(kind, fname):
 
 
 @get_array.add('usgs_xml')
-def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
+def get_array_usgs_xml(_kind, grid_url, uncertainty_url=None):
 
     grid_url = path2url(grid_url)
 
@@ -172,8 +171,8 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
 
 
 @get_array.add('usgs_id')
-def get_array_usgs_id(kind, id):
-    url = SHAKEMAP_URL.format(id)
+def get_array_usgs_id(_kind, usgs_id):
+    url = SHAKEMAP_URL.format(usgs_id)
     logging.info('Downloading %s', url)
     contents = json.loads(urlopen(url).read())[
         'properties']['products']['shakemap'][-1]['contents']
@@ -187,7 +186,7 @@ def get_array_usgs_id(kind, id):
 
 
 @get_array.add('file_npy')
-def get_array_file_npy(kind, fname):
+def get_array_file_npy(_kind, fname):
     return numpy.load(fname)
 
 

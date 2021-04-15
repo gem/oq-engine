@@ -67,7 +67,8 @@ def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
     logging.info('Associating %d GMVs to %d sites',
                  len(shakemap), len(sitecol))
 
-    return geo.utils.assoc_to_polygons(polygons, shakemap, sitecol, assoc_dist, mode)
+    return geo.utils.assoc_to_polygons(polygons,
+                                       shakemap, sitecol, assoc_dist, mode)
 
 
 @get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')
@@ -105,7 +106,7 @@ def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
 
 
 def filter_unused_imts(shakemap, required_imts,
-                       site_fields=['lon', 'lat', 'vs30']):
+                       site_fields=('lon', 'lat', 'vs30')):
     """
     build a copy of the ShakeMap with only the relevant IMTs
 

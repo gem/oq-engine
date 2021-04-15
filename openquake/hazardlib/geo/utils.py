@@ -205,7 +205,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
 ERROR_OUTSIDE = 'The site (%.1f %.1f) is outside of any vs30 area.'
 
 
-def assoc_to_polygons(polygons, data, sitecol, assoc_dist, mode):
+def assoc_to_polygons(polygons, data, sitecol, _assoc_dist, mode):
     """
     Associate data from a shapefile with polygons to a site collection
     :param polygons: polygon shape data

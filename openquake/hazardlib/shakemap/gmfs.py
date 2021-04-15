@@ -161,7 +161,7 @@ involves less sites.'''
 
 
 @calculate_gmfs.add('Silva&Horspool')
-def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
+def calculate_gmfs_sh(_kind, shakemap, imts, Z, mu, spatialcorr,
                       crosscorr, cholesky_limit):
     """
     Implementation of paper by Silva and Horspool 2019
@@ -204,7 +204,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
 
 
 @calculate_gmfs.add('basic')
-def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
+def calculate_gmfs_basic(_kind, shakemap, imts, Z, mu):
     """
     Basic calculation method to sample data from shakemap values
 
@@ -220,7 +220,7 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
 
 
 @ calculate_gmfs.add('mmi')
-def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
+def calculate_gmfs_mmi(_kind, shakemap, _imts, Z, mu):
     """
     Basic calculation method to sample data from shakemap values
     given mmi intensities.
