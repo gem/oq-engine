@@ -34,8 +34,6 @@ jobs:
           pip install -U pip
       - name: Install oq engine on dev mode as on documentation
         run: |
-          #pip install -e . 
-          pip install -e oq-engine/[dev]
-          python -m compileall .
+          pip install -e . 
       - name: Run demos to test installation
         run: oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
