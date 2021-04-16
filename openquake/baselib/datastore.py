@@ -93,7 +93,7 @@ def hdf5new(datadir=None):
     return new
 
 
-def extract_calc_id_datadir(filename, datadir=None):
+def extract_calc_id_datadir(filename):
     """
     Extract the calculation ID from the given filename or integer:
 
@@ -104,37 +104,38 @@ def extract_calc_id_datadir(filename, datadir=None):
        ...
     ValueError: Cannot extract calc_id from /mnt/ssd/oqdata/wrong_name.hdf5
     """
-    datadir = datadir or get_datadir()
-    try:
-        calc_id = int(filename)
-    except ValueError:
-        filename = os.path.abspath(filename)
-        datadir = os.path.dirname(filename)
-        mo = re.match(CALC_REGEX, os.path.basename(filename))
-        if mo is None:
-            raise ValueError('Cannot extract calc_id from %s' % filename)
-        calc_id = int(mo.group(2))
+    filename = os.path.abspath(filename)
+    datadir = os.path.dirname(filename)
+    mo = re.match(CALC_REGEX, os.path.basename(filename))
+    if mo is None:
+        raise ValueError('Cannot extract calc_id from %s' % filename)
+    calc_id = int(mo.group(2))
     return calc_id, datadir
 
 
-def read(calc_id, mode='r', datadir=None):
+def read(calc_id, mode='r', datadir=None, parentdir=None):
     """
     :param calc_id: calculation ID or filename
     :param mode: 'r' or 'w'
     :param datadir: the directory where to look
+    :param parentdir: the datadir of the parent calculation
     :returns: the corresponding DataStore instance
 
     Read the datastore, if it exists and it is accessible.
     """
-    datadir = datadir or get_datadir()
-    dstore = DataStore(calc_id, datadir, mode=mode)
+    if isinstance(calc_id, str):  # pathname
+        dstore = DataStore(calc_id, mode=mode)
+    else:
+        dstore = DataStore.new(calc_id, datadir, mode=mode)
     try:
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
         hc_id = None
     if hc_id:
-        dstore.parent = read(hc_id, datadir=os.path.dirname(dstore.filename))
-    return dstore
+        # assume the parent datadir is the same of the children datadir
+        pdir = parentdir or os.path.dirname(dstore.filename)
+        dstore.parent = read(hc_id, datadir=pdir)
+    return dstore.open(mode)
 
 
 def sel(dset, filterdict):
@@ -244,32 +245,55 @@ class DataStore(collections.abc.MutableMapping):
     """
 
     class EmptyDataset(ValueError):
-        """Raised when reading an empty dataset"""
+        """Raised whe        # look in the db
+        job = logs.dbcmd('get_job', calc_id)
+        if job:
+            ppath = job.ds_calc_dir + '.hdf5'
+            if job.hazard_calculation_id:
+                pjob = logs.dbcmd('get_job', job.hazard_calculation_id)
+                ppath = pjob.ds_calc_dir + '.hdf5'
+        else:  # when using oq run there is no job in the db
+            path = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
+n reading an empty dataset"""
 
-    def __init__(self, calc_id=None, datadir=None, params=(), mode=None):
+    @classmethod
+    def new(cls, calc_id=None, datadir=None, mode=None):
+        """
+        :returns: a DataStore instance associated to the given calc_id
+        """
+        from openquake.commonlib import logs
         datadir = datadir or get_datadir()
-        if isinstance(calc_id, str):  # passed a real path
-            self.filename = calc_id
-            self.calc_id, datadir = extract_calc_id_datadir(calc_id, datadir)
+        ppath = None
+        if calc_id is None:  # use a new datastore
+            cid = get_last_calc_id(datadir) + 1
+        elif calc_id < 0:  # use an old datastore
+            calc_ids = get_calc_ids(datadir)
+            try:
+                cid = calc_ids[calc_id]
+            except IndexError:
+                raise IndexError(
+                    'There are %d old calculations, cannot '
+                    'retrieve the %s' % (len(calc_ids), calc_id))
         else:
-            if calc_id is None:  # use a new datastore
-                self.calc_id = get_last_calc_id(datadir) + 1
-            elif calc_id < 0:  # use an old datastore
-                calc_ids = get_calc_ids(datadir)
-                try:
-                    self.calc_id = calc_ids[calc_id]
-                except IndexError:
-                    raise IndexError(
-                        'There are %d old calculations, cannot '
-                        'retrieve the %s' % (len(calc_ids), calc_id))
-            else:  # use the given datastore
-                self.calc_id = calc_id
-            self.filename = os.path.join(
-                datadir, 'calc_%s.hdf5' % self.calc_id)
+            cid = calc_id
+        # look in the db
+        job = logs.dbcmd('get_job', cid)
+        if job:
+            path = job.ds_calc_dir + '.hdf5'
+            if job.hazard_calculation_id:
+                pjob = logs.dbcmd('get_job', job.hazard_calculation_id)
+                ppath = pjob.ds_calc_dir + '.hdf5'
+        else:  # when using oq run there is no job in the db
+            path = os.path.join(datadir, 'calc_%s.hdf5' % cid)
+        return cls(path, ppath, mode)
+
+    def __init__(self, path, ppath=None, mode=None):
+        self.filename = path
+        self.ppath = ppath
+        self.calc_id, datadir = extract_calc_id_datadir(path)
         self.tempname = self.filename[:-5] + '_tmp.hdf5'
         if not os.path.exists(datadir):
             os.makedirs(datadir)
-        self.params = params
         self.parent = ()  # can be set later
         self.datadir = datadir
         self.mode = mode or ('r+' if os.path.exists(self.filename) else 'w')
@@ -287,6 +311,9 @@ class DataStore(collections.abc.MutableMapping):
                 self.hdf5 = hdf5.File(self.filename, mode)
             except OSError as exc:
                 raise OSError('%s in %s' % (exc, self.filename))
+            if self.ppath:
+                self.parent = read(self.ppath)
+        return self
 
     @property
     def export_dir(self):
