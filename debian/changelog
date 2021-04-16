@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Made it possible to run an even _based risk starting from a parent
+    calculation ran by a different user
+
   [Pablo Heresi]
   * Implemented Idini et al (2017) GSIM.
   * Added dynamic site parameter 'soiltype'
