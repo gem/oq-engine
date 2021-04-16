@@ -117,11 +117,12 @@ def extract_calc_id_datadir(filename, datadir=None):
     return calc_id, datadir
 
 
-def read(calc_id, mode='r', datadir=None):
+def read(calc_id, mode='r', datadir=None, parentdir=None):
     """
     :param calc_id: calculation ID or filename
     :param mode: 'r' or 'w'
     :param datadir: the directory where to look
+    :param parentdir: the datadir of the parent calculation
     :returns: the corresponding DataStore instance
 
     Read the datastore, if it exists and it is accessible.
@@ -133,9 +134,9 @@ def read(calc_id, mode='r', datadir=None):
     except KeyError:  # no oqparam
         hc_id = None
     if hc_id:
-        # NB: assume the parent datadir is the same of the children datadir
-        # it breaks if the parent calculation was ran by a different user!
-        dstore.parent = read(hc_id, datadir=os.path.dirname(dstore.filename))
+        # assume the parent datadir is the same of the children datadir
+        pdir = parentdir or os.path.dirname(dstore.filename)
+        dstore.parent = read(hc_id, datadir=pdir)
     return dstore
 
 

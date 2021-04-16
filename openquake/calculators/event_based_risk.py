@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import logging
 import operator
 import itertools
@@ -79,13 +80,10 @@ def event_based_risk(df, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
-    dstore = datastore.read(param['hdf5path'])
+    dstore = datastore.read(param['hdf5path'], parentdir=param['parentdir'])
     K = param['K']
-    hc_id = param['oqparam'].hazard_calculation_id
     with monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
-            if hc_id:  # open the right parent, even if the user was different
-                dstore.parent = util.read(hc_id)
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
         kids = dstore['assetcol/kids'][:] if K else ()
@@ -246,7 +244,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
         super().pre_execute()
+        if oq.hazard_calculation_id:
+            parentdir = os.path.dirname(
+                util.read(oq.hazard_calculation_id).filename)
+        else:
+            parentdir = None
         self.set_param(hdf5path=self.datastore.filename,
+                       parentdir=parentdir,
                        ignore_covs=oq.ignore_covs,
                        master_seed=oq.master_seed,
                        asset_correlation=int(oq.asset_correlation))
