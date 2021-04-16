@@ -82,7 +82,7 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, reuse_input,
     hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
     hcalc.datastore.close()
     hc_id = hcalc.datastore.calc_id
-    rcalc_id = logs.init(level=getattr(logging, loglevel.upper()))
+    rcalc_id = logs.init('job', level=getattr(logging, loglevel.upper()))
     params['hazard_calculation_id'] = str(hc_id)
     oq = readinput.get_oqparam(job_risk, kw=params)
     rcalc = base.calculators(oq, rcalc_id)

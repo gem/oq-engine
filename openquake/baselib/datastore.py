@@ -134,6 +134,7 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     if hc_id:
         # assume the parent datadir is the same of the children datadir
         pdir = parentdir or os.path.dirname(dstore.filename)
+        dstore.ppath = os.path.join(pdir, 'calc_%d.hdf5' % hc_id)
         dstore.parent = read(hc_id, datadir=pdir)
     return dstore.open(mode)
 
@@ -677,7 +678,8 @@ n reading an empty dataset"""
                     parent=self.parent,
                     calc_id=self.calc_id,
                     hdf5=(),
-                    filename=self.filename)
+                    filename=self.filename,
+                    ppath=self.ppath)
 
     def __iter__(self):
         if not self.hdf5:
