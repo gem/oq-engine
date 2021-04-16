@@ -71,8 +71,8 @@ class user:
     """
     VENV = os.path.expanduser('~\\openquake')
     CFG = os.path.join(VENV, 'openquake.cfg')
-    OQ = os.path.join(VENV, '/bin/oq')
-    OQDATA = os.path.expanduser('~/oqdata')
+    OQ = os.path.join(VENV, '\\bin\\oq')
+    OQDATA = os.path.expanduser('~\\oqdata')
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1908
     CONFIG = ''
@@ -129,7 +129,7 @@ def install_standalone(venv):
     for app in 'standalone ipt taxtweb taxonomy'.split():
         env = {'PYBUILD_NAME': 'oq-taxonomy'} if app == 'taxonomy' else {}
         try:
-            subprocess.check_call(['%s/Scripts/pip' % venv, 'install',
+            subprocess.check_call(['%s\\Scripts\\pip' % venv, 'install',
                                    '--upgrade', STANDALONE % app], env=env)
         except Exception as exc:
             print('%s: could not install %s' % (exc, STANDALONE % app))
@@ -214,24 +214,24 @@ def install(inst, version):
         print('Created %s' % inst.VENV)
 
     # upgrade pip
-    subprocess.check_call(['%s/Scripts/pip' % inst.VENV, 'install', 'pip', 'wheel',
+    subprocess.check_call(['%s\\Scripts\\pip' % inst.VENV, 'install', 'pip', 'wheel',
                            '--upgrade'])
 
     # install the requirements
     req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \
         'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
-    subprocess.check_call(['%s/Scripts/pip' % inst.VENV, 'install', '-r', req])
+    subprocess.check_call(['%s\\Scripts\\pip' % inst.VENV, 'install', '-r', req])
 
     if inst is devel:  # install from the local repo
-        subprocess.check_call(['%s/Scripts/pip' % inst.VENV, 'install', '-e', '.'])
+        subprocess.check_call(['%s\\Scripts\\pip' % inst.VENV, 'install', '-e', '.'])
     elif version is None:  # install the stable version
-        subprocess.check_call(['%s/Scripts/pip' % inst.VENV, 'install',
+        subprocess.check_call(['%s\\Scripts\\pip' % inst.VENV, 'install',
                                '--upgrade', 'openquake.engine'])
     elif '.' in version:  # install an official version
-        subprocess.check_call(['%s/Scripts/pip' % inst.VENV, 'install',
+        subprocess.check_call(['%s\\Scripts\\pip' % inst.VENV, 'install',
                                '--upgrade', 'openquake.engine==' + version])
     else:  # install a branch from github
-        subprocess.check_call(['%s/Scripts/pip' % inst.VENV, 'install',
+        subprocess.check_call(['%s\\Scripts\\pip' % inst.VENV, 'install',
                                '--upgrade', GITBRANCH % version])
 
     install_standalone(inst.VENV)
