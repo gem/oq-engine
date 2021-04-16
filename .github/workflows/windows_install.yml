@@ -2,8 +2,10 @@
 name: Installation Script for Windows
 
 on:
-  push:
-    branches: [ windows ]
+  #push:
+  #  branches: [ windows ]
+  schedule:
+    - cron: "30 22 * * *"
 
 jobs:
   install:
