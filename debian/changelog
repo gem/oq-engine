@@ -1,6 +1,6 @@
   [Michele Simionato]
-  * Made it possible to run an even _based risk starting from a parent
-    calculation ran by a different user
+  * Made it possible to run an event based risk calculation starting from a
+    parent ran by a different user
 
   [Pablo Heresi]
   * Implemented Idini et al (2017) GSIM.
