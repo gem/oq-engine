@@ -40,7 +40,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, util
+from openquake.commonlib import readinput, logictree
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -157,7 +157,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
     def __init__(self, oqparam, calc_id):
         oqparam.validate()
-        self.datastore = datastore.DataStore(calc_id)
+        self.datastore = datastore.DataStore.new(calc_id)
         init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
@@ -548,7 +548,7 @@ class HazardCalculator(BaseCalculator):
             self.save_crmodel()
             self.datastore.swmr_on()
         elif oq.hazard_calculation_id:
-            parent = util.read(oq.hazard_calculation_id)
+            parent = datastore.read(oq.hazard_calculation_id)
             self.check_precalc(parent['oqparam'].calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
@@ -723,7 +723,7 @@ class HazardCalculator(BaseCalculator):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
         if oq.hazard_calculation_id:
-            with util.read(oq.hazard_calculation_id) as dstore:
+            with datastore.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
                 if ('amplification' in oq.inputs and
                         'ampcode' not in haz_sitecol.array.dtype.names):

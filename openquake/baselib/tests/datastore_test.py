@@ -27,7 +27,7 @@ from openquake.baselib.datastore import DataStore, read
 
 class DataStoreTestCase(unittest.TestCase):
     def setUp(self):
-        self.dstore = DataStore()
+        self.dstore = DataStore.new()
 
     def tearDown(self):
         self.dstore.clear()

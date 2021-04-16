@@ -22,7 +22,6 @@ import logging
 
 from openquake.baselib import datastore, hdf5
 from openquake.commonlib.writers import write_csv
-from openquake.commonlib import util
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.extract import extract
 
@@ -65,7 +64,7 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
         rows = []
         for calc_id in datastore.get_calc_ids(datadir):
             try:
-                ds = util.read(calc_id)
+                ds = datastore.read(calc_id)
                 oq = ds['oqparam']
                 cmode, descr = oq.calculation_mode, oq.description
             except Exception:
@@ -80,7 +79,7 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
             print('#%d %s: %s' % row)
         return
 
-    ds = util.read(calc_id)
+    ds = datastore.read(calc_id)
 
     # this part is experimental
     if view.keyfunc(what) in view:

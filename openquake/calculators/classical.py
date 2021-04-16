@@ -26,7 +26,7 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import parallel, hdf5, config
+from openquake.baselib import parallel, hdf5, config, datastore
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize,
@@ -39,7 +39,7 @@ from openquake.hazardlib.contexts import ContextMaker, get_effect
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.commonlib import calc, util, readinput
+from openquake.commonlib import calc, readinput
 from openquake.calculators import getters
 from openquake.calculators import base
 
@@ -447,7 +447,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         if oq.hazard_calculation_id and not oq.compare_with_classical:
-            with util.read(self.oqparam.hazard_calculation_id) as parent:
+            with datastore.read(self.oqparam.hazard_calculation_id) as parent:
                 self.full_lt = parent['full_lt']
             self.calc_stats()  # post-processing
             return {}
