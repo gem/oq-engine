@@ -30,7 +30,7 @@ from h5py._hl.group import Group
 import numpy
 import pandas
 
-from openquake.baselib import config, hdf5, general
+from openquake.baselib import config, hdf5, general, datastore
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
@@ -1386,7 +1386,7 @@ class Extractor(object):
     """
     def __init__(self, calc_id):
         self.calc_id = calc_id
-        self.dstore = util.read(calc_id)
+        self.dstore = datastore.read(calc_id)
         self.oqparam = self.dstore['oqparam']
 
     def get(self, what, asdict=False):

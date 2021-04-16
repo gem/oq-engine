@@ -28,7 +28,7 @@ from scipy import sparse
 from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
-from openquake.commonlib import logs, util
+from openquake.commonlib import logs
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
 
@@ -246,7 +246,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         super().pre_execute()
         if oq.hazard_calculation_id:
             parentdir = os.path.dirname(
-                util.read(oq.hazard_calculation_id).filename)
+                datastore.read(oq.hazard_calculation_id).filename)
         else:
             parentdir = None
         self.set_param(hdf5path=self.datastore.filename,

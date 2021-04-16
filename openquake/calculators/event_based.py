@@ -20,7 +20,7 @@ import os.path
 import logging
 import numpy
 
-from openquake.baselib import hdf5, parallel
+from openquake.baselib import hdf5, parallel, datastore
 from openquake.baselib.general import AccumDict, copyobj, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import geom_avg_std, compute_pmap_stats
@@ -314,7 +314,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.set_param()
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
-            self.datastore.parent = util.read(oq.hazard_calculation_id)
+            self.datastore.parent = datastore.read(oq.hazard_calculation_id)
         elif hasattr(self, 'csm'):  # from sources
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and

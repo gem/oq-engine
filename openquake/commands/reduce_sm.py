@@ -18,8 +18,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from openquake.baselib import performance, general
-from openquake.commonlib import readinput, util
+from openquake.baselib import performance, general, datastore
+from openquake.commonlib import readinput
 
 
 def get_dupl(src_ids):
@@ -37,7 +37,7 @@ def main(calc_id: int):
     """
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
-    with util.read(calc_id) as dstore:
+    with datastore.read(calc_id) as dstore:
         oqparam = dstore['oqparam']
         info = dstore['source_info'][()]
     src_ids = info['source_id']

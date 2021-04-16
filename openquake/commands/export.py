@@ -17,8 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 
-from openquake.baselib import general, performance
-from openquake.commonlib import util
+from openquake.baselib import general, performance, datastore
 from openquake.calculators.export import export as export_
 
 
@@ -28,10 +27,10 @@ def main(datastore_key, calc_id: int = -1, *, exports='csv', export_dir='.'):
     Export an output from the datastore. To see the available datastore
     keys, use the command `oq info exports`.
     """
-    dstore = util.read(calc_id)
+    dstore = datastore.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
-        dstore.parent = util.read(parent_id)
+        dstore.parent = datastore.read(parent_id)
     dstore.export_dir = export_dir
     with performance.Monitor('export', measuremem=True) as mon:
         for fmt in exports.split(','):
