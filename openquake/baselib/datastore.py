@@ -246,16 +246,7 @@ class DataStore(collections.abc.MutableMapping):
     """
 
     class EmptyDataset(ValueError):
-        """Raised whe        # look in the db
-        job = logs.dbcmd('get_job', calc_id)
-        if job:
-            ppath = job.ds_calc_dir + '.hdf5'
-            if job.hazard_calculation_id:
-                pjob = logs.dbcmd('get_job', job.hazard_calculation_id)
-                ppath = pjob.ds_calc_dir + '.hdf5'
-        else:  # when using oq run there is no job in the db
-            path = os.path.join(datadir, 'calc_%s.hdf5' % calc_id)
-n reading an empty dataset"""
+        """Raised when reading an empty dataset"""
 
     @classmethod
     def new(cls, calc_id=None, datadir=None, mode=None):
@@ -266,26 +257,26 @@ n reading an empty dataset"""
         datadir = datadir or get_datadir()
         ppath = None
         if calc_id is None:  # use a new datastore
-            cid = get_last_calc_id(datadir) + 1
+            jid = get_last_calc_id(datadir) + 1
         elif calc_id < 0:  # use an old datastore
             calc_ids = get_calc_ids(datadir)
             try:
-                cid = calc_ids[calc_id]
+                jid = calc_ids[calc_id]
             except IndexError:
                 raise IndexError(
                     'There are %d old calculations, cannot '
                     'retrieve the %s' % (len(calc_ids), calc_id))
         else:
-            cid = calc_id
+            jid = calc_id
         # look in the db
-        job = logs.dbcmd('get_job', cid)
+        job = logs.dbcmd('get_job', jid)
         if job:
             path = job.ds_calc_dir + '.hdf5'
-            if job.hazard_calculation_id:
+            if job.hazard_calculation_id and job.hazard_calculation_id != jid:
                 pjob = logs.dbcmd('get_job', job.hazard_calculation_id)
                 ppath = pjob.ds_calc_dir + '.hdf5'
         else:  # when using oq run there is no job in the db
-            path = os.path.join(datadir, 'calc_%s.hdf5' % cid)
+            path = os.path.join(datadir, 'calc_%s.hdf5' % jid)
         return cls(path, ppath, mode)
 
     def __init__(self, path, ppath=None, mode=None):
@@ -305,15 +296,13 @@ n reading an empty dataset"""
 
     def open(self, mode):
         """
-        Open the underlying .hdf5 file and the parent, if any
+        Open the underlying .hdf5 file
         """
         if self.hdf5 == ():  # not already open
             try:
                 self.hdf5 = hdf5.File(self.filename, mode)
             except OSError as exc:
                 raise OSError('%s in %s' % (exc, self.filename))
-            if self.ppath:
-                self.parent = read(self.ppath)
         return self
 
     @property
