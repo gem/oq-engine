@@ -84,10 +84,9 @@ def event_based_risk(df, param, monitor):
     hc_id = param['oqparam'].hazard_calculation_id
     with monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
-            if hc_id:  # read from the parent
-                df = util.read(hc_id).read_df('gmf_data', slc=df)
-            else:  # read from the child
-                df = dstore.read_df('gmf_data', slc=df)
+            if hc_id:  # open the right parent, even if the user was different
+                dstore.parent = util.read(hc_id)
+            df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
         kids = dstore['assetcol/kids'][:] if K else ()
         crmodel = monitor.read('crmodel')
