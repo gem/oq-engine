@@ -210,8 +210,8 @@ def install(inst, version):
     if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
         # create venv
         print('List folder %s' % inst.VENV)
-        venv.EnvBuilder(with_pip=True).create(inst.VENV)
-        print('Created %s' % inst.VENV)
+        # venv.EnvBuilder(with_pip=True).create(inst.VENV)
+        # print('Created %s' % inst.VENV)
 
     # upgrade pip
     subprocess.check_call(['%s\\Scripts\\pip' % inst.VENV, 'install', '--user', 'pip', 'wheel',
