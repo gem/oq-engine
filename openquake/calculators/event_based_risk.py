@@ -24,7 +24,7 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, parallel, general
+from openquake.baselib import datastore, hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
 from openquake.commonlib import logs, util
@@ -79,11 +79,15 @@ def event_based_risk(df, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
-    dstore = util.read(param['hc_id'])
+    dstore = datastore.read(param['hdf5path'])
     K = param['K']
+    hc_id = param['oqparam'].hazard_calculation_id
     with monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
-            df = dstore.read_df('gmf_data', slc=df)
+            if hc_id:  # read from the parent
+                df = util.read(hc_id).read_df('gmf_data', slc=df)
+            else:  # read from the child
+                df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
         kids = dstore['assetcol/kids'][:] if K else ()
         crmodel = monitor.read('crmodel')
@@ -243,10 +247,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
         super().pre_execute()
-        self.set_param(
-            hc_id=oq.hazard_calculation_id or self.datastore.calc_id,
-            ignore_covs=oq.ignore_covs, master_seed=oq.master_seed,
-            asset_correlation=int(oq.asset_correlation))
+        self.set_param(hdf5path=self.datastore.filename,
+                       ignore_covs=oq.ignore_covs,
+                       master_seed=oq.master_seed,
+                       asset_correlation=int(oq.asset_correlation))
         logging.info(
             'There are {:_d} ruptures'.format(len(self.datastore['ruptures'])))
         self.events_per_sid = numpy.zeros(self.N, U32)

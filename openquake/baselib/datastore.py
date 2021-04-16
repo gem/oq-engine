@@ -133,6 +133,8 @@ def read(calc_id, mode='r', datadir=None):
     except KeyError:  # no oqparam
         hc_id = None
     if hc_id:
+        # NB: assume the parent datadir is the same of the children datadir
+        # it breaks if the parent calculation was ran by a different user!
         dstore.parent = read(hc_id, datadir=os.path.dirname(dstore.filename))
     return dstore
 
