@@ -39,6 +39,6 @@ jobs:
           pip install -U pip
     # Use script to install engine and not the pip install .
       - name: Install engine with install script
-        run: python3 install_win.py devel 
+        run: python3 install_win.py user
       - name: Run demos to test installation
         run: oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
