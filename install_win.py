@@ -209,6 +209,7 @@ def install(inst, version):
     # create the openquake venv if necessary
     if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
         # create venv
+        print('List folder %s' % inst.VENV)
         venv.EnvBuilder(with_pip=True).create(inst.VENV)
         print('Created %s' % inst.VENV)
 
