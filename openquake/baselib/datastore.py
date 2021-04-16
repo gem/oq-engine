@@ -228,7 +228,7 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> ds = DataStore()
+    >>> ds = DataStore.new()
     >>> ds['example'] = 42
     >>> print(ds['example'][()])
     42
