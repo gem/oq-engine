@@ -19,7 +19,8 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.6, 3.8]
+        #python-version: [3.6, 3.8]
+        python-version: [3.6]
 
     steps:
       - name: Check out the codebase.
