@@ -31,7 +31,6 @@ You have to remove the data directories manually, if you so wish.
 """
 import os
 import sys
-import pwd
 import shutil
 import socket
 import getpass
@@ -193,6 +192,7 @@ def install(inst, version):
     Install the engine in one of the three possible modes
     """
     if inst is server:
+        import pwd
         # create the openquake user if necessary
         try:
             pwd.getpwnam('openquake')
