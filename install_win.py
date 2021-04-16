@@ -69,7 +69,7 @@ class user:
     """
     Parameters for a user installation
     """
-    VENV = os.path.expanduser('~/openquake')
+    VENV = os.path.expanduser('~\\openquake')
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = os.path.join(VENV, '/bin/oq')
     OQDATA = os.path.expanduser('~/oqdata')
