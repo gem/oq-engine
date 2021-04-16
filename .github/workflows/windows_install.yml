@@ -41,6 +41,7 @@ jobs:
       - name: Install engine with install script
         run: |
           git status
-          python3 install_win.py user
+          type install_win.py
+          python3 install_win.py devel
       - name: Run demos to test installation
         run: oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
