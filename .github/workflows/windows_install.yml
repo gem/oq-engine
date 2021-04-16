@@ -33,6 +33,7 @@ jobs:
         run: python -c "import sys; print(sys.version)"
       - name: Upgrade pip and install requirements
         run: |
+          git status
           pip install -U pip
     # Use script to install engine and not the pip install .
       - name: Install engine with install script

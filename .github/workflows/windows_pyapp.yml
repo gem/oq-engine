@@ -2,8 +2,11 @@
 name: Python Applicaton Windows
 
 on:
-  push:
-    branches: [ windows ]
+  #push:
+  #  branches: [ windows ]
+  schedule:
+    - cron: "30 23 * * *"
+
 
 jobs:
   install:
