@@ -19,12 +19,13 @@
 import operator
 import numpy
 import pandas
-from openquake.baselib import hdf5, datastore, general, performance
+from openquake.baselib import hdf5, general, performance
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib import calc, probability_map, stats
+from openquake.hazardlib import probability_map, stats
+from openquake.hazardlib.calc import filters, gmf
 from openquake.hazardlib.source.rupture import BaseRupture, RuptureProxy
 from openquake.risklib.riskinput import rsi2str
-from openquake.commonlib.calc import gmvs_to_poes
+from openquake.commonlib import calc, datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -269,7 +270,7 @@ class GmfGetter(object):
         self.N = len(self.sitecol)
         self.num_rlzs = sum(len(rlzs) for rlzs in self.rlzs_by_gsim.values())
         self.sig_eps_dt = sig_eps_dt(oqparam.imtls)
-        md = (calc.filters.MagDepDistance(oqparam.maximum_distance)
+        md = (filters.MagDepDistance(oqparam.maximum_distance)
               if isinstance(oqparam.maximum_distance, dict)
               else oqparam.maximum_distance)
         param = {'imtls': oqparam.imtls, 'maximum_distance': md}
@@ -292,7 +293,7 @@ class GmfGetter(object):
                     continue
                 sitecol = self.sitecol.filtered(sids)
                 try:
-                    computer = calc.gmf.GmfComputer(
+                    computer = gmf.GmfComputer(
                         ebr, sitecol, self.cmaker,
                         self.oqparam.truncation_level, self.correl_model,
                         self.amplifier, self.sec_perils)
@@ -357,7 +358,7 @@ class GmfGetter(object):
                 return dict(gmfdata=(), hcurves=hcurves)
             for (sid, rlz), df in gmfdata.groupby(['sid', 'rlz']):
                 with hc_mon:
-                    poes = gmvs_to_poes(
+                    poes = calc.gmvs_to_poes(
                         df, oq.imtls, oq.ses_per_logic_tree_path)
                     for m, imt in enumerate(oq.imtls):
                         hcurves[rsi2str(rlz, sid, imt)] = poes[m]
@@ -411,7 +412,7 @@ def get_gmfgetter(dstore, rup_id):
     :returns: GmfGetter associated to the given rupture
     """
     oq = dstore['oqparam']
-    srcfilter = calc.filters.SourceFilter(
+    srcfilter = filters.SourceFilter(
         dstore['sitecol'], oq.maximum_distance)
     for rgetter in gen_rupture_getters(dstore, slc=slice(rup_id, rup_id+1)):
         gg = GmfGetter(rgetter, srcfilter, oq)

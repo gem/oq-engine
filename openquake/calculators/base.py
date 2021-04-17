@@ -29,7 +29,7 @@ import numpy
 import pandas
 
 from openquake.baselib import (
-    general, hdf5, datastore, __version__ as engine_version)
+    general, hdf5, __version__ as engine_version)
 from openquake.baselib import parallel, python3compat
 from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile, site, stats
@@ -40,7 +40,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree
+from openquake.commonlib import readinput, logictree, datastore
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 

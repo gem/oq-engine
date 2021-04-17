@@ -159,7 +159,7 @@ Suppose you want to code a character-counting algorithm, which is a textbook
 exercise in parallel computing and suppose that you want to store information
 about the performance of the algorithm. Then you should use the OpenQuake
 ``Monitor`` class, as well as the utility
-``openquake.baselib.datastore.hdf5new`` that build an empty datastore
+``openquake.baselib.commonlib.hdf5new`` that build an empty datastore
 for you. Having done that, the ``openquake.baselib.parallel.Starmap``
 class can take care of the parallelization for you as in the following
 example:

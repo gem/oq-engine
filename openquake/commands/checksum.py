@@ -18,8 +18,7 @@
 import sys
 import unittest.mock as mock
 import os.path
-from openquake.commonlib import readinput
-from openquake.baselib import datastore
+from openquake.commonlib import readinput, datastore
 
 
 def main(thing):

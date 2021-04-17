@@ -20,8 +20,8 @@ import os
 import json
 import logging
 
-from openquake.baselib import datastore, hdf5
-from openquake.commonlib.writers import write_csv
+from openquake.baselib import hdf5
+from openquake.commonlib import writers, datastore
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.extract import extract
 
@@ -45,7 +45,7 @@ def print_(aw):
         print(rst_table(aw.to_dframe()))
     elif hasattr(aw, 'array') and aw.dtype.names:
         sio = io.StringIO()
-        write_csv(sio, aw.array)
+        writers.write_csv(sio, aw.array)
         print(sio.getvalue())
     elif hasattr(aw, 'array'):
         print(aw.array)
@@ -89,7 +89,7 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
         if isinstance(obj, hdf5.ArrayWrapper):
             print_(obj)
         elif hasattr(obj, 'dtype') and obj.dtype.names:
-            print(write_csv(io.StringIO(), obj))
+            print(writers.write_csv(io.StringIO(), obj))
         else:
             print(obj)
     elif what in ds:

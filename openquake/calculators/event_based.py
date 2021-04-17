@@ -20,7 +20,7 @@ import os.path
 import logging
 import numpy
 
-from openquake.baselib import hdf5, parallel, datastore
+from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.stats import geom_avg_std, compute_pmap_stats
@@ -30,7 +30,8 @@ from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import EBRupture
-from openquake.commonlib import calc, util, logs, readinput, logictree
+from openquake.commonlib import (
+    calc, util, logs, readinput, logictree, datastore)
 from openquake.risklib.riskinput import str2rsi
 from openquake.calculators import base, views
 from openquake.calculators.getters import (

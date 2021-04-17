@@ -18,10 +18,10 @@
 import os
 import sys
 import getpass
-from openquake.baselib import config, datastore
+from openquake.baselib import config
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
-from openquake.commonlib import logs
+from openquake.commonlib import logs, datastore
 from openquake.engine.engine import run_jobs
 from openquake.engine.export import core
 from openquake.engine.utils import confirm

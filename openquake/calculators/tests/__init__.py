@@ -29,8 +29,9 @@ import numpy
 
 from openquake.calculators import base
 from openquake.calculators.export import export
-from openquake.baselib import datastore, general, parallel
-from openquake.commonlib import readinput, oqvalidation, writers, logs
+from openquake.baselib import general, parallel
+from openquake.commonlib import (
+    datastore, readinput, oqvalidation, writers, logs)
 
 
 NOT_DARWIN = sys.platform != 'darwin'
