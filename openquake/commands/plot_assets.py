@@ -15,9 +15,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import numpy
 import shapely
-from openquake.baselib import datastore
+from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl
 
 

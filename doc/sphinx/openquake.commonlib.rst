@@ -1,6 +1,14 @@
 openquake.commonlib package
 ===========================
 
+openquake.commonlib.datastore module
+------------------------------------
+
+.. automodule:: openquake.commonlib.datastore
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 calc module
 ---------------------------------
 

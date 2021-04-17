@@ -20,8 +20,8 @@ import logging
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, datastore, general, parallel
-from openquake.hazardlib.stats import avg_std
+from openquake.baselib import hdf5, general, parallel
+from openquake.commonlib import datastore
 from openquake.risklib import scientific
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator

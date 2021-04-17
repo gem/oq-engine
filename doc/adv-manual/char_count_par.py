@@ -4,7 +4,7 @@ import pathlib
 import collections
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.datastore import hdf5new
+from openquake.commonlib.datastore import hdf5new
 
 
 def count(text):

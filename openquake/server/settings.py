@@ -20,7 +20,8 @@ import os
 import socket
 import getpass
 
-from openquake.baselib import config, datastore
+from openquake.baselib import config
+from openquake.commonlib import datastore
 
 try:
     from openquakeplatform.settings import STANDALONE, STANDALONE_APPS

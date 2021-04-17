@@ -22,10 +22,10 @@ import unittest.mock as mock
 import unittest
 from io import BytesIO
 
-from openquake.baselib import general, datastore
+from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification
 from openquake.risklib import asset
-from openquake.commonlib import readinput, logictree
+from openquake.commonlib import readinput, logictree, datastore
 from openquake.qa_tests_data.classical import case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import (

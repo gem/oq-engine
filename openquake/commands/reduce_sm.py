@@ -18,8 +18,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from openquake.baselib import performance, general, datastore
-from openquake.commonlib import readinput
+from openquake.baselib import performance, general
+from openquake.commonlib import readinput, datastore
 
 
 def get_dupl(src_ids):

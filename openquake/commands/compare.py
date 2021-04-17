@@ -18,7 +18,7 @@
 import sys
 import collections
 import numpy
-from openquake.baselib import datastore
+from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 

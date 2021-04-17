@@ -17,7 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 
-from openquake.baselib import general, performance, datastore
+from openquake.baselib import general, performance
+from openquake.commonlib import datastore
 from openquake.calculators.export import export as export_
 
 

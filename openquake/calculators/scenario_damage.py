@@ -147,7 +147,7 @@ def scenario_damage(riskinputs, param, monitor):
     return res
 
 
-@base.calculators.add('scenario_damage', 'event_based_damage')
+@base.calculators.add('scenario_damage')
 class ScenarioDamageCalculator(base.RiskCalculator):
     """
     Damage calculator

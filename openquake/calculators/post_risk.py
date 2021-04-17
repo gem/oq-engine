@@ -21,8 +21,9 @@ import logging
 import itertools
 import numpy
 
-from openquake.baselib import general, datastore, parallel, python3compat
+from openquake.baselib import general, parallel, python3compat
 from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.commonlib import datastore
 from openquake.risklib import scientific
 from openquake.calculators import base, views
 

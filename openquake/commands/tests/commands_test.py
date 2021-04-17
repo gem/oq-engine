@@ -28,10 +28,10 @@ import numpy
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp
 from openquake.baselib import parallel, sap
-from openquake.baselib.datastore import read
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
+from openquake.commonlib.datastore import read
 from openquake.engine.engine import run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view

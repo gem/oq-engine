@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import numpy
-from openquake.baselib import config, datastore
+from openquake.baselib import config
+from openquake.commonlib import datastore
 
 F32 = numpy.float32
 read = datastore.read

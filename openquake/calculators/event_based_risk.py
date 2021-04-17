@@ -25,10 +25,10 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import datastore, hdf5, parallel, general
+from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
-from openquake.commonlib import logs
+from openquake.commonlib import logs, datastore
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
 

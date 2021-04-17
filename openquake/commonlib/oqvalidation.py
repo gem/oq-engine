@@ -26,14 +26,14 @@ import functools
 import multiprocessing
 import numpy
 
-from openquake.baselib import __version__, hdf5, python3compat, datastore
+from openquake.baselib import __version__, hdf5, python3compat
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.shakemap.maps import get_array
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
 from openquake.sep.classes import SecondaryPeril
-from openquake.commonlib import logictree
+from openquake.commonlib import logictree, datastore
 from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\

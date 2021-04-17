@@ -253,7 +253,7 @@ class DataStore(collections.abc.MutableMapping):
         """
         :returns: a DataStore instance associated to the given calc_id
         """
-        from openquake.commonlib import logs
+        from openquake.commonlib import logs  # avoid circular import
         datadir = datadir or get_datadir()
         ppath = None
         if calc_id is None:  # use a new datastore

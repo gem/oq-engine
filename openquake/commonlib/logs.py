@@ -23,7 +23,8 @@ import socket
 import logging
 from datetime import datetime
 from contextlib import contextmanager
-from openquake.baselib import zeromq, config, parallel, datastore
+from openquake.baselib import zeromq, config, parallel
+from openquake.commonlib import datastore
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,

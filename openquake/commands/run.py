@@ -22,9 +22,9 @@ import os.path
 import cProfile
 import pstats
 
-from openquake.baselib import performance, general, datastore, parallel
+from openquake.baselib import performance, general, parallel
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, oqvalidation, logs
+from openquake.commonlib import readinput, oqvalidation, logs, datastore
 from openquake.calculators import base, views
 from openquake.server import dbserver
 
@@ -145,7 +145,7 @@ def main(job_ini,
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
          loglevel='info',
-         calc_id='nojob'):
+         calc_id='job'):
     """
     Run a calculation bypassing the database layer
     """
