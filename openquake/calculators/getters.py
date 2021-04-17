@@ -385,7 +385,7 @@ def strip_zeros(gmf_df):
 
 def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
     """
-    :param dstore: a :class:`openquake.baselib.datastore.DataStore`
+    :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
     :param ct: number of concurrent tasks
     :yields: RuptureGetters
     """
