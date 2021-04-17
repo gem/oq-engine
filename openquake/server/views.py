@@ -18,7 +18,6 @@
 
 import shutil
 import json
-import time
 import logging
 import os
 import tempfile
@@ -38,11 +37,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore, hdf5, config
+from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim, valid
-from openquake.commonlib import readinput, oqvalidation, logs
+from openquake.commonlib import readinput, oqvalidation, logs, datastore
 from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
