@@ -21,7 +21,6 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, datastore, general, parallel
-from openquake.hazardlib.stats import avg_std
 from openquake.risklib import scientific
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -35,6 +34,12 @@ F32 = numpy.float32
 def fix_dtype(dic, dtype, names):
     for name in names:
         dic[name] = dtype(dic[name])
+
+
+def agg_damages(dstore, slc, monitor):
+    df = dstore.read_df('agg_damage_table', 'event_id', slc=slc)
+    agg = df.groupby(['agg_id', 'loss_id']).sum()
+    return dict(zip(agg.index, agg.to_numpy()))
 
 
 def event_based_damage(df, param, monitor):
@@ -131,12 +136,22 @@ class DamageCalculator(EventBasedRiskCalculator):
         return 1
 
     def post_execute(self, dummy):
+        oq = self.oqparam
+        D = len(self.crmodel.damage_states)
         K = self.datastore['agg_damage_table'].attrs['K']
-        df = self.datastore.read_df(
-            'agg_damage_table', 'agg_id', dict(agg_id=K))
-        cols = ['loss_id'] + [
-            col for col in df.columns if col.startswith('dmg_')]
-        d = df[cols].groupby('loss_id').sum() / self.E
+        adt = self.datastore['agg_damage_table']
         tot_number = self.assetcol['number'].sum()
-        d['dmg_0'] = tot_number - d.to_numpy().sum()
-        logging.info('Average portfolio_damage:\n%s', d)
+        agg_number = self.datastore['agg_number'][:]  # K
+        smap = parallel.Starmap(agg_damages, h5=self.datastore.hdf5)
+        # producing concurrent_tasks/2 = num_cores tasks
+        ct = oq.concurrent_tasks or 1
+        for slc in general.split_in_slices(len(adt), ct):
+            smap.submit((self.datastore, slc))
+        agg = smap.reduce()  # (agg_id, loss_id) -> cum_ddd
+        R = 0
+        L = len(oq.loss_names)
+        agg_dmgs = numpy.zeros((K + 1, R, L, D), F32)
+        for (k, li), dmgs in agg.items():
+            agg_dmgs[k, 0, li, 1:] = dmgs
+            agg_dmgs[k, 0, li, 0] = agg_number[k] - dmgs.sum()
+        self.datastore['agg_damages-rlzs'] = agg_dmgs
