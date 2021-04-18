@@ -38,7 +38,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.source import rupture
 from openquake.calculators import getters
-from openquake.commonlib import calc, util, oqvalidation, writers
+from openquake.commonlib import calc, util, oqvalidation, writers, datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -1386,7 +1386,7 @@ class Extractor(object):
     """
     def __init__(self, calc_id):
         self.calc_id = calc_id
-        self.dstore = util.read(calc_id)
+        self.dstore = datastore.read(calc_id)
         self.oqparam = self.dstore['oqparam']
 
     def get(self, what, asdict=False):

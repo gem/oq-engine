@@ -18,11 +18,11 @@
 import os
 import logging
 import numpy
-from openquake.baselib import performance, datastore
+from openquake.baselib import performance
 from openquake.hazardlib import site, valid
 from openquake.hazardlib.geo.utils import assoc
 from openquake.risklib.asset import Exposure
-from openquake.commonlib.writers import write_csv
+from openquake.commonlib import writers, datastore
 
 SQRT2 = 1.414
 vs30_dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
@@ -167,7 +167,7 @@ def main(
         if z2pt5:
             haz_sitecol.array['z2pt5'] = calculate_z2pt5_ngaw2(vs30['vs30'])
         hdf5['sitecol'] = haz_sitecol
-        write_csv(output, haz_sitecol.array[fields])
+        writers.write_csv(output, haz_sitecol.array[fields])
     logging.info('Saved %d rows in %s' % (len(haz_sitecol), output))
     logging.info(mon)
     return haz_sitecol

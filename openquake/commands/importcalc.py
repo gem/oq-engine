@@ -18,8 +18,7 @@
 import sys
 import pprint
 import logging
-from openquake.baselib import datastore
-from openquake.commonlib import logs
+from openquake.commonlib import logs, datastore
 from openquake.calculators.extract import WebExtractor
 from openquake.engine import engine
 from openquake.server import dbserver
