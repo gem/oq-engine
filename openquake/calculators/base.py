@@ -1192,10 +1192,10 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     :returns: the aggkey dictionary key -> tags
     """
     lst = []
+    aggkey = assetcol.tagcol.get_aggkey(aggby)
+    K = len(aggkey)
+    agg_number = numpy.zeros(K + 1, U32)
     if aggby:
-        aggkey = assetcol.tagcol.get_aggkey(aggby)
-        K = len(aggkey)
-        agg_number = numpy.zeros(K + 1, U32)
         logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in aggby] + [
             (name, hdf5.vstr) for name in aggby]
@@ -1214,8 +1214,8 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
             kids = [key2i[tuple(t)] for t in assetcol[aggby]]
         dstore['assetcol/kids'] = U16(kids)
         agg_number[:K] = general.fast_agg(kids, assetcol['number'], M=K)
-        agg_number[K] = assetcol['number'].sum()
-        dstore['agg_number'] = agg_number
+    agg_number[K] = assetcol['number'].sum()
+    dstore['agg_number'] = agg_number
     lst.append('*total*')
     dstore['agg_values'] = assetcol.get_agg_values(lossnames, aggby)
     dstore.set_shape_descr('agg_values', aggregation=lst, loss_type=lossnames)

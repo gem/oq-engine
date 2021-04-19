@@ -1,0 +1,3 @@
+        loss_id   dmg_1   dmg_2
+agg_id                         
+0             0  6619.0  6687.0
