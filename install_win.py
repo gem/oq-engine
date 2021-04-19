@@ -69,10 +69,10 @@ class user:
     """
     Parameters for a user installation
     """
-    VENV = os.path.expanduser('~\\openquake')
+    VENV = os.path.expanduser('~/openquake')
     CFG = os.path.join(VENV, 'openquake.cfg')
-    OQ = os.path.join(VENV, '\\bin\\oq')
-    OQDATA = os.path.expanduser('~\\oqdata')
+    OQ = os.path.join(VENV, '/Scripts/oq')
+    OQDATA = os.path.expanduser('~/oqdata')
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1908
     CONFIG = ''
