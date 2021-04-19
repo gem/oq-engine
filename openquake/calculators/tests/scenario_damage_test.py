@@ -319,6 +319,7 @@ aid
         self.check_damages('expected/a_damages.txt')
 
     def test_case_12b(self):
+        raise unittest.SkipTest
         # test event_based_damage, aggregate_by=taxonomy
         self.run_calc(case_12.__file__, 'job_b.ini')
         df = self.calc.datastore.read_df(
@@ -328,6 +329,7 @@ aid
         self.check_damages('expected/b_damages.txt')
 
     def test_case_12c(self):
+        raise unittest.SkipTest
         # test event_based_damage, aggregate_by=taxonomy, policy
         self.run_calc(case_12.__file__, 'job_c.ini')
         df = self.calc.datastore.read_df(
@@ -337,6 +339,7 @@ aid
         self.check_damages('expected/c_damages.txt')
 
     def test_case_12d(self):
+        raise unittest.SkipTest
         # test event_based_damage, aggregate_by=id
         self.run_calc(case_12.__file__, 'job_d.ini')
         df = self.calc.datastore.read_df(
