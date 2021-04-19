@@ -16,12 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import numpy
 import pandas
 
 from openquake.baselib import hdf5, general, parallel
 from openquake.risklib import scientific
+from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 
@@ -37,6 +37,9 @@ def fix_dtype(dic, dtype, names):
 
 
 def agg_damages(dstore, slc, monitor):
+    """
+    :returns: dict (agg_id, loss_id) -> [dmg1, dmg2, ...]
+    """
     df = dstore.read_df('agg_damage_table', 'event_id', slc=slc)
     agg = df.groupby(['agg_id', 'loss_id']).sum()
     return dict(zip(agg.index, agg.to_numpy()))
@@ -59,7 +62,7 @@ def event_based_damage(df, param, monitor):
         kids = (dstore['assetcol/kids'][:] if K
                 else numpy.zeros(len(assets_df), U16))
         crmodel = monitor.read('crmodel')
-    rndgen = scientific.MultiEventRNG(
+    rng = scientific.MultiEventRNG(
         param['master_seed'], numpy.unique(df.eid), param['asset_correlation'])
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
@@ -73,18 +76,16 @@ def event_based_damage(df, param, monitor):
             eids = out['eids']
             taxkids = kids[asset_df.index]
             ukids = numpy.unique(taxkids)
-            numbers = U32(out['assets']['number'])
+            numbers = asset_df.number.to_numpy()
             for lti, lt in enumerate(out['loss_types']):
-                ddd = rndgen.discrete_dmg_dist(eids, out[lt], numbers)
-                tot = ddd.sum(axis=0)  # shape AED -> ED
+                ddd = rng.discrete_dmg_dist(eids, out[lt], numbers)  # AED
+                tot = ddd.sum(axis=0)  # shape ED
                 if K:
-                    res = general.fast_agg(taxkids, ddd)  # shape KED
-                else:
-                    res = tot
+                    res = general.fast_agg(taxkids, ddd, M=K)  # shape KED
                 for e, eid in enumerate(eids):
                     if K:
-                        for k, kid in enumerate(ukids):
-                            dddict[eid, kid][lti] += res[k, e]
+                        for kid in ukids:
+                            dddict[eid, kid][lti] += res[kid, e]
                     dddict[eid, K][lti] += tot[e]
     dic = general.AccumDict(accum=[])
     for (eid, kid), dd in dddict.items():
@@ -124,12 +125,14 @@ class DamageCalculator(EventBasedRiskCalculator):
 
     def combine(self, acc, res):
         """
+        :param acc: unused
+        :param res: DataFrame with fields (event_id, agg_id, loss_id, dmg1 ...)
         Combine the results and grows agg_damage_table with fields
         (event_id, agg_id, loss_id) and (dmg_0, dmg_1, dmg_2, ...)
         """
         if res is None:
             raise MemoryError('You ran out of memory!')
-        with self.monitor('saving dd_data', measuremem=True):
+        with self.monitor('saving agg_damage_table', measuremem=True):
             for name in res.columns:
                 dset = self.datastore['agg_damage_table/' + name]
                 hdf5.extend(dset, res[name].to_numpy())
@@ -140,15 +143,14 @@ class DamageCalculator(EventBasedRiskCalculator):
         D = len(self.crmodel.damage_states)
         K = self.datastore['agg_damage_table'].attrs['K']
         adt = self.datastore['agg_damage_table']
-        tot_number = self.assetcol['number'].sum()
-        agg_number = self.datastore['agg_number'][:]  # K
+        agg_number = self.datastore['agg_number'][:]  # K + 1
         smap = parallel.Starmap(agg_damages, h5=self.datastore.hdf5)
         # producing concurrent_tasks/2 = num_cores tasks
         ct = oq.concurrent_tasks or 1
         for slc in general.split_in_slices(len(adt), ct):
             smap.submit((self.datastore, slc))
         agg = smap.reduce()  # (agg_id, loss_id) -> cum_ddd
-        R = 0
+        R = 1
         L = len(oq.loss_names)
         agg_dmgs = numpy.zeros((K + 1, R, L, D), F32)
         for (k, li), dmgs in agg.items():
