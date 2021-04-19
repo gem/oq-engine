@@ -1,7 +1,7 @@
 import os.path
 import unittest
 import numpy
-from openquake.baselib.general import get_array, gettemp
+from openquake.baselib.general import gettemp
 from openquake.hazardlib.shakemap.parsers import \
     get_shakemap_array, get_array_shapefile
 
