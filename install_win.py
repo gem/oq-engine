@@ -213,30 +213,6 @@ def install(inst, version):
         venv.EnvBuilder(with_pip=True).create(inst.VENV)
         print('Created %s' % inst.VENV)
     # upgrade pip
-
- 22 
- 21     # install the requirements
- 20     req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \ 
- 19     ¦   'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
- 18     subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', '-r', req])
- 17 
- 16     if inst is devel:  # install from the local repo
- 15     ¦   subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', '-e', '.'])
- 14     elif version is None:  # install the stable version
- 13     ¦   subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
- 12     ¦   ¦   ¦   ¦   ¦   ¦   ¦  '--upgrade', 'openquake.engine'])
- 11     elif '.' in version:  # install an official version
- 10     ¦   subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
-  9     ¦   ¦   ¦   ¦   ¦   ¦   ¦  '--upgrade', 'openquake.engine==' + version])
-  8     else:  # install a branch from github
-  7     ¦   subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
-  6     ¦   ¦   ¦   ¦   ¦   ¦   ¦  '--upgrade', GITBRANCH % version])
-
-
- 25     # upgrade pip
- 24     subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', 'pip', 'wheel',
- 23     ¦   ¦   ¦   ¦   ¦   ¦  '--upgrade']) 
-
     subprocess.check_call(['%s/Scripts/python', '-m', 'pip' % inst.VENV, 'install', '--upgrade', 'pip', 'wheel'])
 
     # install the requirements
