@@ -19,7 +19,7 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.6, 3.8]
+        python-version: [ 3.8]
 
     steps:
       - name: Check out the codebase.
@@ -35,11 +35,11 @@ jobs:
         run: python -c "import sys; print(sys.version)"
       - name: Install virtualenv on user space
         run: |
-          py -m pip install --user virtualenv
+          python -m pip install --user virtualenv
     # Use script to install engine and not the pip install .
       - name: Install engine with install script
         run: |
-          py install_win.py devel
+          python install_win.py devel
       - name: Run demos to test installation
         run: |
           oq --version
