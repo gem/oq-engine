@@ -40,8 +40,9 @@ def agg_damages(dstore, slc, monitor):
     """
     :returns: dict (agg_id, loss_id) -> [dmg1, dmg2, ...]
     """
-    df = dstore.read_df('agg_damage_table', 'event_id', slc=slc)
-    agg = df.groupby(['agg_id', 'loss_id']).sum()
+    with dstore:
+        df = dstore.read_df('agg_damage_table', 'event_id', slc=slc)
+        agg = df.groupby(['agg_id', 'loss_id']).sum()
     return dict(zip(agg.index, agg.to_numpy()))
 
 
@@ -76,7 +77,7 @@ def event_based_damage(df, param, monitor):
             eids = out['eids']
             taxkids = kids[asset_df.index]
             ukids = numpy.unique(taxkids)
-            numbers = asset_df.number.to_numpy()
+            numbers = U32(asset_df.number)
             for lti, lt in enumerate(out['loss_types']):
                 ddd = rng.discrete_dmg_dist(eids, out[lt], numbers)  # AED
                 tot = ddd.sum(axis=0)  # shape ED
@@ -142,12 +143,13 @@ class DamageCalculator(EventBasedRiskCalculator):
         oq = self.oqparam
         D = len(self.crmodel.damage_states)
         K = self.datastore['agg_damage_table'].attrs['K']
-        adt = self.datastore['agg_damage_table']
+        len_table = len(self.datastore['agg_damage_table'])
         agg_number = self.datastore['agg_number'][:]  # K + 1
+        self.datastore.swmr_on()
         smap = parallel.Starmap(agg_damages, h5=self.datastore.hdf5)
         # producing concurrent_tasks/2 = num_cores tasks
         ct = oq.concurrent_tasks or 1
-        for slc in general.split_in_slices(len(adt), ct):
+        for slc in general.split_in_slices(len_table, ct):
             smap.submit((self.datastore, slc))
         agg = smap.reduce()  # (agg_id, loss_id) -> cum_ddd
         R = 1

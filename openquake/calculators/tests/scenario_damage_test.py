@@ -304,13 +304,15 @@ aid
         aac(losses(1, alt), [38175, 3, 903, 11122, 28599, 30341, 18978, 0])
         aac(losses(2, alt), [26412, 0, 21055, 44631, 36447, 0, 0, 0])
 
-    def test_case_12(self):
+    def test_case_12a(self):
         # test event_based_damage, no aggregate_by
         self.run_calc(case_12.__file__, 'job.ini')
         df = self.calc.datastore.read_df(
             'agg_damage_table', 'event_id').sort_index()
         fname = gettemp(str(df))
         self.assertEqualFiles('expected/agg_damage_table.txt', fname)
+        damages = self.calc.datastore['agg_damages-rlzs'][0, 0, 0]
+        aac(damages, [1446, 62, 15])
 
 
 def losses(aid, alt):
