@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import numpy
 import pandas
 
@@ -29,6 +30,14 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+
+
+def floats_in(numbers):
+    """
+    :param numbers: an array of numbers
+    :returns: number of non-uint32 number
+    """
+    return (U32(numbers) != numbers).sum()
 
 
 def fix_dtype(dic, dtype, names):
@@ -75,9 +84,15 @@ def event_based_damage(df, param, monitor):
         with mon_risk:
             out = crmodel.get_output(taxo, asset_df, gmf_df)
             eids = out['eids']
-            numbers = U32(asset_df.number)
+            numbers = asset_df.number
             for lti, lt in enumerate(out['loss_types']):
-                ddd = rng.discrete_dmg_dist(eids, out[lt], numbers)  # AED
+                if param['float_dmg_dist']:
+                    ddd = numpy.array(out[lt])  # shape AED
+                    for a, n in enumerate(numbers):
+                        ddd[a] *= n
+                    print(taxo, lti, ddd.sum())
+                else:  # extra-slow
+                    ddd = rng.discrete_dmg_dist(eids, out[lt], U32(numbers))
                 tot = ddd.sum(axis=0)  # shape ED
                 for e, eid in enumerate(eids):
                     dddict[eid, K][lti] += tot[e]
@@ -114,6 +129,18 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         Compute risk from GMFs or ruptures depending on what is stored
         """
+        oq = self.oqparam
+        num_floats = floats_in(self.assetcol['number'])
+        if num_floats:
+            logging.warning(
+                'The exposure contains %d non-integer asset numbers: '
+                'using floating point damage distributions', num_floats)
+        bad = self.assetcol['number'] > 2**32 - 1
+        for ass in self.assetcol[bad]:
+            aref = self.assetcol.tagcol.id[ass['id']]
+            logging.error("The asset %s has number=%s > 2^32-1!",
+                          aref, ass['number'])
+        self.param['float_dmg_dist'] = oq.float_dmg_dist or num_floats
         smap = parallel.Starmap(
             event_based_damage, self.gen_args(), h5=self.datastore.hdf5)
         smap.monitor.save('assets', self.assetcol.to_dframe())
