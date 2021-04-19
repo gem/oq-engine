@@ -142,20 +142,20 @@ class DamageCalculator(EventBasedRiskCalculator):
     def post_execute(self, dummy):
         oq = self.oqparam
         D = len(self.crmodel.damage_states)
-        K = self.datastore['agg_damage_table'].attrs['K']
-        len_table = len(self.datastore['agg_damage_table'])
-        agg_number = self.datastore['agg_number'][:]  # K + 1
+        len_table = len(self.datastore['agg_damage_table/event_id'])
         self.datastore.swmr_on()
         smap = parallel.Starmap(agg_damages, h5=self.datastore.hdf5)
-        # producing concurrent_tasks/2 = num_cores tasks
         ct = oq.concurrent_tasks or 1
         for slc in general.split_in_slices(len_table, ct):
             smap.submit((self.datastore, slc))
         agg = smap.reduce()  # (agg_id, loss_id) -> cum_ddd
-        R = 1
-        L = len(oq.loss_names)
-        agg_dmgs = numpy.zeros((K + 1, R, L, D), F32)
+        dic = general.AccumDict(accum=[])
         for (k, li), dmgs in agg.items():
-            agg_dmgs[k, 0, li, 1:] = dmgs
-            agg_dmgs[k, 0, li, 0] = agg_number[k] - dmgs.sum()
-        self.datastore['agg_damages-rlzs'] = agg_dmgs
+            dic['agg_id'].append(k)
+            dic['loss_id'].append(li)
+            for dsi in range(1, D):
+                dic['dmg_%d' % dsi].append(dmgs[dsi - 1])
+        fix_dtype(dic, U16, ['agg_id'])
+        fix_dtype(dic, U8, ['loss_id'])
+        fix_dtype(dic, F32, ['dmg_%d' % d for d in range(1, D)])
+        self.datastore.create_dframe('damages', dic.items())
