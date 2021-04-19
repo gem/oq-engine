@@ -20,10 +20,9 @@ import runpy
 from functools import partial
 import numpy
 from openquake.hazardlib import nrml
-from openquake.baselib.datastore import read
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.contexts import Timer
-from openquake.commonlib import readinput, calc, logs
+from openquake.commonlib import readinput, calc, logs, datastore
 from openquake.calculators.base import get_calc
 from openquake.calculators.extract import extract, WebExtractor
 
@@ -42,7 +41,7 @@ class OpenQuake(object):
             pass
         self.lookfor = partial(numpy.lookfor, module='openquake')
         self.extract = extract
-        self.read = read
+        self.read = datastore.read
         self.nrml = nrml
         self.get__exposure = readinput.get_exposure
         self.get_oqparam = readinput.get_oqparam

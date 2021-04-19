@@ -16,13 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, datastore, general, parallel
-from openquake.hazardlib.stats import avg_std
+from openquake.baselib import hdf5, general, parallel
 from openquake.risklib import scientific
+from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 
@@ -35,6 +34,16 @@ F32 = numpy.float32
 def fix_dtype(dic, dtype, names):
     for name in names:
         dic[name] = dtype(dic[name])
+
+
+def agg_damages(dstore, slc, monitor):
+    """
+    :returns: dict (agg_id, loss_id) -> [dmg1, dmg2, ...]
+    """
+    with dstore:
+        df = dstore.read_df('agg_damage_table', 'event_id', slc=slc)
+        agg = df.groupby(['agg_id', 'loss_id']).sum()
+    return dict(zip(agg.index, agg.to_numpy()))
 
 
 def event_based_damage(df, param, monitor):
@@ -54,7 +63,7 @@ def event_based_damage(df, param, monitor):
         kids = (dstore['assetcol/kids'][:] if K
                 else numpy.zeros(len(assets_df), U16))
         crmodel = monitor.read('crmodel')
-    rndgen = scientific.MultiEventRNG(
+    rng = scientific.MultiEventRNG(
         param['master_seed'], numpy.unique(df.eid), param['asset_correlation'])
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
@@ -66,23 +75,17 @@ def event_based_damage(df, param, monitor):
         with mon_risk:
             out = crmodel.get_output(taxo, asset_df, gmf_df)
             eids = out['eids']
-            taxkids = kids[asset_df.index]
-            ukids = numpy.unique(taxkids)
-            numbers = U32(out['assets']['number'])
+            numbers = U32(asset_df.number)
             for lti, lt in enumerate(out['loss_types']):
-                ddd = rndgen.discrete_dmg_dist(eids, out[lt], numbers)
-                tot = ddd.sum(axis=0)  # shape AED -> ED
-                if K:
-                    res = general.fast_agg(taxkids, ddd)  # shape KED
-                else:
-                    res = tot
+                ddd = rng.discrete_dmg_dist(eids, out[lt], numbers)  # AED
+                tot = ddd.sum(axis=0)  # shape ED
                 for e, eid in enumerate(eids):
-                    if K:
-                        for k, kid in enumerate(ukids):
-                            dddict[eid, kid][lti] += res[k, e]
                     dddict[eid, K][lti] += tot[e]
+                    if K:
+                        for a, aid in enumerate(asset_df.index):
+                            dddict[eid, kids[aid]][lti] += ddd[a, e]
     dic = general.AccumDict(accum=[])
-    for (eid, kid), dd in dddict.items():
+    for (eid, kid), dd in sorted(dddict.items()):
         for lti in range(L):
             dic['event_id'].append(eid)
             dic['agg_id'].append(kid)
@@ -119,24 +122,36 @@ class DamageCalculator(EventBasedRiskCalculator):
 
     def combine(self, acc, res):
         """
+        :param acc: unused
+        :param res: DataFrame with fields (event_id, agg_id, loss_id, dmg1 ...)
         Combine the results and grows agg_damage_table with fields
         (event_id, agg_id, loss_id) and (dmg_0, dmg_1, dmg_2, ...)
         """
         if res is None:
             raise MemoryError('You ran out of memory!')
-        with self.monitor('saving dd_data', measuremem=True):
+        with self.monitor('saving agg_damage_table', measuremem=True):
             for name in res.columns:
                 dset = self.datastore['agg_damage_table/' + name]
                 hdf5.extend(dset, res[name].to_numpy())
         return 1
 
     def post_execute(self, dummy):
-        K = self.datastore['agg_damage_table'].attrs['K']
-        df = self.datastore.read_df(
-            'agg_damage_table', 'agg_id', dict(agg_id=K))
-        cols = ['loss_id'] + [
-            col for col in df.columns if col.startswith('dmg_')]
-        d = df[cols].groupby('loss_id').sum() / self.E
-        tot_number = self.assetcol['number'].sum()
-        d['dmg_0'] = tot_number - d.to_numpy().sum()
-        logging.info('Average portfolio_damage:\n%s', d)
+        oq = self.oqparam
+        D = len(self.crmodel.damage_states)
+        len_table = len(self.datastore['agg_damage_table/event_id'])
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(agg_damages, h5=self.datastore.hdf5)
+        ct = oq.concurrent_tasks or 1
+        for slc in general.split_in_slices(len_table, ct):
+            smap.submit((self.datastore, slc))
+        agg = smap.reduce()  # (agg_id, loss_id) -> cum_ddd
+        dic = general.AccumDict(accum=[])
+        for (k, li), dmgs in agg.items():
+            dic['agg_id'].append(k)
+            dic['loss_id'].append(li)
+            for dsi in range(1, D):
+                dic['dmg_%d' % dsi].append(dmgs[dsi - 1])
+        fix_dtype(dic, U16, ['agg_id'])
+        fix_dtype(dic, U8, ['loss_id'])
+        fix_dtype(dic, F32, ['dmg_%d' % d for d in range(1, D)])
+        self.datastore.create_dframe('damages', dic.items())

@@ -23,10 +23,7 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel
-from openquake.baselib.general import (
-    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs,
-    block_splitter, groupby)
+from openquake.baselib import parallel, general
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.contexts import read_ctxs, RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
@@ -130,9 +127,9 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # IMPORTANT!! we rely on the fact that the classical part
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices
-        for block in block_splitter(rdata, maxweight,
-                                    operator.itemgetter('nsites'),
-                                    operator.itemgetter('grp_id')):
+        for block in general.block_splitter(rdata, maxweight,
+                                            operator.itemgetter('nsites'),
+                                            operator.itemgetter('grp_id')):
             Ta += 1
             grp_id = block[0]['grp_id']
             trti = et_ids[grp_id][0] // num_eff_rlzs

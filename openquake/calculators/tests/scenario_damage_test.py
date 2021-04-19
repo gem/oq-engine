@@ -36,6 +36,7 @@ aac = numpy.testing.assert_allclose
 
 
 class ScenarioDamageTestCase(CalculatorTestCase):
+
     def assert_ok(self, pkg, job_ini, exports='csv', kind='damages'):
         test_dir = os.path.dirname(pkg.__file__)
         out = self.run_calc(test_dir, job_ini, exports=exports,
@@ -304,13 +305,48 @@ aid
         aac(losses(1, alt), [38175, 3, 903, 11122, 28599, 30341, 18978, 0])
         aac(losses(2, alt), [26412, 0, 21055, 44631, 36447, 0, 0, 0])
 
-    def test_case_12(self):
+    def check_damages(self, fname):
+        df = self.calc.datastore.read_df('damages', 'agg_id').sort_index()
+        self.assertEqualFiles(fname, gettemp(str(df)))
+
+    def test_case_12a(self):
         # test event_based_damage, no aggregate_by
-        self.run_calc(case_12.__file__, 'job.ini')
+        self.run_calc(case_12.__file__, 'job_a.ini')
         df = self.calc.datastore.read_df(
             'agg_damage_table', 'event_id').sort_index()
         fname = gettemp(str(df))
-        self.assertEqualFiles('expected/agg_damage_table.txt', fname)
+        self.assertEqualFiles('expected/a_damage_table.txt', fname)
+        self.check_damages('expected/a_damages.txt')
+
+    def test_case_12b(self):
+        raise unittest.SkipTest
+        # test event_based_damage, aggregate_by=taxonomy
+        self.run_calc(case_12.__file__, 'job_b.ini')
+        df = self.calc.datastore.read_df(
+            'agg_damage_table', 'event_id').sort_index()
+        fname = gettemp(str(df))
+        self.assertEqualFiles('expected/b_damage_table.txt', fname)
+        self.check_damages('expected/b_damages.txt')
+
+    def test_case_12c(self):
+        raise unittest.SkipTest
+        # test event_based_damage, aggregate_by=taxonomy, policy
+        self.run_calc(case_12.__file__, 'job_c.ini')
+        df = self.calc.datastore.read_df(
+            'agg_damage_table', 'event_id').sort_index()
+        fname = gettemp(str(df))
+        self.assertEqualFiles('expected/c_damage_table.txt', fname)
+        self.check_damages('expected/c_damages.txt')
+
+    def test_case_12d(self):
+        raise unittest.SkipTest
+        # test event_based_damage, aggregate_by=id
+        self.run_calc(case_12.__file__, 'job_d.ini')
+        df = self.calc.datastore.read_df(
+            'agg_damage_table', 'event_id').sort_index()
+        fname = gettemp(str(df))
+        self.assertEqualFiles('expected/d_damage_table.txt', fname)
+        self.check_damages('expected/d_damages.txt')
 
 
 def losses(aid, alt):

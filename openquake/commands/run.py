@@ -22,9 +22,9 @@ import os.path
 import cProfile
 import pstats
 
-from openquake.baselib import performance, general, datastore, parallel
+from openquake.baselib import performance, general, parallel
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, oqvalidation, logs
+from openquake.commonlib import readinput, oqvalidation, logs, datastore
 from openquake.calculators import base, views
 from openquake.server import dbserver
 
@@ -82,7 +82,7 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, reuse_input,
     hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
     hcalc.datastore.close()
     hc_id = hcalc.datastore.calc_id
-    rcalc_id = logs.init(level=getattr(logging, loglevel.upper()))
+    rcalc_id = logs.init('job', level=getattr(logging, loglevel.upper()))
     params['hazard_calculation_id'] = str(hc_id)
     oq = readinput.get_oqparam(job_risk, kw=params)
     rcalc = base.calculators(oq, rcalc_id)
@@ -145,7 +145,7 @@ def main(job_ini,
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
          loglevel='info',
-         calc_id='nojob'):
+         calc_id='job'):
     """
     Run a calculation bypassing the database layer
     """

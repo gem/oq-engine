@@ -29,7 +29,7 @@ import numpy
 import pandas
 
 from openquake.baselib import (
-    general, hdf5, datastore, __version__ as engine_version)
+    general, hdf5, __version__ as engine_version)
 from openquake.baselib import parallel, python3compat
 from openquake.baselib.performance import Monitor, init_performance
 from openquake.hazardlib import InvalidFile, site, stats
@@ -40,7 +40,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, util
+from openquake.commonlib import readinput, logictree, datastore
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -157,7 +157,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
     def __init__(self, oqparam, calc_id):
         oqparam.validate()
-        self.datastore = datastore.DataStore(calc_id)
+        self.datastore = datastore.DataStore.new(calc_id)
         init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
@@ -548,7 +548,7 @@ class HazardCalculator(BaseCalculator):
             self.save_crmodel()
             self.datastore.swmr_on()
         elif oq.hazard_calculation_id:
-            parent = util.read(oq.hazard_calculation_id)
+            parent = datastore.read(oq.hazard_calculation_id)
             self.check_precalc(parent['oqparam'].calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
@@ -723,7 +723,7 @@ class HazardCalculator(BaseCalculator):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
         if oq.hazard_calculation_id:
-            with util.read(oq.hazard_calculation_id) as dstore:
+            with datastore.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
                 if ('amplification' in oq.inputs and
                         'ampcode' not in haz_sitecol.array.dtype.names):
@@ -1192,10 +1192,10 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     :returns: the aggkey dictionary key -> tags
     """
     lst = []
+    aggkey = assetcol.tagcol.get_aggkey(aggby)
+    K = len(aggkey)
+    agg_number = numpy.zeros(K + 1, U32)
     if aggby:
-        aggkey = assetcol.tagcol.get_aggkey(aggby)
-        K = len(aggkey)
-        agg_number = numpy.zeros(K + 1, U32)
         logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in aggby] + [
             (name, hdf5.vstr) for name in aggby]
@@ -1214,8 +1214,8 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
             kids = [key2i[tuple(t)] for t in assetcol[aggby]]
         dstore['assetcol/kids'] = U16(kids)
         agg_number[:K] = general.fast_agg(kids, assetcol['number'], M=K)
-        agg_number[K] = assetcol['number'].sum()
-        dstore['agg_number'] = agg_number
+    agg_number[K] = assetcol['number'].sum()
+    dstore['agg_number'] = agg_number
     lst.append('*total*')
     dstore['agg_values'] = assetcol.get_agg_values(lossnames, aggby)
     dstore.set_shape_descr('agg_values', aggregation=lst, loss_type=lossnames)

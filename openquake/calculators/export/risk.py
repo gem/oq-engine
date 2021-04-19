@@ -415,10 +415,10 @@ def export_agglosses(ekey, dstore):
     losses = []
     header = ['rlz_id', 'loss_type', 'unit', 'mean', 'stddev']
     for r in range(len(agglosses)):
-        for l, lt in enumerate(loss_dt.names):
+        for li, lt in enumerate(loss_dt.names):
             unit = unit_by_lt[lt]
-            mean = agglosses[r, l]['mean']
-            stddev = agglosses[r, l]['stddev']
+            mean = agglosses[r, li]['mean']
+            stddev = agglosses[r, li]['stddev']
             losses.append((r, lt, unit, mean, stddev))
     dest = dstore.build_fname('agglosses', '', 'csv')
     writers.write_csv(dest, losses, header=header, comment=dstore.metadata)

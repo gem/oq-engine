@@ -18,7 +18,7 @@
 import sys
 import collections
 import numpy
-from openquake.commonlib import util
+from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
@@ -161,7 +161,7 @@ def compare_rups(calc_1: int, calc_2: int):
     """
     Compare the ruptures of two calculations as pandas DataFrames
     """
-    with util.read(calc_1) as ds1, util.read(calc_2) as ds2:
+    with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
         df1 = ds1.read_df('rup').sort_values(['src_id', 'mag'])
         df2 = ds2.read_df('rup').sort_values(['src_id', 'mag'])
     cols = [col for col in df1.columns if col not in
