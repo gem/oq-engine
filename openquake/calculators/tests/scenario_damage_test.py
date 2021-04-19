@@ -307,6 +307,9 @@ aid
 
     def check_damages(self, fname):
         df = self.calc.datastore.read_df('damages', 'agg_id').sort_index()
+        for col in df.columns:
+            if col.startswith('dmg_'):
+                df[col] = numpy.around(df[col])
         self.assertEqualFiles(fname, gettemp(str(df)))
 
     def test_case_12a(self):
