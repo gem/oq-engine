@@ -1,13 +1,20 @@
 import os.path
 import unittest
 import numpy
-from openquake.baselib.general import gettemp
+from openquake.baselib.general import get_array, gettemp
 from openquake.hazardlib.shakemap.parsers import \
-    get_shakemap_array
+    get_shakemap_array, get_array_shapefile
 
 aae = numpy.testing.assert_almost_equal
 F32 = numpy.float32
 CDIR = os.path.dirname(__file__)
+FIELDMAP = {
+    'MMI': ('val', 'MMI'),
+    'PGA': ('val', 'PGA'),
+    'PSA03': ('val', 'SA(0.3)'),
+    'PSA10': ('val', 'SA(1.0)'),
+    'PSA30': ('val', 'SA(3.0)'),
+}
 
 
 class ShakemapConverterTestCase(unittest.TestCase):
@@ -58,6 +65,38 @@ class ShakemapConverterTestCase(unittest.TestCase):
         uncertainty_file = os.path.join(CDIR, 'ghorka_uncertainty.xml')
         array = get_shakemap_array(grid_file, uncertainty_file)
         aae(array['std']['SA(0.3)'], [0.57, 0.55, 0.56, 0.52])
+
+    def test_shapefile(self):
+        dt = sorted((imt[1], F32)
+                    for key, imt in FIELDMAP.items() if imt[0] == 'val')
+        bbox = [('minx', F32), ('miny', F32), ('maxx', F32), ('maxy', F32)]
+        dtlist = [('bbox', bbox), ('vs30', F32), ('val', dt), ('std', dt)]
+        test_data = numpy.array(
+            [((6.679133333333334, 47.007911201914766,
+               6.6874666666666664, 47.01246666666667),
+              0.5, (2.12, 0.44, 1.82, 2.80, 1.26),
+              (0.8376, 0.53, 0.0, 0.0, 0.0)),
+             ((6.6875333333333336, 47.01170211247184,
+               6.689462114996358, 47.01246666666667),
+              0.5, (2.12, 0.47, 1.99, 3.09, 1.41),
+              (0.8376, 0.52, 0.0, 0.0, 0.0)),
+             ((6.529133333333333, 46.95413333333333,
+               6.537466666666666, 46.95899903054027),
+              0.5, (2.02, 0.47, 1.97, 3.04, 1.38),
+              (0.8146, 0.52, 0.0, 0.0, 0.0)),
+             ((6.5625333333333336, 46.961963065996876,
+               6.563892498238765, 46.96246666666667),
+              0.5, (2.02, 0.52, 2.23, 3.51, 1.64),
+              (0.8146, 0.50, 0.0, 0.0, 0.0)),
+             ((6.604133333333333, 46.98241563219726,
+               6.612466666666666, 46.986979614004284),
+              0.5, (2.02, 0.47, 2.23, 3.51, 1.64),
+              (0.8146, 0.52, 0.0, 0.0, 0.0))], dtype=dtlist)
+
+        _, data = get_array_shapefile(
+            'shapefile', os.path.join(CDIR, 'shapefiles_test/output.shp'))
+        aae(test_data['val']['PGA'], data['val']['PGA'])
+        aae(test_data['bbox']['minx'], data['bbox']['minx'])
 
 
 example_sa = """\
