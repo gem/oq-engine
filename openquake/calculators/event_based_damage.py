@@ -75,21 +75,17 @@ def event_based_damage(df, param, monitor):
         with mon_risk:
             out = crmodel.get_output(taxo, asset_df, gmf_df)
             eids = out['eids']
-            taxkids = kids[asset_df.index]
-            ukids = numpy.unique(taxkids)
             numbers = U32(asset_df.number)
             for lti, lt in enumerate(out['loss_types']):
                 ddd = rng.discrete_dmg_dist(eids, out[lt], numbers)  # AED
                 tot = ddd.sum(axis=0)  # shape ED
-                if K:
-                    res = general.fast_agg(taxkids, ddd, M=K)  # shape KED
                 for e, eid in enumerate(eids):
-                    if K:
-                        for kid in ukids:
-                            dddict[eid, kid][lti] += res[kid, e]
                     dddict[eid, K][lti] += tot[e]
+                    if K:
+                        for a, aid in enumerate(asset_df.index):
+                            dddict[eid, kids[aid]][lti] += ddd[a, e]
     dic = general.AccumDict(accum=[])
-    for (eid, kid), dd in dddict.items():
+    for (eid, kid), dd in sorted(dddict.items()):
         for lti in range(L):
             dic['event_id'].append(eid)
             dic['agg_id'].append(kid)
