@@ -36,6 +36,9 @@ jobs:
       - name: Install virtualenv on user space
         run: |
           python -m pip install --user virtualenv
+          where virtualenv.exe
+          where python
+          where py
     # Use script to install engine and not the pip install .
       - name: Install engine with install script
         run: |
