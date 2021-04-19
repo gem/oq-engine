@@ -47,6 +47,10 @@ jobs:
           python install_win.py devel
       - name: Run demos to test installation
         run: |
-          where.exe oq
+          #$HOMEDRIVE = "C:\"
+          #$HOMEPATH = "Users\" + $env:username
+          # Set and force overwrite of the $HOME variable
+          #Set-Variable HOME "$HOMEDRIVE$HOMEPATH" -Force
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
           oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
