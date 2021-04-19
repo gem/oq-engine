@@ -348,6 +348,15 @@ aid
         self.assertEqualFiles('expected/d_damage_table.txt', fname)
         self.check_damages('expected/d_damages.txt')
 
+    def test_case_12e(self):
+        # test event_based_damage float_dmg_dist=True
+        self.run_calc(case_12.__file__, 'job_e.ini')
+        df = self.calc.datastore.read_df(
+            'agg_damage_table', 'event_id').sort_index()
+        fname = gettemp(str(df))
+        self.assertEqualFiles('expected/e_damage_table.txt', fname)
+        self.check_damages('expected/e_damages.txt')
+
 
 def losses(aid, alt):
     E = len(alt.event_id.unique())

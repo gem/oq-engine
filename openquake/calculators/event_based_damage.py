@@ -76,7 +76,7 @@ def event_based_damage(df, param, monitor):
         param['master_seed'], numpy.unique(df.eid), param['asset_correlation'])
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
-    dddict = general.AccumDict(accum=numpy.zeros((L, D), U32))  # by eid, kid
+    dddict = general.AccumDict(accum=numpy.zeros((L, D), F32))  # by eid, kid
     for taxo, asset_df in assets_df.groupby('taxonomy'):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         if len(gmf_df) == 0:
@@ -90,7 +90,6 @@ def event_based_damage(df, param, monitor):
                     ddd = numpy.array(out[lt])  # shape AED
                     for a, n in enumerate(numbers):
                         ddd[a] *= n
-                    print(taxo, lti, ddd.sum())
                 else:  # extra-slow
                     ddd = rng.discrete_dmg_dist(eids, out[lt], U32(numbers))
                 tot = ddd.sum(axis=0)  # shape ED
