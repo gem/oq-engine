@@ -213,8 +213,7 @@ def install(inst, version):
         venv.EnvBuilder(with_pip=True).create(inst.VENV)
         print('Created %s' % inst.VENV)
     # upgrade pip
-    # subprocess.check_call(['%s/Scripts/python' % inst.VENV , '-m', 'pip', 'install', '--upgrade', 'pip', 'wheel'])
-    subprocess.check_call(['%s/Scripts/pip' % inst.VENV , 'install', '--upgrade', 'pip', 'wheel'])
+    subprocess.check_call(['%s/Scripts/python' % inst.VENV , '-m', 'pip', 'install', '--upgrade', 'pip', 'wheel'])
 
     # install the requirements
     req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \
@@ -222,8 +221,7 @@ def install(inst, version):
     subprocess.check_call(['%s/Scripts/python' % inst.VENV,  '-m', 'pip', 'install', '-r', req])
 
     if inst is devel:  # install from the local repo
-        #subprocess.check_call(['%s/Scripts/python' % inst.VENV, '-m', 'pip' , 'install', '-e', '.'])
-        subprocess.check_call(['%s/Scripts/pip' % inst.VENV, 'install', '-e', '.'])
+        subprocess.check_call(['%s/Scripts/python' % inst.VENV, '-m', 'pip' , 'install', '-e', '.'])
     elif version is None:  # install the stable version
         subprocess.check_call(['%s/Scripts/python' % inst.VENV, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine'])
