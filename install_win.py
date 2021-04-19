@@ -210,28 +210,28 @@ def install(inst, version):
     if not os.path.exists(inst.VENV) or not os.listdir(inst.VENV):
         # create venv
         print('List folder %s' % inst.VENV)
-        # venv.EnvBuilder(with_pip=True).create(inst.VENV)
-        # print('Created %s' % inst.VENV)
+        venv.EnvBuilder(with_pip=True).create(inst.VENV)
+        print('Created %s' % inst.VENV)
 
     # upgrade pip
-    subprocess.check_call(['pip', 'install', '--user', 'pip', 'wheel',
+    subprocess.check_call(['py', '-m pip', 'install', 'pip', 'wheel',
                            '--upgrade'])
 
     # install the requirements
     req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \
         'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
-    subprocess.check_call(['pip', 'install', '--user', '-r', req])
+    subprocess.check_call(['py', '-m pip', 'install', '-r', req])
 
     if inst is devel:  # install from the local repo
-        subprocess.check_call(['pip', 'install', '--user', '-e', '.'])
+        subprocess.check_call(['py', '-m pip', 'install', '-e', '.'])
     elif version is None:  # install the stable version
-        subprocess.check_call(['pip', 'install', '--user',
+        subprocess.check_call(['py', '-m pip', 'install',
                                '--upgrade', 'openquake.engine'])
     elif '.' in version:  # install an official version
-        subprocess.check_call(['pip', 'install', '--user',
+        subprocess.check_call(['py', '-m pip', 'install',
                                '--upgrade', 'openquake.engine==' + version])
     else:  # install a branch from github
-        subprocess.check_call(['pip', 'install', '--user',
+        subprocess.check_call(['py', '-m pip', 'install',
                                '--upgrade', GITBRANCH % version])
 
     install_standalone(inst.VENV)
