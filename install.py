@@ -223,8 +223,6 @@ def install(inst, version):
         pycmd = inst.VENV + '/Scripts/python'
     else:
         pycmd = inst.VENV + '/bin/python'
-
-    print(pycmd)
     # upgrade pip
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade', 
                           'pip', 'wheel'])
