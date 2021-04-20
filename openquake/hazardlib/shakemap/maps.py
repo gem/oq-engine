@@ -30,12 +30,12 @@ get_sitecol_shakemap = CallableDict()
 
 @get_sitecol_shakemap.add('shapefile')
 def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
-                          _=None, mode='filter'):
+                          assoc_dist=None, mode='filter'):
     """
     :param uridict: a dictionary specifying the ShakeMap resource
     :param imts: required IMTs as a list of strings
     :param sitecol: SiteCollection used to reduce the shakemap
-    :param _: assoc_dist, unused for shapefiles
+    :param assoc_dist: unused for shapefiles
     :param mode: 'strict', 'warn' or 'filter'
     :returns: filtered site collection, filtered shakemap, discarded
     """
