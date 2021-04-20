@@ -457,7 +457,7 @@ class OrthographicProjection(object):
     can be also used for measuring distance to an extent of around 700
     kilometers (error doesn't exceed 1 km up until then).
     """
-    @ classmethod
+    @classmethod
     def from_lons_lats(cls, lons, lats):
         return cls(*get_spherical_bounding_box(lons, lats))
 
