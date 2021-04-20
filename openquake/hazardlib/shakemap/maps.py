@@ -67,8 +67,7 @@ def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
     logging.info('Associating %d GMVs to %d sites',
                  len(shakemap), len(sitecol))
 
-    return geo.utils.assoc_to_polygons(polygons,
-                                       shakemap, sitecol, assoc_dist, mode)
+    return geo.utils.assoc_to_polygons(polygons, shakemap, sitecol, mode)
 
 
 @get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')
