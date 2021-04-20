@@ -469,8 +469,8 @@ class CompositeRiskModel(collections.abc.Mapping):
             if len(coeffs):
                 cname, tagname = byname.split('_by_')
                 func = scientific.consequence[cname]
-                coeffs = coeffs[asset[tagname]][loss_type]
-                csq[cname] = func(coeffs, asset, fractions[:, 1:], loss_type)
+                cs = coeffs[asset[tagname]][loss_type]
+                csq[cname] = func(cs, asset, fractions[:, 1:], loss_type)
         return csq
 
     def init(self):

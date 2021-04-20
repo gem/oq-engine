@@ -67,21 +67,25 @@ def event_based_damage(df, param, monitor):
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     with mon_risk:
+        by_eid = general.AccumDict(accum=numpy.zeros(L, F32))
+        consdict = general.AccumDict(accum=by_eid)
         dddict = general.AccumDict(accum=numpy.zeros((L, D), F32))  # eid, kid
         for taxo, asset_df in assets_df.groupby('taxonomy'):
             for sid, adf in asset_df.groupby('site_id'):
                 gmf_df = df[df.sid == sid]
                 if len(gmf_df) == 0:
                     continue
-                numbers = adf.number
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 eids = out['eids']
-                numbers = out['assets']['number']
                 aids = out['assets']['ordinal']
                 for lti, lt in enumerate(out['loss_types']):
                     ddd = numpy.array(out[lt])  # shape AED
-                    for a, n in enumerate(numbers):
-                        ddd[a] *= n
+                    for a, asset in enumerate(out['assets']):
+                        ddd[a] *= asset['number']
+                        csq = crmodel.compute_csq(asset, out[lt][a], lt)
+                        for name, values in csq.items():
+                            for eid, value in zip(eids, values):
+                                consdict[name][eid][lti] += value
                     # using discrete damage distributions would be too slow
                     # ddd = rng.discrete_dmg_dist(eids, out[lt], U32(numbers))
                     tot = ddd.sum(axis=0)  # shape ED
@@ -102,7 +106,9 @@ def event_based_damage(df, param, monitor):
         fix_dtype(dic, U16, ['agg_id'])
         fix_dtype(dic, U8, ['loss_id'])
         fix_dtype(dic, F32, ['dmg_%d' % d for d in range(1, D)])
-    return pandas.DataFrame(dic)
+    res = dict(damages=pandas.DataFrame(dic))
+    res.update(consdict)
+    return res
 
 
 @base.calculators.add('event_based_damage')
@@ -110,6 +116,7 @@ class DamageCalculator(EventBasedRiskCalculator):
     """
     Damage calculator
     """
+
     core_task = event_based_damage
     is_stochastic = True
     precalc = 'event_based'
@@ -136,9 +143,9 @@ class DamageCalculator(EventBasedRiskCalculator):
         if res is None:
             raise MemoryError('You ran out of memory!')
         with self.monitor('saving agg_damage_table', measuremem=True):
-            for name in res.columns:
+            for name in res['damages'].columns:
                 dset = self.datastore['agg_damage_table/' + name]
-                hdf5.extend(dset, res[name].to_numpy())
+                hdf5.extend(dset, res['damages'][name].to_numpy())
         return 1
 
     def post_execute(self, dummy):
