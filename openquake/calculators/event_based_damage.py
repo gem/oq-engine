@@ -20,7 +20,6 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, general, parallel
-from openquake.risklib import scientific
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -41,9 +40,11 @@ def agg_damages(dstore, slc, monitor):
     :returns: dict (agg_id, loss_id) -> [dmg1, dmg2, ...]
     """
     with dstore:
-        df = dstore.read_df('agg_damage_table', 'event_id', slc=slc)
-        agg = df.groupby(['agg_id', 'loss_id']).sum()
-    return dict(zip(agg.index, agg.to_numpy()))
+        df = dstore.read_df('agg_damage_table', ['agg_id', 'loss_id'], slc=slc)
+        del df['event_id']
+        agg = df.groupby(df.index).sum()
+        dic = dict(zip(agg.index, agg.to_numpy()))
+    return dic
 
 
 def event_based_damage(df, param, monitor):
@@ -65,9 +66,9 @@ def event_based_damage(df, param, monitor):
         crmodel = monitor.read('crmodel')
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
-    dddict = general.AccumDict(accum=numpy.zeros((L, D), F32))  # by eid, kid
-    for taxo, asset_df in assets_df.groupby('taxonomy'):
-        with mon_risk:
+    with mon_risk:
+        dddict = general.AccumDict(accum=numpy.zeros((L, D), F32))  # eid, kid
+        for taxo, asset_df in assets_df.groupby('taxonomy'):
             for sid, adf in asset_df.groupby('site_id'):
                 gmf_df = df[df.sid == sid]
                 if len(gmf_df) == 0:
@@ -75,30 +76,32 @@ def event_based_damage(df, param, monitor):
                 numbers = adf.number
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 eids = out['eids']
+                numbers = out['assets']['number']
+                aids = out['assets']['ordinal']
                 for lti, lt in enumerate(out['loss_types']):
                     ddd = numpy.array(out[lt])  # shape AED
                     for a, n in enumerate(numbers):
                         ddd[a] *= n
-                    # using discrete damage distributions is too slow:
+                    # using discrete damage distributions would be too slow
                     # ddd = rng.discrete_dmg_dist(eids, out[lt], U32(numbers))
                     tot = ddd.sum(axis=0)  # shape ED
                     for e, eid in enumerate(eids):
                         dddict[eid, K][lti] += tot[e]
                         if K:
-                            for a, aid in enumerate(adf.index):
+                            for a, aid in enumerate(aids):
                                 dddict[eid, kids[aid]][lti] += ddd[a, e]
-    dic = general.AccumDict(accum=[])
-    for (eid, kid), dd in sorted(dddict.items()):
-        for lti in range(L):
-            dic['event_id'].append(eid)
-            dic['agg_id'].append(kid)
-            dic['loss_id'].append(lti)
-            for dsi in range(1, D):
-                dic['dmg_%d' % dsi].append(dd[lti, dsi])
-    fix_dtype(dic, U32, ['event_id'])
-    fix_dtype(dic, U16, ['agg_id'])
-    fix_dtype(dic, U8, ['loss_id'])
-    fix_dtype(dic, F32, ['dmg_%d' % d for d in range(1, D)])
+        dic = general.AccumDict(accum=[])
+        for (eid, kid), dd in sorted(dddict.items()):
+            for lti in range(L):
+                dic['event_id'].append(eid)
+                dic['agg_id'].append(kid)
+                dic['loss_id'].append(lti)
+                for dsi in range(1, D):
+                    dic['dmg_%d' % dsi].append(dd[lti, dsi])
+        fix_dtype(dic, U32, ['event_id'])
+        fix_dtype(dic, U16, ['agg_id'])
+        fix_dtype(dic, U8, ['loss_id'])
+        fix_dtype(dic, F32, ['dmg_%d' % d for d in range(1, D)])
     return pandas.DataFrame(dic)
 
 
