@@ -11,7 +11,8 @@ from openquake.hazardlib.shakemap.gmfs import (
 
 aae = numpy.testing.assert_almost_equal
 F64 = numpy.float64
-imts = [imt.from_string(x) for x in ['PGA', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)']]
+imts = [imt.from_string(x)
+        for x in ['PGA', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)']]
 imt_dt = numpy.dtype([(str(imt), float) for imt in imts])
 shakemap_dt = numpy.dtype([('lon', float), ('lat', float), ('val', imt_dt),
                            ('std', imt_dt), ('vs30', float)])
@@ -164,8 +165,9 @@ class ShakemapTestCase(unittest.TestCase):
         f1 = 'file://' + os.path.join(CDIR, 'ghorka_grid.xml')
         f2 = 'file://' + os.path.join(CDIR, 'ghorka_uncertainty.xml')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
+
         sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
-                                                     uridict, imt_dt.names)
+                                                     uridict, ['MMI'])
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
 

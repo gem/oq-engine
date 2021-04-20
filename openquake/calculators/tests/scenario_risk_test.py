@@ -17,10 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
+import os
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
     case_6a, case_7, case_8, case_10, occupants, case_master,
-    case_shakemap)
+    case_shakemap, case_shapefile)
 
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
@@ -224,6 +225,27 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqual(gmfa.shape, (9,))
         self.assertEqual(gmfa.dtype.names,
                          ('lon', 'lat', 'PGA', 'SA(0.3)', 'SA(1.0)'))
+        [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agglosses.csv', fname)
+
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)
+
+    def test_case_shapefile(self):
+        uri = '{"kind": "shapefile", "fname": "%s"}' % os.path.join(
+            os.path.dirname(case_shapefile.__file__), 'shp/output.shp')
+
+        self.run_calc(case_shapefile.__file__, 'prepare_job.ini')
+        self.run_calc(case_shapefile.__file__, 'job.ini',
+                      hazard_calculation_id=str(self.calc.datastore.calc_id),
+                      shakemap_uri=uri)
+        sitecol = self.calc.datastore['sitecol']
+        self.assertEqual(len(sitecol), 7)
+        gmfdict = dict(extract(self.calc.datastore, 'gmf_data'))
+        gmfa = gmfdict['rlz-000']
+        self.assertEqual(gmfa.shape, (7,))
+        self.assertEqual(gmfa.dtype.names,
+                         ('lon', 'lat', 'MMI'))
         [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 

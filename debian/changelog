@@ -1,3 +1,7 @@
+  [Nicolas Schmid]
+  * Added possibility to use *.shp files instead of *.xml files when 
+    doing risk calculations from shakemaps.
+  
   [Michele Simionato]
   * Made it possible to run an event based risk calculation starting from a
     parent ran by a different user
