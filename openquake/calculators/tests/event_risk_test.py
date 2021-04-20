@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import numpy
+from openquake.commonlib.datastore import read
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
@@ -104,3 +106,10 @@ class GmfEbRiskTestCase(CalculatorTestCase):
 
         check_full_lt(calc0, calc1)  # the full_lt arrays must be equal
         check_full_lt(calc0, calc2)  # the full_lt arrays must be equal
+
+    def test_read_old(self):
+        # check GMFs in v3.11 format are readable
+        d = os.path.dirname(case_master.__file__)
+        ds = read(os.path.join(d, 'calc_311.hdf5'))
+        gmf_df = ds.read_df('gmf_data', 'eid')
+        self.assertEqual(len(gmf_df), 314)
