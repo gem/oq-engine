@@ -69,9 +69,13 @@ class user:
     """
     Parameters for a user installation
     """
+    # check platform
     VENV = os.path.expanduser('~/openquake')
+    if sys.platform == 'win32':
+        OQ = os.path.join(VENV, '/Scripts/oq')
+    else:
+        OQ = os.path.join(VENV, '/bin/oq')
     CFG = os.path.join(VENV, 'openquake.cfg')
-    OQ = os.path.join(VENV, '/bin/oq')
     OQDATA = os.path.expanduser('~/oqdata')
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1908
@@ -212,22 +216,28 @@ def install(inst, version):
         venv.EnvBuilder(with_pip=True).create(inst.VENV)
         print('Created %s' % inst.VENV)
 
+    if sys.platform == 'win32':
+        pycmd = '/Scripts/python'
+    else:
+        pycmd = '/bin/python'
+
     # upgrade pip
-    subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', 'pip', 'wheel',
-                           '--upgrade'])
+    subprocess.check_call(['%s' % inst.VENV, pycmd, '-m', 'pip', 'install',
+                           '--upgrade', 'pip', 'wheel'])
 
     # install the requirements
     req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \
         'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
-    subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', '-r', req])
+
+    subprocess.check_call(['%s' % inst.VENV, pycmd, 'install', '-r', req])
 
     if inst is devel:  # install from the local repo
-        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', '-e', '.'])
+        subprocess.check_call(['%s' % inst.VENV, pycmd, 'install', '-e', '.'])
     elif version is None:  # install the stable version
-        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
+        subprocess.check_call(['%s' % inst.VENV, pycmd, 'install',
                                '--upgrade', 'openquake.engine'])
     elif '.' in version:  # install an official version
-        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
+        subprocess.check_call(['%s' % inst.VENV, pycmd, 'install',
                                '--upgrade', 'openquake.engine==' + version])
     else:  # install a branch from github
         subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
