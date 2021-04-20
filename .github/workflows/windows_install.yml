@@ -5,7 +5,7 @@ on:
   push:
     branches: [ windows ]
   schedule:
-    - cron: "30 22 * * *"
+    - cron: "00 23 * * *"
 
 jobs:
   install:
@@ -24,8 +24,6 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
-        with:
-          ref: windows
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
