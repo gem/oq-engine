@@ -322,7 +322,6 @@ aid
         self.check_damages('expected/a_damages.txt')
 
     def test_case_12b(self):
-        raise unittest.SkipTest
         # test event_based_damage, aggregate_by=taxonomy
         self.run_calc(case_12.__file__, 'job_b.ini')
         df = self.calc.datastore.read_df(
@@ -332,7 +331,6 @@ aid
         self.check_damages('expected/b_damages.txt')
 
     def test_case_12c(self):
-        raise unittest.SkipTest
         # test event_based_damage, aggregate_by=taxonomy, policy
         self.run_calc(case_12.__file__, 'job_c.ini')
         df = self.calc.datastore.read_df(
@@ -342,7 +340,6 @@ aid
         self.check_damages('expected/c_damages.txt')
 
     def test_case_12d(self):
-        raise unittest.SkipTest
         # test event_based_damage, aggregate_by=id
         self.run_calc(case_12.__file__, 'job_d.ini')
         df = self.calc.datastore.read_df(
@@ -350,15 +347,6 @@ aid
         fname = gettemp(str(df))
         self.assertEqualFiles('expected/d_damage_table.txt', fname)
         self.check_damages('expected/d_damages.txt')
-
-    def test_case_12e(self):
-        # test event_based_damage float_dmg_dist=True
-        self.run_calc(case_12.__file__, 'job_e.ini')
-        df = self.calc.datastore.read_df(
-            'agg_damage_table', 'event_id').sort_index()
-        fname = gettemp(str(df))
-        self.assertEqualFiles('expected/e_damage_table.txt', fname)
-        self.check_damages('expected/e_damages.txt')
 
 
 def losses(aid, alt):

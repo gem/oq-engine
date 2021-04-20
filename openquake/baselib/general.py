@@ -372,7 +372,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
 _tmp_paths = []
 
 
-def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
+def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=False):
     """Create temporary file with the given content.
 
     Please note: the temporary file can be deleted by the caller or not.

@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import numpy
 import pandas
 
@@ -30,14 +29,6 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-
-
-def floats_in(numbers):
-    """
-    :param numbers: an array of numbers
-    :returns: number of non-uint32 number
-    """
-    return (U32(numbers) != numbers).sum()
 
 
 def fix_dtype(dic, dtype, names):
@@ -72,32 +63,30 @@ def event_based_damage(df, param, monitor):
         kids = (dstore['assetcol/kids'][:] if K
                 else numpy.zeros(len(assets_df), U16))
         crmodel = monitor.read('crmodel')
-    rng = scientific.MultiEventRNG(
-        param['master_seed'], numpy.unique(df.eid), param['asset_correlation'])
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     dddict = general.AccumDict(accum=numpy.zeros((L, D), F32))  # by eid, kid
     for taxo, asset_df in assets_df.groupby('taxonomy'):
-        gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
-        if len(gmf_df) == 0:
-            continue
         with mon_risk:
-            out = crmodel.get_output(taxo, asset_df, gmf_df)
-            eids = out['eids']
-            numbers = asset_df.number
-            for lti, lt in enumerate(out['loss_types']):
-                if param['float_dmg_dist']:
+            for sid, adf in asset_df.groupby('site_id'):
+                gmf_df = df[df.sid == sid]
+                if len(gmf_df) == 0:
+                    continue
+                numbers = adf.number
+                out = crmodel.get_output(taxo, adf, gmf_df)
+                eids = out['eids']
+                for lti, lt in enumerate(out['loss_types']):
                     ddd = numpy.array(out[lt])  # shape AED
                     for a, n in enumerate(numbers):
                         ddd[a] *= n
-                else:  # extra-slow
-                    ddd = rng.discrete_dmg_dist(eids, out[lt], U32(numbers))
-                tot = ddd.sum(axis=0)  # shape ED
-                for e, eid in enumerate(eids):
-                    dddict[eid, K][lti] += tot[e]
-                    if K:
-                        for a, aid in enumerate(asset_df.index):
-                            dddict[eid, kids[aid]][lti] += ddd[a, e]
+                    # using discrete damage distributions is too slow:
+                    # ddd = rng.discrete_dmg_dist(eids, out[lt], U32(numbers))
+                    tot = ddd.sum(axis=0)  # shape ED
+                    for e, eid in enumerate(eids):
+                        dddict[eid, K][lti] += tot[e]
+                        if K:
+                            for a, aid in enumerate(adf.index):
+                                dddict[eid, kids[aid]][lti] += ddd[a, e]
     dic = general.AccumDict(accum=[])
     for (eid, kid), dd in sorted(dddict.items()):
         for lti in range(L):
@@ -128,18 +117,6 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         Compute risk from GMFs or ruptures depending on what is stored
         """
-        oq = self.oqparam
-        num_floats = floats_in(self.assetcol['number'])
-        if num_floats:
-            logging.warning(
-                'The exposure contains %d non-integer asset numbers: '
-                'using floating point damage distributions', num_floats)
-        bad = self.assetcol['number'] > 2**32 - 1
-        for ass in self.assetcol[bad]:
-            aref = self.assetcol.tagcol.id[ass['id']]
-            logging.error("The asset %s has number=%s > 2^32-1!",
-                          aref, ass['number'])
-        self.param['float_dmg_dist'] = oq.float_dmg_dist or num_floats
         smap = parallel.Starmap(
             event_based_damage, self.gen_args(), h5=self.datastore.hdf5)
         smap.monitor.save('assets', self.assetcol.to_dframe())
