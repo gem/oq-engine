@@ -70,13 +70,16 @@ class user:
     Parameters for a user installation
     """
     # check platform
-    VENV = os.path.expanduser('~/openquake')
     if sys.platform == 'win32':
+        VENV = os.path.expanduser('~\\openquake')
         OQ = os.path.join(VENV, '\\Scripts\\oq')
+        OQDATA = os.path.expanduser('~\\oqdata')
     else:
+        VENV = os.path.expanduser('~/openquake')
         OQ = os.path.join(VENV, '/bin/oq')
+        OQDATA = os.path.expanduser('~/oqdata')
+
     CFG = os.path.join(VENV, 'openquake.cfg')
-    OQDATA = os.path.expanduser('~/oqdata')
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1908
     CONFIG = ''
@@ -259,6 +262,11 @@ def install(inst, version):
 
     # create symlink to oq
     oqreal = '%s/bin/oq' % inst.VENV
+    if sys.platform == 'win32':
+        oqreal = '%s\\Scripts\\oq' % inst.VENV
+    else:
+        oqreal = '%s/bin/oq' % inst.VENV
+
     if inst is server and not os.path.exists(inst.OQ):
         os.symlink(oqreal, inst.OQ)
     if inst is user:
