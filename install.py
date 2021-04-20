@@ -31,7 +31,6 @@ You have to remove the data directories manually, if you so wish.
 """
 import os
 import sys
-import pwd
 import shutil
 import socket
 import getpass
@@ -70,10 +69,17 @@ class user:
     """
     Parameters for a user installation
     """
-    VENV = os.path.expanduser('~/openquake')
+    # check platform
+    if sys.platform == 'win32':
+        VENV = os.path.expanduser('~\\openquake')
+        OQ = os.path.join(VENV, '\\Scripts\\oq')
+        OQDATA = os.path.expanduser('~\\oqdata')
+    else:
+        VENV = os.path.expanduser('~/openquake')
+        OQ = os.path.join(VENV, '/bin/oq')
+        OQDATA = os.path.expanduser('~/oqdata')
+
     CFG = os.path.join(VENV, 'openquake.cfg')
-    OQ = os.path.join(VENV, '/bin/oq')
-    OQDATA = os.path.expanduser('~/oqdata')
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1908
     CONFIG = ''
@@ -193,6 +199,7 @@ def install(inst, version):
     Install the engine in one of the three possible modes
     """
     if inst is server:
+        import pwd
         # create the openquake user if necessary
         try:
             pwd.getpwnam('openquake')
@@ -212,25 +219,30 @@ def install(inst, version):
         venv.EnvBuilder(with_pip=True).create(inst.VENV)
         print('Created %s' % inst.VENV)
 
+    if sys.platform == 'win32':
+        pycmd = inst.VENV + '/Scripts/python'
+    else:
+        pycmd = inst.VENV + '/bin/python'
     # upgrade pip
-    subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', 'pip', 'wheel',
-                           '--upgrade'])
+    subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade', 
+                          'pip', 'wheel'])
 
     # install the requirements
     req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \
         'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
-    subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', '-r', req])
+
+    subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
 
     if inst is devel:  # install from the local repo
-        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install', '-e', '.'])
+        subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', '.'])
     elif version is None:  # install the stable version
-        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
+        subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine'])
     elif '.' in version:  # install an official version
-        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
+        subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine==' + version])
     else:  # install a branch from github
-        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
+        subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', GITBRANCH % version])
 
     install_standalone(inst.VENV)
@@ -248,12 +260,23 @@ def install(inst, version):
 
     # create symlink to oq
     oqreal = '%s/bin/oq' % inst.VENV
+    if sys.platform == 'win32':
+        oqreal = '%s\\Scripts\\oq' % inst.VENV
+    else:
+        oqreal = '%s/bin/oq' % inst.VENV
+
     if inst is server and not os.path.exists(inst.OQ):
         os.symlink(oqreal, inst.OQ)
     if inst is user:
-        print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
+        if sys.platform == 'win32':
+            print(f'Please activate the virtualenv with {inst.VENV}\\Scripts\\activate.bat')
+        else:
+            print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
     elif inst is devel:
-        print(f'Please activate the venv with source {inst.VENV}/bin/activate')
+        if sys.platform == 'win32':
+            print(f'Please activate the virtualenv with {inst.VENV}\\Scripts\\activate.bat')
+        else:
+            print(f'Please activate the venv with source {inst.VENV}/bin/activate')
 
     # create systemd services
     if inst is server and os.path.exists('/lib/systemd/system'):
