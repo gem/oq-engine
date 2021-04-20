@@ -72,7 +72,7 @@ class user:
     # check platform
     VENV = os.path.expanduser('~/openquake')
     if sys.platform == 'win32':
-        OQ = os.path.join(VENV, '/Scripts/oq')
+        OQ = os.path.join(VENV, '\\Scripts\\oq')
     else:
         OQ = os.path.join(VENV, '/bin/oq')
     CFG = os.path.join(VENV, 'openquake.cfg')
@@ -263,12 +263,12 @@ def install(inst, version):
         os.symlink(oqreal, inst.OQ)
     if inst is user:
         if sys.platform == 'win32':
-            print(f'Please activate the virtualenv with {inst.VENV}/Scripts/activate.bat')
+            print(f'Please activate the virtualenv with {inst.VENV}\\Scripts\\activate.bat')
         else:
             print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
     elif inst is devel:
         if sys.platform == 'win32':
-            print(f'Please activate the virtualenv with {inst.VENV}/Scripts/activate.bat')
+            print(f'Please activate the virtualenv with {inst.VENV}\\Scripts\\activate.bat')
         else:
             print(f'Please activate the venv with source {inst.VENV}/bin/activate')
 
