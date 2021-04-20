@@ -205,7 +205,7 @@ class SiteCollection(object):
         arr['lat'] = shakemap_array['lat']
         arr['depth'] = numpy.zeros(n)
         arr['vs30'] = shakemap_array['vs30']
-        arr.flags.writeable = True
+        arr.flags.writeable = False
         return self
 
     @classmethod  # this is the method used by the engine
