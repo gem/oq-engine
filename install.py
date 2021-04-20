@@ -217,30 +217,31 @@ def install(inst, version):
         print('Created %s' % inst.VENV)
 
     if sys.platform == 'win32':
-        pycmd = '/Scripts/python'
+        pycmd = inst.VENV + '/Scripts/python'
     else:
-        pycmd = '/bin/python'
+        pycmd = inst.VENV + '/bin/python'
 
+    print(pycmd)
     # upgrade pip
-    subprocess.check_call(['%s' % inst.VENV, pycmd, '-m', 'pip', 'install',
-                           '--upgrade', 'pip', 'wheel'])
+    subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade', 
+                          'pip', 'wheel'])
 
     # install the requirements
     req = 'https://raw.githubusercontent.com/gem/oq-engine/master/' \
         'requirements-py%d%d-%s.txt' % (PYVER + PLATFORM[sys.platform])
 
-    subprocess.check_call(['%s' % inst.VENV, pycmd, 'install', '-r', req])
+    subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
 
     if inst is devel:  # install from the local repo
-        subprocess.check_call(['%s' % inst.VENV, pycmd, 'install', '-e', '.'])
+        subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', '.'])
     elif version is None:  # install the stable version
-        subprocess.check_call(['%s' % inst.VENV, pycmd, 'install',
+        subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine'])
     elif '.' in version:  # install an official version
-        subprocess.check_call(['%s' % inst.VENV, pycmd, 'install',
+        subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', 'openquake.engine==' + version])
     else:  # install a branch from github
-        subprocess.check_call(['%s/bin/pip' % inst.VENV, 'install',
+        subprocess.check_call([pycmd, '-m', 'pip', 'install',
                                '--upgrade', GITBRANCH % version])
 
     install_standalone(inst.VENV)
@@ -261,9 +262,15 @@ def install(inst, version):
     if inst is server and not os.path.exists(inst.OQ):
         os.symlink(oqreal, inst.OQ)
     if inst is user:
-        print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
+        if sys.platform == 'win32':
+            print(f'Please activate the virtualenv with {inst.VENV}/Scripts/activate.bat')
+        else:
+            print(f'Please add an alias oq={oqreal} in your .bashrc or similar')
     elif inst is devel:
-        print(f'Please activate the venv with source {inst.VENV}/bin/activate')
+        if sys.platform == 'win32':
+            print(f'Please activate the virtualenv with {inst.VENV}/Scripts/activate.bat')
+        else:
+            print(f'Please activate the venv with source {inst.VENV}/bin/activate')
 
     # create systemd services
     if inst is server and os.path.exists('/lib/systemd/system'):
