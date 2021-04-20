@@ -44,13 +44,9 @@ jobs:
     # Use script to install engine and not the pip install .
       - name: Install engine with install script
         run: |
-          python install_win.py devel
+          python install.py devel
       - name: Run demos to test installation
         run: |
-          #$HOMEDRIVE = "C:\"
-          #$HOMEPATH = "Users\" + $env:username
-          # Set and force overwrite of the $HOME variable
-          #Set-Variable HOME "$HOMEDRIVE$HOMEPATH" -Force
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
           oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
