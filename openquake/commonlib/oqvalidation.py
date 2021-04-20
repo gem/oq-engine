@@ -1647,4 +1647,9 @@ class OqParam(valid.ParamSet):
         return hdf5.dumps(vars(self)), {}
 
     def __fromh5__(self, array, attrs):
-        vars(self).update(json.loads(python3compat.decode(array)))
+        if isinstance(array, numpy.ndarray):  # old format <= 3.11
+            pars = dict(array)
+            if 'hazard_calculation_id' in pars:  # read hc_id only
+                self.hazard_calculation_id = int(pars['hazard_calculation_id'])
+        else:  # new format >= 3.12
+            vars(self).update(json.loads(python3compat.decode(array)))
