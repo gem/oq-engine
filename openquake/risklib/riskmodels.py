@@ -612,7 +612,9 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         :returns: damage states (except no_damage) plus consequences
         """
-        return self.damage_states[1:] + self.get_consequences()
+        D = len(self.damage_states)
+        dmgs = ['dmg_%d' % d for d in range(1, D)]
+        return dmgs + self.get_consequences()
 
     def make_curve_params(self):
         # the CurveParams are used only in classical_risk, classical_bcr

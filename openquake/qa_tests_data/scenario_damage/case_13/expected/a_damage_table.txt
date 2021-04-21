@@ -1,4 +1,4 @@
-                           LS1    LS2   losses
+                         dmg_1  dmg_2   losses
 event_id agg_id loss_id                       
 0        0      0          1.0    0.0     63.0
 1        0      0          2.0    1.0    167.0
