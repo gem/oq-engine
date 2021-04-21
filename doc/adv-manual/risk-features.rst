@@ -138,7 +138,7 @@ ShakeMaps from other sources like the local filesystem or a custom URL.
 
 .. _ShakeMaps: https://earthquake.usgs.gov/data/shakemap/
 
-Running the Calcualtion
+Running the Calculation
 .......................
 
 In order to enable this functionality one has to prepare a parent
