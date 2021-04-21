@@ -133,7 +133,7 @@ Scenarios from ShakeMaps
 Beginning with version 3.1, the engine is able to perform `scenario_risk`
 and `scenario_damage` calculations starting from the GeoJSON feed for
 ShakeMaps_ provided by the United States Geological Survey (USGS). 
-Additionally starting from version 3.12 it is also possible to use 
+Furthermore, starting from version 3.12 it is possible to use 
 ShakeMaps from other sources like the local filesystem or a custom URL.
 
 .. _ShakeMaps: https://earthquake.usgs.gov/data/shakemap/
@@ -306,7 +306,7 @@ Disabling spatial AND cross correlation makes it possible run much larger
 calculations. The performance can be further increased by not using a 
 ``truncation_level``.
 
-When using applying correlation, a soft cap on the size of the calculations is 
+When applying correlation, a soft cap on the size of the calculations is 
 defined. This is done and modifiable through the parameter ``cholesky_limit`` which
 refers to the number of sites multiplied by the number of intensity measure types 
 used in the vulnerability model. Raising that limit is at your own peril, as you 
