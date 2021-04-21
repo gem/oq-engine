@@ -1,4 +1,4 @@
-                   LS1     LS2
+                 dmg_1   dmg_2
 agg_id loss_id                
 0      0         117.0   123.0
 1      0          20.0    14.0
