@@ -288,8 +288,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 K=len(self.aggkey), L=len(oq.loss_names))
         else:  # damage
             D = len(self.crmodel.damage_states)
-            descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8)] + \
-                [('dmg_%d' % d, F32) for d in range(1, D)]
+            descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
+                     [(dc, F32) for dc in self.crmodel.get_dmg_csq()])
             self.datastore.create_dframe(
                 'agg_damage_table', descr,
                 K=len(self.aggkey), L=len(oq.loss_names))

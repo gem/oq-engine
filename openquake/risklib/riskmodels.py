@@ -608,6 +608,12 @@ class CompositeRiskModel(collections.abc.Mapping):
                 csq.append(cname_by_tagname.split('_by_')[0])
         return csq
 
+    def get_dmg_csq(self):
+        """
+        :returns: damage states (except no_damage) plus consequences
+        """
+        return self.damage_states[1:] + self.get_consequences()
+
     def make_curve_params(self):
         # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too
