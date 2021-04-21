@@ -23,6 +23,7 @@ from openquake.baselib import hdf5, general, parallel
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
+from openquake.calculators.post_risk import PostRiskCalculator
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -40,7 +41,7 @@ def agg_damages(dstore, slc, monitor):
     :returns: dict (agg_id, loss_id) -> [dmg1, dmg2, ...]
     """
     with dstore:
-        df = dstore.read_df('agg_damage_table', ['agg_id', 'loss_id'], slc=slc)
+        df = dstore.read_df('agg_loss_table', ['agg_id', 'loss_id'], slc=slc)
         del df['event_id']
         agg = df.groupby(df.index).sum()
         dic = dict(zip(agg.index, agg.to_numpy()))
@@ -139,20 +140,25 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         :param acc: unused
         :param res: DataFrame with fields (event_id, agg_id, loss_id, dmg1 ...)
-        Combine the results and grows agg_damage_table with fields
+        Combine the results and grows agg_loss_table with fields
         (event_id, agg_id, loss_id) and (dmg_0, dmg_1, dmg_2, ...)
         """
         if res is None:
             raise MemoryError('You ran out of memory!')
-        with self.monitor('saving agg_damage_table', measuremem=True):
+        with self.monitor('saving agg_loss_table', measuremem=True):
             for name in res.columns:
-                dset = self.datastore['agg_damage_table/' + name]
+                dset = self.datastore['agg_loss_table/' + name]
                 hdf5.extend(dset, res[name].to_numpy())
         return 1
 
     def post_execute(self, dummy):
         oq = self.oqparam
-        len_table = len(self.datastore['agg_damage_table/event_id'])
+        #prc = PostRiskCalculator(oq, self.datastore.calc_id)
+        #if hasattr(self, 'exported'):
+        #    prc.exported = self.exported
+        #prc.run(exports='')
+        #return
+        len_table = len(self.datastore['agg_loss_table/event_id'])
         self.datastore.swmr_on()
         smap = parallel.Starmap(agg_damages, h5=self.datastore.hdf5)
         ct = oq.concurrent_tasks or 1

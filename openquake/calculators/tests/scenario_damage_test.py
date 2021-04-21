@@ -307,7 +307,7 @@ aid
 
     def check_damages(self, f1, f2):
         df = self.calc.datastore.read_df(
-            'agg_damage_table', ['event_id', 'agg_id', 'loss_id']).sort_index()
+            'agg_loss_table', ['event_id', 'agg_id', 'loss_id']).sort_index()
         for col in df.columns:
             df[col] = numpy.around(df[col])
         self.assertEqualFiles('expected/' + f1, gettemp(str(df)))
