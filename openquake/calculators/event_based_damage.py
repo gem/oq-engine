@@ -64,44 +64,53 @@ def event_based_damage(df, param, monitor):
         kids = (dstore['assetcol/kids'][:] if K
                 else numpy.zeros(len(assets_df), U16))
         crmodel = monitor.read('crmodel')
+    dmg_csq = crmodel.get_dmg_csq()
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
+    ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
+    DC = len(ci) + 1
     with mon_risk:
-        dddict = general.AccumDict(accum=numpy.zeros((L, D), F32))  # eid, kid
+        dddict = general.AccumDict(accum=numpy.zeros((L, DC), F32))  # eid, kid
         for taxo, asset_df in assets_df.groupby('taxonomy'):
             for sid, adf in asset_df.groupby('site_id'):
                 gmf_df = df[df.sid == sid]
                 if len(gmf_df) == 0:
                     continue
-                numbers = adf.number
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 eids = out['eids']
-                numbers = out['assets']['number']
                 aids = out['assets']['ordinal']
                 for lti, lt in enumerate(out['loss_types']):
-                    ddd = numpy.array(out[lt])  # shape AED
-                    for a, n in enumerate(numbers):
-                        ddd[a] *= n
-                    # using discrete damage distributions would be too slow
-                    # ddd = rng.discrete_dmg_dist(eids, out[lt], U32(numbers))
-                    tot = ddd.sum(axis=0)  # shape ED
+                    fractions = out[lt]
+                    A, E, D = fractions.shape
+                    ddd = numpy.zeros((A, E, DC), F32)
+                    ddd[:, :, :D] = fractions
+                    for a, asset in enumerate(out['assets']):
+                        ddd[a] *= asset['number']
+                        csq = crmodel.compute_csq(asset, fractions[a], lt)
+                        for name, values in csq.items():
+                            ddd[a, :, ci[name]] = values
+                    tot = ddd.sum(axis=0)
                     for e, eid in enumerate(eids):
                         dddict[eid, K][lti] += tot[e]
                         if K:
                             for a, aid in enumerate(aids):
                                 dddict[eid, kids[aid]][lti] += ddd[a, e]
-        dic = general.AccumDict(accum=[])
-        for (eid, kid), dd in sorted(dddict.items()):
-            for lti in range(L):
-                dic['event_id'].append(eid)
-                dic['agg_id'].append(kid)
-                dic['loss_id'].append(lti)
-                for dsi in range(1, D):
-                    dic['dmg_%d' % dsi].append(dd[lti, dsi])
-        fix_dtype(dic, U32, ['event_id'])
-        fix_dtype(dic, U16, ['agg_id'])
-        fix_dtype(dic, U8, ['loss_id'])
-        fix_dtype(dic, F32, ['dmg_%d' % d for d in range(1, D)])
+    return to_dframe(dddict, ci, L)
+
+
+def to_dframe(adic, ci, L):
+    dic = general.AccumDict(accum=[])
+    for (eid, kid), dd in sorted(adic.items()):
+        for lti in range(L):
+            dic['event_id'].append(eid)
+            dic['agg_id'].append(kid)
+            dic['loss_id'].append(lti)
+            for sname, si in ci.items():
+                dic[sname].append(dd[lti, si])
+    fix_dtype(dic, U32, ['event_id'])
+    fix_dtype(dic, U16, ['agg_id'])
+    fix_dtype(dic, U8, ['loss_id'])
+    fix_dtype(dic, F32, ci)
     return pandas.DataFrame(dic)
 
 
@@ -143,7 +152,6 @@ class DamageCalculator(EventBasedRiskCalculator):
 
     def post_execute(self, dummy):
         oq = self.oqparam
-        D = len(self.crmodel.damage_states)
         len_table = len(self.datastore['agg_damage_table/event_id'])
         self.datastore.swmr_on()
         smap = parallel.Starmap(agg_damages, h5=self.datastore.hdf5)
@@ -151,13 +159,14 @@ class DamageCalculator(EventBasedRiskCalculator):
         for slc in general.split_in_slices(len_table, ct):
             smap.submit((self.datastore, slc))
         agg = smap.reduce()  # (agg_id, loss_id) -> cum_ddd
+        alias = {dc: i for i, dc in enumerate(self.crmodel.get_dmg_csq())}
         dic = general.AccumDict(accum=[])
         for (k, li), dmgs in agg.items():
             dic['agg_id'].append(k)
             dic['loss_id'].append(li)
-            for dsi in range(1, D):
-                dic['dmg_%d' % dsi].append(dmgs[dsi - 1])
+            for name, idx in alias.items():
+                dic[name].append(dmgs[idx])
         fix_dtype(dic, U16, ['agg_id'])
         fix_dtype(dic, U8, ['loss_id'])
-        fix_dtype(dic, F32, ['dmg_%d' % d for d in range(1, D)])
-        self.datastore.create_dframe('damages', dic.items())
+        fix_dtype(dic, F32, alias)
+        self.datastore.create_dframe('dmg_csq', dic.items())

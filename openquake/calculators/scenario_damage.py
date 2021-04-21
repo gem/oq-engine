@@ -87,6 +87,7 @@ def scenario_damage(riskinputs, param, monitor):
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
+
     # algorithm used to compute the discrete damage distributions
     float_dmg_dist = param['float_dmg_dist']
     z = numpy.zeros((L, D - 1), F32 if float_dmg_dist else U32)
