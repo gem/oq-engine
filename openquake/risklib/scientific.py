@@ -1328,7 +1328,7 @@ class LossCurvesMapsBuilder(object):
                 - risk_investigation_time / return_periods)
 
     # used in post_risk
-    def build_curve(self, losses, rlzi):
+    def build_curve(self, losses, rlzi=0):
         return losses_by_period(
             losses, self.return_periods, self.num_events[rlzi], self.eff_time)
 

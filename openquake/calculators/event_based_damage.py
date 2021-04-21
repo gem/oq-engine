@@ -23,6 +23,7 @@ from openquake.baselib import hdf5, general, parallel
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
+from openquake.calculators.post_risk import get_loss_builder
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -40,7 +41,7 @@ def agg_damages(dstore, slc, monitor):
     :returns: dict (agg_id, loss_id) -> [dmg1, dmg2, ...]
     """
     with dstore:
-        df = dstore.read_df('agg_damage_table', ['agg_id', 'loss_id'], slc=slc)
+        df = dstore.read_df('agg_loss_table', ['agg_id', 'loss_id'], slc=slc)
         del df['event_id']
         agg = df.groupby(df.index).sum()
         dic = dict(zip(agg.index, agg.to_numpy()))
@@ -139,34 +140,43 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         :param acc: unused
         :param res: DataFrame with fields (event_id, agg_id, loss_id, dmg1 ...)
-        Combine the results and grows agg_damage_table with fields
+        Combine the results and grows agg_loss_table with fields
         (event_id, agg_id, loss_id) and (dmg_0, dmg_1, dmg_2, ...)
         """
         if res is None:
             raise MemoryError('You ran out of memory!')
-        with self.monitor('saving agg_damage_table', measuremem=True):
+        with self.monitor('saving agg_loss_table', measuremem=True):
             for name in res.columns:
-                dset = self.datastore['agg_damage_table/' + name]
+                dset = self.datastore['agg_loss_table/' + name]
                 hdf5.extend(dset, res[name].to_numpy())
         return 1
 
     def post_execute(self, dummy):
         oq = self.oqparam
-        len_table = len(self.datastore['agg_damage_table/event_id'])
-        self.datastore.swmr_on()
-        smap = parallel.Starmap(agg_damages, h5=self.datastore.hdf5)
-        ct = oq.concurrent_tasks or 1
-        for slc in general.split_in_slices(len_table, ct):
-            smap.submit((self.datastore, slc))
-        agg = smap.reduce()  # (agg_id, loss_id) -> cum_ddd
-        alias = {dc: i for i, dc in enumerate(self.crmodel.get_dmg_csq())}
+        builder = get_loss_builder(self.datastore)
+        alt_df = self.datastore.read_df('agg_loss_table')
+        del alt_df['event_id']
         dic = general.AccumDict(accum=[])
-        for (k, li), dmgs in agg.items():
-            dic['agg_id'].append(k)
-            dic['loss_id'].append(li)
-            for name, idx in alias.items():
-                dic[name].append(dmgs[idx])
+        columns = sorted(
+            set(alt_df.columns) - {'agg_id', 'loss_id', 'variance'})
+        periods = [0] + list(builder.return_periods)
+        for (agg_id, loss_id), df in alt_df.groupby(
+                [alt_df.agg_id, alt_df.loss_id]):
+            tots = [df[col].sum() * oq.ses_ratio for col in columns]
+            curves = [builder.build_curve(df[col].to_numpy())
+                      for col in columns]
+            for p, period in enumerate(periods):
+                dic['agg_id'].append(agg_id)
+                dic['loss_id'].append(loss_id)
+                dic['period'].append(period)
+                if p == 0:
+                    for col, tot in zip(columns, tots):
+                        dic[col].append(tot)
+                else:
+                    for col, curve in zip(columns, curves):
+                        dic[col].append(curve[p - 1])
         fix_dtype(dic, U16, ['agg_id'])
         fix_dtype(dic, U8, ['loss_id'])
-        fix_dtype(dic, F32, alias)
-        self.datastore.create_dframe('dmg_csq', dic.items())
+        fix_dtype(dic, U32, ['period'])
+        fix_dtype(dic, F32, columns)
+        self.datastore.create_dframe('aggcurves', dic.items())
