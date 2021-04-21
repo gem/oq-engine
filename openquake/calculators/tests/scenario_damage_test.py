@@ -312,7 +312,7 @@ aid
             df[col] = numpy.around(df[col])
         self.assertEqualFiles('expected/' + f1, gettemp(str(df)))
         df = self.calc.datastore.read_df(
-            'dmg_csq', ['agg_id', 'loss_id']).sort_index()
+            'aggcurves', ['agg_id', 'loss_id']).sort_index()
         for col in df.columns:
             df[col] = numpy.around(df[col])
         self.assertEqualFiles('expected/' + f2, gettemp(str(df)))
