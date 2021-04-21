@@ -466,6 +466,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         csq = {}  # cname -> values per event
         for byname, coeffs in self.consdict.items():
+            # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 cname, tagname = byname.split('_by_')
                 func = scientific.consequence[cname]

@@ -22,17 +22,25 @@ to numpy composite arrays.
 """
 
 from urllib.request import urlopen, pathname2url
+from urllib.error import URLError
+from collections import defaultdict
+
 import io
+import os
 import pathlib
 import logging
 import json
 import zipfile
+
+from shapely.geometry import Polygon
+import shapefile
 
 import numpy
 from openquake.baselib.general import CallableDict
 from openquake.baselib.node import node_from_xml
 
 
+NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
 SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
 F32 = numpy.float32
@@ -70,18 +78,10 @@ def urlextract(url, fname):
     with urlopen(url) as f:
         data = io.BytesIO(f.read())
     with zipfile.ZipFile(data) as z:
-        try:
-            return z.open(fname)
-        except KeyError:
-            # for instance the ShakeMap ci3031111 has inside a file
-            # data/verified_atlas2.0/reviewed/19920628115739/output/
-            # uncertainty.xml
-            # instead of just uncertainty.xml
-            zinfo = z.filelist[0]
+        for zinfo in z.filelist:
             if zinfo.filename.endswith(fname):
                 return z.open(zinfo)
-            else:
-                raise
+        raise FileNotFoundError
 
 
 def path2url(url):
@@ -94,13 +94,66 @@ def path2url(url):
         file = pathlib.Path(url)
         if file.is_file():
             return 'file:{}'.format(pathname2url(str(file.absolute())))
-        else:
-            raise FileNotFoundError(
-                'The following path could not be found: %s' % url)
+        raise FileNotFoundError(
+            'The following path could not be found: %s' % url)
     return url
 
 
 get_array = CallableDict()
+
+
+@get_array.add('shapefile')
+def get_array_shapefile(kind, fname):
+    """
+    Download and parse data saved as a shapefile.
+    :param fname: url or filepath for the shapefiles,
+    either a zip or the location of one of the files,
+    *.shp and *.dbf are necessary, *.prj and *.shx optional
+    """
+
+    fname = path2url(fname)
+
+    extensions = ['shp', 'dbf', 'prj', 'shx']
+    f_dict = {}
+
+    if fname.endswith('.zip'):
+        # files are saved in a zip
+        for ext in extensions:
+            try:
+                f_dict[ext] = urlextract(fname, '.' + ext)
+            except FileNotFoundError:
+                f_dict[ext] = None
+                logging.warning(NOT_FOUND, ext)
+    else:
+        # files are saved as plain files
+        fname = os.path.splitext(fname)[0]
+        for ext in extensions:
+            try:
+                f_dict[ext] = urlopen(fname + '.' + ext)
+            except URLError:
+                f_dict[ext] = None
+                logging.warning(NOT_FOUND, ext)
+
+    polygons = []
+    data = defaultdict(list)
+
+    try:
+        sf = shapefile.Reader(**f_dict)
+        fieldnames = [f[0].upper() for f in sf.fields[1:]]
+
+        for rec in sf.shapeRecords():
+            # save shapes as polygons
+            polygons.append(Polygon(rec.shape.points))
+            # create dict of lists from data
+            for k, v in zip(fieldnames, rec.record):
+                data[k].append(v)
+            # append bounding box for later use
+            data['bbox'].append(polygons[-1].bounds)
+    except shapefile.ShapefileException as e:
+        raise shapefile.ShapefileException(
+            'Necessary *.shp and/or *.dbf file not found.') from e
+
+    return get_shapefile_arrays(polygons, data)
 
 
 @get_array.add('usgs_xml')
@@ -118,8 +171,9 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
 
 
 @get_array.add('usgs_id')
-def get_array_usgs_id(kind, id):
-    url = SHAKEMAP_URL.format(id)
+def get_array_usgs_id(kind, usgs_id):
+
+    url = SHAKEMAP_URL.format(usgs_id)
     logging.info('Downloading %s', url)
     contents = json.loads(urlopen(url).read())[
         'properties']['products']['shakemap'][-1]['contents']
@@ -134,7 +188,31 @@ def get_array_usgs_id(kind, id):
 
 @get_array.add('file_npy')
 def get_array_file_npy(kind, fname):
+
     return numpy.load(fname)
+
+
+def get_shapefile_arrays(polygons, records):
+    dt = sorted((imt[1], F32) for key, imt in FIELDMAP.items()
+                if imt[0] == 'val' and key in records.keys())
+    bbox = [('minx', F32), ('miny', F32), ('maxx', F32), ('maxy', F32)]
+    dtlist = [('bbox', bbox), ('vs30', F32), ('val', dt), ('std', dt)]
+
+    data = numpy.zeros(len(polygons), dtlist)
+
+    for name, field in sorted([('bbox', bbox), *FIELDMAP.items()]):
+        if name not in records:
+            continue
+        if name == 'bbox':
+            data[name] = numpy.array(records[name], dtype=bbox)
+        elif isinstance(field, tuple):
+            # for ('val', IMT) or ('std', IMT)
+            data[field[0]][field[1]] = F32(records[name])
+        else:
+            # for lon, lat, vs30
+            data[field] = F32(records[name])
+
+    return polygons, data
 
 
 def _get_shakemap_array(xml_file):
