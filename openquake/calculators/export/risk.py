@@ -561,8 +561,8 @@ def export_aggcurves_csv(ekey, dstore):
     md = dstore.metadata
     md['risk_investigation_time'] = oq.risk_investigation_time
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
-    writer.save(df[df.period > 0], dest1, comment=md)
-    dmgcsq = df[df.period == 0]
-    del dmgcsq['period']
+    writer.save(df[df.return_period > 0], dest1, comment=md)
+    dmgcsq = df[df.return_period == 0]
+    del dmgcsq['return_period']
     writer.save(dmgcsq, dest2, comment=md)
     return [dest1, dest2]
