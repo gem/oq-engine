@@ -264,7 +264,7 @@ class Amplifier(object):
                              'from vs30_ref=%d over the tolerance of %d' %
                              (self.vs30_ref, vs30_tolerance))
 
-    def amplify_one(self, ampl_code, imt, poes):
+    def amplify_one(self, ampl_code, imt, poes, option=2):
         """
         :param ampl_code: code for the amplification function
         :param imt: an intensity measure type
@@ -277,8 +277,36 @@ class Amplifier(object):
         if ampl_code == b'' and len(self.ampcodes) == 1:
             ampl_code = self.ampcodes[0]
 
-        ialphas = self.ialphas[ampl_code, imt]
-        isigmas = self.isigmas[ampl_code, imt]
+        min_gm = numpy.amin(self.imtls[imt])
+        min_gm_soil = numpy.amin(self.amplevels)
+        max_gm = numpy.amax(self.imtls[imt])
+        max_gm_soil = numpy.amax(self.amplevels)
+        print('\n>>', min_gm, min_gm_soil, max_gm_soil, max_gm)
+
+        if option == 1:
+            stepl = abs(numpy.diff(numpy.log(self.imtls[imt][0:2])))
+            lows = 10.0**numpy.arange(numpy.log10(min_gm),
+                                    numpy.log10(min_gm_soil),
+                                    step=stepl)
+            stepu = numpy.diff(self.amplevels[-2:])
+            if numpy.log10(max_gm_soil)+stepu < numpy.log10(max_gm)+stepu:
+                upps = 10.0**numpy.arange(numpy.log10(max_gm_soil)+stepu,
+                                        numpy.log10(max_gm),
+                                        step=stepu)
+            else:
+                upps = []
+            allimls = numpy.array([list(lows)+list(self.amplevels)+list(upps)])
+            allimls = numpy.squeeze(allimls)
+        elif option == 2:
+            min_ratio = numpy.amin(self.amplevels[1:] / self.amplevels[:-1])*0.9
+            min_ratio = min(max(min_ratio, 1.05), 1.1)
+            allimls = [min_gm]
+            while allimls[-1] < max_gm:
+                allimls.append(allimls[-1]*min_ratio)
+            allimls = numpy.array(allimls)
+        elif option == 0:
+            allimls = self.imtls[imt]
+        print(len(allimls))
 
         A, G = len(self.amplevels), poes.shape[1]
         ampl_poes = numpy.zeros((A, G))
@@ -288,7 +316,27 @@ class Amplifier(object):
 
             # Compute the probability of occurrence of GM within a number of
             # intervals
-            p_occ = -numpy.diff(poes[:, g])
+            idx = numpy.nonzero(poes[:, g].flatten() > 1e-100)
+            simls = allimls[allimls <= numpy.amax(self.imtls[imt][idx])]
+            ipoes = numpy.interp(numpy.log10(simls),
+                                 numpy.log10(self.imtls[imt][idx]),
+                                 numpy.log10(poes[:, g].flatten()[idx]))
+            ipoes = 10.0**ipoes
+            p_occ = -numpy.diff(ipoes)
+
+            self.levels = simls
+            self._set_alpha_sigma(mag=None, dst=None)
+            ialphas = self.ialphas[ampl_code, imt]
+            isigmas = self.isigmas[ampl_code, imt]
+
+            if False:
+                import matplotlib.pyplot as plt
+                plt.plot(self.imtls[imt], poes[:, g], label='orig')
+                plt.plot(simls, ipoes)
+                plt.legend()
+                plt.xscale('log')
+                plt.yscale('log')
+                plt.show()
 
             for mid, p, a, s in zip(self.midlevels, p_occ, ialphas, isigmas):
                 #
@@ -310,7 +358,7 @@ class Amplifier(object):
                 ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
         return ampl_poes
 
-    def amplify(self, ampl_code, pcurves):
+    def amplify(self, ampl_code, pcurves, opt=1):
         """
         :param ampl_code: 2-letter code for the amplification function
         :param pcurves: a list of ProbabilityCurves containing PoEs
@@ -321,7 +369,7 @@ class Amplifier(object):
             lst = []
             for imt in self.imtls:
                 slc = self.imtls(imt)
-                new = self.amplify_one(ampl_code, imt, pcurve.array[slc])
+                new = self.amplify_one(ampl_code, imt, pcurve.array[slc], opt)
                 lst.append(new)
             out.append(ProbabilityCurve(numpy.concatenate(lst)))
         return out
