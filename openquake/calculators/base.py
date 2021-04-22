@@ -1217,8 +1217,10 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     agg_number[K] = assetcol['number'].sum()
     dstore['agg_number'] = agg_number
     lst.append('*total*')
-    dstore['agg_values'] = assetcol.get_agg_values(lossnames, aggby)
-    dstore.set_shape_descr('agg_values', aggregation=lst, loss_type=lossnames)
+    if assetcol.get_value_fields():
+        dstore['agg_values'] = assetcol.get_agg_values(lossnames, aggby)
+        dstore.set_shape_descr(
+            'agg_values', aggregation=lst, loss_type=lossnames)
     return aggkey if aggby else {}
 
 
