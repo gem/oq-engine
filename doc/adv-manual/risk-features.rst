@@ -207,15 +207,18 @@ instead of a `shakemap_id`::
          "uncertainty_url": "https://url.to/uncertainty.xml"
          }
 
-It is also possible to define absolute paths with`"file://absolute/path/to/file.xml"`, even if it is a BAD idea, since using absolute paths will make your calculation not portable across different machines.
+It is also possible to define absolute paths with
+``file://absolute/path/to/file.xml``, even if it is a BAD idea,
+since using absolute paths will make your calculation not portable
+across different machines.
 The files still have to be in the USGS ShakeMap format and either `*.xml` or 
 a `*.zip` file containing a valid xml file.
 
-Also starting from version 3.12 it is possible to use ESRI Shapefiles in the same
-manner as ShakeMaps. Polygons define areas with the same intensity levels and 
-assets/sites will be associated to a polygon if contained by the latter. Sites
-outside of a polygon will be discarded. Shapefile inputs can be specified similar
-to ShakeMaps::
+Also starting from version 3.12 it is possible to use ESRI Shapefiles
+in the same manner as ShakeMaps. Polygons define areas with the same
+intensity levels and assets/sites will be associated to a polygon if
+contained by the latter. Sites outside of a polygon will be
+discarded. Shapefile inputs can be specified similar to ShakeMaps::
 
    shakemap_uri = {
       "kind": "shapefile",

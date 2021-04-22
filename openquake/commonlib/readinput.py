@@ -1138,6 +1138,19 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     return good, total
 
 
+def get_shapefiles(dirname):
+    """
+    :param dirname: directory containing the shapefiles
+    :returns: list of shapefiles
+    """
+    out = []
+    extensions = ('.shp', '.dbf', '.prj', '.shx')
+    for fname in os.listdir(dirname):
+        if fname.endswith(extensions):
+            out.append(os.path.join(dirname, fname))
+    return out
+
+
 def get_input_files(oqparam, hazard=False):
     """
     :param oqparam: an OqParam instance
@@ -1145,6 +1158,18 @@ def get_input_files(oqparam, hazard=False):
     :returns: input path names in a specific order
     """
     fnames = set()  # files entering in the checksum
+    uri = oqparam.shakemap_uri
+    if isinstance(uri, dict) and uri:
+        if uri['kind'] == 'shapefile':
+            fname = os.path.join(oqparam.base_path, uri['fname'])
+            fnames.update(get_shapefiles(os.path.dirname(fname)))
+        else:  # xml local files
+            for key, val in uri.items():
+                if key == 'fname' or (
+                        key.endswith('_url') and os.path.exists(val)):
+                    fname = os.path.join(oqparam.base_path, val)
+                    uri[key] = fname
+                    fnames.add(fname)
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
         if hazard and key not in ('source_model_logic_tree',
