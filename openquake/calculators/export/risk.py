@@ -55,16 +55,24 @@ def tag2idx(tags):
     return {tag: i for i, tag in enumerate(tags)}
 
 
+def get_agg_tags(dstore, aggregate_by):
+    agg_tags = {}
+    if aggregate_by:
+        agg_keys = dstore['agg_keys'][:]
+        for tagname in aggregate_by:
+            agg_tags[tagname] = numpy.concatenate(
+                [agg_keys[tagname], ['*total*']])
+    else:
+        agg_tags = {}
+    return agg_tags
+
+
 # this is used by event_based_risk and ebrisk
 @export.add(('agg_curves-rlzs', 'csv'), ('agg_curves-stats', 'csv'))
 def export_agg_curve_rlzs(ekey, dstore):
     oq = dstore['oqparam']
     lnames = numpy.array(oq.loss_names)
-    if oq.aggregate_by:
-        agg_keys = dstore['agg_keys'][:]
-    agg_tags = {}
-    for tagname in oq.aggregate_by:
-        agg_tags[tagname] = numpy.concatenate([agg_keys[tagname], ['*total*']])
+    agg_tags = get_agg_tags(dstore, oq.aggregate_by)
     aggvalue = dstore['agg_values'][()]  # shape (K+1, L)
     md = dstore.metadata
     md['risk_investigation_time'] = oq.risk_investigation_time
@@ -530,3 +538,28 @@ def export_agg_risk_csv(ekey, dstore):
     dset = dstore['agg_risk']
     writer.save(dset[()], fname, dset.dtype.names)
     return [fname]
+
+
+@export.add(('aggcurves', 'csv'))
+def export_aggcurves_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    oq = dstore['oqparam']
+    lossnames = numpy.array(oq.loss_names)
+    aggtags = get_agg_tags(dstore, oq.aggregate_by)
+    df = dstore.read_df('aggcurves')
+    for tagname, tags in aggtags.items():
+        df[tagname] = tags[df.agg_id]
+    del df['agg_id']
+    df['loss_type'] = lossnames[df.loss_id.to_numpy()]
+    del df['loss_id']
+    dest1 = dstore.export_path('%s.%s' % ekey)
+    dest2 = dstore.export_path('dmgcsq.%s' % ekey[1])
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    writer.save(df[df.period > 0], dest1)
+    dmgcsq = df[df.period == 0]
+    del dmgcsq['period']
+    writer.save(dmgcsq, dest2)
+    return [dest1, dest2]
