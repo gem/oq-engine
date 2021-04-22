@@ -84,9 +84,12 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     """
     oq = dstore['oqparam']
     weights = dstore['weights'][()]
-    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+    try:
+        eff_time = dstore['gmf_data'].attrs['effective_time']
+    except KeyError:
+        eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
+            len(weights) if oq.collect_rlzs else 1)
     if oq.collect_rlzs:
-        eff_time *= len(weights)
         num_events = numpy.array([len(dstore['events'])])
         weights = numpy.ones(1)
     else:
