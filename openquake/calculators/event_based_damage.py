@@ -179,4 +179,4 @@ class DamageCalculator(EventBasedRiskCalculator):
         fix_dtype(dic, U8, ['loss_id'])
         fix_dtype(dic, U32, ['period'])
         fix_dtype(dic, F32, columns)
-        self.datastore.create_dframe('aggcurves', dic.items())
+        self.datastore.create_df('aggcurves', dic.items())

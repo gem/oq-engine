@@ -362,7 +362,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 else:
                     dt = F32
                 descr.append((param, dt))
-            self.datastore.create_dframe('rup', descr, 'gzip')
+            self.datastore.create_df('rup', descr, 'gzip')
         self.by_task = {}  # task_no => src_ids
         self.maxradius = 0
         self.Ns = len(self.csm.source_info)

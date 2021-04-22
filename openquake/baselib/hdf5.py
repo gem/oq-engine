@@ -29,7 +29,7 @@ import toml
 import pandas
 import numpy
 import h5py
-from openquake.baselib import InvalidFile
+from openquake.baselib import InvalidFile, general
 from openquake.baselib.python3compat import encode, decode
 
 vbytes = h5py.special_dtype(vlen=bytes)
@@ -185,6 +185,89 @@ class Group(collections.abc.Mapping):
         return len(self.dic)
 
 
+def sel(dset, filterdict):
+    """
+    Select a dataset with shape_descr. For instance
+    dstore.sel('hcurves', imt='PGA', sid=2)
+    """
+    dic = get_shape_descr(dset.attrs['json'])
+    lst = []
+    for dim in dic['shape_descr']:
+        if dim in filterdict:
+            val = filterdict[dim]
+            values = dic[dim]
+            if isinstance(val, INT) and val < 0:
+                # for instance sid=-1 means the last sid
+                idx = values[val]
+            else:
+                idx = values.index(val)
+            lst.append(slice(idx, idx + 1))
+        else:
+            lst.append(slice(None))
+    return dset[tuple(lst)]
+
+
+def dset2df(dset, indexfield, filterdict):
+    """
+    Converts an HDF5 dataset with an attribute shape_descr into a Pandas
+    dataframe. NB: this is very slow for large datasets.
+    """
+    arr = sel(dset, filterdict)
+    dic = get_shape_descr(dset.attrs['json'])
+    tags = []
+    idxs = []
+    for dim in dic['shape_descr']:
+        values = dic[dim]
+        if dim in filterdict:
+            val = filterdict[dim]
+            idx = values.index(val)
+            idxs.append([idx])
+            values = [val]
+        elif hasattr(values, 'stop'):  # a range object already
+            idxs.append(values)
+        else:
+            idxs.append(range(len(values)))
+        tags.append(values)
+    acc = general.AccumDict(accum=[])
+    index = []
+    for idx, vals in zip(itertools.product(*idxs), itertools.product(*tags)):
+        for field, val in zip(dic['shape_descr'], vals):
+            if field == indexfield:
+                index.append(val)
+            else:
+                acc[field].append(val)
+        acc['value'].append(arr[idx])
+    return pandas.DataFrame(acc, index or None)
+
+
+def extract_cols(datagrp, sel, slc, columns):
+    """
+    :param datagrp: something like and HDF5 data group
+    :param sel: dictionary column name -> value specifying a selection
+    :param slc: a slice object specifying the rows considered
+    :param columns: the full list of column names
+    :returns: a dictionary col -> array of values
+    """
+    first = columns[0]
+    nrows = len(datagrp[first])
+    if slc.start is None and slc.stop is None:  # split in slices
+        slcs = general.gen_slices(0, nrows, MAX_ROWS)
+    else:
+        slcs = [slc]
+    acc = general.AccumDict(accum=[])  # col -> arrays
+    for slc in slcs:
+        ok = slice(None)
+        dic = {col: datagrp[col][slc] for col in sel}
+        for col in sel:
+            if isinstance(ok, slice):  # first selection
+                ok = dic[col] == sel[col]
+            else:  # other selections
+                ok &= dic[col] == sel[col]
+        for col in columns:
+            acc[col].append(datagrp[col][slc][ok])
+    return {k: numpy.concatenate(vs) for k, vs in acc.items()}
+
+
 class File(h5py.File):
     """
     Subclass of :class:`h5py.File` able to store and retrieve objects
@@ -220,6 +303,82 @@ class File(h5py.File):
         self = cls(path, 'w')
         self.path = path
         return self
+
+    def create_df(self, key, nametypes, compression=None, **kw):
+        """
+        Create a HDF5 datagroup readable as a pandas DataFrame
+
+        :param key:
+            name of the dataset
+        :param nametypes:
+            list of pairs (name, dtype) or (name, array) or DataFrame
+        :param compression:
+            the kind of HDF5 compression to use
+        :param kw:
+            extra attributes to store
+        """
+        if isinstance(nametypes, pandas.DataFrame):
+            nametypes = {name: nametypes[name].to_numpy()
+                         for name in nametypes.columns}.items()
+        names = []
+        for name, value in nametypes:
+            is_array = isinstance(value, numpy.ndarray)
+            if is_array and isinstance(value[0], str):
+                dt = vstr
+            elif is_array:
+                dt = value.dtype
+            else:
+                dt = value
+            dset = create(self, f'{key}/{name}', dt, (None,), compression)
+            if is_array:
+                extend(dset, value)
+            names.append(name)
+        attrs = self[key].attrs
+        attrs['__pdcolumns__'] = ' '.join(names)
+        for k, v in kw.items():
+            attrs[k] = v
+
+    def read_df(self, key, index=None, sel=(), slc=slice(None)):
+        """
+        :param key: name of the structured dataset
+        :param index: pandas index (or multi-index), possibly None
+        :param sel: dictionary used to select subsets of the dataset
+        :param slc: slice object to extract a slice of the dataset
+        :returns: pandas DataFrame associated to the dataset
+        """
+        dset = self.getitem(key)
+        if len(dset) == 0:
+            raise self.EmptyDataset('Dataset %s is empty' % key)
+        elif 'json' in dset.attrs:
+            return dset2df(dset, index, sel)
+        elif '__pdcolumns__' in dset.attrs:
+            columns = dset.attrs['__pdcolumns__'].split()
+            dic = extract_cols(dset, sel, slc, columns)
+            if index is None:
+                return pandas.DataFrame(dic)
+            else:
+                return pandas.DataFrame(dic).set_index(index)
+
+        dtlist = []
+        for name in dset.dtype.names:
+            dt = dset.dtype[name]
+            if dt.shape:  # vector field
+                templ = name + '_%d' * len(dt.shape)
+                for i, _ in numpy.ndenumerate(numpy.zeros(dt.shape)):
+                    dtlist.append((templ % i, dt.base))
+            else:  # scalar field
+                dtlist.append((name, dt))
+        data = numpy.zeros(len(dset), dtlist)
+        for name in dset.dtype.names:
+            arr = dset[name]
+            dt = dset.dtype[name]
+            if dt.shape:  # vector field
+                templ = name + '_%d' * len(dt.shape)
+                for i, _ in numpy.ndenumerate(numpy.zeros(dt.shape)):
+                    data[templ % i] = arr[(slice(None),) + i]
+            else:  # scalar field
+                data[name] = arr
+        return pandas.DataFrame.from_records(data, index=index)
 
     def save_vlen(self, key, data):  # used in SourceWriterTestCase
         """

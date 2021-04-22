@@ -179,7 +179,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.datastore['events']['rlz_id'], minlength=self.R)
         if (ne == 0).any():
             logging.warning('There are realizations with zero events')
-        self.datastore.create_dframe(
+        self.datastore.create_df(
             'dd_data', self.param['asset_damage_dt'], 'gzip')
         self.riskinputs = self.build_riskinputs('gmf')
 
