@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import numpy
 import pandas
 
@@ -153,6 +154,7 @@ class DamageCalculator(EventBasedRiskCalculator):
 
     def post_execute(self, dummy):
         oq = self.oqparam
+        logging.info('Building aggregated curves')
         builder = get_loss_builder(self.datastore)
         alt_df = self.datastore.read_df('agg_loss_table')
         del alt_df['event_id']

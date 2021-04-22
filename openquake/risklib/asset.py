@@ -489,6 +489,12 @@ class AssetCollection(object):
                 aval[array['ordinal'], lti] = array['value-' + lt]
         return aval
 
+    def get_value_fields(self):
+        """
+        :returns: list of fields starting with value-
+        """
+        return [f for f in self.array.dtype.names if f.startswith('value-')]
+
     def get_agg_values(self, loss_names, tagnames):
         """
         :param loss_names:
