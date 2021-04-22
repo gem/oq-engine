@@ -1158,9 +1158,14 @@ def get_input_files(oqparam, hazard=False):
     :returns: input path names in a specific order
     """
     fnames = set()  # files entering in the checksum
-    for key, fname in oqparam.shakemap_uri.items():
-        if key == 'fname':
-            fnames.update(get_shapefiles(os.path.dirname(fname)))
+    uri = oqparam.shakemap_uri
+    if isinstance(uri, dict) and uri:
+        if uri['kind'] == 'shapefile':
+            fnames.update(get_shapefiles(os.path.dirname(uri['fname'])))
+        else:  # xml local files
+            for key, val in uri.items():
+                if key.endswith('_url') and os.path.exists(val):
+                    fnames.add(val)
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
         if hazard and key not in ('source_model_logic_tree',
