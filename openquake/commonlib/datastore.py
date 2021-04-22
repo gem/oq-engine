@@ -448,7 +448,9 @@ class DataStore(collections.abc.MutableMapping):
         :param slc: slice object to extract a slice of the dataset
         :returns: pandas DataFrame associated to the dataset
         """
-        return self.hdf5.read_df(key, index, sel, slc)
+        if key in self.hdf5:
+            return self.hdf5.read_df(key, index, sel, slc)
+        return self.parent.read_df(key, index, sel, slc)
 
     def read_unique(self, key, field):
         """
