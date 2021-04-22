@@ -361,9 +361,9 @@ def export_dmg_by_event(ekey, dstore):
             arr = numpy.zeros(len(ok), dt_list)
             arr['event_id'] = events['id'][ok]
             arr['rlz_id'] = rlz_id
-            for l, loss_type in enumerate(damage_dt.names):
+            for li, loss_type in enumerate(damage_dt.names):
                 for d, dmg_state in enumerate(damage_dt[loss_type].names):
-                    arr[loss_type][dmg_state] = dmg_by_event[ok, l, d]
+                    arr[loss_type][dmg_state] = dmg_by_event[ok, li, d]
             writer.save_block(arr, dest)
     return [fname]
 
@@ -558,8 +558,11 @@ def export_aggcurves_csv(ekey, dstore):
     dest1 = dstore.export_path('%s.%s' % ekey)
     dest2 = dstore.export_path('dmgcsq.%s' % ekey[1])
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    writer.save(df[df.period > 0], dest1)
+    md = dstore.metadata
+    md['risk_investigation_time'] = oq.risk_investigation_time
+    md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
+    writer.save(df[df.period > 0], dest1, comment=md)
     dmgcsq = df[df.period == 0]
     del dmgcsq['period']
-    writer.save(dmgcsq, dest2)
+    writer.save(dmgcsq, dest2, comment=md)
     return [dest1, dest2]
