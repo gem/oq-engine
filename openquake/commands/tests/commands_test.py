@@ -42,6 +42,7 @@ from openquake.qa_tests_data.event_based import (
     case_2, case_5, case_16, case_21)
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_eb)
+from openquake.qa_tests_data.scenario_risk import case_shapefile
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server import manage, dbapi, dbserver
 from openquake.server.tests import data as test_data
@@ -399,6 +400,19 @@ class ZipTestCase(unittest.TestCase):
         dtemp = os.path.join(tempfile.mkdtemp(), 'inp')
         shutil.copytree(os.path.dirname(case_21.__file__), dtemp)
         sap.runline(f'openquake.commands zip {dtemp}')
+        shutil.rmtree(dtemp)
+
+    def test_shapefile(self):
+        # zipping shapefiles used for ShakeMaps
+        dtemp = os.path.join(tempfile.mkdtemp(), 'inp')
+        shutil.copytree(os.path.dirname(case_shapefile.__file__), dtemp)
+        sap.runline(f'openquake.commands zip {dtemp}')
+        job_zip = os.path.join(dtemp, 'job.zip')
+        names = sorted(zipfile.ZipFile(job_zip).namelist())
+        self.assertIn('shp/output.dbf', names)
+        self.assertIn('shp/output.prj', names)
+        self.assertIn('shp/output.shp', names)
+        self.assertIn('shp/output.shx', names)
         shutil.rmtree(dtemp)
 
 
