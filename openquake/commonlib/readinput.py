@@ -1165,10 +1165,11 @@ def get_input_files(oqparam, hazard=False):
             fnames.update(get_shapefiles(os.path.dirname(fname)))
         else:  # xml local files
             for key, val in uri.items():
-                if key == 'fname':
-                    fnames.add(val)
-                elif key.endswith('_url') and os.path.exists(val):
-                    fnames.add(val)
+                if key == 'fname' or (
+                        key.endswith('_url') and os.path.exists(val)):
+                    fname = os.path.join(oqparam.base_path, val)
+                    uri[key] = fname
+                    fnames.add(fname)
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
         if hazard and key not in ('source_model_logic_tree',
