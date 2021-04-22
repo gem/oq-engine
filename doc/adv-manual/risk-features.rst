@@ -207,7 +207,7 @@ instead of a `shakemap_id`::
          "uncertainty_url": "https://url.to/uncertainty.xml"
          }
 
-It is also possible to define absolute paths with `"file://absolute/path/to/file.xml"`.
+It is also possible to define absolute paths with`"file://absolute/path/to/file.xml"`, even if it is a BAD idea, since using absolute paths will make your calculation not portable across different machines.
 The files still have to be in the USGS ShakeMap format and either `*.xml` or 
 a `*.zip` file containing a valid xml file.
 
