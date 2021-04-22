@@ -406,7 +406,7 @@ class ZipTestCase(unittest.TestCase):
         # zipping shapefiles used for ShakeMaps
         dtemp = os.path.join(tempfile.mkdtemp(), 'inp')
         shutil.copytree(os.path.dirname(case_shapefile.__file__), dtemp)
-        sap.runline(f'openquake.commands zip {dtemp}')
+        sap.runline(f'openquake.commands zip {dtemp}/job.ini {dtemp}/job.zip')
         job_zip = os.path.join(dtemp, 'job.zip')
         names = sorted(zipfile.ZipFile(job_zip).namelist())
         self.assertIn('shp/output.dbf', names)

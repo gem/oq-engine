@@ -1161,7 +1161,8 @@ def get_input_files(oqparam, hazard=False):
     uri = oqparam.shakemap_uri
     if isinstance(uri, dict) and uri:
         if uri['kind'] == 'shapefile':
-            fnames.update(get_shapefiles(os.path.dirname(uri['fname'])))
+            fname = os.path.join(oqparam.base_path, uri['fname'])
+            fnames.update(get_shapefiles(os.path.dirname(fname)))
         else:  # xml local files
             for key, val in uri.items():
                 if key == 'fname':
