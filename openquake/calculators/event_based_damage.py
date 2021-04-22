@@ -170,7 +170,7 @@ class DamageCalculator(EventBasedRiskCalculator):
             for p, period in enumerate(periods):
                 dic['agg_id'].append(agg_id)
                 dic['loss_id'].append(loss_id)
-                dic['period'].append(period)
+                dic['return_period'].append(period)
                 if p == 0:
                     for col, tot in zip(columns, tots):
                         dic[col].append(tot)
@@ -179,6 +179,7 @@ class DamageCalculator(EventBasedRiskCalculator):
                         dic[col].append(curve[p - 1])
         fix_dtype(dic, U16, ['agg_id'])
         fix_dtype(dic, U8, ['loss_id'])
-        fix_dtype(dic, U32, ['period'])
+        fix_dtype(dic, U32, ['return_period'])
         fix_dtype(dic, F32, columns)
-        self.datastore.create_df('aggcurves', dic.items())
+        ls = ' '.join(self.crmodel.damage_states[1:])
+        self.datastore.create_df('aggcurves', dic.items(), limit_states=ls)

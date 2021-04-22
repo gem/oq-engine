@@ -84,9 +84,17 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     """
     oq = dstore['oqparam']
     weights = dstore['weights'][()]
-    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+    try:
+        haz_time = dstore['gmf_data'].attrs['effective_time']
+    except KeyError:
+        haz_time = None
+    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
+        len(weights) if oq.collect_rlzs else 1)
     if oq.collect_rlzs:
-        eff_time *= len(weights)
+        if haz_time and haz_time != eff_time:
+            raise ValueError('The effective time stored in gmf_data is %d, '
+                             'which is inconsistent with %d' %
+                             (haz_time, eff_time))
         num_events = numpy.array([len(dstore['events'])])
         weights = numpy.ones(1)
     else:
