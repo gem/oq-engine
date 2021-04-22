@@ -94,7 +94,7 @@ class ShakemapConverterTestCase(unittest.TestCase):
               (0.8146, 0.52, 0.0, 0.0, 0.0))], dtype=dtlist)
 
         _, data = get_array_shapefile(
-            'shapefile', os.path.join(CDIR, 'shapefiles_test/output.shp'))
+            'shapefile', CDIR, 'shapefiles_test/output.shp')
         aae(test_data['val']['PGA'], data['val']['PGA'])
         aae(test_data['bbox']['minx'], data['bbox']['minx'])
 
