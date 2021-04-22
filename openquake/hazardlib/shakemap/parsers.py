@@ -110,7 +110,6 @@ def get_array_shapefile(kind, fname):
     either a zip or the location of one of the files,
     *.shp and *.dbf are necessary, *.prj and *.shx optional
     """
-
     fname = path2url(fname)
 
     extensions = ['shp', 'dbf', 'prj', 'shx']
@@ -158,7 +157,9 @@ def get_array_shapefile(kind, fname):
 
 @get_array.add('usgs_xml')
 def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
-
+    """
+    Read a ShakeMap in XML format from the local file system
+    """
     grid_url = path2url(grid_url)
 
     if uncertainty_url is None:
@@ -172,7 +173,9 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
 
 @get_array.add('usgs_id')
 def get_array_usgs_id(kind, usgs_id):
-
+    """
+    Download a ShakeMap from the USGS site
+    """
     url = SHAKEMAP_URL.format(usgs_id)
     logging.info('Downloading %s', url)
     contents = json.loads(urlopen(url).read())[
@@ -188,7 +191,9 @@ def get_array_usgs_id(kind, usgs_id):
 
 @get_array.add('file_npy')
 def get_array_file_npy(kind, fname):
-
+    """
+    Read a ShakeMap in .npy format from the local file system
+    """
     return numpy.load(fname)
 
 

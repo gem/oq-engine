@@ -1164,7 +1164,9 @@ def get_input_files(oqparam, hazard=False):
             fnames.update(get_shapefiles(os.path.dirname(uri['fname'])))
         else:  # xml local files
             for key, val in uri.items():
-                if key.endswith('_url') and os.path.exists(val):
+                if key == 'fname':
+                    fnames.add(val)
+                elif key.endswith('_url') and os.path.exists(val):
                     fnames.add(val)
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]

@@ -97,9 +97,10 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
     oq = oq or readinput.get_oqparam(job_ini, validate=False)
     if risk_ini:
         risk_ini = os.path.normpath(os.path.abspath(risk_ini))
-        risk_inputs = readinput.get_params(risk_ini)['inputs']
-        del risk_inputs['job_ini']
-        oq.inputs.update(risk_inputs)
+        oqr = readinput.get_oqparam(risk_ini)
+        del oqr.inputs['job_ini']
+        oq.inputs.update(oqr.inputs)
+        oq.shakemap_uri.update(oqr.shakemap_uri)
     files = readinput.get_input_files(oq)
     if risk_ini:
         files = [risk_ini] + files
