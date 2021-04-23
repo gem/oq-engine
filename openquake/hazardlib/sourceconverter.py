@@ -632,6 +632,47 @@ class RuptureConverter(object):
         return coll
 
 
+class FaultSectionConverter(RuptureConverter):
+
+    def __init__(self, rupture_mesh_spacing=5.0):
+        self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.sections = []
+
+    def convert_node(self, node):
+        """
+        Convert the given source node into a hazardlib rupture surface
+
+        :param node: a node representing a section
+        """
+        obj = getattr(self, 'convert_' + striptag(node.tag))(node)
+        return obj
+
+    def convert_faultSectionCollection(self, node):
+        return [self.convert_node(subnode) for subnode in node]
+
+    def convert_section(self, node):
+        types = set()
+        with context(self.fname, node):
+            if hasattr(node, 'planarSurface'):
+                surfaces = list(node.getnodes('planarSurface'))
+                for s in surfaces:
+                    assert s.tag.endswith('planarSurface')
+                types = types.union('planarSurface')
+            elif hasattr(node, 'kiteSurface'):
+                surfaces = list(node.getnodes('kiteSurface'))
+                for s in surfaces:
+                    assert s.tag.endswith('kiteSurface')
+                types = types.union('kiteSurface')
+            else:
+                raise ValueError('Only planarSurfaces or kiteSurfaces ' +
+                                 'supported')
+            if len(list(types)) > 1:
+                raise ValueError('Please use only one surface geometry type' +
+                                 ' for the definition of sections')
+
+        return self.convert_surfaces(surfaces)
+
+
 class SourceConverter(RuptureConverter):
     """
     Convert sources from valid nodes into Hazardlib objects.

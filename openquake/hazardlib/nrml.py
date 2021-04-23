@@ -175,6 +175,11 @@ def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
 
 
+@node_to_obj.add(('faultSectionCollection', 'nrml/0.5'))
+def get_section_collection(node, fname, converter):
+    return converter.convert_node(node)
+
+
 default = sourceconverter.SourceConverter(area_source_discretization=10,
                                           rupture_mesh_spacing=10)
 
