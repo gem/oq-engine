@@ -540,6 +540,16 @@ def export_agg_risk_csv(ekey, dstore):
     return [fname]
 
 
+def rename(df, damage_states):
+    cols = {}
+    for col in df.columns:
+        if col.startswith('dmg_'):
+            cols[col] = damage_states[int(col[4:])]
+        else:
+            cols[col] = col
+    return df.rename(columns=cols)
+
+
 @export.add(('aggcurves', 'csv'))
 def export_aggcurves_csv(ekey, dstore):
     """
@@ -566,7 +576,9 @@ def export_aggcurves_csv(ekey, dstore):
     md['effective_time'] = (
         oq.investigation_time * oq.ses_per_logic_tree_path * R)
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
-    writer.save(df[df.return_period > 0], dest1, comment=md)
+    dmg_states = ['nodamage'] + md['limit_states'].split()
+    writer.save(rename(df[df.return_period > 0], dmg_states),
+                dest1, comment=md)
 
     # aggregate damages/consequences
     dmgcsq = df[df.return_period == 0]  # length K+1
@@ -576,5 +588,5 @@ def export_aggcurves_csv(ekey, dstore):
     dmgcsq.insert(0, 'dmg_0', dmg0)
     dmgcsq.insert(0, 'number', agg_number)
     del dmgcsq['return_period']
-    writer.save(dmgcsq, dest2, comment=md)
+    writer.save(rename(dmgcsq, dmg_states), dest2, comment=md)
     return [dest1, dest2]
