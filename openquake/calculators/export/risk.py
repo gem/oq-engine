@@ -547,6 +547,8 @@ def export_aggcurves_csv(ekey, dstore):
     :param dstore: datastore object
     """
     oq = dstore['oqparam']
+    E = len(dstore['events'])
+    R = len(dstore['weights'])
     lossnames = numpy.array(oq.loss_names)
     aggtags = get_agg_tags(dstore, oq.aggregate_by)
     df = dstore.read_df('aggcurves')
@@ -560,9 +562,19 @@ def export_aggcurves_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
     md['risk_investigation_time'] = oq.risk_investigation_time
+    md['num_events'] = E
+    md['effective_time'] = (
+        oq.investigation_time * oq.ses_per_logic_tree_path * R)
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
     writer.save(df[df.return_period > 0], dest1, comment=md)
-    dmgcsq = df[df.return_period == 0]
+
+    # aggregate damages/consequences
+    dmgcsq = df[df.return_period == 0]  # length K+1
+    agg_number = dstore['agg_number'][:]
+    dmgs = [col for col in df.columns if col.startswith('dmg_')]
+    dmg0 = agg_number * E * oq.time_ratio - dmgcsq[dmgs].to_numpy().sum(axis=1)
+    dmgcsq.insert(0, 'dmg_0', dmg0)
+    dmgcsq.insert(0, 'number', agg_number)
     del dmgcsq['return_period']
     writer.save(dmgcsq, dest2, comment=md)
     return [dest1, dest2]

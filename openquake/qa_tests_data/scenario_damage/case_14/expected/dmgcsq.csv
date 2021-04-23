@@ -1,8 +1,8 @@
-#,,,,,,"generated_by='OpenQuake engine 3.12.0-git81f55788b7', start_date='2021-04-22T12:21:33', checksum=3590982611, risk_investigation_time=1.0, limit_states='slight moderate extreme complete'"
-dmg_1,dmg_2,dmg_3,dmg_4,losses,NAME_1,loss_type
-9.25084E+02,1.11204E+03,6.68130E+02,8.37389E+02,1.83708E+07,Mid-Western,structural
-6.10576E+02,7.25499E+02,4.26165E+02,4.53789E+02,1.08730E+07,Far-Western,structural
-1.92029E+03,2.31318E+03,1.38102E+03,1.66143E+03,3.72398E+07,West,structural
-1.71973E+03,2.09240E+03,1.25904E+03,1.40445E+03,3.26286E+07,East,structural
-4.11824E+03,5.15021E+03,3.15916E+03,3.72685E+03,8.37305E+07,Central,structural
-9.29392E+03,1.13933E+04,6.89352E+03,8.08390E+03,1.82843E+08,*total*,structural
+#,,,,,,,,"generated_by='OpenQuake engine 3.12.0-git4ef54e56f8', start_date='2021-04-23T05:05:46', checksum=3590982611, risk_investigation_time=1.0, num_events=481, effective_time=500.0, limit_states='slight moderate extreme complete'"
+number,dmg_0,dmg_1,dmg_2,dmg_3,dmg_4,losses,NAME_1,loss_type
+728432,6.97209E+05,9.25084E+02,1.11204E+03,6.68130E+02,8.37389E+02,1.83708E+07,Mid-Western,structural
+497029,4.75926E+05,6.10576E+02,7.25499E+02,4.26165E+02,4.53789E+02,1.08730E+07,Far-Western,structural
+1057610,1.01014E+06,1.92029E+03,2.31318E+03,1.38102E+03,1.66143E+03,3.72398E+07,West,structural
+1222419,1.16949E+06,1.71973E+03,2.09240E+03,1.25904E+03,1.40445E+03,3.26286E+07,East,structural
+1876271,1.78882E+06,4.11824E+03,5.15021E+03,3.15916E+03,3.72685E+03,8.37305E+07,Central,structural
+5381761,5.14159E+06,9.29392E+03,1.13933E+04,6.89352E+03,8.08390E+03,1.82843E+08,*total*,structural
