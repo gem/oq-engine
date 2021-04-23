@@ -1053,6 +1053,19 @@ class SourceConverter(RuptureConverter):
         return convert_nonParametricSeismicSource(self.fname, node,
                                                   self.rupture_mesh_spacing)
 
+    def convert_multiFaultSeismicSource(self, node):
+        """
+        Convert the given node into a multi fault source object.
+
+        :param node:
+            a node with tag multiFaultSource
+        :returns:
+            a :class:`openquake.hazardlib.source.multiFaultSource`
+            instance
+        """
+        return convert_nonParametricSeismicSource(self.fname, node,
+                                                  self.rupture_mesh_spacing)
+
     def convert_sourceModel(self, node):
         return [self.convert_node(subnode) for subnode in node]
 

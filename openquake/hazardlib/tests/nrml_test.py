@@ -16,7 +16,8 @@
 import os
 import unittest
 from openquake.hazardlib.nrml import to_python
-from openquake.hazardlib.sourceconverter import FaultSectionConverter
+from openquake.hazardlib.sourceconverter import (FaultSectionConverter,
+                                                 SourceConverter)
 from openquake.hazardlib.geo import Point
 
 datadir = os.path.join(os.path.dirname(__file__), 'data', 'sections')
@@ -33,10 +34,14 @@ class KiteFaultSectionsTestCase(unittest.TestCase):
         sec = to_python(self.fname, conv)
         expected = [Point(11, 45, 0), Point(11, 45.5, 10)]
         print(sec[1].profiles[0].points)
+        # Check geometry info
         self.assertEqual(expected[0], sec[1].profiles[0].points[0])
         self.assertEqual(expected[1], sec[1].profiles[0].points[1])
+        # Check section ID
+        self.assertEqual(sec[1].id, 's1')
 
-class KiteFaultSectionsTestCase(unittest.TestCase):
+
+class KiteFaultSectionsErrorTestCase(unittest.TestCase):
 
     def setUp(self):
         fname = 'sections_mix.xml'
@@ -45,3 +50,14 @@ class KiteFaultSectionsTestCase(unittest.TestCase):
     def test_load_error(self):
         conv = FaultSectionConverter()
         self.assertRaises(ValueError, to_python, self.fname, conv)
+
+
+class MultiFaultSourceModelTestCase(unittest.TestCase):
+
+    def setUp(self):
+        fname = 'sources.xml'
+        self.fname = os.path.join(datadir, fname)
+
+    def test_load_error(self):
+        conv = SourceConverter()
+        ssm = to_python(self.fname, conv)
