@@ -126,14 +126,14 @@ def input_checks(catalogue, config, completeness):
         config = {'reference_magnitude': None,
                   'magnitude_interval': 0.1}
     else:
-        if (not 'reference_magnitude' in config.keys()) or\
+        if ('reference_magnitude' not in config.keys()) or\
                 (config['reference_magnitude'] is None):
             ref_mag = 0.
             config['reference_magnitude'] = None
         else:
             ref_mag = config['reference_magnitude']
 
-        if (not 'magnitude_interval' in config.keys()) or \
+        if ('magnitude_interval' not in config.keys()) or \
                 not config['magnitude_interval']:
             dmag = 0.1
         else:
@@ -198,7 +198,7 @@ def downsample_completeness_table(comp_table, sample_width=0.1, mmax=None):
     new_comp_table = []
     for i in range(comp_table.shape[0] - 1):
         mvals = np.arange(comp_table[i, 1],
-                          comp_table[i + 1, 1], d_m)  # FIXME: d_m is undefined!
+                          comp_table[i + 1, 1], d_m)  # FIXME: d_m not defined!
         new_comp_table.extend([[comp_table[i, 0], mval] for mval in mvals])
     # If mmax > last magnitude in completeness table
     if mmax and (mmax > comp_table[-1, 1]):
@@ -257,6 +257,10 @@ def get_completeness_counts(catalogue, completeness, d_m):
             sel_mags,
             bins=m_bins)[0].astype(float)
         count_years[m_idx[:-1]] += float(nyrs)
+
+    if sum(count_rates) < 1e-20:
+        return None, None, None
+
     # Removes any zero rates greater than
     last_loc = np.where(count_rates > 0)[0][-1]
     n_obs = count_rates[:(last_loc + 1)]
