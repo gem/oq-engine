@@ -24,8 +24,8 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, general
-from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.contexts import read_ctxs, RuptureContext
+from openquake.hazardlib.contexts import (
+    read_ctxs, read_cmakers, RuptureContext)
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.calculators import base, getters
 
@@ -33,7 +33,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 
 
-def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
+def conditional_spectrum(dstore, slc, cmaker, monitor):
     """
     :param dstore:
         a DataStore instance
@@ -41,8 +41,6 @@ def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
         a slice of ruptures
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param grp_id:
-        the group of ruptures currently considered
     :param monitor:
         monitor of the currently running job
     :returns:
@@ -52,13 +50,12 @@ def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
         cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        allctxs, _close = read_ctxs(
-            dstore, slc, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
+        allctxs, _close = read_ctxs(dstore, slc)
     N, L, G = len(_close), cmaker.imtls.size, len(cmaker.gsims)
     acc = numpy.ones((N, L, G))
     for ctx, poes in cmaker.gen_ctx_poes(allctxs):
         acc *= ctx.get_probability_no_exceedance(poes)
-    return {grp_id: 1 - acc}
+    return {cmaker.grp_id: 1 - acc}
 
 
 @base.calculators.add('conditional_spectrum')
@@ -119,9 +116,9 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
             numpy.ceil(totweight / (oq.concurrent_tasks or 1)), maxw)
-        num_eff_rlzs = len(self.full_lt.sm_rlzs)
         U = 0
         Ta = 0
+        cmakers = read_cmakers(self.datastore)
         self.datastore.swmr_on()
         smap = parallel.Starmap(conditional_spectrum, h5=self.datastore.hdf5)
         # IMPORTANT!! we rely on the fact that the classical part
@@ -132,18 +129,11 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
                                             operator.itemgetter('grp_id')):
             Ta += 1
             grp_id = block[0]['grp_id']
-            trti = et_ids[grp_id][0] // num_eff_rlzs
-            trt = self.trts[trti]
             G = len(rlzs_by_gsim[grp_id])
-            cmaker = ContextMaker(
-                trt, rlzs_by_gsim[grp_id],
-                {'truncation_level': oq.truncation_level,
-                 'maximum_distance': oq.maximum_distance,
-                 'investigation_time': oq.investigation_time,
-                 'imtls': oq.imtls})
+            cmaker = cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, grp_id))
+            smap.submit((dstore, slc, cmaker))
         results = smap.reduce(self.agg_result)
         return results
 

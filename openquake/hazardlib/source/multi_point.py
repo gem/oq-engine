@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
+Module :mod:`openquake.hazardlib.source.area` defines
+:class:`MultiPointSource`.
 """
 import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
@@ -151,19 +152,19 @@ class MultiPointSource(ParametricSeismicSource):
         self.tectonic_region_type = attrs['tectonic_region_type']
         self.magnitude_scaling_relationship = SCALEREL[
             attrs['magnitude_scaling_relationship']]
-        npd = dic.pop('nodal_plane_distribution')[:]
-        hdd = dic.pop('hypocenter_distribution')[:]
-        mesh = dic.pop('mesh')[:]
-        self.rupture_aspect_ratio = dic.pop('rupture_aspect_ratio')[()]
-        self.lower_seismogenic_depth = dic.pop('lower_seismogenic_depth')[()]
-        self.upper_seismogenic_depth = dic.pop('upper_seismogenic_depth')[()]
+        npd = dic.pop('nodal_plane_distribution').value
+        hdd = dic.pop('hypocenter_distribution').value
+        mesh = dic.pop('mesh').value
+        self.rupture_aspect_ratio = dic.pop('rupture_aspect_ratio').value
+        self.lower_seismogenic_depth = dic.pop('lower_seismogenic_depth').value
+        self.upper_seismogenic_depth = dic.pop('upper_seismogenic_depth').value
         [(mfd_kind, mfd)] = dic.items()
         self.nodal_plane_distribution = PMF([
             (prob, NodalPlane(strike, dip, rake))
             for prob, strike, dip, rake in npd])
         self.hypocenter_distribution = PMF(hdd)
         self.mesh = Mesh(mesh['lon'], mesh['lat'])
-        kw = {k: dset[:] for k, dset in mfd.items()}
+        kw = {k: dset.value for k, dset in mfd.items()}
         kw['size'] = len(mesh)
         kw['kind'] = mfd_kind
         self.mfd = MultiMFD(**kw)

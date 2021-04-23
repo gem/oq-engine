@@ -143,13 +143,12 @@ def _make_pmap(ctxs, cmaker):
     return ~pmap
 
 
-def read_ctxs(dstore, slc=slice(None), req_site_params=None):
+def read_ctxs(dstore, slc=slice(None)):
     """
-     :returns: a list of contexts plus a list of lists of contexts
+    :param dstore: a DataStore instance
+    :returns: a list of contexts plus N lists of contexts close to each site
     """
     sitecol = dstore['sitecol'].complete
-    site_params = {par: sitecol[par]
-                   for par in req_site_params or sitecol.array.dtype.names}
     params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
     ctxs = []
     for u in range(len(params['mag'])):
@@ -158,8 +157,8 @@ def read_ctxs(dstore, slc=slice(None), req_site_params=None):
             if par.endswith('_'):
                 par = par[:-1]
             setattr(ctx, par, arr[u])
-        for par, arr in site_params.items():
-            setattr(ctx, par, arr[ctx.sids])
+        for par in sitecol.array.dtype.names:
+            setattr(ctx, par, sitecol[par][ctx.sids])
         ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
         ctxs.append(ctx)
     close_ctxs = [[] for sid in sitecol.sids]
@@ -189,6 +188,7 @@ class ContextMaker(object):
         self.investigation_time = param.get('investigation_time')
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
+        self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
         self.task_no = getattr(monitor, 'task_no', 0)
         for req in self.REQUIRES:
@@ -1088,5 +1088,6 @@ def read_cmakers(dstore):
              'collapse_level': oq.collapse_level,
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
-             'imtls': oq.imtls}))
+             'imtls': oq.imtls,
+             'grp_id': grp_id}))
     return cmakers
