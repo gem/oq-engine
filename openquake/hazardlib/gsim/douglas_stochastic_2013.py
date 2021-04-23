@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports 
+Module exports
 :class:`DouglasEtAl2013StochasticSD001Q200K005`
 :class:`DouglasEtAl2013StochasticSD001Q200K020`
 :class:`DouglasEtAl2013StochasticSD001Q200K040`
@@ -140,6 +140,9 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
 
     #: The required distance parameter is hypocentral distance
     REQUIRES_DISTANCES = {'rhypo'}
+
+    #: Definined for a reference velocity of 1100 m/s (Table 4)
+    DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
