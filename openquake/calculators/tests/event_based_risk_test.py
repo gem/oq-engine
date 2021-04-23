@@ -223,7 +223,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
         tot = self.calc.datastore['avg_losses-rlzs'][:, 0, 0].sum()  # A1L
-        aac(avg, tot)
+        aac(avg, tot, rtol=1E-6)
 
         # agg_losses
         [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
