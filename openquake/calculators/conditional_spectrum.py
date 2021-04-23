@@ -50,8 +50,7 @@ def conditional_spectrum(dstore, slc, cmaker, monitor):
         cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        allctxs, _close = read_ctxs(
-            dstore, slc, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
+        allctxs, _close = read_ctxs(dstore, slc)
     N, L, G = len(_close), cmaker.imtls.size, len(cmaker.gsims)
     acc = numpy.ones((N, L, G))
     for ctx, poes in cmaker.gen_ctx_poes(allctxs):
