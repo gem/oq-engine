@@ -31,8 +31,8 @@ from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.contexts import read_ctxs, RuptureContext
+from openquake.hazardlib.contexts import (
+    read_ctxs, read_cmakers, RuptureContext)
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
@@ -341,20 +341,13 @@ class DisaggregationCalculator(base.HazardCalculator):
         # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
         # that would break the ordering of the indices causing an incredibly
         # worse performance, but visible only in extra-large calculations!
+        cmakers = read_cmakers(self.datastore)
         for block in block_splitter(rdata, maxweight,
                                     operator.itemgetter('nsites'),
                                     operator.itemgetter('grp_id')):
             grp_id = block[0]['grp_id']
             trti = et_ids[grp_id][0] // num_eff_rlzs
-            trt = self.trts[trti]
-            cmaker = ContextMaker(
-                trt, rlzs_by_gsim[grp_id],
-                {'truncation_level': oq.truncation_level,
-                 'maximum_distance': oq.maximum_distance,
-                 'collapse_level': oq.collapse_level,
-                 'num_epsilon_bins': oq.num_epsilon_bins,
-                 'investigation_time': oq.investigation_time,
-                 'imtls': oq.imtls})
+            cmaker = cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
             smap.submit((dstore, slc, cmaker, self.hmap4, trti, magi[slc],

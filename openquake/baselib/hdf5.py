@@ -130,13 +130,10 @@ def dotname2cls(dotname):
 
 def get_nbytes(dset):
     """
-    If the dataset has an attribute 'nbytes', return it. Otherwise get the size
-    of the underlying array. Returns None if the dataset is actually a group.
+    :returns: get the size of the underlying array or None if the dataset
+    is actually a group.
     """
-    if 'nbytes' in dset.attrs:
-        # look if the dataset has an attribute nbytes
-        return dset.attrs['nbytes']
-    elif hasattr(dset, 'dtype'):
+    if hasattr(dset, 'dtype'):
         # else extract nbytes from the underlying array
         return dset.size * numpy.zeros(1, dset.dtype).nbytes
 

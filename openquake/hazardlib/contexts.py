@@ -1065,3 +1065,28 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
                 di = nbins - 1
             dic['%.2f' % rup.mag][di] += 1
     return {trt: AccumDict(dic)}
+
+
+def read_cmakers(dstore):
+    """
+    :param dstore: a DataStore-like object
+    :returns: a list of ContextMaker instance, one per source group
+    """
+    cmakers = []
+    oq = dstore['oqparam']
+    full_lt = dstore['full_lt']
+    et_ids = dstore['et_ids'][:]
+    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(et_ids)
+    trts = list(full_lt.gsim_lt.values)
+    num_eff_rlzs = len(full_lt.sm_rlzs)
+    for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
+        trt = trts[et_ids[grp_id][0] // num_eff_rlzs]
+        cmakers.append(ContextMaker(
+            trt, rlzs_by_gsim,
+            {'truncation_level': oq.truncation_level,
+             'maximum_distance': oq.maximum_distance,
+             'collapse_level': oq.collapse_level,
+             'num_epsilon_bins': oq.num_epsilon_bins,
+             'investigation_time': oq.investigation_time,
+             'imtls': oq.imtls}))
+    return cmakers
