@@ -341,7 +341,9 @@ aid
     def test_case_13a(self):
         # test event_based_damage, no aggregate_by
         self.run_calc(case_13.__file__, 'job_a.ini')
-        self.check_damages('a_damage_table.txt', 'a_damages.txt')
+        [f1, f2] = export(('aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f1), f1, delta=1E-5)
+        self.assertEqualFiles('expected/' + strip_calc_id(f2), f2, delta=1E-5)
 
     def test_case_13b(self):
         # test event_based_damage, aggregate_by=taxonomy
