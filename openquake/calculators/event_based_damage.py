@@ -154,7 +154,9 @@ class DamageCalculator(EventBasedRiskCalculator):
 
     def post_execute(self, dummy):
         oq = self.oqparam
-        logging.info('Building aggregated curves')
+        size = self.datastore.getsize('agg_loss_table')
+        logging.info('Building aggregated curves from %s of agg_loss_table',
+                     general.humansize(size))
         builder = get_loss_builder(self.datastore)
         alt_df = self.datastore.read_df('agg_loss_table')
         del alt_df['event_id']
