@@ -1041,3 +1041,15 @@ def view_delta_loss(token, dstore):
     dic = dict(loss=losses_by_period(df['loss'], periods, num_events, efftime),
                even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
     return pandas.DataFrame(dic, periods)
+
+
+@view.add('composite_source_model')
+def view_composite_source_model(token, dstore):
+    """
+    Show the structure of the CompositeSourceModel in terms of grp_id
+    """
+    lst = []
+    for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
+        srcs = ' '.join(df['source_id'])
+        lst.append((grp_id, srcs))
+    return rst_table(lst, ['grp_id', 'sources'])
