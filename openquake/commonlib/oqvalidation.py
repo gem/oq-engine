@@ -398,7 +398,7 @@ modal_damage_state:
 num_epsilon_bins:
   Number of epsilon bins in disaggregation calculations.
   Example: *num_epsilon_bins = 3*.
-  Default: no default
+  Default: 1
 
 num_rlzs_disagg:
   Used in disaggregation calculation to specify how many outputs will be
@@ -773,7 +773,7 @@ class OqParam(valid.ParamSet):
     modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
-    num_epsilon_bins = valid.Param(valid.positiveint)
+    num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
