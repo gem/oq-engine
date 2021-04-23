@@ -189,6 +189,7 @@ class ContextMaker(object):
         self.investigation_time = param.get('investigation_time')
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
+        self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
         self.task_no = getattr(monitor, 'task_no', 0)
         for req in self.REQUIRES:
@@ -1088,5 +1089,6 @@ def read_cmakers(dstore):
              'collapse_level': oq.collapse_level,
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
-             'imtls': oq.imtls}))
+             'imtls': oq.imtls,
+             'grp_id': grp_id}))
     return cmakers
