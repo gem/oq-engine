@@ -121,8 +121,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
         cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        allctxs, close_ctxs = read_ctxs(
-            dstore, slc, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
+        allctxs, close_ctxs = read_ctxs(dstore, slc)
         for magidx, ctx in zip(magi, allctxs):
             ctx.magi = magidx
     dis_mon = monitor('disaggregate', measuremem=False)
