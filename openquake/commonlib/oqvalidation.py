@@ -1101,7 +1101,7 @@ class OqParam(valid.ParamSet):
                 (self.number_of_logic_tree_samples or 1))
 
     @property
-    def ses_ratio(self):
+    def time_ratio(self):
         """
         The ratio
 

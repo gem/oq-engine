@@ -1084,6 +1084,7 @@ def import_gmfs_csv(dstore, oqparam, sids):
     E = len(eids)
     events = numpy.zeros(E, rupture.events_dt)
     events['id'] = eids
+    logging.info('Storing %d events, all relevant', E)
     dstore['events'] = events
     # store the GMFs
     dic = general.group_array(arr, 'sid')
@@ -1147,8 +1148,9 @@ def import_gmfs_hdf5(dstore, oqparam):
     E = attrs['num_events']
     events = numpy.zeros(E, rupture.events_dt)
     events['id'] = numpy.arange(E)
+    rel = numpy.unique(dstore['gmf_data/eid'])
+    logging.info('Storing %d events, %d relevant', E, len(rel))
     dstore['events'] = events
-
     dstore['weights'] = numpy.ones(1)
     return events['id']
 

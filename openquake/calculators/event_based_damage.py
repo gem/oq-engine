@@ -164,7 +164,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         periods = [0] + list(builder.return_periods)
         for (agg_id, loss_id), df in alt_df.groupby(
                 [alt_df.agg_id, alt_df.loss_id]):
-            tots = [df[col].sum() * oq.ses_ratio for col in columns]
+            tots = [df[col].sum() * oq.time_ratio for col in columns]
             curves = [builder.build_curve(df[col].to_numpy())
                       for col in columns]
             for p, period in enumerate(periods):

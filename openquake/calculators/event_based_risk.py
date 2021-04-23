@@ -300,12 +300,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if oq.avg_losses:
             if oq.collect_rlzs:
                 if oq.investigation_time:  # event_based
-                    self.avg_ratio = numpy.array([oq.ses_ratio / len(ws)])
+                    self.avg_ratio = numpy.array([oq.time_ratio / len(ws)])
                 else:  # scenario
                     self.avg_ratio = numpy.array([1. / self.num_events.sum()])
             else:
                 if oq.investigation_time:  # event_based
-                    self.avg_ratio = numpy.array([oq.ses_ratio] * R)
+                    self.avg_ratio = numpy.array([oq.time_ratio] * len(ws))
                 else:  # scenario
                     self.avg_ratio = 1. / self.num_events
             self.avg_losses = numpy.zeros((A, R, L), F32)

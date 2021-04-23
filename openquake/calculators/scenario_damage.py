@@ -222,7 +222,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
         if oq.investigation_time:  # event_based_damage
-            avg_ratio = numpy.array([oq.ses_ratio] * R)
+            avg_ratio = numpy.array([oq.time_ratio] * R)
         else:  # scenario_damage
             avg_ratio = 1. / self.param['num_events']
 
