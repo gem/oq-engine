@@ -108,7 +108,6 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         totweight = rdata['nsites'].sum()
         trt_smrlzs = dstore['trt_smrlzs'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrlzs)
-        self.slice_by_g = getters.get_slice_by_g(rlzs_by_gsim)
         L = oq.imtls.size
         poes_shape = (sum(len(rbg) for rbg in rlzs_by_gsim), self.N, L)
         self.datastore.create_dset('poes', float, poes_shape)
@@ -118,7 +117,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             numpy.ceil(totweight / (oq.concurrent_tasks or 1)), maxw)
         U = 0
         Ta = 0
-        cmakers = read_cmakers(self.datastore)
+        self.cmakers = read_cmakers(self.datastore)
         self.datastore.swmr_on()
         smap = parallel.Starmap(conditional_spectrum, h5=self.datastore.hdf5)
         # IMPORTANT!! we rely on the fact that the classical part
@@ -130,7 +129,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
             Ta += 1
             grp_id = block[0]['grp_id']
             G = len(rlzs_by_gsim[grp_id])
-            cmaker = cmakers[grp_id]
+            cmaker = self.cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
             smap.submit((dstore, slc, cmaker))
@@ -155,4 +154,4 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
     def post_execute(self, acc):
         for grp_id, poes in acc.items():
             poes = poes.transpose(2, 0, 1)  # NLG -> GNL
-            self.datastore['poes'][self.slice_by_g[grp_id]] = poes
+            self.datastore['poes'][self.cmakers[grp_id].slc] = poes
