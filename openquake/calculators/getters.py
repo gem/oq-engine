@@ -391,7 +391,7 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
     """
     full_lt = dstore['full_lt']
     trt_by_et = full_lt.trt_by_et
-    rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
+    rlzs_by_gsim = full_lt.get_rlzs_by_gsim()
     rup_array = dstore['ruptures'][slc]
     rup_array.sort(order='trt_smrlz')  # avoid generating too many tasks
     maxweight = rup_array['n_occ'].sum() / (ct or 1)

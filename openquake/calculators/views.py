@@ -200,7 +200,7 @@ def view_full_lt(token, dstore):
     try:
         rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrlzs'])
     except KeyError:  # for scenario trt_smrlzs is missing
-        rlzs_by_gsim_list = [full_lt.get_rlzs_by_gsim(0)]
+        rlzs_by_gsim_list = [full_lt._rlzs_by_gsim(0)]
     header = ['grp_id', 'gsim', 'rlzs']
     rows = []
     for grp_id, rbg in enumerate(rlzs_by_gsim_list):
