@@ -17,8 +17,10 @@
 
 import os
 import unittest
-from openquake.hazardlib.source.multi_fault import MultiFaultSource
+from openquake.hazardlib.source.multi_fault import (MultiFaultSource,
+                                                    FaultSection)
 from openquake.hazardlib.geo.surface import KiteSurface
+from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
@@ -50,18 +52,26 @@ class MultiFaultTestCase(unittest.TestCase):
         sfc_c = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
 
         # Sections list
-        sections = [sfc_a, sfc_b, sfc_c]
+        sections = [FaultSection('0', sfc_a),
+                    FaultSection('1', sfc_b),
+                    FaultSection('2', sfc_c)]
 
         # Rupture indexes
-        rup_idxs = [[0], [1], [2], [0, 1], [0, 2], [1, 2], [0, 1, 2]]
+        rup_idxs = [['0'], ['1'], ['2'], ['0', '1'], ['0', '2'],
+                    ['1', '2'], ['0', '1', '2']]
 
         # Magnitudes
         rup_mags = [5.8, 5.8, 5.8, 6.2, 6.2, 6.2, 6.5]
         rakes = [90.0, 90.0, 90.0, 90.0, 90.0, 90.0, 90.0]
 
         # Occurrence probabilities of occurrence
-        poes = [[0.90, 0.10], [0.90, 0.10], [0.90, 0.10], [0.95, 0.05],
-                [0.98, 0.02], [0.95, 0.05], [0.99, 0.01]]
+        poes = [PMF([[0.90, 0], [0.10, 1]]),
+                PMF([[0.90, 0], [0.10, 1]]),
+                PMF([[0.90, 0], [0.10, 1]]),
+                PMF([[0.90, 0], [0.10, 1]]),
+                PMF([[0.90, 0], [0.10, 1]]),
+                PMF([[0.90, 0], [0.10, 1]]),
+                PMF([[0.90, 0], [0.10, 1]])]
 
         self.sections = sections
         self.rup_idxs = rup_idxs
@@ -70,8 +80,8 @@ class MultiFaultTestCase(unittest.TestCase):
         self.rakes = rakes
 
     def test01(self):
-        """ test instantiation """
+        """ test instantiation and rupture generation """
         src = MultiFaultSource("01", "test", "Moon Crust", self.sections,
                                self.rup_idxs, self.poes, self.mags, self.rakes)
-        rups = [r for r in src.iter_ruptures()]
+        rups = list(src.iter_ruptures())
         self.assertEqual(7, len(rups))

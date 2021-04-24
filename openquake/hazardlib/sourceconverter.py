@@ -364,6 +364,7 @@ def convert_multiFaultSource(fname, node, rup_spacing=5.0):
     [node_sections] = read(section_file)
     conv = FaultSectionConverter()
     sections = conv.convert_node(node_sections)
+    import pdb; pdb.set_trace()
 
     # Create the multiFaultSource
     sid = node.attrib.get('id')
