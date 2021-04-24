@@ -68,7 +68,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     @property
     def trt_smrlzs(self):
         """
-        :returns: a list of source group IDs (usually of 1 element)
+        :returns: a list of integers (usually of 1 element)
         """
         trt_smrlz = self.trt_smrlz
         return [trt_smrlz] if isinstance(trt_smrlz, int) else trt_smrlz

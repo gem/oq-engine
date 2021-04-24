@@ -126,11 +126,10 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def acc0(self):
         """
-        Initial accumulator, a dictionary (trt_smrlz, gsim) -> curves
+        Initial accumulator, a dictionary rlz -> ProbabilityMap
         """
         self.L = self.oqparam.imtls.size
-        zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
-        return zd
+        return {r: ProbabilityMap(self.L) for r in range(self.R)}
 
     def build_events_from_sources(self):
         """
