@@ -1330,7 +1330,7 @@ class FullLogicTree(object):
             rlzs, smltpath).items()}
         return dic
 
-    def get_rlzs_by_gsim(self, trt_smrlz):
+    def get_rlzs_by_gsim(self, grp_id):
         """
         :returns: a dictionary gsim -> array of rlz indices
         """
@@ -1350,7 +1350,7 @@ class FullLogicTree(object):
             for gid, dic in acc.items():
                 self._rlzs_by_grp[gid] = {
                     gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
-        return self._rlzs_by_grp[trt_smrlz]
+        return self._rlzs_by_grp[grp_id]
 
     def get_rlzs_by_gsim_grp(self):
         """
@@ -1364,14 +1364,14 @@ class FullLogicTree(object):
 
     def get_rlzs_by_grp(self):
         """
-        :returns: a dictionary trt_smrlz -> [rlzis, ...]
+        :returns: a dictionary grp_id -> [rlzis, ...]
         """
         dic = {}
         for sm in self.sm_rlzs:
             for trt_smrlz in self.trt_smrlzs(sm.ordinal):
                 grp = 'grp-%02d' % trt_smrlz
                 dic[grp] = list(self.get_rlzs_by_gsim(trt_smrlz).values())
-        return {trt_smrlz: dic[trt_smrlz] for trt_smrlz in sorted(dic)}
+        return {grp_id: dic[grp_id] for grp_id in sorted(dic)}
 
     def get_rlzs_by_gsim_list(self, list_of_trt_smrlzs):
         """
