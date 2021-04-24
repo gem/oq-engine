@@ -72,7 +72,7 @@ source_model_dt = numpy.dtype([
 ])
 
 src_group_dt = numpy.dtype(
-    [('trt_smrlz', U32),
+    [('trt_smr', U32),
      ('name', hdf5.vstr),
      ('trti', U16),
      ('effrup', I32),
@@ -1221,11 +1221,11 @@ class FullLogicTree(object):
     @property
     def trt_by_et(self):
         """
-        :returns: a list of TRTs, one for each trt_smrlz
+        :returns: a list of TRTs, one for each trt_smr
         """
         e = len(self.sm_rlzs)
         trts = list(self.gsim_lt.values)
-        return [trts[trt_smrlz // e] for trt_smrlz in range(e*len(trts))]
+        return [trts[trt_smr // e] for trt_smr in range(e*len(trts))]
 
     @property
     def seed(self):
@@ -1248,20 +1248,20 @@ class FullLogicTree(object):
         """
         return self.source_model_lt.sampling_method
 
-    def get_trti_eri(self, trt_smrlz):
+    def get_trti_eri(self, trt_smr):
         """
         :returns: (trti, eri)
         """
-        return divmod(trt_smrlz, len(self.sm_rlzs))
+        return divmod(trt_smr, len(self.sm_rlzs))
 
-    def get_trt_smrlz(self, trt, eri):
+    def get_trt_smr(self, trt, eri):
         """
-        :returns: trt_smrlz
+        :returns: trt_smr
         """
         gid = self.trti[trt] * len(self.sm_rlzs) + int(eri)
         return gid
 
-    def get_trt_smrlzs(self, eri):
+    def get_trt_smrs(self, eri):
         """
         :param eri: effective realization index
         :returns: array of T group IDs, being T the number of TRTs
@@ -1337,9 +1337,9 @@ class FullLogicTree(object):
         if not hasattr(self, '_rlzs_by_grp'):
             eri_by_ltp = self.get_eri_by_ltp()
             rlzs = self.get_realizations()
-            acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smrlz->gsim->rlzs
+            acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
             for sm in self.sm_rlzs:
-                for gid in self.get_trt_smrlzs(sm.ordinal):
+                for gid in self.get_trt_smrs(sm.ordinal):
                     trti, eri = divmod(gid, len(self.sm_rlzs))
                     for rlz in rlzs:
                         idx = eri_by_ltp['~'.join(rlz.sm_lt_path)]
@@ -1354,12 +1354,12 @@ class FullLogicTree(object):
 
     def get_rlzs_by_gsim(self):
         """
-        :returns: a dictionary trt_smrlz -> gsim -> rlzs
+        :returns: a dictionary trt_smr -> gsim -> rlzs
         """
         dic = {}
         for sm in self.sm_rlzs:
-            for trt_smrlz in self.get_trt_smrlzs(sm.ordinal):
-                dic[trt_smrlz] = self._rlzs_by_gsim(trt_smrlz)
+            for trt_smr in self.get_trt_smrs(sm.ordinal):
+                dic[trt_smr] = self._rlzs_by_gsim(trt_smr)
         return dic
 
     def get_rlzs_by_grp(self):
@@ -1368,20 +1368,20 @@ class FullLogicTree(object):
         """
         dic = {}
         for sm in self.sm_rlzs:
-            for trt_smrlz in self.get_trt_smrlzs(sm.ordinal):
-                grp = 'grp-%02d' % trt_smrlz
-                dic[grp] = list(self._rlzs_by_gsim(trt_smrlz).values())
+            for trt_smr in self.get_trt_smrs(sm.ordinal):
+                grp = 'grp-%02d' % trt_smr
+                dic[grp] = list(self._rlzs_by_gsim(trt_smr).values())
         return {grp_id: dic[grp_id] for grp_id in sorted(dic)}
 
-    def get_rlzs_by_gsim_list(self, list_of_trt_smrlzs):
+    def get_rlzs_by_gsim_list(self, list_of_trt_smrs):
         """
         :returns: a list of dictionaries rlzs_by_gsim, one for each grp_id
         """
         out = []
-        for grp_id, trt_smrlzs in enumerate(list_of_trt_smrlzs):
+        for grp_id, trt_smrs in enumerate(list_of_trt_smrs):
             dic = AccumDict(accum=[])
-            for trt_smrlz in trt_smrlzs:
-                for gsim, rlzs in self._rlzs_by_gsim(trt_smrlz).items():
+            for trt_smr in trt_smrs:
+                for gsim, rlzs in self._rlzs_by_gsim(trt_smr).items():
                     dic[gsim].extend(rlzs)
             out.append(dic)
         return out
@@ -1453,10 +1453,10 @@ class FullLogicTree(object):
 
     def get_sm_by_grp(self):
         """
-        :returns: a dictionary trt_smrlz -> sm_id
+        :returns: a dictionary trt_smr -> sm_id
         """
-        return {trt_smrlz: sm.ordinal for sm in self.sm_rlzs
-                for trt_smrlz in self.get_trt_smrlzs(sm.ordinal)}
+        return {trt_smr: sm.ordinal for sm in self.sm_rlzs
+                for trt_smr in self.get_trt_smrs(sm.ordinal)}
 
     def __repr__(self):
         info_by_model = {}

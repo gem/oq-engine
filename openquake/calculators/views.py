@@ -169,7 +169,7 @@ def view_slow_ruptures(token, dstore, maxrows=25):
     """
     Show the slowest ruptures
     """
-    fields = ['code', 'n_occ', 'mag', 'trt_smrlz']
+    fields = ['code', 'n_occ', 'mag', 'trt_smr']
     rups = dstore['ruptures'][()][fields]
     time = dstore['gmf_data/time_by_rup'][()]
     arr = util.compose_arrays(rups, time)
@@ -198,8 +198,8 @@ def view_contents(token, dstore):
 def view_full_lt(token, dstore):
     full_lt = dstore['full_lt']
     try:
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrlzs'])
-    except KeyError:  # for scenario trt_smrlzs is missing
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrs'])
+    except KeyError:  # for scenario trt_smrs is missing
         rlzs_by_gsim_list = [full_lt._rlzs_by_gsim(0)]
     header = ['grp_id', 'gsim', 'rlzs']
     rows = []
@@ -538,16 +538,16 @@ def view_required_params_per_trt(token, dstore):
     """
     full_lt = dstore['full_lt']
     tbl = []
-    for trt_smrlz, trt in enumerate(full_lt.trt_by_et):
+    for trt_smr, trt in enumerate(full_lt.trt_by_et):
         gsims = full_lt.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((trt_smrlz, ' '.join(map(repr, map(repr, gsims))),
+        tbl.append((trt_smr, ' '.join(map(repr, map(repr, gsims))),
                     distances, siteparams, ruptparams))
     return rst_table(
-        tbl, header='trt_smrlz gsims distances siteparams ruptparams'.split(),
+        tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
         fmt=scientificformat)
 
 
@@ -667,7 +667,7 @@ def view_global_poes(token, dstore):
     """
     tbl = []
     imtls = dstore['oqparam'].imtls
-    header = ['trt_smrlz']
+    header = ['trt_smr']
     for imt in imtls:
         for poe in imtls[imt]:
             header.append(str(poe))
@@ -758,10 +758,10 @@ class GmpeExtractor(object):
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()
 
-    def extract(self, trt_smrlzs, rlz_ids):
+    def extract(self, trt_smrs, rlz_ids):
         out = []
-        for trt_smrlz, rlz_id in zip(trt_smrlzs, rlz_ids):
-            trt = self.trt_by_et[trt_smrlz]
+        for trt_smr, rlz_id in zip(trt_smrs, rlz_ids):
+            trt = self.trt_by_et[trt_smr]
             out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
         return out
 
@@ -783,8 +783,8 @@ def view_extreme_gmvs(token, dstore):
         ev = dstore['events'][()][extreme_df.index]
         extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
-        trt_smrlzs = dstore['ruptures']['trt_smrlz'][extreme_df.rup]
-        extreme_df['gmpe'] = gmpe.extract(trt_smrlzs, ev['rlz_id'])
+        trt_smrs = dstore['ruptures']['trt_smr'][extreme_df.rup]
+        extreme_df['gmpe'] = gmpe.extract(trt_smrs, ev['rlz_id'])
         return extreme_df.sort_values('gmv_0').groupby('sid').head(1)
     return 'Could not do anything for ' + imt0
 
@@ -983,8 +983,8 @@ def view_gsim_for_event(token, dstore):
     eid = int(token.split(':')[1])
     full_lt = dstore['full_lt']
     rup_id, rlz_id = dstore['events'][eid][['rup_id', 'rlz_id']]
-    trt_smrlz = dstore['ruptures'][rup_id]['trt_smrlz']
-    trti = trt_smrlz // len(full_lt.sm_rlzs)
+    trt_smr = dstore['ruptures'][rup_id]['trt_smr']
+    trti = trt_smr // len(full_lt.sm_rlzs)
     gsim = full_lt.get_realizations()[rlz_id].gsim_rlz.value[trti]
     return gsim
 
@@ -1054,9 +1054,9 @@ def view_composite_source_model(token, dstore):
     """
     lst = []
     n = len(dstore['full_lt'].sm_rlzs)
-    trt_smrlzs = dstore['trt_smrlzs'][:]
+    trt_smrs = dstore['trt_smrs'][:]
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
         srcs = ' '.join(df['source_id'])
-        trts, sm_rlzs = numpy.divmod(trt_smrlzs[grp_id], n)
+        trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], n)
         lst.append((grp_id, to_str(trts), to_str(sm_rlzs), srcs))
     return rst_table(lst, ['grp_id', 'trt', 'sm_rlzs', 'sources'])

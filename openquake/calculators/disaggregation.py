@@ -323,8 +323,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         rdata['grp_id'] = dstore['rup/grp_id'][:]
         rdata['nsites'] = dstore['rup/nsites'][:]
         totweight = rdata['nsites'].sum()
-        trt_smrlzs = dstore['trt_smrlzs'][:]
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrlzs)
+        trt_smrs = dstore['trt_smrs'][:]
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
@@ -345,7 +345,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                                     operator.itemgetter('nsites'),
                                     operator.itemgetter('grp_id')):
             grp_id = block[0]['grp_id']
-            trti = trt_smrlzs[grp_id][0] // num_eff_rlzs
+            trti = trt_smrs[grp_id][0] // num_eff_rlzs
             cmaker = cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
