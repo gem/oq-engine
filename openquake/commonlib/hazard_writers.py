@@ -377,7 +377,7 @@ class SESXMLWriter(object):
         Serialize a collection of stochastic event sets to XML.
 
         :param data:
-            A dictionary et_id -> list of
+            A dictionary trt_smrlz -> list of
             :class:`openquake.commonlib.calc.Rupture` objects.
             Each Rupture should have the following attributes:
 
@@ -432,12 +432,12 @@ class SESXMLWriter(object):
             root = et.Element('nrml')
             ses_container = et.SubElement(root, 'ruptureCollection')
             ses_container.set('investigationTime', str(investigation_time))
-            for et_id in sorted(data):
+            for trt_smrlz in sorted(data):
                 attrs = dict(
-                    id=et_id,
-                    tectonicRegion=data[et_id][0].tectonic_region_type)
+                    id=trt_smrlz,
+                    tectonicRegion=data[trt_smrlz][0].tectonic_region_type)
                 sg = et.SubElement(ses_container, 'ruptureGroup', attrs)
-                for rupture in data[et_id]:
+                for rupture in data[trt_smrlz]:
                     rupture_to_element(rupture, sg)
             nrml.write(list(root), fh)
 

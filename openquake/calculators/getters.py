@@ -393,17 +393,17 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
     trt_by_et = full_lt.trt_by_et
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_grp()
     rup_array = dstore['ruptures'][slc]
-    rup_array.sort(order='et_id')  # avoid generating too many tasks
+    rup_array.sort(order='trt_smrlz')  # avoid generating too many tasks
     maxweight = rup_array['n_occ'].sum() / (ct or 1)
     scenario = 'scenario' in dstore['oqparam'].calculation_mode
     for block in general.block_splitter(
             rup_array, maxweight, operator.itemgetter('n_occ'),
-            key=operator.itemgetter('et_id')):
-        et_id = block[0]['et_id']
-        trt = trt_by_et[et_id]
+            key=operator.itemgetter('trt_smrlz')):
+        trt_smrlz = block[0]['trt_smrlz']
+        trt = trt_by_et[trt_smrlz]
         proxies = [RuptureProxy(rec, scenario=scenario) for rec in block]
-        yield RuptureGetter(proxies, dstore.filename, et_id,
-                            trt, rlzs_by_gsim[et_id])
+        yield RuptureGetter(proxies, dstore.filename, trt_smrlz,
+                            trt, rlzs_by_gsim[trt_smrlz])
 
 
 # NB: amplification is missing
@@ -438,18 +438,18 @@ class RuptureGetter(object):
         a list of RuptureProxies
     :param filename:
         path to the HDF5 file containing a 'rupgeoms' dataset
-    :param et_id:
+    :param trt_smrlz:
         source group index
     :param trt:
         tectonic region type string
     :param rlzs_by_gsim:
         dictionary gsim -> rlzs for the group
     """
-    def __init__(self, proxies, filename, et_id, trt, rlzs_by_gsim):
+    def __init__(self, proxies, filename, trt_smrlz, trt, rlzs_by_gsim):
         self.proxies = proxies
         self.weight = sum(proxy.weight for proxy in proxies)
         self.filename = filename
-        self.et_id = et_id
+        self.trt_smrlz = trt_smrlz
         self.trt = trt
         self.rlzs_by_gsim = rlzs_by_gsim
         self.num_events = sum(int(proxy['n_occ']) for proxy in proxies)
@@ -484,7 +484,7 @@ class RuptureGetter(object):
             dic['surface_class'] = surclass.__name__
             dic['hypo'] = rec['hypo']
             dic['occurrence_rate'] = rec['occurrence_rate']
-            dic['et_id'] = rec['et_id']
+            dic['trt_smrlz'] = rec['trt_smrlz']
             dic['n_occ'] = rec['n_occ']
             dic['seed'] = rec['seed']
             dic['mag'] = rec['mag']
@@ -517,7 +517,7 @@ class RuptureGetter(object):
                 proxy.nsites = len(sids)
                 proxies.append(proxy)
         for block in general.block_splitter(proxies, maxw, weight):
-            yield RuptureGetter(block, self.filename, self.et_id, self.trt,
+            yield RuptureGetter(block, self.filename, self.trt_smrlz, self.trt,
                                 self.rlzs_by_gsim)
 
     def __len__(self):
@@ -525,5 +525,5 @@ class RuptureGetter(object):
 
     def __repr__(self):
         wei = ' [w=%d]' % self.weight if hasattr(self, 'weight') else ''
-        return '<%s et_id=%d, %d rupture(s)%s>' % (
-            self.__class__.__name__, self.et_id, len(self), wei)
+        return '<%s trt_smrlz=%d, %d rupture(s)%s>' % (
+            self.__class__.__name__, self.trt_smrlz, len(self), wei)

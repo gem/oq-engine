@@ -1075,12 +1075,12 @@ def read_cmakers(dstore):
     cmakers = []
     oq = dstore['oqparam']
     full_lt = dstore['full_lt']
-    et_ids = dstore['et_ids'][:]
-    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(et_ids)
+    trt_smrlzs = dstore['trt_smrlzs'][:]
+    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrlzs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
-        trt = trts[et_ids[grp_id][0] // num_eff_rlzs]
+        trt = trts[trt_smrlzs[grp_id][0] // num_eff_rlzs]
         cmakers.append(ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': oq.truncation_level,

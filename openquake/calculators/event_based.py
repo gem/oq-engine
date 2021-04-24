@@ -126,7 +126,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def acc0(self):
         """
-        Initial accumulator, a dictionary (et_id, gsim) -> curves
+        Initial accumulator, a dictionary (trt_smrlz, gsim) -> curves
         """
         self.L = self.oqparam.imtls.size
         zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
@@ -286,7 +286,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 [len(gsim_lt.values[trt]) for trt in gsim_lt.values], U32)
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ
-                aw['n_occ'] *= ngmfs * num_gsims[aw['et_id']]
+                aw['n_occ'] *= ngmfs * num_gsims[aw['trt_smrlz']]
         rup_array = aw.array
         hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 

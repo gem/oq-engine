@@ -205,7 +205,7 @@ class EventBasedTestCase(CalculatorTestCase):
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
         self.assertEqual(einfo['rlzi'], 0)
-        self.assertEqual(einfo['et_id'], 0)
+        self.assertEqual(einfo['trt_smrlz'], 0)
         aac(einfo['occurrence_rate'], 0.6)
         aac(einfo['hypo'], [0., 0., 4.])
 

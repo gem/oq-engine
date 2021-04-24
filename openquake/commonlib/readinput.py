@@ -718,12 +718,12 @@ def save_source_info(csm, h5):
     lens = []
     for sg in csm.src_groups:
         for src in sg:
-            lens.append(len(src.et_ids))
+            lens.append(len(src.trt_smrlzs))
             row = [src.source_id, src.grp_id, src.code,
                    0, 0, 0, csm.full_lt.trti[src.tectonic_region_type], 0]
             wkts.append(src._wkt)
             data[src.id] = row
-    logging.info('There are %d groups and %d sources with len(et_ids)=%.2f',
+    logging.info('There are %d groups and %d sources with len(trt_smrlzs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
     csm.source_info = data  # src_id -> row
@@ -732,7 +732,7 @@ def save_source_info(csm, h5):
         # avoid hdf5 damned bug by creating source_info in advance
         hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        h5['et_ids'] = csm.get_et_ids()
+        h5['trt_smrlzs'] = csm.get_trt_smrlzs()
 
 
 def _check_csm(csm, oqparam, h5):
@@ -806,7 +806,7 @@ def get_composite_source_model(oqparam, h5=None):
                 csm.full_lt = full_lt
             if h5:
                 # avoid errors with --reuse_hazard
-                h5['et_ids'] = csm.get_et_ids()
+                h5['trt_smrlzs'] = csm.get_trt_smrlzs()
                 hdf5.create(h5, 'source_info', source_info_dt)
             _check_csm(csm, oqparam, h5)
             return csm
