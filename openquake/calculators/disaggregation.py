@@ -94,7 +94,7 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
+def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -106,8 +106,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param hmap4:
         an ArrayWrapper of shape (N, M, P, Z)
-    :param trti:
-        tectonic region type index
     :param magi:
         magnitude bin indices
     :param bin_egdes:
@@ -121,7 +119,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
         cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        allctxs, close_ctxs = read_ctxs(dstore, slc)
+        allctxs, ctxs_around_site = read_ctxs(dstore, slc)
         for magidx, ctx in zip(magi, allctxs):
             ctx.magi = magidx
     dis_mon = monitor('disaggregate', measuremem=False)
@@ -135,14 +133,14 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
     eps3 = disagg._eps3(cmaker.trunclevel, cmaker.num_epsilon_bins)
     imts = [from_string(im) for im in cmaker.imtls]
     for magi, ctxs in groupby(allctxs, operator.attrgetter('magi')).items():
-        res = {'trti': trti, 'magi': magi}
+        res = {'trti': cmaker.trti, 'magi': magi}
         with ms_mon:
             # compute mean and std (N * U * M * G * 16 bytes)
             disagg.set_mean_std(ctxs, imts, cmaker.gsims)
 
         # disaggregate by site, IMT
         for s, iml3 in enumerate(hmap4):
-            close = [ctx for ctx in close_ctxs[s] if ctx.magi == magi]
+            close = [ctx for ctx in ctxs_around_site[s] if ctx.magi == magi]
             if not g_by_z[s] or not close:
                 # g_by_z[s] is empty in test case_7
                 continue
@@ -329,7 +327,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
             numpy.ceil(totweight / (oq.concurrent_tasks or 1)), maxw)
-        num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
         U = 0
         self.datastore.swmr_on()
@@ -345,13 +342,12 @@ class DisaggregationCalculator(base.HazardCalculator):
                                     operator.itemgetter('nsites'),
                                     operator.itemgetter('grp_id')):
             grp_id = block[0]['grp_id']
-            trti = trt_smrlzs[grp_id][0] // num_eff_rlzs
             cmaker = cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, self.hmap4, trti, magi[slc],
-                         self.bin_edges))
-            task_inputs.append((trti, slc.stop-slc.start))
+            smap.submit((dstore, slc, cmaker, self.hmap4,
+                         magi[slc], self.bin_edges))
+            task_inputs.append((cmaker.trti, slc.stop-slc.start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)

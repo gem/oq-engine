@@ -161,11 +161,11 @@ def read_ctxs(dstore, slc=slice(None)):
             setattr(ctx, par, sitecol[par][ctx.sids])
         ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
         ctxs.append(ctx)
-    close_ctxs = [[] for sid in sitecol.sids]
+    ctxs_around_site = [[] for sid in sitecol.sids]
     for ctx in ctxs:
         for sid in ctx.idx:
-            close_ctxs[sid].append(ctx)
-    return ctxs, close_ctxs
+            ctxs_around_site[sid].append(ctx)
+    return ctxs, ctxs_around_site
 
 
 class ContextMaker(object):
@@ -1067,21 +1067,23 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
     return {trt: AccumDict(dic)}
 
 
-def read_cmakers(dstore):
+def read_cmakers(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
     :returns: a list of ContextMaker instance, one per source group
     """
     cmakers = []
     oq = dstore['oqparam']
-    full_lt = dstore['full_lt']
+    full_lt = full_lt or dstore['full_lt']
     trt_smrlzs = dstore['trt_smrlzs'][:]
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrlzs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
+    start = 0
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
-        trt = trts[trt_smrlzs[grp_id][0] // num_eff_rlzs]
-        cmakers.append(ContextMaker(
+        trti = trt_smrlzs[grp_id][0] // num_eff_rlzs
+        trt = trts[trti]
+        cmaker = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': oq.truncation_level,
              'maximum_distance': oq.maximum_distance,
@@ -1089,5 +1091,10 @@ def read_cmakers(dstore):
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
              'imtls': oq.imtls,
-             'grp_id': grp_id}))
+             'grp_id': grp_id})
+        cmaker.trti = trti
+        stop = start + len(rlzs_by_gsim)
+        cmaker.slc = slice(start, stop)
+        start = stop
+        cmakers.append(cmaker)
     return cmakers
