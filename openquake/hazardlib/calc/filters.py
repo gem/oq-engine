@@ -31,7 +31,7 @@ from openquake.hazardlib.geo.utils import (
 
 U32 = numpy.uint32
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
-et_id = operator.attrgetter('et_id')
+trt_smrlz = operator.attrgetter('trt_smrlz')
 
 
 @contextmanager
@@ -223,7 +223,7 @@ def split_source(src):
     if len(splits) > 1:
         for i, split in enumerate(splits):
             split.source_id = '%s:%s' % (src.source_id, i)
-            split.et_id = src.et_id
+            split.trt_smrlz = src.trt_smrlz
             split.grp_id = grp_id
             split.id = src.id
             if has_samples:
@@ -233,7 +233,7 @@ def split_source(src):
     elif splits:  # single source
         [s] = splits
         s.source_id = src.source_id
-        s.et_id = src.et_id
+        s.trt_smrlz = src.trt_smrlz
         s.grp_id = grp_id
         s.id = src.id
         if has_samples:

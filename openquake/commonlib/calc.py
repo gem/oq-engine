@@ -272,7 +272,7 @@ class RuptureImporter(object):
         eid_rlz = []
         for rup in proxies:
             ebr = EBRupture(Mock(rup_id=rup['seed']), rup['source_id'],
-                            rup['et_id'], rup['n_occ'], e0=rup['e0'])
+                            rup['trt_smrlz'], rup['n_occ'], e0=rup['e0'])
             ebr.scenario = 'scenario' in self.oqparam.calculation_mode
             for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
                 for eid in eids:
@@ -299,7 +299,7 @@ class RuptureImporter(object):
 
     def save_events(self, rup_array):
         """
-        :param rup_array: an array of ruptures with fields et_id
+        :param rup_array: an array of ruptures with fields trt_smrlz
         :returns: a list of RuptureGetters
         """
         from openquake.calculators.getters import gen_rupture_getters

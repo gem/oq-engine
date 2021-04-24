@@ -86,7 +86,7 @@ def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
 # ######################## rupture calculator ############################ #
 
 rupture_dt = numpy.dtype([
-    ('id', U32), ('seed', U32), ('source_id', '<S16'), ('et_id', U16),
+    ('id', U32), ('seed', U32), ('source_id', '<S16'), ('trt_smrlz', U16),
     ('code', U8), ('n_occ', U32), ('mag', F32), ('rake', F32),
     ('occurrence_rate', F32),
     ('minlon', F32), ('minlat', F32), ('maxlon', F32), ('maxlat', F32),
@@ -138,7 +138,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
                 srcfilter.close_sids(rec, rup.tectonic_region_type)) == 0:
             continue
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (0, ebrupture.rup_id, ebrupture.source_id, ebrupture.et_id,
+        tup = (0, ebrupture.rup_id, ebrupture.source_id, ebrupture.trt_smrlz,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
                minlon, minlat, maxlon, maxlat, hypo, 0, 0)
         rups.append(tup)
@@ -174,7 +174,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     eb_ruptures = []
     ses_seed = param['ses_seed']
     numpy.random.seed(sources[0].serial(ses_seed))
-    [et_id] = set(src.et_id for src in sources)
+    [trt_smrlz] = set(src.trt_smrlz for src in sources)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
     calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
     # Set the parameters required to compute the number of occurrences
@@ -211,7 +211,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                     rup_data[src.id] = {}
                 if rup.idx not in rup_counter[src.id]:
                     rup_counter[src.id][rup.idx] = 1
-                    rup_data[src.id][rup.idx] = [rup, src.id, et_id]
+                    rup_data[src.id][rup.idx] = [rup, src.id, trt_smrlz]
                 else:
                     rup_counter[src.id][rup.idx] += 1
                 # Store info
@@ -223,9 +223,9 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     # Create event based ruptures
     for src_key in rup_data:
         for rup_key in rup_data[src_key]:
-            rup, source_id, et_id = rup_data[src_key][rup_key]
+            rup, source_id, trt_smrlz = rup_data[src_key][rup_key]
             cnt = rup_counter[src_key][rup_key]
-            ebr = EBRupture(rup, source_id, et_id, cnt)
+            ebr = EBRupture(rup, source_id, trt_smrlz, cnt)
             eb_ruptures.append(ebr)
 
     return eb_ruptures, calc_times
@@ -278,9 +278,9 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
                                      calc_times={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
-            for rup, et_id, n_occ in src.sample_ruptures(
+            for rup, trt_smrlz, n_occ in src.sample_ruptures(
                     samples * num_ses, param['ses_seed']):
-                ebr = EBRupture(rup, src.source_id, et_id, n_occ)
+                ebr = EBRupture(rup, src.source_id, trt_smrlz, n_occ)
                 eb_ruptures.append(ebr)
             dt = time.time() - t0
             calc_times[src.id] += numpy.array([nr, src.nsites, dt])

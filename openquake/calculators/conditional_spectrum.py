@@ -106,8 +106,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         rdata['grp_id'] = dstore['rup/grp_id'][:]
         rdata['nsites'] = dstore['rup/nsites'][:]
         totweight = rdata['nsites'].sum()
-        et_ids = dstore['et_ids'][:]
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(et_ids)
+        trt_smrlzs = dstore['trt_smrlzs'][:]
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrlzs)
         self.slice_by_g = getters.get_slice_by_g(rlzs_by_gsim)
         L = oq.imtls.size
         poes_shape = (sum(len(rbg) for rbg in rlzs_by_gsim), self.N, L)

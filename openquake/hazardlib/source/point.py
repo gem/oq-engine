@@ -498,7 +498,7 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
             cps = CollapsedPointSource('cps-%d-%d' % (task_no, i), ps[idxs])
             cps.id = ps[0].id
             cps.grp_id = ps[0].grp_id
-            cps.et_id = ps[0].et_id
+            cps.trt_smrlz = ps[0].trt_smrlz
             out.append(cps)
         else:  # there is a single source
             out.append(ps[idxs[0]])

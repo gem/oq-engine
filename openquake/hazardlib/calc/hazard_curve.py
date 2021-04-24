@@ -171,7 +171,6 @@ def calc_hazard_curves(
         odic = groupby(groups, operator.attrgetter('tectonic_region_type'))
         groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
                   for trt in odic]
-    # ensure the sources have the right et_id
     idx = 0
     for i, grp in enumerate(groups):
         for src in grp:
