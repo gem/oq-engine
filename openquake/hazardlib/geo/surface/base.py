@@ -183,8 +183,8 @@ class BaseSurface:
         top_edge = self.mesh[0:1]
         mean_strike = self.get_strike()
 
-        # Computing the distances between the sites and the two lines 
-        # perpendicular to the strike passing trough the two extremes 
+        # Computing the distances between the sites and the two lines
+        # perpendicular to the strike passing trough the two extremes
         # of the top of the rupture
         dst1 = geodetic.distance_to_arc(top_edge.lons[0, 0],
                                         top_edge.lats[0, 0],

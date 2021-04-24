@@ -60,4 +60,8 @@
 | case_58 | Test for the truncatedGRFromSlipAbsolute epistemic uncertainty |
 | case_59 | Test for NRCan15SiteTerm |
 | case_60 | |
-| case_61 | Test the Kite Fault with info for Simple Fault |
+| case_60 | |
+| case_62 | Tests a sample mode obtained from SHERIFS |
+| case_63 | Test for GMM with soiltype |
+| case_64 | |
+| case_65 | Test for the multi fault source |

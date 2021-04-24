@@ -97,11 +97,12 @@ class MultiFaultSource(BaseSeismicSource):
         self._create_inverted_index()
 
     def _create_inverted_index(self):
+        """ Creates an inverted index structure """
         self.invx = {}
         for i, sec in enumerate(self.sections):
             self.invx[sec.sid] = i
 
-    def iter_ruptures(self, fromidx=0, untilidx=None):
+    def iter_ruptures(self, fromidx=0, untilidx=None, **kwargs):
         """
         An iterator for the ruptures.
 
