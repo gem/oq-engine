@@ -15,15 +15,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import unittest
+import numpy as np
 from openquake.hazardlib.nrml import to_python
+from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.sourceconverter import (FaultSectionConverter,
                                                  SourceConverter)
 from openquake.hazardlib.geo import Point
+from openquake.hazardlib.nrml import SourceModel
 
 datadir = os.path.join(os.path.dirname(__file__), 'data', 'sections')
 
 
 class KiteFaultSectionsTestCase(unittest.TestCase):
+    """ Tests reading an .xml file wiith sections """
 
     def setUp(self):
         fname = 'sections_kite.xml'
@@ -33,31 +37,34 @@ class KiteFaultSectionsTestCase(unittest.TestCase):
         conv = FaultSectionConverter()
         sec = to_python(self.fname, conv)
         expected = [Point(11, 45, 0), Point(11, 45.5, 10)]
-        print(sec[1].profiles[0].points)
         # Check geometry info
-        self.assertEqual(expected[0], sec[1].profiles[0].points[0])
-        self.assertEqual(expected[1], sec[1].profiles[0].points[1])
-        # Check section ID
-        self.assertEqual(sec[1].id, 's1')
-
-
-class KiteFaultSectionsErrorTestCase(unittest.TestCase):
-
-    def setUp(self):
-        fname = 'sections_mix.xml'
-        self.fname = os.path.join(datadir, fname)
-
-    def test_load_error(self):
-        conv = FaultSectionConverter()
-        self.assertRaises(ValueError, to_python, self.fname, conv)
+        self.assertEqual(expected[0], sec[1].surface.profiles[0].points[0])
+        self.assertEqual(expected[1], sec[1].surface.profiles[0].points[1])
+        self.assertEqual(sec[1].sid, 's2')
 
 
 class MultiFaultSourceModelTestCase(unittest.TestCase):
+    """ Tests reading a multi fault model """
 
     def setUp(self):
         fname = 'sources.xml'
         self.fname = os.path.join(datadir, fname)
 
-    def test_load_error(self):
+    def test_load_mfs(self):
         conv = SourceConverter()
         ssm = to_python(self.fname, conv)
+        self.assertIsInstance(ssm, SourceModel)
+
+        rups = []
+        for rup in ssm[0][0].iter_ruptures():
+            rups.append(rup)
+
+        # Check data for the second rupture
+        msg = 'Rake for rupture #0 is wrong'
+        self.assertEqual(rups[0].rake, 90.0, msg)
+        # Check data for the second rupture
+        msg = 'Rake for rupture #1 is wrong'
+        self.assertEqual(rups[1].rake, -90.0, msg)
+        # Check mfd
+        expected = np.array([0.9, 0.1])
+        np.testing.assert_almost_equal(rups[1].probs_occur, expected)
