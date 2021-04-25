@@ -1072,6 +1072,7 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
 def read_cmakers(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
+    :param full_lt: a FullLogicTree instance, if given
     :returns: a list of ContextMaker instance, one per source group
     """
     cmakers = []
