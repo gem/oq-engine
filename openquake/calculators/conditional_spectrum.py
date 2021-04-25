@@ -24,10 +24,9 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, general
-from openquake.hazardlib.contexts import (
-    read_ctxs, read_cmakers, RuptureContext)
+from openquake.hazardlib.contexts import read_cmakers, RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
-from openquake.calculators import base, getters
+from openquake.calculators import base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -50,7 +49,7 @@ def conditional_spectrum(dstore, slc, cmaker, monitor):
         cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        allctxs, _close = read_ctxs(dstore, slc)
+        allctxs, _close = cmaker.read_ctxs(dstore, slc)
     N, L, G = len(_close), cmaker.imtls.size, len(cmaker.gsims)
     acc = numpy.ones((N, L, G))
     for ctx, poes in cmaker.gen_ctx_poes(allctxs):

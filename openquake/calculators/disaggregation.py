@@ -31,8 +31,7 @@ from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.contexts import (
-    read_ctxs, read_cmakers, RuptureContext)
+from openquake.hazardlib.contexts import read_cmakers, RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
@@ -119,7 +118,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
         cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        allctxs, ctxs_around_site = read_ctxs(dstore, slc)
+        allctxs, ctxs_around_site = cmaker.read_ctxs(dstore, slc)
         for magidx, ctx in zip(magi, allctxs):
             ctx.magi = magidx
     dis_mon = monitor('disaggregate', measuremem=False)
