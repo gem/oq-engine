@@ -53,7 +53,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
-grp_extreme_dt = numpy.dtype([('trt_smrlz', U16), ('grp_trt', hdf5.vstr),
+grp_extreme_dt = numpy.dtype([('trt_smr', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
@@ -402,12 +402,12 @@ class ClassicalCalculator(base.HazardCalculator):
         super().init()
         if self.oqparam.hazard_calculation_id:
             full_lt = self.datastore.parent['full_lt']
-            trt_smrlzs = self.datastore.parent['trt_smrlzs'][:]
+            trt_smrs = self.datastore.parent['trt_smrs'][:]
         else:
             full_lt = self.csm.full_lt
-            trt_smrlzs = self.csm.get_trt_smrlzs()
-        self.grp_ids = numpy.arange(len(trt_smrlzs))
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrlzs)
+            trt_smrs = self.csm.get_trt_smrs()
+        self.grp_ids = numpy.arange(len(trt_smrs))
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
         rlzs_by_g = []
         for rlzs_by_gsim in rlzs_by_gsim_list:
             for rlzs in rlzs_by_gsim.values():

@@ -1078,13 +1078,13 @@ def read_cmakers(dstore, full_lt=None):
     cmakers = []
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt']
-    trt_smrlzs = dstore['trt_smrlzs'][:]
-    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrlzs)
+    trt_smrs = dstore['trt_smrs'][:]
+    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
-        trti = trt_smrlzs[grp_id][0] // num_eff_rlzs
+        trti = trt_smrs[grp_id][0] // num_eff_rlzs
         trt = trts[trti]
         cmaker = ContextMaker(
             trt, rlzs_by_gsim,

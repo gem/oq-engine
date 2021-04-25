@@ -538,7 +538,7 @@ def extract_sources(dstore, what):
     wkt_gz = gzip.compress(';'.join(wkt).encode('utf8'))
     src_gz = gzip.compress(';'.join(info['source_id']).encode('utf8'))
     oknames = [name for name in info.dtype.names  # avoid pickle issues
-               if name not in ('source_id', 'trt_smrlzs')]
+               if name not in ('source_id', 'trt_smrs')]
     arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
     for n in oknames:
         arr[n] = info[n]
@@ -947,22 +947,22 @@ def extract_mfd(dstore, what):
     duration = oq.investigation_time * oq.ses_per_logic_tree_path
     dic = {'duration': duration}
     dd = collections.defaultdict(float)
-    rups = dstore['ruptures']['trt_smrlz', 'mag', 'n_occ']
+    rups = dstore['ruptures']['trt_smr', 'mag', 'n_occ']
     mags = sorted(numpy.unique(rups['mag']))
     magidx = {mag: idx for idx, mag in enumerate(mags)}
-    num_groups = rups['trt_smrlz'].max() + 1
+    num_groups = rups['trt_smr'].max() + 1
     frequencies = numpy.zeros((len(mags), num_groups), float)
-    for trt_smrlz, mag, n_occ in rups:
+    for trt_smr, mag, n_occ in rups:
         if kind_mean:
-            dd[mag] += n_occ * weights[trt_smrlz % n] / duration
+            dd[mag] += n_occ * weights[trt_smr % n] / duration
         if kind_by_group:
-            frequencies[magidx[mag], trt_smrlz] += n_occ / duration
+            frequencies[magidx[mag], trt_smr] += n_occ / duration
     dic['magnitudes'] = numpy.array(mags)
     if kind_mean:
         dic['mean_frequency'] = numpy.array([dd[mag] for mag in mags])
     if kind_by_group:
-        for trt_smrlz, freqs in enumerate(frequencies.T):
-            dic['grp-%02d_frequency' % trt_smrlz] = freqs
+        for trt_smr, freqs in enumerate(frequencies.T):
+            dic['grp-%02d_frequency' % trt_smr] = freqs
     return ArrayWrapper((), dic)
 
 # NB: this is an alternative, slower approach giving exactly the same numbers;

@@ -39,7 +39,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`openquake.hazardlib.const.TRT`.
     """
-    trt_smrlz = 0  # set by the engine
+    trt_smr = 0  # set by the engine
     nsites = 0  # set when filtering the source
     ngsims = 1
     min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
@@ -66,12 +66,12 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         return w
 
     @property
-    def trt_smrlzs(self):
+    def trt_smrs(self):
         """
         :returns: a list of integers (usually of 1 element)
         """
-        trt_smrlz = self.trt_smrlz
-        return [trt_smrlz] if isinstance(trt_smrlz, int) else trt_smrlz
+        trt_smr = self.trt_smr
+        return [trt_smr] if isinstance(trt_smr, int) else trt_smr
 
     def serial(self, ses_seed):
         """
@@ -83,7 +83,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.source_id = source_id
         self.name = name
         self.tectonic_region_type = tectonic_region_type
-        self.trt_smrlz = -1  # set by the engine
+        self.trt_smr = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
         self.min_mag = 0  # set by the SourceConverter
@@ -108,15 +108,15 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     def sample_ruptures(self, eff_num_ses, ses_seed):
         """
         :param eff_num_ses: number of stochastic event sets * number of samples
-        :yields: triples (rupture, trt_smrlz, num_occurrences)
+        :yields: triples (rupture, trt_smr, num_occurrences)
         """
         seed = self.serial(ses_seed)
         numpy.random.seed(seed)
-        for trt_smrlz in self.trt_smrlzs:
+        for trt_smr in self.trt_smrs:
             for rup, num_occ in self._sample_ruptures(eff_num_ses):
                 rup.rup_id = seed
                 seed += 1
-                yield rup, trt_smrlz, num_occ
+                yield rup, trt_smr, num_occ
 
     def _sample_ruptures(self, eff_num_ses):
         tom = getattr(self, 'temporal_occurrence_model', None)
