@@ -81,11 +81,11 @@ def get_csm(oq, full_lt, h5=None):
     if oq.is_ucerf():
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         src_groups = []
-        for trt_smr, sm_rlz in enumerate(full_lt.sm_rlzs):
+        for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
-            src.checksum = src.trt_smr = src.id = trt_smr
+            src.checksum = src.grp_id = src.id = src.trt_smr = grp_id
             src.samples = sm_rlz.samples
             logging.info('Reading sections and rupture planes for %s', src)
             planes = src.get_planes()
