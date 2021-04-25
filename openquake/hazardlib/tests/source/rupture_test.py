@@ -118,7 +118,7 @@ class ParametricProbabilisticRuptureTestCase(unittest.TestCase):
     def test_get_probability_no_exceedance(self):
         rupture = make_rupture(ParametricProbabilisticRupture,
                                occurrence_rate=0.01,
-                               temporal_occurrence_model=tom)
+                               temporal_occurrence_model=PoissonTOM(50))
         poes = numpy.array([[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]])
         pne = rupture.get_probability_no_exceedance(poes)
         numpy.testing.assert_allclose(
@@ -237,11 +237,10 @@ class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
         pmf = PMF([(0.7, 0), (0.2, 1), (0.1, 2)])
         poes = numpy.array([[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]])
         rup = make_rupture(NonParametricProbabilisticRupture, pmf=pmf)
-        pne = rup.get_probability_no_exceedance(poes)
+        pne = rup.get_probability_no_exceedance(poes, PoissonTOM(20))
         numpy.testing.assert_allclose(
             pne,
-            numpy.array([[0.721, 0.744, 0.769], [0.796, 0.825, 0.856]])
-        )
+            numpy.array([[0.721, 0.744, 0.769], [0.796, 0.825, 0.856]]))
 
     def test_sample_number_of_occurrences(self):
         pmf = PMF([(0.7, 0), (0.2, 1), (0.1, 2)])
