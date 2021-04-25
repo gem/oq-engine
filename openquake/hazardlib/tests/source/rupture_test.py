@@ -118,7 +118,7 @@ class ParametricProbabilisticRuptureTestCase(unittest.TestCase):
     def test_get_probability_no_exceedance(self):
         rupture = make_rupture(ParametricProbabilisticRupture,
                                occurrence_rate=0.01,
-                               temporal_occurrence_model=PoissonTOM(50))
+                               temporal_occurrence_model=tom)
         poes = numpy.array([[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]])
         pne = rupture.get_probability_no_exceedance(poes)
         numpy.testing.assert_allclose(

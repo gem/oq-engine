@@ -115,12 +115,11 @@ DEBUG = AccumDict(accum=[])  # sid -> pnes.mean(), useful for debugging
 
 
 # this is inside an inner loop
-def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
+def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     """
-    :param ctxs: a list of U fat RuptureContexts
-    :param imts: a list of Intensity Measure Type objects
+    :param ctxs: a list of U RuptureContexts
+    :param tom: a temporal occurrence model
     :param g_by_z: an array of gsim indices
-    :param imt: an Intensity Measure Type
     :param iml2dict: a dictionary of arrays imt -> (P, Z)
     :param eps3: a triplet (truncnorm, epsilons, eps_bands)
     """
@@ -168,7 +167,7 @@ def disaggregate(ctxs, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
         poes[:, :, m, p, z] = _disagg_eps(
             truncnorm.sf(lvls), idxs, eps_bands, cum_bands)
     for u, ctx in enumerate(ctxs):
-        pnes[u] *= ctx.get_probability_no_exceedance(poes[u])  # this is slow
+        pnes[u] *= ctx.get_probability_no_exceedance(poes[u], tom)  # slow
     bindata = BinData(dists, lons, lats, pnes)
     DEBUG[idx].append(pnes.mean())
     if not bin_edges:
@@ -368,8 +367,7 @@ def disaggregation(
     rups = AccumDict(accum=[])
     cmaker = {}  # trt -> cmaker
     for trt, srcs in by_trt.items():
-        contexts.RuptureContext.temporal_occurrence_model = (
-            srcs[0].temporal_occurrence_model)
+        tom = srcs[0].temporal_occurrence_model
         cmaker[trt] = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': truncation_level,
@@ -386,7 +384,7 @@ def disaggregation(
         gsim = gsim_by_trt[trt]
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
             set_mean_std(ctxs, [imt], [gsim])
-            bdata[trt, magi] = disaggregate(ctxs, [0], {imt: iml2}, eps3)
+            bdata[trt, magi] = disaggregate(ctxs, tom, [0], {imt: iml2}, eps3)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:
         warnings.warn(

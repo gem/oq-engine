@@ -47,7 +47,7 @@ class MultiPointTestCase(unittest.TestCase):
         splits = list(mps)
         self.assertEqual(len(splits), 2)
         for split in splits:
-            self.assertEqual(split.trt_smrlz, mps.trt_smrlz)
+            self.assertEqual(split.trt_smr, mps.trt_smr)
 
         got = obj_to_node(mps).to_str()
         print(got)

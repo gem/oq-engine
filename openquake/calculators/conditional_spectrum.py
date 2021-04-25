@@ -24,8 +24,7 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, general
-from openquake.hazardlib.contexts import read_cmakers, RuptureContext
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -45,15 +44,13 @@ def conditional_spectrum(dstore, slc, cmaker, monitor):
     :returns:
         dictionary grp_id -> poes of shape (N, L, G)
     """
-    RuptureContext.temporal_occurrence_model = PoissonTOM(
-        cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         allctxs, _close = cmaker.read_ctxs(dstore, slc)
     N, L, G = len(_close), cmaker.imtls.size, len(cmaker.gsims)
     acc = numpy.ones((N, L, G))
     for ctx, poes in cmaker.gen_ctx_poes(allctxs):
-        acc *= ctx.get_probability_no_exceedance(poes)
+        acc *= ctx.get_probability_no_exceedance(poes, cmaker.tom)
     return {cmaker.grp_id: 1 - acc}
 
 
@@ -105,8 +102,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         rdata['grp_id'] = dstore['rup/grp_id'][:]
         rdata['nsites'] = dstore['rup/nsites'][:]
         totweight = rdata['nsites'].sum()
-        trt_smrlzs = dstore['trt_smrlzs'][:]
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrlzs)
+        trt_smrs = dstore['trt_smrs'][:]
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
         L = oq.imtls.size
         poes_shape = (sum(len(rbg) for rbg in rlzs_by_gsim), self.N, L)
         self.datastore.create_dset('poes', float, poes_shape)

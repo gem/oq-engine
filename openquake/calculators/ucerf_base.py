@@ -176,15 +176,15 @@ class UCERFSource(BaseSeismicSource):
         """
         return self.num_ruptures
 
-    def new(self, trt_smrlz, branch_id):
+    def new(self, trt_smr, branch_id):
         """
-        :param trt_smrlz: ordinal of the source group
+        :param trt_smr: ordinal of the source group
         :param branch_name: name of the UCERF branch
         :param branch_id: string associated to the branch
         :returns: a new UCERFSource associated to the branch_id
         """
         new = copy.copy(self)
-        new.trt_smrlz = trt_smrlz
+        new.trt_smr = trt_smr
         new.source_id = branch_id  # i.e. FM3_1/ABM/Shaw09Mod/
         # DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
         new.ukey = build_ukey(branch_id, self.start_date)
@@ -345,7 +345,7 @@ class UCERFSource(BaseSeismicSource):
                 ps.checksum = zlib.adler32(pickle.dumps(vars(ps), protocol=4))
                 ps._wkt = ps.wkt()
                 ps.id = self.id
-                ps.trt_smrlz = self.trt_smrlz
+                ps.trt_smr = self.trt_smr
                 ps.num_ruptures = ps.count_ruptures()
                 ps.nsites = 1  # anything <> 0 goes
                 sources.append(ps)

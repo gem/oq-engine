@@ -166,14 +166,15 @@ class EffectTestCase(unittest.TestCase):
 
 
 def compose(ctxs, poe):
-    pnes = [ctx.get_probability_no_exceedance(poe) for ctx in ctxs]
+    pnes = [ctx.get_probability_no_exceedance(poe, tom) for ctx in ctxs]
     return 1. - numpy.prod(pnes), pnes
 
 
 class CollapseTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        RuptureContext.temporal_occurrence_model = PoissonTOM(50.)
+        global tom
+        tom = PoissonTOM(50.)
 
     def test_param(self):
         ctxs = [RuptureContext([('occurrence_rate', .001)]),
