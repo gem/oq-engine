@@ -24,7 +24,7 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, general
-from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.contexts import read_cmakers, RuptureContext
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.calculators import base
 
