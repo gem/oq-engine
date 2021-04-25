@@ -34,7 +34,7 @@ from openquake.baselib.general import (
     AccumDict, DictArray, groupby, block_splitter)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.tom import PoissonTOM, registry
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -1099,7 +1099,7 @@ def read_cmakers(dstore, full_lt=None):
              'investigation_time': oq.investigation_time,
              'imtls': oq.imtls,
              'grp_id': grp_id})
-        cmaker.tom = hdf5.dotname2cls(toms[grp_id])(oq.investigation_time)
+        cmaker.tom = registry[toms[grp_id]](oq.investigation_time)
         cmaker.trti = trti
         stop = start + len(rlzs_by_gsim)
         cmaker.slc = slice(start, stop)

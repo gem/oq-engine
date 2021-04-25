@@ -734,14 +734,18 @@ def save_source_info(csm, h5):
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
         h5['trt_smrs'] = csm.get_trt_smrs()
         h5['toms'] = numpy.array(
-            [get_tom(sg) for sg in csm.src_groups], hdf5.vstr)
+            [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
 
 
-def get_tom(sg):
+def get_tom_name(sg):
+    """
+    :param sg: a source group instance
+    :returns: name of the associated temporal occurrence model
+    """
     if sg.temporal_occurrence_model:
-        return hdf5.cls2dotname(sg.temporal_occurrence_model.__class__)
+        return sg.temporal_occurrence_model.__class__.__name__
     else:
-        return 'openquake.hazardlib.tom.PoissonTOM'
+        return 'PoissonTOM'
 
 
 def _check_csm(csm, oqparam, h5):
