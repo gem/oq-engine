@@ -143,31 +143,6 @@ def _make_pmap(ctxs, cmaker):
     return ~pmap
 
 
-def read_ctxs(dstore, slc=slice(None)):
-    """
-    :param dstore: a DataStore instance
-    :returns: a list of contexts plus N lists of contexts close to each site
-    """
-    sitecol = dstore['sitecol'].complete
-    params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
-    ctxs = []
-    for u in range(len(params['mag'])):
-        ctx = RuptureContext()
-        for par, arr in params.items():
-            if par.endswith('_'):
-                par = par[:-1]
-            setattr(ctx, par, arr[u])
-        for par in sitecol.array.dtype.names:
-            setattr(ctx, par, sitecol[par][ctx.sids])
-        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
-        ctxs.append(ctx)
-    ctxs_around_site = [[] for sid in sitecol.sids]
-    for ctx in ctxs:
-        for sid in ctx.idx:
-            ctxs_around_site[sid].append(ctx)
-    return ctxs, ctxs_around_site
-
-
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
@@ -226,6 +201,33 @@ class ContextMaker(object):
         # instantiate monitors
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
+
+    def read_ctxs(self, dstore, slc=None):
+        """
+        :param dstore: a DataStore instance
+        :param slice: a slice of contexts with the same grp_id
+        :returns: a list of contexts plus N lists of contexts for each site
+        """
+        sitecol = dstore['sitecol'].complete
+        if slc is None:
+            slc = dstore['rup/grp_id'][:] == self.grp_id
+        params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
+        ctxs = []
+        for u in range(len(params['mag'])):
+            ctx = RuptureContext()
+            for par, arr in params.items():
+                if par.endswith('_'):
+                    par = par[:-1]
+                setattr(ctx, par, arr[u])
+            for par in sitecol.array.dtype.names:
+                setattr(ctx, par, sitecol[par][ctx.sids])
+            ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
+            ctxs.append(ctx)
+        ctxs_around_site = [[] for sid in sitecol.sids]
+        for ctx in ctxs:
+            for sid in ctx.idx:
+                ctxs_around_site[sid].append(ctx)
+        return ctxs, ctxs_around_site
 
     def multi(self, ctxs):
         """
