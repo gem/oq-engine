@@ -43,6 +43,7 @@ intensities = {
     '5.0': numpy.array([1.2, 1.1, .7, .69, .6, .5]),
     '5.5': numpy.array([1.5, 1.2, .89, .85, .82, .6]),
     '6.0': numpy.array([2.0, 1.5, .9, .85, .81, .6])}
+tom = PoissonTOM(50.)
 
 
 class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
@@ -171,11 +172,6 @@ def compose(ctxs, poe):
 
 
 class CollapseTestCase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        global tom
-        tom = PoissonTOM(50.)
-
     def test_param(self):
         ctxs = [RuptureContext([('occurrence_rate', .001)]),
                 RuptureContext([('occurrence_rate', .002)])]
