@@ -130,16 +130,30 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-# used only in contexts_test.py
-def _make_pmap(ctxs, cmaker):
-    tom = PoissonTOM(cmaker.investigation_time)
-    # easy case of independent ruptures, useful for debugging
-    pmap = ProbabilityMap(cmaker.loglevels.size, len(cmaker.gsims))
+def get_pmap(ctxs, cmaker, probmap=None):
+    """
+    :param ctxs: a list of contexts
+    :param cmaker: the ContextMaker used to create the contexts
+    :param probmap: is not None, update it
+    :returns: a new ProbabilityMap if probmap is None
+    """
+    tom = cmaker.tom
+    rup_indep = cmaker.rup_indep
+    if probmap is None:  # create new pmap
+        pmap = ProbabilityMap(cmaker.imtls.size, len(cmaker.gsims))
+    else:  # update passed probmap
+        pmap = probmap
     for ctx, poes in cmaker.gen_ctx_poes(ctxs):
-        pnes = ctx.get_probability_no_exceedance(poes, tom)  # (N, L, G)
+        # pnes and poes of shape (N, L, G)
+        pnes = ctx.get_probability_no_exceedance(poes, tom)
         for sid, pne in zip(ctx.sids, pnes):
-            pmap.setdefault(sid, 1.).array *= pne
-    return ~pmap
+            probs = pmap.setdefault(sid, cmaker.rup_indep).array
+            if rup_indep:
+                probs *= pne
+            else:  # rup_mutex
+                probs += (1. - pne) * ctx.weight
+    if probmap is None:  # return the new pmap
+        return ~pmap if rup_indep else pmap
 
 
 class ContextMaker(object):
@@ -574,22 +588,12 @@ class PmapMaker(object):
 
     def _update_pmap(self, ctxs, pmap):
         # compute PoEs and update pmap
-        rup_indep = self.cmaker.rup_indep
         # splitting in blocks makes sure that the maximum poes array
         # generated has size N x L x G x 8 = 4 MB
-        tom = self.cmaker.tom
         with self.pne_mon:
             for block in block_splitter(
                     ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
-                for ctx, poes in self.cmaker.gen_ctx_poes(block):
-                    # pnes and poes of shape (N, L, G)
-                    pnes = ctx.get_probability_no_exceedance(poes, tom)
-                    for sid, pne in zip(ctx.sids, pnes):
-                        probs = pmap.setdefault(sid, rup_indep).array
-                        if rup_indep:
-                            probs *= pne
-                        else:  # rup_mutex
-                            probs += (1. - pne) * ctx.weight
+                get_pmap(block, self.cmaker, pmap)
 
     def _ruptures(self, src, filtermag=None):
         return src.iter_ruptures(
