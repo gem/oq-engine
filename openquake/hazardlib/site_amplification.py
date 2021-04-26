@@ -280,7 +280,8 @@ class Amplifier(object):
         min_gm = numpy.amin(self.imtls[imt])
         max_gm = numpy.amax(self.imtls[imt])
 
-        min_ratio = numpy.amin(self.amplevels[1:] / self.amplevels[:-1])*0.9
+        min_ratio = numpy.amin(numpy.array(self.amplevels[1:]) /
+                               numpy.array(self.amplevels[:-1]))*0.9
         min_ratio = min(max(min_ratio, 1.05), 1.1)
         allimls = [min_gm]
         while allimls[-1] < max_gm:
