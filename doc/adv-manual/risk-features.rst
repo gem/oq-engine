@@ -190,29 +190,38 @@ calculation::
 
   $ oq engine --run job.ini --hc 1000
 
-Starting from version 3.12 it is also possible to specify the following sources 
+Starting from version 3.12 it is also possible to specify the following sources
 instead of a `shakemap_id`::
 
-   # from local files:
+   # (1) from local files:
    shakemap_uri = {
          "kind": "usgs_xml",
          "grid_url": "relative/path/file.xml",
          "uncertainty_url": "relative/path/file.xml"
          }
 
-   # from remote files:
+   # (2) from remote files:
    shakemap_uri = {
          "kind": "usgs_xml",
          "grid_url": "https://url.to/grid.xml",
-         "uncertainty_url": "https://url.to/uncertainty.xml"
+         "uncertainty_url": "https://url.to/uncertainty.zip"
+         }
+   
+   # (3) both files in a single archive
+   # containing grid.xml, uncertainty.xml:
+   shakemap_uri = {
+         "kind": "usgs_xml",
+         "grid_url": "relative/path/grid.zip" 
          }
 
-It is also possible to define absolute paths with
-``file://absolute/path/to/file.xml``, even if it is a BAD idea,
-since using absolute paths will make your calculation not portable
+While it is also possible to define absolute paths, it is advised not to do
+so since using absolute paths will make your calculation not portable
 across different machines.
-The files still have to be in the USGS ShakeMap format and either `*.xml` or 
-a `*.zip` file containing a valid xml file.
+
+The files must be valid `.xml` USGS ShakeMaps `(1)`. One or both files can
+also be passed as `.zip` archives containing a single valid xml ShakeMap
+`(2)`. If both files are in the same `.zip`, the archived files `must` be
+named ``grid.xml`` and ``uncertainty.xml``.
 
 Also starting from version 3.12 it is possible to use ESRI Shapefiles
 in the same manner as ShakeMaps. Polygons define areas with the same
