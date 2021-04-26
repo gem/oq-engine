@@ -134,7 +134,7 @@ def get_pmap(ctxs, cmaker, probmap=None):
     """
     :param ctxs: a list of contexts
     :param cmaker: the ContextMaker used to create the contexts
-    :param probmap: is not None, update it
+    :param probmap: if not None, update it
     :returns: a new ProbabilityMap if probmap is None
     """
     tom = cmaker.tom
