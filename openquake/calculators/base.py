@@ -711,7 +711,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Storing risk model')
             attrs = self.crmodel.get_attrs()
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
-                                         'gzip', **attrs)
+                                     'gzip', **attrs)
 
     def _read_risk_data(self):
         # read the risk model (if any), the exposure (if any) and then the
@@ -1232,6 +1232,8 @@ def read_shakemap(calc, haz_sitecol, assetcol):
     and stored in the datastore.
     """
     oq = calc.oqparam
+    # from openquake.commonlib.readinput import get_input_files
+    # print(get_input_files(oq))
     E = oq.number_of_ground_motion_fields
     oq.risk_imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
     logging.info('Getting/reducing shakemap')
@@ -1247,9 +1249,8 @@ def read_shakemap(calc, haz_sitecol, assetcol):
             uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
         else:
             uridict = oq.shakemap_uri
-        base_path = getattr(oq, 'base_path', '')
         sitecol, shakemap, discarded = get_sitecol_shakemap(
-            uridict.pop('kind'), uridict, oq.imtls, base_path, haz_sitecol,
+            uridict.pop('kind'), uridict, oq.imtls, haz_sitecol,
             oq.asset_hazard_distance['default'])
         if len(discarded):
             calc.datastore['discarded'] = discarded

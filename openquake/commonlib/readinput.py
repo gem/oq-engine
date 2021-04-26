@@ -812,7 +812,7 @@ def get_composite_source_model(oqparam, h5=None):
             return csm
 
     # read and process the composite source model from the input files
-    csm = get_csm(oqparam, full_lt,  h5)
+    csm = get_csm(oqparam, full_lt, h5)
     save_source_info(csm, h5)
     if oqparam.cachedir and not oqparam.is_ucerf():
         logging.info('Saving %s', fname)

@@ -29,7 +29,7 @@ get_sitecol_shakemap = CallableDict()
 
 
 @get_sitecol_shakemap.add('shapefile')
-def get_sitecol_shapefile(kind, uridict, required_imts, base_path, sitecol=None,
+def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
                           assoc_dist=None, mode='filter'):
     """
     :param uridict: a dictionary specifying the ShakeMap resource
@@ -39,7 +39,7 @@ def get_sitecol_shapefile(kind, uridict, required_imts, base_path, sitecol=None,
     :param mode: 'strict', 'warn' or 'filter'
     :returns: filtered site collection, filtered shakemap, discarded
     """
-    polygons, shakemap = get_array(kind, base_path, **uridict)
+    polygons, shakemap = get_array(kind, **uridict)
 
     available_imts = set(shakemap['val'].dtype.names)
 
@@ -71,7 +71,7 @@ def get_sitecol_shapefile(kind, uridict, required_imts, base_path, sitecol=None,
 
 
 @get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')
-def get_sitecol_usgs(kind, uridict, required_imts, base_path, sitecol=None,
+def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
                      assoc_dist=None, mode='warn'):
     """
     :param uridict: a dictionary specifying the ShakeMap resource
@@ -81,7 +81,7 @@ def get_sitecol_usgs(kind, uridict, required_imts, base_path, sitecol=None,
     :param mode: 'strict', 'warn' or 'filter'
     :returns: filtered site collection, filtered shakemap, discarded
     """
-    shakemap = get_array(kind, base_path, **uridict)
+    shakemap = get_array(kind, **uridict)
 
     available_imts = set(shakemap['val'].dtype.names)
 

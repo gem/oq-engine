@@ -84,14 +84,14 @@ def urlextract(url, fname):
         raise FileNotFoundError
 
 
-def path2url(url, base_path):
+def path2url(url):
     """
     If a relative path is given for the file, parse it so it can be
     read with 'urlopen'.
     :param url: path/url to be parsed
     """
     if not url.startswith('file:') and not url.startswith('http'):
-        file = pathlib.Path(os.path.join(base_path, url))
+        file = pathlib.Path(url)
         if file.is_file():
             return 'file:{}'.format(pathname2url(str(file.absolute())))
         raise FileNotFoundError(
@@ -103,15 +103,14 @@ get_array = CallableDict()
 
 
 @get_array.add('shapefile')
-def get_array_shapefile(kind, base_path, fname):
+def get_array_shapefile(kind, fname):
     """
     Download and parse data saved as a shapefile.
-    :param base_path: base path of job.ini
     :param fname: url or filepath for the shapefiles,
     either a zip or the location of one of the files,
     *.shp and *.dbf are necessary, *.prj and *.shx optional
     """
-    fname = path2url(fname, base_path)
+    fname = path2url(fname)
 
     extensions = ['shp', 'dbf', 'prj', 'shx']
     f_dict = {}
@@ -157,38 +156,23 @@ def get_array_shapefile(kind, base_path, fname):
 
 
 @get_array.add('usgs_xml')
-def get_array_usgs_xml(kind, base_path, grid_url, uncertainty_url=None):
+def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
     """
     Read a ShakeMap in XML format from the local file system
     """
-    try:
-        grid_url = path2url(grid_url, base_path)
-        if uncertainty_url is None:
-            if grid_url.endswith('.zip'):
-                # see if both are in the same file, naming must be correct
-                try:
-                    with urlextract(grid_url, 'grid.xml') as f1, urlextract(
-                            path2url(grid_url, base_path),
-                            'uncertainty.xml') as f2:
-                        return get_shakemap_array(f1, f2)
-                except FileNotFoundError:
-                    pass
-            # if not just return the grid
-            with urlextract(grid_url, '.xml') as f:
-                return get_shakemap_array(f)
+    grid_url = path2url(grid_url)
 
-        # both files present, return them both
-        with urlextract(grid_url, '.xml') as f1, urlextract(
-                path2url(uncertainty_url, base_path), '.xml') as f2:
+    if uncertainty_url is None:
+        with urlopen(grid_url) as f:
+            return get_shakemap_array(f)
+    else:
+        with urlopen(grid_url) as f1, urlextract(
+                path2url(uncertainty_url), 'uncertainty.xml') as f2:
             return get_shakemap_array(f1, f2)
-
-    except FileNotFoundError as e:
-        raise FileNotFoundError(
-            'USGS xml grid file could not be found at %s' % grid_url) from e
 
 
 @get_array.add('usgs_id')
-def get_array_usgs_id(kind, base_path, usgs_id):
+def get_array_usgs_id(kind, usgs_id):
     """
     Download a ShakeMap from the USGS site
     """
@@ -206,11 +190,10 @@ def get_array_usgs_id(kind, base_path, usgs_id):
 
 
 @get_array.add('file_npy')
-def get_array_file_npy(kind, base_path, fname):
+def get_array_file_npy(kind, fname):
     """
     Read a ShakeMap in .npy format from the local file system
     """
-    fname = os.path.join(base_path, fname)
     return numpy.load(fname)
 
 

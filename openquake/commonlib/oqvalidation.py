@@ -1393,8 +1393,6 @@ class OqParam(valid.ParamSet):
             kind = self.shakemap_uri['kind']
             sig = inspect.signature(get_array[kind])
             params = list(sig.parameters)
-            if 'base_path' in params:
-                params.remove('base_path')
             if params != list(self.shakemap_uri):
                 raise ValueError(
                     'Expected parameters %s in shakemap_uri, got %s' %
