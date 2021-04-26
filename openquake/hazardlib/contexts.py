@@ -609,7 +609,7 @@ class PmapMaker(object):
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         for src, sites in self.srcfilter.split(self.group):
             t0 = time.time()
-            tom = getattr(src, 'temporal_occurrence_model', None)
+            tom = self.cmaker.tom
             if self.fewsites:
                 sites = sites.complete
             self.numctxs = 0
@@ -627,7 +627,7 @@ class PmapMaker(object):
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         for src, indices in self.srcfilter.filter(self.group):
             t0 = time.time()
-            tom = getattr(src, 'temporal_occurrence_model', None)
+            tom = self.cmaker.tom
             sites = self.srcfilter.sitecol.filtered(indices)
             self.numctxs = 0
             self.numsites = 0

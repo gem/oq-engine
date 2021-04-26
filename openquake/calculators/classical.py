@@ -562,6 +562,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.N / oq.max_sites_per_tile)
         self.params = dict(
             truncation_level=oq.truncation_level,
+            investigation_time=oq.investigation_time,
             imtls=oq.imtls, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo,
