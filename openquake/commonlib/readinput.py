@@ -1160,7 +1160,7 @@ def get_input_files(oqparam, hazard=False):
     fnames = set()  # files entering in the checksum
     uri = oqparam.shakemap_uri
     if isinstance(uri, dict) and uri:
-        # local xml, zip or npy files
+        # local files
         for key, val in uri.items():
             if key == 'fname' or key.endswith('_url'):
                 val = val.replace('file://', '').replace('file:', '')
@@ -1168,7 +1168,7 @@ def get_input_files(oqparam, hazard=False):
                 if os.path.exists(fname):
                     uri[key] = fname
                     fnames.add(fname)
-        # separate shapefiles
+        # additional separate shapefiles
         if uri['kind'] == 'shapefile' and not uri['fname'].endswith('.zip'):
             fnames.update(get_shapefiles(os.path.dirname(fname)))
 
