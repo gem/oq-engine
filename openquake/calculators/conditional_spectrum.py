@@ -54,7 +54,7 @@ def conditional_spectrum(dstore, slc, cmaker, monitor):
 @base.calculators.add('conditional_spectrum')
 class ConditionalSpectrumCalculator(base.HazardCalculator):
     """
-    Conditional spectrum calculator
+    Conditional spectrum calculator, to be used for few sites only
     """
     precalc = 'classical'
     accept_precalc = ['classical', 'disaggregation']
