@@ -192,6 +192,7 @@ def reduce_sources(sources_with_same_id):
         # duplicate sources: same id, same checksum
         src = srcs[0]
         if len(srcs) > 1:  # happens in classical/case_20
+            import pdb; pdb.set_trace()
             src.trt_smr = tuple(s.trt_smr for s in srcs)
         else:
             src.trt_smr = src.trt_smr,

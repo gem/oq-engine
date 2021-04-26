@@ -129,6 +129,7 @@ class MultiMFD(BaseMFD):
             kwargs['bin_width'] = [width_of_mfd_bin]
         for field in kwargs:
             self.check_size(field, kwargs[field])
+        self.modifications = []
 
     def check_size(self, field, values):
         if len(values) not in (1, self.size):
@@ -179,5 +180,6 @@ class MultiMFD(BaseMFD):
         Apply a modification to the underlying point sources, with the
         same parameters for all sources
         """
+        self.modifications.append({modification: parameters})
         for src in self:
             src.modify(modification, parameters)
