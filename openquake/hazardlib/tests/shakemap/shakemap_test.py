@@ -36,13 +36,12 @@ def mean_std(shakemap, site_effects):
 class ShakemapTestCase(unittest.TestCase):
 
     def test_gmfs(self):
-        # test absolute path with file://
-        f1 = 'file://' + os.path.join(CDIR, 'ghorka_grid.xml')
-        f2 = 'file://' + os.path.join(CDIR, 'ghorka_uncertainty.zip')
+        # test uncertainty in zip
+        f1 = os.path.join(CDIR, 'ghorka_grid.xml')
+        f2 = os.path.join(CDIR, 'ghorka_uncertainty.zip')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
         sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
-                                                     uridict, imt_dt.names,
-                                                     CDIR)
+                                                     uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, _ = mean_std(shakemap, site_effects=True)
@@ -145,13 +144,12 @@ class ShakemapTestCase(unittest.TestCase):
 
     def test_from_files(self):
         # files provided by Vitor Silva, without site amplification
-        # test relative path and zip
-        f1 = 'test_shaking.zip'
-        f2 = 'test_uncertainty.xml'
+        # test grid in zip
+        f1 = os.path.join(CDIR, 'test_shaking.zip')
+        f2 = os.path.join(CDIR, 'test_uncertainty.xml')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
         sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
-                                                     uridict, imt_dt.names,
-                                                     CDIR)
+                                                     uridict, imt_dt.names)
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
         gmf_by_imt, std_by_imt = mean_std(shakemap, site_effects=False)
@@ -166,13 +164,12 @@ class ShakemapTestCase(unittest.TestCase):
                          [0.5815353, 0.6460007, 0.6491335, 0.6603457]])
 
     def test_for_mmi(self):
-        # test absolute path without file:// and zip
+        # test both files in one zip
         f1 = os.path.join(CDIR, 'ghorka_grid.zip')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=None)
 
         sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
-                                                     uridict, ['MMI'],
-                                                     CDIR)
+                                                     uridict, ['MMI'])
         n = 4  # number of sites
         self.assertEqual(len(sitecol), n)
 
