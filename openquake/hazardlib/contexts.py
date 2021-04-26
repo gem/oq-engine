@@ -34,7 +34,7 @@ from openquake.baselib.general import (
     AccumDict, DictArray, groupby, block_splitter)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.tom import PoissonTOM, registry
+from openquake.hazardlib.tom import registry
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -143,7 +143,7 @@ def get_pmap(ctxs, cmaker, probmap=None):
         pmap = ProbabilityMap(cmaker.imtls.size, len(cmaker.gsims))
     else:  # update passed probmap
         pmap = probmap
-    for ctx, poes in cmaker.gen_ctx_poes(ctxs):
+    for ctx, poes in zip(ctxs, gen_poes(ctxs, cmaker)):
         # pnes and poes of shape (N, L, G)
         pnes = ctx.get_probability_no_exceedance(poes, tom)
         for sid, pne in zip(ctx.sids, pnes):
@@ -154,6 +154,34 @@ def get_pmap(ctxs, cmaker, probmap=None):
                 probs += (1. - pne) * ctx.weight
     if probmap is None:  # return the new pmap
         return ~pmap if rup_indep else pmap
+
+
+def gen_poes(ctxs, cmaker):
+    """
+    :param ctxs: a list of C context objects
+    :yields: poes of shape (N, L, G)
+    """
+    nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
+    C = len(ctxs)
+    N = nsites.sum()
+    poes = numpy.zeros((N, cmaker.loglevels.size, len(cmaker.gsims)))
+    if cmaker.single_site_opt.any():
+        ctx = cmaker.multi(ctxs)
+    for g, gsim in enumerate(cmaker.gsims):
+        with cmaker.gmf_mon:
+            # builds mean_std of shape (2, N, M)
+            if cmaker.single_site_opt[g] and C > 1 and (nsites == 1).all():
+                mean_std = gsim.get_mean_std1(ctx, cmaker.imts)
+            else:
+                mean_std = gsim.get_mean_std(ctxs, cmaker.imts)
+        with cmaker.poe_mon:
+            # builds poes of shape (N, L, G)
+            poes[:, :, g] = gsim.get_poes(
+                mean_std, cmaker.loglevels, cmaker.trunclevel, cmaker.af, ctxs)
+    s = 0
+    for ctx, n in zip(ctxs, nsites):
+        yield poes[s:s+n]
+        s += n
 
 
 class ContextMaker(object):
@@ -260,33 +288,6 @@ class ContextMaker(object):
             setattr(ctx, par, numpy.array(dists))
         ctx.ctxs = ctxs
         return ctx
-
-    def gen_ctx_poes(self, ctxs):
-        """
-        :param ctxs: a list of C context objects
-        :yields: C pairs (ctx, poes of shape (N, L, G))
-        """
-        nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
-        C = len(ctxs)
-        N = nsites.sum()
-        poes = numpy.zeros((N, self.loglevels.size, len(self.gsims)))
-        if self.single_site_opt.any():
-            ctx = self.multi(ctxs)
-        for g, gsim in enumerate(self.gsims):
-            with self.gmf_mon:
-                # builds mean_std of shape (2, N, M)
-                if self.single_site_opt[g] and C > 1 and (nsites == 1).all():
-                    mean_std = gsim.get_mean_std1(ctx, self.imts)
-                else:
-                    mean_std = gsim.get_mean_std(ctxs, self.imts)
-            with self.poe_mon:
-                # builds poes of shape (N, L, G)
-                poes[:, :, g] = gsim.get_poes(
-                    mean_std, self.loglevels, self.trunclevel, self.af, ctxs)
-        s = 0
-        for ctx, n in zip(ctxs, nsites):
-            yield ctx, poes[s:s+n]
-            s += n
 
     def get_ctx_params(self):
         """
