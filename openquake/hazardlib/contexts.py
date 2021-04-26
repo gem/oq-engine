@@ -604,8 +604,9 @@ class PmapMaker(object):
                 self.rupdata.append(ctx)
             yield ctx
 
-    def _make_src_indep(self, pmap):
+    def _make_src_indep(self):
         # sources with the same ID
+        pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         for src, sites in self.srcfilter.split(self.group):
             t0 = time.time()
             tom = getattr(src, 'temporal_occurrence_model', None)
@@ -622,7 +623,8 @@ class PmapMaker(object):
                        self.cmaker.task_no)
         return ~pmap if self.rup_indep else pmap
 
-    def _make_src_mutex(self, pmap):
+    def _make_src_mutex(self):
+        pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         for src, indices in self.srcfilter.filter(self.group):
             t0 = time.time()
             tom = getattr(src, 'temporal_occurrence_model', None)
@@ -654,14 +656,12 @@ class PmapMaker(object):
 
     def make(self):
         self.rupdata = []
-        imtls = self.cmaker.imtls
-        pmap = ProbabilityMap(imtls.size, len(self.gsims))
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         if self.src_mutex:
-            pmap = self._make_src_mutex(pmap)
+            pmap = self._make_src_mutex()
         else:
-            pmap = self._make_src_indep(pmap)
+            pmap = self._make_src_indep()
         rupdata = self.dictarray(self.rupdata)
         return pmap, rupdata, self.calc_times
 
