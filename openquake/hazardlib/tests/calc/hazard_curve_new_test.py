@@ -115,7 +115,8 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None)
+                                    truncation_level=None,
+                                    investigation_time=1)
         crv = list(curves[0][0])
         npt.assert_almost_equal([0.30000, 0.2646, 0.0625],
                                 crv, decimal=4)
@@ -129,7 +130,8 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None)
+                                    truncation_level=None,
+                                    investigation_time=1)
         npt.assert_almost_equal(numpy.array([0.30000, 0.2646, 0.0625]),
                                 curves[0][0], decimal=4)
 
@@ -177,7 +179,8 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None)
+                                    truncation_level=None,
+                                    investigation_time=1)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.40000, 0.36088, 0.07703]),
                                 crv, decimal=4)
@@ -188,7 +191,8 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
                                     self.sites,
                                     self.imtls,
                                     self.gsim_by_trt,
-                                    truncation_level=None)
+                                    truncation_level=None,
+                                    investigation_time=1)
         crv = curves[0][0]
         npt.assert_almost_equal(numpy.array([0.58000, 0.53, 0.1347]),
                                 crv, decimal=4)

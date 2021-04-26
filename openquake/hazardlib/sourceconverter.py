@@ -910,7 +910,7 @@ class SourceConverter(RuptureConverter):
             geom = node.simpleFaultGeometry
             fault_trace = self.geo_line(geom)
             as_kite = False
-        except:
+        except Exception:
             geom = node.kiteFaultGeometry
             profiles = self.geo_lines(geom)
 

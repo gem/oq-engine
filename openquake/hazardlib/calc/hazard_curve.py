@@ -52,7 +52,7 @@ from openquake.hazardlib.probability_map import (
 from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.tom import FatedTOM
+from openquake.hazardlib.tom import PoissonTOM, FatedTOM
 
 
 def _cluster(imtls, tom, gsims, pmap):
@@ -110,6 +110,13 @@ def classical(group, src_filter, gsims, param, monitor=Monitor()):
     param['maximum_distance'] = src_filter.integration_distance
     [trt] = trts  # there must be a single tectonic region type
     cmaker = ContextMaker(trt, gsims, param, monitor)
+    try:
+        cmaker.tom = group.temporal_occurrence_model
+    except AttributeError:  # got a list of sources, not a group
+        time_span = param.get('investigation_time')  # None for nonparametric
+        cmaker.tom = PoissonTOM(time_span) if time_span else None
+    if cluster:
+        cmaker.tom = FatedTOM(time_span=1)
     pmap, rup_data, calc_times = PmapMaker(cmaker, src_filter, group).make()
     extra = {}
     extra['task_no'] = getattr(monitor, 'task_no', 0)
@@ -172,15 +179,20 @@ def calc_hazard_curves(
         groups = [SourceGroup(trt, odic[trt], 'src_group', 'indep', 'indep')
                   for trt in odic]
     idx = 0
+    span = None
     for i, grp in enumerate(groups):
         for src in grp:
+            tom = getattr(src, 'temporal_occurrence_model', None)
+            if tom:
+                span = tom.time_span
             src.grp_id = i
             src.id = idx
             idx += 1
     imtls = DictArray(imtls)
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level, reqv=reqv,
-                 cluster=grp.cluster, shift_hypo=shift_hypo)
+                 cluster=grp.cluster, shift_hypo=shift_hypo,
+                 investigation_time=kwargs.get('investigation_time', span))
     pmap = ProbabilityMap(imtls.size, 1)
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
@@ -213,6 +225,7 @@ def calc_hazard_curve(site1, src, gsims, oqparam):
     assert len(site1) == 1, site1
     trt = src.tectonic_region_type
     cmaker = ContextMaker(trt, gsims, vars(oqparam))
+    cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
     pmap, rup_data, calc_times = PmapMaker(cmaker, srcfilter, [src]).make()
     if not pmap:  # filtered away

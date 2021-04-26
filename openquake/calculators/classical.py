@@ -35,7 +35,7 @@ from openquake.hazardlib.source.point import (
     PointSource, grid_point_sources, msr_name)
 from openquake.hazardlib.source.base import EPS
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.contexts import ContextMaker, get_effect
+from openquake.hazardlib.contexts import ContextMaker, get_effect, read_cmakers
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -227,9 +227,7 @@ class Hazard:
     def __init__(self, dstore, full_lt, pgetter, srcidx):
         self.datastore = dstore
         self.full_lt = full_lt
-        self.trt_smrs = dstore['trt_smrs'][:]
-        self.rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(self.trt_smrs)
-        self.slice_by_g = getters.get_slice_by_g(self.rlzs_by_gsim_list)
+        self.cmakers = read_cmakers(dstore, full_lt)
         self.get_hcurves = pgetter.get_hcurves
         self.imtls = pgetter.imtls
         self.sids = pgetter.sids
@@ -241,21 +239,21 @@ class Hazard:
         Initialize the pmaps dictionary with zeros, if needed
         """
         if grp_id not in pmaps:
-            L, G = self.imtls.size, len(self.rlzs_by_gsim_list[grp_id])
+            L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
             pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
 
     def store_poes(self, grp_id, pmap):
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        trt = self.full_lt.trt_by_et[self.trt_smrs[grp_id][0]]
+        cmaker = self.cmakers[grp_id]
         base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
         arr = numpy.array([pmap[sid].array for sid in pmap]).transpose(2, 0, 1)
-        self.datastore['_poes'][self.slice_by_g[grp_id]] = arr  # shape GNL
+        self.datastore['_poes'][cmaker.slc] = arr  # shape GNL
         extreme = max(
             get_extreme_poe(pmap[sid].array, self.imtls)
             for sid in pmap)
-        self.data.append((grp_id, trt, extreme))
+        self.data.append((grp_id, cmaker.trt, extreme))
 
     def store_disagg(self, pmaps=None):
         """
@@ -264,7 +262,7 @@ class Hazard:
         if pmaps:  # called inside a loop
             for key, pmap in pmaps.items():
                 # contains only string keys in case of disaggregation
-                rlzs_by_gsim = self.rlzs_by_gsim_list[pmap.grp_id]
+                rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
                 self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
                     self.get_hcurves(pmap, rlzs_by_gsim))
         else:  # called at the end of the loop
@@ -564,6 +562,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.N / oq.max_sites_per_tile)
         self.params = dict(
             truncation_level=oq.truncation_level,
+            investigation_time=oq.investigation_time,
             imtls=oq.imtls, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo,
@@ -582,10 +581,10 @@ class ClassicalCalculator(base.HazardCalculator):
         src_groups = self.csm.src_groups
         tot_weight = 0
         for grp_id in grp_ids:
-            rlzs_by_gsim = hazard.rlzs_by_gsim_list[grp_id]
+            gsims = hazard.cmakers[grp_id].gsims
             sg = src_groups[grp_id]
             for src in sg:
-                src.ngsims = len(rlzs_by_gsim)
+                src.ngsims = len(gsims)
                 tot_weight += src.weight
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
@@ -599,7 +598,7 @@ class ClassicalCalculator(base.HazardCalculator):
             int(tot_weight), int(max_weight)))
         self.counts = AccumDict(accum=0)
         for grp_id in grp_ids:
-            rlzs_by_gsim = hazard.rlzs_by_gsim_list[grp_id]
+            rlzs_by_gsim = hazard.cmakers[grp_id].gsims
             sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups

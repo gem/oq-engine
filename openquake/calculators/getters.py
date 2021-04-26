@@ -67,19 +67,6 @@ def sig_eps_dt(imts):
     return numpy.dtype(lst)
 
 
-def get_slice_by_g(rlzs_by_gsim_list):
-    """
-    :returns: a list of slices
-    """
-    slices = []
-    start = 0
-    for rlzs_by_gsim in rlzs_by_gsim_list:
-        ngsims = len(rlzs_by_gsim)
-        slices.append(slice(start, start + ngsims))
-        start += ngsims
-    return slices
-
-
 class PmapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a

@@ -34,7 +34,7 @@ from openquake.baselib.general import (
     AccumDict, DictArray, groupby, block_splitter)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.tom import PoissonTOM, registry
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -130,42 +130,30 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-# used only in contexts_test.py
-def _make_pmap(ctxs, cmaker):
-    RuptureContext.temporal_occurrence_model = PoissonTOM(
-        cmaker.investigation_time)
-    # easy case of independent ruptures, useful for debugging
-    pmap = ProbabilityMap(cmaker.loglevels.size, len(cmaker.gsims))
+def get_pmap(ctxs, cmaker, probmap=None):
+    """
+    :param ctxs: a list of contexts
+    :param cmaker: the ContextMaker used to create the contexts
+    :param probmap: if not None, update it
+    :returns: a new ProbabilityMap if probmap is None
+    """
+    tom = cmaker.tom
+    rup_indep = cmaker.rup_indep
+    if probmap is None:  # create new pmap
+        pmap = ProbabilityMap(cmaker.imtls.size, len(cmaker.gsims))
+    else:  # update passed probmap
+        pmap = probmap
     for ctx, poes in cmaker.gen_ctx_poes(ctxs):
-        pnes = ctx.get_probability_no_exceedance(poes)  # (N, L, G)
+        # pnes and poes of shape (N, L, G)
+        pnes = ctx.get_probability_no_exceedance(poes, tom)
         for sid, pne in zip(ctx.sids, pnes):
-            pmap.setdefault(sid, 1.).array *= pne
-    return ~pmap
-
-
-def read_ctxs(dstore, slc=slice(None)):
-    """
-    :param dstore: a DataStore instance
-    :returns: a list of contexts plus N lists of contexts close to each site
-    """
-    sitecol = dstore['sitecol'].complete
-    params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
-    ctxs = []
-    for u in range(len(params['mag'])):
-        ctx = RuptureContext()
-        for par, arr in params.items():
-            if par.endswith('_'):
-                par = par[:-1]
-            setattr(ctx, par, arr[u])
-        for par in sitecol.array.dtype.names:
-            setattr(ctx, par, sitecol[par][ctx.sids])
-        ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
-        ctxs.append(ctx)
-    close_ctxs = [[] for sid in sitecol.sids]
-    for ctx in ctxs:
-        for sid in ctx.idx:
-            close_ctxs[sid].append(ctx)
-    return ctxs, close_ctxs
+            probs = pmap.setdefault(sid, cmaker.rup_indep).array
+            if rup_indep:
+                probs *= pne
+            else:  # rup_mutex
+                probs += (1. - pne) * ctx.weight
+    if probmap is None:  # return the new pmap
+        return ~pmap if rup_indep else pmap
 
 
 class ContextMaker(object):
@@ -173,6 +161,8 @@ class ContextMaker(object):
     A class to manage the creation of contexts for distances, sites, rupture.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
+    rup_indep = True
+    tom = None
 
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}  # empty in the gmpe-smtk
@@ -226,6 +216,33 @@ class ContextMaker(object):
         # instantiate monitors
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
+
+    def read_ctxs(self, dstore, slc=None):
+        """
+        :param dstore: a DataStore instance
+        :param slice: a slice of contexts with the same grp_id
+        :returns: a list of contexts plus N lists of contexts for each site
+        """
+        sitecol = dstore['sitecol'].complete
+        if slc is None:
+            slc = dstore['rup/grp_id'][:] == self.grp_id
+        params = {n: dstore['rup/' + n][slc] for n in dstore['rup']}
+        ctxs = []
+        for u in range(len(params['mag'])):
+            ctx = RuptureContext()
+            for par, arr in params.items():
+                if par.endswith('_'):
+                    par = par[:-1]
+                setattr(ctx, par, arr[u])
+            for par in sitecol.array.dtype.names:
+                setattr(ctx, par, sitecol[par][ctx.sids])
+            ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
+            ctxs.append(ctx)
+        ctxs_around_site = [[] for sid in sitecol.sids]
+        for ctx in ctxs:
+            for sid in ctx.idx:
+                ctxs_around_site[sid].append(ctx)
+        return ctxs, ctxs_around_site
 
     def multi(self, ctxs):
         """
@@ -549,7 +566,7 @@ class PmapMaker(object):
         self.N = len(self.srcfilter.sitecol.complete)
         self.group = group
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
-        self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
+        self.cmaker.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         # NB: if maxsites is too big or too small the performance of
@@ -569,25 +586,14 @@ class PmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def _update_pmap(self, ctxs, pmap=None):
+    def _update_pmap(self, ctxs, pmap):
         # compute PoEs and update pmap
-        if pmap is None:  # for src_indep
-            pmap = self.pmap
-        rup_indep = self.rup_indep
         # splitting in blocks makes sure that the maximum poes array
         # generated has size N x L x G x 8 = 4 MB
-        for block in block_splitter(
-                ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
-            for ctx, poes in self.cmaker.gen_ctx_poes(block):
-                with self.pne_mon:
-                    # pnes and poes of shape (N, L, G)
-                    pnes = ctx.get_probability_no_exceedance(poes)
-                    for sid, pne in zip(ctx.sids, pnes):
-                        probs = pmap.setdefault(sid, rup_indep).array
-                        if rup_indep:
-                            probs *= pne
-                        else:  # rup_mutex
-                            probs += (1. - pne) * ctx.weight
+        with self.pne_mon:
+            for block in block_splitter(
+                    ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
+                get_pmap(block, self.cmaker, pmap)
 
     def _ruptures(self, src, filtermag=None):
         return src.iter_ruptures(
@@ -607,42 +613,43 @@ class PmapMaker(object):
 
     def _make_src_indep(self):
         # sources with the same ID
+        pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         for src, sites in self.srcfilter.split(self.group):
+            t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
-            t0 = time.time()
             self.numctxs = 0
             self.numsites = 0
             rups = self._gen_rups(src, sites)
-            self._update_pmap(self._gen_ctxs(rups, sites, src.id))
+            self._update_pmap(self._gen_ctxs(rups, sites, src.id), pmap)
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
                 [self.numctxs, self.numsites, dt])
             timer.save(src, self.numctxs, self.numsites, dt,
                        self.cmaker.task_no)
-        return ~self.pmap if self.rup_indep else self.pmap
+        return ~pmap if self.cmaker.rup_indep else pmap
 
     def _make_src_mutex(self):
+        pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         for src, indices in self.srcfilter.filter(self.group):
             t0 = time.time()
             sites = self.srcfilter.sitecol.filtered(indices)
             self.numctxs = 0
             self.numsites = 0
             rups = self._ruptures(src)
-            L, G = self.cmaker.imtls.size, len(self.cmaker.gsims)
-            pmap = ProbabilityMap(L, G)
-            self._update_pmap(self._gen_ctxs(rups, sites, src.id), pmap)
-            p = pmap
-            if self.rup_indep:
+            pm = ProbabilityMap(self.cmaker.imtls.size, len(self.cmaker.gsims))
+            self._update_pmap(self._gen_ctxs(rups, sites, src.id), pm)
+            p = pm
+            if self.cmaker.rup_indep:
                 p = ~p
             p *= src.mutex_weight
-            self.pmap += p
+            pmap += p
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
                 [self.numctxs, self.numsites, dt])
             timer.save(src, self.numctxs, self.numsites, dt,
                        self.cmaker.task_no)
-        return self.pmap
+        return pmap
 
     def dictarray(self, ctxs):
         dic = {}  # par -> array
@@ -654,9 +661,6 @@ class PmapMaker(object):
 
     def make(self):
         self.rupdata = []
-        imtls = self.cmaker.imtls
-        L, G = imtls.size, len(self.gsims)
-        self.pmap = ProbabilityMap(L, G)
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         if self.src_mutex:
@@ -820,7 +824,6 @@ class RuptureContext(BaseContext):
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
-    temporal_occurrence_model = None  # to be set
 
     @classmethod
     def full(cls, rup, sites, dctx=None):
@@ -875,7 +878,7 @@ class RuptureContext(BaseContext):
                 setattr(ctx, dist, array)
         return ctx
 
-    def get_probability_no_exceedance(self, poes):
+    def get_probability_no_exceedance(self, poes, tom):
         """
         Compute and return the probability that in the time span for which the
         rupture is defined, the rupture itself never generates a ground motion
@@ -895,6 +898,10 @@ class RuptureContext(BaseContext):
             ground motion level at a site. First dimension represent sites,
             second dimension intensity measure levels. ``poes`` can be obtained
             calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
+
+        :param tom:
+            temporal occurrence model instance, used only if the rupture
+            is parametric
         """
         if numpy.isnan(self.occurrence_rate):  # nonparametric rupture
             # Uses the formula
@@ -914,7 +921,6 @@ class RuptureContext(BaseContext):
             return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
 
         # parametric rupture
-        tom = self.temporal_occurrence_model
         return tom.get_probability_no_exceedance(self.occurrence_rate, poes)
 
 
@@ -1067,21 +1073,25 @@ def ruptures_by_mag_dist(sources, srcfilter, gsims, params, monitor):
     return {trt: AccumDict(dic)}
 
 
-def read_cmakers(dstore):
+def read_cmakers(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
+    :param full_lt: a FullLogicTree instance, if given
     :returns: a list of ContextMaker instance, one per source group
     """
     cmakers = []
     oq = dstore['oqparam']
-    full_lt = dstore['full_lt']
+    full_lt = full_lt or dstore['full_lt']
     trt_smrs = dstore['trt_smrs'][:]
+    toms = dstore['toms'][:]
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
+    start = 0
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
-        trt = trts[trt_smrs[grp_id][0] // num_eff_rlzs]
-        cmakers.append(ContextMaker(
+        trti = trt_smrs[grp_id][0] // num_eff_rlzs
+        trt = trts[trti]
+        cmaker = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': oq.truncation_level,
              'maximum_distance': oq.maximum_distance,
@@ -1089,5 +1099,11 @@ def read_cmakers(dstore):
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
              'imtls': oq.imtls,
-             'grp_id': grp_id}))
+             'grp_id': grp_id})
+        cmaker.tom = registry[toms[grp_id]](oq.investigation_time)
+        cmaker.trti = trti
+        stop = start + len(rlzs_by_gsim)
+        cmaker.slc = slice(start, stop)
+        start = stop
+        cmakers.append(cmaker)
     return cmakers
