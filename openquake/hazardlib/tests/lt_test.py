@@ -94,9 +94,10 @@ class CollapseTestCase(unittest.TestCase):
         for i, src in enumerate(srcs):
             src.id = i
         N = len(self.srcfilter.sitecol.complete)
+        time_span = srcs[0].temporal_occurrence_model.time_span
         res = classical(srcs, self.srcfilter, self.gsims,
                         dict(imtls=self.imtls, truncation_level2=2,
-                             collapse_level=2))
+                             collapse_level=2, investigation_time=time_span))
         pmap = res['pmap']
         effrups = sum(nr for nr, ns, dt in res['calc_times'].values())
         curve = pmap.array(N)[0, :, 0]
