@@ -570,10 +570,8 @@ class PmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def _update_pmap(self, ctxs, tom, pmap=None):
+    def _update_pmap(self, ctxs, tom, pmap):
         # compute PoEs and update pmap
-        if pmap is None:  # for src_indep
-            pmap = self.pmap
         rup_indep = self.rup_indep
         # splitting in blocks makes sure that the maximum poes array
         # generated has size N x L x G x 8 = 4 MB
@@ -606,7 +604,7 @@ class PmapMaker(object):
                 self.rupdata.append(ctx)
             yield ctx
 
-    def _make_src_indep(self):
+    def _make_src_indep(self, pmap):
         # sources with the same ID
         for src, sites in self.srcfilter.split(self.group):
             t0 = time.time()
@@ -616,15 +614,15 @@ class PmapMaker(object):
             self.numctxs = 0
             self.numsites = 0
             rups = self._gen_rups(src, sites)
-            self._update_pmap(self._gen_ctxs(rups, sites, src.id), tom)
+            self._update_pmap(self._gen_ctxs(rups, sites, src.id), tom, pmap)
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
                 [self.numctxs, self.numsites, dt])
             timer.save(src, self.numctxs, self.numsites, dt,
                        self.cmaker.task_no)
-        return ~self.pmap if self.rup_indep else self.pmap
+        return ~pmap if self.rup_indep else pmap
 
-    def _make_src_mutex(self):
+    def _make_src_mutex(self, pmap):
         for src, indices in self.srcfilter.filter(self.group):
             t0 = time.time()
             tom = getattr(src, 'temporal_occurrence_model', None)
@@ -632,20 +630,19 @@ class PmapMaker(object):
             self.numctxs = 0
             self.numsites = 0
             rups = self._ruptures(src)
-            L, G = self.cmaker.imtls.size, len(self.cmaker.gsims)
-            pmap = ProbabilityMap(L, G)
-            self._update_pmap(self._gen_ctxs(rups, sites, src.id), tom, pmap)
-            p = pmap
+            pm = ProbabilityMap(self.cmaker.imtls.size, len(self.cmaker.gsims))
+            self._update_pmap(self._gen_ctxs(rups, sites, src.id), tom, pm)
+            p = pm
             if self.rup_indep:
                 p = ~p
             p *= src.mutex_weight
-            self.pmap += p
+            pmap += p
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
                 [self.numctxs, self.numsites, dt])
             timer.save(src, self.numctxs, self.numsites, dt,
                        self.cmaker.task_no)
-        return self.pmap
+        return pmap
 
     def dictarray(self, ctxs):
         dic = {}  # par -> array
@@ -658,14 +655,13 @@ class PmapMaker(object):
     def make(self):
         self.rupdata = []
         imtls = self.cmaker.imtls
-        L, G = imtls.size, len(self.gsims)
-        self.pmap = ProbabilityMap(L, G)
+        pmap = ProbabilityMap(imtls.size, len(self.gsims))
         # AccumDict of arrays with 3 elements nrups, nsites, calc_time
         self.calc_times = AccumDict(accum=numpy.zeros(3, numpy.float32))
         if self.src_mutex:
-            pmap = self._make_src_mutex()
+            pmap = self._make_src_mutex(pmap)
         else:
-            pmap = self._make_src_indep()
+            pmap = self._make_src_indep(pmap)
         rupdata = self.dictarray(self.rupdata)
         return pmap, rupdata, self.calc_times
 
