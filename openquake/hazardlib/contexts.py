@@ -34,7 +34,7 @@ from openquake.baselib.general import (
     AccumDict, DictArray, groupby, block_splitter)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.tom import PoissonTOM, registry
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -132,12 +132,11 @@ def get_num_distances(gsims):
 
 # used only in contexts_test.py
 def _make_pmap(ctxs, cmaker):
-    RuptureContext.temporal_occurrence_model = PoissonTOM(
-        cmaker.investigation_time)
+    tom = PoissonTOM(cmaker.investigation_time)
     # easy case of independent ruptures, useful for debugging
     pmap = ProbabilityMap(cmaker.loglevels.size, len(cmaker.gsims))
     for ctx, poes in cmaker.gen_ctx_poes(ctxs):
-        pnes = ctx.get_probability_no_exceedance(poes)  # (N, L, G)
+        pnes = ctx.get_probability_no_exceedance(poes, tom)  # (N, L, G)
         for sid, pne in zip(ctx.sids, pnes):
             pmap.setdefault(sid, 1.).array *= pne
     return ~pmap
@@ -571,7 +570,7 @@ class PmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def _update_pmap(self, ctxs, pmap=None):
+    def _update_pmap(self, ctxs, tom, pmap=None):
         # compute PoEs and update pmap
         if pmap is None:  # for src_indep
             pmap = self.pmap
@@ -583,7 +582,7 @@ class PmapMaker(object):
             for ctx, poes in self.cmaker.gen_ctx_poes(block):
                 with self.pne_mon:
                     # pnes and poes of shape (N, L, G)
-                    pnes = ctx.get_probability_no_exceedance(poes)
+                    pnes = ctx.get_probability_no_exceedance(poes, tom)
                     for sid, pne in zip(ctx.sids, pnes):
                         probs = pmap.setdefault(sid, rup_indep).array
                         if rup_indep:
@@ -610,13 +609,14 @@ class PmapMaker(object):
     def _make_src_indep(self):
         # sources with the same ID
         for src, sites in self.srcfilter.split(self.group):
+            t0 = time.time()
+            tom = getattr(src, 'temporal_occurrence_model', None)
             if self.fewsites:
                 sites = sites.complete
-            t0 = time.time()
             self.numctxs = 0
             self.numsites = 0
             rups = self._gen_rups(src, sites)
-            self._update_pmap(self._gen_ctxs(rups, sites, src.id))
+            self._update_pmap(self._gen_ctxs(rups, sites, src.id), tom)
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
                 [self.numctxs, self.numsites, dt])
@@ -627,13 +627,14 @@ class PmapMaker(object):
     def _make_src_mutex(self):
         for src, indices in self.srcfilter.filter(self.group):
             t0 = time.time()
+            tom = getattr(src, 'temporal_occurrence_model', None)
             sites = self.srcfilter.sitecol.filtered(indices)
             self.numctxs = 0
             self.numsites = 0
             rups = self._ruptures(src)
             L, G = self.cmaker.imtls.size, len(self.cmaker.gsims)
             pmap = ProbabilityMap(L, G)
-            self._update_pmap(self._gen_ctxs(rups, sites, src.id), pmap)
+            self._update_pmap(self._gen_ctxs(rups, sites, src.id), tom, pmap)
             p = pmap
             if self.rup_indep:
                 p = ~p
@@ -822,7 +823,6 @@ class RuptureContext(BaseContext):
     _slots_ = (
         'mag', 'strike', 'dip', 'rake', 'ztor', 'hypo_lon', 'hypo_lat',
         'hypo_depth', 'width', 'hypo_loc')
-    temporal_occurrence_model = None  # to be set
 
     @classmethod
     def full(cls, rup, sites, dctx=None):
@@ -877,7 +877,7 @@ class RuptureContext(BaseContext):
                 setattr(ctx, dist, array)
         return ctx
 
-    def get_probability_no_exceedance(self, poes):
+    def get_probability_no_exceedance(self, poes, tom):
         """
         Compute and return the probability that in the time span for which the
         rupture is defined, the rupture itself never generates a ground motion
@@ -897,6 +897,10 @@ class RuptureContext(BaseContext):
             ground motion level at a site. First dimension represent sites,
             second dimension intensity measure levels. ``poes`` can be obtained
             calling the :func:`func <openquake.hazardlib.gsim.base.get_poes>`
+
+        :param tom:
+            temporal occurrence model instance, used only if the rupture
+            is parametric
         """
         if numpy.isnan(self.occurrence_rate):  # nonparametric rupture
             # Uses the formula
@@ -916,7 +920,6 @@ class RuptureContext(BaseContext):
             return numpy.clip(prob_no_exceed, 0., 1.)  # avoid numeric issues
 
         # parametric rupture
-        tom = self.temporal_occurrence_model
         return tom.get_probability_no_exceedance(self.occurrence_rate, poes)
 
 
@@ -1079,6 +1082,7 @@ def read_cmakers(dstore, full_lt=None):
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt']
     trt_smrs = dstore['trt_smrs'][:]
+    toms = dstore['toms'][:]
     rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
@@ -1095,6 +1099,7 @@ def read_cmakers(dstore, full_lt=None):
              'investigation_time': oq.investigation_time,
              'imtls': oq.imtls,
              'grp_id': grp_id})
+        cmaker.tom = registry[toms[grp_id]](oq.investigation_time)
         cmaker.trti = trti
         stop = start + len(rlzs_by_gsim)
         cmaker.slc = slice(start, stop)

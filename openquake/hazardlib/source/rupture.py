@@ -413,7 +413,7 @@ class ParametricProbabilisticRupture(BaseRupture):
         r = self.occurrence_rate * self.temporal_occurrence_model.time_span
         return numpy.random.poisson(r, n)
 
-    def get_probability_no_exceedance(self, poes):
+    def get_probability_no_exceedance(self, poes, tom=None):
         """
         See :meth:`superclass method
         <.rupture.BaseRupture.get_probability_no_exceedance>`
@@ -422,7 +422,7 @@ class ParametricProbabilisticRupture(BaseRupture):
         Uses
         :meth:`openquake.hazardlib.tom.PoissonTOM.get_probability_no_exceedance`
         """
-        tom = self.temporal_occurrence_model
+        tom = tom or self.temporal_occurrence_model
         rate = self.occurrence_rate
         return tom.get_probability_no_exceedance(rate, poes)
 

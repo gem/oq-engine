@@ -31,8 +31,7 @@ from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.contexts import read_cmakers, RuptureContext
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -114,8 +113,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
     :returns:
         a dictionary sid, imti -> 6D-array
     """
-    RuptureContext.temporal_occurrence_model = PoissonTOM(
-        cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
         allctxs, ctxs_around_site = cmaker.read_ctxs(dstore, slc)
@@ -149,8 +146,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
             iml2 = dict(zip(imts, iml3))
             with dis_mon:
                 # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
-                matrix = disagg.disaggregate(
-                    close, g_by_z[s], iml2, eps3, s, bins)  # 7D-matrix
+                matrix = disagg.disaggregate(close, cmaker.tom, g_by_z[s],
+                                             iml2, eps3, s, bins)  # 7D-matrix
                 for m in range(M):
                     mat6 = matrix[..., m, :, :]
                     if mat6.any():

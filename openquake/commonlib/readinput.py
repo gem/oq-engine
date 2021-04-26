@@ -733,6 +733,19 @@ def save_source_info(csm, h5):
         hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
         h5['trt_smrs'] = csm.get_trt_smrs()
+        h5['toms'] = numpy.array(
+            [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
+
+
+def get_tom_name(sg):
+    """
+    :param sg: a source group instance
+    :returns: name of the associated temporal occurrence model
+    """
+    if sg.temporal_occurrence_model:
+        return sg.temporal_occurrence_model.__class__.__name__
+    else:
+        return 'PoissonTOM'
 
 
 def _check_csm(csm, oqparam, h5):
