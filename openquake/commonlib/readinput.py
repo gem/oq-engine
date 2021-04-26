@@ -1160,16 +1160,18 @@ def get_input_files(oqparam, hazard=False):
     fnames = set()  # files entering in the checksum
     uri = oqparam.shakemap_uri
     if isinstance(uri, dict) and uri:
-        if uri['kind'] == 'shapefile':
-            fname = os.path.join(oqparam.base_path, uri['fname'])
-            fnames.update(get_shapefiles(os.path.dirname(fname)))
-        else:  # xml local files
-            for key, val in uri.items():
-                if key == 'fname' or (
-                        key.endswith('_url') and os.path.exists(val)):
-                    fname = os.path.join(oqparam.base_path, val)
+        # local xml, zip or npy files
+        for key, val in uri.items():
+            if key == 'fname' or key.endswith('_url'):
+                val = val.replace('file://', '').replace('file:', '')
+                fname = os.path.join(oqparam.base_path, val)
+                if os.path.exists(fname):
                     uri[key] = fname
                     fnames.add(fname)
+        # separate shapefiles
+        if uri['kind'] == 'shapefile' and not uri['fname'].endswith('.zip'):
+            fnames.update(get_shapefiles(os.path.dirname(fname)))
+
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
         if hazard and key not in ('source_model_logic_tree',

@@ -1232,8 +1232,6 @@ def read_shakemap(calc, haz_sitecol, assetcol):
     and stored in the datastore.
     """
     oq = calc.oqparam
-    # from openquake.commonlib.readinput import get_input_files
-    # print(get_input_files(oq))
     E = oq.number_of_ground_motion_fields
     oq.risk_imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
     logging.info('Getting/reducing shakemap')
