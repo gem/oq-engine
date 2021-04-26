@@ -42,7 +42,7 @@ from openquake.qa_tests_data.event_based import (
     case_2, case_5, case_16, case_21)
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_eb)
-from openquake.qa_tests_data.scenario_risk import case_shapefile
+from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server import manage, dbapi, dbserver
 from openquake.server.tests import data as test_data
@@ -350,6 +350,7 @@ class ZipTestCase(unittest.TestCase):
     """
     Test for the command oq zip
     """
+
     def test_zip(self):
         # this is a case with .hdf5 files
         ini = os.path.join(os.path.dirname(case_18.__file__), 'job.ini')
@@ -415,12 +416,35 @@ class ZipTestCase(unittest.TestCase):
         self.assertIn('shp/output.shx', names)
         shutil.rmtree(dtemp)
 
+    def test_shapefile_zipped(self):
+        # zipping shapefile archive used for ShakeMaps
+        dtemp = os.path.join(tempfile.mkdtemp(), 'inp')
+        shutil.copytree(os.path.dirname(case_shapefile.__file__), dtemp)
+        sap.runline(
+            f'openquake.commands zip {dtemp}/job_zipped.ini {dtemp}/job.zip')
+        job_zip = os.path.join(dtemp, 'job.zip')
+        names = sorted(zipfile.ZipFile(job_zip).namelist())
+        self.assertIn('shp/shapefiles.zip', names)
+        shutil.rmtree(dtemp)
+
+    def test_shakemap(self):
+        # zipping *.npy shakemap with relative path for ShakeMaps
+        dtemp = os.path.join(tempfile.mkdtemp(), 'inp')
+        shutil.copytree(os.path.dirname(case_shakemap.__file__), dtemp)
+        sap.runline(
+            f'openquake.commands zip {dtemp}/job.ini {dtemp}/job.zip')
+        job_zip = os.path.join(dtemp, 'job.zip')
+        names = sorted(zipfile.ZipFile(job_zip).namelist())
+        self.assertIn('shakefile/usp000fjta.npy', names)
+        shutil.rmtree(dtemp)
+
 
 class SourceModelShapefileConverterTestCase(unittest.TestCase):
     """
     Simple conversion test for the Source Model to shapefile converter
     - more tests will follow
     """
+
     def setUp(self):
         self.OUTDIR = tempfile.mkdtemp()
         self.out = os.path.join(self.OUTDIR, 'smc')
