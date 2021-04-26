@@ -24,7 +24,7 @@ import operator
 import numpy
 
 from openquake.baselib import parallel, general
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, get_pmap
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -46,18 +46,15 @@ def conditional_spectrum(dstore, slc, cmaker, monitor):
     """
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        allctxs, _close = cmaker.read_ctxs(dstore, slc)
-    N, L, G = len(_close), cmaker.imtls.size, len(cmaker.gsims)
-    acc = numpy.ones((N, L, G))
-    for ctx, poes in cmaker.gen_ctx_poes(allctxs):
-        acc *= ctx.get_probability_no_exceedance(poes, cmaker.tom)
-    return {cmaker.grp_id: 1 - acc}
+        allctxs, ctxs_around = cmaker.read_ctxs(dstore, slc)
+        N = len(ctxs_around)
+    return {cmaker.grp_id: get_pmap(allctxs, cmaker).array(N)}
 
 
 @base.calculators.add('conditional_spectrum')
 class ConditionalSpectrumCalculator(base.HazardCalculator):
     """
-    Conditional spectrum calculator
+    Conditional spectrum calculator, to be used for few sites only
     """
     precalc = 'classical'
     accept_precalc = ['classical', 'disaggregation']
