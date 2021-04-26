@@ -147,6 +147,8 @@ class ContextMaker(object):
     A class to manage the creation of contexts for distances, sites, rupture.
     """
     REQUIRES = ['DISTANCES', 'SITES_PARAMETERS', 'RUPTURE_PARAMETERS']
+    rup_indep = True
+    tom = None
 
     def __init__(self, trt, gsims, param=None, monitor=Monitor()):
         param = param or {}  # empty in the gmpe-smtk
@@ -550,7 +552,7 @@ class PmapMaker(object):
         self.N = len(self.srcfilter.sitecol.complete)
         self.group = group
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
-        self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
+        self.cmaker.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
         self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         # NB: if maxsites is too big or too small the performance of
@@ -572,14 +574,14 @@ class PmapMaker(object):
 
     def _update_pmap(self, ctxs, pmap):
         # compute PoEs and update pmap
-        rup_indep = self.rup_indep
+        rup_indep = self.cmaker.rup_indep
         # splitting in blocks makes sure that the maximum poes array
         # generated has size N x L x G x 8 = 4 MB
         tom = self.cmaker.tom
-        for block in block_splitter(
-                ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
-            for ctx, poes in self.cmaker.gen_ctx_poes(block):
-                with self.pne_mon:
+        with self.pne_mon:
+            for block in block_splitter(
+                    ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
+                for ctx, poes in self.cmaker.gen_ctx_poes(block):
                     # pnes and poes of shape (N, L, G)
                     pnes = ctx.get_probability_no_exceedance(poes, tom)
                     for sid, pne in zip(ctx.sids, pnes):
@@ -621,7 +623,7 @@ class PmapMaker(object):
                 [self.numctxs, self.numsites, dt])
             timer.save(src, self.numctxs, self.numsites, dt,
                        self.cmaker.task_no)
-        return ~pmap if self.rup_indep else pmap
+        return ~pmap if self.cmaker.rup_indep else pmap
 
     def _make_src_mutex(self):
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
@@ -634,7 +636,7 @@ class PmapMaker(object):
             pm = ProbabilityMap(self.cmaker.imtls.size, len(self.cmaker.gsims))
             self._update_pmap(self._gen_ctxs(rups, sites, src.id), pm)
             p = pm
-            if self.rup_indep:
+            if self.cmaker.rup_indep:
                 p = ~p
             p *= src.mutex_weight
             pmap += p
