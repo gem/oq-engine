@@ -570,11 +570,12 @@ class PmapMaker(object):
             nbytes += 8 * dparams * nsites
         return nbytes
 
-    def _update_pmap(self, ctxs, tom, pmap):
+    def _update_pmap(self, ctxs, pmap):
         # compute PoEs and update pmap
         rup_indep = self.rup_indep
         # splitting in blocks makes sure that the maximum poes array
         # generated has size N x L x G x 8 = 4 MB
+        tom = self.cmaker.tom
         for block in block_splitter(
                 ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
             for ctx, poes in self.cmaker.gen_ctx_poes(block):
@@ -609,13 +610,12 @@ class PmapMaker(object):
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         for src, sites in self.srcfilter.split(self.group):
             t0 = time.time()
-            tom = self.cmaker.tom
             if self.fewsites:
                 sites = sites.complete
             self.numctxs = 0
             self.numsites = 0
             rups = self._gen_rups(src, sites)
-            self._update_pmap(self._gen_ctxs(rups, sites, src.id), tom, pmap)
+            self._update_pmap(self._gen_ctxs(rups, sites, src.id), pmap)
             dt = time.time() - t0
             self.calc_times[src.id] += numpy.array(
                 [self.numctxs, self.numsites, dt])
@@ -627,13 +627,12 @@ class PmapMaker(object):
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
         for src, indices in self.srcfilter.filter(self.group):
             t0 = time.time()
-            tom = self.cmaker.tom
             sites = self.srcfilter.sitecol.filtered(indices)
             self.numctxs = 0
             self.numsites = 0
             rups = self._ruptures(src)
             pm = ProbabilityMap(self.cmaker.imtls.size, len(self.cmaker.gsims))
-            self._update_pmap(self._gen_ctxs(rups, sites, src.id), tom, pm)
+            self._update_pmap(self._gen_ctxs(rups, sites, src.id), pm)
             p = pm
             if self.rup_indep:
                 p = ~p
