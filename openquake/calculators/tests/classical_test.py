@@ -27,7 +27,8 @@ from openquake.commonlib import readinput
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
+from openquake.calculators.tests import (
+    CalculatorTestCase, NOT_DARWIN, strip_calc_id)
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
@@ -476,11 +477,9 @@ hazard_uhs-std.csv
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
-        self.assert_curves_ok([
-            'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.05).csv',
-            'hazard_curve-mean-SA(0.1).csv', 'hazard_curve-mean-SA(0.2).csv',
-            'hazard_curve-mean-SA(0.5)', 'hazard_curve-mean-SA(1.0).csv',
-            'hazard_curve-mean-SA(2.0).csv'], case_28.__file__, delta=1E-6)
+        out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')
+        for f in out['uhs', 'csv']:
+            self.assertEqualFiles('expected/' + strip_calc_id(f), f)
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
 

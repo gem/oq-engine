@@ -13,7 +13,11 @@ xmlns="http://openquake.org/xmlns/nrml/0.5">
                       branchSetID="mmax">
     <logicTreeBranch branchID="m_0.2">
       <uncertaintyModel>+0.2</uncertaintyModel>
-      <uncertaintyWeight>1.0</uncertaintyWeight>
+      <uncertaintyWeight>0.6</uncertaintyWeight>
+    </logicTreeBranch>
+    <logicTreeBranch branchID="m_0.4">
+      <uncertaintyModel>+0.4</uncertaintyModel>
+      <uncertaintyWeight>0.4</uncertaintyWeight>
     </logicTreeBranch>
   </logicTreeBranchSet>
   <logicTreeBranchSet uncertaintyType="bGRRelative" applyToSources="21"
