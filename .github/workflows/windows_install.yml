@@ -41,7 +41,7 @@ jobs:
       - name: Install engine with install script
         run: |
           git status
-          python install.py devel
+          python install.py devel --install=cleanup
       - name: Run demos to test installation
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
