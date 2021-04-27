@@ -1,14 +1,30 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2021, GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import numpy as np
 import numpy.matlib
 from scipy import constants
-from typing import Type
 from abc import ABC, abstractmethod
-from openquake.hazardlib.imt import PGA, SA, IMT
+from openquake.hazardlib.imt import IMT
+
 
 class CrossCorrelation(ABC):
-
-    # TODO We need to specify the HORIZONTAL GMM COMPONENT used 
-
+    # TODO We need to specify the HORIZONTAL GMM COMPONENT used
     @abstractmethod
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
         """
@@ -17,7 +33,6 @@ class CrossCorrelation(ABC):
         :param to_imt:
             An intensity measure type
         """
-        raise NotImplementedError()
 
 
 class BakerJayaram2008(CrossCorrelation):
@@ -25,7 +40,6 @@ class BakerJayaram2008(CrossCorrelation):
     Implements the correlation model of Baker and Jayaram published in 2008
     on Earthquake Spectra. This model works for GMRotI50.
     """
-
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
 
         from_per = from_imt.period
@@ -44,8 +58,8 @@ class BakerJayaram2008(CrossCorrelation):
         c3 = c1
         if t_max < 0.109:
             c3 = c2
-        c4 = c1 + 0.5*(np.sqrt(c3)-c3)*(1+np.cos(constants.pi*t_min/0.109))
-
+        c4 = c1 + 0.5 * (np.sqrt(c3) - c3) * (
+            1 + np.cos(constants.pi*t_min/0.109))
         if t_max < 0.109:
             corr = c2
         elif t_min > 0.109:
@@ -54,13 +68,11 @@ class BakerJayaram2008(CrossCorrelation):
             corr = np.amin([c2, c4])
         else:
             corr = c4
-
         return corr
 
 
-def get_correlation_mtx(corr_model: Type[CrossCorrelation], 
-        ref_imt: Type[IMT], target_imts: list, num_sites):
-
+def get_correlation_mtx(corr_model: CrossCorrelation,
+                        ref_imt: IMT, target_imts: list, num_sites):
     """
     :param corr_model:
         An instance of a correlation models
