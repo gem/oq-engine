@@ -264,7 +264,6 @@ class ContextMaker(object):
                 setattr(ctx, par, arr[u])
             for par in sitecol.array.dtype.names:
                 setattr(ctx, par, sitecol[par][ctx.sids])
-            ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
             ctxs.append(ctx)
         return ctxs
 
