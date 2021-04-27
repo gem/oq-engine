@@ -20,6 +20,7 @@ Utilities to compute mean and quantile curves
 """
 import numpy
 from scipy.stats import norm
+from openquake.baselib.general import agg_probs
 
 
 def norm_cdf(x, a, s):
@@ -294,3 +295,23 @@ def set_rlzs_stats(dstore, prefix, **attrs):
         pairs = list(attrs.items())
         pairs.insert(1, ('stat', statnames))
         dstore.set_shape_descr(name, **dict(pairs))
+
+
+def combine_probs(values_by_grp, cmakers):
+    """
+    :param values_by_grp: C arrays of shape (..., G)
+    :param cmakers: C ContextMakers with G gsims each
+    :returns: array of shape (R, ...) where R is the number of realizations
+    """
+    rlzset = set()
+    for cmaker in cmakers:
+        for rlzs in cmaker.gsims.values():
+            rlzset.update(rlzs)
+    shp = (len(rlzset),) + values_by_grp[0].shape[:-1]
+    res = numpy.zeros(shp)
+    for values, cmaker in zip(values_by_grp, cmakers):
+        for g, rlzs in enumerate(cmaker.gsims.values()):
+            value = values[..., g]
+            for rlz in rlzs:
+                res[rlz] = agg_probs(res[rlz], value)
+    return res
