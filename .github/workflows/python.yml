@@ -37,9 +37,11 @@ jobs:
    # Use script to install engine and not the pip install .
     - name: Install engine with install script
       run: |
+        grep setuptools *
         python install.py devel
     - name: Run demos to test installation
       run: |
+        source openquake/bin/activate
         oq --version
         oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
     - name: Test with pytest
