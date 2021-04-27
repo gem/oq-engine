@@ -987,6 +987,8 @@ class Exposure(object):
                     raise InvalidFile('%s: missing %s' % (fname, missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
                 'retrofitted': float, None: object}
+        for f in strfields:
+            conv[f] = str
         revmap = {}  # oq -> inp
         for inp, oq in self.fieldmap.items():
             revmap[oq] = inp
