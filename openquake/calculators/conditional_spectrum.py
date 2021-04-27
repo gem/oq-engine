@@ -46,9 +46,9 @@ def conditional_spectrum(dstore, slc, cmaker, monitor):
     """
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        allctxs, ctxs_around = cmaker.read_ctxs(dstore, slc)
-        N = len(ctxs_around)
-    return {cmaker.grp_id: get_pmap(allctxs, cmaker).array(N)}
+        ctxs = cmaker.read_ctxs(dstore, slc)
+        N = len(dstore['sitecol/sids'])
+    return {cmaker.grp_id: get_pmap(ctxs, cmaker).array(N)}
 
 
 @base.calculators.add('conditional_spectrum')

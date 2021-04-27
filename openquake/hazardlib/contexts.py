@@ -264,13 +264,8 @@ class ContextMaker(object):
                 setattr(ctx, par, arr[u])
             for par in sitecol.array.dtype.names:
                 setattr(ctx, par, sitecol[par][ctx.sids])
-            ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
             ctxs.append(ctx)
-        ctxs_around_site = [[] for sid in sitecol.sids]
-        for ctx in ctxs:
-            for sid in ctx.idx:
-                ctxs_around_site[sid].append(ctx)
-        return ctxs, ctxs_around_site
+        return ctxs
 
     def multi(self, ctxs):
         """
@@ -307,10 +302,10 @@ class ContextMaker(object):
         allctxs = []
         for i, src in enumerate(srcs):
             src.id = i
-            ctxs = []
+            rctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
-                ctxs.append(self.make_rctx(rup))
-            allctxs.extend(self.gen_ctxs(ctxs, site1, src.id))
+                rctxs.append(self.make_rctx(rup))
+            allctxs.extend(self.gen_ctxs(rctxs, site1, src.id))
         return allctxs
 
     def filter(self, sites, rup):

@@ -189,10 +189,10 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
             # Computing the probability of exceedance of the levels of
             # ground-motion loglevels on soil
             logaf = numpy.log(numpy.exp(soillevels) / iml_mid)  # shape L1
-            for l in range(L1):
+            for li in range(L1):
                 poex_af = 1. - norm.cdf(
-                    logaf[l], numpy.log(median_af), std_af)  # shape C
-                out_s[:, m * L1 + l] += poex_af * pocc_rock  # shape C
+                    logaf[li], numpy.log(median_af), std_af)  # shape C
+                out_s[:, m * L1 + li] += poex_af * pocc_rock  # shape C
 
     return out_s
 
