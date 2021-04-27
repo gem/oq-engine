@@ -1392,11 +1392,16 @@ class OqParam(valid.ParamSet):
         if self.shakemap_uri:
             kind = self.shakemap_uri['kind']
             sig = inspect.signature(get_array[kind])
-            params = list(sig.parameters)
-            if params != list(self.shakemap_uri):
+            # parameters without default value
+            params = [p.name for p in list(
+                sig.parameters.values()) if p.default is p.empty]
+            all_params = list(sig.parameters)
+            if not all(p in list(self.shakemap_uri) for p in params) or \
+                    not all(p in all_params for p in list(self.shakemap_uri)):
                 raise ValueError(
-                    'Expected parameters %s in shakemap_uri, got %s' %
-                    (params, list(self.shakemap_uri)))
+                    'Error in shakemap_uri: Expected parameters %s, '
+                    'valid parameters %s, got %s' %
+                    (params, all_params, list(self.shakemap_uri)))
         return self.hazard_calculation_id if (
             self.shakemap_id or self.shakemap_uri) else True
 

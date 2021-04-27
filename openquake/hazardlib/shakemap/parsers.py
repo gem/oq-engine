@@ -172,7 +172,10 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
                         return get_shakemap_array(f1, f2)
                 except FileNotFoundError:
                     pass
-            # if not just return the grid
+
+            # if not just return the grid and log a warning
+            logging.warning(
+                'No Uncertainty grid found, please check your input files.')
             with urlextract(grid_url, '.xml') as f:
                 return get_shakemap_array(f)
 
