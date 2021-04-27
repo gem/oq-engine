@@ -161,8 +161,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
         self.run_calc(case_7.__file__, 'job.ini')
         cmakers = read_cmakers(self.calc.datastore)
-        ctxs0, _ = cmakers[0].read_ctxs(self.calc.datastore)
-        ctxs1, _ = cmakers[1].read_ctxs(self.calc.datastore)
+        ctxs0 = cmakers[0].read_ctxs(self.calc.datastore)
+        ctxs1 = cmakers[1].read_ctxs(self.calc.datastore)
         self.assertEqual(len(ctxs0), 7)  # rlz-0, the closest to the mean
         self.assertEqual(len(ctxs1), 2)  # rlz-1, the one to discard
         # checking that the wrong realization is indeed discarded

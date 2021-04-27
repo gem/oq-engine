@@ -264,13 +264,8 @@ class ContextMaker(object):
                 setattr(ctx, par, arr[u])
             for par in sitecol.array.dtype.names:
                 setattr(ctx, par, sitecol[par][ctx.sids])
-            ctx.idx = {sid: idx for idx, sid in enumerate(ctx.sids)}
             ctxs.append(ctx)
-        ctxs_around_site = [[] for sid in sitecol.sids]
-        for ctx in ctxs:
-            for sid in ctx.idx:
-                ctxs_around_site[sid].append(ctx)
-        return ctxs, ctxs_around_site
+        return ctxs
 
     def multi(self, ctxs):
         """

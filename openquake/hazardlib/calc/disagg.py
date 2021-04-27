@@ -28,7 +28,6 @@ from functools import partial
 import numpy
 import scipy.stats
 
-from openquake.hazardlib import contexts
 from openquake.baselib.general import AccumDict, groupby, pprod
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
@@ -142,10 +141,9 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     G = len(ctxs[0].mean_std)
     mean_std = numpy.zeros((2, U, M, G), numpy.float32)
     for u, ctx in enumerate(ctxs):
-        if not hasattr(ctx, 'idx'):  # assume single site
-            idx = 0
-        else:
-            idx = ctx.idx[sid]
+        # search the index associated to the site ID; for instance
+        # searchsorted([2, 4, 6], 4) => 1
+        idx = numpy.searchsorted(ctx.sids, sid)
         dists[u] = ctx.rrup[idx]  # distance to the site
         lons[u] = ctx.clon[idx]  # closest point of the rupture lon
         lats[u] = ctx.clat[idx]  # closest point of the rupture lat
