@@ -802,7 +802,7 @@ def _read_csv(fileobj, compositedt):
         if dt.kind == 'S':  # limit of the length of byte-fields
             conv[name] = check_length(name, dt.itemsize)
     df = pandas.read_csv(fileobj, names=compositedt.names, converters=conv,
-                         dtype=dic)
+                         dtype=dic, keep_default_na=False)
     arr = numpy.zeros(len(df), compositedt)
     for col in df.columns:
         arr[col] = df[col].to_numpy()
