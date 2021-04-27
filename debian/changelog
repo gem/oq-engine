@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Implemented the BakerJayaram2008 cross correlation model
+
   [Michele Simionato]
   * Fixed logic tree bug: MultiMFDs were not modified
   * Internal: added a view composite_source_model to show the sources by group
