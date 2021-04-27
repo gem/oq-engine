@@ -3,7 +3,7 @@ name: Installation Script for Windows
 
 on:
   push:
-    branches: [ windows ]
+    branches: [ cleanup ]
   schedule:
     - cron: "00 23 * * *"
 
@@ -19,11 +19,13 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.6, 3.8]
+        python-version: [3.6, 3.7, 3.8]
 
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
+        with:
+          ref: cleanup
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:

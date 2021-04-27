@@ -2,7 +2,7 @@ name: macos pyapp
 'on':
   push:
     branches:
-      - macos
+      - cleanup
   schedule:
     - cron: "0 1 * * *"
 
@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
+        with:
+          ref: cleanup
       - name: Set up Python3 
         uses: actions/setup-python@v2
         with:
@@ -26,11 +28,12 @@ jobs:
         run: pip3 install pytest
       - name: Run Installation of oq-engine in devel mode 
         run: |
-            PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
-            echo $PY_VER
-            pip3 install -r requirements-$PY_VER-macos.txt
-            pip3 install -e .\[osgeo\]
-            pip3 list
+          #            PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
+          #  echo $PY_VER
+          #  pip3 install -r requirements-$PY_VER-macos.txt
+          #  pip3 install -e .\[osgeo\]
+          #  pip3 list
+            python install.py devel
       - name: Run tests
         run: |
             oq dbserver start &
