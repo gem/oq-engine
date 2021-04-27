@@ -160,15 +160,33 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
     """
     Read a ShakeMap in XML format from the local file system
     """
-    grid_url = path2url(grid_url)
+    try:
+        grid_url = path2url(grid_url)
+        if uncertainty_url is None:
+            if grid_url.endswith('.zip'):
+                # see if both are in the same file, naming must be correct
+                try:
+                    with urlextract(grid_url, 'grid.xml') as f1, urlextract(
+                            path2url(grid_url),
+                            'uncertainty.xml') as f2:
+                        return get_shakemap_array(f1, f2)
+                except FileNotFoundError:
+                    pass
 
-    if uncertainty_url is None:
-        with urlopen(grid_url) as f:
-            return get_shakemap_array(f)
-    else:
-        with urlopen(grid_url) as f1, urlextract(
-                path2url(uncertainty_url), 'uncertainty.xml') as f2:
+            # if not just return the grid and log a warning
+            logging.warning(
+                'No Uncertainty grid found, please check your input files.')
+            with urlextract(grid_url, '.xml') as f:
+                return get_shakemap_array(f)
+
+        # both files present, return them both
+        with urlextract(grid_url, '.xml') as f1, urlextract(
+                path2url(uncertainty_url), '.xml') as f2:
             return get_shakemap_array(f1, f2)
+
+    except FileNotFoundError as e:
+        raise FileNotFoundError(
+            'USGS xml grid file could not be found at %s' % grid_url) from e
 
 
 @get_array.add('usgs_id')
