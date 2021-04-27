@@ -302,10 +302,10 @@ class ContextMaker(object):
         allctxs = []
         for i, src in enumerate(srcs):
             src.id = i
-            ctxs = []
+            rctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
-                ctxs.append(self.make_rctx(rup))
-            allctxs.extend(self.gen_ctxs(ctxs, site1, src.id))
+                rctxs.append(self.make_rctx(rup))
+            allctxs.extend(self.gen_ctxs(rctxs, site1, src.id))
         return allctxs
 
     def filter(self, sites, rup):
