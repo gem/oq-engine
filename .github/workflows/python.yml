@@ -38,7 +38,7 @@ jobs:
     - name: Install engine with install script
       run: |
         git status
-        grep setuptools *
+        grep setuptools requirements*
         python install.py devel
     - name: Run demos to test installation
       run: |

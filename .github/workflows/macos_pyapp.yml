@@ -34,7 +34,7 @@ jobs:
           #  pip3 install -e .\[osgeo\]
           #  pip3 list
             git status
-            grep setuptools *
+            grep setuptools requirements*
             python install.py devel
       - name: Run tests
         run: |
