@@ -1163,7 +1163,7 @@ def get_input_files(oqparam, hazard=False):
         # local files
         for key, val in uri.items():
             if key == 'fname' or key.endswith('_url'):
-                val = val.replace('file://', '').replace('file:', '')
+                val = val.replace('file://', '')
                 fname = os.path.join(oqparam.base_path, val)
                 if os.path.exists(fname):
                     uri[key] = fname
