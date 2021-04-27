@@ -39,7 +39,7 @@ jobs:
       run: |
         git status
         grep setuptools requirements*
-        python install.py devel --install=cleanup
+        python install.py devel --version=cleanup
     - name: Run demos to test installation
       run: |
         source openquake/bin/activate

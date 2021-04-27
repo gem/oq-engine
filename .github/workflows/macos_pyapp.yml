@@ -35,7 +35,7 @@ jobs:
           #  pip3 list
             git status
             grep setuptools requirements*
-            python install.py devel --install=cleanup
+            python install.py devel --version=cleanup
       - name: Run tests
         run: |
             oq dbserver start &
