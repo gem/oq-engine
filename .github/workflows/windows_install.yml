@@ -40,7 +40,7 @@ jobs:
     # Use script to install engine and not the pip install .
       - name: Install engine with install script
         run: |
-          grep setuptools *
+          git status
           python install.py devel
       - name: Run demos to test installation
         run: |
