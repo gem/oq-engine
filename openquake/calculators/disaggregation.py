@@ -136,7 +136,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
 
         # disaggregate by site, IMT
         for s, iml3 in enumerate(hmap4):
-            close = [ctx for ctx in ctxs_around_site[s] if ctx.magi == magi]
+            close = [ctx for ctx in ctxs if ctx.magi == magi and s in ctx.sids]
             if not g_by_z[s] or not close:
                 # g_by_z[s] is empty in test case_7
                 continue
