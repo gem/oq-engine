@@ -297,21 +297,17 @@ def set_rlzs_stats(dstore, prefix, **attrs):
         dstore.set_shape_descr(name, **dict(pairs))
 
 
-def combine_probs(values_by_grp, cmakers):
+def combine_probs(values_by_grp, cmakers, rlz):
     """
     :param values_by_grp: C arrays of shape (..., G)
     :param cmakers: C ContextMakers with G gsims each
+    :param rlz: a realization index
     :returns: array of shape (R, ...) where R is the number of realizations
     """
-    rlzset = set()
-    for cmaker in cmakers:
-        for rlzs in cmaker.gsims.values():
-            rlzset.update(rlzs)
-    shp = (len(rlzset),) + values_by_grp[0].shape[:-1]
-    res = numpy.zeros(shp)
+    probs = []
     for values, cmaker in zip(values_by_grp, cmakers):
+        assert values.shape[-1] == len(cmaker.gsims)
         for g, rlzs in enumerate(cmaker.gsims.values()):
-            value = values[..., g]
-            for rlz in rlzs:
-                res[rlz] = agg_probs(res[rlz], value)
-    return res
+            if rlz in rlzs:
+                probs.append(values[..., g])
+    return agg_probs(*probs)
