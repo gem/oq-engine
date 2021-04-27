@@ -41,13 +41,3 @@ jobs:
           #source openquake/bin/activate
           oq --version
           oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
-      - name: Run tests
-        run: |
-            oq dbserver start &
-            echo " pytest openquake"
-            pytest openquake
-      - name: Run demos
-        run: |
-            oq reset -y
-            oq dbserver start &
-            ./bin/run-demos.sh demos

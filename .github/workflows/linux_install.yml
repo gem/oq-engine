@@ -50,7 +50,3 @@ jobs:
         #source openquake/bin/activate
         oq --version
         oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
-    - name: Test with pytest
-      run: |
-        oq dbserver start
-        pytest openquake/commands openquake/commonlib --disable-warnings --color=yes && pytest openquake --doctest-modules -x -k "not gsim" --disable-warnings --color=yes --durations=10 && pytest doc/adv-manual/developing.rst && oq dbserver stop
