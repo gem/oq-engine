@@ -225,10 +225,9 @@ def export_agg_loss_table(ekey, dstore):
         df = dstore.read_df('losses_by_event')
         ren = {'loss_%d' % li: ln for li, ln in enumerate(oq.loss_names)}
         df.rename(columns=ren, inplace=True)
-    evs = events[df.event_id.to_numpy()]
-    if 'loss' in df.columns:  # event_based_risk
-        df['rlz_id'] = evs['rlz_id']
     if oq.calculation_mode in 'event_based_risk ebrisk':
+        evs = events[df.event_id.to_numpy()]
+        df['rlz_id'] = evs['rlz_id']
         df['rup_id'] = evs['rup_id']
         df['year'] = evs['year']
     df.sort_values('event_id', inplace=True)
