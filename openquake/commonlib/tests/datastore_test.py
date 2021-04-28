@@ -22,12 +22,12 @@ import sys
 import unittest
 import tempfile
 import numpy
-from openquake.commonlib.datastore import DataStore, read
+from openquake.commonlib.datastore import new, read
 
 
 class DataStoreTestCase(unittest.TestCase):
     def setUp(self):
-        self.dstore = DataStore.new()
+        self.dstore = new()
 
     def tearDown(self):
         self.dstore.clear()
