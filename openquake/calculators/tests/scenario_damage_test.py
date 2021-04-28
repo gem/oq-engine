@@ -350,6 +350,9 @@ aid
         self.run_calc(case_13.__file__, 'job_b.ini')
         self.check_damages('b_damage_table.txt', 'b_damages.txt')
 
+        [f] = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+
     def test_case_13c(self):
         # test event_based_damage, aggregate_by=taxonomy, policy
         self.run_calc(case_13.__file__, 'job_c.ini')
