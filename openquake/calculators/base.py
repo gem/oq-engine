@@ -157,7 +157,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
     def __init__(self, oqparam, calc_id):
         oqparam.validate()
-        self.datastore = datastore.DataStore.new(calc_id)
+        self.datastore = datastore.new(calc_id)
         init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,

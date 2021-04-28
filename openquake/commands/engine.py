@@ -18,6 +18,7 @@
 import os
 import sys
 import getpass
+import logging
 from openquake.baselib import config
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
@@ -98,7 +99,7 @@ def main(
     """
     if not run:
         # configure a basic logging
-        logs.init()
+        logging.basicConfig(level=logging.INFO)
 
     if config_file:
         config.read(os.path.abspath(os.path.expanduser(config_file)),

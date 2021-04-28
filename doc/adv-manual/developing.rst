@@ -109,16 +109,16 @@ all of them. They are documented here_.
 Running calculations programmatically
 -------------------------------------
 
-Starting from engine 3.9 the recommended way to run a calculation
+Starting from engine 3.12 the recommended way to run a job
 programmaticaly is the following:
 
 .. code-block:: python
 
  >> from openquake.commonlib import logs
  >> from openquake.calculators.base import get_calc
- >> calc_id = logs.init()  # initialize logs
- >> calc = get_calc('job.ini', calc_id)  # instantiate calculator
- >> calc.run()  # run the calculation
+ >> job_id = logs.init('job')  # initialize logs
+ >> calc = get_calc('job.ini', job_id)  # instantiate calculator
+ >> calc.run()  # run the calculator
 
 Then the results can be read from the datastore by using the extract API:
 
