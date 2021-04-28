@@ -144,7 +144,7 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     if isinstance(calc_id, str):  # pathname
         dstore = DataStore(calc_id, mode=mode)
     else:
-        dstore = new(calc_id, datadir, mode=mode)
+        dstore = new(calc_id, datadir=datadir, mode=mode)
     try:
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
@@ -157,7 +157,7 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     return dstore.open(mode)
 
 
-def new(calc_id, datadir=None, mode=None):
+def new(calc_id, oqparam=None, datadir=None, mode=None):
     """
     :param calc_id:
         if "job", create a job record and initialize the logs
@@ -168,7 +168,7 @@ def new(calc_id, datadir=None, mode=None):
         a DataStore instance associated to the given calc_id
     """
     if calc_id in ('job', 'calc'):
-        return new(init(calc_id), datadir, mode)
+        return new(init(calc_id), oqparam, datadir, mode)
     datadir = datadir or get_datadir()
     ppath = None
     if calc_id < 0:  # look at the old calculations of the current user
@@ -181,16 +181,23 @@ def new(calc_id, datadir=None, mode=None):
                 'retrieve the %s' % (len(calc_ids), calc_id))
     else:
         jid = calc_id
+    haz_id = None if oqparam is None else oqparam.hazard_calculation_id
     # look in the db
     job = dbcmd('get_job', jid)
     if job:
         path = job.ds_calc_dir + '.hdf5'
-        if job.hazard_calculation_id and job.hazard_calculation_id != jid:
-            pjob = dbcmd('get_job', job.hazard_calculation_id)
-            ppath = pjob.ds_calc_dir + '.hdf5'
+        hc_id = job.hazard_calculation_id
+        if not hc_id and haz_id:
+            dbcmd('update_job', jid, {'hazard_calculation_id': haz_id})
+            hc_id = haz_id
+        if hc_id and hc_id != jid:
+            ppath = dbcmd('get_job', hc_id).ds_calc_dir + '.hdf5'
     else:  # when using oq run there is no job in the db
         path = os.path.join(datadir, 'calc_%s.hdf5' % jid)
-    return DataStore(path, ppath, mode)
+    dstore = DataStore(path, ppath, mode)
+    if oqparam:
+        dstore['oqparam'] = oqparam
+    return dstore
 
 
 def init(calc_id, level=logging.INFO):
