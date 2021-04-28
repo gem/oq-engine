@@ -157,15 +157,21 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     return dstore.open(mode)
 
 
-def new(calc_id=None, datadir=None, mode=None):
+def new(calc_id, datadir=None, mode=None):
     """
-    :returns: a DataStore instance associated to the given calc_id
+    :param calc_id:
+        if "job", create a job record and initialize the logs
+        if "calc" just initialize the logs
+        if integer > 0 look in the database and then on the filesystem
+        if integer < 0 look at the old calculations in the filesystem
+    :returns:
+        a DataStore instance associated to the given calc_id
     """
+    if calc_id in ('job', 'calc'):
+        return new(init(calc_id), datadir, mode)
     datadir = datadir or get_datadir()
     ppath = None
-    if calc_id is None:  # use a new datastore
-        jid = get_last_calc_id(datadir) + 1
-    elif calc_id < 0:  # use an old datastore
+    if calc_id < 0:  # look at the old calculations of the current user
         calc_ids = get_calc_ids(datadir)
         try:
             jid = calc_ids[calc_id]
@@ -219,7 +225,7 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> ds = new()
+    >>> ds = new('calc')
     >>> ds['example'] = 42
     >>> print(ds['example'][()])
     42
