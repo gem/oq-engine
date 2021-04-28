@@ -41,7 +41,12 @@ jobs:
       - name: Install engine with install script
         run: |
           git status
-          python install.py devel --version=cleanup
+          PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
+          echo $PY_VER
+          pip3 install -r requirements-$PY_VER-macos.txt
+          pip3 install -e .\[osgeo\]
+          pip3 list
+          #python install.py devel --version=cleanup
       - name: Run demos to test installation
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
