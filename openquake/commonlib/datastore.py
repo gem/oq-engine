@@ -193,7 +193,7 @@ def new(calc_id, datadir=None, mode=None):
     return DataStore(path, ppath, mode)
 
 
-def init(calc_id='calc', level=logging.INFO):
+def init(calc_id, level=logging.INFO):
     """
     1. initialize the root logger (if not already initialized)
     2. set the format of the root handlers (if any)
