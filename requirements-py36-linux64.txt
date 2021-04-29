@@ -47,7 +47,7 @@ https://wheelhouse.openquake.org/v2/linux/py/celery-4.1.0-py2.py3-none-any.whl
 # comment the following lines to skip installation
 # of the plotting libraries (optional feature)
 https://wheelhouse.openquake.org/v3/linux/py/python_dateutil-2.8.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v2/linux/py/pyparsing-2.2.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v2/linux/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py36/matplotlib-3.1.2-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/pyproj-1.9.5.1-cp36-cp36m-manylinux1_x86_64.whl

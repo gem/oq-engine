@@ -32,7 +32,7 @@ https://wheelhouse.openquake.org/v2/windows/py/toml-0.10.0-py2.py3-none-any.whl
 # comment the following lines to skip installation
 # of the plotting libraries (optional feature)
 https://wheelhouse.openquake.org/v3/windows/py/python_dateutil-2.8.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v2/windows/py/pyparsing-2.2.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v2/windows/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py36/kiwisolver-1.0.1-cp36-none-win_amd64.whl
 https://wheelhouse.openquake.org/v2/windows/py36/matplotlib-3.1.2-cp36-cp36m-win_amd64.whl
