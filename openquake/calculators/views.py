@@ -1059,4 +1059,4 @@ def view_composite_source_model(token, dstore):
         srcs = ' '.join(df['source_id'])
         trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], n)
         lst.append((grp_id, to_str(trts), to_str(sm_rlzs), srcs))
-    return rst_table(lst, ['grp_id', 'trt', 'sm_rlzs', 'sources'])
+    return rst_table(lst, ['grp_id', 'trt', 'smrs', 'sources'])

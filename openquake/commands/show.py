@@ -45,7 +45,7 @@ def print_(aw):
         print(rst_table(aw.to_dframe()))
     elif hasattr(aw, 'array') and aw.dtype.names:
         sio = io.StringIO()
-        writers.write_csv(sio, aw.array)
+        writers.write_csv(sio, aw.array, sep='\t')
         print(sio.getvalue())
     elif hasattr(aw, 'array'):
         print(aw.array)

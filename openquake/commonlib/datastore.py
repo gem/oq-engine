@@ -508,7 +508,9 @@ class DataStore(collections.abc.MutableMapping):
         """
         if key in self.hdf5:
             return self.hdf5.read_df(key, index, sel, slc)
-        return self.parent.read_df(key, index, sel, slc)
+        if self.parent:
+            return self.parent.read_df(key, index, sel, slc)
+        raise KeyError(key)
 
     def read_unique(self, key, field):
         """
