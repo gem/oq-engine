@@ -41,5 +41,5 @@ https://wheelhouse.openquake.org/v3/macos/py/python_dateutil-2.8.0-py2.py3-none-
 https://wheelhouse.openquake.org/v3/macos/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py37/kiwisolver-1.1.0-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py37/matplotlib-3.1.1-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py37/matplotlib-3.1.2-cp37-cp37m-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py37/pyproj-2.1.3-cp37-cp37m-macosx_10_6_intel.macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl
