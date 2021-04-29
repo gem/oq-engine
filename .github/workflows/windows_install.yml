@@ -33,16 +33,10 @@ jobs:
     # You can test your matrix by printing the current Python version
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
-      - name: Check version of executable
-        run: |
-          where.exe python
-          where.exe py
-    # Use script to install engine and not the pip install .
-      - name: Install engine with install script
+      - name: Install engine on developer mode
         run: |
           git status
           $PY_VER="py${{ matrix.python-version }}"
-          $PY_VER
           $PY_VER = $PY_VER -replace ".", ""
           python -m pip install pip wheel setuptools --upgrade
           python -m pip install install -r requirements-$PY_VER-win64.txt
