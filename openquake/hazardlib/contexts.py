@@ -420,6 +420,7 @@ class ContextMaker(object):
                 for par in self.REQUIRES_DISTANCES | {'rrup'}:
                     setattr(ctx, par, getattr(dctx, par))
                 if fewsites:
+                    # get closest point on the surface
                     closest = rup.surface.get_closest_points(sites.complete)
                     ctx.clon = closest.lons[ctx.sids]
                     ctx.clat = closest.lats[ctx.sids]

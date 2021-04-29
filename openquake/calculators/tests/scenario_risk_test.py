@@ -232,13 +232,10 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/realizations.csv', fname)
 
     def test_case_shapefile(self):
-        uri = '{"kind": "shapefile", "fname": "%s"}' % os.path.join(
-            os.path.dirname(case_shapefile.__file__), 'shp/output.shp')
-
         self.run_calc(case_shapefile.__file__, 'prepare_job.ini')
+        pre_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_shapefile.__file__, 'job.ini',
-                      hazard_calculation_id=str(self.calc.datastore.calc_id),
-                      shakemap_uri=uri)
+                      hazard_calculation_id=pre_id)
         sitecol = self.calc.datastore['sitecol']
         self.assertEqual(len(sitecol), 7)
         gmfdict = dict(extract(self.calc.datastore, 'gmf_data'))
@@ -249,5 +246,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)
+
+        # also test case if shapefiles are together in a zip file
+        self.run_calc(case_shapefile.__file__, 'job_zipped.ini',
+                      hazard_calculation_id=pre_id)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)

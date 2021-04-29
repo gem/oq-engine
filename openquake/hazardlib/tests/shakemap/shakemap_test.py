@@ -36,8 +36,9 @@ def mean_std(shakemap, site_effects):
 class ShakemapTestCase(unittest.TestCase):
 
     def test_gmfs(self):
-        f1 = 'file://' + os.path.join(CDIR, 'ghorka_grid.xml')
-        f2 = 'file://' + os.path.join(CDIR, 'ghorka_uncertainty.xml')
+        # test uncertainty in zip
+        f1 = os.path.join(CDIR, 'ghorka_grid.xml')
+        f2 = os.path.join(CDIR, 'ghorka_uncertainty.zip')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
         sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
                                                      uridict, imt_dt.names)
@@ -143,8 +144,9 @@ class ShakemapTestCase(unittest.TestCase):
 
     def test_from_files(self):
         # files provided by Vitor Silva, without site amplification
-        f1 = 'file://' + os.path.join(CDIR, 'test_shaking.xml')
-        f2 = 'file://' + os.path.join(CDIR, 'test_uncertainty.xml')
+        # test grid in zip
+        f1 = os.path.join(CDIR, 'test_shaking.zip')
+        f2 = os.path.join(CDIR, 'test_uncertainty.xml')
         uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
         sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
                                                      uridict, imt_dt.names)
@@ -162,9 +164,9 @@ class ShakemapTestCase(unittest.TestCase):
                          [0.5815353, 0.6460007, 0.6491335, 0.6603457]])
 
     def test_for_mmi(self):
-        f1 = 'file://' + os.path.join(CDIR, 'ghorka_grid.xml')
-        f2 = 'file://' + os.path.join(CDIR, 'ghorka_uncertainty.xml')
-        uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=f2)
+        # test both files in one zip
+        f1 = os.path.join(CDIR, 'ghorka_grid.zip')
+        uridict = dict(kind='usgs_xml', grid_url=f1, uncertainty_url=None)
 
         sitecol, shakemap, *_ = get_sitecol_shakemap(uridict.pop('kind'),
                                                      uridict, ['MMI'])

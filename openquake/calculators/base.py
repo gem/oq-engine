@@ -157,7 +157,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
     def __init__(self, oqparam, calc_id):
         oqparam.validate()
-        self.datastore = datastore.DataStore.new(calc_id)
+        self.datastore = datastore.new(calc_id)
         init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
@@ -711,7 +711,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Storing risk model')
             attrs = self.crmodel.get_attrs()
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
-                                         'gzip', **attrs)
+                                     'gzip', **attrs)
 
     def _read_risk_data(self):
         # read the risk model (if any), the exposure (if any) and then the

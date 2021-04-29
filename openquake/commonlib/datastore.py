@@ -20,14 +20,35 @@ import io
 import os
 import re
 import gzip
+import socket
 import getpass
+import logging
 import collections
 import numpy
 import h5py
 
-from openquake.baselib import hdf5, config, performance, general
+from openquake.baselib import (
+    hdf5, config, parallel, performance, general, zeromq)
 
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
+DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+
+
+def dbcmd(action, *args):
+    """
+    A dispatcher to the database server.
+
+    :param string action: database action to perform
+    :param tuple args: arguments
+    """
+    host = socket.gethostbyname(config.dbserver.host)
+    sock = zeromq.Socket(
+        'tcp://%s:%s' % (host, DBSERVER_PORT), zeromq.zmq.REQ, 'connect')
+    with sock:
+        res = sock.send((action,) + args)
+        if isinstance(res, parallel.Result):
+            return res.get()
+    return res
 
 
 def get_datadir():
@@ -123,7 +144,7 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     if isinstance(calc_id, str):  # pathname
         dstore = DataStore(calc_id, mode=mode)
     else:
-        dstore = DataStore.new(calc_id, datadir, mode=mode)
+        dstore = new(calc_id, datadir=datadir, mode=mode)
     try:
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
@@ -136,6 +157,74 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     return dstore.open(mode)
 
 
+def new(calc_id, oqparam=None, datadir=None, mode=None):
+    """
+    :param calc_id:
+        if "job", create a job record and initialize the logs
+        if "calc" just initialize the logs
+        if integer > 0 look in the database and then on the filesystem
+        if integer < 0 look at the old calculations in the filesystem
+    :returns:
+        a DataStore instance associated to the given calc_id
+    """
+    if calc_id in ('job', 'calc'):
+        return new(init(calc_id), oqparam, datadir, mode)
+    datadir = datadir or get_datadir()
+    ppath = None
+    if calc_id < 0:  # look at the old calculations of the current user
+        calc_ids = get_calc_ids(datadir)
+        try:
+            jid = calc_ids[calc_id]
+        except IndexError:
+            raise IndexError(
+                'There are %d old calculations, cannot '
+                'retrieve the %s' % (len(calc_ids), calc_id))
+    else:
+        jid = calc_id
+    haz_id = None if oqparam is None else oqparam.hazard_calculation_id
+    # look in the db
+    job = dbcmd('get_job', jid)
+    if job:
+        path = job.ds_calc_dir + '.hdf5'
+        hc_id = job.hazard_calculation_id
+        if not hc_id and haz_id:
+            dbcmd('update_job', jid, {'hazard_calculation_id': haz_id})
+            hc_id = haz_id
+        if hc_id and hc_id != jid:
+            ppath = dbcmd('get_job', hc_id).ds_calc_dir + '.hdf5'
+    else:  # when using oq run there is no job in the db
+        path = os.path.join(datadir, 'calc_%s.hdf5' % jid)
+    dstore = DataStore(path, ppath, mode)
+    if oqparam:
+        dstore['oqparam'] = oqparam
+    return dstore
+
+
+def init(calc_id, level=logging.INFO):
+    """
+    1. initialize the root logger (if not already initialized)
+    2. set the format of the root handlers (if any)
+    3. return a new calculation ID if calc_id is 'job' or 'calc'
+       (with 'calc' the calculation ID is not stored in the database)
+    """
+    if not logging.root.handlers:  # first time
+        logging.basicConfig(level=level)
+    if calc_id == 'job':  # produce a calc_id by creating a job in the db
+        calc_id = dbcmd('create_job', get_datadir())
+    elif calc_id == 'calc':  # produce a calc_id without creating a job
+        calc_id = get_last_calc_id() + 1
+    else:
+        calc_id = int(calc_id)
+        path = os.path.join(get_datadir(), 'calc_%d.hdf5' % calc_id)
+        if os.path.exists(path):
+            raise OSError('%s already exists' % path)
+    fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
+    for handler in logging.root.handlers:
+        f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
+        handler.setFormatter(f)
+    return calc_id
+
+
 class DataStore(collections.abc.MutableMapping):
     """
     DataStore class to store the inputs/outputs of a calculation on the
@@ -143,7 +232,7 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> ds = DataStore.new()
+    >>> ds = new('calc')
     >>> ds['example'] = 42
     >>> print(ds['example'][()])
     42
@@ -161,37 +250,6 @@ class DataStore(collections.abc.MutableMapping):
 
     class EmptyDataset(ValueError):
         """Raised when reading an empty dataset"""
-
-    @classmethod
-    def new(cls, calc_id=None, datadir=None, mode=None):
-        """
-        :returns: a DataStore instance associated to the given calc_id
-        """
-        from openquake.commonlib import logs  # avoid circular import
-        datadir = datadir or get_datadir()
-        ppath = None
-        if calc_id is None:  # use a new datastore
-            jid = get_last_calc_id(datadir) + 1
-        elif calc_id < 0:  # use an old datastore
-            calc_ids = get_calc_ids(datadir)
-            try:
-                jid = calc_ids[calc_id]
-            except IndexError:
-                raise IndexError(
-                    'There are %d old calculations, cannot '
-                    'retrieve the %s' % (len(calc_ids), calc_id))
-        else:
-            jid = calc_id
-        # look in the db
-        job = logs.dbcmd('get_job', jid)
-        if job:
-            path = job.ds_calc_dir + '.hdf5'
-            if job.hazard_calculation_id and job.hazard_calculation_id != jid:
-                pjob = logs.dbcmd('get_job', job.hazard_calculation_id)
-                ppath = pjob.ds_calc_dir + '.hdf5'
-        else:  # when using oq run there is no job in the db
-            path = os.path.join(datadir, 'calc_%s.hdf5' % jid)
-        return cls(path, ppath, mode)
 
     def __init__(self, path, ppath=None, mode=None):
         self.filename = path

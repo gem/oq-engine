@@ -18,47 +18,16 @@
 """
 Set up some system-wide loggers
 """
-import os.path
-import socket
 import logging
 from datetime import datetime
 from contextlib import contextmanager
-from openquake.baselib import zeromq, config, parallel
-from openquake.commonlib import datastore
+from openquake.commonlib.datastore import dbcmd, init  # keep it here!
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
-
-DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
-
-
-def dbcmd(action, *args):
-    """
-    A dispatcher to the database server.
-
-    :param string action: database action to perform
-    :param tuple args: arguments
-    """
-    host = socket.gethostbyname(config.dbserver.host)
-    sock = zeromq.Socket(
-        'tcp://%s:%s' % (host, DBSERVER_PORT), zeromq.zmq.REQ, 'connect')
-    with sock:
-        res = sock.send((action,) + args)
-        if isinstance(res, parallel.Result):
-            return res.get()
-    return res
-
-
-def touch_log_file(log_file):
-    """
-    If a log file destination is specified, attempt to open the file in
-    'append' mode ('a'). If the specified file is not writable, an
-    :exc:`IOError` will be raised.
-    """
-    open(os.path.abspath(log_file), 'a').close()
 
 
 def _update_log_record(self, record):
@@ -142,28 +111,3 @@ def handle(job_id, log_level='info', log_file=None):
     finally:
         for handler in handlers:
             logging.root.removeHandler(handler)
-
-
-def init(calc_id='nojob', level=logging.INFO):
-    """
-    1. initialize the root logger (if not already initialized)
-    2. set the format of the root handlers (if any)
-    3. return a new calculation ID candidate if calc_id is 'job' or 'nojob'
-       (with 'nojob' the calculation ID is not stored in the database)
-    """
-    if not logging.root.handlers:  # first time
-        logging.basicConfig(level=level)
-    if calc_id == 'job':  # produce a calc_id by creating a job in the db
-        calc_id = dbcmd('create_job', datastore.get_datadir())
-    elif calc_id == 'nojob':  # produce a calc_id without creating a job
-        calc_id = datastore.get_last_calc_id() + 1
-    else:
-        calc_id = int(calc_id)
-        path = os.path.join(datastore.get_datadir(), 'calc_%d.hdf5' % calc_id)
-        if os.path.exists(path):
-            raise OSError('%s already exists' % path)
-    fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
-    for handler in logging.root.handlers:
-        f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
-        handler.setFormatter(f)
-    return calc_id
