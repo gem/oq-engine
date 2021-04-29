@@ -3,7 +3,7 @@ name: Installation Script for Windows
 
 on:
   push:
-    branches: [ windows ]
+    branches: [ cleanup ]
   schedule:
     - cron: "00 23 * * *"
 
@@ -19,11 +19,13 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.6, 3.8]
+        python-version: [3.6, 3.7, 3.8]
 
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
+        with:
+          ref: cleanup
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -38,9 +40,9 @@ jobs:
     # Use script to install engine and not the pip install .
       - name: Install engine with install script
         run: |
-          python install.py devel
+          git status
+          python -m pip install -e .
       - name: Run demos to test installation
         run: |
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
           oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"

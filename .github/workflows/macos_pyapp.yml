@@ -2,7 +2,7 @@ name: macos pyapp
 'on':
   push:
     branches:
-      - macos
+      - cleanup
   schedule:
     - cron: "0 1 * * *"
 
@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v2
+        with:
+          ref: cleanup
       - name: Set up Python3 
         uses: actions/setup-python@v2
         with:
@@ -26,18 +28,16 @@ jobs:
         run: pip3 install pytest
       - name: Run Installation of oq-engine in devel mode 
         run: |
+            git status
+            grep setuptools requirements*
             PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
             echo $PY_VER
             pip3 install -r requirements-$PY_VER-macos.txt
             pip3 install -e .\[osgeo\]
             pip3 list
-      - name: Run tests
+            #  python install.py devel --version=cleanup
+      - name: Run demos to test installation
         run: |
-            oq dbserver start &
-            echo " pytest openquake"
-            pytest openquake
-      - name: Run demos
-        run: |
-            oq reset -y
-            oq dbserver start &
-            ./bin/run-demos.sh demos
+          #source openquake/bin/activate
+          oq --version
+          oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
