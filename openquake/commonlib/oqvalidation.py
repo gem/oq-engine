@@ -712,7 +712,7 @@ class OqParam(valid.ParamSet):
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
-    collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), 0)
+    collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), '0')
     collect_rlzs = valid.Param(valid.boolean, False)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
@@ -883,9 +883,6 @@ class OqParam(valid.ParamSet):
                 'region_constraint is obsolete, use region instead')
             self.region = valid.wkt_polygon(
                 names_vals.pop('region_constraint'))
-        self.risk_investigation_time = (
-            self.risk_investigation_time or self.investigation_time)
-        self.collapse_level = int(self.collapse_level)
         if ('intensity_measure_types_and_levels' in names_vals and
                 'intensity_measure_types' in names_vals):
             logging.warning('Ignoring intensity_measure_types since '
@@ -989,12 +986,6 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(
                     '%s: conditional_loss_poes are not defined '
                     'for classical_damage calculations' % job_ini)
-
-        # checks for ebrisk
-        if self.calculation_mode in ('ebrisk', 'event_based_risk'):
-            if self.risk_investigation_time is None:
-                raise InvalidFile('Please set the risk_investigation_time in'
-                                  ' %s' % job_ini)
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')

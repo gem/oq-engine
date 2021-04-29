@@ -567,7 +567,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo,
             min_weight=oq.min_weight,
-            collapse_level=oq.collapse_level, hint=hint,
+            collapse_level=int(oq.collapse_level), hint=hint,
             max_sites_disagg=oq.max_sites_disagg,
             split_sources=oq.split_sources, af=self.af)
         return psd
