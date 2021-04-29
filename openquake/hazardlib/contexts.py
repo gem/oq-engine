@@ -295,7 +295,7 @@ class ContextMaker(object):
             params.add(dparam + '_')
         return params
 
-    def from_srcs(self, srcs, site1):  # used in disagg.disaggregation
+    def from_srcs(self, srcs, sitecol):  # used in disagg.disaggregation
         """
         :returns: a list RuptureContexts
         """
@@ -305,7 +305,7 @@ class ContextMaker(object):
             rctxs = []
             for rup in src.iter_ruptures(shift_hypo=self.shift_hypo):
                 rctxs.append(self.make_rctx(rup))
-            allctxs.extend(self.gen_ctxs(rctxs, site1, src.id))
+            allctxs.extend(self.gen_ctxs(rctxs, sitecol, src.id))
         return allctxs
 
     def filter(self, sites, rup):
