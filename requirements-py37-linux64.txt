@@ -10,7 +10,7 @@ https://wheelhouse.openquake.org/v3/linux/py37/h5py-2.10.0-cp37-cp37m-manylinux1
 https://wheelhouse.openquake.org/v3/linux/py37/numpy-1.18.2-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/scipy-1.4.1-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/pandas-1.1.5-cp37-cp37m-manylinux1_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py37/pyzmq-18.0.2-cp37-cp37m-manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py37/pyzmq-19.0.0-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/psutil-5.6.3-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py37/Shapely-1.7.1-cp37-cp37m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py/docutils-0.14-py3-none-any.whl

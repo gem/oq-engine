@@ -11,7 +11,7 @@ https://wheelhouse.openquake.org/v2/windows/py36/h5py-2.10.0-cp36-cp36m-win_amd6
 https://wheelhouse.openquake.org/v2/windows/py36/numpy-1.18.2-cp36-cp36m-win_amd64.whl
 https://wheelhouse.openquake.org/v2/windows/py36/scipy-1.4.1-cp36-cp36m-win_amd64.whl
 https://wheelhouse.openquake.org/v2/windows/py36/pandas-1.1.5-cp36-cp36m-win_amd64.whl
-https://wheelhouse.openquake.org/v2/windows/py36/pyzmq-17.0.0-cp36-cp36m-win_amd64.whl
+https://wheelhouse.openquake.org/v2/windows/py36/pyzmq-19.0.0-cp36-cp36m-win_amd64.whl
 https://wheelhouse.openquake.org/v2/windows/py36/psutil-5.4.3-cp36-cp36m-win_amd64.whl
 https://wheelhouse.openquake.org/v2/windows/py36/Shapely-1.7.1-cp36-cp36m-win_amd64.whl
 https://wheelhouse.openquake.org/v2/windows/py/docutils-0.14-py3-none-any.whl

@@ -10,7 +10,7 @@ https://wheelhouse.openquake.org/v3/macos/py37/h5py-2.10.0-cp37-cp37m-macosx_10_
 https://wheelhouse.openquake.org/v3/macos/py37/numpy-1.18.2-cp37-cp37m-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py37/scipy-1.4.1-cp37-cp37m-macosx_10_6_intel.whl
 https://wheelhouse.openquake.org/v3/macos/py37/pandas-1.1.5-cp37-cp37m-macosx_10_9_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py37/pyzmq-18.0.2-cp37-cp37m-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py37/pyzmq-19.0.0-cp37-cp37m-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py37/psutil-5.6.3-cp37-cp37m-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py37/Shapely-1.7.1-cp37-cp37m-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py/docutils-0.14-py3-none-any.whl

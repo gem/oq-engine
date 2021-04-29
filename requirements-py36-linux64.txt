@@ -12,7 +12,7 @@ https://wheelhouse.openquake.org/v2/linux/py/setuptools-56.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py36/h5py-2.10.0-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/numpy-1.18.2-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/scipy-1.4.1-cp36-cp36m-manylinux1_x86_64.whl
-https://wheelhouse.openquake.org/v2/linux/py36/pyzmq-17.0.0-cp36-cp36m-manylinux1_x86_64.whl
+https://wheelhouse.openquake.org/v2/linux/py36/pyzmq-19.0.0-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/psutil-5.4.3-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/Shapely-1.7.1-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py/docutils-0.14-py3-none-any.whl
