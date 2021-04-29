@@ -41,7 +41,7 @@ jobs:
       - name: Install engine with install script
         run: |
           git status
-          $PY_VER=py${{ matrix.python-version }}
+          $PY_VER="py${{ matrix.python-version }}"
           $PY_VER
           $PY_VER = $PY_VER -replace ".", ""
           python -m pip install pip wheel setuptools --upgrade
