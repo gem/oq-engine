@@ -6,13 +6,13 @@
 # We also provide pre-compiled manylinux1 wheels for
 # h5py, Shapely, psutil
 
+https://wheelhouse.openquake.org/v2/linux/py36/pandas-1.1.5-cp36-cp36m-win_amd64.whl
 https://wheelhouse.openquake.org/v2/linux/py/pytz-2018.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/setuptools-56.0.0-py3-none-any.whl 
 https://wheelhouse.openquake.org/v2/linux/py36/h5py-2.10.0-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py/nose-1.3.7-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py36/numpy-1.18.2-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/scipy-1.3.1-cp36-cp36m-manylinux1_x86_64.whl
-https://wheelhouse.openquake.org/v2/linux/py36/pandas-0.25.3-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/pyzmq-17.0.0-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/psutil-5.4.3-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/Shapely-1.7.1-cp36-cp36m-manylinux1_x86_64.whl
