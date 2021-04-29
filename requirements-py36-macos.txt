@@ -38,7 +38,7 @@ https://wheelhouse.openquake.org/v2/macos/py36/setproctitle-1.1.10-cp36-cp36m-ma
 ### Plotting ###
 # comment the following lines to skip installation
 # of the plotting libraries (optional feature)
-https://wheelhouse.openquake.org/v2/macos/py/python_dateutil-2.7.2-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/macos/py/python_dateutil-2.8.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/pyparsing-2.2.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py36/matplotlib-3.1.2-cp36-cp36m-macosx_10_9_x86_64.whl
