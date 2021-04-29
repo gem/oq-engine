@@ -29,9 +29,9 @@ jobs:
       - name: Run Installation of oq-engine in devel mode 
         run: |
             git status
-            grep setuptools requirements*
             PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
             echo $PY_VER
+            pip3 install -U pip wheel setuptools
             pip3 install -r requirements-$PY_VER-macos.txt
             pip3 install -e .\[osgeo\]
             pip3 list

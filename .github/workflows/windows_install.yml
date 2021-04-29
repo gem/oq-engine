@@ -41,6 +41,7 @@ jobs:
       - name: Install engine with install script
         run: |
           git status
+          python -m pip install pip wheel setuptools --upgrade
           python -m pip install -e .
       - name: Run demos to test installation
         run: |
