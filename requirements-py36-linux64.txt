@@ -16,7 +16,7 @@ https://wheelhouse.openquake.org/v2/linux/py36/pyzmq-19.0.0-cp36-cp36m-manylinux
 https://wheelhouse.openquake.org/v2/linux/py36/psutil-5.4.3-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py36/Shapely-1.7.1-cp36-cp36m-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v2/linux/py/docutils-0.14-py3-none-any.whl
-https://wheelhouse.openquake.org/v2/linux/py/decorator-4.3.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v2/linux/py/decorator-4.4.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/pbr-4.0.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/six-1.11.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/linux/py/Django-2.2.7-py3-none-any.whl

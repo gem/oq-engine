@@ -1,4 +1,4 @@
-# Suggested versions for development based on
+ versions for development based on
 # Ubuntu 18.04 stack
 # !! must update pip first! so wheels will be used !!
 
@@ -15,7 +15,7 @@ https://wheelhouse.openquake.org/v2/macos/py36/pyzmq-19.0.0-cp36-cp36m-macosx_10
 https://wheelhouse.openquake.org/v2/macos/py36/psutil-5.4.3-cp36-cp36m-macosx_10_6_intel.whl
 https://wheelhouse.openquake.org/v2/macos/py36/Shapely-1.7.1-cp36-cp36m-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v2/macos/py/docutils-0.14-py3-none-any.whl
-https://wheelhouse.openquake.org/v2/macos/py/decorator-4.3.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v2/macos/py/decorator-4.4.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/pbr-4.0.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/six-1.11.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/Django-2.2.7-py3-none-any.whl

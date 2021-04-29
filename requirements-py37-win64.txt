@@ -14,7 +14,7 @@ https://wheelhouse.openquake.org/v3/windows/py37/pyzmq-19.0.0-cp37-cp37m-win_amd
 https://wheelhouse.openquake.org/v3/windows/py37/psutil-5.6.3-cp37-cp37m-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py37/Shapely-1.7.1-cp37-cp37m-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py/docutils-0.14-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/windows/py/decorator-4.4.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/windows/py/decorator-4.4.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/pbr-5.2.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/six-1.12.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/windows/py/Django-2.2.7-py3-none-any.whl
