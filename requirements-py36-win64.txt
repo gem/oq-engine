@@ -24,7 +24,7 @@ https://wheelhouse.openquake.org/v2/windows/py/certifi-2019.3.9-py2.py3-none-any
 https://wheelhouse.openquake.org/v2/windows/py/urllib3-1.25.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/chardet-3.0.4-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/idna-2.8-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v2/windows/py/requests-2.20.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v2/windows/py/requests-2.22.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/toml-0.10.0-py2.py3-none-any.whl
 
