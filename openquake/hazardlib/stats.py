@@ -299,10 +299,10 @@ def set_rlzs_stats(dstore, prefix, **attrs):
 
 def combine_probs(values_by_grp, cmakers, rlz):
     """
-    :param values_by_grp: C arrays of shape (..., G)
+    :param values_by_grp: C arrays of shape (D1, D2..., G)
     :param cmakers: C ContextMakers with G gsims each
     :param rlz: a realization index
-    :returns: array of shape (R, ...) where R is the number of realizations
+    :returns: array of shape (D1, D2, ...)
     """
     probs = []
     for values, cmaker in zip(values_by_grp, cmakers):
