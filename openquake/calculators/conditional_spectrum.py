@@ -97,7 +97,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         rdata = numpy.zeros(totrups, rdt)
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
-        rdata['nsites'] = dstore['rup/nsites'][:]
+        rdata['nsites'] = [len(sids) for sids in dstore['rup/sids_']]
         totweight = rdata['nsites'].sum()
         trt_smrs = dstore['trt_smrs'][:]
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
