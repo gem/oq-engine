@@ -44,6 +44,5 @@ jobs:
           python -m pip install -e .
       - name: Run demos to test installation
         run: |
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
           oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
