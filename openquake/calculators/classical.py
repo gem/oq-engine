@@ -138,7 +138,6 @@ def store_ctxs(dstore, rupdata, grp_id):
     Store contexts with the same magnitude in the datastore
     """
     nr = len(rupdata['mag'])
-    rupdata['nsites'] = numpy.array([len(s) for s in rupdata['sids_']])
     rupdata['grp_id'] = numpy.repeat(grp_id, nr)
     nans = numpy.repeat(numpy.nan, nr)
     for par in dstore['rup']:
@@ -333,7 +332,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Store some empty datasets in the datastore
         """
         params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
-                  'nsites', 'probs_occur_', 'sids_', 'src_id'}
+                  'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
             cm = ContextMaker(trt, gsims, dict(imtls=self.oqparam.imtls))
@@ -355,7 +354,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = hdf5.vfloat32
                 elif param == 'src_id':
                     dt = U32
-                elif param in {'nsites', 'grp_id'}:
+                elif param == 'grp_id':
                     dt = U16
                 else:
                     dt = F32
@@ -567,7 +566,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo,
             min_weight=oq.min_weight,
-            collapse_level=oq.collapse_level, hint=hint,
+            collapse_level=int(oq.collapse_level), hint=hint,
             max_sites_disagg=oq.max_sites_disagg,
             split_sources=oq.split_sources, af=self.af)
         return psd

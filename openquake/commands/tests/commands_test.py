@@ -244,7 +244,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             sap.runline('openquake.commands show sitecol %d' % self.calc_id)
-        self.assertIn('sids,lon,lat,depth,vs30,vs30measured', str(p))
+        self.assertIn('sids\tlon\tlat\tdepth\tvs30\tvs30measured', str(p))
 
         with Print.patch() as p:
             sap.runline(f'openquake.commands show slow_sources {self.calc_id}')

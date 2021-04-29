@@ -104,7 +104,7 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
         loss_dt or oq.loss_dt(), weights, dict(enumerate(num_events)),
-        eff_time, oq.risk_investigation_time)
+        eff_time, oq.risk_investigation_time or oq.investigation_time)
 
 
 def get_src_loss_table(dstore, L):
