@@ -27,11 +27,6 @@ https://wheelhouse.openquake.org/v3/linux/py/requests-2.22.0-py2.py3-none-any.wh
 https://wheelhouse.openquake.org/v3/linux/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/linux/py/toml-0.10.0-py2.py3-none-any.whl
 
-### setproctitle ###
-# comment the following lines to skip installation
-# of setproctitle (optional feature)
-https://wheelhouse.openquake.org/v3/linux/py37/setproctitle-1.1.10-cp37-cp37m-manylinux1_x86_64.whl
-
 ### python-prctl ###
 # comment the following lines to skip installation
 # of python-prctl (optional feature)

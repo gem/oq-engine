@@ -29,11 +29,6 @@ https://wheelhouse.openquake.org/v3/macos/py37/PyYAML-5.1.2-cp37-cp37m-macosx_10
 https://wheelhouse.openquake.org/v3/macos/py/toml-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/macos/py37/GDAL-3.1.2-cp37-cp37m-macosx_10_14_x86_64.whl
 
-### setproctitle ###
-# comment the following lines to skip installation
-# of setproctitle (optional feature)
-https://wheelhouse.openquake.org/v3/macos/py37/setproctitle-1.1.10-cp37-cp37m-macosx_10_9_x86_64.whl
-
 ### Plotting ###
 # comment the following lines to skip installation
 # of the plotting libraries (optional feature)

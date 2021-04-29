@@ -28,11 +28,6 @@ https://wheelhouse.openquake.org/v2/windows/py/requests-2.22.0-py2.py3-none-any.
 https://wheelhouse.openquake.org/v2/windows/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/windows/py/toml-0.10.0-py2.py3-none-any.whl
 
-### setproctitle ###
-# comment the following lines to skip installation
-# of setproctitle (optional feature)
-https://wheelhouse.openquake.org/v2/windows/py36/setproctitle-1.1.10-cp36-cp36m-win_amd64.whl
-
 ### Plotting ###
 # comment the following lines to skip installation
 # of the plotting libraries (optional feature)

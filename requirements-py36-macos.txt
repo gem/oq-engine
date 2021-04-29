@@ -29,11 +29,6 @@ https://wheelhouse.openquake.org/v2/macos/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/toml-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py36/GDAL-3.1.2-cp36-cp36m-macosx_10_14_x86_64.whl
 
-### setproctitle ###
-# comment the following lines to skip installation
-# of setproctitle (optional feature)
-https://wheelhouse.openquake.org/v2/macos/py36/setproctitle-1.1.10-cp36-cp36m-macosx_10_6_intel.whl
-
 ### Plotting ###
 # comment the following lines to skip installation
 # of the plotting libraries (optional feature)
