@@ -175,7 +175,7 @@ cross_correlation:
 description:
   A string describing the calculation.
   Example: *description = Test calculation*.
-  Default: no default
+  Default: "no description"
 
 disagg_by_src:
   Flag used to enable disaggregation by source when possible.
@@ -723,7 +723,7 @@ class OqParam(valid.ParamSet):
     cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
-    description = valid.Param(valid.utf8_not_empty)
+    description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs,
                                  list(calc.disagg.pmf_map))

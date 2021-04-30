@@ -31,7 +31,7 @@ import pandas
 from openquake.baselib import (
     general, hdf5, __version__ as engine_version)
 from openquake.baselib import parallel, python3compat
-from openquake.baselib.performance import Monitor, init_performance
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib import InvalidFile, site, stats
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
@@ -158,7 +158,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     def __init__(self, oqparam, calc_id):
         oqparam.validate()
         self.datastore = datastore.new(calc_id)
-        init_performance(self.datastore.hdf5)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
             h5=self.datastore)

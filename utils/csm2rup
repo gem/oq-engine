@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+import os
+import logging
+import operator
+import numpy
+import pandas
+from openquake.baselib import sap, parallel, general
+from openquake.commonlib import readinput, datastore
+
+TWO32 = 2 ** 32
+rupfields = dict(
+    mag=numpy.float32,
+    occurrence_rate=numpy.float32,
+    hypo_lon=numpy.float32,
+    hypo_lat=numpy.float32,
+    hypo_dep=numpy.float32,
+    grp_id=numpy.uint16,
+    rup_id=numpy.uint64,
+    # add more if you like
+)
+
+
+def build_rupdict(srcs, mon):
+    dic = {f: [] for f in rupfields}
+    for src in srcs:
+        for rupno, rup in enumerate(src.iter_ruptures()):
+            dic['mag'].append(rup.mag)
+            dic['occurrence_rate'].append(rup.occurrence_rate)
+            dic['hypo_lon'].append(rup.hypocenter.x)
+            dic['hypo_lat'].append(rup.hypocenter.y)
+            dic['hypo_dep'].append(rup.hypocenter.z)
+            dic['grp_id'].append(src.grp_id)
+            dic['rup_id'].append(src.id * TWO32 + rupno)
+    return dic
+
+
+def csm2rup(csm, dstore):
+    """
+    :param csm: CompositeSourceModel instance
+    :param dstore: DataStore where to save the ruptures
+    """
+    def src_weight(src):  # make point sources 100x lighter
+        if src.code == b'P':
+            return .01
+        else:
+            return 1
+    sources = csm.get_sources()
+    dic = parallel.Starmap.apply(
+        build_rupdict, (sources,), weight=src_weight,
+        key=operator.attrgetter('grp_id'), h5=dstore
+    ).reduce()
+    df = pandas.DataFrame(
+        {k: rupfields[k](v) for k, v in dic.items()})
+    dstore.create_df('rup', df, compression='gzip')  # 10x gain!
+
+
+def main(job_ini):
+    """
+    Convert a composite source model into a DataFrame of ruptures
+    """
+    oq = readinput.get_oqparam(job_ini)
+    csm = readinput.get_composite_source_model(oq)
+    with datastore.new('job', oq) as dstore:
+        csm2rup(csm, dstore)
+        nrups = len(dstore['rup/mag'])
+    size = general.humansize(os.path.getsize(dstore.filename))
+    logging.info('Stored %d ruptures [%s] inside %s', nrups, size, dstore)
+
+
+if __name__ == '__main__':
+    # example: python csm2rup2.py classical/case_20/job.ini
+    sap.run(main)

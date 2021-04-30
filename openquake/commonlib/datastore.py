@@ -265,6 +265,7 @@ class DataStore(collections.abc.MutableMapping):
             raise IOError('File not found: %s' % self.filename)
         self.hdf5 = ()  # so that `key in self.hdf5` is valid
         self.open(self.mode)
+        performance.init_performance(self.hdf5)
 
     def open(self, mode):
         """
