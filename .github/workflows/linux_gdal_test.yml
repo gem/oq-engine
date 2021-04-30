@@ -1,19 +1,15 @@
-name: macos pyapp
+name: GDAL test action for Linux
 'on':
   push:
     branches:
       - cleanup
-  schedule:
-    - cron: "0 1 * * *"
-
 jobs:
-
   Matrix-build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         #os: [macos-latest, windows-latest, ubuntu-latest]
-        os: [macos-10.15]
+        os: [ubuntu-latest]
         python-version: [3.6, 3.7, 3.8]
     steps:
       - name: Check out the codebase.
@@ -32,12 +28,15 @@ jobs:
             PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
             echo $PY_VER
             pip3 install -U pip wheel setuptools
-            pip3 install -r requirements-$PY_VER-macos.txt
+            pip3 install -r requirements-$PY_VER-linux64.txt
             pip3 install -e .\[osgeo\]
+            pip3 install fiona
             pip3 list
             #  python install.py devel --version=cleanup
+      - name: pytest to test gdal whl
+        run: |
+          pytest tests/commands_test.py -k nrml_to_gpkg
       - name: Run demos to test installation
         run: |
-          #source openquake/bin/activate
           oq --version
           oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
