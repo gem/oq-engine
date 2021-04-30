@@ -33,12 +33,10 @@ jobs:
           git status
           $PY_VER="py${{ matrix.python-version }}"
           write-host $PY_VER
-          write-host "$PY_VER"
-          $PY_VER = $PY_VER -replace ".", ""
-          write-host $PY_VER
-          write-host "$PY_VER"
+          $py = $PY_VER.replace(".","")
+          write-host $py
           python -m pip install pip wheel setuptools --upgrade
-          python -m pip install install -r requirements-$PY_VER-win64.txt
+          python -m pip install install -r requirements-$py-win64.txt
           python -m pip install fiona
           python -m pip install -e .
       - name: pytest to test gdal whl
