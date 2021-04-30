@@ -37,9 +37,9 @@ jobs:
         run: |
           git status
           $PY_VER="py${{ matrix.python-version }}"
-          $PY_VER = $PY_VER -replace ".", ""
+          $py = $PY_VER.replace(".","")
           python -m pip install pip wheel setuptools --upgrade
-          python -m pip install install -r requirements-$PY_VER-win64.txt
+          python -m pip install install -r requirements-$py-win64.txt
           python -m pip install -e .
       - name: Run demos to test installation
         run: |
