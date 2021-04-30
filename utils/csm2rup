@@ -51,7 +51,8 @@ def csm2rup(csm, dstore):
     sources = csm.get_sources()
     dic = parallel.Starmap.apply(
         build_rupdict, (sources,), weight=src_weight,
-        key=operator.attrgetter('grp_id'), h5=dstore
+        key=operator.attrgetter('grp_id'), h5=dstore,
+        concurrent_tasks=1000,
     ).reduce()
     df = pandas.DataFrame(
         {k: rupfields[k](v) for k, v in dic.items()})
