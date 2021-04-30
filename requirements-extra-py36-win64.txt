@@ -1,2 +1,1 @@
 ## Extra ##
-https://wheelhouse.openquake.org/v2/windows/py36/basemap-1.1.0-cp36-cp36m-win_amd64.whl
