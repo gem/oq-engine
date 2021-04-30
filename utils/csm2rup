@@ -68,7 +68,8 @@ def main(job_ini):
     csm2rup(csm, dstore)
     nrups = len(dstore['rup/mag'])
     size = general.humansize(os.path.getsize(dstore.filename))
-    logging.info('Stored %d ruptures [%s] inside %s', nrups, size, dstore)
+    logging.info('Stored {:_d} ruptures [{}] inside {}'.format(
+        nrups, size, dstore.filename))
 
 
 if __name__ == '__main__':
