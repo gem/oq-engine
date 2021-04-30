@@ -4,10 +4,10 @@ import logging
 import operator
 import numpy
 import pandas
-from openquake.baselib import sap, parallel, general
+from openquake.baselib import sap, parallel, general, hdf5
 from openquake.commonlib import readinput, datastore, logs
 
-TWO32 = 2 ** 32
+MAX_RUPS_PER_SOURCE = 1_000_000
 rupfields = dict(
     mag=numpy.float32,
     occurrence_rate=numpy.float32,
@@ -28,13 +28,14 @@ def build_rupdict(srcs, mon):
     dic = {f: [] for f in rupfields}
     for src in srcs:
         for rupno, rup in enumerate(src.iter_ruptures()):
+            assert rupno < MAX_RUPS_PER_SOURCE
             dic['mag'].append(rup.mag)
             dic['occurrence_rate'].append(rup.occurrence_rate)
             dic['hypo_lon'].append(rup.hypocenter.x)
             dic['hypo_lat'].append(rup.hypocenter.y)
             dic['hypo_dep'].append(rup.hypocenter.z)
             dic['grp_id'].append(src.grp_id)
-            dic['rup_id'].append(src.id * TWO32 + rupno)
+            dic['rup_id'].append(src.id * MAX_RUPS_PER_SOURCE + rupno)
     return {k: rupfields[k](v) for k, v in dic.items()}
 
 
@@ -50,18 +51,13 @@ def csm2rup(csm, dstore):
         else:
             return 1
     sources = csm.get_sources()
-    rupdicts = parallel.Starmap.apply(
-        build_rupdict, (sources,), weight=src_weight,
-        key=operator.attrgetter('grp_id'), h5=dstore,
-        concurrent_tasks=1000)
-    dic = {}
-    for rupdict in rupdicts:
+    dstore.create_df('rup', rupfields.items(), compression='gzip')  # 10x gain!
+    for rupdict in parallel.Starmap.apply(
+            build_rupdict, (sources,), weight=src_weight,
+            key=operator.attrgetter('grp_id'), h5=dstore,
+            concurrent_tasks=1000):
         for k, v in rupdict.items():
-            if k in dic:
-                dic[k] = numpy.concatenate([dic[k], v])
-            else:
-                dic[k] = v
-    dstore.create_df('rup', dic.items(), compression='gzip')  # 10x gain!
+            hdf5.extend(dstore[f'rup/{k}'], v)
 
 
 def main(job_ini):
