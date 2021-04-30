@@ -5,7 +5,7 @@ import operator
 import numpy
 import pandas
 from openquake.baselib import sap, parallel, general
-from openquake.commonlib import readinput, datastore
+from openquake.commonlib import readinput, datastore, logs
 
 TWO32 = 2 ** 32
 rupfields = dict(
@@ -21,6 +21,10 @@ rupfields = dict(
 
 
 def build_rupdict(srcs, mon):
+    """
+    :param srcs: a list of sources of the same source group
+    :param mon: a Monitor instance (used to save performance info)
+    """
     dic = {f: [] for f in rupfields}
     for src in srcs:
         for rupno, rup in enumerate(src.iter_ruptures()):
@@ -58,15 +62,14 @@ def main(job_ini):
     """
     Convert a composite source model into a DataFrame of ruptures
     """
-    oq = readinput.get_oqparam(job_ini)
+    dstore = datastore.new("job")
+    dstore["oqparam"] = oq = readinput.get_oqparam(job_ini)
     csm = readinput.get_composite_source_model(oq)
-    with datastore.new('job', oq) as dstore:
-        csm2rup(csm, dstore)
-        nrups = len(dstore['rup/mag'])
+    csm2rup(csm, dstore)
+    nrups = len(dstore['rup/mag'])
     size = general.humansize(os.path.getsize(dstore.filename))
     logging.info('Stored %d ruptures [%s] inside %s', nrups, size, dstore)
 
 
 if __name__ == '__main__':
-    # example: python csm2rup2.py classical/case_20/job.ini
     sap.run(main)
