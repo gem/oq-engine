@@ -37,3 +37,5 @@ https://wheelhouse.openquake.org/v2/windows/py/cycler-0.10.0-py2.py3-none-any.wh
 https://wheelhouse.openquake.org/v2/windows/py36/kiwisolver-1.1.0-cp36-none-win_amd64.whl
 https://wheelhouse.openquake.org/v2/windows/py36/matplotlib-3.1.2-cp36-cp36m-win_amd64.whl
 https://wheelhouse.openquake.org/v2/windows/py36/pyproj-2.5.0-cp36-cp36m-win_amd64.whl
+#
+https://wheelhouse.openquake.org/v2/windows/py36/GDAL-3.1.4-cp36-cp36m-win_amd64.whl

@@ -27,7 +27,6 @@ https://wheelhouse.openquake.org/v2/macos/py/idna-2.8-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/requests-2.22.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/pyshp-1.2.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py/toml-0.10.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v2/macos/py36/GDAL-3.1.2-cp36-cp36m-macosx_10_14_x86_64.whl
 
 ### Plotting ###
 # comment the following lines to skip installation
@@ -38,3 +37,5 @@ https://wheelhouse.openquake.org/v2/macos/py36/kiwisolver-1.1.0-cp36-cp36m-macos
 https://wheelhouse.openquake.org/v2/macos/py/cycler-0.10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v2/macos/py36/matplotlib-3.1.2-cp36-cp36m-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v2/macos/py36/pyproj-2.5.0-cp36-cp36m-macosx_10_9_x86_64.whl
+#
+https://wheelhouse.openquake.org/v2/macos/py36/GDAL-3.2.2-cp36-cp36m-macosx_10_14_x86_64.whl
