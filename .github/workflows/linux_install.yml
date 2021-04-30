@@ -4,10 +4,8 @@
 name: Install engine for 3.6, 3.7 and 3.8 on linux
 
 on:
-  push:
-    branches:
-      - cleanup
-
+  schedule:
+    - cron: "0 13 * * *"
 jobs:
 
   install_and_test:

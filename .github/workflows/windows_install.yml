@@ -2,8 +2,6 @@
 name: Installation Script for Windows
 
 on:
-  push:
-    branches: [ cleanup ]
   schedule:
     - cron: "00 23 * * *"
 

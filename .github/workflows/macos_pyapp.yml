@@ -1,8 +1,5 @@
 name: macos pyapp
 'on':
-  push:
-    branches:
-      - cleanup
   schedule:
     - cron: "0 1 * * *"
 
