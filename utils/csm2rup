@@ -77,8 +77,9 @@ def main(job_ini):
     csm = readinput.get_composite_source_model(oq)
     try:
         nrups = csm2rup(csm, dstore)
-    except Exception as e:
+    except Exception:
         datastore.dbcmd('finish', job_id, 'failed')
+        raise
     finally:
         dstore.close()
         parallel.Starmap.shutdown()
