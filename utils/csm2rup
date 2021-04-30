@@ -63,7 +63,7 @@ def csm2rup(csm, dstore):
     size = general.humansize(os.path.getsize(dstore.filename))
     logging.info('Stored {:_d} ruptures [{}] inside {}'.format(
         nrups, size, dstore.filename))
-    return rnrups
+    return nrups
 
 
 def main(job_ini):
@@ -80,6 +80,8 @@ def main(job_ini):
     except Exception:
         datastore.dbcmd('finish', job_id, 'failed')
         raise
+    else:
+        datastore.dbcmd('finish', job_id, 'complete')
     finally:
         dstore.close()
         parallel.Starmap.shutdown()
