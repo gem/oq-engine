@@ -20,10 +20,9 @@ rupfields = dict(
 )
 
 
-def build_rupdict(srcs, mon):
+def build_rupdict(srcs):
     """
     :param srcs: a list of sources of the same source group
-    :param mon: a Monitor instance (used to save performance info)
     """
     dic = {f: [] for f in rupfields}
     for src in srcs:
