@@ -44,6 +44,7 @@ def csm2rup(csm, dstore):
     """
     :param csm: CompositeSourceModel instance
     :param dstore: DataStore where to save the ruptures
+    :returns: the number of stored ruptures
     """
     def src_weight(src):  # make point sources 100x lighter
         if src.code == b'P':
@@ -58,24 +59,29 @@ def csm2rup(csm, dstore):
             concurrent_tasks=1000):
         for k, v in rupdict.items():
             hdf5.extend(dstore[f'rup/{k}'], v)
+    nrups = len(dstore['rup/mag'])
+    size = general.humansize(os.path.getsize(dstore.filename))
+    logging.info('Stored {:_d} ruptures [{}] inside {}'.format(
+        nrups, size, dstore.filename))
+    return rnrups
 
 
 def main(job_ini):
     """
     Convert a composite source model into a DataFrame of ruptures
     """
+    # first of all, initialize logs
     job_id = datastore.init("job")
     oq = readinput.get_oqparam(job_ini)
     dstore = datastore.new(job_id, oq)
     csm = readinput.get_composite_source_model(oq)
     try:
-        csm2rup(csm, dstore)
+        nrups = csm2rup(csm, dstore)
+    except Exception as e:
+        datastore.dbcmd('finish', job_id, 'failed')
     finally:
+        dstore.close()
         parallel.Starmap.shutdown()
-    nrups = len(dstore['rup/mag'])
-    size = general.humansize(os.path.getsize(dstore.filename))
-    logging.info('Stored {:_d} ruptures [{}] inside {}'.format(
-        nrups, size, dstore.filename))
 
 
 if __name__ == '__main__':
