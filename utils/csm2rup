@@ -35,7 +35,8 @@ def build_rupdict(srcs, mon):
             dic['hypo_dep'].append(rup.hypocenter.z)
             dic['grp_id'].append(src.grp_id)
             dic['rup_id'].append(src.id * TWO32 + rupno)
-    return dic
+    return {k: rupfields[k](v) for k, v in dic.items()}
+
 
 
 def csm2rup(csm, dstore):
@@ -49,14 +50,18 @@ def csm2rup(csm, dstore):
         else:
             return 1
     sources = csm.get_sources()
-    dic = parallel.Starmap.apply(
+    rupdicts = parallel.Starmap.apply(
         build_rupdict, (sources,), weight=src_weight,
         key=operator.attrgetter('grp_id'), h5=dstore,
-        concurrent_tasks=1000,
-    ).reduce()
-    df = pandas.DataFrame(
-        {k: rupfields[k](v) for k, v in dic.items()})
-    dstore.create_df('rup', df, compression='gzip')  # 10x gain!
+        concurrent_tasks=1000)
+    dic = {}
+    for rupdict in rupdicts:
+        for k, v in rupdict.items():
+            if k in dic:
+                dic[k] = numpy.concatenate([dic[k], v])
+            else:
+                dic[k] = v
+    dstore.create_df('rup', dic.items(), compression='gzip')  # 10x gain!
 
 
 def main(job_ini):
