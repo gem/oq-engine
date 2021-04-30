@@ -38,3 +38,4 @@ https://wheelhouse.openquake.org/v3/windows/py37/matplotlib-3.1.2-cp37-cp37m-win
 https://wheelhouse.openquake.org/v3/windows/py37/pyproj-2.1.3-cp37-cp37m-win_amd64.whl
 #
 https://wheelhouse.openquake.org/v3/windows/py37/GDAL-3.2.2-cp37-cp37m-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py37/Fiona‑1.8.19‑cp37‑cp37m‑win_amd64.whl
