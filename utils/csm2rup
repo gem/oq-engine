@@ -7,7 +7,7 @@ import pandas
 from openquake.baselib import sap, parallel, general, hdf5
 from openquake.commonlib import readinput, datastore, logs
 
-MAX_RUPS_PER_SOURCE = 1_000_000
+MAX_RUPS_PER_SOURCE = 1_000_000_000
 rupfields = dict(
     mag=numpy.float32,
     occurrence_rate=numpy.float32,
@@ -64,10 +64,14 @@ def main(job_ini):
     """
     Convert a composite source model into a DataFrame of ruptures
     """
-    dstore = datastore.new("job")
-    dstore["oqparam"] = oq = readinput.get_oqparam(job_ini)
+    job_id = datastore.init("job")
+    oq = readinput.get_oqparam(job_ini)
+    dstore = datastore.new(job_id, oq)
     csm = readinput.get_composite_source_model(oq)
-    csm2rup(csm, dstore)
+    try:
+        csm2rup(csm, dstore)
+    finally:
+        parallel.Starmap.shutdown()
     nrups = len(dstore['rup/mag'])
     size = general.humansize(os.path.getsize(dstore.filename))
     logging.info('Stored {:_d} ruptures [{}] inside {}'.format(
