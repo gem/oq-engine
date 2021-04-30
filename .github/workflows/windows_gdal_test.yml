@@ -32,7 +32,11 @@ jobs:
         run: |
           git status
           $PY_VER="py${{ matrix.python-version }}"
+          write-host $PY_VER
+          write-host "$PY_VER"
           $PY_VER = $PY_VER -replace ".", ""
+          write-host $PY_VER
+          write-host "$PY_VER"
           python -m pip install pip wheel setuptools --upgrade
           python -m pip install install -r requirements-$PY_VER-win64.txt
           python -m pip install fiona
