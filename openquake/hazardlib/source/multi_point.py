@@ -152,12 +152,12 @@ class MultiPointSource(ParametricSeismicSource):
         self.tectonic_region_type = attrs['tectonic_region_type']
         self.magnitude_scaling_relationship = SCALEREL[
             attrs['magnitude_scaling_relationship']]
-        npd = dic.pop('nodal_plane_distribution').value
-        hdd = dic.pop('hypocenter_distribution').value
-        mesh = dic.pop('mesh').value
-        self.rupture_aspect_ratio = dic.pop('rupture_aspect_ratio').value
-        self.lower_seismogenic_depth = dic.pop('lower_seismogenic_depth').value
-        self.upper_seismogenic_depth = dic.pop('upper_seismogenic_depth').value
+        npd = dic.pop('nodal_plane_distribution')[:]
+        hdd = dic.pop('hypocenter_distribution')[:]
+        mesh = dic.pop('mesh')[:]
+        self.rupture_aspect_ratio = dic.pop('rupture_aspect_ratio')[:]
+        self.lower_seismogenic_depth = dic.pop('lower_seismogenic_depth')[:]
+        self.upper_seismogenic_depth = dic.pop('upper_seismogenic_depth')[:]
         [(mfd_kind, mfd)] = dic.items()
         self.nodal_plane_distribution = PMF([
             (prob, NodalPlane(strike, dip, rake))

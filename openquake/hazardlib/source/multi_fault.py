@@ -34,7 +34,7 @@ class FaultSection():
     A class to define a fault section, that is the geometry definition of a
     portion of a fault.
 
-    :param sid:
+    :param sec_id:
         A unique identifier
     :param surface:
         An instance of
@@ -42,8 +42,8 @@ class FaultSection():
         describes the 3D geometry of a part of a fault system.
     """
 
-    def __init__(self, sid: str, surface):
-        self.sid = sid
+    def __init__(self, sec_id: str, surface):
+        self.sec_id = sec_id
         self.surface = surface
 
 
@@ -100,7 +100,7 @@ class MultiFaultSource(BaseSeismicSource):
         """ Creates an inverted index structure """
         self.invx = {}
         for i, sec in enumerate(self.sections):
-            self.invx[sec.sid] = i
+            self.invx[sec.sec_id] = i
 
     def iter_ruptures(self, fromidx=0, untilidx=None, **kwargs):
         """
