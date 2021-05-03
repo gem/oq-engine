@@ -20,7 +20,7 @@
 Determine the total number of ruptures in all the calculations in oqdata
 """
 import glob
-from openquake.baselib.datastore import get_datadir, read
+from openquake.commonlib.datastore import get_datadir, read
 from openquake.calculators.views import rst_table
 
 

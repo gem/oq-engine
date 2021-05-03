@@ -1,3 +1,19 @@
+  [Marco Pagani]
+  * Implemented the BakerJayaram2008 cross correlation model
+
+  [Michele Simionato]
+  * Fixed logic tree bug: MultiMFDs were not modified
+  * Internal: added a view composite_source_model to show the sources by group
+
+  [Nicolas Schmid]
+  * Added possibility to use *.shp files instead of *.xml files when
+    doing risk calculations from shakemaps.
+
+  [Michele Simionato]
+  * Rewritten the event_based_damage calculation to support `aggregate_by`
+  * Made it possible to run an event based risk calculation starting from a
+    parent ran by a different user
+
   [Pablo Heresi]
   * Implemented Idini et al (2017) GSIM.
   * Added dynamic site parameter 'soiltype'

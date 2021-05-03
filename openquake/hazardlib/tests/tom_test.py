@@ -64,5 +64,4 @@ class PoissonTOMTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             pne,
             numpy.array([[0.6376282, 0.6703200, 0.7046881],
-                         [0.7408182, 0.7788008, 0.8187308]])
-        )
+                         [0.7408182, 0.7788008, 0.8187308]]))

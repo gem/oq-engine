@@ -613,12 +613,12 @@ class RuptureConverter(object):
     def convert_ruptureCollection(self, node):
         """
         :param node: a ruptureCollection node
-        :returns: a dictionary et_id -> EBRuptures
+        :returns: a dictionary trt_smr -> EBRuptures
         """
         coll = {}
         for grpnode in node:
-            et_id = int(grpnode['id'])
-            coll[et_id] = ebrs = []
+            trt_smr = int(grpnode['id'])
+            coll[trt_smr] = ebrs = []
             for node in grpnode:
                 rup = self.convert_node(node)
                 rup.rup_id = int(node['id'])
@@ -910,7 +910,7 @@ class SourceConverter(RuptureConverter):
             geom = node.simpleFaultGeometry
             fault_trace = self.geo_line(geom)
             as_kite = False
-        except:
+        except Exception:
             geom = node.kiteFaultGeometry
             profiles = self.geo_lines(geom)
 

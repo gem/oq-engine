@@ -22,7 +22,8 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.baselib import datastore, general
+from openquake.baselib import general
+from openquake.commonlib import datastore
 from openquake.calculators.export import export
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
@@ -277,6 +278,7 @@ DISPLAY_NAME = {
     'agg_losses-stats': 'Aggregate Losses Statistics',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
+    'aggcurves': 'Aggregate Risk Curves',
     'avg_gmf': 'Average Ground Motion Field',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',

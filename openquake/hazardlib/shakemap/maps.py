@@ -28,6 +28,48 @@ F32 = numpy.float32
 get_sitecol_shakemap = CallableDict()
 
 
+@get_sitecol_shakemap.add('shapefile')
+def get_sitecol_shapefile(kind, uridict, required_imts, sitecol=None,
+                          assoc_dist=None, mode='filter'):
+    """
+    :param uridict: a dictionary specifying the ShakeMap resource
+    :param imts: required IMTs as a list of strings
+    :param sitecol: SiteCollection used to reduce the shakemap
+    :param assoc_dist: unused for shapefiles
+    :param mode: 'strict', 'warn' or 'filter'
+    :returns: filtered site collection, filtered shakemap, discarded
+    """
+    polygons, shakemap = get_array(kind, **uridict)
+
+    available_imts = set(shakemap['val'].dtype.names)
+
+    bbox = (shakemap['bbox']['minx'].min(), shakemap['bbox']['miny'].min(),
+            shakemap['bbox']['maxx'].max(), shakemap['bbox']['maxy'].max())
+
+    check_required_imts(required_imts, available_imts)
+
+    # build a copy of the ShakeMap with only the relevant IMTs
+    shakemap = filter_unused_imts(
+        shakemap, required_imts, site_fields=['vs30'])
+
+    if sitecol is None:
+        # use centroids of polygons to generate sitecol
+        centroids = numpy.array([tuple(*p.centroid.coords)
+                                 for p in polygons],
+                                dtype=[('lon', numpy.float32),
+                                       ('lat', numpy.float32)])
+        for name in ('lon', 'lat'):
+            shakemap[name] = centroids[name]
+        return site.SiteCollection.from_usgs_shakemap(shakemap), shakemap, []
+
+    sitecol = apply_bounding_box(sitecol, bbox)
+
+    logging.info('Associating %d GMVs to %d sites',
+                 len(shakemap), len(sitecol))
+
+    return geo.utils.assoc_to_polygons(polygons, shakemap, sitecol, mode)
+
+
 @get_sitecol_shakemap.add('usgs_xml', 'usgs_id', 'file_npy')
 def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
                      assoc_dist=None, mode='warn'):
@@ -46,18 +88,10 @@ def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
     bbox = (shakemap['lon'].min(), shakemap['lat'].min(),
             shakemap['lon'].max(), shakemap['lat'].max())
 
-    # build a copy of the ShakeMap with only the relevant IMTs
-    dt = [(imt, F32) for imt in sorted(required_imts)]
-    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
-              ('val', dt), ('std', dt)]
-    data = numpy.zeros(len(shakemap), dtlist)
-    for name in ('lon', 'lat', 'vs30'):
-        data[name] = shakemap[name]
-    for name in ('val', 'std'):
-        for im in required_imts:
-            data[name][im] = shakemap[name][im]
-
     check_required_imts(required_imts, available_imts)
+
+    # build a copy of the ShakeMap with only the relevant IMTs
+    shakemap = filter_unused_imts(shakemap, required_imts)
 
     if sitecol is None:
         return site.SiteCollection.from_usgs_shakemap(shakemap), shakemap, []
@@ -68,6 +102,27 @@ def get_sitecol_usgs(kind, uridict, required_imts, sitecol=None,
                  len(shakemap), len(sitecol))
 
     return geo.utils.assoc(shakemap, sitecol, assoc_dist, mode)
+
+
+def filter_unused_imts(shakemap, required_imts,
+                       site_fields=('lon', 'lat', 'vs30')):
+    """
+    build a copy of the ShakeMap with only the relevant IMTs
+
+    :param shakemap: shakemap array which should be filtered
+    :param required_imts: imts to keep in shakemap array
+    :param site_fields: single columns which are copied over
+    """
+    dt = [(imt, F32) for imt in sorted(required_imts)]
+    dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
+              ('val', dt), ('std', dt)]
+    data = numpy.zeros(len(shakemap), dtlist)
+    for name in site_fields:
+        data[name] = shakemap[name]
+    for name in ('val', 'std'):
+        for im in required_imts:
+            data[name][im] = shakemap[name][im]
+    return data
 
 
 def check_required_imts(required_imts, available_imts):

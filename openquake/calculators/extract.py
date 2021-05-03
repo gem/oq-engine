@@ -38,7 +38,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.source import rupture
 from openquake.calculators import getters
-from openquake.commonlib import calc, util, oqvalidation, writers
+from openquake.commonlib import calc, util, oqvalidation, writers, datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -538,7 +538,7 @@ def extract_sources(dstore, what):
     wkt_gz = gzip.compress(';'.join(wkt).encode('utf8'))
     src_gz = gzip.compress(';'.join(info['source_id']).encode('utf8'))
     oknames = [name for name in info.dtype.names  # avoid pickle issues
-               if name not in ('source_id', 'et_ids')]
+               if name not in ('source_id', 'trt_smrs')]
     arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
     for n in oknames:
         arr[n] = info[n]
@@ -947,22 +947,22 @@ def extract_mfd(dstore, what):
     duration = oq.investigation_time * oq.ses_per_logic_tree_path
     dic = {'duration': duration}
     dd = collections.defaultdict(float)
-    rups = dstore['ruptures']['et_id', 'mag', 'n_occ']
+    rups = dstore['ruptures']['trt_smr', 'mag', 'n_occ']
     mags = sorted(numpy.unique(rups['mag']))
     magidx = {mag: idx for idx, mag in enumerate(mags)}
-    num_groups = rups['et_id'].max() + 1
+    num_groups = rups['trt_smr'].max() + 1
     frequencies = numpy.zeros((len(mags), num_groups), float)
-    for et_id, mag, n_occ in rups:
+    for trt_smr, mag, n_occ in rups:
         if kind_mean:
-            dd[mag] += n_occ * weights[et_id % n] / duration
+            dd[mag] += n_occ * weights[trt_smr % n] / duration
         if kind_by_group:
-            frequencies[magidx[mag], et_id] += n_occ / duration
+            frequencies[magidx[mag], trt_smr] += n_occ / duration
     dic['magnitudes'] = numpy.array(mags)
     if kind_mean:
         dic['mean_frequency'] = numpy.array([dd[mag] for mag in mags])
     if kind_by_group:
-        for et_id, freqs in enumerate(frequencies.T):
-            dic['grp-%02d_frequency' % et_id] = freqs
+        for trt_smr, freqs in enumerate(frequencies.T):
+            dic['grp-%02d_frequency' % trt_smr] = freqs
     return ArrayWrapper((), dic)
 
 # NB: this is an alternative, slower approach giving exactly the same numbers;
@@ -1386,7 +1386,7 @@ class Extractor(object):
     """
     def __init__(self, calc_id):
         self.calc_id = calc_id
-        self.dstore = util.read(calc_id)
+        self.dstore = datastore.read(calc_id)
         self.oqparam = self.dstore['oqparam']
 
     def get(self, what, asdict=False):

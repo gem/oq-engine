@@ -29,9 +29,9 @@ import numpy
 import pandas
 
 from openquake.baselib import (
-    general, hdf5, datastore, __version__ as engine_version)
+    general, hdf5, __version__ as engine_version)
 from openquake.baselib import parallel, python3compat
-from openquake.baselib.performance import Monitor, init_performance
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib import InvalidFile, site, stats
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
@@ -40,7 +40,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, util
+from openquake.commonlib import readinput, logictree, datastore
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -157,8 +157,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
 
     def __init__(self, oqparam, calc_id):
         oqparam.validate()
-        self.datastore = datastore.DataStore(calc_id)
-        init_performance(self.datastore.hdf5)
+        self.datastore = datastore.new(calc_id)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
             h5=self.datastore)
@@ -548,7 +547,7 @@ class HazardCalculator(BaseCalculator):
             self.save_crmodel()
             self.datastore.swmr_on()
         elif oq.hazard_calculation_id:
-            parent = util.read(oq.hazard_calculation_id)
+            parent = datastore.read(oq.hazard_calculation_id)
             self.check_precalc(parent['oqparam'].calculation_mode)
             self.datastore.parent = parent
             # copy missing parameters from the parent
@@ -710,8 +709,8 @@ class HazardCalculator(BaseCalculator):
         if len(self.crmodel):
             logging.info('Storing risk model')
             attrs = self.crmodel.get_attrs()
-            self.datastore.create_dframe('crm', self.crmodel.to_dframe(),
-                                         'gzip', **attrs)
+            self.datastore.create_df('crm', self.crmodel.to_dframe(),
+                                     'gzip', **attrs)
 
     def _read_risk_data(self):
         # read the risk model (if any), the exposure (if any) and then the
@@ -723,7 +722,7 @@ class HazardCalculator(BaseCalculator):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
         if oq.hazard_calculation_id:
-            with util.read(oq.hazard_calculation_id) as dstore:
+            with datastore.read(oq.hazard_calculation_id) as dstore:
                 haz_sitecol = dstore['sitecol'].complete
                 if ('amplification' in oq.inputs and
                         'ampcode' not in haz_sitecol.array.dtype.names):
@@ -848,7 +847,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('minimum_asset_loss=%s', mal)
         self.param = dict(individual_curves=oq.individual_curves,
                           ps_grid_spacing=oq.ps_grid_spacing,
-                          collapse_level=oq.collapse_level,
+                          collapse_level=int(oq.collapse_level),
                           split_sources=oq.split_sources,
                           avg_losses=oq.avg_losses,
                           amplifier=self.amplifier,
@@ -1084,6 +1083,7 @@ def import_gmfs_csv(dstore, oqparam, sids):
     E = len(eids)
     events = numpy.zeros(E, rupture.events_dt)
     events['id'] = eids
+    logging.info('Storing %d events, all relevant', E)
     dstore['events'] = events
     # store the GMFs
     dic = general.group_array(arr, 'sid')
@@ -1147,8 +1147,9 @@ def import_gmfs_hdf5(dstore, oqparam):
     E = attrs['num_events']
     events = numpy.zeros(E, rupture.events_dt)
     events['id'] = numpy.arange(E)
+    rel = numpy.unique(dstore['gmf_data/eid'])
+    logging.info('Storing %d events, %d relevant', E, len(rel))
     dstore['events'] = events
-
     dstore['weights'] = numpy.ones(1)
     return events['id']
 
@@ -1172,7 +1173,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
         eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     else:
         eff_time = 0
-    dstore.create_dframe('gmf_data', items, 'gzip')
+    dstore.create_df('gmf_data', items, 'gzip')
     dstore.set_attrs('gmf_data', num_events=len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
                      effective_time=eff_time)
@@ -1192,10 +1193,10 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
     :returns: the aggkey dictionary key -> tags
     """
     lst = []
+    aggkey = assetcol.tagcol.get_aggkey(aggby)
+    K = len(aggkey)
+    agg_number = numpy.zeros(K + 1, U32)
     if aggby:
-        aggkey = assetcol.tagcol.get_aggkey(aggby)
-        K = len(aggkey)
-        agg_number = numpy.zeros(K + 1, U32)
         logging.info('Storing %d aggregation keys', len(aggkey))
         dt = [(name + '_', U16) for name in aggby] + [
             (name, hdf5.vstr) for name in aggby]
@@ -1214,11 +1215,13 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
             kids = [key2i[tuple(t)] for t in assetcol[aggby]]
         dstore['assetcol/kids'] = U16(kids)
         agg_number[:K] = general.fast_agg(kids, assetcol['number'], M=K)
-        agg_number[K] = assetcol['number'].sum()
-        dstore['agg_number'] = agg_number
+    agg_number[K] = assetcol['number'].sum()
+    dstore['agg_number'] = agg_number
     lst.append('*total*')
-    dstore['agg_values'] = assetcol.get_agg_values(lossnames, aggby)
-    dstore.set_shape_descr('agg_values', aggregation=lst, loss_type=lossnames)
+    if assetcol.get_value_fields():
+        dstore['agg_values'] = assetcol.get_agg_values(lossnames, aggby)
+        dstore.set_shape_descr(
+            'agg_values', aggregation=lst, loss_type=lossnames)
     return aggkey if aggby else {}
 
 

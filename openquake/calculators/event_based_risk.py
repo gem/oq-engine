@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 import logging
 import operator
 import itertools
@@ -24,10 +25,10 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import datastore, hdf5, parallel, general
+from openquake.baselib import hdf5, parallel, general
 from openquake.hazardlib import stats
 from openquake.risklib.scientific import InsuredLosses, MultiEventRNG
-from openquake.commonlib import logs
+from openquake.commonlib import logs, datastore
 from openquake.calculators import base, event_based, getters, views
 from openquake.calculators.post_risk import PostRiskCalculator
 
@@ -79,7 +80,7 @@ def event_based_risk(df, param, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
-    dstore = datastore.read(param['hdf5path'])
+    dstore = datastore.read(param['hdf5path'], parentdir=param['parentdir'])
     K = param['K']
     with monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
@@ -243,7 +244,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
         super().pre_execute()
+        if oq.hazard_calculation_id:
+            parentdir = os.path.dirname(
+                datastore.read(oq.hazard_calculation_id).filename)
+        else:
+            parentdir = None
         self.set_param(hdf5path=self.datastore.filename,
+                       parentdir=parentdir,
                        ignore_covs=oq.ignore_covs,
                        master_seed=oq.master_seed,
                        asset_correlation=int(oq.asset_correlation))
@@ -276,16 +283,16 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if 'risk' in oq.calculation_mode:
             descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                      ('loss', F32), ('variance', F32)]
-            self.datastore.create_dframe(
+            self.datastore.create_df(
                 'agg_loss_table', descr,
                 K=len(self.aggkey), L=len(oq.loss_names))
         else:  # damage
-            D = len(self.crmodel.damage_states)
-            descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8)] + \
-                [('dmg_%d' % d, F32) for d in range(1, D)]
-            self.datastore.create_dframe(
-                'agg_damage_table', descr,
-                K=len(self.aggkey), L=len(oq.loss_names))
+            dmgs = ' '.join(self.crmodel.damage_states[:1])
+            descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
+                     [(dc, F32) for dc in self.crmodel.get_dmg_csq()])
+            self.datastore.create_df(
+                'agg_loss_table', descr,
+                K=len(self.aggkey), L=len(oq.loss_names), limit_states=dmgs)
         ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
         self.rlzs = self.datastore['events']['rlz_id']
@@ -293,12 +300,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if oq.avg_losses:
             if oq.collect_rlzs:
                 if oq.investigation_time:  # event_based
-                    self.avg_ratio = numpy.array([oq.ses_ratio / len(ws)])
+                    self.avg_ratio = numpy.array([oq.time_ratio / len(ws)])
                 else:  # scenario
                     self.avg_ratio = numpy.array([1. / self.num_events.sum()])
             else:
                 if oq.investigation_time:  # event_based
-                    self.avg_ratio = numpy.array([oq.ses_ratio] * R)
+                    self.avg_ratio = numpy.array([oq.time_ratio] * len(ws))
                 else:  # scenario
                     self.avg_ratio = 1. / self.num_events
             self.avg_losses = numpy.zeros((A, R, L), F32)

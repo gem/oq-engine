@@ -23,20 +23,15 @@ import logging
 import operator
 import numpy
 
-from openquake.baselib import parallel
-from openquake.baselib.general import (
-    AccumDict, get_nbytes_msg, humansize, pprod, agg_probs,
-    block_splitter, groupby)
-from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.contexts import read_ctxs, RuptureContext
-from openquake.hazardlib.tom import PoissonTOM
-from openquake.calculators import base, getters
+from openquake.baselib import parallel, general
+from openquake.hazardlib.contexts import read_cmakers, get_pmap
+from openquake.calculators import base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 
 
-def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
+def conditional_spectrum(dstore, slc, cmaker, monitor):
     """
     :param dstore:
         a DataStore instance
@@ -44,30 +39,22 @@ def conditional_spectrum(dstore, slc, cmaker, grp_id, monitor):
         a slice of ruptures
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
-    :param grp_id:
-        the group of ruptures currently considered
     :param monitor:
         monitor of the currently running job
     :returns:
         dictionary grp_id -> poes of shape (N, L, G)
     """
-    RuptureContext.temporal_occurrence_model = PoissonTOM(
-        cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        allctxs, _close = read_ctxs(
-            dstore, slc, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
-    N, L, G = len(_close), cmaker.imtls.size, len(cmaker.gsims)
-    acc = numpy.ones((N, L, G))
-    for ctx, poes in cmaker.gen_ctx_poes(allctxs):
-        acc *= ctx.get_probability_no_exceedance(poes)
-    return {grp_id: 1 - acc}
+        ctxs = cmaker.read_ctxs(dstore, slc)
+        N = len(dstore['sitecol/sids'])
+    return {cmaker.grp_id: get_pmap(ctxs, cmaker).array(N)}
 
 
 @base.calculators.add('conditional_spectrum')
 class ConditionalSpectrumCalculator(base.HazardCalculator):
     """
-    Conditional spectrum calculator
+    Conditional spectrum calculator, to be used for few sites only
     """
     precalc = 'classical'
     accept_precalc = ['classical', 'disaggregation']
@@ -110,11 +97,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         rdata = numpy.zeros(totrups, rdt)
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
-        rdata['nsites'] = dstore['rup/nsites'][:]
+        rdata['nsites'] = [len(sids) for sids in dstore['rup/sids_']]
         totweight = rdata['nsites'].sum()
-        et_ids = dstore['et_ids'][:]
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(et_ids)
-        self.slice_by_g = getters.get_slice_by_g(rlzs_by_gsim)
+        trt_smrs = dstore['trt_smrs'][:]
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
         L = oq.imtls.size
         poes_shape = (sum(len(rbg) for rbg in rlzs_by_gsim), self.N, L)
         self.datastore.create_dset('poes', float, poes_shape)
@@ -122,31 +108,24 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
             numpy.ceil(totweight / (oq.concurrent_tasks or 1)), maxw)
-        num_eff_rlzs = len(self.full_lt.sm_rlzs)
         U = 0
         Ta = 0
+        self.cmakers = read_cmakers(self.datastore)
         self.datastore.swmr_on()
         smap = parallel.Starmap(conditional_spectrum, h5=self.datastore.hdf5)
         # IMPORTANT!! we rely on the fact that the classical part
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices
-        for block in block_splitter(rdata, maxweight,
-                                    operator.itemgetter('nsites'),
-                                    operator.itemgetter('grp_id')):
+        for block in general.block_splitter(rdata, maxweight,
+                                            operator.itemgetter('nsites'),
+                                            operator.itemgetter('grp_id')):
             Ta += 1
             grp_id = block[0]['grp_id']
-            trti = et_ids[grp_id][0] // num_eff_rlzs
-            trt = self.trts[trti]
             G = len(rlzs_by_gsim[grp_id])
-            cmaker = ContextMaker(
-                trt, rlzs_by_gsim[grp_id],
-                {'truncation_level': oq.truncation_level,
-                 'maximum_distance': oq.maximum_distance,
-                 'investigation_time': oq.investigation_time,
-                 'imtls': oq.imtls})
+            cmaker = self.cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, grp_id))
+            smap.submit((dstore, slc, cmaker))
         results = smap.reduce(self.agg_result)
         return results
 
@@ -168,4 +147,4 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
     def post_execute(self, acc):
         for grp_id, poes in acc.items():
             poes = poes.transpose(2, 0, 1)  # NLG -> GNL
-            self.datastore['poes'][self.slice_by_g[grp_id]] = poes
+            self.datastore['poes'][self.cmakers[grp_id].slc] = poes

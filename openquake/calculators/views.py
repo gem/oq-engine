@@ -137,15 +137,15 @@ def rst_table(data, header=None, fmt=None):
                              % (len(col_sizes), len(tup)))
         body.append(tup)
 
-    sepline = ' '.join(('=' * size for size in col_sizes))
-    templ = ' '.join(('%-{}s'.format(size) for size in col_sizes))
+    sepline = '+-%s-+' % '+'.join(('-' * size for size in col_sizes))
+    templ = '| %s |' % '|'.join(('%-{}s'.format(size) for size in col_sizes))
     if header:
         lines = [sepline, templ % tuple(header), sepline]
     else:
         lines = [sepline]
     for row in body:
         lines.append(templ % row)
-    lines.append(sepline)
+        lines.append(sepline)
     return '\n'.join(lines)
 
 
@@ -169,7 +169,7 @@ def view_slow_ruptures(token, dstore, maxrows=25):
     """
     Show the slowest ruptures
     """
-    fields = ['code', 'n_occ', 'mag', 'et_id']
+    fields = ['code', 'n_occ', 'mag', 'trt_smr']
     rups = dstore['ruptures'][()][fields]
     time = dstore['gmf_data/time_by_rup'][()]
     arr = util.compose_arrays(rups, time)
@@ -198,9 +198,9 @@ def view_contents(token, dstore):
 def view_full_lt(token, dstore):
     full_lt = dstore['full_lt']
     try:
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['et_ids'])
-    except KeyError:  # for scenario et_ids is missing
-        rlzs_by_gsim_list = [full_lt.get_rlzs_by_gsim(0)]
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(dstore['trt_smrs'])
+    except KeyError:  # for scenario trt_smrs is missing
+        rlzs_by_gsim_list = [full_lt._rlzs_by_gsim(0)]
     header = ['grp_id', 'gsim', 'rlzs']
     rows = []
     for grp_id, rbg in enumerate(rlzs_by_gsim_list):
@@ -538,16 +538,16 @@ def view_required_params_per_trt(token, dstore):
     """
     full_lt = dstore['full_lt']
     tbl = []
-    for et_id, trt in enumerate(full_lt.trt_by_et):
+    for trt_smr, trt in enumerate(full_lt.trt_by_et):
         gsims = full_lt.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((et_id, ' '.join(map(repr, map(repr, gsims))),
+        tbl.append((trt_smr, ' '.join(map(repr, map(repr, gsims))),
                     distances, siteparams, ruptparams))
     return rst_table(
-        tbl, header='et_id gsims distances siteparams ruptparams'.split(),
+        tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
         fmt=scientificformat)
 
 
@@ -667,7 +667,7 @@ def view_global_poes(token, dstore):
     """
     tbl = []
     imtls = dstore['oqparam'].imtls
-    header = ['et_id']
+    header = ['trt_smr']
     for imt in imtls:
         for poe in imtls[imt]:
             header.append(str(poe))
@@ -758,10 +758,10 @@ class GmpeExtractor(object):
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()
 
-    def extract(self, et_ids, rlz_ids):
+    def extract(self, trt_smrs, rlz_ids):
         out = []
-        for et_id, rlz_id in zip(et_ids, rlz_ids):
-            trt = self.trt_by_et[et_id]
+        for trt_smr, rlz_id in zip(trt_smrs, rlz_ids):
+            trt = self.trt_by_et[trt_smr]
             out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
         return out
 
@@ -783,8 +783,8 @@ def view_extreme_gmvs(token, dstore):
         ev = dstore['events'][()][extreme_df.index]
         extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
-        et_ids = dstore['ruptures']['et_id'][extreme_df.rup]
-        extreme_df['gmpe'] = gmpe.extract(et_ids, ev['rlz_id'])
+        trt_smrs = dstore['ruptures']['trt_smr'][extreme_df.rup]
+        extreme_df['gmpe'] = gmpe.extract(trt_smrs, ev['rlz_id'])
         return extreme_df.sort_values('gmv_0').groupby('sid').head(1)
     return 'Could not do anything for ' + imt0
 
@@ -983,8 +983,8 @@ def view_gsim_for_event(token, dstore):
     eid = int(token.split(':')[1])
     full_lt = dstore['full_lt']
     rup_id, rlz_id = dstore['events'][eid][['rup_id', 'rlz_id']]
-    et_id = dstore['ruptures'][rup_id]['et_id']
-    trti = et_id // len(full_lt.sm_rlzs)
+    trt_smr = dstore['ruptures'][rup_id]['trt_smr']
+    trti = trt_smr // len(full_lt.sm_rlzs)
     gsim = full_lt.get_realizations()[rlz_id].gsim_rlz.value[trti]
     return gsim
 
@@ -1041,3 +1041,22 @@ def view_delta_loss(token, dstore):
     dic = dict(loss=losses_by_period(df['loss'], periods, num_events, efftime),
                even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
     return pandas.DataFrame(dic, periods)
+
+
+def to_str(arr):
+    return ' '.join(map(str, numpy.unique(arr)))
+
+
+@view.add('composite_source_model')
+def view_composite_source_model(token, dstore):
+    """
+    Show the structure of the CompositeSourceModel in terms of grp_id
+    """
+    lst = []
+    n = len(dstore['full_lt'].sm_rlzs)
+    trt_smrs = dstore['trt_smrs'][:]
+    for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
+        srcs = ' '.join(df['source_id'])
+        trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], n)
+        lst.append((grp_id, to_str(trts), to_str(sm_rlzs), srcs))
+    return rst_table(lst, ['grp_id', 'trt', 'smrs', 'sources'])

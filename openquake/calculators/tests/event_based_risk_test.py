@@ -223,7 +223,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
         tot = self.calc.datastore['avg_losses-rlzs'][:, 0, 0].sum()  # A1L
-        aac(avg, tot)
+        aac(avg, tot, rtol=1E-6)
 
         # agg_losses
         [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
@@ -554,7 +554,7 @@ agg_id
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
         oq.__dict__['aggregate_by'] = ['NAME_1']
-        job_id = logs.init('nojob', logging.INFO)  # requires the DbServer
+        job_id = logs.init('calc', logging.INFO)  # requires the DbServer
         prc = PostRiskCalculator(oq, job_id)
         oq.hazard_calculation_id = parent.calc_id
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):

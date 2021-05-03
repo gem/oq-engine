@@ -15,9 +15,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import numpy
 import shapely
-from openquake.commonlib import util
+from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl
 
 
@@ -28,7 +29,7 @@ def main(calc_id: int = -1, site_model=False):
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
     from openquake.hmtk.plotting.patch import PolygonPatch
-    dstore = util.read(calc_id)
+    dstore = datastore.read(calc_id)
     try:
         region = dstore['oqparam'].region
     except KeyError:

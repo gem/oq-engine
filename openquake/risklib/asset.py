@@ -489,6 +489,12 @@ class AssetCollection(object):
                 aval[array['ordinal'], lti] = array['value-' + lt]
         return aval
 
+    def get_value_fields(self):
+        """
+        :returns: list of fields starting with value-
+        """
+        return [f for f in self.array.dtype.names if f.startswith('value-')]
+
     def get_agg_values(self, loss_names, tagnames):
         """
         :param loss_names:
@@ -981,6 +987,8 @@ class Exposure(object):
                     raise InvalidFile('%s: missing %s' % (fname, missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
                 'retrofitted': float, None: object}
+        for f in strfields:
+            conv[f] = str
         revmap = {}  # oq -> inp
         for inp, oq in self.fieldmap.items():
             revmap[oq] = inp

@@ -466,11 +466,12 @@ class CompositeRiskModel(collections.abc.Mapping):
         """
         csq = {}  # cname -> values per event
         for byname, coeffs in self.consdict.items():
+            # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 cname, tagname = byname.split('_by_')
                 func = scientific.consequence[cname]
-                coeffs = coeffs[asset[tagname]][loss_type]
-                csq[cname] = func(coeffs, asset, fractions[:, 1:], loss_type)
+                cs = coeffs[asset[tagname]][loss_type]
+                csq[cname] = func(cs, asset, fractions[:, 1:], loss_type)
         return csq
 
     def init(self):
@@ -606,6 +607,14 @@ class CompositeRiskModel(collections.abc.Mapping):
             if len(arr):
                 csq.append(cname_by_tagname.split('_by_')[0])
         return csq
+
+    def get_dmg_csq(self):
+        """
+        :returns: damage states (except no_damage) plus consequences
+        """
+        D = len(self.damage_states)
+        dmgs = ['dmg_%d' % d for d in range(1, D)]
+        return dmgs + self.get_consequences()
 
     def make_curve_params(self):
         # the CurveParams are used only in classical_risk, classical_bcr

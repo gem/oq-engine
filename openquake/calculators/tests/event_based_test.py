@@ -26,9 +26,9 @@ import numpy.testing
 
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import countby, gettemp
-from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter
+from openquake.commonlib.datastore import read
 from openquake.commonlib.writers import write_csv
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.calc import gmvs_to_poes
@@ -205,7 +205,7 @@ class EventBasedTestCase(CalculatorTestCase):
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
         self.assertEqual(einfo['rlzi'], 0)
-        self.assertEqual(einfo['et_id'], 0)
+        self.assertEqual(einfo['trt_smr'], 0)
         aac(einfo['occurrence_rate'], 0.6)
         aac(einfo['hypo'], [0., 0., 4.])
 

@@ -29,8 +29,9 @@ import numpy
 
 from openquake.calculators import base
 from openquake.calculators.export import export
-from openquake.baselib import datastore, general, parallel
-from openquake.commonlib import readinput, oqvalidation, writers, logs
+from openquake.baselib import general, parallel
+from openquake.commonlib import (
+    datastore, readinput, oqvalidation, writers, logs)
 
 
 NOT_DARWIN = sys.platform != 'darwin'
@@ -122,7 +123,7 @@ class CalculatorTestCase(unittest.TestCase):
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
-        return base.calculators(oq, logs.init())
+        return base.calculators(oq, logs.init('calc'))
 
     def run_calc(self, testfile, job_ini, **kw):
         """

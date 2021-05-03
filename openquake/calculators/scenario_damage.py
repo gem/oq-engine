@@ -87,6 +87,7 @@ def scenario_damage(riskinputs, param, monitor):
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
+
     # algorithm used to compute the discrete damage distributions
     float_dmg_dist = param['float_dmg_dist']
     z = numpy.zeros((L, D - 1), F32 if float_dmg_dist else U32)
@@ -135,7 +136,6 @@ def scenario_damage(riskinputs, param, monitor):
                         nodamage = asset['number'] * (ne - len(damages))
                         tot[0] += nodamage
                         res['d_asset'].append((lti, r, aid, tot))
-                        # TODO: use the ddd, not the fractions in compute_csq
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
                             res['avg_%s' % name].append(
@@ -147,7 +147,7 @@ def scenario_damage(riskinputs, param, monitor):
     return res
 
 
-@base.calculators.add('scenario_damage', 'event_based_damage')
+@base.calculators.add('scenario_damage')
 class ScenarioDamageCalculator(base.RiskCalculator):
     """
     Damage calculator
@@ -179,7 +179,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.datastore['events']['rlz_id'], minlength=self.R)
         if (ne == 0).any():
             logging.warning('There are realizations with zero events')
-        self.datastore.create_dframe(
+        self.datastore.create_df(
             'dd_data', self.param['asset_damage_dt'], 'gzip')
         self.riskinputs = self.build_riskinputs('gmf')
 
@@ -222,7 +222,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
         if oq.investigation_time:  # event_based_damage
-            avg_ratio = numpy.array([oq.ses_ratio] * R)
+            avg_ratio = numpy.array([oq.time_ratio] * R)
         else:  # scenario_damage
             avg_ratio = 1. / self.param['num_events']
 

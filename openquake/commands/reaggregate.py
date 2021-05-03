@@ -20,7 +20,7 @@ import os
 import getpass
 import logging
 from openquake.baselib import parallel
-from openquake.commonlib import logs, util
+from openquake.commonlib import logs, datastore
 from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.engine import engine
 
@@ -29,7 +29,7 @@ def main(calc_id: int, aggregate_by):
     """
     Re-run the postprocessing after an event based risk calculation
     """
-    parent = util.read(calc_id)
+    parent = datastore.read(calc_id)
     oqp = parent['oqparam']
     aggby = aggregate_by.split(',')
     for tagname in aggby:

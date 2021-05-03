@@ -26,7 +26,8 @@ from openquake.hazardlib import InvalidFile
 from openquake.commonlib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
-    case_6, case_7, case_8, case_9, case_10, case_11, case_12)
+    case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
+    case_14)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -36,6 +37,7 @@ aac = numpy.testing.assert_allclose
 
 
 class ScenarioDamageTestCase(CalculatorTestCase):
+
     def assert_ok(self, pkg, job_ini, exports='csv', kind='damages'):
         test_dir = os.path.dirname(pkg.__file__)
         out = self.run_calc(test_dir, job_ini, exports=exports,
@@ -304,13 +306,69 @@ aid
         aac(losses(1, alt), [38175, 3, 903, 11122, 28599, 30341, 18978, 0])
         aac(losses(2, alt), [26412, 0, 21055, 44631, 36447, 0, 0, 0])
 
-    def test_case_12(self):
-        # test event_based_damage, no aggregate_by
-        self.run_calc(case_12.__file__, 'job.ini')
+    def check_damages(self, f1, f2):
         df = self.calc.datastore.read_df(
-            'agg_damage_table', 'event_id').sort_index()
-        fname = gettemp(str(df))
-        self.assertEqualFiles('expected/agg_damage_table.txt', fname)
+            'agg_loss_table', ['event_id', 'agg_id', 'loss_id']).sort_index()
+        for col in df.columns:
+            df[col] = numpy.around(df[col])
+        self.assertEqualFiles('expected/' + f1, gettemp(str(df)))
+        df = self.calc.datastore.read_df(
+            'aggcurves', ['agg_id', 'loss_id']).sort_index()
+        for col in df.columns:
+            df[col] = numpy.around(df[col])
+        self.assertEqualFiles('expected/' + f2, gettemp(str(df)))
+
+    def test_case_12a(self):
+        # test event_based_damage, no aggregate_by
+        self.run_calc(case_12.__file__, 'job_a.ini')
+        self.check_damages('a_damage_table.txt', 'a_damages.txt')
+
+    def test_case_12b(self):
+        # test event_based_damage, aggregate_by=taxonomy
+        self.run_calc(case_12.__file__, 'job_b.ini')
+        self.check_damages('b_damage_table.txt', 'b_damages.txt')
+
+    def test_case_12c(self):
+        # test event_based_damage, aggregate_by=taxonomy, policy
+        self.run_calc(case_12.__file__, 'job_c.ini')
+        self.check_damages('c_damage_table.txt', 'c_damages.txt')
+
+    def test_case_12d(self):
+        # test event_based_damage, aggregate_by=id
+        self.run_calc(case_12.__file__, 'job_d.ini')
+        self.check_damages('d_damage_table.txt', 'd_damages.txt')
+
+    def test_case_13a(self):
+        # test event_based_damage, no aggregate_by
+        self.run_calc(case_13.__file__, 'job_a.ini')
+        [f1, f2] = export(('aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f1), f1, delta=1E-5)
+        self.assertEqualFiles('expected/' + strip_calc_id(f2), f2, delta=1E-5)
+
+    def test_case_13b(self):
+        # test event_based_damage, aggregate_by=taxonomy
+        self.run_calc(case_13.__file__, 'job_b.ini')
+        self.check_damages('b_damage_table.txt', 'b_damages.txt')
+
+        [f] = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+
+    def test_case_13c(self):
+        # test event_based_damage, aggregate_by=taxonomy, policy
+        self.run_calc(case_13.__file__, 'job_c.ini')
+        self.check_damages('c_damage_table.txt', 'c_damages.txt')
+
+    def test_case_13d(self):
+        # test event_based_damage, aggregate_by=id
+        self.run_calc(case_13.__file__, 'job_d.ini')
+        self.check_damages('d_damage_table.txt', 'd_damages.txt')
+
+    def test_case_14(self):
+        # test event_based_damage, aggregate_by=NAME_1
+        self.run_calc(case_14.__file__, 'job.ini')
+        [f1, f2] = export(('aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f1), f1, delta=1E-5)
+        self.assertEqualFiles('expected/' + strip_calc_id(f2), f2, delta=1E-5)
 
 
 def losses(aid, alt):

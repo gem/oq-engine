@@ -33,7 +33,7 @@ from openquake.hazardlib.shakemap.maps import get_array
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
 from openquake.sep.classes import SecondaryPeril
-from openquake.commonlib import logictree, util
+from openquake.commonlib import logictree, datastore
 from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
@@ -175,7 +175,7 @@ cross_correlation:
 description:
   A string describing the calculation.
   Example: *description = Test calculation*.
-  Default: no default
+  Default: "no description"
 
 disagg_by_src:
   Flag used to enable disaggregation by source when possible.
@@ -398,7 +398,7 @@ modal_damage_state:
 num_epsilon_bins:
   Number of epsilon bins in disaggregation calculations.
   Example: *num_epsilon_bins = 3*.
-  Default: no default
+  Default: 1
 
 num_rlzs_disagg:
   Used in disaggregation calculation to specify how many outputs will be
@@ -712,7 +712,7 @@ class OqParam(valid.ParamSet):
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
-    collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), 0)
+    collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), '0')
     collect_rlzs = valid.Param(valid.boolean, False)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
@@ -723,7 +723,7 @@ class OqParam(valid.ParamSet):
     cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
-    description = valid.Param(valid.utf8_not_empty)
+    description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs,
                                  list(calc.disagg.pmf_map))
@@ -773,7 +773,7 @@ class OqParam(valid.ParamSet):
     modal_damage_state = valid.Param(valid.boolean, False)
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
-    num_epsilon_bins = valid.Param(valid.positiveint)
+    num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, None)
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
@@ -883,9 +883,6 @@ class OqParam(valid.ParamSet):
                 'region_constraint is obsolete, use region instead')
             self.region = valid.wkt_polygon(
                 names_vals.pop('region_constraint'))
-        self.risk_investigation_time = (
-            self.risk_investigation_time or self.investigation_time)
-        self.collapse_level = int(self.collapse_level)
         if ('intensity_measure_types_and_levels' in names_vals and
                 'intensity_measure_types' in names_vals):
             logging.warning('Ignoring intensity_measure_types since '
@@ -990,12 +987,6 @@ class OqParam(valid.ParamSet):
                     '%s: conditional_loss_poes are not defined '
                     'for classical_damage calculations' % job_ini)
 
-        # checks for ebrisk
-        if self.calculation_mode in ('ebrisk', 'event_based_risk'):
-            if self.risk_investigation_time is None:
-                raise InvalidFile('Please set the risk_investigation_time in'
-                                  ' %s' % job_ini)
-
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
                 and 'sites' not in self.inputs and self.sites is None):
@@ -1043,7 +1034,7 @@ class OqParam(valid.ParamSet):
         # rt has the form 'vulnerability/structural', 'fragility/...', ...
         costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
-            with util.read(self.hazard_calculation_id) as ds:
+            with datastore.read(self.hazard_calculation_id) as ds:
                 parent = ds['oqparam']
             self._risk_files = get_risk_files(parent.inputs)
             costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
@@ -1101,7 +1092,7 @@ class OqParam(valid.ParamSet):
                 (self.number_of_logic_tree_samples or 1))
 
     @property
-    def ses_ratio(self):
+    def time_ratio(self):
         """
         The ratio
 
@@ -1392,11 +1383,16 @@ class OqParam(valid.ParamSet):
         if self.shakemap_uri:
             kind = self.shakemap_uri['kind']
             sig = inspect.signature(get_array[kind])
-            params = list(sig.parameters)
-            if params != list(self.shakemap_uri):
+            # parameters without default value
+            params = [p.name for p in list(
+                sig.parameters.values()) if p.default is p.empty]
+            all_params = list(sig.parameters)
+            if not all(p in list(self.shakemap_uri) for p in params) or \
+                    not all(p in all_params for p in list(self.shakemap_uri)):
                 raise ValueError(
-                    'Expected parameters %s in shakemap_uri, got %s' %
-                    (params, list(self.shakemap_uri)))
+                    'Error in shakemap_uri: Expected parameters %s, '
+                    'valid parameters %s, got %s' %
+                    (params, all_params, list(self.shakemap_uri)))
         return self.hazard_calculation_id if (
             self.shakemap_id or self.shakemap_uri) else True
 
@@ -1576,9 +1572,12 @@ class OqParam(valid.ParamSet):
 
     def is_valid_collect_rlzs(self):
         """
-        sampling_method must be early_weights and only the mean is available.
-        number_of_logic_tree_samples = {number_of_logic_tree_samples}.
+        sampling_method must be early_weights, only the mean is available,
+        and number_of_logic_tree_samples must be greater than 1.
         """
+        if self.calculation_mode == 'event_based_damage':
+            self.collect_rlzs = True
+            return True
         if self.collect_rlzs is False or self.hazard_calculation_id:
             return True
         hstats = list(self.hazard_stats())
@@ -1647,4 +1646,9 @@ class OqParam(valid.ParamSet):
         return hdf5.dumps(vars(self)), {}
 
     def __fromh5__(self, array, attrs):
-        vars(self).update(json.loads(python3compat.decode(array)))
+        if isinstance(array, numpy.ndarray):  # old format <= 3.11
+            pars = dict(array)
+            if 'hazard_calculation_id' in pars:  # read hc_id only
+                self.hazard_calculation_id = int(pars['hazard_calculation_id'])
+        else:  # new format >= 3.12
+            vars(self).update(json.loads(python3compat.decode(array)))

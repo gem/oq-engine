@@ -20,9 +20,8 @@ import os
 import json
 import logging
 
-from openquake.baselib import datastore, hdf5
-from openquake.commonlib.writers import write_csv
-from openquake.commonlib import util
+from openquake.baselib import hdf5
+from openquake.commonlib import writers, datastore
 from openquake.calculators.views import view, rst_table
 from openquake.calculators.extract import extract
 
@@ -46,7 +45,7 @@ def print_(aw):
         print(rst_table(aw.to_dframe()))
     elif hasattr(aw, 'array') and aw.dtype.names:
         sio = io.StringIO()
-        write_csv(sio, aw.array)
+        writers.write_csv(sio, aw.array, sep='\t')
         print(sio.getvalue())
     elif hasattr(aw, 'array'):
         print(aw.array)
@@ -65,7 +64,7 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
         rows = []
         for calc_id in datastore.get_calc_ids(datadir):
             try:
-                ds = util.read(calc_id)
+                ds = datastore.read(calc_id)
                 oq = ds['oqparam']
                 cmode, descr = oq.calculation_mode, oq.description
             except Exception:
@@ -80,7 +79,7 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
             print('#%d %s: %s' % row)
         return
 
-    ds = util.read(calc_id)
+    ds = datastore.read(calc_id)
 
     # this part is experimental
     if view.keyfunc(what) in view:
@@ -90,12 +89,15 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
         if isinstance(obj, hdf5.ArrayWrapper):
             print_(obj)
         elif hasattr(obj, 'dtype') and obj.dtype.names:
-            print(write_csv(io.StringIO(), obj))
+            print(writers.write_csv(io.StringIO(), obj))
         else:
             print(obj)
     elif what in ds:
         obj = ds.getitem(what)
-        if hasattr(obj, 'items'):  # is a group of datasets
+        if '__pdcolumns__' in obj.attrs:
+            df = ds.read_df(what)
+            print(df.sort_values(df.columns[0]))
+        elif hasattr(obj, 'items'):  # is a group of datasets
             print(obj)
         else:  # is a single dataset
             obj.refresh()  # for SWMR mode

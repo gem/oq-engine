@@ -22,10 +22,10 @@ import unittest.mock as mock
 import unittest
 from io import BytesIO
 
-from openquake.baselib import general, datastore
+from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification
 from openquake.risklib import asset
-from openquake.commonlib import readinput, logictree
+from openquake.commonlib import readinput, logictree, datastore
 from openquake.qa_tests_data.classical import case_2, case_21
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import (
@@ -94,7 +94,6 @@ export_dir = %s
                 'complex_fault_mesh_spacing': 5.0,
                 'truncation_level': 3.0,
                 'random_seed': 5,
-                'collapse_level': 0,
                 'maximum_distance': {'default': [(1, 1), (10, 1)]},
                 'inputs': {'job_ini': source,
                            'sites': sites_csv},
@@ -103,7 +102,6 @@ export_dir = %s
                 'reference_vs30_type': 'measured',
                 'reference_vs30_value': 600.0,
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
-                'risk_investigation_time': None,
                 'minimum_asset_loss': {},
             }
             params = getparams(readinput.get_oqparam(source, validate=1))

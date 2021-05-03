@@ -30,7 +30,8 @@ from openquake.hazardlib.calc.filters import nofilter
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import EBRupture
-from openquake.commonlib import calc, util, logs, readinput, logictree
+from openquake.commonlib import (
+    calc, util, logs, readinput, logictree, datastore)
 from openquake.risklib.riskinput import str2rsi
 from openquake.calculators import base, views
 from openquake.calculators.getters import (
@@ -125,11 +126,10 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def acc0(self):
         """
-        Initial accumulator, a dictionary (et_id, gsim) -> curves
+        Initial accumulator, a dictionary rlz -> ProbabilityMap
         """
         self.L = self.oqparam.imtls.size
-        zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
-        return zd
+        return {r: ProbabilityMap(self.L) for r in range(self.R)}
 
     def build_events_from_sources(self):
         """
@@ -285,7 +285,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 [len(gsim_lt.values[trt]) for trt in gsim_lt.values], U32)
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ
-                aw['n_occ'] *= ngmfs * num_gsims[aw['et_id']]
+                aw['n_occ'] *= ngmfs * num_gsims[aw['trt_smr']]
         rup_array = aw.array
         hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
@@ -314,7 +314,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.set_param()
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
-            self.datastore.parent = util.read(oq.hazard_calculation_id)
+            self.datastore.parent = datastore.read(oq.hazard_calculation_id)
         elif hasattr(self, 'csm'):  # from sources
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and

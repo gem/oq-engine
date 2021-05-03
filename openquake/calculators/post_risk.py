@@ -21,8 +21,9 @@ import logging
 import itertools
 import numpy
 
-from openquake.baselib import general, datastore, parallel, python3compat
+from openquake.baselib import general, parallel, python3compat
 from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.commonlib import datastore
 from openquake.risklib import scientific
 from openquake.calculators import base, views
 
@@ -83,9 +84,17 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     """
     oq = dstore['oqparam']
     weights = dstore['weights'][()]
-    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
+    try:
+        haz_time = dstore['gmf_data'].attrs['effective_time']
+    except KeyError:
+        haz_time = None
+    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
+        len(weights) if oq.collect_rlzs else 1)
     if oq.collect_rlzs:
-        eff_time *= len(weights)
+        if haz_time and haz_time != eff_time:
+            raise ValueError('The effective time stored in gmf_data is %d, '
+                             'which is inconsistent with %d' %
+                             (haz_time, eff_time))
         num_events = numpy.array([len(dstore['events'])])
         weights = numpy.ones(1)
     else:
@@ -95,7 +104,7 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
         loss_dt or oq.loss_dt(), weights, dict(enumerate(num_events)),
-        eff_time, oq.risk_investigation_time)
+        eff_time, oq.risk_investigation_time or oq.investigation_time)
 
 
 def get_src_loss_table(dstore, L):
@@ -214,8 +223,8 @@ class PostRiskCalculator(base.RiskCalculator):
         for krl, curve in smap.reduce().items():
             agg_curves[krl] = curve
         R = len(self.datastore['weights'])
-        ses_ratio = oq.ses_ratio / R if oq.collect_rlzs else oq.ses_ratio
-        self.datastore['agg_losses-rlzs'] = agg_losses * ses_ratio
+        time_ratio = oq.time_ratio / R if oq.collect_rlzs else oq.time_ratio
+        self.datastore['agg_losses-rlzs'] = agg_losses * time_ratio
         set_rlzs_stats(self.datastore, 'agg_losses',
                        agg_id=K + 1, loss_types=oq.loss_names, units=units)
         self.datastore['agg_curves-rlzs'] = agg_curves

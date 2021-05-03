@@ -31,9 +31,7 @@ from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.contexts import read_ctxs, RuptureContext
-from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.commonlib import util, calc
 from openquake.calculators import getters
 from openquake.calculators import base
@@ -94,7 +92,7 @@ def output(mat6):
     return pprod(mat6, axis=(1, 2)), pprod(mat6, axis=(0, 3))
 
 
-def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
+def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
     # see https://bugs.launchpad.net/oq-engine/+bug/1279247 for an explanation
     # of the algorithm used
     """
@@ -106,8 +104,6 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
     :param hmap4:
         an ArrayWrapper of shape (N, M, P, Z)
-    :param trti:
-        tectonic region type index
     :param magi:
         magnitude bin indices
     :param bin_egdes:
@@ -117,12 +113,9 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
     :returns:
         a dictionary sid, imti -> 6D-array
     """
-    RuptureContext.temporal_occurrence_model = PoissonTOM(
-        cmaker.investigation_time)
     with monitor('reading contexts', measuremem=True):
         dstore.open('r')
-        allctxs, close_ctxs = read_ctxs(
-            dstore, slc, req_site_params=cmaker.REQUIRES_SITES_PARAMETERS)
+        allctxs = cmaker.read_ctxs(dstore, slc)
         for magidx, ctx in zip(magi, allctxs):
             ctx.magi = magidx
     dis_mon = monitor('disaggregate', measuremem=False)
@@ -136,14 +129,14 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
     eps3 = disagg._eps3(cmaker.trunclevel, cmaker.num_epsilon_bins)
     imts = [from_string(im) for im in cmaker.imtls]
     for magi, ctxs in groupby(allctxs, operator.attrgetter('magi')).items():
-        res = {'trti': trti, 'magi': magi}
+        res = {'trti': cmaker.trti, 'magi': magi}
         with ms_mon:
             # compute mean and std (N * U * M * G * 16 bytes)
             disagg.set_mean_std(ctxs, imts, cmaker.gsims)
 
         # disaggregate by site, IMT
         for s, iml3 in enumerate(hmap4):
-            close = [ctx for ctx in close_ctxs[s] if ctx.magi == magi]
+            close = [ctx for ctx in ctxs if ctx.magi == magi and s in ctx.sids]
             if not g_by_z[s] or not close:
                 # g_by_z[s] is empty in test case_7
                 continue
@@ -153,8 +146,8 @@ def compute_disagg(dstore, slc, cmaker, hmap4, trti, magi, bin_edges, monitor):
             iml2 = dict(zip(imts, iml3))
             with dis_mon:
                 # 7D-matrix #distbins, #lonbins, #latbins, #epsbins, M, P, Z
-                matrix = disagg.disaggregate(
-                    close, g_by_z[s], iml2, eps3, s, bins)  # 7D-matrix
+                matrix = disagg.disaggregate(close, cmaker.tom, g_by_z[s],
+                                             iml2, eps3, s, bins)  # 7D-matrix
                 for m in range(M):
                     mat6 = matrix[..., m, :, :]
                     if mat6.any():
@@ -322,15 +315,14 @@ class DisaggregationCalculator(base.HazardCalculator):
         rdata['magi'] = magi
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
-        rdata['nsites'] = dstore['rup/nsites'][:]
+        rdata['nsites'] = [len(sids) for sids in dstore['rup/sids_']]
         totweight = rdata['nsites'].sum()
-        et_ids = dstore['et_ids'][:]
-        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(et_ids)
+        trt_smrs = dstore['trt_smrs'][:]
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_list(trt_smrs)
         G = max(len(rbg) for rbg in rlzs_by_gsim)
         maxw = 2 * 1024**3 / (16 * G * self.M)  # at max 2 GB
         maxweight = min(
             numpy.ceil(totweight / (oq.concurrent_tasks or 1)), maxw)
-        num_eff_rlzs = len(self.full_lt.sm_rlzs)
         task_inputs = []
         U = 0
         self.datastore.swmr_on()
@@ -341,25 +333,17 @@ class DisaggregationCalculator(base.HazardCalculator):
         # we are NOT grouping by operator.itemgetter('grp_id', 'magi'):
         # that would break the ordering of the indices causing an incredibly
         # worse performance, but visible only in extra-large calculations!
+        cmakers = read_cmakers(self.datastore)
         for block in block_splitter(rdata, maxweight,
                                     operator.itemgetter('nsites'),
                                     operator.itemgetter('grp_id')):
             grp_id = block[0]['grp_id']
-            trti = et_ids[grp_id][0] // num_eff_rlzs
-            trt = self.trts[trti]
-            cmaker = ContextMaker(
-                trt, rlzs_by_gsim[grp_id],
-                {'truncation_level': oq.truncation_level,
-                 'maximum_distance': oq.maximum_distance,
-                 'collapse_level': oq.collapse_level,
-                 'num_epsilon_bins': oq.num_epsilon_bins,
-                 'investigation_time': oq.investigation_time,
-                 'imtls': oq.imtls})
+            cmaker = cmakers[grp_id]
             U = max(U, block.weight)
             slc = slice(block[0]['idx'], block[-1]['idx'] + 1)
-            smap.submit((dstore, slc, cmaker, self.hmap4, trti, magi[slc],
-                         self.bin_edges))
-            task_inputs.append((trti, slc.stop-slc.start))
+            smap.submit((dstore, slc, cmaker, self.hmap4,
+                         magi[slc], self.bin_edges))
+            task_inputs.append((cmaker.trti, slc.stop-slc.start))
 
         nbytes, msg = get_nbytes_msg(dict(M=self.M, G=G, U=U, F=2))
         logging.info('Maximum mean_std per task:\n%s', msg)

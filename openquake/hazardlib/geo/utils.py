@@ -29,6 +29,8 @@ import numpy
 from scipy.spatial import cKDTree
 import shapely.geometry
 
+from shapely.strtree import STRtree
+
 from openquake.baselib.hdf5 import vstr
 from openquake.hazardlib.geo import geodetic
 
@@ -72,6 +74,7 @@ class _GeographicObjects(object):
     It is possible to extract the closest object to a given location by
     calling the method .get_closest(lon, lat).
     """
+
     def __init__(self, objects):
         self.objects = objects
         if hasattr(objects, 'lons'):
@@ -197,6 +200,53 @@ def assoc(objects, sitecol, assoc_dist, mode):
     else:  # objects is the list assets_by_site
         return _GeographicObjects(sitecol).assoc2(
             objects, assoc_dist, mode)
+
+
+ERROR_OUTSIDE = 'The site (%.1f %.1f) is outside of any vs30 area.'
+
+
+def assoc_to_polygons(polygons, data, sitecol, mode):
+    """
+    Associate data from a shapefile with polygons to a site collection
+    :param polygons: polygon shape data
+    :param data: rest of the data belonging to the shapes
+    :param sitecol: a (filtered) site collection
+    :param mode: 'strict', 'warn' or 'filter'
+    :returns: filtered site collection, filtered objects, discarded
+    """
+    assert mode in 'strict warn filter', mode
+    sites = {}
+    discarded = []
+    tree = STRtree(polygons)
+    index_by_id = dict((id(pl), i) for i, pl in enumerate(polygons))
+
+    for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
+        point = shapely.geometry.Point(lon, lat)
+        result = next((index_by_id[id(o)]
+                       for o in tree.query(point) if o.contains(point)), None)
+        if result is not None:
+            # associate inside
+            sites[sid] = data[result].copy()
+            # use site coords for further calculation
+            sites[sid]['lon'] = lon
+            sites[sid]['lat'] = lat
+        elif mode == 'strict':
+            raise SiteAssociationError(ERROR_OUTSIDE, lon, lat)
+        elif mode == 'warn':
+            discarded.append((lon, lat))
+            logging.warning(ERROR_OUTSIDE, lon, lat)
+        elif mode == 'filter':
+            discarded.append((lon, lat))
+
+    if not sites:
+        raise SiteAssociationError(
+            'No sites could be associated within a shape.')
+
+    sorted_sids = sorted(sites)
+    discarded = numpy.array(discarded, dtype=[('lon', F32), ('lat', F32)])
+
+    return (sitecol.filtered(sorted_sids),
+            numpy.array([sites[s] for s in sorted_sids]), discarded)
 
 
 def clean_points(points):

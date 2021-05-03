@@ -18,10 +18,11 @@
 import os
 import sys
 import getpass
-from openquake.baselib import config, datastore
+import logging
+from openquake.baselib import config
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
-from openquake.commonlib import logs
+from openquake.commonlib import logs, datastore
 from openquake.engine.engine import run_jobs
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
@@ -98,7 +99,7 @@ def main(
     """
     if not run:
         # configure a basic logging
-        logs.init()
+        logging.basicConfig(level=logging.INFO)
 
     if config_file:
         config.read(os.path.abspath(os.path.expanduser(config_file)),
