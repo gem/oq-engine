@@ -23,8 +23,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-      with:
-        ref: cleanup
     - name: Set up Python  ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
