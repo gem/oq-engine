@@ -156,8 +156,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, calc_id):
-        oqparam.validate()
-        self.datastore = datastore.new(calc_id)
+        self.datastore = datastore.new(calc_id, oqparam)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
             h5=self.datastore)
