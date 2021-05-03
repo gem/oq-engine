@@ -131,6 +131,35 @@ def extract_calc_id_datadir(filename):
     return calc_id, datadir
 
 
+def _read(calc_id: int, datadir, mode, haz_id=None):
+    # low level function to read a datastore file
+    datadir = datadir or get_datadir()
+    ppath = None
+    if calc_id < 0:  # look at the old calculations of the current user
+        calc_ids = get_calc_ids(datadir)
+        try:
+            jid = calc_ids[calc_id]
+        except IndexError:
+            raise IndexError(
+                'There are %d old calculations, cannot '
+                'retrieve the %s' % (len(calc_ids), calc_id))
+    else:
+        jid = calc_id
+    # look in the db
+    job = dbcmd('get_job', jid)
+    if job:
+        path = job.ds_calc_dir + '.hdf5'
+        hc_id = job.hazard_calculation_id
+        if not hc_id and haz_id:
+            dbcmd('update_job', jid, {'hazard_calculation_id': haz_id})
+            hc_id = haz_id
+        if hc_id and hc_id != jid:
+            ppath = dbcmd('get_job', hc_id).ds_calc_dir + '.hdf5'
+    else:  # when using oq run there is no job in the db
+        path = os.path.join(datadir, 'calc_%s.hdf5' % jid)
+    return DataStore(path, ppath, mode)
+
+
 def read(calc_id, mode='r', datadir=None, parentdir=None):
     """
     :param calc_id: calculation ID or filename
@@ -144,7 +173,7 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     if isinstance(calc_id, str):  # pathname
         dstore = DataStore(calc_id, mode=mode)
     else:
-        dstore = new(calc_id, datadir=datadir, mode=mode)
+        dstore = _read(calc_id, datadir, mode)
     try:
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
@@ -169,32 +198,8 @@ def new(calc_id, oqparam=None, datadir=None, mode=None):
     """
     if calc_id in ('job', 'calc'):
         return new(init(calc_id), oqparam, datadir, mode)
-    datadir = datadir or get_datadir()
-    ppath = None
-    if calc_id < 0:  # look at the old calculations of the current user
-        calc_ids = get_calc_ids(datadir)
-        try:
-            jid = calc_ids[calc_id]
-        except IndexError:
-            raise IndexError(
-                'There are %d old calculations, cannot '
-                'retrieve the %s' % (len(calc_ids), calc_id))
-    else:
-        jid = calc_id
     haz_id = None if oqparam is None else oqparam.hazard_calculation_id
-    # look in the db
-    job = dbcmd('get_job', jid)
-    if job:
-        path = job.ds_calc_dir + '.hdf5'
-        hc_id = job.hazard_calculation_id
-        if not hc_id and haz_id:
-            dbcmd('update_job', jid, {'hazard_calculation_id': haz_id})
-            hc_id = haz_id
-        if hc_id and hc_id != jid:
-            ppath = dbcmd('get_job', hc_id).ds_calc_dir + '.hdf5'
-    else:  # when using oq run there is no job in the db
-        path = os.path.join(datadir, 'calc_%s.hdf5' % jid)
-    dstore = DataStore(path, ppath, mode)
+    dstore = _read(calc_id, datadir, mode, haz_id)
     if oqparam:
         dstore['oqparam'] = oqparam
     return dstore
@@ -247,9 +252,8 @@ class DataStore(collections.abc.MutableMapping):
     and a dictionary and populating the object.
     For an example of use see :class:`openquake.hazardlib.site.SiteCollection`.
     """
-
-    class EmptyDataset(ValueError):
-        """Raised when reading an empty dataset"""
+    calc_id = None  # set at instantiation time
+    job = None  # set at instantiation time
 
     def __init__(self, path, ppath=None, mode=None):
         self.filename = path
