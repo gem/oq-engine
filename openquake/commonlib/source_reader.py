@@ -285,14 +285,14 @@ class CompositeSourceModel:
         return srcs
 
     # used only in calc_by_rlz.py
-    def get_groups(self, eri):
+    def get_groups(self, smr):
         """
-        :param eri: effective source model realization ID
-        :returns: SourceGroups associated to the given `eri`
+        :param smr: effective source model realization ID
+        :returns: SourceGroups associated to the given `smr`
         """
         src_groups = []
         for sg in self.src_groups:
-            trt_smr = self.full_lt.get_trt_smr(sg.trt, eri)
+            trt_smr = self.full_lt.get_trt_smr(sg.trt, smr)
             src_group = copy.copy(sg)
             src_group.sources = [src for src in sg if trt_smr in src.trt_smrs]
             if len(src_group):

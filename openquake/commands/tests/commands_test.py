@@ -137,13 +137,7 @@ class InfoTestCase(unittest.TestCase):
                             'source_model_logic_tree.xml')
         with Print.patch() as p:
             sap.runline('openquake.commands info ' + path)
-        self.assertEqual(str(p), """\
-==================== ===========
-TRT                  pointSource
-==================== ===========
-active shallow crust 1          
-Total                1          
-==================== ===========""")
+        self.assertIn('pointSource', str(p))
 
     def test_report(self):
         path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
@@ -248,7 +242,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             sap.runline(f'openquake.commands show slow_sources {self.calc_id}')
-        self.assertIn('source_id code calc_time num_sites', str(p))
+        self.assertIn('source_id|code|calc_time|num_sites', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
