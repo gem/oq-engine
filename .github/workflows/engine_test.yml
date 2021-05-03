@@ -5,7 +5,6 @@ name: hazardlib + engine tests
 
 on:
   pull_request:
-  push:
 
 jobs:
   engine:
