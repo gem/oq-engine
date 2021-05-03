@@ -36,6 +36,7 @@ jobs:
           $py = $PY_VER.replace(".","")
           write-host $py
           python -m pip install pip wheel setuptools --upgrade
+          python -m pip install pytest
           python -m pip install install -r requirements-$py-win64.txt
           python -m pip install fiona
           python -m pip install -e .

@@ -28,6 +28,7 @@ jobs:
             PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
             echo $PY_VER
             pip3 install -U pip wheel setuptools
+            pip3 install pytest
             pip3 install -r requirements-$PY_VER-linux64.txt
             pip3 install -e .\[osgeo\]
             pip3 install fiona
