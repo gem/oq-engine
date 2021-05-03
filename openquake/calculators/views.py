@@ -99,12 +99,13 @@ def rst_table(data, header=None, fmt=None):
     
     >>> tbl = [['a', 1], ['b', 2]]
     >>> print(rst_table(tbl, header=['Name', 'Value']))
-    ==== =====
-    Name Value
-    ==== =====
-    a    1    
-    b    2    
-    ==== =====
+    +-----+------+
+    | Name|Value |
+    +-----+------+
+    | a   |1     |
+    +-----+------+
+    | b   |2     |
+    +-----+------+
     """
     if isinstance(data, pandas.DataFrame):
         if data.index.name:

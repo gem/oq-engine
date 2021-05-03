@@ -41,12 +41,12 @@ class GmfEbRiskTestCase(CalculatorTestCase):
     def test_case_1(self):
         self.run_calc(case_1.__file__, 'job_risk.ini')
         text = view('portfolio_loss', self.calc.datastore)
-        self.assertIn('avg  4_322', text)
+        self.assertIn('avg |4_322', text)
 
         # test the HDF5 importer
         self.run_calc(case_1.__file__, 'job.ini')
         text = view('portfolio_loss', self.calc.datastore)
-        self.assertIn('avg  4_322', text)
+        self.assertIn('avg |4_322', text)
 
     def test_case_2(self):
         # case with 3 sites but gmvs only on 2 sites
