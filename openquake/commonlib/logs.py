@@ -150,36 +150,6 @@ class LogDatabaseHandler(logging.Handler):
                   record.getMessage())
 
 
-@contextmanager
-def handle(job_id, log_level='info', log_file=None):
-    """
-    Context manager adding and removing log handlers.
-
-    :param job_id:
-         ID of the current job
-    :param log_level:
-         one of debug, info, warn, error, critical
-    :param log_file:
-         log file path (if None, logs on stdout only)
-    """
-    handlers = [LogDatabaseHandler(job_id)]  # log on db always
-    if log_file is None:
-        # add a StreamHandler if not already there
-        if not any(h for h in logging.root.handlers
-                   if isinstance(h, logging.StreamHandler)):
-            handlers.append(LogStreamHandler(job_id))
-    else:
-        handlers.append(LogFileHandler(job_id, log_file))
-    for handler in handlers:
-        logging.root.addHandler(handler)
-    init(job_id, LEVELS.get(log_level, log_level))
-    try:
-        yield
-    finally:
-        for handler in handlers:
-            logging.root.removeHandler(handler)
-
-
 class LogContext:
     """
     Context manager managing the logging functionality
