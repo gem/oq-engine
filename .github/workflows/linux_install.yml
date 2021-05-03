@@ -5,7 +5,7 @@ name: Install engine for 3.6, 3.7 and 3.8 on linux
 
 on:
   schedule:
-    - cron: "0 13 * * *"
+    - cron: "0 4 * * *"
 jobs:
 
   install_and_test:
