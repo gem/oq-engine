@@ -77,17 +77,15 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, reuse_input,
     """
     Run both hazard and risk, one after the other
     """
-    oq = readinput.get_oqparam(job_haz, kw=params)
-    hcalc = base.calculators(oq, calc_id)
+    hcalc = base.get_calc(job_haz, calc_id, params)
     hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
     hcalc.datastore.close()
     hc_id = hcalc.datastore.calc_id
     rcalc_id = logs.init('job', level=getattr(logging, loglevel.upper()))
     params['hazard_calculation_id'] = str(hc_id)
-    oq = readinput.get_oqparam(job_risk, kw=params)
-    rcalc = base.calculators(oq, rcalc_id)
+    rcalc = base.get_calc(job_risk, rcalc_id, params)
     if reuse_input:  # enable caching
-        oq.cachedir = datastore.get_datadir()
+        rcalc.oqparam.cachedir = datastore.get_datadir()
     rcalc.run(pdb=pdb, exports=exports)
     return rcalc
 
@@ -117,10 +115,9 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
                     raise SystemExit(
                         'There are %d old calculations, cannot '
                         'retrieve the %s' % (len(calc_ids), hc_id))
-            oqparam = readinput.get_oqparam(job_inis[0], kw=params)
-            calc = base.calculators(oqparam, calc_id)
+            calc = base.get_calc(job_inis[0], calc_id, params)
             if reuse_input:  # enable caching
-                oqparam.cachedir = datastore.get_datadir()
+                calc.oqparam.cachedir = datastore.get_datadir()
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports)
         else:  # run hazard + risk

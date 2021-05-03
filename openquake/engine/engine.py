@@ -227,14 +227,14 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
+def run_calc(job_id, job_dict, exports, log_level='info', log_file=None, **kw):
     """
     Run a calculation.
 
     :param job_id:
         ID of the current job
-    :param oqparam:
-        :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :param job_dict:
+        dictionary of job parameters
     :param exports:
         A comma-separated string of export types.
     """
@@ -242,13 +242,13 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
     setproctitle('oq-job-%d' % job_id)
     logs.init(job_id, getattr(logging, log_level.upper()))
     with logs.handle(job_id, log_level, log_file):
-        calc = base.calculators(oqparam, calc_id=job_id)
+        calc = base.get_calc(job_dict, job_id)
         logging.info('%s running %s [--hc=%s]',
                      getpass.getuser(),
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
         logging.info('Using engine version %s', __version__)
-        msg = check_obsolete_version(oqparam.calculation_mode)
+        msg = check_obsolete_version(job_dict['calculation_mode'])
         if msg:
             logging.warning(msg)
         calc.from_engine = True
@@ -370,25 +370,18 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
                     'hazard_calculation_id' not in kw and
                     'sensitivity_analysis' not in job):
                 hc_id = job_id
-            try:
-                oqparam = readinput.get_oqparam(job)
-            except BaseException:
-                tb = traceback.format_exc()
-                logging.critical(tb)
-                logs.dbcmd('finish', job_id, 'failed')
-                raise
-        jobparams.append((job_id, oqparam))
+        jobparams.append((job_id, job))
     jobarray = len(jobparams) > 1 and multi
     try:
         poll_queue(job_id, poll_time=15)
         # wait for an empty slot or a CTRL-C
     except BaseException:
         # the job aborted even before starting
-        for job_id, oqparam in jobparams:
+        for job_id, jobparam in jobparams:
             logs.dbcmd('finish', job_id, 'aborted')
         return jobparams
     else:
-        for job_id, oqparam in jobparams:
+        for job_id, jobparam in jobparams:
             dic = {'status': 'executing', 'pid': _PID}
             if jobarray:
                 dic['hazard_calculation_id'] = jobparams[0][0]
@@ -397,8 +390,8 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         if config.zworkers['host_cores'] and parallel.workers_status() == []:
             logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
-        allargs = [(job_id, oqparam, exports, log_level, log_file)
-                   for job_id, oqparam in jobparams]
+        allargs = [(job_id, jobparam, exports, log_level, log_file)
+                   for job_id, jobparam in jobparams]
         if jobarray:
             with general.start_many(run_calc, allargs):
                 pass

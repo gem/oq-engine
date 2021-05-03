@@ -1652,3 +1652,10 @@ class OqParam(valid.ParamSet):
                 self.hazard_calculation_id = int(pars['hazard_calculation_id'])
         else:  # new format >= 3.12
             vars(self).update(json.loads(python3compat.decode(array)))
+        try:
+            md = self.maximum_distance
+        except AttributeError:  # normal in job_risk.ini
+            return
+        self.maximum_distance = valid.MagDepDistance()
+        for trt, val in md.items():
+            self.maximum_distance[trt] = val

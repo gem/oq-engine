@@ -281,6 +281,9 @@ class File(h5py.File):
     3
     >>> f.close()
     """
+    class EmptyDataset(ValueError):
+        """Raised when reading an empty dataset"""
+
     def __init__(self, name, mode='r', driver=None, libver='latest',
                  userblock_size=None, swmr=True, rdcc_nslots=None,
                  rdcc_nbytes=None, rdcc_w0=None, track_order=None,

@@ -48,7 +48,8 @@ get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
 get_imt = operator.attrgetter('imt')
 
-calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
+calculators = general.CallableDict(
+    lambda dstore: dstore['oqparam'].calculation_mode)
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -59,14 +60,21 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
 
 
-def get_calc(job_ini, calc_id):
+def get_calc(job_ini, calc_id, kw={}):
     """
     Factory function returning a Calculator instance
 
-    :param job_ini: path to job.ini file
+    :param job_ini: path to job.ini file or dictionary of parameters
     :param calc_id: calculation ID
+    :param kw: extra keyword arguments (optional)
     """
-    return calculators(readinput.get_oqparam(job_ini), calc_id)
+    if isinstance(job_ini, dict):
+        params = job_ini
+        params.update(kw)
+    else:  # path to ini file
+        params = readinput.get_params(job_ini, kw=kw)
+    dstore = datastore.new(calc_id, params)
+    return calculators(dstore)
 
 
 # this is used for the minimum_intensity dictionaries
@@ -155,15 +163,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     from_engine = False  # set by engine.run_calc
     is_stochastic = False  # True for scenario and event based calculators
 
-    def __init__(self, oqparam, calc_id):
-        oqparam.validate()
-        self.datastore = datastore.new(calc_id)
+    def __init__(self, dstore):
+        self.datastore = dstore
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
             h5=self.datastore)
         # NB: using h5=self.datastore.hdf5 would mean losing the performance
         # info about Calculator.run since the file will be closed later on
-        self.oqparam = oqparam
+        self.oqparam = dstore['oqparam']
 
     def pre_checks(self):
         """

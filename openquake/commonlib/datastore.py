@@ -157,18 +157,24 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     return dstore.open(mode)
 
 
-def new(calc_id, oqparam=None, datadir=None, mode=None):
+def new(calc_id, job_dict=None, datadir=None, mode=None):
     """
     :param calc_id:
         if "job", create a job record and initialize the logs
         if "calc" just initialize the logs
         if integer > 0 look in the database and then on the filesystem
         if integer < 0 look at the old calculations in the filesystem
+    :param job_dict:
+        a dictionary of parameters or the path to a job.ini file
     :returns:
         a DataStore instance associated to the given calc_id
     """
+    from openquake.commonlib import readinput  # avoids circular import
     if calc_id in ('job', 'calc'):
-        return new(init(calc_id), oqparam, datadir, mode)
+        if isinstance(job_dict, str):
+            job_dict = readinput.get_params(job_dict)  # does not log
+        calc_id = init(calc_id)  # initialize logs
+        return new(calc_id, job_dict, datadir, mode)
     datadir = datadir or get_datadir()
     ppath = None
     if calc_id < 0:  # look at the old calculations of the current user
@@ -181,7 +187,12 @@ def new(calc_id, oqparam=None, datadir=None, mode=None):
                 'retrieve the %s' % (len(calc_ids), calc_id))
     else:
         jid = calc_id
-    haz_id = None if oqparam is None else oqparam.hazard_calculation_id
+    if job_dict:
+        oqparam = readinput.get_oqparam(job_dict)  # logs already initialized
+        oqparam.validate()
+        haz_id = oqparam.hazard_calculation_id
+    else:
+        haz_id = None
     # look in the db
     job = dbcmd('get_job', jid)
     if job:
@@ -195,7 +206,8 @@ def new(calc_id, oqparam=None, datadir=None, mode=None):
     else:  # when using oq run there is no job in the db
         path = os.path.join(datadir, 'calc_%s.hdf5' % jid)
     dstore = DataStore(path, ppath, mode)
-    if oqparam:
+    dstore.job = job
+    if job_dict:
         dstore['oqparam'] = oqparam
     return dstore
 
@@ -248,8 +260,8 @@ class DataStore(collections.abc.MutableMapping):
     For an example of use see :class:`openquake.hazardlib.site.SiteCollection`.
     """
 
-    class EmptyDataset(ValueError):
-        """Raised when reading an empty dataset"""
+    calc_id = None  # to be set
+    job = None  # to be set
 
     def __init__(self, path, ppath=None, mode=None):
         self.filename = path
