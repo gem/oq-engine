@@ -4,10 +4,8 @@
 name: Install engine for 3.6, 3.7 and 3.8 on linux
 
 on:
-  push:
-    branches:
-      - cleanup
-
+  schedule:
+    - cron: "0 13 * * *"
 jobs:
 
   install_and_test:
@@ -41,6 +39,7 @@ jobs:
         grep setuptools requirements*
         PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
         echo $PY_VER
+        pip3 install -U pip wheel setuptools
         pip3 install -r requirements-$PY_VER-linux64.txt
         pip3 install -e .\[osgeo\]
         pip3 list
