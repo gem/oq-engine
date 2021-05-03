@@ -1211,7 +1211,7 @@ class FullLogicTree(object):
                 self.sm_rlzs.append(sm_rlz)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
 
-    def get_eri_by_ltp(self):
+    def get_smr_by_ltp(self):
         """
         :returns: a dictionary sm_lt_path -> effective realization index
         """
@@ -1248,27 +1248,27 @@ class FullLogicTree(object):
         """
         return self.source_model_lt.sampling_method
 
-    def get_trti_eri(self, trt_smr):
+    def get_trti_smr(self, trt_smr):
         """
-        :returns: (trti, eri)
+        :returns: (trti, smr)
         """
         return divmod(trt_smr, len(self.sm_rlzs))
 
-    def get_trt_smr(self, trt, eri):
+    def get_trt_smr(self, trt, smr):
         """
         :returns: trt_smr
         """
-        gid = self.trti[trt] * len(self.sm_rlzs) + int(eri)
+        gid = self.trti[trt] * len(self.sm_rlzs) + int(smr)
         return gid
 
-    def get_trt_smrs(self, eri):
+    def get_trt_smrs(self, smr):
         """
-        :param eri: effective realization index
+        :param smr: effective realization index
         :returns: array of T group IDs, being T the number of TRTs
         """
         nt = len(self.gsim_lt.values)
         ns = len(self.sm_rlzs)
-        return eri + numpy.arange(nt) * ns
+        return smr + numpy.arange(nt) * ns
 
     def gsim_by_trt(self, rlz):
         """
@@ -1319,14 +1319,14 @@ class FullLogicTree(object):
                     rlz.weight = rlz.weight / tot_weight
         return rlzs
 
-    def get_rlzs_by_eri(self):
+    def get_rlzs_by_smr(self):
         """
-        :returns: a dict eri -> rlzs
+        :returns: a dict smr -> rlzs
         """
         smltpath = operator.attrgetter('sm_lt_path')
-        eri_by_ltp = self.get_eri_by_ltp()
+        smr_by_ltp = self.get_smr_by_ltp()
         rlzs = self.get_realizations()
-        dic = {eri_by_ltp['~'.join(ltp)]: rlzs for ltp, rlzs in groupby(
+        dic = {smr_by_ltp['~'.join(ltp)]: rlzs for ltp, rlzs in groupby(
             rlzs, smltpath).items()}
         return dic
 
@@ -1335,15 +1335,15 @@ class FullLogicTree(object):
         :returns: a dictionary gsim -> array of rlz indices
         """
         if not hasattr(self, '_rlzs_by_grp'):
-            eri_by_ltp = self.get_eri_by_ltp()
+            smr_by_ltp = self.get_smr_by_ltp()
             rlzs = self.get_realizations()
             acc = AccumDict(accum=AccumDict(accum=[]))  # trt_smr->gsim->rlzs
             for sm in self.sm_rlzs:
                 for gid in self.get_trt_smrs(sm.ordinal):
-                    trti, eri = divmod(gid, len(self.sm_rlzs))
+                    trti, smr = divmod(gid, len(self.sm_rlzs))
                     for rlz in rlzs:
-                        idx = eri_by_ltp['~'.join(rlz.sm_lt_path)]
-                        if idx == eri:
+                        idx = smr_by_ltp['~'.join(rlz.sm_lt_path)]
+                        if idx == smr:
                             acc[gid][rlz.gsim_rlz.value[trti]].append(
                                 rlz.ordinal)
             self._rlzs_by_grp = {}
