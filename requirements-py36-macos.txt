@@ -1,6 +1,3 @@
- versions for development based on
-# Ubuntu 18.04 stack
-# !! must update pip first! so wheels will be used !!
 
 # GEM Mirror
 # We also provide pre-compiled macosx_10_9_x86_64 wheels for
