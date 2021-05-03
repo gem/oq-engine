@@ -31,13 +31,15 @@ jobs:
         run: python -c "import sys; print(sys.version)"
       - name: Install engine on developer mode
         run: |
-          git status
-          $PY_VER="py${{ matrix.python-version }}"
-          $py = $PY_VER.replace(".","")
+          #git status
+          #$PY_VER="py${{ matrix.python-version }}"
+          #$py = $PY_VER.replace(".","")
           python -m pip install pip wheel setuptools --upgrade
-          python -m pip install install -r requirements-$py-win64.txt
-          python -m pip install -e .
+          #python -m pip install install -r requirements-$py-win64.txt
+          #python -m pip install -e .
+          python install.py devel
       - name: Run demos to test installation
         run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
           oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"

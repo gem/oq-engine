@@ -25,16 +25,14 @@ jobs:
         run: pip3 install pytest
       - name: Run Installation of oq-engine in devel mode 
         run: |
-            git status
-            PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
-            echo $PY_VER
+            #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
+            #echo $PY_VER
             pip3 install -U pip wheel setuptools
-            pip3 install -r requirements-$PY_VER-macos.txt
-            pip3 install -e .\[osgeo\]
-            pip3 list
-            #  python install.py devel --version=cleanup
+            #pip3 install -r requirements-$PY_VER-macos.txt
+            #pip3 install -e .\[osgeo\]
+            python install.py devel --version=cleanup
       - name: Run demos to test installation
         run: |
-          #source openquake/bin/activate
+          source ~/openquake/bin/activate
           oq --version
           oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
