@@ -18,16 +18,60 @@
 """
 Set up some system-wide loggers
 """
+import socket
 import logging
 from datetime import datetime
 from contextlib import contextmanager
-from openquake.commonlib.datastore import dbcmd, init  # keep it here!
+from openquake.baselib import config, zeromq
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
+DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
+
+
+def dbcmd(action, *args):
+    """
+    A dispatcher to the database server.
+
+    :param string action: database action to perform
+    :param tuple args: arguments
+    """
+    host = socket.gethostbyname(config.dbserver.host)
+    sock = zeromq.Socket(
+        'tcp://%s:%s' % (host, DBSERVER_PORT), zeromq.zmq.REQ, 'connect')
+    with sock:
+        res = sock.send((action,) + args)
+        if isinstance(res, parallel.Result):
+            return res.get()
+    return res
+
+
+def init(calc_id, level=logging.INFO):
+    """
+    1. initialize the root logger (if not already initialized)
+    2. set the format of the root handlers (if any)
+    3. return a new calculation ID if calc_id is 'job' or 'calc'
+       (with 'calc' the calculation ID is not stored in the database)
+    """
+    if not logging.root.handlers:  # first time
+        logging.basicConfig(level=level)
+    if calc_id == 'job':  # produce a calc_id by creating a job in the db
+        calc_id = dbcmd('create_job', get_datadir())
+    elif calc_id == 'calc':  # produce a calc_id without creating a job
+        calc_id = get_last_calc_id() + 1
+    else:
+        calc_id = int(calc_id)
+        path = os.path.join(get_datadir(), 'calc_%d.hdf5' % calc_id)
+        if os.path.exists(path):
+            raise OSError('%s already exists' % path)
+    fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
+    for handler in logging.root.handlers:
+        f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
+        handler.setFormatter(f)
+    return calc_id
 
 
 def _update_log_record(self, record):
@@ -111,3 +155,50 @@ def handle(job_id, log_level='info', log_file=None):
     finally:
         for handler in handlers:
             logging.root.removeHandler(handler)
+
+
+class LogHandler:
+    """
+    Context manager managing the logging functionality.
+
+    >> LogHandler("job") creates a record on the DB
+    >> LogHandler("calc") does not create a record on the DB
+    >> LogHandler(calc_id) associates a calculation to the log
+    """
+    def __init__(self, calc_id, log_level='info', log_file=None):
+        if calc_id == "job":
+            self.job = None
+            pass  # create job
+        elif calc_id == "calc":
+            pass
+        elif calc_id < 0:
+            pass
+        self.calc_id = calc_id
+        self.log_level = log_level
+        self.log_file = log_file
+
+    def __enter__(self):
+        self.handlers = []
+        if self.job:
+            self.handlers.append(LogDatabaseHandler(self.calc_id))
+        if self.log_file is None:
+            # add a StreamHandler if not already there
+            if not any(h for h in logging.root.handlers
+                       if isinstance(h, logging.StreamHandler)):
+                self.handlers.append(LogStreamHandler(self.calc_id))
+        else:
+            self.handlers.append(LogFileHandler(self.calc_id, self.log_file))
+        for handler in self.handlers:
+            logging.root.addHandler(handler)
+        init(self.calc_id, LEVELS.get(self.log_level, logging.WARNING))
+        return self
+
+    def __exit(self, etype, exc, tb):
+        if self.job:
+            if tb:
+                datastore.dbcmd('finish', self.calc_id, 'failed')
+            else:
+                datastore.dbcmd('finish', self.calc_id, 'complete')
+        for handler in self.handlers:
+            logging.root.removeHandler(handler)
+

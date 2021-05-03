@@ -22,7 +22,6 @@ import re
 import gzip
 import socket
 import getpass
-import logging
 import collections
 import numpy
 import h5py
@@ -31,24 +30,6 @@ from openquake.baselib import (
     hdf5, config, parallel, performance, general, zeromq)
 
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
-
-
-def dbcmd(action, *args):
-    """
-    A dispatcher to the database server.
-
-    :param string action: database action to perform
-    :param tuple args: arguments
-    """
-    host = socket.gethostbyname(config.dbserver.host)
-    sock = zeromq.Socket(
-        'tcp://%s:%s' % (host, DBSERVER_PORT), zeromq.zmq.REQ, 'connect')
-    with sock:
-        res = sock.send((action,) + args)
-        if isinstance(res, parallel.Result):
-            return res.get()
-    return res
 
 
 def get_datadir():
@@ -204,30 +185,6 @@ def new(calc_id, oqparam=None, datadir=None, mode=None):
         dstore['oqparam'] = oqparam
     return dstore
 
-
-def init(calc_id, level=logging.INFO):
-    """
-    1. initialize the root logger (if not already initialized)
-    2. set the format of the root handlers (if any)
-    3. return a new calculation ID if calc_id is 'job' or 'calc'
-       (with 'calc' the calculation ID is not stored in the database)
-    """
-    if not logging.root.handlers:  # first time
-        logging.basicConfig(level=level)
-    if calc_id == 'job':  # produce a calc_id by creating a job in the db
-        calc_id = dbcmd('create_job', get_datadir())
-    elif calc_id == 'calc':  # produce a calc_id without creating a job
-        calc_id = get_last_calc_id() + 1
-    else:
-        calc_id = int(calc_id)
-        path = os.path.join(get_datadir(), 'calc_%d.hdf5' % calc_id)
-        if os.path.exists(path):
-            raise OSError('%s already exists' % path)
-    fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
-    for handler in logging.root.handlers:
-        f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
-        handler.setFormatter(f)
-    return calc_id
 
 
 class DataStore(collections.abc.MutableMapping):
