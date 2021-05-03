@@ -130,7 +130,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check view inputs
         lines = view('inputs', self.calc.datastore).splitlines()
-        self.assertEqual(len(lines), 9)
+        self.assertEqual(len(lines), 13)  # rst table with 13 rows
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
