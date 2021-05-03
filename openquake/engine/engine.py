@@ -227,7 +227,7 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-def run_calc(log, oqparam, exports, log_file, **kw):
+def run_calc(log, oqparam, exports, log_file=None, **kw):
     """
     Run a calculation.
 
