@@ -306,7 +306,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=False):
                 {imt: imtls[imt]})
         job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
-    if validate and '_job_id' not in job_ini:
+    if validate and '_log' not in job_ini:
         oqparam.validate()
     return oqparam
 

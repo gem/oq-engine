@@ -554,8 +554,8 @@ agg_id
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
         oq.__dict__['aggregate_by'] = ['NAME_1']
-        job_id = logs.init('calc', logging.INFO)  # requires the DbServer
-        prc = PostRiskCalculator(oq, job_id)
+        log = logs.init('calc', logging.INFO)
+        prc = PostRiskCalculator(oq, log.calc_id)
         oq.hazard_calculation_id = parent.calc_id
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
             prc.run()

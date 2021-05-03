@@ -562,13 +562,12 @@ def submit_job(job_ini, username, **kw):
     """
     # errors in validating oqparam are reported immediately
     params = readinput.get_params(job_ini)
-    job_id = logs.init('job')
-    params['_job_id'] = job_id
+    params['_log'] = log = logs.init('job')
     proc = Process(target=engine.run_jobs,
                    args=([params], config.distribution.log_level, None,
                          '', username), kwargs=kw)
     proc.start()
-    return job_id
+    return log.calc_id
 
 
 @require_http_methods(['GET'])

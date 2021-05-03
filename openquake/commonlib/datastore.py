@@ -20,59 +20,13 @@ import io
 import os
 import re
 import gzip
-import socket
-import getpass
 import collections
 import numpy
 import h5py
 
-from openquake.baselib import (
-    hdf5, config, parallel, performance, general, zeromq)
-
-CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-
-
-def get_datadir():
-    """
-    Extracts the path of the directory where the openquake data are stored
-    from the environment ($OQ_DATADIR) or from the shared_dir in the
-    configuration file.
-    """
-    datadir = os.environ.get('OQ_DATADIR')
-    if not datadir:
-        shared_dir = config.directory.shared_dir
-        if shared_dir:
-            datadir = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
-        else:  # use the home of the user
-            datadir = os.path.join(os.path.expanduser('~'), 'oqdata')
-    return datadir
-
-
-def get_calc_ids(datadir=None):
-    """
-    Extract the available calculation IDs from the datadir, in order.
-    """
-    datadir = datadir or get_datadir()
-    if not os.path.exists(datadir):
-        return []
-    calc_ids = set()
-    for f in os.listdir(datadir):
-        mo = re.match(CALC_REGEX, f)
-        if mo:
-            calc_ids.add(int(mo.group(2)))
-    return sorted(calc_ids)
-
-
-def get_last_calc_id(datadir=None):
-    """
-    Extract the latest calculation ID from the given directory.
-    If none is found, return 0.
-    """
-    datadir = datadir or get_datadir()
-    calcs = get_calc_ids(datadir)
-    if not calcs:
-        return 0
-    return calcs[-1]
+from openquake.baselib import hdf5, performance, general
+from openquake.commonlib.logs import (
+    get_datadir, get_calc_ids, get_last_calc_id, CALC_REGEX, dbcmd)
 
 
 def hdf5new(datadir=None):
