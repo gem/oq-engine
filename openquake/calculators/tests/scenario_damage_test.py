@@ -56,15 +56,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_1(self):
         # test with a single event and a missing tag
         self.assert_ok(case_1, 'job_risk.ini')
-        got = view('num_units', self.calc.datastore)
-        self.assertEqual('''\
-======== =========
-taxonomy num_units
-======== =========
-RC       2_000    
-RM       4_000    
-*ALL*    6_000    
-======== =========''', got)
+        view('num_units', self.calc.datastore)
 
         # test agg_damages, 1 realization x 3 damage states
         [dmg] = extract(self.calc.datastore, 'agg_damages/structural?'
