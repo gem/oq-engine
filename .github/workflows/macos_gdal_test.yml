@@ -33,7 +33,7 @@ jobs:
             pip3 list
       - name: pytest to test gdal whl
         run: |
-          pytest tests/commands_test.py -k nrml_to_gpkg
+          pytest -v openquake/commands -k nrml_to_gpkg
       - name: Run demos to test installation
         run: |
           oq --version
