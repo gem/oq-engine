@@ -137,15 +137,15 @@ def rst_table(data, header=None, fmt=None):
                              % (len(col_sizes), len(tup)))
         body.append(tup)
 
-    sepline = ' '.join(('=' * size for size in col_sizes))
-    templ = ' '.join(('%-{}s'.format(size) for size in col_sizes))
+    sepline = '+-%s-+' % '+'.join(('-' * size for size in col_sizes))
+    templ = '| %s |' % '|'.join(('%-{}s'.format(size) for size in col_sizes))
     if header:
         lines = [sepline, templ % tuple(header), sepline]
     else:
         lines = [sepline]
     for row in body:
         lines.append(templ % row)
-    lines.append(sepline)
+        lines.append(sepline)
     return '\n'.join(lines)
 
 
