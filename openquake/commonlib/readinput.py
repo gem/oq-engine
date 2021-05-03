@@ -254,7 +254,7 @@ def get_params(job_ini, kw={}):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=False):
+def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -306,7 +306,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=False):
                 {imt: imtls[imt]})
         job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
-    if validate and '_job_id' not in job_ini:
+    if validate:
         oqparam.validate()
     return oqparam
 
