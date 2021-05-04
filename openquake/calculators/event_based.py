@@ -489,19 +489,20 @@ class EventBasedCalculator(base.HazardCalculator):
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
             oq.export_dir = export_dir
-            job_id = logs.init('job')
-            oq.calculation_mode = 'classical'
-            self.cl = ClassicalCalculator(oq, job_id)
-            # TODO: perhaps it is possible to avoid reprocessing the source
-            # model, however usually this is quite fast and do not dominate
-            # the computation
-            self.cl.run()
-            engine.expose_outputs(self.datastore)
-            for imt in oq.imtls:
-                cl_mean_curves = get_mean_curves(self.datastore, imt)
-                eb_mean_curves = get_mean_curves(self.datastore, imt)
-                self.rdiff, index = util.max_rel_diff_index(
-                    cl_mean_curves, eb_mean_curves)
-                logging.warning('Relative difference with the classical '
-                                'mean curves: %d%% at site index %d, imt=%s',
-                                self.rdiff * 100, index, imt)
+            with logs.init('job') as log:
+                oq.calculation_mode = 'classical'
+                self.cl = ClassicalCalculator(oq, log.calc_id)
+                # TODO: perhaps it is possible to avoid reprocessing the source
+                # model, however usually this is quite fast and do not dominate
+                # the computation
+                self.cl.run()
+                engine.expose_outputs(self.cl.datastore)
+                for imt in oq.imtls:
+                    cl_mean_curves = get_mean_curves(self.datastore, imt)
+                    eb_mean_curves = get_mean_curves(self.datastore, imt)
+                    self.rdiff, index = util.max_rel_diff_index(
+                        cl_mean_curves, eb_mean_curves)
+                    logging.warning(
+                        'Relative difference with the classical '
+                        'mean curves: %d%% at site index %d, imt=%s',
+                        self.rdiff * 100, index, imt)
