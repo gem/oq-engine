@@ -367,7 +367,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         for log, oqparam in logparams:
             dic = {'status': 'executing', 'pid': _PID, 'is_running': 1}
             if jobarray:
-                dic['hazard_calculation_id'] = logparams[0][0]
+                dic['hazard_calculation_id'] = logparams[0][0].calc_id
             logs.dbcmd('update_job', log.calc_id, dic)
     try:
         if config.zworkers['host_cores'] and parallel.workers_status() == []:

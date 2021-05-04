@@ -502,12 +502,12 @@ class DbTestCase(unittest.TestCase):
 class EngineRunJobTestCase(unittest.TestCase):
     def test_multi_run(self):
         job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
-        jobparams = run_jobs([job_ini, job_ini], log_level='error', multi=True)
-        jobs, params = zip(*jobparams)
+        logparams = run_jobs([job_ini, job_ini], log_level='error', multi=True)
+        logs, params = zip(*logparams)
         with Print.patch():
             [r1, r2] = commonlib.logs.dbcmd(
                 'select id, hazard_calculation_id from job '
-                'where id in (?S) order by id', jobs)
+                'where id in (?S) order by id', [log.calc_id for log in logs])
         self.assertEqual(r1.hazard_calculation_id, r1.id)
         self.assertEqual(r2.hazard_calculation_id, r1.id)
 
@@ -532,7 +532,7 @@ sensitivity_analysis = {
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
         with Print.patch() as p:
-            [(job_id, oqparam)] = run_jobs([job_ini], log_level='error')
+            [(log, oqparam)] = run_jobs([job_ini], log_level='error')
         self.assertIn('id | name', str(p))
 
         # check the exported outputs
@@ -555,14 +555,14 @@ Input Files
 Realizations
 Source Loss Table'''.splitlines())
         with Print.patch() as p:
-            sap.runline(f'openquake.commands engine --lo {job_id}')
+            sap.runline(f'openquake.commands engine --lo {log.calc_id}')
         got = set(re.findall(r'\| ([\w ]+)', str(p))) - {'name'}
         if got != expected:
             print('Missing output', expected - got, file=sys.stderr)
         # sanity check on the performance views: make sure that the most
         # relevant information is stored (it can be lost due to a wrong
         # refactoring of the monitoring and it happened several times)
-        with read(job_id) as dstore:
+        with read(log.calc_id) as dstore:
             perf = view('performance', dstore)
             self.assertIn('total event_based_risk', perf)
 
@@ -572,13 +572,13 @@ Source Loss Table'''.splitlines())
         tempdir = tempfile.mkdtemp()
         dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
-            [(job_id, oq)] = run_jobs([job_ini], log_level='error')
-            job = commonlib.logs.dbcmd('get_job', job_id)
+            [(log, oq)] = run_jobs([job_ini], log_level='error')
+            job = commonlib.logs.dbcmd('get_job', log.calc_id)
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)
         with Print.patch() as p:
-            sap.runline(f'openquake.commands export ruptures {job_id} -e csv'
-                        f' --export-dir={tempdir}')
+            sap.runline(f'openquake.commands export ruptures {log.calc_id} '
+                        f'-e csv --export-dir={tempdir}')
         self.assertIn('Exported', str(p))
         shutil.rmtree(tempdir)
 

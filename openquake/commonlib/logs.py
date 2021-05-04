@@ -154,24 +154,23 @@ class LogContext:
     """
     Context manager managing the logging functionality
     """
-    def __init__(self, db, log_level='info', log_file=None):
-        if db:
+    def __init__(self, job: bool, log_level='info', log_file=None):
+        self.job = job
+        if job:
             self.calc_id = dbcmd('create_job', get_datadir())
-            self.job = True
         else:
             self.calc_id = get_last_calc_id() + 1
-            self.job = False
-        if not logging.root.handlers:  # first time
-            logging.basicConfig(level=LEVELS.get(log_level, log_level))
-        fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(
-            self.calc_id)
-        for handler in logging.root.handlers:
-            f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
-            handler.setFormatter(f)
         self.log_level = log_level
         self.log_file = log_file
 
     def __enter__(self):
+        if not logging.root.handlers:  # first time
+            level = LEVELS.get(self.log_level, self.log_level)
+            logging.basicConfig(level=level)
+        f = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(self.calc_id)
+        for handler in logging.root.handlers:
+            fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
+            handler.setFormatter(fmt)
         self.handlers = []
         if self.job:
             self.handlers.append(LogDatabaseHandler(self.calc_id))
@@ -196,6 +195,12 @@ class LogContext:
         for handler in self.handlers:
             logging.root.removeHandler(handler)
         parallel.Starmap.shutdown()
+
+    def __getstate__(self):
+        # ensure pickleability
+        return dict(calc_id=self.calc_id, job=self.job,
+                    log_level=self.log_level, log_file=self.log_file)
+
 
 
 def init(job_or_calc, log_level='info', log_file=None):
