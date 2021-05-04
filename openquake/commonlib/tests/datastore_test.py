@@ -23,11 +23,12 @@ import unittest
 import tempfile
 import numpy
 from openquake.commonlib.datastore import new, read
+from openquake.commonlib import logs
 
 
 class DataStoreTestCase(unittest.TestCase):
     def setUp(self):
-        self.dstore = new('calc')
+        self.dstore = new(logs.init("calc").calc_id)
 
     def tearDown(self):
         self.dstore.clear()
