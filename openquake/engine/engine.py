@@ -365,7 +365,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         return logparams
     else:
         for log, oqparam in logparams:
-            dic = {'status': 'executing', 'pid': _PID}
+            dic = {'status': 'executing', 'pid': _PID, 'is_running': 1}
             if jobarray:
                 dic['hazard_calculation_id'] = logparams[0][0]
             logs.dbcmd('update_job', log.calc_id, dic)
