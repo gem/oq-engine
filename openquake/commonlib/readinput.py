@@ -254,7 +254,7 @@ def get_params(job_ini, kw={}):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
+def get_oqparam(job_ini, pkg=None, calculators=None, kw={}):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
@@ -268,11 +268,9 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
         valid choices for `calculation_mode`
     :param kw:
         Dictionary of strings to override the job parameters
-    :param validate:
-        Flag. By default it is false and the parameters are not validated
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
-        containing the validate and casted parameters/values parsed from
+        containing the validated and casted parameters/values parsed from
         the job.ini file as well as a subdictionary 'inputs' containing
         absolute paths to all of the files referenced in the job.ini, keyed by
         the parameter name.
@@ -306,8 +304,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=True):
                 {imt: imtls[imt]})
         job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
-    if validate:
-        oqparam.validate()
+    oqparam.validate()
     return oqparam
 
 
