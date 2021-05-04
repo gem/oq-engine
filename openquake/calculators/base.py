@@ -40,7 +40,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, datastore
+from openquake.commonlib import readinput, logictree, datastore, logs
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -59,14 +59,16 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
 
 
-def get_calc(job_ini, calc_id):
+def get_calc(job_ini, calc_id, kw={}):
     """
     Factory function returning a Calculator instance
 
     :param job_ini: path to job.ini file
-    :param calc_id: calculation ID
+    :param calc_id: calculation ID or the string "job" or "calc"
     """
-    return calculators(readinput.get_oqparam(job_ini), calc_id)
+    if isinstance(calc_id, str):
+        calc_id = logs.init(calc_id).calc_id
+    return calculators(readinput.get_oqparam(job_ini, kw=kw), calc_id)
 
 
 # this is used for the minimum_intensity dictionaries
