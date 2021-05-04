@@ -576,7 +576,7 @@ Source Loss Table'''.splitlines())
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)
         with Print.patch() as p:
-            sap.runline(f'openquake.commands export ruptures {job.calc_id} '
+            sap.runline(f'openquake.commands export ruptures {job.id} '
                         f'-e csv --export-dir={tempdir}')
         self.assertIn('Exported', str(p))
         shutil.rmtree(tempdir)
