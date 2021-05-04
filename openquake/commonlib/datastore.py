@@ -124,21 +124,16 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
 def new(calc_id, oqparam=None, datadir=None, mode=None):
     """
     :param calc_id:
-        if "job", create a job record and initialize the logs
-        if "calc" just initialize the logs
         if integer > 0 look in the database and then on the filesystem
         if integer < 0 look at the old calculations in the filesystem
     :returns:
         a DataStore instance associated to the given calc_id
     """
-    if calc_id in ('job', 'calc'):
-        return new(init(calc_id), oqparam, datadir, mode)
     haz_id = None if oqparam is None else oqparam.hazard_calculation_id
     dstore = _read(calc_id, datadir, mode, haz_id)
     if oqparam:
         dstore['oqparam'] = oqparam
     return dstore
-
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -148,7 +143,8 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> ds = new('calc')
+    >>> from openquake.commonlib import logs
+    >>> ds = new(logs.init("calc").calc_id)
     >>> ds['example'] = 42
     >>> print(ds['example'][()])
     42
