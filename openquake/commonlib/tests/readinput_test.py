@@ -104,7 +104,7 @@ export_dir = %s
                 'hazard_imtls': {'PGA': [0.1, 0.2]},
                 'minimum_asset_loss': {},
             }
-            params = getparams(readinput.get_oqparam(source, validate=1))
+            params = getparams(readinput.get_oqparam(source))
             self.assertEqual(expected_params, params)
         finally:
             os.unlink(sites_csv)
