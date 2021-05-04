@@ -33,17 +33,16 @@ jobs:
    # Use script to install engine and not the pip install .
     - name: Install engine with install script
       run: |
-        git status
-        grep setuptools requirements*
-        PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
-        echo $PY_VER
+        #git status
+        #grep setuptools requirements*
+        #PY_VER=`echo py${{ matrix.python-version }} | tr -d .` 
+        #echo $PY_VER
         pip3 install -U pip wheel setuptools
-        pip3 install -r requirements-$PY_VER-linux64.txt
-        pip3 install -e .\[osgeo\]
-        pip3 list
-        #python install.py devel --version=cleanup
+        #pip3 install -r requirements-$PY_VER-linux64.txt
+        #pip3 install -e .\[osgeo\]
+        python install.py devel 
     - name: Run demos to test installation
       run: |
-        #source openquake/bin/activate
+        source ~/openquake/bin/activate
         oq --version
         oq engine --run "https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip"
