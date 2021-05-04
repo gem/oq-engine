@@ -32,7 +32,7 @@ from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
-from openquake.engine.engine import run_jobs
+from openquake.engine.engine import create_jobs, run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data.classical import case_1, case_9, case_18
@@ -502,19 +502,19 @@ class DbTestCase(unittest.TestCase):
 class EngineRunJobTestCase(unittest.TestCase):
     def test_multi_run(self):
         job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
-        logparams = run_jobs([job_ini, job_ini], log_level='error', multi=True)
-        logs, params = zip(*logparams)
+        jobs = create_jobs([job_ini, job_ini], log_level='error', multi=True)
+        run_jobs(jobs, dict(multi=True))
         with Print.patch():
             [r1, r2] = commonlib.logs.dbcmd(
                 'select id, hazard_calculation_id from job '
-                'where id in (?S) order by id', [log.calc_id for log in logs])
-        self.assertEqual(r1.hazard_calculation_id, r1.id)
-        self.assertEqual(r2.hazard_calculation_id, r1.id)
+                'where id in (?S) order by id', [job.calc_id for job in jobs])
+        self.assertEqual(r1.hazard_calculation_id, None)
+        self.assertEqual(r2.hazard_calculation_id, None)
 
     def test_OQ_REDUCE(self):
         with mock.patch.dict(os.environ, OQ_REDUCE='.1'):
             job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
-            run_jobs([job_ini])
+            run_jobs(create_jobs([job_ini]))
 
     def test_sensitivity(self):
         job_ini = gettemp('''[general]
@@ -524,7 +524,7 @@ sites = 0 0
 intensity_measure_types = PGA
 sensitivity_analysis = {
   'maximum_distance': [100, 200]}''')
-        run_jobs([job_ini])
+        run_jobs(create_jobs([job_ini]))
 
     def test_ebr(self):
         # test a single case of `run_jobs`, but it is the most complex one,
@@ -532,7 +532,7 @@ sensitivity_analysis = {
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
         with Print.patch() as p:
-            [(log, oqparam)] = run_jobs([job_ini], log_level='error')
+            [log] = run_jobs(create_jobs([job_ini], 'error'))
         self.assertIn('id | name', str(p))
 
         # check the exported outputs
@@ -572,12 +572,12 @@ Source Loss Table'''.splitlines())
         tempdir = tempfile.mkdtemp()
         dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
-            [(log, oq)] = run_jobs([job_ini], log_level='error')
-            job = commonlib.logs.dbcmd('get_job', log.calc_id)
+            [job] = run_jobs(create_jobs([job_ini], 'error'))
+            job = commonlib.logs.dbcmd('get_job', job.calc_id)
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)
         with Print.patch() as p:
-            sap.runline(f'openquake.commands export ruptures {log.calc_id} '
+            sap.runline(f'openquake.commands export ruptures {job.id} '
                         f'-e csv --export-dir={tempdir}')
         self.assertIn('Exported', str(p))
         shutil.rmtree(tempdir)

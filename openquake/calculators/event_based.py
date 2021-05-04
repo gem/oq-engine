@@ -489,8 +489,8 @@ class EventBasedCalculator(base.HazardCalculator):
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
             oq.export_dir = export_dir
-            with logs.init('job') as log:
-                oq.calculation_mode = 'classical'
+            oq.calculation_mode = 'classical'
+            with logs.init('job', vars(oq)) as log:
                 self.cl = ClassicalCalculator(oq, log.calc_id)
                 # TODO: perhaps it is possible to avoid reprocessing the source
                 # model, however usually this is quite fast and do not dominate

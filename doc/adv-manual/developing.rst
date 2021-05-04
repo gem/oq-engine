@@ -115,9 +115,9 @@ programmaticaly is the following:
 .. code-block:: python
 
  >> from openquake.commonlib import logs
- >> from openquake.calculators.base import get_calc
- >> with logs.init('job') as log: # initialize logs
- ...   calc = get_calc('job.ini', log.calc_id)  # instantiate calculator
+ >> from openquake.calculators.base import calculators
+ >> with logs.init('job', 'job_ini') as log: # initialize logs
+ ...   calc = calculators(log.get_oqparam(), log.calc_id)
  ...   calc.run()  # run the calculator
 
 Then the results can be read from the datastore by using the extract API:

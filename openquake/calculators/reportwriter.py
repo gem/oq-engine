@@ -126,8 +126,8 @@ def build_report(job_ini, output_dir=None):
     :param output_dir:
         the directory where the report is written (default the input directory)
     """
-    with logs.init('calc') as log:
-        oq = readinput.get_oqparam(job_ini)
+    with logs.init('calc', job_ini) as log:
+        oq = log.get_oqparam()
         if 'source_model_logic_tree' in oq.inputs:
             oq.calculation_mode = 'preclassical'
         oq.ground_motion_fields = False

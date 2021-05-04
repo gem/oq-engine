@@ -122,7 +122,7 @@ class CalculatorTestCase(unittest.TestCase):
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
-        log = logs.init('calc')
+        log = logs.init('calc', params)
         return base.calculators(oq, log.calc_id)
 
     def run_calc(self, testfile, job_ini, **kw):

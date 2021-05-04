@@ -25,13 +25,14 @@ than 20 lines of code:
 
    import sys
    from openquake.commonlib import logs
-   from openquake.calculators.base import get_calc
+   from openquake.calculators.base import calculators
 
    def main(job_ini):
-       calc = get_calc(job_ini, logs.init('calc'))
-       calc.run(individual_curves='true', shutdown=True)
-       print('The hazard curves are in %s::/hcurves-rlzs'
-             % calc.datastore.filename)
+       with logs.init('calc', job_ini) as log:
+           calc = calculators(log.get_oqparam(), log.calc_id)
+           calc.run(individual_curves='true', shutdown=True)
+           print('The hazard curves are in %s::/hcurves-rlzs'
+                % calc.datastore.filename)
 
    if __name__ == '__main__':
        main(sys.argv[1])  # path to a job.ini file

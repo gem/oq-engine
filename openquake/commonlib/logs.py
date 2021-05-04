@@ -25,8 +25,8 @@ import getpass
 import logging
 import traceback
 from datetime import datetime
-from contextlib import contextmanager
 from openquake.baselib import config, zeromq, parallel
+from openquake.commonlib import readinput
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -154,14 +154,31 @@ class LogContext:
     """
     Context manager managing the logging functionality
     """
-    def __init__(self, job: bool, log_level='info', log_file=None):
+    def __init__(self, job: str, job_ini, log_level='info', log_file=None,
+                 user_name=None):
         self.job = job
-        if job:
-            self.calc_id = dbcmd('create_job', get_datadir())
-        else:
-            self.calc_id = get_last_calc_id() + 1
         self.log_level = log_level
         self.log_file = log_file
+        self.user_name = user_name
+        if isinstance(job_ini, str):
+            self.params = readinput.get_params(job_ini)
+        else:  # assume dictionary of parameters
+            self.params = job_ini
+        if job:
+            self.calc_id = dbcmd(
+                'create_job',
+                get_datadir(),
+                self.params['calculation_mode'],
+                self.params['description'],
+                user_name)
+        else:
+            self.calc_id = get_last_calc_id() + 1
+
+    def get_oqparam(self):
+        """
+        :returns: a validated OqParam instance
+        """
+        return readinput.get_oqparam(self.params)
 
     def __enter__(self):
         if not logging.root.handlers:  # first time
@@ -198,16 +215,31 @@ class LogContext:
 
     def __getstate__(self):
         # ensure pickleability
-        return dict(calc_id=self.calc_id, job=self.job,
-                    log_level=self.log_level, log_file=self.log_file)
+        return dict(calc_id=self.calc_id, job=self.job, params=self.params,
+                    log_level=self.log_level, log_file=self.log_file,
+                    user_name=self.user_name)
+
+    def __repr__(self):
+        hc_id = self.params.get('hazard_calculation_id')
+        return '<%s#%d, hc_id=%s>' % (self.__class__.__name__,
+                                      self.calc_id, hc_id)
 
 
-
-def init(job_or_calc, log_level='info', log_file=None):
+def init(job_or_calc, job_ini, log_level='info', log_file=None,
+         user_name=None):
     """
+    :param job_or_calc: the string "job" or "calc"
+    :param job_ini: path to the job.ini file or dictionary of parameters
+    :param log_level: the log level as a string or number
+    :param log_file: path to the log file (if any)
+    :param user_name: user running the job (None means current user)
+    :returns: a LogContext instance
+
     1. initialize the root logger (if not already initialized)
-    2. set the format of the root handlers (if any)
-    3. return a LogContext instance associated to a calculation ID
+    2. set the format of the root log handlers (if any)
+    3. create a job in the database if job_or_calc == "job"
+    4. return a LogContext instance associated to a calculation ID
     """
     assert job_or_calc in {"job", "calc"}, job_or_calc
-    return LogContext(job_or_calc == "job", log_level, log_file)
+    return LogContext(job_or_calc == "job", job_ini,
+                      log_level, log_file, user_name)

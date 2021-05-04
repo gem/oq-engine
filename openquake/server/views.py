@@ -558,16 +558,15 @@ def calc_run(request):
 def submit_job(job_ini, username, **kw):
     """
     Create a job object from the given job.ini file in the job directory
-    and run it in a new process. Returns a PID.
+    and run it in a new process.
+
+    :returns: a job ID
     """
-    # errors in validating oqparam are reported immediately
-    params = readinput.get_params(job_ini)
-    params['_log'] = log = logs.init('job')
-    proc = Process(target=engine.run_jobs,
-                   args=([params], config.distribution.log_level, None,
-                         '', username), kwargs=kw)
+    jobs = engine.create_jobs(
+        [job_ini], config.distribution.log_level, user_name=username)
+    proc = Process(target=engine.run_jobs, args=(jobs, kw))
     proc.start()
-    return log.calc_id
+    return jobs[0].calc_id
 
 
 @require_http_methods(['GET'])
