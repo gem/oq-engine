@@ -66,21 +66,10 @@ def main(job_ini):
     """
     Convert a composite source model into a DataFrame of ruptures
     """
-    # first of all, initialize logs
-    job_id = datastore.init("job")
-    oq = readinput.get_oqparam(job_ini)
-    dstore = datastore.new(job_id, oq)
-    try:
+    with logs.init("job") as log:
+        oq = readinput.get_oqparam(job_ini)
         csm = readinput.get_composite_source_model(oq)
-        csm2rup(csm, dstore)
-    except Exception:
-        datastore.dbcmd('finish', job_id, 'failed')
-        raise
-    else:
-        datastore.dbcmd('finish', job_id, 'complete')
-    finally:
-        dstore.close()
-        parallel.Starmap.shutdown()
+        csm2rup(csm, datastore.new(log.calc_id, oq))
 
 
 if __name__ == '__main__':

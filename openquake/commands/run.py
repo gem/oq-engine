@@ -82,26 +82,26 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, reuse_input,
     hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
     hcalc.datastore.close()
     hc_id = hcalc.datastore.calc_id
-    rcalc_id = logs.init('job', level=getattr(logging, loglevel.upper()))
-    params['hazard_calculation_id'] = str(hc_id)
-    oq = readinput.get_oqparam(job_risk, kw=params)
-    rcalc = base.calculators(oq, rcalc_id)
-    if reuse_input:  # enable caching
-        oq.cachedir = datastore.get_datadir()
-    rcalc.run(pdb=pdb, exports=exports)
+    with logs.init('job', level=getattr(logging, loglevel.upper())) as log:
+        params['hazard_calculation_id'] = str(hc_id)
+        oq = readinput.get_oqparam(job_risk, kw=params)
+        rcalc = base.calculators(oq, log.rcalc_id)
+        if reuse_input:  # enable caching
+            oq.cachedir = datastore.get_datadir()
+        rcalc.run(pdb=pdb, exports=exports)
     return rcalc
 
 
 # run with processpool unless OQ_DISTRIBUTE is set to something else
-def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
-         exports, params):
+def _run(job_inis, concurrent_tasks, pdb, reuse_input, loglevel, exports,
+         params):
     global calc_path
     assert len(job_inis) in (1, 2), job_inis
     # set the logs first of all
-    calc_id = logs.init(calc_id, getattr(logging, loglevel.upper()))
+    log = logs.init("job", getattr(logging, loglevel.upper()))
     # disable gzip_input
     base.BaseCalculator.gzip_inputs = lambda self: None
-    with performance.Monitor('total runtime', measuremem=True) as monitor:
+    with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
             os.environ['OQ_DISTRIBUTE'] = 'processpool'
         if len(job_inis) == 1:  # run hazard or risk
@@ -118,14 +118,14 @@ def _run(job_inis, concurrent_tasks, calc_id, pdb, reuse_input, loglevel,
                         'There are %d old calculations, cannot '
                         'retrieve the %s' % (len(calc_ids), hc_id))
             oqparam = readinput.get_oqparam(job_inis[0], kw=params)
-            calc = base.calculators(oqparam, calc_id)
+            calc = base.calculators(oqparam, log.calc_id)
             if reuse_input:  # enable caching
                 oqparam.cachedir = datastore.get_datadir()
             calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
                      exports=exports)
         else:  # run hazard + risk
             calc = run2(
-                job_inis[0], job_inis[1], calc_id, concurrent_tasks, pdb,
+                job_inis[0], job_inis[1], log.calc_id, concurrent_tasks, pdb,
                 reuse_input, loglevel, exports, params)
 
     logging.info('Total time spent: %s s', monitor.duration)
@@ -144,10 +144,9 @@ def main(job_ini,
          param='',
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
-         loglevel='info',
-         calc_id='job'):
+         loglevel='info'):
     """
-    Run a calculation bypassing the database layer
+    Run a calculation
     """
     dbserver.ensure_on()
     if param:
@@ -158,7 +157,7 @@ def main(job_ini,
         params['hazard_calculation_id'] = str(hc)
     if slowest:
         prof = cProfile.Profile()
-        stmt = ('_run(job_ini, concurrent_tasks, calc_id, pdb, reuse_input, '
+        stmt = ('_run(job_ini, concurrent_tasks, pdb, reuse_input, '
                 'loglevel, exports, params)')
         prof.runctx(stmt, globals(), locals())
         pstat = calc_path + '.pstat'
@@ -167,7 +166,7 @@ def main(job_ini,
         print(get_pstats(pstat, slowest))
         return
     try:
-        return _run(job_ini, concurrent_tasks, calc_id, pdb,
+        return _run(job_ini, concurrent_tasks, pdb,
                     reuse_input, loglevel, exports, params)
     finally:
         parallel.Starmap.shutdown()

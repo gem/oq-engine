@@ -126,27 +126,24 @@ def build_report(job_ini, output_dir=None):
     :param output_dir:
         the directory where the report is written (default the input directory)
     """
-    calc_id = logs.init('calc')
-    oq = readinput.get_oqparam(job_ini)
-    if 'source_model_logic_tree' in oq.inputs:
-        oq.calculation_mode = 'preclassical'
-    oq.ground_motion_fields = False
-    output_dir = output_dir or os.path.dirname(job_ini)
-    from openquake.calculators import base  # ugly
-    calc = base.calculators(oq, calc_id)
-    calc.save_params()  # needed to save oqparam
+    with logs.init('calc') as log:
+        oq = readinput.get_oqparam(job_ini)
+        if 'source_model_logic_tree' in oq.inputs:
+            oq.calculation_mode = 'preclassical'
+        oq.ground_motion_fields = False
+        output_dir = output_dir or os.path.dirname(job_ini)
+        from openquake.calculators import base  # ugly
+        calc = base.calculators(oq, log.calc_id)
+        calc.save_params()  # needed to save oqparam
 
-    # some taken is care so that the real calculation is not run:
-    # the goal is to extract information about the source management only
-    calc.pre_execute()
-    if oq.calculation_mode == 'preclassical':
-        calc.execute()
-    logging.info('Making the .rst report')
-    rw = ReportWriter(calc.datastore)
-    try:
+        # some taken is care so that the real calculation is not run:
+        # the goal is to extract information about the source management only
+        calc.pre_execute()
+        if oq.calculation_mode == 'preclassical':
+            calc.execute()
+        logging.info('Making the .rst report')
+        rw = ReportWriter(calc.datastore)
         rw.make_report()
-    finally:
-        parallel.Starmap.shutdown()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
               else calc.datastore.export_path('report.rst'))
     try:

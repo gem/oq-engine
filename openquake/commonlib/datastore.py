@@ -20,78 +20,13 @@ import io
 import os
 import re
 import gzip
-import socket
-import getpass
-import logging
 import collections
 import numpy
 import h5py
 
-from openquake.baselib import (
-    hdf5, config, parallel, performance, general, zeromq)
-
-CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
-
-
-def dbcmd(action, *args):
-    """
-    A dispatcher to the database server.
-
-    :param string action: database action to perform
-    :param tuple args: arguments
-    """
-    host = socket.gethostbyname(config.dbserver.host)
-    sock = zeromq.Socket(
-        'tcp://%s:%s' % (host, DBSERVER_PORT), zeromq.zmq.REQ, 'connect')
-    with sock:
-        res = sock.send((action,) + args)
-        if isinstance(res, parallel.Result):
-            return res.get()
-    return res
-
-
-def get_datadir():
-    """
-    Extracts the path of the directory where the openquake data are stored
-    from the environment ($OQ_DATADIR) or from the shared_dir in the
-    configuration file.
-    """
-    datadir = os.environ.get('OQ_DATADIR')
-    if not datadir:
-        shared_dir = config.directory.shared_dir
-        if shared_dir:
-            datadir = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
-        else:  # use the home of the user
-            datadir = os.path.join(os.path.expanduser('~'), 'oqdata')
-    return datadir
-
-
-def get_calc_ids(datadir=None):
-    """
-    Extract the available calculation IDs from the datadir, in order.
-    """
-    datadir = datadir or get_datadir()
-    if not os.path.exists(datadir):
-        return []
-    calc_ids = set()
-    for f in os.listdir(datadir):
-        mo = re.match(CALC_REGEX, f)
-        if mo:
-            calc_ids.add(int(mo.group(2)))
-    return sorted(calc_ids)
-
-
-def get_last_calc_id(datadir=None):
-    """
-    Extract the latest calculation ID from the given directory.
-    If none is found, return 0.
-    """
-    datadir = datadir or get_datadir()
-    calcs = get_calc_ids(datadir)
-    if not calcs:
-        return 0
-    return calcs[-1]
+from openquake.baselib import hdf5, performance, general
+from openquake.commonlib.logs import (
+    get_datadir, get_calc_ids, get_last_calc_id, CALC_REGEX, dbcmd)
 
 
 def hdf5new(datadir=None):
@@ -189,45 +124,16 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
 def new(calc_id, oqparam=None, datadir=None, mode=None):
     """
     :param calc_id:
-        if "job", create a job record and initialize the logs
-        if "calc" just initialize the logs
         if integer > 0 look in the database and then on the filesystem
         if integer < 0 look at the old calculations in the filesystem
     :returns:
         a DataStore instance associated to the given calc_id
     """
-    if calc_id in ('job', 'calc'):
-        return new(init(calc_id), oqparam, datadir, mode)
     haz_id = None if oqparam is None else oqparam.hazard_calculation_id
     dstore = _read(calc_id, datadir, mode, haz_id)
     if oqparam:
         dstore['oqparam'] = oqparam
     return dstore
-
-
-def init(calc_id, level=logging.INFO):
-    """
-    1. initialize the root logger (if not already initialized)
-    2. set the format of the root handlers (if any)
-    3. return a new calculation ID if calc_id is 'job' or 'calc'
-       (with 'calc' the calculation ID is not stored in the database)
-    """
-    if not logging.root.handlers:  # first time
-        logging.basicConfig(level=level)
-    if calc_id == 'job':  # produce a calc_id by creating a job in the db
-        calc_id = dbcmd('create_job', get_datadir())
-    elif calc_id == 'calc':  # produce a calc_id without creating a job
-        calc_id = get_last_calc_id() + 1
-    else:
-        calc_id = int(calc_id)
-        path = os.path.join(get_datadir(), 'calc_%d.hdf5' % calc_id)
-        if os.path.exists(path):
-            raise OSError('%s already exists' % path)
-    fmt = '[%(asctime)s #{} %(levelname)s] %(message)s'.format(calc_id)
-    for handler in logging.root.handlers:
-        f = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
-        handler.setFormatter(f)
-    return calc_id
 
 
 class DataStore(collections.abc.MutableMapping):
@@ -237,7 +143,8 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> ds = new('calc')
+    >>> from openquake.commonlib import logs
+    >>> ds = new(logs.init("calc").calc_id)
     >>> ds['example'] = 42
     >>> print(ds['example'][()])
     42

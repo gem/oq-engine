@@ -28,8 +28,8 @@ import signal
 import getpass
 import logging
 import itertools
-import traceback
 import platform
+from os.path import getsize
 import psutil
 import numpy
 try:
@@ -227,22 +227,23 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
+def run_calc(log, oqparam, exports, log_file=None, **kw):
     """
     Run a calculation.
 
-    :param job_id:
-        ID of the current job
+    :param log:
+        LogContext of the current job
     :param oqparam:
         :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param exports:
         A comma-separated string of export types.
+    :param log_file:
+        Pathname of the log file (or None)
     """
     register_signals()
-    setproctitle('oq-job-%d' % job_id)
-    logs.init(job_id, getattr(logging, log_level.upper()))
-    with logs.handle(job_id, log_level, log_file):
-        calc = base.calculators(oqparam, calc_id=job_id)
+    setproctitle('oq-job-%d' % log.calc_id)
+    with log:
+        calc = base.calculators(oqparam, calc_id=log.calc_id)
         logging.info('%s running %s [--hc=%s]',
                      getpass.getuser(),
                      calc.oqparam.inputs['job_ini'],
@@ -252,50 +253,31 @@ def run_calc(job_id, oqparam, exports, log_level='info', log_file=None, **kw):
         if msg:
             logging.warning(msg)
         calc.from_engine = True
-        tb = 'None\n'
-        try:
-            if config.zworkers['host_cores']:
-                set_concurrent_tasks_default(calc)
-            else:
-                logging.warning('Assuming %d %s workers',
-                                parallel.Starmap.num_cores, OQ_DISTRIBUTE)
-            t0 = time.time()
-            calc.run(exports=exports, **kw)
-            logging.info('Exposing the outputs to the database')
-            expose_outputs(calc.datastore)
-            path = calc.datastore.filename
-            size = general.humansize(os.path.getsize(path))
-            logging.info('Stored %s on %s in %d seconds',
-                         size, path, time.time() - t0)
-            logs.dbcmd('finish', job_id, 'complete')
-            calc.datastore.close()
-            for line in logs.dbcmd('list_outputs', job_id, False):
-                general.safeprint(line)
-        except BaseException as exc:
-            if isinstance(exc, MasterKilled):
-                msg = 'aborted'
-            else:
-                msg = 'failed'
-            tb = traceback.format_exc()
-            try:
-                logging.critical(tb)
-                logs.dbcmd('finish', job_id, msg)
-            except BaseException:  # an OperationalError may always happen
-                sys.stderr.write(tb)
-            raise
-        finally:
-            parallel.Starmap.shutdown()
-    # sanity check to make sure that the logging on file is working
-    if log_file and log_file != os.devnull and os.path.getsize(log_file) == 0:
-        logging.warning('The log file %s is empty!?' % log_file)
+        if config.zworkers['host_cores']:
+            set_concurrent_tasks_default(calc)
+        else:
+            logging.warning('Assuming %d %s workers',
+                            parallel.Starmap.num_cores, OQ_DISTRIBUTE)
+        t0 = time.time()
+        calc.run(exports=exports, **kw)
+        logging.info('Exposing the outputs to the database')
+        expose_outputs(calc.datastore)
+        path = calc.datastore.filename
+        size = general.humansize(getsize(path))
+        logging.info('Stored %s on %s in %d seconds',
+                     size, path, time.time() - t0)
+        calc.datastore.close()
+        for line in logs.dbcmd('list_outputs', log.calc_id, False):
+            general.safeprint(line)
+        # sanity check to make sure that the logging on file is working
+        if log_file and log_file != os.devnull and getsize(log_file) == 0:
+            logging.warning('The log file %s is empty!?' % log_file)
     return calc
 
 
 def _init_logs(dic, lvl):
-    if '_job_id' in dic:  # reuse job_id
-        logs.init(dic['_job_id'], lvl)
-    else:  # create a new job_id
-        dic['_job_id'] = logs.init('job', lvl)
+    if '_log' not in dic:  # create a new job_id
+        dic['_log'] = logs.init('job', lvl)
 
 
 def create_jobs(job_inis, loglvl, kw):
@@ -316,8 +298,8 @@ def create_jobs(job_inis, loglvl, kw):
             for values in itertools.product(*analysis.values()):
                 new = dic.copy()
                 _init_logs(new, loglvl)
-                if '_job_id' in dic:
-                    del dic['_job_id']
+                if '_log' in dic:
+                    del dic['_log']
                 pars = dict(zip(analysis, values))
                 for param, value in pars.items():
                     new[param] = str(value)
@@ -348,7 +330,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     :param kw:
         Extra parameters like hazard_calculation_id and calculation_mode
     """
-    jobparams = []
+    logparams = []
     multi = kw.pop('multi', None)
     loglvl = getattr(logging, log_level.upper())
     jobs = create_jobs(job_inis, loglvl, kw)  # inizialize the logs
@@ -357,48 +339,42 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     else:
         hc_id = None
     for job in jobs:
-        job_id = job['_job_id']
+        job_id = job['_log'].calc_id
         job['hazard_calculation_id'] = hc_id
-        with logs.handle(job_id, log_level, log_file):
+        with job['_log'] as log:
             dic = dict(calculation_mode=job['calculation_mode'],
                        description=job['description'],
                        user_name=username, is_running=1)
             if hc_id:
                 dic['hazard_calculation_id'] = hc_id
             logs.dbcmd('update_job', job_id, dic)
-            if (not jobparams and not multi and
+            if (not logparams and not multi and
                     'hazard_calculation_id' not in kw and
                     'sensitivity_analysis' not in job):
-                hc_id = job_id
-            try:
-                oqparam = readinput.get_oqparam(job)
-            except BaseException:
-                tb = traceback.format_exc()
-                logging.critical(tb)
-                logs.dbcmd('finish', job_id, 'failed')
-                raise
-        jobparams.append((job_id, oqparam))
-    jobarray = len(jobparams) > 1 and multi
+                hc_id = log.calc_id
+            oqparam = readinput.get_oqparam(job)
+        logparams.append((job['_log'], oqparam))
+    jobarray = len(logparams) > 1 and multi
     try:
         poll_queue(job_id, poll_time=15)
         # wait for an empty slot or a CTRL-C
     except BaseException:
         # the job aborted even before starting
-        for job_id, oqparam in jobparams:
-            logs.dbcmd('finish', job_id, 'aborted')
-        return jobparams
+        for log, oqparam in logparams:
+            logs.dbcmd('finish', log.calc_id, 'aborted')
+        return logparams
     else:
-        for job_id, oqparam in jobparams:
-            dic = {'status': 'executing', 'pid': _PID}
+        for log, oqparam in logparams:
+            dic = {'status': 'executing', 'pid': _PID, 'is_running': 1}
             if jobarray:
-                dic['hazard_calculation_id'] = jobparams[0][0]
-            logs.dbcmd('update_job', job_id, dic)
+                dic['hazard_calculation_id'] = logparams[0][0].calc_id
+            logs.dbcmd('update_job', log.calc_id, dic)
     try:
         if config.zworkers['host_cores'] and parallel.workers_status() == []:
             logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
-        allargs = [(job_id, oqparam, exports, log_level, log_file)
-                   for job_id, oqparam in jobparams]
+        allargs = [(log, oqparam, exports, log_file)
+                   for log, oqparam in logparams]
         if jobarray:
             with general.start_many(run_calc, allargs):
                 pass
@@ -409,7 +385,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         if config.zworkers['host_cores']:
             logging.info('Stopping the workers')
             parallel.workers_stop()
-    return jobparams
+    return logparams
 
 
 def version_triple(tag):

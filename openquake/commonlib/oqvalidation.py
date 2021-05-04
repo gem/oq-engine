@@ -858,8 +858,8 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
-        if '_job_id' in names_vals:  # called from engine
-            del names_vals['_job_id']
+        if '_log' in names_vals:  # called from engine
+            del names_vals['_log']
 
         # support legacy names
         for name in list(names_vals):
