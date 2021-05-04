@@ -275,7 +275,8 @@ def run_calc(log, oqparam, exports, log_file=None, **kw):
     return calc
 
 
-def create_jobs(job_inis, loglvl, kw):
+def create_jobs(job_inis, loglvl=logging.INFO, log_file=None,
+                user_name=None, **kw):
     """
     Create job records on the database (if not already there) and returns
     LogContext objects
@@ -286,7 +287,7 @@ def create_jobs(job_inis, loglvl, kw):
     else:
         hc_id = None
     if len(job_inis) > 1 and not hc_id and not multi:  # first job as hc
-        job = logs.init("job", job_inis[0])
+        job = logs.init("job", job_inis[0], loglvl, log_file)
         hc_id = job.calc_id
         jobs = [job]
         job_inis = job_inis[1:]
@@ -303,7 +304,8 @@ def create_jobs(job_inis, loglvl, kw):
         if 'sensitivity_analysis' in dic:
             analysis = valid.dictionary(dic['sensitivity_analysis'])
             for values in itertools.product(*analysis.values()):
-                new = logs.init('job', dic, log_level=loglvl)
+                new = logs.init('job', dic, log_level=loglvl,
+                                user_name=user_name)
                 pars = dict(zip(analysis, values))
                 for param, value in pars.items():
                     new.params[param] = str(value)
@@ -313,18 +315,17 @@ def create_jobs(job_inis, loglvl, kw):
                 logging.info('Job with %s', pars)
                 jobs.append(new)
         else:
-            jobs.append(logs.init('job', dic, log_level=loglvl))
-    username = getpass.getuser()
+            jobs.append(logs.init('job', dic, log_level=loglvl,
+                                  user_name=user_name))
     for job in jobs:
         dic = dict(calculation_mode=job.params['calculation_mode'],
                    description=job.params['description'],
-                   user_name=username, hazard_calculation_id=hc_id)
+                   hazard_calculation_id=hc_id)
         logs.dbcmd('update_job', job.calc_id, dic)
     return jobs
 
 
-def run_jobs(job_inis, log_level='info', log_file=None, exports='',
-             username=getpass.getuser(), **kw):
+def run_jobs(jobs, kw={}):
     """
     Run jobs using the specified config file and other options.
 
@@ -343,8 +344,8 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     :returns:
         A list of LogContexts, one per job
     """
-    loglvl = getattr(logging, log_level.upper())
-    jobs = create_jobs(job_inis, loglvl, kw)  # inizialize the logs
+    exports = kw.get('exports', '')
+    log_file = kw.get('log_file')
     jobarray = len(jobs) > 1 and kw.get('multi')
     try:
         poll_queue(jobs[0].calc_id, poll_time=15)

@@ -154,10 +154,12 @@ class LogContext:
     """
     Context manager managing the logging functionality
     """
-    def __init__(self, job: str, job_ini, log_level='info', log_file=None):
+    def __init__(self, job: str, job_ini, log_level='info', log_file=None,
+                 user_name=None):
         self.job = job
         self.log_level = log_level
         self.log_file = log_file
+        self.user_name = user_name
         if isinstance(job_ini, str):
             self.params = readinput.get_params(job_ini)
         else:  # assume dictionary of parameters
@@ -168,7 +170,7 @@ class LogContext:
                 get_datadir(),
                 self.params['calculation_mode'],
                 self.params['description'],
-                getpass.getuser())
+                user_name)
         else:
             self.calc_id = get_last_calc_id() + 1
 
@@ -213,8 +215,9 @@ class LogContext:
 
     def __getstate__(self):
         # ensure pickleability
-        return dict(calc_id=self.calc_id, job=self.job,
-                    log_level=self.log_level, log_file=self.log_file)
+        return dict(calc_id=self.calc_id, job=self.job, params=self.params,
+                    log_level=self.log_level, log_file=self.log_file,
+                    user_name=self.user_name)
 
     def __repr__(self):
         hc_id = self.params.get('hazard_calculation_id')
@@ -222,12 +225,14 @@ class LogContext:
                                       self.calc_id, hc_id)
 
 
-def init(job_or_calc, job_ini, log_level='info', log_file=None):
+def init(job_or_calc, job_ini, log_level='info', log_file=None,
+         user_name=None):
     """
     :param job_or_calc: the string "job" or "calc"
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param log_level: the log level as a string or number
     :param log_file: path to the log file (if any)
+    :param user_name: user running the job (None means current user)
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -236,4 +241,5 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None):
     4. return a LogContext instance associated to a calculation ID
     """
     assert job_or_calc in {"job", "calc"}, job_or_calc
-    return LogContext(job_or_calc == "job", job_ini, log_level, log_file)
+    return LogContext(job_or_calc == "job", job_ini,
+                      log_level, log_file, user_name)

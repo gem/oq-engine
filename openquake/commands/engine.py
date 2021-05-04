@@ -23,7 +23,7 @@ from openquake.baselib import config
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
-from openquake.engine.engine import run_jobs
+from openquake.engine.engine import create_jobs, run_jobs
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
@@ -162,7 +162,9 @@ def main(
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
         pars['multi'] = multi
-        run_jobs(job_inis, log_level, log_file, exports, **pars)
+        pars['exports'] = exports
+        jobs = create_jobs(job_inis, log_level, log_file)
+        run_jobs(jobs, pars)
 
     # hazard
     elif list_hazard_calculations:

@@ -25,9 +25,9 @@ import pstats
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, oqvalidation, logs, datastore
+from openquake.commonlib import oqvalidation, logs, datastore
 from openquake.calculators import base, views
-from openquake.engine.engine import run_jobs
+from openquake.engine.engine import create_jobs, run_jobs
 from openquake.server import dbserver
 
 calc_path = None  # set only when the flag --slowest is given
@@ -141,7 +141,9 @@ def main(job_ini,
     if len(job_ini) == 1:
         return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
                     loglevel, exports, params)
-    run_jobs(job_ini, loglevel, exports=exports, **params)
+    params['exports'] = exports
+    jobs = create_jobs(job_ini, loglevel)
+    run_jobs(jobs, **params)
 
 
 main.job_ini = dict(help='calculation configuration file '
