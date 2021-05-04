@@ -144,7 +144,7 @@ class DataStore(collections.abc.MutableMapping):
     Here is a minimal example of usage:
 
     >>> from openquake.commonlib import logs
-    >>> ds = new(logs.init("calc").calc_id)
+    >>> ds = new(logs.init("calc", {}).calc_id)
     >>> ds['example'] = 42
     >>> print(ds['example'][()])
     42

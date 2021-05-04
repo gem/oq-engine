@@ -87,8 +87,8 @@ def set_status(db, job_id, status):
     return cursor.rowcount
 
 
-def create_job(db, datadir, description='just created',
-               user_name=None, calculation_mode='to be set'):
+def create_job(db, datadir, calculation_mode='to be set',
+               description='just created', user_name=None):
     """
     Create job for the given user, return it.
 

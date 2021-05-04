@@ -48,7 +48,8 @@ class OpenQuake(object):
         self.get_site_collection = readinput.get_site_collection
         self.get_composite_source_model = readinput.get_composite_source_model
         self.get_exposure = readinput.get_exposure
-        self.get_calc = lambda job_ini: get_calc(job_ini, logs.init('calc'))
+        self.get_calc = lambda job_ini: get_calc(
+            job_ini, logs.init('calc', job_ini).calc_id)
         self.make_hmap = calc.make_hmap
         self.geodetic_distance = geodetic_distance
         self.Timer = Timer

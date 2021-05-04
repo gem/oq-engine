@@ -561,10 +561,9 @@ def submit_job(job_ini, username, **kw):
     and run it in a new process. Returns a PID.
     """
     # errors in validating oqparam are reported immediately
-    params = readinput.get_params(job_ini)
-    params['_log'] = log = logs.init('job')
+    log = logs.init('job', job_ini)
     proc = Process(target=engine.run_jobs,
-                   args=([params], config.distribution.log_level, None,
+                   args=([log.params], config.distribution.log_level, None,
                          '', username), kwargs=kw)
     proc.start()
     return log.calc_id

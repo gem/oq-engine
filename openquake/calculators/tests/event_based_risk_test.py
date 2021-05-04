@@ -554,10 +554,10 @@ agg_id
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
         oq.__dict__['aggregate_by'] = ['NAME_1']
-        log = logs.init('calc', logging.INFO)
+        log = logs.init('calc', {'calculation_mode': 'post_risk'})
         prc = PostRiskCalculator(oq, log.calc_id)
         oq.hazard_calculation_id = parent.calc_id
-        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
+        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), log:
             prc.run()
         [fname] = export(('agg_losses-rlzs', 'csv'), prc.datastore)
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,

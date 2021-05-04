@@ -502,14 +502,13 @@ class DbTestCase(unittest.TestCase):
 class EngineRunJobTestCase(unittest.TestCase):
     def test_multi_run(self):
         job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
-        logparams = run_jobs([job_ini, job_ini], log_level='error', multi=True)
-        logs, params = zip(*logparams)
+        jobs = run_jobs([job_ini, job_ini], log_level='error', multi=True)
         with Print.patch():
             [r1, r2] = commonlib.logs.dbcmd(
                 'select id, hazard_calculation_id from job '
-                'where id in (?S) order by id', [log.calc_id for log in logs])
-        self.assertEqual(r1.hazard_calculation_id, r1.id)
-        self.assertEqual(r2.hazard_calculation_id, r1.id)
+                'where id in (?S) order by id', [job.calc_id for job in jobs])
+        self.assertEqual(r1.hazard_calculation_id, None)
+        self.assertEqual(r2.hazard_calculation_id, None)
 
     def test_OQ_REDUCE(self):
         with mock.patch.dict(os.environ, OQ_REDUCE='.1'):
@@ -532,7 +531,7 @@ sensitivity_analysis = {
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
         with Print.patch() as p:
-            [(log, oqparam)] = run_jobs([job_ini], log_level='error')
+            [log] = run_jobs([job_ini], log_level='error')
         self.assertIn('id | name', str(p))
 
         # check the exported outputs
@@ -572,12 +571,12 @@ Source Loss Table'''.splitlines())
         tempdir = tempfile.mkdtemp()
         dbserver.ensure_on()
         with mock.patch.dict(os.environ, OQ_DATADIR=tempdir):
-            [(log, oq)] = run_jobs([job_ini], log_level='error')
-            job = commonlib.logs.dbcmd('get_job', log.calc_id)
+            [job] = run_jobs([job_ini], log_level='error')
+            job = commonlib.logs.dbcmd('get_job', job.calc_id)
             self.assertTrue(job.ds_calc_dir.startswith(tempdir),
                             job.ds_calc_dir)
         with Print.patch() as p:
-            sap.runline(f'openquake.commands export ruptures {log.calc_id} '
+            sap.runline(f'openquake.commands export ruptures {job.calc_id} '
                         f'-e csv --export-dir={tempdir}')
         self.assertIn('Exported', str(p))
         shutil.rmtree(tempdir)

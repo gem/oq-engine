@@ -33,7 +33,7 @@ from openquake.hazardlib.shakemap.maps import get_array
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
 from openquake.sep.classes import SecondaryPeril
-from openquake.commonlib import logictree, datastore
+from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
@@ -1030,14 +1030,18 @@ class OqParam(valid.ParamSet):
         """
         Set self.loss_names
         """
+        from openquake.commonlib import datastore  # avoid circular import
         # set all_cost_types
         # rt has the form 'vulnerability/structural', 'fragility/...', ...
         costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
-            with datastore.read(self.hazard_calculation_id) as ds:
-                parent = ds['oqparam']
-            self._risk_files = get_risk_files(parent.inputs)
-            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+            try:
+                with datastore.read(self.hazard_calculation_id) as ds:
+                    parent = ds['oqparam']
+                    self._risk_files = rfs = get_risk_files(parent.inputs)
+                    costtypes = set(rt.rsplit('/')[1] for rt in rfs)
+            except OSError:  # FileNotFound for wrong hazard_calculation_id
+                pass
         self.all_cost_types = sorted(costtypes)
 
         # fix minimum_asset_loss

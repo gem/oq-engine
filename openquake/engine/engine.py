@@ -275,41 +275,52 @@ def run_calc(log, oqparam, exports, log_file=None, **kw):
     return calc
 
 
-def _init_logs(dic, lvl):
-    if '_log' not in dic:  # create a new job_id
-        dic['_log'] = logs.init('job', dic, log_level=lvl)
-
-
 def create_jobs(job_inis, loglvl, kw):
     """
-    Create job records on the database (if not already there) and configure
-    the logging.
+    Create job records on the database (if not already there) and returns
+    LogContext objects
     """
-    dicts = []
-    for i, job_ini in enumerate(job_inis):
+    multi = kw.pop('multi', None)
+    if kw.get('hazard_calculation_id'):
+        hc_id = int(kw['hazard_calculation_id'])
+    else:
+        hc_id = None
+    if len(job_inis) > 1 and not hc_id and not multi:  # first job as hc
+        job = logs.init("job", job_inis[0])
+        hc_id = job.calc_id
+        jobs = [job]
+        job_inis = job_inis[1:]
+    else:
+        jobs = []
+    for job_ini in job_inis:
         if isinstance(job_ini, dict):
             dic = job_ini
         else:
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
             dic = readinput.get_params(job_ini, kw)
+        dic['hazard_calculation_id'] = hc_id
         if 'sensitivity_analysis' in dic:
             analysis = valid.dictionary(dic['sensitivity_analysis'])
             for values in itertools.product(*analysis.values()):
-                new = dic.copy()
-                _init_logs(new, loglvl)
-                if '_log' in dic:
-                    del dic['_log']
+                new = logs.init('job', dic, log_level=loglvl)
                 pars = dict(zip(analysis, values))
                 for param, value in pars.items():
-                    new[param] = str(value)
-                new['description'] = '%s %s' % (new['description'], pars)
+                    new.params[param] = str(value)
+                new.params['description'] = '%s %s' % (
+                    new.params['description'], pars)
+                new.params['hazard_calculation_id'] = hc_id
                 logging.info('Job with %s', pars)
-                dicts.append(new)
+                jobs.append(new)
         else:
-            _init_logs(dic, loglvl)
-            dicts.append(dic)
-    return dicts
+            jobs.append(logs.init('job', dic, log_level=loglvl))
+    username = getpass.getuser()
+    for job in jobs:
+        dic = dict(calculation_mode=job.params['calculation_mode'],
+                   description=job.params['description'],
+                   user_name=username, hazard_calculation_id=hc_id)
+        logs.dbcmd('update_job', job.calc_id, dic)
+    return jobs
 
 
 def run_jobs(job_inis, log_level='info', log_file=None, exports='',
@@ -322,59 +333,36 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
     :param str log_level:
         'debug', 'info', 'warn', 'error', or 'critical'
     :param str log_file:
-        Path to log file.
+        Path to log file, or None
     :param exports:
         A comma-separated string of export types requested by the user.
     :param username:
         Name of the user running the job
     :param kw:
         Extra parameters like hazard_calculation_id and calculation_mode
+    :returns:
+        A list of LogContexts, one per job
     """
-    logparams = []
-    multi = kw.pop('multi', None)
     loglvl = getattr(logging, log_level.upper())
     jobs = create_jobs(job_inis, loglvl, kw)  # inizialize the logs
-    if kw.get('hazard_calculation_id'):
-        hc_id = int(kw['hazard_calculation_id'])
-    else:
-        hc_id = None
-    for job in jobs:
-        job_id = job['_log'].calc_id
-        job['hazard_calculation_id'] = hc_id
-        with job['_log'] as log:
-            dic = dict(calculation_mode=job['calculation_mode'],
-                       description=job['description'],
-                       user_name=username, is_running=1)
-            if hc_id:
-                dic['hazard_calculation_id'] = hc_id
-            logs.dbcmd('update_job', job_id, dic)
-            if (not logparams and not multi and
-                    'hazard_calculation_id' not in kw and
-                    'sensitivity_analysis' not in job):
-                hc_id = log.calc_id
-            oqparam = readinput.get_oqparam(job)
-        logparams.append((job['_log'], oqparam))
-    jobarray = len(logparams) > 1 and multi
+    jobarray = len(jobs) > 1 and kw.get('multi')
     try:
-        poll_queue(job_id, poll_time=15)
+        poll_queue(jobs[0].calc_id, poll_time=15)
         # wait for an empty slot or a CTRL-C
     except BaseException:
         # the job aborted even before starting
-        for log, oqparam in logparams:
-            logs.dbcmd('finish', log.calc_id, 'aborted')
-        return logparams
+        for job in jobs:
+            logs.dbcmd('finish', job.calc_id, 'aborted')
+        return jobs
     else:
-        for log, oqparam in logparams:
-            dic = {'status': 'executing', 'pid': _PID, 'is_running': 1}
-            if jobarray:
-                dic['hazard_calculation_id'] = logparams[0][0].calc_id
-            logs.dbcmd('update_job', log.calc_id, dic)
+        for job in jobs:
+            dic = {'status': 'executing', 'pid': _PID}
+            logs.dbcmd('update_job', job.calc_id, dic)
     try:
         if config.zworkers['host_cores'] and parallel.workers_status() == []:
             logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
-        allargs = [(log, oqparam, exports, log_file)
-                   for log, oqparam in logparams]
+        allargs = [(job, job.get_oqparam(), exports, log_file) for job in jobs]
         if jobarray:
             with general.start_many(run_calc, allargs):
                 pass
@@ -385,7 +373,7 @@ def run_jobs(job_inis, log_level='info', log_file=None, exports='',
         if config.zworkers['host_cores']:
             logging.info('Stopping the workers')
             parallel.workers_stop()
-    return logparams
+    return jobs
 
 
 def version_triple(tag):

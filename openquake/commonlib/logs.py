@@ -164,10 +164,11 @@ class LogContext:
             self.params = job_ini
         if job:
             self.calc_id = dbcmd(
-                'create_job', get_datadir(),
-                description=self.params['description'],
-                calculation_mode=self.params['calculation_mode'],
-                user_name=getpass.getuser())
+                'create_job',
+                get_datadir(),
+                self.params['calculation_mode'],
+                self.params['description'],
+                getpass.getuser())
         else:
             self.calc_id = get_last_calc_id() + 1
 
@@ -215,6 +216,10 @@ class LogContext:
         return dict(calc_id=self.calc_id, job=self.job,
                     log_level=self.log_level, log_file=self.log_file)
 
+    def __repr__(self):
+        hc_id = self.params.get('hazard_calculation_id')
+        return '<%s#%d, hc_id=%s>' % (self.__class__.__name__,
+                                      self.calc_id, hc_id)
 
 
 def init(job_or_calc, job_ini, log_level='info', log_file=None):
