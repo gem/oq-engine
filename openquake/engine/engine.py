@@ -277,7 +277,7 @@ def run_calc(log, oqparam, exports, log_file=None, **kw):
 
 def _init_logs(dic, lvl):
     if '_log' not in dic:  # create a new job_id
-        dic['_log'] = logs.init('job', lvl)
+        dic['_log'] = logs.init('job', dic, log_level=lvl)
 
 
 def create_jobs(job_inis, loglvl, kw):

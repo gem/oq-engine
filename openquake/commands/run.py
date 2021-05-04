@@ -82,7 +82,7 @@ def run2(job_haz, job_risk, calc_id, concurrent_tasks, pdb, reuse_input,
     hcalc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
     hcalc.datastore.close()
     hc_id = hcalc.datastore.calc_id
-    with logs.init('job', level=getattr(logging, loglevel.upper())) as log:
+    with logs.init('job', log_level=getattr(logging, loglevel.upper())) as log:
         params['hazard_calculation_id'] = str(hc_id)
         oq = readinput.get_oqparam(job_risk, kw=params)
         rcalc = base.calculators(oq, log.rcalc_id)
@@ -165,11 +165,10 @@ def main(job_ini,
         print('Saved profiling info in %s' % pstat)
         print(get_pstats(pstat, slowest))
         return
-    try:
-        return _run(job_ini, concurrent_tasks, pdb,
-                    reuse_input, loglevel, exports, params)
-    finally:
-        parallel.Starmap.shutdown()
+    for ini in job_ini:
+        with logs.init("job", ini) as log:
+            return _run(log.calc_id, log.get_oqparam(), concurrent_tasks, pdb,
+                        reuse_input, loglevel, exports, params)
 
 
 main.job_ini = dict(help='calculation configuration file '

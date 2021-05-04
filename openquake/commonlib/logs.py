@@ -25,8 +25,8 @@ import getpass
 import logging
 import traceback
 from datetime import datetime
-from contextlib import contextmanager
 from openquake.baselib import config, zeromq, parallel
+from openquake.commonlib import readinput
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -154,14 +154,28 @@ class LogContext:
     """
     Context manager managing the logging functionality
     """
-    def __init__(self, job: bool, log_level='info', log_file=None):
+    def __init__(self, job: str, job_ini, log_level='info', log_file=None):
         self.job = job
-        if job:
-            self.calc_id = dbcmd('create_job', get_datadir())
-        else:
-            self.calc_id = get_last_calc_id() + 1
         self.log_level = log_level
         self.log_file = log_file
+        if isinstance(job_ini, str):
+            self.params = readinput.get_params(job_ini)
+        else:  # assume dictionary of parameters
+            self.params = job_ini
+        if job:
+            self.calc_id = dbcmd(
+                'create_job', get_datadir(),
+                description=self.params['description'],
+                calculation_mode=self.params['calculation_mode'],
+                user_name=getpass.getuser())
+        else:
+            self.calc_id = get_last_calc_id() + 1
+
+    def get_oqparam(self):
+        """
+        :returns: a validated OqParam instance
+        """
+        return readinput.get_oqparam(self.params)
 
     def __enter__(self):
         if not logging.root.handlers:  # first time
@@ -203,11 +217,18 @@ class LogContext:
 
 
 
-def init(job_or_calc, log_level='info', log_file=None):
+def init(job_or_calc, job_ini, log_level='info', log_file=None):
     """
+    :param job_or_calc: the string "job" or "calc"
+    :param job_ini: path to the job.ini file or dictionary of parameters
+    :param log_level: the log level as a string or number
+    :param log_file: path to the log file (if any)
+    :returns: a LogContext instance
+
     1. initialize the root logger (if not already initialized)
-    2. set the format of the root handlers (if any)
-    3. return a LogContext instance associated to a calculation ID
+    2. set the format of the root log handlers (if any)
+    3. create a job in the database if job_or_calc == "job"
+    4. return a LogContext instance associated to a calculation ID
     """
     assert job_or_calc in {"job", "calc"}, job_or_calc
-    return LogContext(job_or_calc == "job", log_level, log_file)
+    return LogContext(job_or_calc == "job", job_ini, log_level, log_file)

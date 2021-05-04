@@ -87,7 +87,8 @@ def set_status(db, job_id, status):
     return cursor.rowcount
 
 
-def create_job(db, datadir):
+def create_job(db, datadir, description='just created',
+               user_name=None, calculation_mode='to be set'):
     """
     Create job for the given user, return it.
 
@@ -99,10 +100,10 @@ def create_job(db, datadir):
         the job ID
     """
     calc_id = get_calc_id(db, datadir) + 1
-    # HACK: just created jobs should not have is_running=1, but we
-    # need that to make views_test.py happy on Jenkins :-(
-    job = dict(id=calc_id, is_running=1, description='just created',
-               user_name=getpass.getuser(), calculation_mode='to be set',
+    # NB: is_running=1 is needed to make views_test.py happy on Jenkins
+    job = dict(id=calc_id, is_running=1, description=description,
+               user_name=user_name or getpass.getuser(),
+               calculation_mode=calculation_mode,
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     return db('INSERT INTO job (?S) VALUES (?X)',
               job.keys(), job.values()).lastrowid
