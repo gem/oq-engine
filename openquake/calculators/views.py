@@ -93,20 +93,21 @@ def form(value):
     return str(value)
 
 
-def rst_table(data, header=None, fmt=None):
+def text_table(data, header=None, fmt=None, ext='rst'):
     """
-    Build a .rst table from a matrix or a DataFrame
+    Build a .rst (or .org) table from a matrix or a DataFrame
     
     >>> tbl = [['a', 1], ['b', 2]]
-    >>> print(rst_table(tbl, header=['Name', 'Value']))
-    +-----+------+
-    | Name|Value |
-    +-----+------+
-    | a   |1     |
-    +-----+------+
-    | b   |2     |
-    +-----+------+
+    >>> print(text_table(tbl, header=['Name', 'Value']))
+    +------+-------+
+    | Name | Value |
+    +------+-------+
+    | a    | 1     |
+    +------+-------+
+    | b    | 2     |
+    +------+-------+
     """
+    assert ext in 'rst org', ext
     if isinstance(data, pandas.DataFrame):
         if data.index.name:
             data = data.reset_index()
@@ -138,15 +139,18 @@ def rst_table(data, header=None, fmt=None):
                              % (len(col_sizes), len(tup)))
         body.append(tup)
 
-    sepline = '+-%s-+' % '+'.join(('-' * size for size in col_sizes))
-    templ = '| %s |' % '|'.join(('%-{}s'.format(size) for size in col_sizes))
-    if header:
+    sepline = '+-%s-+' % '-+-'.join(('-' * size for size in col_sizes))
+    templ = '| %s |' % ' | '.join(('%-{}s'.format(size) for size in col_sizes))
+    if header and ext == 'rst':
         lines = [sepline, templ % tuple(header), sepline]
+    elif header and ext == 'org':
+        lines = [templ % tuple(header), sepline]
     else:
         lines = [sepline]
     for row in body:
         lines.append(templ % row)
-        lines.append(sepline)
+        if ext == 'rst':
+            lines.append(sepline)
     return '\n'.join(lines)
 
 
@@ -162,7 +166,7 @@ def view_slow_sources(token, dstore, maxrows=20):
     data = numpy.zeros(len(info), [(nam, object) for nam in info.dtype.names])
     for name in info.dtype.names:
         data[name] = info[name]
-    return rst_table(data[::-1][:maxrows])
+    return text_table(data[::-1][:maxrows])
 
 
 @view.add('slow_ruptures')
@@ -176,7 +180,7 @@ def view_slow_ruptures(token, dstore, maxrows=25):
     arr = util.compose_arrays(rups, time)
     arr = arr[arr['nsites'] > 0]
     arr.sort(order='time')
-    return rst_table(arr[-maxrows:])
+    return text_table(arr[-maxrows:])
 
 
 @view.add('contents')
@@ -192,7 +196,7 @@ def view_contents(token, dstore):
     rows = [(key, humansize(nbytes)) for nbytes, key in data]
     total = '\n%s : %s' % (
         dstore.filename, humansize(os.path.getsize(dstore.filename)))
-    return rst_table(rows, header=(desc, '')) + total
+    return text_table(rows, header=(desc, '')) + total
 
 
 @view.add('full_lt')
@@ -207,7 +211,7 @@ def view_full_lt(token, dstore):
     for grp_id, rbg in enumerate(rlzs_by_gsim_list):
         for gsim, rlzs in rbg.items():
             rows.append([grp_id, repr(str(gsim)), str(list(rlzs))])
-    return rst_table(rows, header)
+    return text_table(rows, header)
 
 
 @view.add('eff_ruptures')
@@ -215,12 +219,12 @@ def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
     del df['grp_id'], df['trti'], df['task_no']
-    return rst_table(df)
+    return text_table(df)
 
 
 @view.add('short_source_info')
 def view_short_source_info(token, dstore, maxrows=20):
-    return rst_table(dstore['source_info'][:maxrows])
+    return text_table(dstore['source_info'][:maxrows])
 
 
 @view.add('params')
@@ -236,7 +240,7 @@ def view_params(token, dstore):
               'random_seed', 'master_seed', 'ses_seed']
     if 'risk' in oq.calculation_mode:
         params.append('avg_losses')
-    return rst_table([(param, repr(getattr(oq, param, None)))
+    return text_table([(param, repr(getattr(oq, param, None)))
                       for param in params])
 
 
@@ -265,7 +269,7 @@ def build_links(items):
 @view.add('inputs')
 def view_inputs(token, dstore):
     inputs = dstore['oqparam'].inputs.items()
-    return rst_table(build_links(inputs), ['Name', 'File'])
+    return text_table(build_links(inputs), ['Name', 'File'])
 
 
 def _humansize(literal):
@@ -292,7 +296,7 @@ def view_job_info(token, dstore):
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
         recv = get_array(task_info, taskname=encode(task))['received'].sum()
         data.append((task, ' '.join(sent), humansize(recv)))
-    return rst_table(data)
+    return text_table(data)
 
 
 @view.add('avglosses_data_transfer')
@@ -323,7 +327,7 @@ def view_totlosses(token, dstore):
     """
     oq = dstore['oqparam']
     tot_losses = dstore['avg_losses-rlzs'][()].sum(axis=0)
-    return rst_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
+    return text_table(tot_losses.view(oq.loss_dt(F32)), fmt='%.6E')
 
 
 def alt_to_many_columns(alt, loss_names):
@@ -370,7 +374,7 @@ def view_portfolio_losses(token, dstore):
     rlzids = [str(r) for r in range(len(data))]
     array = util.compose_arrays(numpy.array(rlzids), data, 'rlz_id')
     # this is very sensitive to rounding errors, so I am using a low precision
-    return rst_table(array, fmt='%.5E')
+    return text_table(array, fmt='%.5E')
 
 
 @view.add('portfolio_loss')
@@ -392,7 +396,7 @@ def view_portfolio_loss(token, dstore):
         df = alt_df[alt_df.loss_id == li]
         eids = df.pop('event_id').to_numpy()
         avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * E / R)
-    return rst_table([['avg'] + avgs], ['loss'] + oq.loss_names)
+    return text_table([['avg'] + avgs], ['loss'] + oq.loss_names)
 
 
 @view.add('portfolio_damage_error')
@@ -418,7 +422,7 @@ def view_portfolio_damage(token, dstore):
         attrs = get_shape_descr(dstore['damages-rlzs'].attrs['json'])
         arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))
     rows = [[lt] + list(row) for lt, row in zip(attrs['loss_type'], arr)]
-    return rst_table(rows, ['loss_type'] + list(attrs['dmg_state']))
+    return text_table(rows, ['loss_type'] + list(attrs['dmg_state']))
 
 
 def sum_table(records):
@@ -450,7 +454,7 @@ def view_exposure_info(token, dstore):
     taxonomies = sorted(set(dstore['assetcol'].taxonomies))
     data = [('#assets', len(assetcol)),
             ('#taxonomies', len(taxonomies))]
-    return rst_table(data) + '\n\n' + view_assets_by_site(token, dstore)
+    return text_table(data) + '\n\n' + view_assets_by_site(token, dstore)
 
 
 @view.add('ruptures_events')
@@ -463,7 +467,7 @@ def view_ruptures_events(token, dstore):
            ('Total number of events', num_events),
            ('Rupture multiplicity', mult),
            ('Events by rlz', events_by_rlz.values())]
-    return rst_table(lst)
+    return text_table(lst)
 
 
 @view.add('fullreport')
@@ -481,7 +485,7 @@ def view_performance(token, dstore):
     """
     Display performance information
     """
-    return rst_table(performance_view(dstore))
+    return performance_view(dstore)
 
 
 def stats(name, array, *extras):
@@ -508,7 +512,7 @@ def view_num_units(token, dstore):
         counts[taxo[asset['taxonomy']]] += asset['number']
     data = sorted(counts.items())
     data.append(('*ALL*', sum(d[1] for d in data)))
-    return rst_table(data, header=['taxonomy', 'num_units'])
+    return text_table(data, header=['taxonomy', 'num_units'])
 
 
 @view.add('assets_by_site')
@@ -529,7 +533,7 @@ def view_assets_by_site(token, dstore):
     if len(num_assets) > 1:  # more than one taxonomy, add a summary
         n_assets = numpy.array([len(assets) for assets in assets_by_site])
         data.append(stats('*ALL*', n_assets, n_assets.sum()))
-    return rst_table(data)
+    return text_table(data)
 
 
 @view.add('required_params_per_trt')
@@ -547,7 +551,7 @@ def view_required_params_per_trt(token, dstore):
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
         tbl.append((trt_smr, ' '.join(map(repr, map(repr, gsims))),
                     distances, siteparams, ruptparams))
-    return rst_table(
+    return text_table(
         tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
         fmt=scientificformat)
 
@@ -570,7 +574,7 @@ def view_task_info(token, dstore):
         rduration = array['duration'] / array['weight']
         data = util.compose_arrays(rduration, array, 'rduration')
         data.sort(order='duration')
-        return rst_table(data)
+        return text_table(data)
 
     data = ['operation-duration counts mean stddev min max'.split()]
     for task, arr in group_array(task_info[()], 'taskname').items():
@@ -579,7 +583,7 @@ def view_task_info(token, dstore):
             data.append(stats(task, val))
     if len(data) == 1:
         return 'Not available'
-    return rst_table(data)
+    return text_table(data)
 
 
 @view.add('task_durations')
@@ -636,7 +640,7 @@ def view_task_ebrisk(token, dstore):
     ds = dstore.parent if dstore.parent else dstore
     rups = ds['ruptures']['id', 'code', 'n_occ', 'mag'][times['rup_id']]
     codeset = set('code_%d' % code for code in numpy.unique(rups['code']))
-    tbl = rst_table(util.compose_arrays(rups, extra))
+    tbl = text_table(util.compose_arrays(rups, extra))
     codes = ['%s: %s' % it for it in ds.getitem('ruptures').attrs.items()
              if it[0] in codeset]
     msg = '%s\n%s\nHazard time for task %d: %d of %d s, ' % (
@@ -658,7 +662,7 @@ def view_global_hazard(token, dstore):
     imtls = dstore['oqparam'].imtls
     arr = dstore.sel('hcurves-stats', stat='mean')  # shape N, S, M, L
     res = arr.mean(axis=(0, 1, 3))  # shape M
-    return rst_table([res], imtls)
+    return text_table([res], imtls)
 
 
 @view.add('global_poes')
@@ -678,7 +682,7 @@ def view_global_poes(token, dstore):
         site_avg = sum(poes[sid].array for sid in poes) / nsites
         gsim_avg = site_avg.sum(axis=1) / poes.shape_z
         tbl.append([grp] + list(gsim_avg))
-    return rst_table(tbl, header=header)
+    return text_table(tbl, header=header)
 
 
 @view.add('global_hmaps')
@@ -696,7 +700,7 @@ def view_global_hmaps(token, dstore):
     res = numpy.zeros(1, array.dtype)
     for name in array.dtype.names:
         res[name] = array[name].mean()
-    return rst_table(res)
+    return text_table(res)
 
 
 @view.add('global_gmfs')
@@ -707,7 +711,7 @@ def view_global_gmfs(token, dstore):
     imtls = dstore['oqparam'].imtls
     row = [dstore[f'gmf_data/gmv_{m}'][:].mean(axis=0)
            for m in range(len(imtls))]
-    return rst_table([row], header=imtls)
+    return text_table([row], header=imtls)
 
 
 @view.add('gmf')
@@ -807,7 +811,7 @@ def view_mean_disagg(token, dstore):
                 for k, d in kd.items():
                     row.append(d[s, m, p].mean())
                 tbl.append(row)
-    return rst_table(sorted(tbl), header=['key'] + list(kd))
+    return text_table(sorted(tbl), header=['key'] + list(kd))
 
 
 @view.add('disagg_times')
@@ -821,7 +825,7 @@ def view_disagg_times(token, dstore):
     for duration, task_no in zip(info['duration'], info['task_no']):
         tbl.append((duration, task_no) + tuple(data[task_no]))
     header = ('duration', 'task_no') + data.dtype.names
-    return rst_table(sorted(tbl), header=header)
+    return text_table(sorted(tbl), header=header)
 
 
 @view.add('bad_ruptures')
@@ -833,7 +837,7 @@ def view_bad_ruptures(token, dstore):
                               'minlon', 'maxlon', 'minlat', 'maxlat']
     bad = data[numpy.logical_and(data['minlon'] == data['maxlon'],
                                  data['minlat'] == data['maxlat'])]
-    return rst_table(bad)
+    return text_table(bad)
 
 
 Source = collections.namedtuple(
@@ -847,7 +851,7 @@ def view_extreme_groups(token, dstore):
     """
     data = dstore['disagg_by_grp'][()]
     data.sort(order='extreme_poe')
-    return rst_table(data[::-1])
+    return text_table(data[::-1])
 
 
 @view.add('gmvs_to_hazard')
@@ -876,7 +880,7 @@ def view_gmvs_to_hazard(token, dstore):
             exceeding = numpy.sum(gmv[:, imti] >= iml)
             poe = 1 - numpy.exp(- exceeding / num_ses)
             tbl.append((sid, rlz, imt, iml, exceeding, poe))
-    return rst_table(tbl, ['sid', 'rlz', 'imt', 'iml', 'num_exceeding', 'poe'])
+    return text_table(tbl, ['sid', 'rlz', 'imt', 'iml', 'num_exceeding', 'poe'])
 
 
 @view.add('gmvs')
@@ -888,7 +892,7 @@ def view_gmvs(token, dstore):
     assert sid in dstore['sitecol'].sids
     data = dstore.read_df('gmf_data', 'sid')
     gmvs = data.loc[sid]['gmv']
-    return rst_table(gmvs)
+    return text_table(gmvs)
 
 
 @view.add('events_by_mag')
@@ -901,7 +905,7 @@ def view_events_by_mag(token, dstore):
     counts = {}
     for mag, grp in group_array(rups, 'mag').items():
         counts[mag] = sum(num_evs[rup_id] for rup_id in grp['id'])
-    return rst_table(counts.items(), ['mag', 'num_events'])
+    return text_table(counts.items(), ['mag', 'num_events'])
 
 
 @view.add('ebrups_by_mag')
@@ -911,7 +915,7 @@ def view_ebrups_by_mag(token, dstore):
     """
     mags = dstore['ruptures']['mag']
     uniq, counts = numpy.unique(mags, return_counts=True)
-    return rst_table(zip(uniq, counts), ['mag', 'num_ruptures'])
+    return text_table(zip(uniq, counts), ['mag', 'num_ruptures'])
 
 
 @view.add('maximum_intensity')
@@ -921,7 +925,7 @@ def view_maximum_intensity(token, dstore):
     """
     effect = extract(dstore, 'effect')
     data = zip(dstore['full_lt'].trts, effect[-1, -1], effect[-1, 0])
-    return rst_table(data, ['trt', 'intensity1', 'intensity2'])
+    return text_table(data, ['trt', 'intensity1', 'intensity2'])
 
 
 @view.add('extreme_sites')
@@ -1056,8 +1060,10 @@ def view_composite_source_model(token, dstore):
     lst = []
     n = len(dstore['full_lt'].sm_rlzs)
     trt_smrs = dstore['trt_smrs'][:]
+    dt = [('grp_id', object), ('trt', object),
+          ('smrs', object), ('sources', object)]
     for grp_id, df in dstore.read_df('source_info').groupby('grp_id'):
         srcs = ' '.join(df['source_id'])
         trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], n)
-        lst.append((grp_id, to_str(trts), to_str(sm_rlzs), srcs))
-    return rst_table(lst, ['grp_id', 'trt', 'smrs', 'sources'])
+        lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), srcs))
+    return numpy.array(lst, dt)

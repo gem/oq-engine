@@ -21,7 +21,7 @@ Determine the total number of ruptures in all the calculations in oqdata
 """
 import glob
 from openquake.commonlib.datastore import get_datadir, read
-from openquake.calculators.views import rst_table
+from openquake.calculators.views import text_table
 
 
 def main(datadir):
@@ -42,7 +42,7 @@ def main(datadir):
                 tot_ruptures = 0
             else:
                 lst.append((descr, tot_ruptures))
-    print(rst_table(lst, ['calculation', 'total number of ruptures']))
+    print(text_table(lst, ['calculation', 'total number of ruptures']))
 
 
 if __name__ == '__main__':

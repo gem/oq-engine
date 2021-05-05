@@ -23,7 +23,9 @@ Utilities to build a report writer generating a .rst report for a calculation
 import os
 import sys
 import logging
-from openquake.baselib import parallel
+import numpy
+import pandas
+
 from openquake.baselib.python3compat import encode, decode
 from openquake.commonlib import readinput, logs
 from openquake.calculators import views
@@ -65,7 +67,7 @@ class ReportWriter(object):
         except KeyError:
             num_rlzs = '?'
         versions = sorted(dstore['/'].attrs.items())
-        self.text += '\n\n' + views.rst_table(versions)
+        self.text += '\n\n' + views.text_table(versions)
         self.text += '\n\nnum_sites = %d, num_levels = %d, num_rlzs = %s' % (
             len(dstore['sitecol']), oq.imtls.size, num_rlzs)
 
@@ -74,7 +76,11 @@ class ReportWriter(object):
         if obj:
             text = '\n::\n\n' + indent(str(obj))
         else:
-            text = views.view(name, self.dstore)
+            res = views.view(name, self.dstore)
+            if isinstance(res, (numpy.ndarray, pandas.DataFrame)):
+                text = views.text_table(res)
+            else:
+                text = res
         if text:
             title = self.title[name]
             line = '-' * len(title)

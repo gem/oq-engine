@@ -238,11 +238,11 @@ class RunShowExportTestCase(unittest.TestCase):
 
         with Print.patch() as p:
             sap.runline('openquake.commands show sitecol %d' % self.calc_id)
-        self.assertIn('sids\tlon\tlat\tdepth\tvs30\tvs30measured', str(p))
+        self.assertIn('sids | lon | lat | depth | vs30 | vs30measured', str(p))
 
         with Print.patch() as p:
             sap.runline(f'openquake.commands show slow_sources {self.calc_id}')
-        self.assertIn('source_id|code|calc_time|num_sites', str(p))
+        self.assertIn('source_id | code | calc_time | num_sites', str(p))
 
     def test_show_attrs(self):
         with Print.patch() as p:
@@ -563,7 +563,7 @@ Source Loss Table'''.splitlines())
         # relevant information is stored (it can be lost due to a wrong
         # refactoring of the monitoring and it happened several times)
         with read(log.calc_id) as dstore:
-            perf = view('performance', dstore)
+            perf = str(view('performance', dstore))
             self.assertIn('total event_based_risk', perf)
 
     def test_oqdata(self):
