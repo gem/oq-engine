@@ -1,4 +1,9 @@
+  [Michele Simionato]
+  * Added an early check for fragility functions in place of vulnerability
+    functions or viceversa
+
   [Marco Pagani]
+  * Numeric fix to the amplification with the convolution method
   * Implemented the BakerJayaram2008 cross correlation model
 
   [Michele Simionato]
