@@ -99,13 +99,13 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     
     >>> tbl = [['a', 1], ['b', 2]]
     >>> print(text_table(tbl, header=['Name', 'Value']))
-    +-----+------+
-    | Name|Value |
-    +-----+------+
-    | a   |1     |
-    +-----+------+
-    | b   |2     |
-    +-----+------+
+    +------+-------+
+    | Name | Value |
+    +------+-------+
+    | a    | 1     |
+    +------+-------+
+    | b    | 2     |
+    +------+-------+
     """
     assert ext in 'rst org', ext
     if isinstance(data, pandas.DataFrame):
@@ -139,7 +139,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
                              % (len(col_sizes), len(tup)))
         body.append(tup)
 
-    sepline = '+-%s-+' % ' + '.join(('-' * size for size in col_sizes))
+    sepline = '+-%s-+' % '-+-'.join(('-' * size for size in col_sizes))
     templ = '| %s |' % ' | '.join(('%-{}s'.format(size) for size in col_sizes))
     if header and ext == 'rst':
         lines = [sepline, templ % tuple(header), sepline]
