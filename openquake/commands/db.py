@@ -21,7 +21,7 @@ import inspect
 import getpass
 from decorator import getfullargspec
 from openquake.baselib import config
-from openquake.calculators.views import rst_table
+from openquake.calculators.views import text_table
 from openquake.commonlib import logs
 from openquake.server import dbserver
 from openquake.server.db import actions
@@ -58,7 +58,7 @@ def main(cmd, args=()):
     dbserver.ensure_on()
     res = logs.dbcmd(cmd, *convert(args))
     if hasattr(res, '_fields') and res.__class__.__name__ != 'Row':
-        print(rst_table(res))
+        print(text_table(res))
     else:
         print(res)
 

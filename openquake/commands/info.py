@@ -33,7 +33,7 @@ from openquake.commonlib import readinput, logictree
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
-from openquake.calculators.views import view, rst_table
+from openquake.calculators.views import view, text_table
 
 
 def source_model_info(sm_nodes):
@@ -62,7 +62,7 @@ def source_model_info(sm_nodes):
     out[-1]['TRT'] = 'Total'
     for name in out.dtype.names[1:]:
         out[-1][name] = out[name][:-1].sum()
-    return rst_table(out)
+    return text_table(out)
 
 
 def do_build_reports(directory):

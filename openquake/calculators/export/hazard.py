@@ -87,7 +87,7 @@ def export_ruptures_csv(ekey, dstore):
     arr = extract(dstore, 'rupture_info')
     if export.sanity_check:
         bad = view('bad_ruptures', dstore)
-        if bad.count('\n') > 3:  # nonempty rst_table
+        if bad.count('\n') > 3:  # nonempty text_table
             print(bad, file=sys.stderr)
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,

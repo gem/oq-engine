@@ -290,7 +290,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         elif 'avg_portfolio_damage' in self.datastore:
             df = views.portfolio_damage_error(
                 'avg_portfolio_damage', self.datastore)
-            rst = views.rst_table(df)
+            rst = views.text_table(df)
             logging.info('Portfolio damage\n%s' % rst)
         num_assets = avg.sum(axis=1)  # by loss_type
         expected = self.assetcol['number'].sum()
