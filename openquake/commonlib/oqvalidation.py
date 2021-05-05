@@ -925,7 +925,8 @@ class OqParam(valid.ParamSet):
                 if not ok:
                     raise InvalidFile('Missing fragility files in %s' %
                                       self.inputs['job_ini'])
-            elif 'risk' in self.calculation_mode and not hc:
+            elif ('risk' in self.calculation_mode and
+                      self.calculation_mode != 'multi_risk' and not hc):
                 ok = any('vulnerability' in key for key in self._risk_files)
                 if not ok:
                     raise InvalidFile('Missing vulnerability files in %s' %
