@@ -144,7 +144,7 @@ def main(job_ini,
     jobs = create_jobs(job_ini, loglevel, hc_id=hc)
     for job in jobs:
         job.params.update(params)
-        job.params['exports'] = exports
+        job.params['exports'] = ','.join(exports)
     run_jobs(jobs)
 
 

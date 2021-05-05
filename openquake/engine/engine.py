@@ -293,19 +293,22 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
             dic = readinput.get_params(job_ini)
+        dic['hazard_calculation_id'] = hc_id
         if 'sensitivity_analysis' in dic:
             analysis = valid.dictionary(dic['sensitivity_analysis'])
             for values in itertools.product(*analysis.values()):
-                new = logs.init('job', dic, log_level, user_name, hc_id)
+                new = logs.init('job', dic, log_level, None, user_name, hc_id)
                 pars = dict(zip(analysis, values))
                 for param, value in pars.items():
                     new.params[param] = str(value)
                 new.params['description'] = '%s %s' % (
                     new.params['description'], pars)
+                new.params['hazard_calculation_id'] = hc_id
                 logging.info('Job with %s', pars)
                 jobs.append(new)
         else:
-            jobs.append(logs.init('job', dic, log_level, user_name))
+            jobs.append(
+                logs.init('job', dic, log_level, None, user_name, hc_id))
     if multi:
         for job in jobs:
             job.multi = True
