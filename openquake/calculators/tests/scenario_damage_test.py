@@ -67,6 +67,11 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                       'taxonomy=RM&CRESTA=01.1')
         self.assertEqual(dmg.shape, ())
 
+        # missing fragility functions
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_1.__file__, 'job_bad.ini')
+        self.assertIn('Missing fragility files', str(ctx.exception))
+
     def test_case_1c(self):
         # this is a case with more hazard sites than exposure sites
         # it is also a case with asset numbers > 65535 and < 1

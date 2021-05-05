@@ -917,6 +917,20 @@ class OqParam(valid.ParamSet):
                               'pointsource_distance!' % self.inputs['job_ini'])
 
         self._risk_files = get_risk_files(self.inputs)
+        if self.risk_files:
+            # checks for risk_files
+            hc = self.hazard_calculation_id
+            if 'damage' in self.calculation_mode and not hc:
+                ok = any('fragility' in key for key in self._risk_files)
+                if not ok:
+                    raise InvalidFile('Missing fragility files in %s' %
+                                      self.inputs['job_ini'])
+            elif ('risk' in self.calculation_mode and
+                      self.calculation_mode != 'multi_risk' and not hc):
+                ok = any('vulnerability' in key for key in self._risk_files)
+                if not ok:
+                    raise InvalidFile('Missing vulnerability files in %s' %
+                                      self.inputs['job_ini'])
 
         if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'debug')
