@@ -142,7 +142,7 @@ def main(job_ini,
         return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
                     loglevel, exports, params)
     params['exports'] = exports
-    jobs = create_jobs(job_ini, loglevel)
+    jobs = create_jobs(job_ini, loglevel, hc_id=hc)
     run_jobs(jobs, **params)
 
 

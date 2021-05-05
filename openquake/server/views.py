@@ -563,8 +563,9 @@ def submit_job(job_ini, username, **kw):
     :returns: a job ID
     """
     jobs = engine.create_jobs(
-        [job_ini], config.distribution.log_level, user_name=username)
-    proc = Process(target=engine.run_jobs, args=(jobs, kw))
+        [job_ini], config.distribution.log_level, user_name=username,
+        hc_id=kw.get("hazard_calculation_id"))
+    proc = Process(target=engine.run_jobs, args=(jobs, kw.get('exports', '')))
     proc.start()
     return jobs[0].calc_id
 

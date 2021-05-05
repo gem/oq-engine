@@ -59,18 +59,6 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
 
 
-def get_calc(job_ini, calc_id, kw={}):
-    """
-    Factory function returning a Calculator instance
-
-    :param job_ini: path to job.ini file
-    :param calc_id: calculation ID or the string "job" or "calc"
-    """
-    if isinstance(calc_id, str):
-        calc_id = logs.init(calc_id).calc_id
-    return calculators(readinput.get_oqparam(job_ini, kw=kw), calc_id)
-
-
 # this is used for the minimum_intensity dictionaries
 def consistent(dic1, dic2):
     """

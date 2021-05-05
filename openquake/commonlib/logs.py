@@ -154,23 +154,27 @@ class LogContext:
     """
     Context manager managing the logging functionality
     """
+    multi = False
+
     def __init__(self, job: str, job_ini, log_level='info', log_file=None,
-                 user_name=None):
+                 user_name=None, hc_id=None):
         self.job = job
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name
-        if isinstance(job_ini, str):
-            self.params = readinput.get_params(job_ini)
-        else:  # assume dictionary of parameters
+        if isinstance(job_ini, dict):  # dictionary of parameters
             self.params = job_ini
+        else:  # path to job.ini file
+            self.params = readinput.get_params(job_ini)
+        self.params['hazard_calculation_id'] = hc_id
         if job:
             self.calc_id = dbcmd(
                 'create_job',
                 get_datadir(),
                 self.params['calculation_mode'],
                 self.params['description'],
-                user_name)
+                user_name,
+                hc_id)
         else:
             self.calc_id = get_last_calc_id() + 1
 

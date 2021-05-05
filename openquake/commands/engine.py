@@ -97,6 +97,8 @@ def main(
     """
     Run a calculation using the traditional command line API
     """
+    user_name = getpass.getuser()
+
     if not run:
         # configure a basic logging
         logging.basicConfig(level=logging.INFO)
@@ -146,7 +148,7 @@ def main(
     # hazard or hazard+risk
     if hazard_calculation_id == -1:
         # get the latest calculation of the current user
-        hc_id = get_job_id(hazard_calculation_id, getpass.getuser())
+        hc_id = get_job_id(hazard_calculation_id, user_name)
     elif hazard_calculation_id:
         # make it possible to use calculations made by another user
         hc_id = get_job_id(hazard_calculation_id)
@@ -156,14 +158,12 @@ def main(
         pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
         if reuse_input:
             pars['cachedir'] = datadir
-        if hc_id:
-            pars['hazard_calculation_id'] = str(hc_id)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        pars['multi'] = multi
         pars['exports'] = exports
-        jobs = create_jobs(job_inis, log_level, log_file)
+        jobs = create_jobs(job_inis, log_level, log_file, user_name,
+                           hc_id, multi)
         run_jobs(jobs, pars)
 
     # hazard

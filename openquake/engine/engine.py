@@ -275,19 +275,16 @@ def run_calc(log, oqparam, exports, log_file=None, **kw):
     return calc
 
 
-def create_jobs(job_inis, loglvl=logging.INFO, log_file=None,
-                user_name=None, **kw):
+def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
+                user_name=None, hc_id=None, multi=False):
     """
-    Create job records on the database (if not already there) and returns
-    LogContext objects
+    Create job records on the database.
+
+    :returns: a list of LogContext objects
     """
-    multi = kw.pop('multi', None)
-    if kw.get('hazard_calculation_id'):
-        hc_id = int(kw['hazard_calculation_id'])
-    else:
-        hc_id = None
     if len(job_inis) > 1 and not hc_id and not multi:  # first job as hc
-        job = logs.init("job", job_inis[0], loglvl, log_file)
+        job = logs.init("job", job_inis[0], log_level, log_file,
+                        user_name, hc_id)
         hc_id = job.calc_id
         jobs = [job]
         job_inis = job_inis[1:]
@@ -299,33 +296,27 @@ def create_jobs(job_inis, loglvl=logging.INFO, log_file=None,
         else:
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
-            dic = readinput.get_params(job_ini, kw)
-        dic['hazard_calculation_id'] = hc_id
+            dic = readinput.get_params(job_ini)
         if 'sensitivity_analysis' in dic:
             analysis = valid.dictionary(dic['sensitivity_analysis'])
             for values in itertools.product(*analysis.values()):
-                new = logs.init('job', dic, log_level=loglvl,
-                                user_name=user_name)
+                new = logs.init('job', dic, log_level, user_name, hc_id)
                 pars = dict(zip(analysis, values))
                 for param, value in pars.items():
                     new.params[param] = str(value)
                 new.params['description'] = '%s %s' % (
                     new.params['description'], pars)
-                new.params['hazard_calculation_id'] = hc_id
                 logging.info('Job with %s', pars)
                 jobs.append(new)
         else:
-            jobs.append(logs.init('job', dic, log_level=loglvl,
-                                  user_name=user_name))
-    for job in jobs:
-        dic = dict(calculation_mode=job.params['calculation_mode'],
-                   description=job.params['description'],
-                   hazard_calculation_id=hc_id)
-        logs.dbcmd('update_job', job.calc_id, dic)
+            jobs.append(logs.init('job', dic, log_level, user_name))
+    if multi:
+        for job in jobs:
+            job.multi = True
     return jobs
 
 
-def run_jobs(jobs, kw={}):
+def run_jobs(jobs, exports=''):
     """
     Run jobs using the specified config file and other options.
 
@@ -340,13 +331,11 @@ def run_jobs(jobs, kw={}):
     :param username:
         Name of the user running the job
     :param kw:
-        Extra parameters like hazard_calculation_id and calculation_mode
+        Extra parameters like exports
     :returns:
         A list of LogContexts, one per job
     """
-    exports = kw.get('exports', '')
-    log_file = kw.get('log_file')
-    jobarray = len(jobs) > 1 and kw.get('multi')
+    jobarray = len(jobs) > 1 and jobs[0].multi
     try:
         poll_queue(jobs[0].calc_id, poll_time=15)
         # wait for an empty slot or a CTRL-C
@@ -363,7 +352,8 @@ def run_jobs(jobs, kw={}):
         if config.zworkers['host_cores'] and parallel.workers_status() == []:
             logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
-        allargs = [(job, job.get_oqparam(), exports, log_file) for job in jobs]
+        allargs = [(job, job.get_oqparam(), exports, job.log_file)
+                   for job in jobs]
         if jobarray:
             with general.start_many(run_calc, allargs):
                 pass
