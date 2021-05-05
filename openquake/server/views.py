@@ -540,8 +540,7 @@ def calc_run(request):
 
     user = utils.get_user(request)
     try:
-        job_id = submit_job(
-            inifiles[0], user, hazard_calculation_id=hazard_job_id)
+        job_id = submit_job(inifiles[0], user, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -555,7 +554,7 @@ def calc_run(request):
                         status=status)
 
 
-def submit_job(job_ini, username, **kw):
+def submit_job(job_ini, username, hc_id):
     """
     Create a job object from the given job.ini file in the job directory
     and run it in a new process.
@@ -563,8 +562,8 @@ def submit_job(job_ini, username, **kw):
     :returns: a job ID
     """
     jobs = engine.create_jobs(
-        [job_ini], config.distribution.log_level, user_name=username)
-    proc = Process(target=engine.run_jobs, args=(jobs, kw))
+        [job_ini], config.distribution.log_level, None, username, hc_id)
+    proc = Process(target=engine.run_jobs, args=(jobs,))
     proc.start()
     return jobs[0].calc_id
 

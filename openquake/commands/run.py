@@ -141,9 +141,11 @@ def main(job_ini,
     if len(job_ini) == 1:
         return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
                     loglevel, exports, params)
-    params['exports'] = exports
-    jobs = create_jobs(job_ini, loglevel)
-    run_jobs(jobs, **params)
+    jobs = create_jobs(job_ini, loglevel, hc_id=hc)
+    for job in jobs:
+        job.params.update(params)
+        job.params['exports'] = exports
+    run_jobs(jobs)
 
 
 main.job_ini = dict(help='calculation configuration file '

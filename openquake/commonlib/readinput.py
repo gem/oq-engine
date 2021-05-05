@@ -25,6 +25,7 @@ import zlib
 import pickle
 import shutil
 import zipfile
+import pathlib
 import logging
 import tempfile
 import functools
@@ -220,6 +221,8 @@ def get_params(job_ini, kw={}):
     :returns:
         A dictionary of parameters
     """
+    if isinstance(job_ini, pathlib.Path):
+        job_ini = str(job_ini)
     if job_ini.startswith(('http://', 'https://')):
         resp = requests.get(job_ini)
         job_ini = gettemp(suffix='.zip')
