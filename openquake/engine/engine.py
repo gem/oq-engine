@@ -227,23 +227,18 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-def run_calc(log, oqparam, exports, log_file=None, **kw):
+def run_calc(log):
     """
     Run a calculation.
 
     :param log:
         LogContext of the current job
-    :param oqparam:
-        :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param exports:
-        A comma-separated string of export types.
-    :param log_file:
-        Pathname of the log file (or None)
     """
     register_signals()
     setproctitle('oq-job-%d' % log.calc_id)
     with log:
-        calc = base.calculators(oqparam, calc_id=log.calc_id)
+        oqparam = log.get_oqparam()
+        calc = base.calculators(oqparam, log.calc_id)
         logging.info('%s running %s [--hc=%s]',
                      getpass.getuser(),
                      calc.oqparam.inputs['job_ini'],
@@ -259,7 +254,7 @@ def run_calc(log, oqparam, exports, log_file=None, **kw):
             logging.warning('Assuming %d %s workers',
                             parallel.Starmap.num_cores, OQ_DISTRIBUTE)
         t0 = time.time()
-        calc.run(exports=exports, **kw)
+        calc.run()
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         path = calc.datastore.filename
@@ -270,8 +265,9 @@ def run_calc(log, oqparam, exports, log_file=None, **kw):
         for line in logs.dbcmd('list_outputs', log.calc_id, False):
             general.safeprint(line)
         # sanity check to make sure that the logging on file is working
-        if log_file and log_file != os.devnull and getsize(log_file) == 0:
-            logging.warning('The log file %s is empty!?' % log_file)
+        if (log.log_file and log.log_file != os.devnull and
+                getsize(log.log_file) == 0):
+            logging.warning('The log file %s is empty!?' % log.log_file)
     return calc
 
 
@@ -316,24 +312,12 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     return jobs
 
 
-def run_jobs(jobs, exports=''):
+def run_jobs(jobs):
     """
     Run jobs using the specified config file and other options.
 
-    :param str job_inis:
-        A list of paths to .ini files, or a list of job dictionaries
-    :param str log_level:
-        'debug', 'info', 'warn', 'error', or 'critical'
-    :param str log_file:
-        Path to log file, or None
-    :param exports:
-        A comma-separated string of export types requested by the user.
-    :param username:
-        Name of the user running the job
-    :param kw:
-        Extra parameters like exports
-    :returns:
-        A list of LogContexts, one per job
+    :param jobs:
+        List of LogContexts
     """
     jobarray = len(jobs) > 1 and jobs[0].multi
     try:
@@ -352,15 +336,13 @@ def run_jobs(jobs, exports=''):
         if config.zworkers['host_cores'] and parallel.workers_status() == []:
             logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
-        with job:  # log validation errors properly
-            oq = job.get_oqparam()
-        allargs = [(job, oq, exports, job.log_file) for job in jobs]
+        allargs = [(job,) for job in jobs]
         if jobarray:
             with general.start_many(run_calc, allargs):
                 pass
         else:
-            for args in allargs:
-                run_calc(*args)
+            for job in jobs:
+                run_calc(job)
     finally:
         if config.zworkers['host_cores']:
             logging.info('Stopping the workers')

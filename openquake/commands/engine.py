@@ -165,7 +165,8 @@ def main(
                            hc_id, multi)
         for job in jobs:
             job.params.update(pars)
-        run_jobs(jobs, exports)
+            job.params['exports'] = exports
+        run_jobs(jobs)
 
     # hazard
     elif list_hazard_calculations:

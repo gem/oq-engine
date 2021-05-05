@@ -144,7 +144,8 @@ def main(job_ini,
     jobs = create_jobs(job_ini, loglevel, hc_id=hc)
     for job in jobs:
         job.params.update(params)
-    run_jobs(jobs, exports)
+        job.params['exports'] = exports
+    run_jobs(jobs)
 
 
 main.job_ini = dict(help='calculation configuration file '
