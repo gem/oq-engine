@@ -230,13 +230,14 @@ class LogContext:
 
 
 def init(job_or_calc, job_ini, log_level='info', log_file=None,
-         user_name=None):
+         user_name=None, hc_id=None):
     """
     :param job_or_calc: the string "job" or "calc"
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param log_level: the log level as a string or number
     :param log_file: path to the log file (if any)
     :param user_name: user running the job (None means current user)
+    :param hc_id: parent calculation ID (default None)
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -246,4 +247,4 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     """
     assert job_or_calc in {"job", "calc"}, job_or_calc
     return LogContext(job_or_calc == "job", job_ini,
-                      log_level, log_file, user_name)
+                      log_level, log_file, user_name, hc_id)
