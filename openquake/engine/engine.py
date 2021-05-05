@@ -334,7 +334,7 @@ def run_jobs(jobs):
             logs.dbcmd('update_job', job.calc_id, dic)
     try:
         if config.zworkers['host_cores'] and parallel.workers_status() == []:
-            logging.info('Asking the DbServer to start the workers')
+            print('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
         allargs = [(job,) for job in jobs]
         if jobarray:
@@ -345,7 +345,7 @@ def run_jobs(jobs):
                 run_calc(job)
     finally:
         if config.zworkers['host_cores']:
-            logging.info('Stopping the workers')
+            print('Stopping the workers')
             parallel.workers_stop()
     return jobs
 
