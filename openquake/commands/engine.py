@@ -165,6 +165,7 @@ def main(
                            hc_id, multi)
         for job in jobs:
             job.params.update(pars)
+            job.params['hazard_calculation_id'] = hc_id
             job.params['exports'] = exports
         run_jobs(jobs)
 
