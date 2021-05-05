@@ -55,6 +55,7 @@ class OpenQuake(object):
 
     def get_calc(self, job_ini):
         log = logs.init("job", job_ini)
+        log.__enter__()
         return calculators(log.get_oqparam(), log.calc_id)
 
     def webex(self, calc_id, what):

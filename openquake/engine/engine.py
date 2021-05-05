@@ -352,8 +352,9 @@ def run_jobs(jobs, exports=''):
         if config.zworkers['host_cores'] and parallel.workers_status() == []:
             logging.info('Asking the DbServer to start the workers')
             logs.dbcmd('workers_start')  # start the workers
-        allargs = [(job, job.get_oqparam(), exports, job.log_file)
-                   for job in jobs]
+        with job:  # log validation errors properly
+            oq = job.get_oqparam()
+        allargs = [(job, oq, exports, job.log_file) for job in jobs]
         if jobarray:
             with general.start_many(run_calc, allargs):
                 pass

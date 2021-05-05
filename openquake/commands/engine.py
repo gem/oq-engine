@@ -161,10 +161,11 @@ def main(
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        pars['exports'] = exports
         jobs = create_jobs(job_inis, log_level, log_file, user_name,
                            hc_id, multi)
-        run_jobs(jobs, pars)
+        for job in jobs:
+            job.params.update(pars)
+        run_jobs(jobs, exports)
 
     # hazard
     elif list_hazard_calculations:
