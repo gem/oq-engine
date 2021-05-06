@@ -40,7 +40,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels
-from openquake.commonlib import readinput, logictree, datastore, logs
+from openquake.commonlib import readinput, logictree, datastore
 from openquake.calculators.export import export as exp
 from openquake.calculators import getters
 
@@ -1283,8 +1283,8 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         calc.datastore['events'] = events
         # convert into an array of dtype gmv_data_dt
         lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
-               for s in numpy.arange(N, dtype=U32)
-               for ei, event in enumerate(events)]
+               for ei, event in enumerate(events)
+               for s in numpy.arange(N, dtype=U32)]
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.array(lst, oq.gmf_data_dt())
         create_gmf_data(calc.datastore, imts, data=data)
