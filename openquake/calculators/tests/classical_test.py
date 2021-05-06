@@ -24,7 +24,7 @@ from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import lt, contexts
 from openquake.commonlib import readinput
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import (
@@ -86,7 +86,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_1.__file__)
 
         if parallel.oq_distribute() != 'no':
-            info = view('job_info', self.calc.datastore)
+            info = text_table(view('job_info', self.calc.datastore))
             self.assertIn('task', info)
             self.assertIn('sent', info)
             self.assertIn('received', info)
@@ -129,7 +129,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_2.__file__, 'job.ini')
 
         # check view inputs
-        lines = view('inputs', self.calc.datastore).splitlines()
+        lines = text_table(view('inputs', self.calc.datastore)).splitlines()
         self.assertEqual(len(lines), 13)  # rst table with 13 rows
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
@@ -228,7 +228,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
-        csv = general.gettemp(view('extreme_sites', self.calc.datastore))
+        csv = general.gettemp(text_table(view('extreme_sites', self.calc.datastore)))
         self.assertEqualFiles('expected/extreme_sites.csv', csv)
 
         # test extract/hcurves/rlz-0, used by the npz exports

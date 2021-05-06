@@ -226,7 +226,7 @@ class PostRiskCalculator(base.RiskCalculator):
         time_ratio = oq.time_ratio / R if oq.collect_rlzs else oq.time_ratio
         self.datastore['agg_losses-rlzs'] = agg_losses * time_ratio
         set_rlzs_stats(self.datastore, 'agg_losses',
-                       agg_id=K + 1, loss_types=oq.loss_names, units=units)
+                       agg_id=K + 1, loss_type=oq.loss_names, units=units)
         self.datastore['agg_curves-rlzs'] = agg_curves
         set_rlzs_stats(self.datastore, 'agg_curves',
                        agg_id=K + 1, lti=self.L,

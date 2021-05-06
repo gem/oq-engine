@@ -376,6 +376,15 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
+
+        # sanity check on the agg_loss_table
+        alt = self.datastore.read_df(
+            'agg_loss_table', ['event_id', 'agg_id', 'loss_id'])
+        K = self.datastore['agg_loss_table'].attrs.get('K', 0)
+        upper_limit = self.E * self.L * (K + 1)
+        size = len(alt)
+        assert size <= upper_limit, (size, upper_limit)
+
         if oq.avg_losses:
             for r in range(self.R):
                 self.avg_losses[:, r] *= self.avg_ratio[r]
@@ -385,8 +394,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                  loss_type=oq.loss_names)
 
         # save agg_losses
-        alt = self.datastore.read_df('agg_loss_table', 'event_id')
-        K = self.datastore['agg_loss_table'].attrs.get('K', 0)
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         if oq.calculation_mode == 'scenario_risk':  # compute agg_losses
             alt['rlz_id'] = self.rlzs[alt.index.to_numpy()]
