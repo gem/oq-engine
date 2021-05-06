@@ -437,6 +437,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
         vcurves = []  # hazard curves with a vertical section for large poes
         for (s, m, k), mat6 in sorted(results.items()):
+            # NB: k is an index with value 0 (MagDistEps) or 1 (MagLonLat)
             imt = self.imts[m]
             for p, poe in enumerate(self.poes_disagg):
                 mat5 = mat6[..., p, :]

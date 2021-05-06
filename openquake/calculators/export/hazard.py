@@ -29,7 +29,7 @@ from openquake.baselib.general import (
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract, get_sites, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import gen_rupture_getters
@@ -87,8 +87,8 @@ def export_ruptures_csv(ekey, dstore):
     arr = extract(dstore, 'rupture_info')
     if export.sanity_check:
         bad = view('bad_ruptures', dstore)
-        if bad.count('\n') > 3:  # nonempty text_table
-            print(bad, file=sys.stderr)
+        if len(bad):  # nonempty
+            print(text_table(bad), file=sys.stderr)
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)
