@@ -228,8 +228,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
-        csv = general.gettemp(text_table(view('extreme_sites', self.calc.datastore)))
-        self.assertEqualFiles('expected/extreme_sites.csv', csv)
+        csv = general.gettemp(
+            text_table(view('extreme_sites', self.calc.datastore)))
+        self.assertEqualFiles('expected/extreme_sites.rst', csv)
 
         # test extract/hcurves/rlz-0, used by the npz exports
         haz = vars(extract(self.calc.datastore, 'hcurves'))
