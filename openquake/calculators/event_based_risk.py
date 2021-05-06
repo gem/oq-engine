@@ -378,13 +378,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
 
         # sanity check on the agg_loss_table
-        """
         alt = self.datastore.read_df('agg_loss_table', 'event_id')
         K = self.datastore['agg_loss_table'].attrs.get('K', 0)
         upper_limit = self.E * self.L * (K + 1)
         size = len(alt)
-        assert size <= upper_limit, (size, upper_limit)
-        """
+        # assert size <= upper_limit, (size, upper_limit)
         if oq.avg_losses:
             for r in range(self.R):
                 self.avg_losses[:, r] *= self.avg_ratio[r]
