@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Added Ameri (2014) GMPE for the Rjb case
+  
   [Michele Simionato]
   * Added an early check for fragility functions in place of vulnerability
     functions or viceversa
