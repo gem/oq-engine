@@ -378,8 +378,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
 
         # sanity check on the agg_loss_table
-        alt = self.datastore.read_df(
-            'agg_loss_table', ['event_id', 'agg_id', 'loss_id'])
+        alt = self.datastore.read_df('agg_loss_table', 'event_id')
         K = self.datastore['agg_loss_table'].attrs.get('K', 0)
         upper_limit = self.E * self.L * (K + 1)
         size = len(alt)
