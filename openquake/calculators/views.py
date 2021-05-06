@@ -149,7 +149,8 @@ def text_table(data, header=None, fmt=None, ext='rst'):
                              % (len(col_sizes), len(tup)))
         body.append(tup)
 
-    sepline = '+-%s-+' % '-+-'.join(('-' * size for size in col_sizes))
+    wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
+    sepline = wrap % '-+-'.join(('-' * size for size in col_sizes))
     templ = '| %s |' % ' | '.join(('%-{}s'.format(size) for size in col_sizes))
     if header and ext == 'rst':
         lines = [sepline, templ % tuple(header), sepline]
