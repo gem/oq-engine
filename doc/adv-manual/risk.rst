@@ -307,3 +307,68 @@ you the mean and quantile loss curves in a format like the following one::
 If you do not set the ``aggregate_by`` parameter
 you will still able to compute the total loss curve 
 (for the entire portfolio of assets), and the total average losses.
+
+Aggregating by multiple tags
+----------------------------
+
+The engine also supports aggregation my multiple tags. For instance
+the second event based risk demo (the file ``job_eb.ini``) has a line
+
+   ``aggregate_by = NAME_1, taxonomy``
+
+and it is able to aggregate both on geographic region (``NAME_1``) and
+on taxonomy. There are 25 possible combinations, that you can see with
+the command::
+
+   $ oq show agg_keys
+   | NAME_1_ | taxonomy_ | NAME_1      | taxonomy                   |
+   +---------+-----------+-------------+----------------------------+
+   | 1       | 1         | Mid-Western | Wood                       |
+   | 1       | 2         | Mid-Western | Adobe                      |
+   | 1       | 3         | Mid-Western | Stone-Masonry              |
+   | 1       | 4         | Mid-Western | Unreinforced-Brick-Masonry |
+   | 1       | 5         | Mid-Western | Concrete                   |
+   | 2       | 1         | Far-Western | Wood                       |
+   | 2       | 2         | Far-Western | Adobe                      |
+   | 2       | 3         | Far-Western | Stone-Masonry              |
+   | 2       | 4         | Far-Western | Unreinforced-Brick-Masonry |
+   | 2       | 5         | Far-Western | Concrete                   |
+   | 3       | 1         | West        | Wood                       |
+   | 3       | 2         | West        | Adobe                      |
+   | 3       | 3         | West        | Stone-Masonry              |
+   | 3       | 4         | West        | Unreinforced-Brick-Masonry |
+   | 3       | 5         | West        | Concrete                   |
+   | 4       | 1         | East        | Wood                       |
+   | 4       | 2         | East        | Adobe                      |
+   | 4       | 3         | East        | Stone-Masonry              |
+   | 4       | 4         | East        | Unreinforced-Brick-Masonry |
+   | 4       | 5         | East        | Concrete                   |
+   | 5       | 1         | Central     | Wood                       |
+   | 5       | 2         | Central     | Adobe                      |
+   | 5       | 3         | Central     | Stone-Masonry              |
+   | 5       | 4         | Central     | Unreinforced-Brick-Masonry |
+   | 5       | 5         | Central     | Concrete                   |
+
+The lines in this table are associated to the *generalized aggregation ID*,
+``agg_id`` which is an index going from ``0`` (meaning full aggregation) to
+``1`` (meaning aggregate assets with NAME_1=Mid-Western and taxonomy=Wood),
+to ``2``, ... to ``25`` (meaning aggregate assets with NAME_1=Central and
+taxonomy=Concrete).
+
+The ``agg_id`` field enters in the ``agg_loss_table`` and in outputs like
+the aggregate losses; for instance::
+
+   $ oq show agg_losses-rlzs
+   | agg_id | rlz | loss_type     | value       |
+   +--------+-----+---------------+-------------+
+   | 0      | 0   | nonstructural | 2_327_008   |
+   | 0      | 0   | structural    | 937_852     |
+   +--------+-----+---------------+-------------+
+   | ...    + ... + ...           + ...         +
+   +--------+-----+---------------+-------------+
+   | 25     | 1   | nonstructural | 100_199_448 |
+   | 25     | 1   | structural    | 157_885_648 |
+
+The exporter (``oq export agg_losses-rlzs``) converts back the ``agg_id``
+to the proper combination of tags; ``agg_id=0`` means full aggregation
+and is replaced with the string ``*total*``.
