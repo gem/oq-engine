@@ -1,5 +1,5 @@
 #!/bin/bash
-set -x
+set -e
 if [ ! -d "$1" ]; then
     echo "Please specify the location of the folder containing the demos. Aborting." >&2
     exit 1
