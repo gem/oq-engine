@@ -350,10 +350,10 @@ the command::
    | 5       | 5         | Central     | Concrete                   |
 
 The lines in this table are associated to the *generalized aggregation ID*,
-``agg_id`` which is an index going from ``0`` (meaning full aggregation) to
-``1`` (meaning aggregate assets with NAME_1=Mid-Western and taxonomy=Wood),
-to ``2``, ... to ``25`` (meaning aggregate assets with NAME_1=Central and
-taxonomy=Concrete).
+``agg_id`` which is an index going from ``0`` (meaning aggregate assets with
+NAME_1=*Mid-Western* and taxonomy=*Wood*) to ``24`` (meaning aggregate assets
+with NAME_1=*Mid-Western* and taxonomy=*Wood*); moreover ``agg_id=25`` means
+full aggregation.
 
 The ``agg_id`` field enters in the ``agg_loss_table`` and in outputs like
 the aggregate losses; for instance::
@@ -370,5 +370,5 @@ the aggregate losses; for instance::
    | 25     | 1   | structural    | 157_885_648 |
 
 The exporter (``oq export agg_losses-rlzs``) converts back the ``agg_id``
-to the proper combination of tags; ``agg_id=0`` means full aggregation
-and is replaced with the string ``*total*``.
+to the proper combination of tags; ``agg_id=25``, i.e. full aggregation,
+is replaced with the string ``*total*``.
