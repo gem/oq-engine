@@ -372,3 +372,19 @@ the aggregate losses; for instance::
 The exporter (``oq export agg_losses-rlzs``) converts back the ``agg_id``
 to the proper combination of tags; ``agg_id=25``, i.e. full aggregation,
 is replaced with the string ``*total*``.
+
+By knowing the number of events, the number of aggregation keys and the
+number of loss types, it is possible to give an upper limit to the size
+of the ``agg_loss_table``. In the demo there are 1703 events, 26 aggregation
+keys and 2 loss types, so the ``agg_loss_table`` contains at most
+
+  1703 * 26 * 2 = 88,556 rows
+
+This is an upper limit, since some combination can produce zero losses
+and are not stored, especially if the ``minimum_asset_loss`` feature is
+used. In the case of the demo actually only 20,877 rows are nonzero::
+
+   $ oq show agg_loss_table
+          event_id  agg_id  loss_id           loss      variance
+   ...
+   [20877 rows x 5 columns]
