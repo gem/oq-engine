@@ -88,7 +88,7 @@ but they are convertible to DataFrames:
 
 $ oq show hcurves-stats
 | site_id | stat | imt     | lvl | value   |
-|-------- + ---- + ------- + --- + --------|
+|---------+ -----+ --------+ ----+ --------|
 | 0       | mean | PGA     | 0   | 0.45286 |
 | 0       | mean | PGA     | 1   | 0.05589 |
 | 0       | mean | PGA     | 2   | 0.00558 |
@@ -237,7 +237,7 @@ Here is how to show the group structure of the CompositeSourceModel:
 
 $ oq show composite_source_model # case_2
 | grp_id | trt | smrs | sources |
-|------- + --- + ---- + --------|
+|--------+ ----+ -----+ --------|
 | 0      | 0   | 0    | 1       |
 | 1      | 1   | 0    | 2       |
 
@@ -245,7 +245,7 @@ $ oq show composite_source_model # case_2
 
 $ oq show composite_source_model  # LogicTreeCase1ClassicalPSHA
 | grp_id | trt | smrs | sources |
-|------- + --- + ---- + --------|
+|--------+ ----+ -----+ --------|
 | 0      | 0   | 0    | 2;0     |
 | 1      | 0   | 1    | 2;1     |
 | 2      | 1   | 0    | 1;0     |
@@ -260,7 +260,7 @@ The engine has no trouble managing identical sources either:
 
 $ oq show composite_source_model # case_7, "1" in both branches
 | grp_id | trt | smrs | sources |
-|------- + --- + ---- + --------|
+|--------+ ----+ -----+ --------|
 | 0      | 0   | 0    | 2       |
 | 1      | 0   | 0 1  | 1       |
 
@@ -272,7 +272,7 @@ Here source multiplication happens:
 
 $ oq show composite_source_model # case_8
 | grp_id | trt | smrs  | sources |
-|------- + --- + ----- + --------|
+|--------+ ----+ ------+ --------|
 | 0      | 0   | 0     | 1;0     |
 | 1      | 0   | 0 1 2 | 2       |
 | 2      | 0   | 1     | 1;1     |
@@ -282,7 +282,7 @@ $ oq show composite_source_model # case_8
 
 $ oq show composite_source_model  # case_20
 | grp_id | trt | smrs          | sources   |
-|------- + --- + ------------- + ----------|
+|--------+ ----+ --------------+ ----------|
 | 0      | 0   | 0 1 2 3 4 5   | SFLT1;0   |
 | 1      | 0   | 0 1 2 6 7 8   | COMFLT1;0 |
 | 2      | 0   | 0 3 6 9       | CHAR1;0   |
@@ -298,7 +298,7 @@ $ oq show full_lt/source_model_lt|vd
 
 $ oq show composite_source_model  # case_16, 10/759_375 samples
 | grp_id | trt | smrs    | sources         |
-|------- + --- + ------- + ----------------|
+|--------+ ----+ --------+ ----------------|
 | 0      | 0   | 0       | 1;0 5;0         |
 | 1      | 0   | 0 2     | 4;0             |
 | 2      | 0   | 0 3 6 9 | 2;0             |
@@ -325,7 +325,7 @@ $ oq show composite_source_model  # case_16, 10/759_375 samples
 $ oq show full_lt/source_model_lt|vd
 $ oq show realizations
 | rlz_id | branch_path   | weight  |
-|------- + ------------- + --------|
+|--------+ --------------+ --------|
 | 0      | 00211222230~0 | 0.10000 |
 | 1      | 01031112121~0 | 0.10000 |
 | 2      | 01121422231~0 | 0.10000 |
