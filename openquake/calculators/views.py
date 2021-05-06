@@ -150,8 +150,8 @@ def text_table(data, header=None, fmt=None, ext='rst'):
         body.append(tup)
 
     wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
-    sepline = wrap % '-+-'.join(('-' * size for size in col_sizes))
-    templ = '| %s |' % ' | '.join(('%-{}s'.format(size) for size in col_sizes))
+    sepline = wrap % '-+-'.join('-' * size for size in col_sizes)
+    templ = '| %s |' % ' | '.join('%-{}s'.format(size) for size in col_sizes)
     if header and ext == 'rst':
         lines = [sepline, templ % tuple(header), sepline]
     elif header and ext == 'org':
