@@ -244,8 +244,9 @@ class PostRiskCalculator(base.RiskCalculator):
             dloss = views.view('delta_loss:%d' % li, self.datastore)
             if dloss['delta'].mean() > .1:  # more than 10% variation
                 logging.warning(
-                    'A big variation in the %s loss curve is expected:\n%s',
-                    ln, dloss)
+                    'A big variation in the %s loss curve is expected '
+                    '(oq show delta_loss:%d %d)', ln, li,
+                    self.datastore.calc_id)
         if not self.aggkey:
             return
         logging.info('Sanity check on agg_losses')
