@@ -40,7 +40,7 @@ def main(calc_id: int, aggregate_by):
         description=oqp.description + '[aggregate_by=%s]' % aggregate_by,
         user_name=getpass.getuser(), is_running=1, status='executing',
         pid=os.getpid(), hazard_calculation_id=calc_id)
-    log = logs.init('job', dic, level=logging.INFO)
+    log = logs.init('job', dic, logging.INFO)
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     with log:
