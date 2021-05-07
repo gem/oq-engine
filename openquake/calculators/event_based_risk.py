@@ -328,7 +328,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             smap.monitor.save('srcfilter', self.src_filter())
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
-            for rg in getters.gen_rupture_getters(
+            for rg in getters.get_rupture_getters(
                     self.datastore, self.oqparam.concurrent_tasks):
                 smap.submit((rg, self.param))
             smap.reduce(self.agg_dicts)

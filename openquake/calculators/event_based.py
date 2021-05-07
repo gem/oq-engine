@@ -35,7 +35,7 @@ from openquake.commonlib import (
 from openquake.risklib.riskinput import str2rsi
 from openquake.calculators import base, views
 from openquake.calculators.getters import (
-    GmfGetter, gen_rupture_getters, sig_eps_dt, time_dt)
+    GmfGetter, get_rupture_getters, sig_eps_dt, time_dt)
 from openquake.calculators.classical import ClassicalCalculator
 from openquake.engine import engine
 
@@ -347,7 +347,7 @@ class EventBasedCalculator(base.HazardCalculator):
         nr = len(self.datastore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
         allargs = [(rgetter, self.param)
-                   for rgetter in gen_rupture_getters(
+                   for rgetter in get_rupture_getters(
                            self.datastore, oq.concurrent_tasks)]
         # reading the args is fast since we are not prefiltering the ruptures,
         # nor reading the geometries; using an iterator would cause the usual
