@@ -85,3 +85,10 @@ class MultiFaultTestCase(unittest.TestCase):
                                self.rup_idxs, self.poes, self.mags, self.rakes)
         rups = list(src.iter_ruptures())
         self.assertEqual(7, len(rups))
+
+    def test02(self):
+        """ First test of _check_rupture_definition method """
+        rup_idxs = [['0'], ['1'], ['3']]
+        self.assertRaises(ValueError, MultiFaultSource, "01", "test",
+                          "Moon Crust", self.sections, rup_idxs,
+                          self.poes, self.mags, self.rakes)

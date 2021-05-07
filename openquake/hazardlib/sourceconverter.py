@@ -389,7 +389,11 @@ def convert_multiFaultSource(fname, node, rup_spacing=5.0):
         mags.append(~rupnode.magnitude)
         rakes.append(~rupnode.rake)
         # Get indexes
-        idxs.append(rupnode.sectionIndexes.attrib.get('indexes').split(','))
+        tmp = rupnode.sectionIndexes.attrib.get('indexes')
+        if ',' in tmp:
+            idxs.append(tmp.split(','))
+        else:
+            idxs.append(tmp.split(' '))
     mags = numpy.array(mags)
     rakes = numpy.array(rakes)
     poes = numpy.array(prbs)

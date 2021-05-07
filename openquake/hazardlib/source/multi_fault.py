@@ -85,8 +85,6 @@ class MultiFaultSource(BaseSeismicSource):
                  sections: list, rupture_idxs: list,
                  occurrence_probs: Mapping[list, np.ndarray],
                  magnitudes: list, rakes: list):
-        """
-        """
         self.sections = sections
         self.rupture_idxs = rupture_idxs
         self.poes = occurrence_probs
@@ -94,6 +92,7 @@ class MultiFaultSource(BaseSeismicSource):
         self.rakes = rakes
         self.trt = tectonic_region_type
         super().__init__(source_id, name, tectonic_region_type)
+        self._check_rupture_definition()
         self._create_inverted_index()
 
     def _create_inverted_index(self):
@@ -102,12 +101,24 @@ class MultiFaultSource(BaseSeismicSource):
         for i, sec in enumerate(self.sections):
             self.invx[sec.sec_id] = i
 
-    def iter_ruptures(self, fromidx=0, untilidx=None, **kwargs):
+    def _check_rupture_definition(self):
+        """ Checks that all the section indexes in the ruptures exists """
+        section_idxs = [s.sec_id for s in self.sections]
+        msg = 'Rupture #{:d}: section {:s} does not exists in '
+        msg += 'sections list'
+        for i in range(len(self.mags)):
+            for idx in self.rupture_idxs[i]:
+                if idx not in section_idxs:
+                    raise ValueError(msg.format(i, idx))
+
+    def iter_ruptures(self, fromidx: int = 0, untilidx: int = None, **kwargs):
         """
         An iterator for the ruptures.
 
         :param fromidx:
+            Index of the first rupture yielded
         :param untilidx:
+            Index of the last rupture yielded
         """
 
         # Create inverted index
