@@ -82,7 +82,7 @@ def event_based_risk(df, param, monitor):
     mon_avg = monitor('averaging losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'], parentdir=param['parentdir'])
     K = param['K']
-    with monitor('reading data'):
+    with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
@@ -244,13 +244,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
         super().pre_execute()
-        if oq.hazard_calculation_id:
-            parentdir = os.path.dirname(
-                datastore.read(oq.hazard_calculation_id).filename)
-        else:
-            parentdir = None
         self.set_param(hdf5path=self.datastore.filename,
-                       parentdir=parentdir,
+                       parentdir=self.datastore.ppath,
                        ignore_covs=oq.ignore_covs,
                        master_seed=oq.master_seed,
                        asset_correlation=int(oq.asset_correlation))
@@ -409,7 +404,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             prc = PostRiskCalculator(oq, self.datastore.calc_id)
             if hasattr(self, 'exported'):
                 prc.exported = self.exported
-            prc.run(exports='')
+            with prc.datastore:
+                prc.run(exports='')
 
         if (oq.investigation_time or not oq.avg_losses or
                 'agg_losses-rlzs' not in self.datastore):

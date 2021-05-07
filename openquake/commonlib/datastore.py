@@ -161,6 +161,8 @@ class DataStore(collections.abc.MutableMapping):
     """
     calc_id = None  # set at instantiation time
     job = None  # set at instantiation time
+    opened = 0
+    closed = 0
 
     def __init__(self, path, ppath=None, mode=None):
         self.filename = path
@@ -186,6 +188,7 @@ class DataStore(collections.abc.MutableMapping):
         if self.hdf5 == ():  # not already open
             try:
                 self.hdf5 = hdf5.File(self.filename, mode)
+                self.__class__.opened += 1
             except OSError as exc:
                 raise OSError('%s in %s' % (exc, self.filename))
         return self
@@ -352,6 +355,7 @@ class DataStore(collections.abc.MutableMapping):
         if self.hdf5:  # is open
             self.hdf5.flush()
             self.hdf5.close()
+            self.__class__.closed += 1
             self.hdf5 = ()
 
     def clear(self):
@@ -488,15 +492,10 @@ class DataStore(collections.abc.MutableMapping):
         del self.hdf5[key]
 
     def __enter__(self):
-        self.was_close = self.hdf5 == ()
-        if self.was_close:
-            self.open(self.mode)
         return self
 
     def __exit__(self, etype, exc, tb):
-        if self.was_close:  # and has been opened in __enter__, close it
-            self.close()
-        del self.was_close
+        self.close()
 
     def __getstate__(self):
         # make the datastore pickleable
