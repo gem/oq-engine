@@ -21,7 +21,7 @@ import os.path
 import logging
 from openquake.baselib import general
 from openquake.risklib.asset import Exposure
-from openquake.commonlib import readinput, logictree
+from openquake.commonlib import readinput, logictree, oqvalidation
 
 
 def zip_all(directory):
@@ -94,7 +94,7 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
         if os.path.exists(archive_zip):
             sys.exit('%s exists already' % archive_zip)
     # do not validate to avoid permissions error on the export_dir
-    oq = oq or readinput.get_oqparam(job_ini, validate=False)
+    oq = oq or oqvalidation.OqParam(**readinput.get_params(job_ini))
     if risk_ini:
         risk_ini = os.path.normpath(os.path.abspath(risk_ini))
         oqr = readinput.get_oqparam(risk_ini)

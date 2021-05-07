@@ -233,7 +233,7 @@ class Choices(Choice):
         return tuple(values)
 
 
-export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz')
+export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz', 'hdf5')
 
 
 class Regex(object):

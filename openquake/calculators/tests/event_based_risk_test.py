@@ -23,7 +23,7 @@ import numpy
 from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
 from openquake.commonlib import logs, readinput
-from openquake.calculators.views import view, rst_table
+from openquake.calculators.views import view, text_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -107,43 +107,43 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # extract tot_curves
         aw = extract(self.calc.datastore, 'tot_curves?kind=stats&'
                      'loss_type=structural&absolute=1')
-        tmp = gettemp(rst_table(aw.to_dframe()))
+        tmp = gettemp(text_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves1.csv', tmp)
 
         aw = extract(self.calc.datastore, 'tot_curves?kind=rlzs&'
                      'loss_type=structural&absolute=1')
-        tmp = gettemp(rst_table(aw.to_dframe()))
+        tmp = gettemp(text_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves2.csv', tmp)
 
         aw = extract(self.calc.datastore, 'tot_curves?kind=stats&'
                      'loss_type=structural&absolute=0')
-        tmp = gettemp(rst_table(aw.to_dframe()))
+        tmp = gettemp(text_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves3.csv', tmp)
 
         aw = extract(self.calc.datastore, 'tot_curves?kind=rlzs&'
                      'loss_type=structural&absolute=0')
-        tmp = gettemp(rst_table(aw.to_dframe()))
+        tmp = gettemp(text_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves4.csv', tmp)
 
         # extract agg_curves with tags
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
-        tmp = gettemp(rst_table(aw.to_dframe()))
+        tmp = gettemp(text_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves5.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
                      'loss_type=structural&absolute=1&policy=A&taxonomy=RC')
-        tmp = gettemp(rst_table(aw.to_dframe()))
+        tmp = gettemp(text_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves6.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=stats&'
                      'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
-        tmp = gettemp(rst_table(aw.to_dframe()))
+        tmp = gettemp(text_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves7.csv', tmp)
 
         aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
                      'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
-        tmp = gettemp(rst_table(aw.to_dframe()))
+        tmp = gettemp(text_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves8.csv', tmp)
 
         # test ct_independence
@@ -554,10 +554,10 @@ agg_id
         # the parent has aggregate_by = NAME_1, NAME_2, taxonomy
         oq = parent['oqparam']
         oq.__dict__['aggregate_by'] = ['NAME_1']
-        job_id = logs.init('nojob', logging.INFO)  # requires the DbServer
-        prc = PostRiskCalculator(oq, job_id)
+        log = logs.init('calc', {'calculation_mode': 'post_risk'})
+        prc = PostRiskCalculator(oq, log.calc_id)
         oq.hazard_calculation_id = parent.calc_id
-        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}):
+        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}), log:
             prc.run()
         [fname] = export(('agg_losses-rlzs', 'csv'), prc.datastore)
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,

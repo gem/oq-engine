@@ -104,7 +104,7 @@ def get_loss_builder(dstore, return_periods=None, loss_dt=None):
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
         loss_dt or oq.loss_dt(), weights, dict(enumerate(num_events)),
-        eff_time, oq.risk_investigation_time)
+        eff_time, oq.risk_investigation_time or oq.investigation_time)
 
 
 def get_src_loss_table(dstore, L):
@@ -226,7 +226,7 @@ class PostRiskCalculator(base.RiskCalculator):
         time_ratio = oq.time_ratio / R if oq.collect_rlzs else oq.time_ratio
         self.datastore['agg_losses-rlzs'] = agg_losses * time_ratio
         set_rlzs_stats(self.datastore, 'agg_losses',
-                       agg_id=K + 1, loss_types=oq.loss_names, units=units)
+                       agg_id=K + 1, loss_type=oq.loss_names, units=units)
         self.datastore['agg_curves-rlzs'] = agg_curves
         set_rlzs_stats(self.datastore, 'agg_curves',
                        agg_id=K + 1, lti=self.L,
@@ -244,8 +244,9 @@ class PostRiskCalculator(base.RiskCalculator):
             dloss = views.view('delta_loss:%d' % li, self.datastore)
             if dloss['delta'].mean() > .1:  # more than 10% variation
                 logging.warning(
-                    'A big variation in the %s loss curve is expected:\n%s',
-                    ln, dloss)
+                    'A big variation in the %s loss curve is expected '
+                    '(oq show delta_loss:%d %d)', ln, li,
+                    self.datastore.calc_id)
         if not self.aggkey:
             return
         logging.info('Sanity check on agg_losses')

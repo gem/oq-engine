@@ -117,13 +117,13 @@ class CalculatorTestCase(unittest.TestCase):
         self.testdir = os.path.dirname(testfile) if os.path.isfile(testfile) \
             else testfile
         params = readinput.get_params(os.path.join(self.testdir, job_ini), kw)
-
         oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
             base.calculators)
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
-        return base.calculators(oq, logs.init())
+        log = logs.init('calc', params)
+        return base.calculators(oq, log.calc_id)
 
     def run_calc(self, testfile, job_ini, **kw):
         """

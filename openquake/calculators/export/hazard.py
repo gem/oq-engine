@@ -29,7 +29,7 @@ from openquake.baselib.general import (
 from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract, get_sites, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import gen_rupture_getters
@@ -67,7 +67,7 @@ def export_ruptures_xml(ekey, dstore):
             events_by_ses = group_array(events[proxy['id']], 'ses_id')
             ebr = proxy.to_ebr(rgetter.trt)
             ebrs.append(ebr.export(events_by_ses))
-        ruptures_by_grp[rgetter.et_id].extend(ebrs)
+        ruptures_by_grp[rgetter.trt_smr].extend(ebrs)
     dest = dstore.export_path('ses.' + fmt)
     writer = hazard_writers.SESXMLWriter(dest)
     writer.serialize(ruptures_by_grp, oq.investigation_time)
@@ -87,8 +87,8 @@ def export_ruptures_csv(ekey, dstore):
     arr = extract(dstore, 'rupture_info')
     if export.sanity_check:
         bad = view('bad_ruptures', dstore)
-        if bad.count('\n') > 3:  # nonempty rst_table
-            print(bad, file=sys.stderr)
+        if len(bad):  # nonempty
+            print(text_table(bad), file=sys.stderr)
     comment = dstore.metadata
     comment.update(investigation_time=oq.investigation_time,
                    ses_per_logic_tree_path=oq.ses_per_logic_tree_path)

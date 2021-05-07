@@ -277,8 +277,16 @@ class Amplifier(object):
         if ampl_code == b'' and len(self.ampcodes) == 1:
             ampl_code = self.ampcodes[0]
 
-        ialphas = self.ialphas[ampl_code, imt]
-        isigmas = self.isigmas[ampl_code, imt]
+        min_gm = numpy.amin(self.imtls[imt])
+        max_gm = numpy.amax(self.imtls[imt])
+
+        min_ratio = numpy.amin(numpy.array(self.amplevels[1:]) /
+                               numpy.array(self.amplevels[:-1]))*0.9
+        min_ratio = min(max(min_ratio, 1.05), 1.1)
+        allimls = [min_gm]
+        while allimls[-1] < max_gm:
+            allimls.append(allimls[-1]*min_ratio)
+        allimls = numpy.array(allimls)
 
         A, G = len(self.amplevels), poes.shape[1]
         ampl_poes = numpy.zeros((A, G))
@@ -287,8 +295,21 @@ class Amplifier(object):
         for g in range(G):
 
             # Compute the probability of occurrence of GM within a number of
-            # intervals
-            p_occ = -numpy.diff(poes[:, g])
+            # intervals by interpolating the hazard curve
+            idx = numpy.nonzero(poes[:, g].flatten() > 1e-100)
+            simls = allimls[allimls <= numpy.amax(self.imtls[imt][idx])]
+            ipoes = numpy.interp(numpy.log10(simls),
+                                 numpy.log10(self.imtls[imt][idx]),
+                                 numpy.log10(poes[:, g].flatten()[idx]))
+            ipoes = 10.0**ipoes
+            p_occ = -numpy.diff(ipoes)
+
+            # Calculate the amplification factor and sigma for the selected
+            # IMLs
+            self.levels = simls
+            self._set_alpha_sigma(mag=None, dst=None)
+            ialphas = self.ialphas[ampl_code, imt]
+            isigmas = self.isigmas[ampl_code, imt]
 
             for mid, p, a, s in zip(self.midlevels, p_occ, ialphas, isigmas):
                 #

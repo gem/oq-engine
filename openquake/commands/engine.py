@@ -18,11 +18,12 @@
 import os
 import sys
 import getpass
+import logging
 from openquake.baselib import config
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
-from openquake.engine.engine import run_jobs
+from openquake.engine.engine import create_jobs, run_jobs
 from openquake.engine.export import core
 from openquake.engine.utils import confirm
 from openquake.engine.tools.make_html_report import make_report
@@ -96,9 +97,11 @@ def main(
     """
     Run a calculation using the traditional command line API
     """
+    user_name = getpass.getuser()
+
     if not run:
         # configure a basic logging
-        logs.init()
+        logging.basicConfig(level=logging.INFO)
 
     if config_file:
         config.read(os.path.abspath(os.path.expanduser(config_file)),
@@ -145,7 +148,7 @@ def main(
     # hazard or hazard+risk
     if hazard_calculation_id == -1:
         # get the latest calculation of the current user
-        hc_id = get_job_id(hazard_calculation_id, getpass.getuser())
+        hc_id = get_job_id(hazard_calculation_id, user_name)
     elif hazard_calculation_id:
         # make it possible to use calculations made by another user
         hc_id = get_job_id(hazard_calculation_id)
@@ -155,13 +158,15 @@ def main(
         pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
         if reuse_input:
             pars['cachedir'] = datadir
-        if hc_id:
-            pars['hazard_calculation_id'] = str(hc_id)
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        pars['multi'] = multi
-        run_jobs(job_inis, log_level, log_file, exports, **pars)
+        jobs = create_jobs(job_inis, log_level, log_file, user_name,
+                           hc_id, multi)
+        for job in jobs:
+            job.params.update(pars)
+            job.params['exports'] = exports
+        run_jobs(jobs)
 
     # hazard
     elif list_hazard_calculations:

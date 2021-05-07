@@ -78,7 +78,7 @@ class CollapseTestCase(unittest.TestCase):
         # compute the mean curve with full enumeration
         srcs = []
         weights = []
-        grp_id = et_id = 0
+        grp_id = trt_smr = 0
         for weight, branches in self.bs0.enumerate_paths():
             path = tuple(br.branch_id for br in branches)
             bset_values = self.bs0.get_bset_values(path)
@@ -86,17 +86,18 @@ class CollapseTestCase(unittest.TestCase):
             sg = lt.apply_uncertainties(bset_values, self.sg)
             for src in sg:
                 src.grp_id = grp_id
-                src.et_id = et_id
+                src.trt_smr = trt_smr
             grp_id += 1
-            et_id += 1
+            trt_smr += 1
             srcs.extend(sg)
             weights.append(weight)
         for i, src in enumerate(srcs):
             src.id = i
         N = len(self.srcfilter.sitecol.complete)
+        time_span = srcs[0].temporal_occurrence_model.time_span
         res = classical(srcs, self.srcfilter, self.gsims,
                         dict(imtls=self.imtls, truncation_level2=2,
-                             collapse_level=2))
+                             collapse_level=2, investigation_time=time_span))
         pmap = res['pmap']
         effrups = sum(nr for nr, ns, dt in res['calc_times'].values())
         curve = pmap.array(N)[0, :, 0]

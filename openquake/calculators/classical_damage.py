@@ -76,4 +76,5 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
                              assets=self.assetcol['id'],
                              loss_type=self.oqparam.loss_names,
                              dmg_state=self.crmodel.damage_states)
-        logging.info('\n' + views.view('portfolio_damage', self.datastore))
+        dmg = views.view('portfolio_damage', self.datastore)
+        logging.info('\n' + views.text_table(dmg, ext='org'))

@@ -127,7 +127,7 @@ class UCERFSource(BaseSeismicSource):
         self.source_id = None  # unset until .new is called
         self.inv_time = investigation_time
         self.start_date = start_date
-        self.tom = self._get_tom()
+        self.temporal_occurrence_model = PoissonTOM(self.inv_time)
         self.min_mag = min_mag
         self.npd = npd
         self.hdd = hdd
@@ -176,15 +176,15 @@ class UCERFSource(BaseSeismicSource):
         """
         return self.num_ruptures
 
-    def new(self, et_id, branch_id):
+    def new(self, trt_smr, branch_id):
         """
-        :param et_id: ordinal of the source group
+        :param trt_smr: ordinal of the source group
         :param branch_name: name of the UCERF branch
         :param branch_id: string associated to the branch
         :returns: a new UCERFSource associated to the branch_id
         """
         new = copy.copy(self)
-        new.et_id = et_id
+        new.trt_smr = trt_smr
         new.source_id = branch_id  # i.e. FM3_1/ABM/Shaw09Mod/
         # DsrUni_CharConst_M5Rate6.5_MMaxOff7.3_NoFix_SpatSeisU2
         new.ukey = build_ukey(branch_id, self.start_date)
@@ -198,12 +198,6 @@ class UCERFSource(BaseSeismicSource):
         Called when updating the SourceGroup
         """
         return self.min_mag, 10
-
-    def _get_tom(self):
-        """
-        Returns the temporal occurence model as a Poisson TOM
-        """
-        return PoissonTOM(self.inv_time)
 
     def get_sections(self):
         """
@@ -283,7 +277,8 @@ class UCERFSource(BaseSeismicSource):
         rupture = ParametricProbabilisticRupture(
             mag, self.rake[ridx], self.tectonic_region_type,
             surface_set[len(surface_set) // 2].get_middle_point(),
-            MultiSurface(surface_set), self.rate[ridx], self.tom)
+            MultiSurface(surface_set), self.rate[ridx],
+            self.temporal_occurrence_model)
         rupture.rup_id = self.start + ridx
         return rupture
 
@@ -338,14 +333,14 @@ class UCERFSource(BaseSeismicSource):
                     rates[i, mag_idx].tolist())
                 ps = PointSource(
                     src_id, src_name, self.tectonic_region_type, src_mfd,
-                    self.mesh_spacing, self.msr, self.aspect, self.tom,
-                    self.usd, self.lsd,
+                    self.mesh_spacing, self.msr, self.aspect,
+                    self.temporal_occurrence_model, self.usd, self.lsd,
                     Point(locations[i, 0], locations[i, 1]),
                     self.npd, self.hdd)
                 ps.checksum = zlib.adler32(pickle.dumps(vars(ps), protocol=4))
                 ps._wkt = ps.wkt()
                 ps.id = self.id
-                ps.et_id = self.et_id
+                ps.trt_smr = self.trt_smr
                 ps.num_ruptures = ps.count_ruptures()
                 ps.nsites = 1  # anything <> 0 goes
                 sources.append(ps)
@@ -360,8 +355,9 @@ class UCERFSource(BaseSeismicSource):
         """
         # get rates from file
         with h5py.File(self.source_file, 'r') as hdf5:
-            occurrences = self.tom.sample_number_of_occurrences(
-                self.rate * eff_num_ses, self.serial)
+            occurrences = (
+                self.temporal_occurrence_model.sample_number_of_occurrences(
+                    self.rate * eff_num_ses, self.serial))
             indices, = numpy.where(occurrences)
             logging.debug(
                 'Considering "%s", %d ruptures', self.source_id, len(indices))
@@ -377,9 +373,9 @@ class UCERFSource(BaseSeismicSource):
 
             # sample background sources
             background_ruptures, background_n_occ = sample_background_model(
-                hdf5, self.ukey["grid_key"], self.tom, eff_num_ses,
-                self.serial, background_sids, self.min_mag, self.npd,
-                self.hdd, self.usd, self.lsd, self.msr, self.aspect,
+                hdf5, self.ukey["grid_key"], self.temporal_occurrence_model,
+                eff_num_ses, self.serial, background_sids, self.min_mag,
+                self.npd, self.hdd, self.usd, self.lsd, self.msr, self.aspect,
                 self.tectonic_region_type)
             ruptures.extend(background_ruptures)
             rupture_occ.extend(background_n_occ)

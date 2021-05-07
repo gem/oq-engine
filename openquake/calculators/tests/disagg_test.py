@@ -21,8 +21,8 @@ import unittest
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.contexts import read_ctxs
-from openquake.calculators.views import view
+from openquake.hazardlib.contexts import read_cmakers
+from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
@@ -160,9 +160,9 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_7(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
         self.run_calc(case_7.__file__, 'job.ini')
-        ctxs, _ = read_ctxs(self.calc.datastore)
-        ctxs0 = [ctx for ctx in ctxs if ctx.grp_id == 0]
-        ctxs1 = [ctx for ctx in ctxs if ctx.grp_id == 1]
+        cmakers = read_cmakers(self.calc.datastore)
+        ctxs0 = cmakers[0].read_ctxs(self.calc.datastore)
+        ctxs1 = cmakers[1].read_ctxs(self.calc.datastore)
         self.assertEqual(len(ctxs0), 7)  # rlz-0, the closest to the mean
         self.assertEqual(len(ctxs1), 2)  # rlz-1, the one to discard
         # checking that the wrong realization is indeed discarded
@@ -186,7 +186,7 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')
-        fname = gettemp(view('mean_disagg', self.calc.datastore))
+        fname = gettemp(text_table(view('mean_disagg', self.calc.datastore)))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
         os.remove(fname)
 

@@ -33,8 +33,8 @@ by_id = operator.attrgetter('source_id')
 CALC_TIME, NUM_SITES, EFF_RUPTURES, TASK_NO = 3, 4, 5, 7
 
 
-def et_ids(src):
-    return tuple(src.et_ids)
+def trt_smrs(src):
+    return tuple(src.trt_smrs)
 
 
 def read_source_model(fname, converter, monitor):
@@ -81,11 +81,11 @@ def get_csm(oq, full_lt, h5=None):
     if oq.is_ucerf():
         [grp] = nrml.to_python(oq.inputs["source_model"], converter)
         src_groups = []
-        for et_id, sm_rlz in enumerate(full_lt.sm_rlzs):
+        for grp_id, sm_rlz in enumerate(full_lt.sm_rlzs):
             sg = copy.copy(grp)
             src_groups.append(sg)
             src = sg[0].new(sm_rlz.ordinal, sm_rlz.value)  # one source
-            src.checksum = src.et_id = src.id = et_id
+            src.checksum = src.grp_id = src.id = src.trt_smr = grp_id
             src.samples = sm_rlz.samples
             logging.info('Reading sections and rupture planes for %s', src)
             planes = src.get_planes()
@@ -156,10 +156,10 @@ def _build_groups(full_lt, smdict):
                     (value, common, rlz.value))
             src_groups.extend(extra)
         for src_group in src_groups:
-            et_id = full_lt.get_et_id(src_group.trt, rlz.ordinal)
+            trt_smr = full_lt.get_trt_smr(src_group.trt, rlz.ordinal)
             sg = apply_uncertainties(bset_values, src_group)
             for src in sg:
-                src.et_id = et_id
+                src.trt_smr = trt_smr
                 if rlz.samples > 1:
                     src.samples = rlz.samples
             groups.append(sg)
@@ -180,23 +180,23 @@ def _build_groups(full_lt, smdict):
 def reduce_sources(sources_with_same_id):
     """
     :param sources_with_same_id: a list of sources with the same source_id
-    :returns: a list of truly unique sources, ordered by et_id
+    :returns: a list of truly unique sources, ordered by trt_smr
     """
     out = []
     for src in sources_with_same_id:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id et_id samples'}
+               if k not in 'source_id trt_smr samples'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
     for srcs in general.groupby(
             sources_with_same_id, operator.attrgetter('checksum')).values():
         # duplicate sources: same id, same checksum
         src = srcs[0]
         if len(srcs) > 1:  # happens in classical/case_20
-            src.et_id = tuple(s.et_id for s in srcs)
+            src.trt_smr = tuple(s.trt_smr for s in srcs)
         else:
-            src.et_id = src.et_id,
+            src.trt_smr = src.trt_smr,
         out.append(src)
-    out.sort(key=operator.attrgetter('et_id'))
+    out.sort(key=operator.attrgetter('trt_smr'))
     return out
 
 
@@ -218,7 +218,7 @@ def _get_csm(full_lt, groups):
             if len(srcs) > 1:
                 srcs = reduce_sources(srcs)
             lst.extend(srcs)
-        for sources in general.groupby(lst, et_ids).values():
+        for sources in general.groupby(lst, trt_smrs).values():
             # check if OQ_SAMPLE_SOURCES is set
             ss = os.environ.get('OQ_SAMPLE_SOURCES')
             if ss:
@@ -226,7 +226,7 @@ def _get_csm(full_lt, groups):
                 split = []
                 for src in sources:
                     for s in src:
-                        s.et_id = src.et_id
+                        s.trt_smr = src.trt_smr
                         split.append(s)
                 sources = general.random_filter(split, float(ss)) or split[0]
             # set ._wkt attribute (for later storage in the source_wkt dataset)
@@ -264,13 +264,13 @@ class CompositeSourceModel:
                 src.grp_id = grp_id
                 idx += 1
 
-    def get_et_ids(self):
+    def get_trt_smrs(self):
         """
-        :returns: an array of et_ids (to be stored as an hdf5.vuint32 array)
+        :returns: an array of trt_smrs (to be stored as an hdf5.vuint32 array)
         """
-        keys = [sg.sources[0].et_ids for sg in self.src_groups]
+        keys = [sg.sources[0].trt_smrs for sg in self.src_groups]
         assert len(keys) < TWO16, len(keys)
-        return [numpy.array(et_ids, numpy.uint32) for et_ids in keys]
+        return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
     def get_sources(self, atomic=None):
         """
@@ -285,16 +285,16 @@ class CompositeSourceModel:
         return srcs
 
     # used only in calc_by_rlz.py
-    def get_groups(self, eri):
+    def get_groups(self, smr):
         """
-        :param eri: effective source model realization ID
-        :returns: SourceGroups associated to the given `eri`
+        :param smr: effective source model realization ID
+        :returns: SourceGroups associated to the given `smr`
         """
         src_groups = []
         for sg in self.src_groups:
-            et_id = self.full_lt.get_et_id(sg.trt, eri)
+            trt_smr = self.full_lt.get_trt_smr(sg.trt, smr)
             src_group = copy.copy(sg)
-            src_group.sources = [src for src in sg if et_id in src.et_ids]
+            src_group.sources = [src for src in sg if trt_smr in src.trt_smrs]
             if len(src_group):
                 src_groups.append(src_group)
         return src_groups

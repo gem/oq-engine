@@ -22,13 +22,13 @@ import unittest
 import numpy
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import lt
+from openquake.hazardlib import lt, contexts
 from openquake.commonlib import readinput
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.getters import get_slice_by_g
-from openquake.calculators.tests import CalculatorTestCase, NOT_DARWIN
+from openquake.calculators.tests import (
+    CalculatorTestCase, NOT_DARWIN, strip_calc_id)
 from openquake.qa_tests_data.classical import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
@@ -39,6 +39,7 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
     case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65)
 
+ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
 
 
@@ -85,7 +86,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_1.__file__)
 
         if parallel.oq_distribute() != 'no':
-            info = view('job_info', self.calc.datastore)
+            info = text_table(view('job_info', self.calc.datastore))
             self.assertIn('task', info)
             self.assertIn('sent', info)
             self.assertIn('received', info)
@@ -128,8 +129,8 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_2.__file__, 'job.ini')
 
         # check view inputs
-        lines = view('inputs', self.calc.datastore).splitlines()
-        self.assertEqual(len(lines), 9)
+        lines = text_table(view('inputs', self.calc.datastore)).splitlines()
+        self.assertEqual(len(lines), 13)  # rst table with 13 rows
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
@@ -227,8 +228,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
-        csv = general.gettemp(view('extreme_sites', self.calc.datastore))
-        self.assertEqualFiles('expected/extreme_sites.csv', csv)
+        csv = general.gettemp(
+            text_table(view('extreme_sites', self.calc.datastore)))
+        self.assertEqualFiles('expected/extreme_sites.rst', csv)
 
         # test extract/hcurves/rlz-0, used by the npz exports
         haz = vars(extract(self.calc.datastore, 'hcurves'))
@@ -368,7 +370,7 @@ hazard_uhs-std.csv
         # there are 3 sources x 12 sm_rlzs
         sgs = self.calc.csm.src_groups  # 7 source groups with 1 source each
         self.assertEqual(len(sgs), 7)
-        dupl = sum(len(sg.sources[0].et_ids) - 1 for sg in sgs)
+        dupl = sum(len(sg.sources[0].trt_smrs) - 1 for sg in sgs)
         self.assertEqual(dupl, 29)  # there are 29 duplicated sources
 
         # another way to look at the duplicated sources; protects against
@@ -476,11 +478,9 @@ hazard_uhs-std.csv
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
-        self.assert_curves_ok([
-            'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.05).csv',
-            'hazard_curve-mean-SA(0.1).csv', 'hazard_curve-mean-SA(0.2).csv',
-            'hazard_curve-mean-SA(0.5)', 'hazard_curve-mean-SA(1.0).csv',
-            'hazard_curve-mean-SA(2.0).csv'], case_28.__file__, delta=1E-6)
+        out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')
+        for f in out['uhs', 'csv']:
+            self.assertEqualFiles('expected/' + strip_calc_id(f), f)
 
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
 
@@ -804,16 +804,13 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurves.csv', fname)
 
         self.calc.datastore['_poes'].shape
-        full_lt = self.calc.datastore['full_lt']
-        rlzs_by_grp = full_lt.get_rlzs_by_grp()
-        numpy.testing.assert_equal(
-            rlzs_by_grp['grp-00'], [[1, 3, 5], [2], [0, 4]])
-        numpy.testing.assert_equal(
-            rlzs_by_grp['grp-01'], [[7, 9], [6, 8]])
+        cmakers = contexts.read_cmakers(self.calc.datastore)
+        ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
+        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
         # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
-        slc0, slc1 = get_slice_by_g(rlzs_by_grp)
-        [(trt, gsims)] = full_lt.get_gsims_by_trt().items()
-        self.assertEqual(len(gsims), 3)
+        slc0, slc1 = cmakers[0].slc, cmakers[1].slc
+        self.assertEqual(slc0.stop - slc0.start, 3)
+        self.assertEqual(slc1.stop - slc1.start, 2)
 
     def test_case_57(self):
         # AvgPoeGMPE

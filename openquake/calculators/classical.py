@@ -35,7 +35,7 @@ from openquake.hazardlib.source.point import (
     PointSource, grid_point_sources, msr_name)
 from openquake.hazardlib.source.base import EPS
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.contexts import ContextMaker, get_effect
+from openquake.hazardlib.contexts import ContextMaker, get_effect, read_cmakers
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -53,7 +53,7 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
-grp_extreme_dt = numpy.dtype([('et_id', U16), ('grp_trt', hdf5.vstr),
+grp_extreme_dt = numpy.dtype([('trt_smr', U16), ('grp_trt', hdf5.vstr),
                              ('extreme_poe', F32)])
 
 
@@ -138,7 +138,6 @@ def store_ctxs(dstore, rupdata, grp_id):
     Store contexts with the same magnitude in the datastore
     """
     nr = len(rupdata['mag'])
-    rupdata['nsites'] = numpy.array([len(s) for s in rupdata['sids_']])
     rupdata['grp_id'] = numpy.repeat(grp_id, nr)
     nans = numpy.repeat(numpy.nan, nr)
     for par in dstore['rup']:
@@ -227,9 +226,7 @@ class Hazard:
     def __init__(self, dstore, full_lt, pgetter, srcidx):
         self.datastore = dstore
         self.full_lt = full_lt
-        self.et_ids = dstore['et_ids'][:]
-        self.rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(self.et_ids)
-        self.slice_by_g = getters.get_slice_by_g(self.rlzs_by_gsim_list)
+        self.cmakers = read_cmakers(dstore, full_lt)
         self.get_hcurves = pgetter.get_hcurves
         self.imtls = pgetter.imtls
         self.sids = pgetter.sids
@@ -241,21 +238,21 @@ class Hazard:
         Initialize the pmaps dictionary with zeros, if needed
         """
         if grp_id not in pmaps:
-            L, G = self.imtls.size, len(self.rlzs_by_gsim_list[grp_id])
+            L, G = self.imtls.size, len(self.cmakers[grp_id].gsims)
             pmaps[grp_id] = ProbabilityMap.build(L, G, self.sids)
 
     def store_poes(self, grp_id, pmap):
         """
         Store the pmap of the given group inside the _poes dataset
         """
-        trt = self.full_lt.trt_by_et[self.et_ids[grp_id][0]]
+        cmaker = self.cmakers[grp_id]
         base.fix_ones(pmap)  # avoid saving PoEs == 1, fast
         arr = numpy.array([pmap[sid].array for sid in pmap]).transpose(2, 0, 1)
-        self.datastore['_poes'][self.slice_by_g[grp_id]] = arr  # shape GNL
+        self.datastore['_poes'][cmaker.slc] = arr  # shape GNL
         extreme = max(
             get_extreme_poe(pmap[sid].array, self.imtls)
             for sid in pmap)
-        self.data.append((grp_id, trt, extreme))
+        self.data.append((grp_id, cmaker.trt, extreme))
 
     def store_disagg(self, pmaps=None):
         """
@@ -264,7 +261,7 @@ class Hazard:
         if pmaps:  # called inside a loop
             for key, pmap in pmaps.items():
                 # contains only string keys in case of disaggregation
-                rlzs_by_gsim = self.rlzs_by_gsim_list[pmap.grp_id]
+                rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
                 self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
                     self.get_hcurves(pmap, rlzs_by_gsim))
         else:  # called at the end of the loop
@@ -335,7 +332,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Store some empty datasets in the datastore
         """
         params = {'grp_id', 'occurrence_rate', 'clon_', 'clat_', 'rrup_',
-                  'nsites', 'probs_occur_', 'sids_', 'src_id'}
+                  'probs_occur_', 'sids_', 'src_id'}
         gsims_by_trt = self.full_lt.get_gsims_by_trt()
         for trt, gsims in gsims_by_trt.items():
             cm = ContextMaker(trt, gsims, dict(imtls=self.oqparam.imtls))
@@ -357,7 +354,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = hdf5.vfloat32
                 elif param == 'src_id':
                     dt = U32
-                elif param in {'nsites', 'grp_id'}:
+                elif param == 'grp_id':
                     dt = U16
                 else:
                     dt = F32
@@ -404,12 +401,12 @@ class ClassicalCalculator(base.HazardCalculator):
         super().init()
         if self.oqparam.hazard_calculation_id:
             full_lt = self.datastore.parent['full_lt']
-            et_ids = self.datastore.parent['et_ids'][:]
+            trt_smrs = self.datastore.parent['trt_smrs'][:]
         else:
             full_lt = self.csm.full_lt
-            et_ids = self.csm.get_et_ids()
-        self.grp_ids = numpy.arange(len(et_ids))
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(et_ids)
+            trt_smrs = self.csm.get_trt_smrs()
+        self.grp_ids = numpy.arange(len(trt_smrs))
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
         rlzs_by_g = []
         for rlzs_by_gsim in rlzs_by_gsim_list:
             for rlzs in rlzs_by_gsim.values():
@@ -564,11 +561,12 @@ class ClassicalCalculator(base.HazardCalculator):
             self.N / oq.max_sites_per_tile)
         self.params = dict(
             truncation_level=oq.truncation_level,
+            investigation_time=oq.investigation_time,
             imtls=oq.imtls, reqv=oq.get_reqv(),
             pointsource_distance=oq.pointsource_distance,
             shift_hypo=oq.shift_hypo,
             min_weight=oq.min_weight,
-            collapse_level=oq.collapse_level, hint=hint,
+            collapse_level=int(oq.collapse_level), hint=hint,
             max_sites_disagg=oq.max_sites_disagg,
             split_sources=oq.split_sources, af=self.af)
         return psd
@@ -582,10 +580,10 @@ class ClassicalCalculator(base.HazardCalculator):
         src_groups = self.csm.src_groups
         tot_weight = 0
         for grp_id in grp_ids:
-            rlzs_by_gsim = hazard.rlzs_by_gsim_list[grp_id]
+            gsims = hazard.cmakers[grp_id].gsims
             sg = src_groups[grp_id]
             for src in sg:
-                src.ngsims = len(rlzs_by_gsim)
+                src.ngsims = len(gsims)
                 tot_weight += src.weight
                 if src.code == b'C' and src.num_ruptures > 20_000:
                     msg = ('{} is suspiciously large, containing {:_d} '
@@ -599,7 +597,7 @@ class ClassicalCalculator(base.HazardCalculator):
             int(tot_weight), int(max_weight)))
         self.counts = AccumDict(accum=0)
         for grp_id in grp_ids:
-            rlzs_by_gsim = hazard.rlzs_by_gsim_list[grp_id]
+            rlzs_by_gsim = hazard.cmakers[grp_id].gsims
             sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups

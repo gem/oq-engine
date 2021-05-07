@@ -20,57 +20,13 @@ import io
 import os
 import re
 import gzip
-import getpass
 import collections
 import numpy
 import h5py
 
-from openquake.baselib import hdf5, config, performance, general
-
-CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-
-
-def get_datadir():
-    """
-    Extracts the path of the directory where the openquake data are stored
-    from the environment ($OQ_DATADIR) or from the shared_dir in the
-    configuration file.
-    """
-    datadir = os.environ.get('OQ_DATADIR')
-    if not datadir:
-        shared_dir = config.directory.shared_dir
-        if shared_dir:
-            datadir = os.path.join(shared_dir, getpass.getuser(), 'oqdata')
-        else:  # use the home of the user
-            datadir = os.path.join(os.path.expanduser('~'), 'oqdata')
-    return datadir
-
-
-def get_calc_ids(datadir=None):
-    """
-    Extract the available calculation IDs from the datadir, in order.
-    """
-    datadir = datadir or get_datadir()
-    if not os.path.exists(datadir):
-        return []
-    calc_ids = set()
-    for f in os.listdir(datadir):
-        mo = re.match(CALC_REGEX, f)
-        if mo:
-            calc_ids.add(int(mo.group(2)))
-    return sorted(calc_ids)
-
-
-def get_last_calc_id(datadir=None):
-    """
-    Extract the latest calculation ID from the given directory.
-    If none is found, return 0.
-    """
-    datadir = datadir or get_datadir()
-    calcs = get_calc_ids(datadir)
-    if not calcs:
-        return 0
-    return calcs[-1]
+from openquake.baselib import hdf5, performance, general
+from openquake.commonlib.logs import (
+    get_datadir, get_calc_ids, get_last_calc_id, CALC_REGEX, dbcmd)
 
 
 def hdf5new(datadir=None):
@@ -110,6 +66,35 @@ def extract_calc_id_datadir(filename):
     return calc_id, datadir
 
 
+def _read(calc_id: int, datadir, mode, haz_id=None):
+    # low level function to read a datastore file
+    datadir = datadir or get_datadir()
+    ppath = None
+    if calc_id < 0:  # look at the old calculations of the current user
+        calc_ids = get_calc_ids(datadir)
+        try:
+            jid = calc_ids[calc_id]
+        except IndexError:
+            raise IndexError(
+                'There are %d old calculations, cannot '
+                'retrieve the %s' % (len(calc_ids), calc_id))
+    else:
+        jid = calc_id
+    # look in the db
+    job = dbcmd('get_job', jid)
+    if job:
+        path = job.ds_calc_dir + '.hdf5'
+        hc_id = job.hazard_calculation_id
+        if not hc_id and haz_id:
+            dbcmd('update_job', jid, {'hazard_calculation_id': haz_id})
+            hc_id = haz_id
+        if hc_id and hc_id != jid:
+            ppath = dbcmd('get_job', hc_id).ds_calc_dir + '.hdf5'
+    else:  # when using oq run there is no job in the db
+        path = os.path.join(datadir, 'calc_%s.hdf5' % jid)
+    return DataStore(path, ppath, mode)
+
+
 def read(calc_id, mode='r', datadir=None, parentdir=None):
     """
     :param calc_id: calculation ID or filename
@@ -123,7 +108,7 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     if isinstance(calc_id, str):  # pathname
         dstore = DataStore(calc_id, mode=mode)
     else:
-        dstore = DataStore.new(calc_id, datadir, mode=mode)
+        dstore = _read(calc_id, datadir, mode)
     try:
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
@@ -136,6 +121,21 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     return dstore.open(mode)
 
 
+def new(calc_id, oqparam=None, datadir=None, mode=None):
+    """
+    :param calc_id:
+        if integer > 0 look in the database and then on the filesystem
+        if integer < 0 look at the old calculations in the filesystem
+    :returns:
+        a DataStore instance associated to the given calc_id
+    """
+    haz_id = None if oqparam is None else oqparam.hazard_calculation_id
+    dstore = _read(calc_id, datadir, mode, haz_id)
+    if oqparam:
+        dstore['oqparam'] = oqparam
+    return dstore
+
+
 class DataStore(collections.abc.MutableMapping):
     """
     DataStore class to store the inputs/outputs of a calculation on the
@@ -143,7 +143,8 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> ds = DataStore.new()
+    >>> from openquake.commonlib import logs
+    >>> ds = new(logs.init("calc", {}).calc_id)
     >>> ds['example'] = 42
     >>> print(ds['example'][()])
     42
@@ -158,40 +159,8 @@ class DataStore(collections.abc.MutableMapping):
     and a dictionary and populating the object.
     For an example of use see :class:`openquake.hazardlib.site.SiteCollection`.
     """
-
-    class EmptyDataset(ValueError):
-        """Raised when reading an empty dataset"""
-
-    @classmethod
-    def new(cls, calc_id=None, datadir=None, mode=None):
-        """
-        :returns: a DataStore instance associated to the given calc_id
-        """
-        from openquake.commonlib import logs  # avoid circular import
-        datadir = datadir or get_datadir()
-        ppath = None
-        if calc_id is None:  # use a new datastore
-            jid = get_last_calc_id(datadir) + 1
-        elif calc_id < 0:  # use an old datastore
-            calc_ids = get_calc_ids(datadir)
-            try:
-                jid = calc_ids[calc_id]
-            except IndexError:
-                raise IndexError(
-                    'There are %d old calculations, cannot '
-                    'retrieve the %s' % (len(calc_ids), calc_id))
-        else:
-            jid = calc_id
-        # look in the db
-        job = logs.dbcmd('get_job', jid)
-        if job:
-            path = job.ds_calc_dir + '.hdf5'
-            if job.hazard_calculation_id and job.hazard_calculation_id != jid:
-                pjob = logs.dbcmd('get_job', job.hazard_calculation_id)
-                ppath = pjob.ds_calc_dir + '.hdf5'
-        else:  # when using oq run there is no job in the db
-            path = os.path.join(datadir, 'calc_%s.hdf5' % jid)
-        return cls(path, ppath, mode)
+    calc_id = None  # set at instantiation time
+    job = None  # set at instantiation time
 
     def __init__(self, path, ppath=None, mode=None):
         self.filename = path
@@ -207,6 +176,8 @@ class DataStore(collections.abc.MutableMapping):
             raise IOError('File not found: %s' % self.filename)
         self.hdf5 = ()  # so that `key in self.hdf5` is valid
         self.open(self.mode)
+        if mode != 'r':  # w, a or r+
+            performance.init_performance(self.hdf5)
 
     def open(self, mode):
         """
@@ -450,7 +421,9 @@ class DataStore(collections.abc.MutableMapping):
         """
         if key in self.hdf5:
             return self.hdf5.read_df(key, index, sel, slc)
-        return self.parent.read_df(key, index, sel, slc)
+        if self.parent:
+            return self.parent.read_df(key, index, sel, slc)
+        raise KeyError(key)
 
     def read_unique(self, key, field):
         """

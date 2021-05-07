@@ -126,11 +126,10 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def acc0(self):
         """
-        Initial accumulator, a dictionary (et_id, gsim) -> curves
+        Initial accumulator, a dictionary rlz -> ProbabilityMap
         """
         self.L = self.oqparam.imtls.size
-        zd = {r: ProbabilityMap(self.L) for r in range(self.R)}
-        return zd
+        return {r: ProbabilityMap(self.L) for r in range(self.R)}
 
     def build_events_from_sources(self):
         """
@@ -286,7 +285,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 [len(gsim_lt.values[trt]) for trt in gsim_lt.values], U32)
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ
-                aw['n_occ'] *= ngmfs * num_gsims[aw['et_id']]
+                aw['n_occ'] *= ngmfs * num_gsims[aw['trt_smr']]
         rup_array = aw.array
         hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
@@ -490,19 +489,20 @@ class EventBasedCalculator(base.HazardCalculator):
             if not os.path.exists(export_dir):
                 os.makedirs(export_dir)
             oq.export_dir = export_dir
-            job_id = logs.init('job')
             oq.calculation_mode = 'classical'
-            self.cl = ClassicalCalculator(oq, job_id)
-            # TODO: perhaps it is possible to avoid reprocessing the source
-            # model, however usually this is quite fast and do not dominate
-            # the computation
-            self.cl.run()
-            engine.expose_outputs(self.datastore)
-            for imt in oq.imtls:
-                cl_mean_curves = get_mean_curves(self.datastore, imt)
-                eb_mean_curves = get_mean_curves(self.datastore, imt)
-                self.rdiff, index = util.max_rel_diff_index(
-                    cl_mean_curves, eb_mean_curves)
-                logging.warning('Relative difference with the classical '
-                                'mean curves: %d%% at site index %d, imt=%s',
-                                self.rdiff * 100, index, imt)
+            with logs.init('job', vars(oq)) as log:
+                self.cl = ClassicalCalculator(oq, log.calc_id)
+                # TODO: perhaps it is possible to avoid reprocessing the source
+                # model, however usually this is quite fast and do not dominate
+                # the computation
+                self.cl.run()
+                engine.expose_outputs(self.cl.datastore)
+                for imt in oq.imtls:
+                    cl_mean_curves = get_mean_curves(self.datastore, imt)
+                    eb_mean_curves = get_mean_curves(self.datastore, imt)
+                    self.rdiff, index = util.max_rel_diff_index(
+                        cl_mean_curves, eb_mean_curves)
+                    logging.warning(
+                        'Relative difference with the classical '
+                        'mean curves: %d%% at site index %d, imt=%s',
+                        self.rdiff * 100, index, imt)

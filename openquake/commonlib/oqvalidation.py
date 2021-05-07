@@ -33,7 +33,7 @@ from openquake.hazardlib.shakemap.maps import get_array
 from openquake.hazardlib import correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile
 from openquake.sep.classes import SecondaryPeril
-from openquake.commonlib import logictree, datastore
+from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
 
 __doc__ = """\
@@ -175,7 +175,7 @@ cross_correlation:
 description:
   A string describing the calculation.
   Example: *description = Test calculation*.
-  Default: no default
+  Default: "no description"
 
 disagg_by_src:
   Flag used to enable disaggregation by source when possible.
@@ -712,7 +712,7 @@ class OqParam(valid.ParamSet):
     base_path = valid.Param(valid.utf8, '.')
     calculation_mode = valid.Param(valid.Choice())  # -> get_oqparam
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
-    collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), 0)
+    collapse_level = valid.Param(valid.Choice('0', '1', '2', '3'), '0')
     collect_rlzs = valid.Param(valid.boolean, False)
     coordinate_bin_width = valid.Param(valid.positivefloat)
     compare_with_classical = valid.Param(valid.boolean, False)
@@ -723,7 +723,7 @@ class OqParam(valid.ParamSet):
     cross_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     cachedir = valid.Param(valid.utf8, '')
-    description = valid.Param(valid.utf8_not_empty)
+    description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs,
                                  list(calc.disagg.pmf_map))
@@ -858,8 +858,8 @@ class OqParam(valid.ParamSet):
                 for key, value in self.inputs['reqv'].items()}
 
     def __init__(self, **names_vals):
-        if '_job_id' in names_vals:  # called from engine
-            del names_vals['_job_id']
+        if '_log' in names_vals:  # called from engine
+            del names_vals['_log']
 
         # support legacy names
         for name in list(names_vals):
@@ -883,9 +883,6 @@ class OqParam(valid.ParamSet):
                 'region_constraint is obsolete, use region instead')
             self.region = valid.wkt_polygon(
                 names_vals.pop('region_constraint'))
-        self.risk_investigation_time = (
-            self.risk_investigation_time or self.investigation_time)
-        self.collapse_level = int(self.collapse_level)
         if ('intensity_measure_types_and_levels' in names_vals and
                 'intensity_measure_types' in names_vals):
             logging.warning('Ignoring intensity_measure_types since '
@@ -920,6 +917,20 @@ class OqParam(valid.ParamSet):
                               'pointsource_distance!' % self.inputs['job_ini'])
 
         self._risk_files = get_risk_files(self.inputs)
+        if self.risk_files:
+            # checks for risk_files
+            hc = self.hazard_calculation_id
+            if 'damage' in self.calculation_mode and not hc:
+                ok = any('fragility' in key for key in self._risk_files)
+                if not ok:
+                    raise InvalidFile('Missing fragility files in %s' %
+                                      self.inputs['job_ini'])
+            elif ('risk' in self.calculation_mode and
+                      self.calculation_mode != 'multi_risk' and not hc):
+                ok = any('vulnerability' in key for key in self._risk_files)
+                if not ok:
+                    raise InvalidFile('Missing vulnerability files in %s' %
+                                      self.inputs['job_ini'])
 
         if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'debug')
@@ -990,12 +1001,6 @@ class OqParam(valid.ParamSet):
                     '%s: conditional_loss_poes are not defined '
                     'for classical_damage calculations' % job_ini)
 
-        # checks for ebrisk
-        if self.calculation_mode in ('ebrisk', 'event_based_risk'):
-            if self.risk_investigation_time is None:
-                raise InvalidFile('Please set the risk_investigation_time in'
-                                  ' %s' % job_ini)
-
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
                 and 'sites' not in self.inputs and self.sites is None):
@@ -1039,14 +1044,18 @@ class OqParam(valid.ParamSet):
         """
         Set self.loss_names
         """
+        from openquake.commonlib import datastore  # avoid circular import
         # set all_cost_types
         # rt has the form 'vulnerability/structural', 'fragility/...', ...
         costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
-            with datastore.read(self.hazard_calculation_id) as ds:
-                parent = ds['oqparam']
-            self._risk_files = get_risk_files(parent.inputs)
-            costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+            try:
+                with datastore.read(self.hazard_calculation_id) as ds:
+                    parent = ds['oqparam']
+                    self._risk_files = rfs = get_risk_files(parent.inputs)
+                    costtypes = set(rt.rsplit('/')[1] for rt in rfs)
+            except OSError:  # FileNotFound for wrong hazard_calculation_id
+                pass
         self.all_cost_types = sorted(costtypes)
 
         # fix minimum_asset_loss
@@ -1392,11 +1401,16 @@ class OqParam(valid.ParamSet):
         if self.shakemap_uri:
             kind = self.shakemap_uri['kind']
             sig = inspect.signature(get_array[kind])
-            params = list(sig.parameters)
-            if params != list(self.shakemap_uri):
+            # parameters without default value
+            params = [p.name for p in list(
+                sig.parameters.values()) if p.default is p.empty]
+            all_params = list(sig.parameters)
+            if not all(p in list(self.shakemap_uri) for p in params) or \
+                    not all(p in all_params for p in list(self.shakemap_uri)):
                 raise ValueError(
-                    'Expected parameters %s in shakemap_uri, got %s' %
-                    (params, list(self.shakemap_uri)))
+                    'Error in shakemap_uri: Expected parameters %s, '
+                    'valid parameters %s, got %s' %
+                    (params, all_params, list(self.shakemap_uri)))
         return self.hazard_calculation_id if (
             self.shakemap_id or self.shakemap_uri) else True
 

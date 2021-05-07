@@ -31,7 +31,7 @@ import pandas
 from openquake.baselib import (
     general, hdf5, __version__ as engine_version)
 from openquake.baselib import parallel, python3compat
-from openquake.baselib.performance import Monitor, init_performance
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib import InvalidFile, site, stats
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
@@ -57,17 +57,6 @@ TWO32 = 2 ** 32
 
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32), ('len', U16)])
-
-
-def get_calc(job_ini, calc_id):
-    """
-    Factory function returning a Calculator instance
-
-    :param job_ini: path to job.ini file
-    :param calc_id: calculation ID
-    """
-    return calculators(readinput.get_oqparam(job_ini), calc_id)
-
 
 # this is used for the minimum_intensity dictionaries
 def consistent(dic1, dic2):
@@ -156,9 +145,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, calc_id):
-        oqparam.validate()
-        self.datastore = datastore.DataStore.new(calc_id)
-        init_performance(self.datastore.hdf5)
+        self.datastore = datastore.new(calc_id, oqparam)
         self._monitor = Monitor(
             '%s.run' % self.__class__.__name__, measuremem=True,
             h5=self.datastore)
@@ -711,7 +698,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('Storing risk model')
             attrs = self.crmodel.get_attrs()
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
-                                         'gzip', **attrs)
+                                     'gzip', **attrs)
 
     def _read_risk_data(self):
         # read the risk model (if any), the exposure (if any) and then the
@@ -848,7 +835,7 @@ class HazardCalculator(BaseCalculator):
             logging.info('minimum_asset_loss=%s', mal)
         self.param = dict(individual_curves=oq.individual_curves,
                           ps_grid_spacing=oq.ps_grid_spacing,
-                          collapse_level=oq.collapse_level,
+                          collapse_level=int(oq.collapse_level),
                           split_sources=oq.split_sources,
                           avg_losses=oq.avg_losses,
                           amplifier=self.amplifier,
@@ -1296,8 +1283,8 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         calc.datastore['events'] = events
         # convert into an array of dtype gmv_data_dt
         lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
-               for s in numpy.arange(N, dtype=U32)
-               for ei, event in enumerate(events)]
+               for ei, event in enumerate(events)
+               for s in numpy.arange(N, dtype=U32)]
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.array(lst, oq.gmf_data_dt())
         create_gmf_data(calc.datastore, imts, data=data)

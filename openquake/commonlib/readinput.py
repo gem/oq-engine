@@ -25,6 +25,7 @@ import zlib
 import pickle
 import shutil
 import zipfile
+import pathlib
 import logging
 import tempfile
 import functools
@@ -220,6 +221,8 @@ def get_params(job_ini, kw={}):
     :returns:
         A dictionary of parameters
     """
+    if isinstance(job_ini, pathlib.Path):
+        job_ini = str(job_ini)
     if job_ini.startswith(('http://', 'https://')):
         resp = requests.get(job_ini)
         job_ini = gettemp(suffix='.zip')
@@ -254,12 +257,13 @@ def get_params(job_ini, kw={}):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=False):
+def get_oqparam(job_ini, pkg=None, calculators=None, kw={}):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
     :param job_ini:
-        Path to configuration file/archive or dictionary of parameters
+        Path to configuration file/archive or
+        dictionary of parameters with at least a key "calculation_mode"
     :param pkg:
         Python package where to find the configuration file (optional)
     :param calculators:
@@ -267,11 +271,9 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=False):
         valid choices for `calculation_mode`
     :param kw:
         Dictionary of strings to override the job parameters
-    :param validate:
-        Flag. By default it is false and the parameters are not validated
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
-        containing the validate and casted parameters/values parsed from
+        containing the validated and casted parameters/values parsed from
         the job.ini file as well as a subdictionary 'inputs' containing
         absolute paths to all of the files referenced in the job.ini, keyed by
         the parameter name.
@@ -305,8 +307,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=False):
                 {imt: imtls[imt]})
         job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
-    if validate and '_job_id' not in job_ini:
-        oqparam.validate()
+    oqparam.validate()
     return oqparam
 
 
@@ -718,12 +719,12 @@ def save_source_info(csm, h5):
     lens = []
     for sg in csm.src_groups:
         for src in sg:
-            lens.append(len(src.et_ids))
+            lens.append(len(src.trt_smrs))
             row = [src.source_id, src.grp_id, src.code,
                    0, 0, 0, csm.full_lt.trti[src.tectonic_region_type], 0]
             wkts.append(src._wkt)
             data[src.id] = row
-    logging.info('There are %d groups and %d sources with len(et_ids)=%.2f',
+    logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
     csm.source_info = data  # src_id -> row
@@ -732,7 +733,20 @@ def save_source_info(csm, h5):
         # avoid hdf5 damned bug by creating source_info in advance
         hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        h5['et_ids'] = csm.get_et_ids()
+        h5['trt_smrs'] = csm.get_trt_smrs()
+        h5['toms'] = numpy.array(
+            [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
+
+
+def get_tom_name(sg):
+    """
+    :param sg: a source group instance
+    :returns: name of the associated temporal occurrence model
+    """
+    if sg.temporal_occurrence_model:
+        return sg.temporal_occurrence_model.__class__.__name__
+    else:
+        return 'PoissonTOM'
 
 
 def _check_csm(csm, oqparam, h5):
@@ -806,13 +820,13 @@ def get_composite_source_model(oqparam, h5=None):
                 csm.full_lt = full_lt
             if h5:
                 # avoid errors with --reuse_hazard
-                h5['et_ids'] = csm.get_et_ids()
+                h5['trt_smrs'] = csm.get_trt_smrs()
                 hdf5.create(h5, 'source_info', source_info_dt)
             _check_csm(csm, oqparam, h5)
             return csm
 
     # read and process the composite source model from the input files
-    csm = get_csm(oqparam, full_lt,  h5)
+    csm = get_csm(oqparam, full_lt, h5)
     save_source_info(csm, h5)
     if oqparam.cachedir and not oqparam.is_ucerf():
         logging.info('Saving %s', fname)
@@ -1160,16 +1174,18 @@ def get_input_files(oqparam, hazard=False):
     fnames = set()  # files entering in the checksum
     uri = oqparam.shakemap_uri
     if isinstance(uri, dict) and uri:
-        if uri['kind'] == 'shapefile':
-            fname = os.path.join(oqparam.base_path, uri['fname'])
-            fnames.update(get_shapefiles(os.path.dirname(fname)))
-        else:  # xml local files
-            for key, val in uri.items():
-                if key == 'fname' or (
-                        key.endswith('_url') and os.path.exists(val)):
-                    fname = os.path.join(oqparam.base_path, val)
+        # local files
+        for key, val in uri.items():
+            if key == 'fname' or key.endswith('_url'):
+                val = val.replace('file://', '')
+                fname = os.path.join(oqparam.base_path, val)
+                if os.path.exists(fname):
                     uri[key] = fname
                     fnames.add(fname)
+        # additional separate shapefiles
+        if uri['kind'] == 'shapefile' and not uri['fname'].endswith('.zip'):
+            fnames.update(get_shapefiles(os.path.dirname(fname)))
+
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
         if hazard and key not in ('source_model_logic_tree',

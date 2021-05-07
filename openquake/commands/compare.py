@@ -64,7 +64,7 @@ class Comparator(object):
         for ex in self.extractors:
             time = ex.get('performance_data')['time_sec'].sum()
             data.append((ex.calc_id, time))
-        print(views.rst_table(data, ['calc_id', 'time']))
+        print(views.text_table(data, ['calc_id', 'time']))
 
     def getsids(self, samplesites):
         sids = self.sitecol['sids']
@@ -149,10 +149,10 @@ class Comparator(object):
             fdict = {ex.calc_id: open('%s.txt' % ex.calc_id, 'w')
                      for ex in self.extractors}
             for calc_id, f in fdict.items():
-                f.write(views.rst_table(rows[calc_id], header))
+                f.write(views.text_table(rows[calc_id], header))
                 print('Generated %s' % f.name)
         else:
-            print(views.rst_table(rows['all'], header))
+            print(views.text_table(rows['all'], header))
         return arrays
 
 
@@ -192,7 +192,7 @@ def compare_hmaps(imt, calc_ids: int, files=False, *,
         maxdiff = numpy.abs(arrays[0] - arrays[1]).max(axis=0)  # P
         rows = [(str(poe), rms, md) for poe, rms, md in zip(
             c.oq.poes, numpy.sqrt(ms), maxdiff)]
-        print(views.rst_table(rows, ['poe', 'rms-diff', 'max-diff']))
+        print(views.text_table(rows, ['poe', 'rms-diff', 'max-diff']))
 
 
 def compare_hcurves(imt, calc_ids: int, files=False, *,

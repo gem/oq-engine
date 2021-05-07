@@ -39,6 +39,9 @@ def layout(node):
 
 def main(fname):
     smlt = SourceModelLogicTree(fname)
+    if smlt.num_paths > 1000:
+        raise ValueError('The logic tree is too big to plot: {:_d} branches'.
+                         format(smlt.num_paths))
     tree = Tree()
     extend(tree, smlt.root_branchset)
     print(tree)
