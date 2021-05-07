@@ -580,16 +580,17 @@ def view_task_info(token, dstore):
         rduration = array['duration'] / array['weight']
         data = util.compose_arrays(rduration, array, 'rduration')
         data.sort(order='duration')
-        return text_table(data)
+        return data
 
-    data = ['operation-duration counts mean stddev min max'.split()]
+    data = []
     for task, arr in group_array(task_info[()], 'taskname').items():
         val = arr['duration']
         if len(val):
             data.append(stats(task, val))
     if len(data) == 1:
         return 'Not available'
-    return text_table(data)
+    return numpy.array(
+        data, dt('operation-duration counts mean stddev min max'))
 
 
 @view.add('task_durations')
