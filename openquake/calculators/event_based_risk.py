@@ -337,8 +337,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(gmf_bytes.sum()))
         else:  # start from GMFs
+            allargs = list(self.gen_args())
+            self.datastore.swmr_on()  # crucial!
             smap = parallel.Starmap(
-                event_based_risk, self.gen_args(), h5=self.datastore.hdf5)
+                event_based_risk, allargs, h5=self.datastore.hdf5)
             smap.monitor.save('assets', self.assetcol.to_dframe())
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
@@ -425,7 +427,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
     def gen_args(self):
         """
-        :yields: pairs (gmf_df, param)
+        :yields: pairs (slice, param)
         """
         ct = self.oqparam.concurrent_tasks or 1
         eids = self.datastore['gmf_data/eid'][:]
