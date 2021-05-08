@@ -245,7 +245,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     eff_time)
         super().pre_execute()
         self.set_param(hdf5path=self.datastore.filename,
-                       parentdir=self.datastore.ppath,
+                       parentdir=os.path.dirname(self.datastore.ppath),
                        ignore_covs=oq.ignore_covs,
                        master_seed=oq.master_seed,
                        asset_correlation=int(oq.asset_correlation))
