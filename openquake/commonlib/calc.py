@@ -302,14 +302,14 @@ class RuptureImporter(object):
         :param rup_array: an array of ruptures with fields trt_smr
         :returns: a list of RuptureGetters
         """
-        from openquake.calculators.getters import gen_rupture_getters
+        from openquake.calculators.getters import get_rupture_getters
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
         self.check_overflow(E)  # check the number of events
         events = numpy.zeros(E, rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = gen_rupture_getters(
+        rgetters = get_rupture_getters(
             self.datastore, self.oqparam.concurrent_tasks)
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!

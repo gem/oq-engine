@@ -370,11 +370,11 @@ def strip_zeros(gmf_df):
     return gmf_df[ok]
 
 
-def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
+def get_rupture_getters(dstore, ct=0, slc=slice(None)):
     """
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
     :param ct: number of concurrent tasks
-    :yields: RuptureGetters
+    :returns: a list of RuptureGetters
     """
     full_lt = dstore['full_lt']
     trt_by_et = full_lt.trt_by_et
@@ -383,14 +383,17 @@ def gen_rupture_getters(dstore, ct=0, slc=slice(None)):
     rup_array.sort(order='trt_smr')  # avoid generating too many tasks
     maxweight = rup_array['n_occ'].sum() / (ct or 1)
     scenario = 'scenario' in dstore['oqparam'].calculation_mode
+    rgetters = []
     for block in general.block_splitter(
             rup_array, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('trt_smr')):
         trt_smr = block[0]['trt_smr']
         trt = trt_by_et[trt_smr]
         proxies = [RuptureProxy(rec, scenario=scenario) for rec in block]
-        yield RuptureGetter(proxies, dstore.filename, trt_smr,
-                            trt, rlzs_by_gsim[trt_smr])
+        rg = RuptureGetter(proxies, dstore.filename, trt_smr,
+                           trt, rlzs_by_gsim[trt_smr])
+        rgetters.append(rg)
+    return rgetters
 
 
 # NB: amplification is missing
@@ -401,7 +404,7 @@ def get_gmfgetter(dstore, rup_id):
     oq = dstore['oqparam']
     srcfilter = filters.SourceFilter(
         dstore['sitecol'], oq.maximum_distance)
-    for rgetter in gen_rupture_getters(dstore, slc=slice(rup_id, rup_id+1)):
+    for rgetter in get_rupture_getters(dstore, slc=slice(rup_id, rup_id+1)):
         gg = GmfGetter(rgetter, srcfilter, oq)
         break
     return gg
@@ -412,13 +415,13 @@ def get_ebruptures(dstore):
     Extract EBRuptures from the datastore
     """
     ebrs = []
-    for rgetter in gen_rupture_getters(dstore):
+    for rgetter in get_rupture_getters(dstore):
         for proxy in rgetter.get_proxies():
             ebrs.append(proxy.to_ebr(rgetter.trt))
     return ebrs
 
 
-# this is never called directly; gen_rupture_getters is used instead
+# this is never called directly; get_rupture_getters is used instead
 class RuptureGetter(object):
     """
     :param proxies:
