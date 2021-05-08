@@ -28,22 +28,25 @@ from openquake.commonlib import logs
 
 class DataStoreTestCase(unittest.TestCase):
     def setUp(self):
-        self.dstore = new(logs.init("calc", {}).calc_id)
+        log = logs.init("calc", {'calculation_mode': 'scenario',
+                                 'sites': '0 0'})
+        self.dstore = new(log.calc_id, log.get_oqparam())
 
     def tearDown(self):
         self.dstore.clear()
 
     def test_hdf5(self):
         # store numpy arrays as hdf5 files
-        self.assertEqual(len(self.dstore), 3)
+        self.assertEqual(len(self.dstore), 4)
         # performance_data, task_info, task_sent
         self.dstore['/key1'] = value1 = numpy.array(['a', 'b'], dtype=bytes)
         self.dstore['/key2'] = numpy.array([1, 2])
         self.assertEqual(list(self.dstore), [
-            'key1', 'key2', 'performance_data', 'task_info', 'task_sent'])
+            'key1', 'key2', 'oqparam', 'performance_data',
+            'task_info', 'task_sent'])
         del self.dstore['/key2']
         self.assertEqual(list(self.dstore), [
-            'key1', 'performance_data', 'task_info', 'task_sent'])
+            'key1', 'oqparam', 'performance_data', 'task_info', 'task_sent'])
         numpy.testing.assert_equal(self.dstore['key1'], value1)
 
         self.assertGreater(self.dstore.getsize('key1'), 0)
