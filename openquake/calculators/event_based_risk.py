@@ -244,8 +244,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
         super().pre_execute()
+        parentdir = (os.path.dirname(self.datastore.ppath)
+                     if self.datastore.ppath else None)
         self.set_param(hdf5path=self.datastore.filename,
-                       parentdir=os.path.dirname(self.datastore.ppath),
+                       parentdir=parentdir,
                        ignore_covs=oq.ignore_covs,
                        master_seed=oq.master_seed,
                        asset_correlation=int(oq.asset_correlation))
