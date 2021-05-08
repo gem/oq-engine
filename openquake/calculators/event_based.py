@@ -63,7 +63,7 @@ def get_mean_curves(dstore, imt):
 # ########################################################################## #
 
 
-def count_ruptures(src, monitor):
+def count_ruptures(src):
     """
     Count the number of ruptures on a heavy source
     """
@@ -140,7 +140,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # weighting the heavy sources
         nrups = parallel.Starmap(
             count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
-            h5=self.datastore.hdf5).reduce()
+        ).reduce()
         for src in sources:
             src.nsites = 1  # avoid 0 weight
             try:

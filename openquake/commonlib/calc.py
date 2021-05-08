@@ -317,8 +317,7 @@ class RuptureImporter(object):
             it = itertools.starmap(self.get_eid_rlz, iterargs)
         else:
             it = parallel.Starmap(
-                self.get_eid_rlz, iterargs, progress=logging.debug,
-                h5=self.datastore.hdf5)
+                self.get_eid_rlz, iterargs, progress=logging.debug)
         i = 0
         for eid_rlz in it:
             for er in eid_rlz:
