@@ -427,7 +427,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
     def gen_args(self, eids):
         """
-        :yields: pairs (slice, param)
+        :yields: pairs (gmf_slice, param)
         """
         ct = self.oqparam.concurrent_tasks or 1
         maxweight = len(eids) / ct
