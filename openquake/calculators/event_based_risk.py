@@ -337,8 +337,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(gmf_bytes.sum()))
         else:  # start from GMFs
+            eids = self.datastore['gmf_data/eid'][:]
+            logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
+            self.datastore.swmr_on()  # crucial!
             smap = parallel.Starmap(
-                event_based_risk, self.gen_args(), h5=self.datastore.hdf5)
+                event_based_risk, self.gen_args(eids), h5=self.datastore.hdf5)
             smap.monitor.save('assets', self.assetcol.to_dframe())
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
@@ -423,15 +426,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 ' agg_losses != sum(avg_losses): %s != %s\nsee %s',
                 agglosses[K].mean(), sumlosses.mean(), url)
 
-    def gen_args(self):
+    def gen_args(self, eids):
         """
-        :yields: pairs (gmf_df, param)
+        :yields: pairs (gmf_slice, param)
         """
         ct = self.oqparam.concurrent_tasks or 1
-        eids = self.datastore['gmf_data/eid'][:]
         maxweight = len(eids) / ct
         start = stop = weight = 0
-        logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
         for eid, group in itertools.groupby(eids):
