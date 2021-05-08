@@ -201,7 +201,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_source_info(calc_times)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
-            self.rgetters = imp.import_rups_events(
+            imp.import_rups_events(
                 self.datastore.getitem('ruptures')[()], get_rupture_getters)
 
     def agg_dicts(self, acc, result):
@@ -309,7 +309,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_rlz_info({})  # store weights
         self.save_params()
         imp = calc.RuptureImporter(self.datastore)
-        self.rgetters = imp.import_rups_events(rup_array, get_rupture_getters)
+        imp.import_rups_events(rup_array, get_rupture_getters)
 
     def execute(self):
         oq = self.oqparam
@@ -348,7 +348,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # compute_gmfs in parallel
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
-        rgetters = get_rupture_getters(dstore, oq.concurrent_tasks)
+        rgetters = get_rupture_getters(dstore, oq.concurrent_tasks * 1.25)
         allargs = [(rgetter, self.param) for rgetter in rgetters]
         dstore.swmr_on()
         smap = parallel.Starmap(
