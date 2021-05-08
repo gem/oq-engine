@@ -76,17 +76,17 @@ class DataStoreTestCase(unittest.TestCase):
 
         # case of a non-existing directory
         with self.assertRaises(OSError):
-            read(42, datadir='/fake/directory')
+            read(42, 'r', '/fake/directory')
         # case of a non-existing file
         with self.assertRaises(IOError):
-            read(42, datadir='/tmp')
+            read(42, 'r', '/tmp')
         # case of no read permission
         tmp = tempfile.mkdtemp()
         fname = os.path.join(tmp, 'calc_42.hdf5')
         open(fname, 'w').write('')
         os.chmod(fname, 0)
         with self.assertRaises(IOError) as ctx:
-            read(42, datadir=tmp)
+            read(42, 'r', tmp)
         self.assertIn('permission denied', str(ctx.exception).lower())
         os.remove(fname)
 

@@ -311,10 +311,11 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
+        dstore = self.datastore
         self.set_param()
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
-            self.datastore.parent = datastore.read(oq.hazard_calculation_id)
+            dstore.parent = datastore.read(oq.hazard_calculation_id)
         elif hasattr(self, 'csm'):  # from sources
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and
@@ -325,8 +326,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 'There is no rupture_model, the calculator will just '
                 'import data without performing any calculation')
             fake = logictree.FullLogicTree.fake()
-            self.datastore['full_lt'] = fake  # needed to expose the outputs
-            self.datastore['weights'] = [1.]
+            dstore['full_lt'] = fake  # needed to expose the outputs
+            dstore['weights'] = [1.]
             return {}
         else:  # scenario
             self._read_scenario_ruptures()
@@ -336,28 +337,27 @@ class EventBasedCalculator(base.HazardCalculator):
 
         if oq.ground_motion_fields:
             imts = oq.get_primary_imtls()
-            nrups = len(self.datastore['ruptures'])
-            base.create_gmf_data(self.datastore, imts, oq.get_sec_imts())
-            self.datastore.create_dset('gmf_data/sigma_epsilon',
-                                       sig_eps_dt(oq.imtls))
-            self.datastore.create_dset('gmf_data/time_by_rup',
-                                       time_dt, (nrups,), fillvalue=None)
+            nrups = len(dstore['ruptures'])
+            base.create_gmf_data(dstore, imts, oq.get_sec_imts())
+            dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
+            dstore.create_dset('gmf_data/time_by_rup',
+                               time_dt, (nrups,), fillvalue=None)
 
         # compute_gmfs in parallel
-        nr = len(self.datastore['ruptures'])
+        nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
         allargs = [(rgetter, self.param)
                    for rgetter in get_rupture_getters(
-                           self.datastore, oq.concurrent_tasks)]
+                           dstore, oq.concurrent_tasks)]
         # reading the args is fast since we are not prefiltering the ruptures,
         # nor reading the geometries; using an iterator would cause the usual
         # damned h5py error, last seen on macos
-        self.datastore.swmr_on()
+        dstore.swmr_on()
         smap = parallel.Starmap(
-            self.core_task.__func__, allargs, h5=self.datastore.hdf5)
+            self.core_task.__func__, allargs, h5=dstore.hdf5)
         smap.monitor.save('srcfilter', self.srcfilter)
         acc = smap.reduce(self.agg_dicts, self.acc0())
-        if 'gmf_data' not in self.datastore:
+        if 'gmf_data' not in dstore:
             return acc
         if oq.ground_motion_fields:
             with self.monitor('saving avg_gmf', measuremem=True):
