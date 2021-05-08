@@ -349,9 +349,6 @@ class EventBasedCalculator(base.HazardCalculator):
         allargs = [(rgetter, self.param)
                    for rgetter in get_rupture_getters(
                            dstore, oq.concurrent_tasks)]
-        # reading the args is fast since we are not prefiltering the ruptures,
-        # nor reading the geometries; using an iterator would cause the usual
-        # damned h5py error, last seen on macos
         dstore.swmr_on()
         smap = parallel.Starmap(
             self.core_task.__func__, allargs, h5=dstore.hdf5)
