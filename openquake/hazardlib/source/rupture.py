@@ -812,10 +812,10 @@ class RuptureProxy(object):
         """
         :returns:
             heuristic weight for the underlying rupture, depending on the
-            number of occurrences, number of samples and number of sites
+            number of occurrences and number of presumably affected sites
         """
         return self['n_occ'] * (
-            100 if self.nsites is None else max(self.nsites, 100))
+            10 if self.nsites is None else max(self.nsites, 10))
 
     def __getitem__(self, name):
         return self.rec[name]

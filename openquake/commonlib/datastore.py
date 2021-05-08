@@ -68,10 +68,12 @@ def extract_calc_id_datadir(filename):
 
 def _read(calc_id: int, datadir, mode, haz_id=None):
     # low level function to read a datastore file
-    datadir = datadir or get_datadir()
+    ddir = datadir or get_datadir()
+    if not os.path.exists(ddir):
+        raise OSError(ddir)
     ppath = None
     if calc_id < 0:  # look at the old calculations of the current user
-        calc_ids = get_calc_ids(datadir)
+        calc_ids = get_calc_ids(ddir)
         try:
             jid = calc_ids[calc_id]
         except IndexError:
@@ -82,7 +84,7 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
         jid = calc_id
     # look in the db
     job = dbcmd('get_job', jid)
-    if job:
+    if job and datadir is None:
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
@@ -91,7 +93,7 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
         if hc_id and hc_id != jid:
             ppath = dbcmd('get_job', hc_id).ds_calc_dir + '.hdf5'
     else:  # when using oq run there is no job in the db
-        path = os.path.join(datadir, 'calc_%s.hdf5' % jid)
+        path = os.path.join(ddir, 'calc_%s.hdf5' % jid)
     return DataStore(path, ppath, mode)
 
 
@@ -161,15 +163,13 @@ class DataStore(collections.abc.MutableMapping):
     """
     calc_id = None  # set at instantiation time
     job = None  # set at instantiation time
-    opened = 0
-    closed = 0
 
     def __init__(self, path, ppath=None, mode=None):
         self.filename = path
         self.ppath = ppath
         self.calc_id, datadir = extract_calc_id_datadir(path)
         self.tempname = self.filename[:-5] + '_tmp.hdf5'
-        if not os.path.exists(datadir):
+        if not os.path.exists(datadir) and mode != 'r':
             os.makedirs(datadir)
         self.parent = ()  # can be set later
         self.datadir = datadir
@@ -188,7 +188,6 @@ class DataStore(collections.abc.MutableMapping):
         if self.hdf5 == ():  # not already open
             try:
                 self.hdf5 = hdf5.File(self.filename, mode)
-                self.__class__.opened += 1
             except OSError as exc:
                 raise OSError('%s in %s' % (exc, self.filename))
         return self
@@ -355,7 +354,6 @@ class DataStore(collections.abc.MutableMapping):
         if self.hdf5:  # is open
             self.hdf5.flush()
             self.hdf5.close()
-            self.__class__.closed += 1
             self.hdf5 = ()
 
     def clear(self):
@@ -492,10 +490,15 @@ class DataStore(collections.abc.MutableMapping):
         del self.hdf5[key]
 
     def __enter__(self):
+        self.was_close = self.hdf5 == ()
+        if self.was_close:
+            self.open(self.mode)
         return self
 
     def __exit__(self, etype, exc, tb):
-        self.close()
+        if self.was_close:  # and has been opened in __enter__, close it
+            self.close()
+        del self.was_close
 
     def __getstate__(self):
         # make the datastore pickleable

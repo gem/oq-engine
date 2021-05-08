@@ -549,13 +549,13 @@ def view_required_params_per_trt(token, dstore):
     """
     full_lt = dstore['full_lt']
     tbl = []
-    for trt_smr, trt in enumerate(full_lt.trt_by_et):
+    for trt in full_lt.trts:
         gsims = full_lt.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((trt_smr, ' '.join(map(repr, map(repr, gsims))),
+        tbl.append((trt, ' '.join(map(repr, map(repr, gsims))),
                     distances, siteparams, ruptparams))
     return text_table(
         tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
@@ -743,14 +743,14 @@ def view_gmf_error(token, dstore):
 class GmpeExtractor(object):
     def __init__(self, dstore):
         full_lt = dstore['full_lt']
-        self.trt_by_et = full_lt.trt_by_et
+        self.trt_by = full_lt.trt_by
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()
 
     def extract(self, trt_smrs, rlz_ids):
         out = []
         for trt_smr, rlz_id in zip(trt_smrs, rlz_ids):
-            trt = self.trt_by_et[trt_smr]
+            trt = self.trt_by(trt_smr)
             out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
         return out
 
