@@ -201,7 +201,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_source_info(calc_times)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
-            imp.import_rups_events(
+            self.rgetters = imp.import_rups_events(
                 self.datastore.getitem('ruptures')[()], get_rupture_getters)
 
     def agg_dicts(self, acc, result):
@@ -308,8 +308,8 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore['full_lt'] = fake
         self.store_rlz_info({})  # store weights
         self.save_params()
-        calc.RuptureImporter(self.datastore).import_rups_events(
-            rup_array, get_rupture_getters)
+        imp = calc.RuptureImporter(self.datastore)
+        self.rgetters = imp.import_rups_events(rup_array, get_rupture_getters)
 
     def execute(self):
         oq = self.oqparam
@@ -348,9 +348,9 @@ class EventBasedCalculator(base.HazardCalculator):
         # compute_gmfs in parallel
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
-        allargs = [(rgetter, self.param)
-                   for rgetter in get_rupture_getters(
-                           dstore, oq.concurrent_tasks)]
+        # if not hasattr(self, 'rgetters'):
+        self.rgetters = get_rupture_getters(dstore, oq.concurrent_tasks)
+        allargs = [(rgetter, self.param) for rgetter in self.rgetters]
         dstore.swmr_on()
         smap = parallel.Starmap(
             self.core_task.__func__, allargs, h5=dstore.hdf5)

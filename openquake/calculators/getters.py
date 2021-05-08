@@ -387,7 +387,7 @@ def weight_ruptures(rup_array, srcfilter, trt_by, scenario):
     return proxies
 
 
-def get_rupture_getters(dstore, ct=1, slc=slice(None)):
+def get_rupture_getters(dstore, ct=0, slc=slice(None)):
     """
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
     :param ct: number of concurrent tasks
@@ -395,26 +395,24 @@ def get_rupture_getters(dstore, ct=1, slc=slice(None)):
     """
     oq = dstore['oqparam']
     if 'sitecol' in dstore:
-        srcfilter = filters.SourceFilter(
-            dstore['sitecol'], oq.maximum_distance)
+        sf = filters.SourceFilter(dstore['sitecol'], oq.maximum_distance)
     else:
-        srcfilter = None
+        sf = None
     full_lt = dstore['full_lt']
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim()
     rup_array = dstore['ruptures'][slc]
     rup_array.sort(order='trt_smr')  # avoid generating too many tasks
     scenario = 'scenario' in dstore['oqparam'].calculation_mode
-    if srcfilter is None:
+    if sf is None:
         proxies = [RuptureProxy(rec, None, scenario) for rec in rup_array]
     elif len(rup_array) <= 1000:  # do not parallelize
-        proxies = weight_ruptures(
-            rup_array, srcfilter, full_lt.trt_by, scenario)
+        proxies = weight_ruptures(rup_array, sf, full_lt.trt_by, scenario)
     else:  # parallelize the weighting of the ruptures
         proxies = parallel.Starmap.apply(
-            weight_ruptures, (rup_array, srcfilter, full_lt.trt_by, scenario),
+            weight_ruptures, (rup_array, sf, full_lt.trt_by, scenario),
             concurrent_tasks=ct
         ).reduce(acc=[])
-    maxweight = sum(proxy.weight for proxy in proxies) / ct
+    maxweight = sum(proxy.weight for proxy in proxies) / (ct or 1)
     rgetters = []
     for block in general.block_splitter(
             proxies, maxweight, operator.attrgetter('weight'),

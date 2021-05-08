@@ -281,7 +281,8 @@ class RuptureImporter(object):
 
     def import_rups_events(self, rup_array, get_rupture_getters):
         """
-        Import an array of ruptures and store the associated events
+        Import an array of ruptures and store the associated events.
+        :returns: a list of RuptureGetters
         """
         logging.info('Reordering the ruptures and storing the events')
         # order the ruptures by seed
@@ -298,6 +299,7 @@ class RuptureImporter(object):
         rgetters = get_rupture_getters(
             self.datastore, self.oqparam.concurrent_tasks)
         self._save_events(rup_array, rgetters)
+        return rgetters
 
     def _save_events(self, rup_array, rgetters):
         # this is very fast compared to saving the ruptures
