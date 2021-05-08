@@ -213,9 +213,6 @@ class PostRiskCalculator(base.RiskCalculator):
             agg_losses[k, r, lni] = df.loss.sum()
             krl_losses.append((k, r, lni, df.loss.to_numpy()))
             if len(krl_losses) >= blocksize:
-                size = len(krl_losses) * 8
-                logging.info('Sending %s of losses',
-                             general.humansize(size))
                 smap.submit((builder, krl_losses))
                 krl_losses[:] = []
         if krl_losses:
@@ -244,8 +241,8 @@ class PostRiskCalculator(base.RiskCalculator):
             dloss = views.view('delta_loss:%d' % li, self.datastore)
             if dloss['delta'].mean() > .1:  # more than 10% variation
                 logging.warning(
-                    'A big variation in the %s loss curve is expected '
-                    '(oq show delta_loss:%d %d)', ln, li,
+                    'A big variation in the %s loss curve is expected: try\n'
+                    '$ oq show delta_loss:%d %d', ln, li,
                     self.datastore.calc_id)
         if not self.aggkey:
             return
