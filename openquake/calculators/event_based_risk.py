@@ -338,6 +338,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 'Produced %s of GMFs', general.humansize(gmf_bytes.sum()))
         else:  # start from GMFs
             eids = self.datastore['gmf_data/eid'][:]
+            logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
             self.datastore.swmr_on()  # crucial!
             smap = parallel.Starmap(
                 event_based_risk, self.gen_args(eids), h5=self.datastore.hdf5)
@@ -432,7 +433,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         ct = self.oqparam.concurrent_tasks or 1
         maxweight = len(eids) / ct
         start = stop = weight = 0
-        logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
         for eid, group in itertools.groupby(eids):
