@@ -123,18 +123,19 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     return dstore.open(mode)
 
 
-def new(calc_id, oqparam=None, datadir=None, mode=None):
+def new(calc_id, oqparam, datadir=None, mode=None):
     """
     :param calc_id:
         if integer > 0 look in the database and then on the filesystem
         if integer < 0 look at the old calculations in the filesystem
+    :param oqparam:
+        OqParam instance with the validated parameters of the calculation
     :returns:
         a DataStore instance associated to the given calc_id
     """
     haz_id = None if oqparam is None else oqparam.hazard_calculation_id
     dstore = _read(calc_id, datadir, mode, haz_id)
-    if oqparam:
-        dstore['oqparam'] = oqparam
+    dstore['oqparam'] = oqparam
     return dstore
 
 
@@ -146,11 +147,12 @@ class DataStore(collections.abc.MutableMapping):
     Here is a minimal example of usage:
 
     >>> from openquake.commonlib import logs
-    >>> ds = new(logs.init("calc", {}).calc_id)
-    >>> ds['example'] = 42
-    >>> print(ds['example'][()])
+    >>> params = {'calculation_mode': 'scenario', 'sites': '0 0'}
+    >>> with logs.init("calc", params) as log:
+    ...     ds = new(log.calc_id, log.get_oqparam())
+    ...     ds['example'] = 42
+    ...     print(ds['example'][()])
     42
-    >>> ds.clear()
 
     When reading the items, the DataStore will return a generator. The
     items will be ordered lexicographically according to their name.
@@ -163,6 +165,8 @@ class DataStore(collections.abc.MutableMapping):
     """
     calc_id = None  # set at instantiation time
     job = None  # set at instantiation time
+    opened = 0
+    closed = 0
 
     def __init__(self, path, ppath=None, mode=None):
         self.filename = path

@@ -587,7 +587,7 @@ def view_task_info(token, dstore):
         val = arr['duration']
         if len(val):
             data.append(stats(task, val))
-    if len(data) == 1:
+    if not data:
         return 'Not available'
     return numpy.array(
         data, dt('operation-duration counts mean stddev min max'))
