@@ -163,6 +163,8 @@ class DataStore(collections.abc.MutableMapping):
     """
     calc_id = None  # set at instantiation time
     job = None  # set at instantiation time
+    opened = 0
+    closed = 0
 
     def __init__(self, path, ppath=None, mode=None):
         self.filename = path

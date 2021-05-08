@@ -201,7 +201,8 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_source_info(calc_times)
         imp = calc.RuptureImporter(self.datastore)
         with self.monitor('saving ruptures and events'):
-            imp.import_rups(self.datastore.getitem('ruptures')[()])
+            imp.import_rups_events(
+                self.datastore.getitem('ruptures')[()], get_rupture_getters)
 
     def agg_dicts(self, acc, result):
         """
@@ -307,7 +308,8 @@ class EventBasedCalculator(base.HazardCalculator):
         self.datastore['full_lt'] = fake
         self.store_rlz_info({})  # store weights
         self.save_params()
-        calc.RuptureImporter(self.datastore).import_rups(rup_array)
+        calc.RuptureImporter(self.datastore).import_rups_events(
+            rup_array, get_rupture_getters)
 
     def execute(self):
         oq = self.oqparam
