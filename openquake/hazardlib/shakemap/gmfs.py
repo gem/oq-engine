@@ -215,9 +215,9 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     """
     # create diag matrix with std values
     std = numpy.array([shakemap['std'][str(im)] for im in imts])
-    sig = diags(std.flatten())  # shape (M*N, M*N)
+    sig = std.flatten()
     # mu has unit (pctg), sig has unit ln(pctg)
-    return numpy.exp(sig @ Z + numpy.log(mu)) / PCTG
+    return numpy.exp((Z.T * sig).T + numpy.log(mu)) / PCTG
 
 
 @ calculate_gmfs.add('mmi')
@@ -233,11 +233,12 @@ def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
     try:
         # create diag matrix with std values
         std = numpy.array(shakemap['std']['MMI'])
-        sig = diags(std.flatten())  # shape (M*N, M*N)
+        sig = std.flatten()
     except ValueError as e:
         raise ValueError('No stds for MMI intensities supplied, only %s' %
                          ', '.join(shakemap['std'].dtype.names)) from e
-    return sig @ Z + mu
+
+    return (Z.T * sig).T + mu
 
 
 def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,
