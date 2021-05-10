@@ -167,8 +167,6 @@ def main(
             job.params.update(pars)
             job.params['exports'] = exports
         run_jobs(jobs)
-        print('opened', datastore.DataStore.opened)
-        print('closed', datastore.DataStore.closed)
 
     # hazard
     elif list_hazard_calculations:
