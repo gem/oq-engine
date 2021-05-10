@@ -216,6 +216,7 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     # create vector with std values
     sig = numpy.array([shakemap['std'][str(im)] for im in imts]).flatten()
     # mu has unit (pctg), sig has unit ln(pctg)
+    # multiply Z and sig column-wise and add mean
     return numpy.exp((Z.T * sig).T + numpy.log(mu)) / PCTG
 
 
@@ -236,6 +237,7 @@ def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
         raise ValueError('No stds for MMI intensities supplied, only %s' %
                          ', '.join(shakemap['std'].dtype.names)) from e
 
+    # multiply Z and sig column-wise and add mean
     return (Z.T * sig).T + mu
 
 
