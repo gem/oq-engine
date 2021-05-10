@@ -20,6 +20,7 @@ import math
 import logging
 import numpy
 from scipy.stats import truncnorm, norm
+from scipy.sparse import diags
 from scipy import interpolate
 
 from openquake.baselib.general import CallableDict
@@ -214,7 +215,7 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     """
     # create diag matrix with std values
     std = numpy.array([shakemap['std'][str(im)] for im in imts])
-    sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
+    sig = diags(std.flatten())  # shape (M*N, M*N)
     # mu has unit (pctg), sig has unit ln(pctg)
     return numpy.exp(sig @ Z + numpy.log(mu)) / PCTG
 
@@ -232,7 +233,7 @@ def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
     try:
         # create diag matrix with std values
         std = numpy.array(shakemap['std']['MMI'])
-        sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
+        sig = diags(std.flatten())  # shape (M*N, M*N)
     except ValueError as e:
         raise ValueError('No stds for MMI intensities supplied, only %s' %
                          ', '.join(shakemap['std'].dtype.names)) from e
