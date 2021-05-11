@@ -170,10 +170,15 @@ node_to_obj = CallableDict(keyfunc=get_tag_version, keymissing=lambda n, f: n)
 # dictionary of functions with at least two arguments, node and fname
 
 
-@node_to_obj.add(('ruptureCollection', 'nrml/0.5'),
-                 ('faultSectionCollection', 'nrml/0.5'))
+@node_to_obj.add(('ruptureCollection', 'nrml/0.5'))
 def get_rupture_collection(node, fname, converter):
     return converter.convert_node(node)
+
+
+@node_to_obj.add(('faultSectionCollection', 'nrml/0.5'))
+def get_fault_collection(node, fname, converter):
+    converter.convert_node(node)  # populate converter.sectiondict
+    return SourceModel([], node.get('name', ''))
 
 
 default = sourceconverter.SourceConverter(area_source_discretization=10,
