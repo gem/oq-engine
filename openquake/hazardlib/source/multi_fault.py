@@ -78,7 +78,7 @@ class MultiFaultSource(BaseSeismicSource):
         rupture
     """
 
-    code = b'X'
+    code = b'F'
     MODIFICATIONS = {}
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
