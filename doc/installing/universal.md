@@ -4,6 +4,7 @@ Since version 3.11 there is a universal installation script that works on any pl
 
 - **Note 1**: Python 3.9 and 3.10 are not yet supported.
 - **Note 2**: This script will install the OpenQuake engine in its own virtual environment. Users who need to use any additional Python packages (eg. Jupyter, Spyder) along with the OpenQuake engine should install those packages within this virtual environment.
+- **Note 3**: The virtual environment `openquake` and its corresponding folder will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts.
 
 The script allows the user to select between three different kinds of installations:
 
