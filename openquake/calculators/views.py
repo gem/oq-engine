@@ -422,11 +422,13 @@ def view_portfolio_damage(token, dstore):
     """
     if 'aggcurves' in dstore:  # event_based_damage
         K = dstore.get_attr('agg_loss_table', 'K')
-        df = dstore.read_df('aggcurves', ['loss_id'],
-                            dict(agg_id=K, return_period=0))
+        df = dstore.read_df('aggcurves', sel=dict(agg_id=K, return_period=0))
+        lnames = numpy.array(dstore['oqparam'].loss_names)
+        df['loss_type'] = lnames[df.loss_id.to_numpy()]
+        del df['loss_id']
         del df['agg_id']
         del df['return_period']
-        return df
+        return df.set_index('loss_type')
 
     # dimensions assets, stat, loss_types, dmg_state
     if 'damages-stats' in dstore:
