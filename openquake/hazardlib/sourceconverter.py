@@ -23,12 +23,15 @@ import copy
 import logging
 import numpy
 
+from openquake.hazardlib.source.multi_fault import MultiFaultSource
 from openquake.baselib import hdf5
 from openquake.baselib.general import groupby, block_splitter
 from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source import NonParametricSeismicSource
+from openquake.hazardlib.source.multi_fault import FaultSection
+
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -341,6 +344,59 @@ def split_coords_3d(seq):
     return list(zip(lons, lats, depths))
 
 
+def convert_multiFaultSource(fname, node, rup_spacing=5.0):
+    """
+    Convert the given node into a multi fault source
+
+    :param fname:
+        full pathname to the XML file associated to the node
+    :param node:
+        a Node object coming from an XML file
+    :returns:
+        a :class:`openquake.hazardlib.source.multiFaultSource`
+        instance
+    """
+    from openquake.hazardlib.nrml import read
+
+    # Read sections
+    section_file = node.attrib.get('faultSectionFname')
+    section_file = os.path.join(os.path.dirname(fname), section_file)
+    [node_sections] = read(section_file)
+    conv = FaultSectionConverter()
+    sections = conv.convert_node(node_sections)
+
+    # Create the multiFaultSource
+    sid = node.attrib.get('id')
+    name = node.attrib.get('name')
+    trt = node.attrib.get('tectonicRegion')
+
+    # Parse data
+    prbs = []
+    mags = []
+    rakes = []
+    idxs = []
+    num_probs = None
+    for i, rupnode in enumerate(node):
+        prb = pmf.PMF(valid.pmf(rupnode['probs_occur']))
+        if num_probs is None:  # first time
+            num_probs = len(prb.data)
+        elif len(prb.data) != num_probs:
+            # probs_occur must have uniform length for all ruptures
+            raise ValueError(
+                'prob_occurs=%s has %d elements, expected %s'
+                % (rupnode['probs_occur'], len(prb.data), num_probs))
+        prbs.append(prb)
+        mags.append(~rupnode.magnitude)
+        rakes.append(~rupnode.rake)
+        # Get indexes
+        idxs.append(rupnode.sectionIndexes.attrib.get('indexes').split(','))
+    mags = numpy.array(mags)
+    rakes = numpy.array(rakes)
+    poes = numpy.array(prbs)
+    mfs = MultiFaultSource(sid, name, trt, sections, idxs, poes, mags, rakes)
+    return mfs
+
+
 def convert_nonParametricSeismicSource(fname, node, rup_spacing=5.0):
     """
     Convert the given node into a non parametric source object.
@@ -630,6 +686,41 @@ class RuptureConverter(object):
                 ebr = source.rupture.EBRupture(rup, 0, 0, numpy.array([n]))
                 ebrs.append(ebr)
         return coll
+
+
+class FaultSectionConverter(RuptureConverter):
+
+    def __init__(self, rupture_mesh_spacing=5.0):
+        self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.sections = []
+
+    def convert_node(self, node):
+        """
+        Convert the given source node into a hazardlib rupture surface
+
+        :param node: a node representing a section
+        """
+        obj = getattr(self, 'convert_' + striptag(node.tag))(node)
+        return obj
+
+    def convert_faultSectionCollection(self, node):
+        return [self.convert_node(subnode) for subnode in node]
+
+    def convert_section(self, node):
+        with context(self.fname, node):
+            if hasattr(node, 'planarSurface'):
+                surfaces = list(node.getnodes('planarSurface'))
+                for s in surfaces:
+                    assert s.tag.endswith('planarSurface')
+            elif hasattr(node, 'kiteSurface'):
+                surfaces = list(node.getnodes('kiteSurface'))
+                for s in surfaces:
+                    assert s.tag.endswith('kiteSurface')
+            else:
+                raise ValueError('Only planarSurfaces or kiteSurfaces ' +
+                                 'supported')
+            surfs = self.convert_surfaces(surfaces)
+        return FaultSection(node['id'], surfs)
 
 
 class SourceConverter(RuptureConverter):
@@ -1012,6 +1103,19 @@ class SourceConverter(RuptureConverter):
         return convert_nonParametricSeismicSource(self.fname, node,
                                                   self.rupture_mesh_spacing)
 
+    def convert_multiFaultSource(self, node):
+        """
+        Convert the given node into a multi fault source object.
+
+        :param node:
+            a node with tag multiFaultSource
+        :returns:
+            a :class:`openquake.hazardlib.source.multiFaultSource`
+            instance
+        """
+        return convert_multiFaultSource(self.fname, node,
+                                        self.rupture_mesh_spacing)
+
     def convert_sourceModel(self, node):
         return [self.convert_node(subnode) for subnode in node]
 
@@ -1272,6 +1376,22 @@ class RowConverter(SourceConverter):
             ruptures,
             'Polygon', [nps.polygon.coords])
 
+    def convert_multiFaultSource(self, node):
+        mfs = convert_multiFaultSource(self.fname, node)
+        ruptures = []
+        for rup, pmf_ in mfs.data:
+            probs = [p for p, i in pmf_.data]
+            hypo = [rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z]
+            dic = dict(mag=rup.mag, rake=rup.rake, weight=rup.weight,
+                       probs_occur=probs, hypo=hypo)
+            ruptures.append(dic)
+        return NPRow(
+            node['id'],
+            node['name'],
+            'N',
+            node['tectonicRegion'],
+            ruptures,
+            'Polygon', [mfs.polygon.coords])
 
 # ################### MultiPointSource conversion ######################## #
 
