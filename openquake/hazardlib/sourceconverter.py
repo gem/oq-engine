@@ -362,7 +362,7 @@ def convert_multiFaultSource(fname, node, rup_spacing=5.0):
     section_file = node.attrib.get('faultSectionFname')
     section_file = os.path.join(os.path.dirname(fname), section_file)
     [node_sections] = read(section_file)
-    conv = FaultSectionConverter()
+    conv = FaultSectionConverter(rup_spacing)
     sections = conv.convert_node(node_sections)
 
     # Create the multiFaultSource
