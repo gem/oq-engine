@@ -20,7 +20,7 @@ import numpy
 from openquake.baselib import hdf5, general
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.hazardlib.mfd.multi_mfd import MultiMFD
-from openquake.hazardlib.source.multi import MultiPointSource
+from openquake.hazardlib.source.multi_point import MultiPointSource
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.geo import NodalPlane
