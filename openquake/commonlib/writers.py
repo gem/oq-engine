@@ -123,7 +123,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=(), comment=None,
     elif not hasattr(dest, 'getvalue'):
         # assume dest is a filename
         dest = open(dest, 'w')
-    w = csv.writer(dest, delimiter=sep, newlines='')
+    w = csv.writer(dest, delimiter=sep, newline='')
     try:
         # see if data is a composite numpy array
         data.dtype.fields
