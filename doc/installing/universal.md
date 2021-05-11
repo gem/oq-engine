@@ -23,8 +23,12 @@ $ cd oq-engine && /usr/bin/python3 install.py devel
 
 on Windows:
 ```
-$ git clone https://github.com/gem/oq-engine.git
-$ cd oq-engine && FIXME
+The use of PowerShell is recommended instead of classic cmd.exe
+
+PS C:\>  cd %HOMEPATH%
+PS C:\>  git clone https://github.com/gem/oq-engine.git
+PS C:\>  cd oq-engine 
+PS C:\>  python install.py devel
 ```
 
 This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine
@@ -37,7 +41,7 @@ $ source $HOME/openquake/bin/activate
 
 on Windows:
 ```
-$ FIXME
+PS C:\> %HOMEPATH%\openquake\Scripts\Activate.ps1
 ```
 
 It should now be possible to develop with the engine. Calculation data will be stored in `$HOME/oqdata`.
@@ -54,7 +58,8 @@ $ /usr/bin/python3 install.py user
 
 on Windows:
 ```
-FIXME
+PS C:\>  curl.exe -LO https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+PS C:\>  python install.py user
 ```
 
 This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine on it.
@@ -67,9 +72,8 @@ $ source $HOME/openquake/bin/activate
 
 on Windows:
 ```
-FIXME
+PS C:\> %HOMEPATH%\openquake\Scripts\Activate.ps1
 ```
-
 
 You can also invoke the `oq` command without activating the virtual environment by directly calling
 
@@ -80,7 +84,7 @@ $HOME/openquake/bin/oq
 
 on Windows:
 ```
-FIXME
+PS C:\> %HOMEPATH%\openquake\Scripts\bin\oq
 ```
 
 Calculation data will be stored in `$HOME/oqdata`.
@@ -128,7 +132,9 @@ $ sudo -H /usr/bin/python3 install.py server --remove
 
 on Windows:
 ```
-FIXME
+PS C:\>  %HOMEPATH%\openquake\Scripts\Activate.ps1
+PS C:\>  python install.py devel --remove
+PS C:\>  python install.py user --remove
 ```
 
 The calculation data (in `$HOME/oqdata` or `/var/lib/openquake/oqdata`) _WILL NOT_ be removed.
