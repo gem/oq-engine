@@ -31,7 +31,7 @@ from openquake.hazardlib.source.complex_fault import (
     ComplexFaultSource, MINWEIGHT)
 from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
-from openquake.hazardlib.source.multi import MultiPointSource
+from openquake.hazardlib.source.multi_point import MultiPointSource
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
 
 
