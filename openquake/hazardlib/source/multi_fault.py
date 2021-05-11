@@ -132,5 +132,10 @@ class MultiFaultSource(BaseSeismicSource):
     def get_one_rupture(self, ses_seed, rupture_mutex):
         raise NotImplementedError
 
+    @property
+    def data(self):  # compatibility with NonParametricSeismicSource
+        for sec in self.sections:
+            yield sec, None
+
     polygon = NP.polygon
     wkt = NP.wkt
