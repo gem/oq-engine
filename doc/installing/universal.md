@@ -3,7 +3,9 @@
 Since version 3.11 there is a universal installation script that works on any platform, provided you have Python 3.6, 3.7, or 3.8 installed. 
 
 - **Note 1**: Python 3.9 and 3.10 are not yet supported.
-- **Note 2**: This script will install the OpenQuake engine in its own virtual environment. Users who need to use any additional Python packages (eg. Jupyter, Spyder) along with the OpenQuake engine should install those packages within this virtual environment.
+- **Note 2**: This script will install the OpenQuake engine in its own virtual environment. Users who need to use any additional Python packages (eg. Jupyter, Spyder) along with the OpenQuake engine should install those packages within this virtual environment. Users with no knowledge of virtual environments are referred to this page of the Python tutorial:
+
+￼https://docs.python.org/3/tutorial/venv.html
 
 The script allows the user to select between three different kinds of installations:
 
