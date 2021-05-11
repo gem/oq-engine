@@ -284,7 +284,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 'agg_loss_table', descr,
                 K=len(self.aggkey), L=len(oq.loss_names))
         else:  # damage
-            dmgs = ' '.join(self.crmodel.damage_states[:1])
+            dmgs = ' '.join(self.crmodel.damage_states[1:])
             descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
                      [(dc, F32) for dc in self.crmodel.get_dmg_csq()])
             self.datastore.create_df(

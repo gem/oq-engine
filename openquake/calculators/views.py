@@ -420,6 +420,14 @@ def view_portfolio_damage(token, dstore):
     The mean full portfolio damage for each loss type,
     extracted from the average damages
     """
+    if 'aggcurves' in dstore:  # event_based_damage
+        K = dstore.get_attr('agg_loss_table', 'K')
+        df = dstore.read_df('aggcurves', ['loss_id'],
+                            dict(agg_id=K, return_period=0))
+        del df['agg_id']
+        del df['return_period']
+        return df
+
     # dimensions assets, stat, loss_types, dmg_state
     if 'damages-stats' in dstore:
         attrs = get_shape_descr(dstore['damages-stats'].attrs['json'])
