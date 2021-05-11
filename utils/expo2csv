@@ -68,7 +68,7 @@ def expo2csv(job_ini):
         csvname = fname.replace('.xml', '.csv')
         print('Saving %s' % csvname)
         with codecs.open(csvname, 'wb', encoding='utf8') as f:
-            writer = csv.writer(f)
+            writer = csv.writer(f, newlines='')
             writer.writerow(header)
             for row in rows:
                 writer.writerow(row)

@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Fixed newlines in the CSV exports on Windows
+
   [Graeme Weatherill]
   * Added Ameri (2014) GMPE for the Rjb case
 
