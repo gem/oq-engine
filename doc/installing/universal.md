@@ -23,12 +23,9 @@ $ cd oq-engine && /usr/bin/python3 install.py devel
 
 on Windows:
 ```
-The use of PowerShell is recommended instead of classic cmd.exe
-
-PS C:\>  cd %HOMEPATH%
-PS C:\>  git clone https://github.com/gem/oq-engine.git
-PS C:\>  cd oq-engine 
-PS C:\>  python install.py devel
+C:\>git clone https://github.com/gem/oq-engine.git
+C:\>cd oq-engine 
+C:\>python install.py devel
 ```
 
 This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine
@@ -41,7 +38,7 @@ $ source $HOME/openquake/bin/activate
 
 on Windows:
 ```
-PS C:\> %HOMEPATH%\openquake\Scripts\Activate.ps1
+C:\>%USERPROFILE%\openquake\Scripts\activate.bat
 ```
 
 It should now be possible to develop with the engine. Calculation data will be stored in `$HOME/oqdata`.
@@ -58,8 +55,8 @@ $ /usr/bin/python3 install.py user
 
 on Windows:
 ```
-PS C:\>  curl.exe -LO https://raw.githubusercontent.com/gem/oq-engine/master/install.py
-PS C:\>  python install.py user
+C:\>curl.exe -LO https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+C:\>python install.py user
 ```
 
 This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine on it.
@@ -72,7 +69,7 @@ $ source $HOME/openquake/bin/activate
 
 on Windows:
 ```
-PS C:\> %HOMEPATH%\openquake\Scripts\Activate.ps1
+C:\>%USERPROFILE%\openquake\Scripts\activate.bat
 ```
 
 You can also invoke the `oq` command without activating the virtual environment by directly calling
@@ -84,7 +81,7 @@ $HOME/openquake/bin/oq
 
 on Windows:
 ```
-PS C:\> %HOMEPATH%\openquake\Scripts\bin\oq
+C:\>%USERPROFILE%\openquake\Scripts\oq
 ```
 
 Calculation data will be stored in `$HOME/oqdata`.
@@ -132,9 +129,9 @@ $ sudo -H /usr/bin/python3 install.py server --remove
 
 on Windows:
 ```
-PS C:\>  %HOMEPATH%\openquake\Scripts\Activate.ps1
-PS C:\>  python install.py devel --remove
-PS C:\>  python install.py user --remove
+C:\>cd %USERPROFILE%
+C:\>python install.py devel --remove
+C:\>python install.py user --remove
 ```
 
 The calculation data (in `$HOME/oqdata` or `/var/lib/openquake/oqdata`) _WILL NOT_ be removed.
