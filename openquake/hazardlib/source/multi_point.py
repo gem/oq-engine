@@ -14,8 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`openquake.hazardlib.source.area` defines
-:class:`MultiPointSource`.
+Module :mod:`openquake.hazardlib.source.area` defines :class:`AreaSource`.
 """
 import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
@@ -155,16 +154,16 @@ class MultiPointSource(ParametricSeismicSource):
         npd = dic.pop('nodal_plane_distribution')[:]
         hdd = dic.pop('hypocenter_distribution')[:]
         mesh = dic.pop('mesh')[:]
-        self.rupture_aspect_ratio = dic.pop('rupture_aspect_ratio')[:]
-        self.lower_seismogenic_depth = dic.pop('lower_seismogenic_depth')[:]
-        self.upper_seismogenic_depth = dic.pop('upper_seismogenic_depth')[:]
+        self.rupture_aspect_ratio = dic.pop('rupture_aspect_ratio')[()]
+        self.lower_seismogenic_depth = dic.pop('lower_seismogenic_depth')[()]
+        self.upper_seismogenic_depth = dic.pop('upper_seismogenic_depth')[()]
         [(mfd_kind, mfd)] = dic.items()
         self.nodal_plane_distribution = PMF([
             (prob, NodalPlane(strike, dip, rake))
             for prob, strike, dip, rake in npd])
         self.hypocenter_distribution = PMF(hdd)
         self.mesh = Mesh(mesh['lon'], mesh['lat'])
-        kw = {k: dset.value for k, dset in mfd.items()}
+        kw = {k: dset[:] for k, dset in mfd.items()}
         kw['size'] = len(mesh)
         kw['kind'] = mfd_kind
         self.mfd = MultiMFD(**kw)
