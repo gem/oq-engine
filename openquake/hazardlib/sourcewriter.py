@@ -593,6 +593,35 @@ def build_complex_fault_source_node(fault_source):
                 nodes=source_nodes)
 
 
+@obj_to_node.add('MultiFaultSource')
+def build_multi_fault_source_node(multi_fault_source):
+    """
+    Parses a MultiFaultSource to a Node class
+
+    :param mfs:
+        Multi fault source as instance of :class:
+        `openquake.hazardlib.source.multi_fault.MultiFaultSource`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    rup_nodes = []  # multiPlanesRupture
+    for rup_idxs, pmf_, mag, rake in zip(
+            multi_fault_source.rupture_idxs,
+            multi_fault_source.pmfs,
+            multi_fault_source.mags,
+            multi_fault_source.rakes):
+        probs = ' '.join(map(str, [pair[0] for pair in pmf_.data]))
+        nodes = [Node('magnitude', text=str(mag)),
+                 Node('sectionIndexes', {'indexes': ','.join(rup_idxs)}),
+                 Node('rake', text=str(rake))]
+        rup_node = Node('multiPlanesRupture', {'probs_occur': probs},
+                        nodes=nodes)
+        rup_nodes.append(rup_node)
+    return Node("multiFaultSource",
+                get_source_attributes(multi_fault_source),
+                nodes=rup_nodes)
+
+
 @obj_to_node.add('SourceGroup')
 def build_source_group(source_group):
     source_nodes = [obj_to_node(src) for src in source_group.sources]
