@@ -1196,7 +1196,7 @@ class FullLogicTree(object):
     def __init__(self, source_model_lt, gsim_lt):
         self.source_model_lt = source_model_lt
         self.gsim_lt = gsim_lt
-        self.init()  # set .sm_rlzs and .trt_by_et
+        self.init()  # set .sm_rlzs and .trts
 
     def init(self):
         if self.source_model_lt.num_samples:
@@ -1210,6 +1210,7 @@ class FullLogicTree(object):
                 sm_rlz.samples = samples
                 self.sm_rlzs.append(sm_rlz)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
+        self.trts = list(self.gsim_lt.values)
 
     def get_smr_by_ltp(self):
         """
@@ -1218,14 +1219,11 @@ class FullLogicTree(object):
         return {'~'.join(sm_rlz.lt_path): i
                 for i, sm_rlz in enumerate(self.sm_rlzs)}
 
-    @property
-    def trt_by_et(self):
+    def trt_by(self, trt_smr):
         """
-        :returns: a list of TRTs, one for each trt_smr
+        :returns: the TRT associated to trt_smr
         """
-        e = len(self.sm_rlzs)
-        trts = list(self.gsim_lt.values)
-        return [trts[trt_smr // e] for trt_smr in range(e*len(trts))]
+        return self.trts[trt_smr // len(self.sm_rlzs)]
 
     @property
     def seed(self):

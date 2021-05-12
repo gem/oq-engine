@@ -4,12 +4,10 @@
   <logicTree logicTreeID="lt1">
       <logicTreeBranchSet uncertaintyType="sourceModel"
                           branchSetID="zoning">
-
         <logicTreeBranch branchID="b_01">
-            <uncertaintyModel>ssm.xml</uncertaintyModel>
+            <uncertaintyModel>sections.xml ssm.xml</uncertaintyModel>
           <uncertaintyWeight>1.0</uncertaintyWeight>
         </logicTreeBranch>
-
       </logicTreeBranchSet>
   </logicTree>
 </nrml>

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2021 GEM Foundation
+# Copyright (C) 2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,7 +13,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 
 import os
 import unittest
@@ -30,7 +29,6 @@ class MultiFaultTestCase(unittest.TestCase):
     """
     Test the construction of multi-fault ruptures
     """
-
     def setUp(self):
 
         hsmpl = 4
@@ -81,6 +79,7 @@ class MultiFaultTestCase(unittest.TestCase):
 
     def test01(self):
         """ test instantiation and rupture generation """
+        # test instantiation and rupture generation
         src = MultiFaultSource("01", "test", "Moon Crust", self.sections,
                                self.rup_idxs, self.poes, self.mags, self.rakes)
         rups = list(src.iter_ruptures())

@@ -82,7 +82,7 @@ def event_based_risk(df, param, monitor):
     mon_avg = monitor('averaging losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'], parentdir=param['parentdir'])
     K = param['K']
-    with monitor('reading data'):
+    with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
@@ -244,11 +244,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'eff_time=%s is too small to compute loss curves',
                     eff_time)
         super().pre_execute()
-        if oq.hazard_calculation_id:
-            parentdir = os.path.dirname(
-                datastore.read(oq.hazard_calculation_id).filename)
-        else:
-            parentdir = None
+        parentdir = (os.path.dirname(self.datastore.ppath)
+                     if self.datastore.ppath else None)
         self.set_param(hdf5path=self.datastore.filename,
                        parentdir=parentdir,
                        ignore_covs=oq.ignore_covs,
@@ -287,7 +284,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 'agg_loss_table', descr,
                 K=len(self.aggkey), L=len(oq.loss_names))
         else:  # damage
-            dmgs = ' '.join(self.crmodel.damage_states[:1])
+            dmgs = ' '.join(self.crmodel.damage_states[1:])
             descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
                      [(dc, F32) for dc in self.crmodel.get_dmg_csq()])
             self.datastore.create_df(
@@ -328,7 +325,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             smap.monitor.save('srcfilter', self.src_filter())
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
-            for rg in getters.gen_rupture_getters(
+            for rg in getters.get_rupture_getters(
                     self.datastore, self.oqparam.concurrent_tasks):
                 smap.submit((rg, self.param))
             smap.reduce(self.agg_dicts)
@@ -340,8 +337,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(gmf_bytes.sum()))
         else:  # start from GMFs
+            eids = self.datastore['gmf_data/eid'][:]
+            logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
+            self.datastore.swmr_on()  # crucial!
             smap = parallel.Starmap(
-                event_based_risk, self.gen_args(), h5=self.datastore.hdf5)
+                event_based_risk, self.gen_args(eids), h5=self.datastore.hdf5)
             smap.monitor.save('assets', self.assetcol.to_dframe())
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
@@ -409,7 +409,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             prc = PostRiskCalculator(oq, self.datastore.calc_id)
             if hasattr(self, 'exported'):
                 prc.exported = self.exported
-            prc.run(exports='')
+            with prc.datastore:
+                prc.run(exports='')
 
         if (oq.investigation_time or not oq.avg_losses or
                 'agg_losses-rlzs' not in self.datastore):
@@ -425,15 +426,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 ' agg_losses != sum(avg_losses): %s != %s\nsee %s',
                 agglosses[K].mean(), sumlosses.mean(), url)
 
-    def gen_args(self):
+    def gen_args(self, eids):
         """
-        :yields: pairs (gmf_df, param)
+        :yields: pairs (gmf_slice, param)
         """
         ct = self.oqparam.concurrent_tasks or 1
-        eids = self.datastore['gmf_data/eid'][:]
         maxweight = len(eids) / ct
         start = stop = weight = 0
-        logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         # IMPORTANT!! we rely on the fact that the hazard part
         # of the calculation stores the GMFs in chunks of constant eid
         for eid, group in itertools.groupby(eids):

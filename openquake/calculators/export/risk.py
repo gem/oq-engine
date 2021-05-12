@@ -75,7 +75,8 @@ def export_agg_curve_rlzs(ekey, dstore):
     agg_tags = get_agg_tags(dstore, oq.aggregate_by)
     aggvalue = dstore['agg_values'][()]  # shape (K+1, L)
     md = dstore.metadata
-    md['risk_investigation_time'] = oq.risk_investigation_time
+    md['risk_investigation_time'] = (
+        oq.risk_investigation_time or oq.investigation_time)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     descr = hdf5.get_shape_descr(dstore[ekey[0]].attrs['json'])
     name, suffix = ekey[0].split('-')
@@ -125,7 +126,8 @@ def export_agg_losses(ekey, dstore):
         'loss_value', 'exposed_value', 'loss_ratio')
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
-              risk_investigation_time=oq.risk_investigation_time))
+                   risk_investigation_time=oq.risk_investigation_time or
+                   oq.investigation_time))
     for r, ros in enumerate(rlzs_or_stats):
         ros = ros if isinstance(ros, str) else 'rlz-%03d' % ros
         rows = []
@@ -173,7 +175,8 @@ def export_avg_losses(ekey, dstore):
     assets = get_assets(dstore)
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time))
+                   risk_investigation_time=oq.risk_investigation_time
+                   or oq.investigation_time))
     for ros, values in zip(rlzs_or_stats, value.transpose(1, 0, 2)):
         dest = dstore.build_fname(name, ros, 'csv')
         array = numpy.zeros(len(values), dt)
@@ -193,7 +196,8 @@ def export_src_loss_table(ekey, dstore):
     oq = dstore['oqparam']
     md = dstore.metadata
     md.update(dict(investigation_time=oq.investigation_time,
-                   risk_investigation_time=oq.risk_investigation_time))
+                   risk_investigation_time=oq.risk_investigation_time or
+                   oq.investigation_time))
     aw = hdf5.ArrayWrapper.from_(dstore['src_loss_table'], 'loss_value')
     dest = dstore.build_fname('src_loss_table', '', 'csv')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -214,7 +218,8 @@ def export_agg_loss_table(ekey, dstore):
     md = dstore.metadata
     if 'scenario' not in oq.calculation_mode:
         md.update(dict(investigation_time=oq.investigation_time,
-                       risk_investigation_time=oq.risk_investigation_time))
+                       risk_investigation_time=oq.risk_investigation_time
+                       or oq.investigation_time))
     events = dstore['events'][()]
     try:
         K = dstore.get_attr('agg_loss_table', 'K', 0)
@@ -274,7 +279,8 @@ def export_loss_maps_csv(ekey, dstore):
             ros = 'rlz-%d' % ros.ordinal
         fname = dstore.build_fname('loss_maps', ros, ekey[1])
         md.update(
-            dict(kind=ros, risk_investigation_time=oq.risk_investigation_time))
+            dict(kind=ros, risk_investigation_time=oq.risk_investigation_time
+                 or oq.investigation_time))
         writer.save(compose_arrays(assets, value[:, i]), fname, comment=md,
                     renamedict=dict(id='asset_id'))
     return writer.getsaved()
@@ -323,7 +329,8 @@ def export_damages_csv(ekey, dstore):
     md = dstore.metadata
     if oq.investigation_time:
         md.update(dict(investigation_time=oq.investigation_time,
-                       risk_investigation_time=oq.risk_investigation_time))
+                       risk_investigation_time=oq.risk_investigation_time
+                       or oq.investigation_time))
     if ekey[0].endswith('stats'):
         rlzs_or_stats = oq.hazard_stats()
     else:
@@ -572,7 +579,8 @@ def export_aggcurves_csv(ekey, dstore):
     dest2 = dstore.export_path('dmgcsq.%s' % ekey[1])
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
-    md['risk_investigation_time'] = oq.risk_investigation_time
+    md['risk_investigation_time'] = (oq.risk_investigation_time or
+                                     oq.investigation_time)
     md['num_events'] = E
     md['effective_time'] = (
         oq.investigation_time * oq.ses_per_logic_tree_path * R)

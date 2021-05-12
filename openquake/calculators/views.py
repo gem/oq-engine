@@ -420,6 +420,16 @@ def view_portfolio_damage(token, dstore):
     The mean full portfolio damage for each loss type,
     extracted from the average damages
     """
+    if 'aggcurves' in dstore:  # event_based_damage
+        K = dstore.get_attr('agg_loss_table', 'K')
+        df = dstore.read_df('aggcurves', sel=dict(agg_id=K, return_period=0))
+        lnames = numpy.array(dstore['oqparam'].loss_names)
+        df['loss_type'] = lnames[df.loss_id.to_numpy()]
+        del df['loss_id']
+        del df['agg_id']
+        del df['return_period']
+        return df.set_index('loss_type')
+
     # dimensions assets, stat, loss_types, dmg_state
     if 'damages-stats' in dstore:
         attrs = get_shape_descr(dstore['damages-stats'].attrs['json'])
@@ -549,13 +559,13 @@ def view_required_params_per_trt(token, dstore):
     """
     full_lt = dstore['full_lt']
     tbl = []
-    for trt_smr, trt in enumerate(full_lt.trt_by_et):
+    for trt in full_lt.trts:
         gsims = full_lt.gsim_lt.get_gsims(trt)
         maker = ContextMaker(trt, gsims)
         distances = sorted(maker.REQUIRES_DISTANCES)
         siteparams = sorted(maker.REQUIRES_SITES_PARAMETERS)
         ruptparams = sorted(maker.REQUIRES_RUPTURE_PARAMETERS)
-        tbl.append((trt_smr, ' '.join(map(repr, map(repr, gsims))),
+        tbl.append((trt, ' '.join(map(repr, map(repr, gsims))),
                     distances, siteparams, ruptparams))
     return text_table(
         tbl, header='trt_smr gsims distances siteparams ruptparams'.split(),
@@ -587,7 +597,7 @@ def view_task_info(token, dstore):
         val = arr['duration']
         if len(val):
             data.append(stats(task, val))
-    if len(data) == 1:
+    if not data:
         return 'Not available'
     return numpy.array(
         data, dt('operation-duration counts mean stddev min max'))
@@ -743,14 +753,14 @@ def view_gmf_error(token, dstore):
 class GmpeExtractor(object):
     def __init__(self, dstore):
         full_lt = dstore['full_lt']
-        self.trt_by_et = full_lt.trt_by_et
+        self.trt_by = full_lt.trt_by
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()
 
     def extract(self, trt_smrs, rlz_ids):
         out = []
         for trt_smr, rlz_id in zip(trt_smrs, rlz_ids):
-            trt = self.trt_by_et[trt_smr]
+            trt = self.trt_by(trt_smr)
             out.append(self.gsim_by_trt(self.rlzs[rlz_id])[trt])
         return out
 
@@ -1041,3 +1051,17 @@ def view_composite_source_model(token, dstore):
         trts, sm_rlzs = numpy.divmod(trt_smrs[grp_id], n)
         lst.append((str(grp_id), to_str(trts), to_str(sm_rlzs), srcs))
     return numpy.array(lst, dt('grp_id trt smrs sources'))
+
+
+@view.add('branch_ids')
+def view_branch_ids(token, dstore):
+    """
+    Show the branch IDs
+    """
+    full_lt = dstore['full_lt']
+    tbl = []
+    for k, v in full_lt.source_model_lt.shortener.items():
+        tbl.append(('source_model_lt', v, k))
+    for k, v in full_lt.gsim_lt.shortener.items():
+        tbl.append(('gsim_lt', v, k))
+    return text_table(tbl, ['logic_tree', 'abbrev', 'branch_id'])

@@ -68,10 +68,12 @@ def extract_calc_id_datadir(filename):
 
 def _read(calc_id: int, datadir, mode, haz_id=None):
     # low level function to read a datastore file
-    datadir = datadir or get_datadir()
+    ddir = datadir or get_datadir()
+    if not os.path.exists(ddir):
+        raise OSError(ddir)
     ppath = None
     if calc_id < 0:  # look at the old calculations of the current user
-        calc_ids = get_calc_ids(datadir)
+        calc_ids = get_calc_ids(ddir)
         try:
             jid = calc_ids[calc_id]
         except IndexError:
@@ -82,7 +84,7 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
         jid = calc_id
     # look in the db
     job = dbcmd('get_job', jid)
-    if job:
+    if job and datadir is None:
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
@@ -91,7 +93,7 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
         if hc_id and hc_id != jid:
             ppath = dbcmd('get_job', hc_id).ds_calc_dir + '.hdf5'
     else:  # when using oq run there is no job in the db
-        path = os.path.join(datadir, 'calc_%s.hdf5' % jid)
+        path = os.path.join(ddir, 'calc_%s.hdf5' % jid)
     return DataStore(path, ppath, mode)
 
 
@@ -121,18 +123,19 @@ def read(calc_id, mode='r', datadir=None, parentdir=None):
     return dstore.open(mode)
 
 
-def new(calc_id, oqparam=None, datadir=None, mode=None):
+def new(calc_id, oqparam, datadir=None, mode=None):
     """
     :param calc_id:
         if integer > 0 look in the database and then on the filesystem
         if integer < 0 look at the old calculations in the filesystem
+    :param oqparam:
+        OqParam instance with the validated parameters of the calculation
     :returns:
         a DataStore instance associated to the given calc_id
     """
     haz_id = None if oqparam is None else oqparam.hazard_calculation_id
     dstore = _read(calc_id, datadir, mode, haz_id)
-    if oqparam:
-        dstore['oqparam'] = oqparam
+    dstore['oqparam'] = oqparam
     return dstore
 
 
@@ -144,11 +147,12 @@ class DataStore(collections.abc.MutableMapping):
     Here is a minimal example of usage:
 
     >>> from openquake.commonlib import logs
-    >>> ds = new(logs.init("calc", {}).calc_id)
-    >>> ds['example'] = 42
-    >>> print(ds['example'][()])
+    >>> params = {'calculation_mode': 'scenario', 'sites': '0 0'}
+    >>> with logs.init("calc", params) as log:
+    ...     ds = new(log.calc_id, log.get_oqparam())
+    ...     ds['example'] = 42
+    ...     print(ds['example'][()])
     42
-    >>> ds.clear()
 
     When reading the items, the DataStore will return a generator. The
     items will be ordered lexicographically according to their name.
@@ -161,13 +165,15 @@ class DataStore(collections.abc.MutableMapping):
     """
     calc_id = None  # set at instantiation time
     job = None  # set at instantiation time
+    opened = 0
+    closed = 0
 
     def __init__(self, path, ppath=None, mode=None):
         self.filename = path
         self.ppath = ppath
         self.calc_id, datadir = extract_calc_id_datadir(path)
         self.tempname = self.filename[:-5] + '_tmp.hdf5'
-        if not os.path.exists(datadir):
+        if not os.path.exists(datadir) and mode != 'r':
             os.makedirs(datadir)
         self.parent = ()  # can be set later
         self.datadir = datadir
