@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato]
+  * Implemented MultiFaultSources
+
   [Michele Simionato]
   * Fixed newlines in the CSV exports on Windows
 

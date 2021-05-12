@@ -20,8 +20,10 @@ defines :class:`MultiFaultSource`.
 
 import numpy as np
 from typing import Union
-from openquake.hazardlib.source.rupture import NonParametricProbabilisticRupture
-from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource as NP
+from openquake.hazardlib.source.rupture import (
+    NonParametricProbabilisticRupture)
+from openquake.hazardlib.source.non_parametric import (
+    NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.base import BaseSeismicSource
 
@@ -84,15 +86,16 @@ class MultiFaultSource(BaseSeismicSource):
                  magnitudes: list, rakes: list):
         self.sections = sections
         self.rupture_idxs = rupture_idxs
-        self.poes = occurrence_probs
+        self.pmfs = occurrence_probs
         self.mags = magnitudes
         self.rakes = rakes
-        self.trt = tectonic_region_type
         super().__init__(source_id, name, tectonic_region_type)
-        self._create_inverted_index()
+        self.create_inverted_index()
 
-    def _create_inverted_index(self):
-        # Creates an inverted index structure
+    def create_inverted_index(self):
+        """
+        Creates an inverted index structure, i.e. a dictionary sec_id->index
+        """
         self.invx = {}
         for i, sec in enumerate(self.sections):
             self.invx[sec.sec_id] = i
@@ -101,12 +104,12 @@ class MultiFaultSource(BaseSeismicSource):
         """
         An iterator for the ruptures.
 
-        :param fromidx:
-        :param untilidx:
+        :param fromidx: start
+        :param untilidx: stop
         """
         # Create inverted index
         if 'invx' not in self.__dict__:
-            self._create_inverted_index()
+            self.create_inverted_index()
 
         # Iter ruptures
         untilidx = len(self.mags) if untilidx is None else untilidx
@@ -119,9 +122,9 @@ class MultiFaultSource(BaseSeismicSource):
                 sfc = MultiSurface([s[self.invx[j]].surface for j in idxs])
             rake = self.rakes[i]
             hypo = self.sections[self.invx[idxs[0]]].surface.get_middle_point()
-            pmf = self.poes[i]
-            yield NonParametricProbabilisticRupture(self.mags[i], rake,
-                                                    self.trt, hypo, sfc, pmf)
+            yield NonParametricProbabilisticRupture(
+                self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
+                self.pmfs[i])
 
     def count_ruptures(self):
         return len(self.mags)
@@ -134,8 +137,8 @@ class MultiFaultSource(BaseSeismicSource):
 
     @property
     def data(self):  # compatibility with NonParametricSeismicSource
-        for sec in self.sections:
-            yield sec, None
+        for sec, pmf in zip(self.sections, self.pmfs):
+            yield sec, pmf
 
     polygon = NP.polygon
     wkt = NP.wkt

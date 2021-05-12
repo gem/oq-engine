@@ -4,9 +4,7 @@
     xmlns:gml="http://www.opengis.net/gml" >
   <sourceModel name="test hazardmodel" investigation_time="1.0">
     <sourceGroup name="group1" tectonicRegion="Active Shallow Crust">
-      <multiFaultSource id="1" name="Test1" 
-                        tectonicRegion="Active Shallow Crust" 
-                        faultSectionFname="./sections.xml">
+      <multiFaultSource id="1" name="Test1">
 	<multiPlanesRupture probs_occur="0.8 0.2">
 	  <magnitude>5.0</magnitude>
 	  <sectionIndexes indexes="s1"/>
