@@ -670,7 +670,7 @@ class SourceConverter(RuptureConverter):
             # if source_id is set in the job.ini, discard all other sources
             return
         if hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):
-            # TruncatedGRMFD with slip rate (for xSlovenia)
+            # TruncatedGRMFD with slip rate (for Slovenia)
             m = obj.mfd
             obj.mfd = m.from_slip_rate(
                 m.min_mag, m.max_mag, m.bin_width, m.b_val,
@@ -1073,6 +1073,8 @@ class SourceConverter(RuptureConverter):
             idxs.append(rupnode.sectionIndexes.get('indexes').split(','))
         mags = numpy.array(mags)
         rakes = numpy.array(rakes)
+        # NB: passing an empty list of sections; the sections will be fixed
+        # later on, in source_reader
         mfs = MultiFaultSource(sid, name, trt, [], idxs, pmfs, mags, rakes)
         return mfs
 

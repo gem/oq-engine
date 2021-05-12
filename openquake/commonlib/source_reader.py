@@ -137,7 +137,7 @@ def fix_geometry_sections(smdict):
     """
     gmodels = []
     smodels = []
-    for fname, mod in list(smdict.items()):
+    for fname, mod in smdict.items():
         if isinstance(mod, nrml.GeometryModel):
             gmodels.append(mod)
         elif isinstance(mod, nrml.SourceModel):
