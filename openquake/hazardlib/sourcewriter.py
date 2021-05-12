@@ -598,7 +598,7 @@ def build_multi_fault_source_node(multi_fault_source):
     """
     Parses a MultiFaultSource to a Node class
 
-    :param mfs:
+    :param multi_fault_source:
         Multi fault source as instance of :class:
         `openquake.hazardlib.source.multi_fault.MultiFaultSource`
     :returns:
