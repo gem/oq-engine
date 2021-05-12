@@ -122,7 +122,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=(), comment=None,
         close = False
     elif not hasattr(dest, 'getvalue'):
         # assume dest is a filename
-        dest = open(dest, 'w')
+        dest = open(dest, 'w', newline='')
     w = csv.writer(dest, delimiter=sep)
     try:
         # see if data is a composite numpy array
