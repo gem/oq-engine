@@ -653,7 +653,6 @@ class SourceConverter(RuptureConverter):
         self.width_of_mfd_bin = width_of_mfd_bin
         self.source_id = source_id
         self.discard_trts = discard_trts
-        self.sectiondict = {}  # populated by convert_faultSectionCollection
 
     def convert_node(self, node):
         """
@@ -668,25 +667,21 @@ class SourceConverter(RuptureConverter):
         obj = getattr(self, 'convert_' + striptag(node.tag))(node)
         source_id = getattr(obj, 'source_id', '')
         if self.source_id and source_id and source_id not in self.source_id:
+            # if source_id is set in the job.ini, discard all other sources
             return
         if hasattr(obj, 'mfd') and hasattr(obj.mfd, 'slip_rate'):
-            # TruncatedGRMFD with slip rate
+            # TruncatedGRMFD with slip rate (for xSlovenia)
             m = obj.mfd
             obj.mfd = m.from_slip_rate(
                 m.min_mag, m.max_mag, m.bin_width, m.b_val,
                 m.slip_rate, m.rigidity, obj.get_fault_surface_area())
         return obj
 
-    def convert_faultSectionCollection(self, node):
+    def convert_geometryModel(self, node):
         """
-        Populate .sectiondict
+        :returns: a list of sections
         """
-        sections = []
-        for secnode in node:
-            sec = self.convert_node(secnode)
-            assert sec.sec_id not in self.sectiondict, sec.sec_id
-            self.sectiondict[sec.sec_id] = sec
-            sections.append(sec)
+        sections = [self.convert_node(secnode) for secnode in node]
         return sections
 
     def convert_section(self, node):
@@ -697,17 +692,13 @@ class SourceConverter(RuptureConverter):
         with context(self.fname, node):
             if hasattr(node, 'planarSurface'):
                 surfaces = list(node.getnodes('planarSurface'))
-                for s in surfaces:
-                    assert s.tag.endswith('planarSurface')
             elif hasattr(node, 'kiteSurface'):
                 surfaces = list(node.getnodes('kiteSurface'))
-                for s in surfaces:
-                    assert s.tag.endswith('kiteSurface')
             else:
                 raise ValueError('Only planarSurfaces or kiteSurfaces ' +
                                  'supported')
-            surfaces = self.convert_surfaces(surfaces)
-        return FaultSection(node['id'], surfaces)
+            surfs = self.convert_surfaces(surfaces)
+        return FaultSection(node['id'], surfs)
 
     def get_tom(self, node):
         """
@@ -1045,8 +1036,8 @@ class SourceConverter(RuptureConverter):
             a :class:`openquake.hazardlib.source.NonParametricSeismicSource`
             instance
         """
-        return convert_nonParametricSeismicSource(self.fname, node,
-                                                  self.rupture_mesh_spacing)
+        return convert_nonParametricSeismicSource(
+            self.fname, node, self.rupture_mesh_spacing)
 
     def convert_multiFaultSource(self, node):
         """
@@ -1058,13 +1049,10 @@ class SourceConverter(RuptureConverter):
             a :class:`openquake.hazardlib.source.multiFaultSource`
             instance
         """
-        # Create the multiFaultSource
         sid = node.get('id')
         name = node.get('name')
         trt = node.get('tectonicRegion')
-
-        # Parse data
-        prbs = []
+        pmfs = []
         mags = []
         rakes = []
         idxs = []
@@ -1078,20 +1066,13 @@ class SourceConverter(RuptureConverter):
                 raise ValueError(
                     'prob_occurs=%s has %d elements, expected %s'
                     % (rupnode['probs_occur'], len(prb.data), num_probs))
-            prbs.append(prb)
+            pmfs.append(prb)
             mags.append(~rupnode.magnitude)
             rakes.append(~rupnode.rake)
             idxs.append(rupnode.sectionIndexes.get('indexes').split(','))
         mags = numpy.array(mags)
         rakes = numpy.array(rakes)
-        poes = numpy.array(prbs)
-        sects = list(self.sectiondict.values())
-        if not sects:
-            f = os.path.basename(self.fname)
-            raise RuntimeError(
-                'The file with the fault sections must be listed in '
-                'the source model logic tree file, before %s' % f)
-        mfs = MultiFaultSource(sid, name, trt, sects, idxs, poes, mags, rakes)
+        mfs = MultiFaultSource(sid, name, trt, [], idxs, pmfs, mags, rakes)
         return mfs
 
     def convert_sourceModel(self, node):
@@ -1155,6 +1136,7 @@ class SourceConverter(RuptureConverter):
                     % (len(srcs_weights), len(node), self.fname))
             for src, sw in zip(sg, srcs_weights):
                 src.mutex_weight = sw
+
         # check that, when the cluster option is set, the group has a temporal
         # occurrence model properly defined
         if sg.cluster and not hasattr(sg, 'temporal_occurrence_model'):

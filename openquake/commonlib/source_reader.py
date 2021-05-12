@@ -119,6 +119,7 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
+    fix_geometry_sections(smdict)
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
@@ -127,6 +128,38 @@ def get_csm(oq, full_lt, h5=None):
         logging.info('Applied %d changes to the composite source model',
                      changes)
     return _get_csm(full_lt, groups)
+
+
+def fix_geometry_sections(smdict):
+    """
+    If there are MultiFaultSources, fix the sections according to the
+    GeometryModels (if any).
+    """
+    gmodels = []
+    smodels = []
+    for fname, mod in list(smdict.items()):
+        if isinstance(mod, nrml.GeometryModel):
+            gmodels.append(mod)
+        elif isinstance(mod, nrml.SourceModel):
+            smodels.append(mod)
+        else:
+            raise RuntimeError('Unknown model %s' % mod)
+
+    # merge the sections
+    sections = []
+    for gmod in gmodels:
+        sections.extend(gmod.sections)
+    nrml.check_unique([sec.sec_id for sec in sections])
+
+    # fix the MultiFaultSources
+    for smod in smodels:
+        for sg in smod.src_groups:
+            for src in sg:
+                if hasattr(src, 'sections'):
+                    if not sections:
+                        raise RuntimeError('Missing geometryModel files!')
+                    src.sections = sections
+                    src.create_inverted_index()
 
 
 def _build_groups(full_lt, smdict):

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-    xmlns="http://openquake.org/xmlns/nrml/0.5">
-  <faultSectionCollection name="Dummy" id="fs1">
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <geometryModel name="fault_sections">
     <section name="central" id="s1">
       <kiteSurface>
 	<profile>
@@ -30,5 +30,5 @@
 	</profile>
       </kiteSurface>
     </section>    
-  </faultSectionCollection>
+</geometryModel>
 </nrml>
