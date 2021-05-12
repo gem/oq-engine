@@ -91,7 +91,6 @@ class MultiFaultSource(BaseSeismicSource):
         self.mags = magnitudes
         self.rakes = rakes
         super().__init__(source_id, name, tectonic_region_type)
-        self.create_inverted_index()
 
     def create_inverted_index(self):
         """
