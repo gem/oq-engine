@@ -1061,7 +1061,7 @@ def view_branch_ids(token, dstore):
     full_lt = dstore['full_lt']
     tbl = []
     for k, v in full_lt.source_model_lt.shortener.items():
-        tbl.append(('source_model_lt', k, v))
+        tbl.append(('source_model_lt', v, k))
     for k, v in full_lt.gsim_lt.shortener.items():
-        tbl.append(('gsim_lt', k, v))
+        tbl.append(('gsim_lt', v, k))
     return text_table(tbl, ['logic_tree', 'abbrev', 'branch_id'])
