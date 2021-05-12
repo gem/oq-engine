@@ -17,44 +17,32 @@ import os
 import unittest
 import numpy as np
 from openquake.hazardlib.nrml import to_python
-from openquake.hazardlib.sourceconverter import (
-    FaultSectionConverter, SourceConverter)
+from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.nrml import SourceModel
 
 datadir = os.path.join(os.path.dirname(__file__), 'data', 'sections')
 
 
-class KiteFaultSectionsTestCase(unittest.TestCase):
-    """ Tests reading an .xml file wiith sections """
+class MultiFaultSourceModelTestCase(unittest.TestCase):
+    """ Tests reading a multi fault model """
 
-    def setUp(self):
-        fname = 'sections_kite.xml'
-        self.fname = os.path.join(datadir, fname)
-
-    def test_load_kite(self):
-        conv = FaultSectionConverter()
-        sec = to_python(self.fname, conv)
+    def test_load_mfs(self):
+        sec_xml = os.path.join(datadir, 'sections_kite.xml')
+        src_xml = os.path.join(datadir, 'sources.xml')
+        conv = SourceConverter()
+        sec = to_python(sec_xml, conv).sections
         expected = [Point(11, 45, 0), Point(11, 45.5, 10)]
         # Check geometry info
         self.assertEqual(expected[0], sec[1].surface.profiles[0].points[0])
         self.assertEqual(expected[1], sec[1].surface.profiles[0].points[1])
         self.assertEqual(sec[1].sec_id, 's2')
-
-
-class MultiFaultSourceModelTestCase(unittest.TestCase):
-    """ Tests reading a multi fault model """
-
-    def setUp(self):
-        fname = 'sources.xml'
-        self.fname = os.path.join(datadir, fname)
-
-    def test_load_mfs(self):
-        conv = SourceConverter()
-        ssm = to_python(self.fname, conv)
+        ssm = to_python(src_xml, conv)
         self.assertIsInstance(ssm, SourceModel)
 
         rups = []
+        ssm[0][0].sections = sec  # fix sections
+        ssm[0][0].create_inverted_index()
         for rup in ssm[0][0].iter_ruptures():
             rups.append(rup)
 

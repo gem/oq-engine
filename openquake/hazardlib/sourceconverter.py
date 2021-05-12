@@ -679,6 +679,7 @@ class SourceConverter(RuptureConverter):
 
     def convert_geometryModel(self, node):
         """
+        :param node: a geometryModel node
         :returns: a list of sections
         """
         sections = [self.convert_node(secnode) for secnode in node]
@@ -686,7 +687,7 @@ class SourceConverter(RuptureConverter):
 
     def convert_section(self, node):
         """
-        :param node: a_faultSectionCollection node
+        :param node: a section node
         :returns: a FaultSection instance
         """
         with context(self.fname, node):
