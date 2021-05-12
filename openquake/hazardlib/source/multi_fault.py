@@ -20,8 +20,10 @@ defines :class:`MultiFaultSource`.
 
 import numpy as np
 from typing import Union
-from openquake.hazardlib.source.rupture import NonParametricProbabilisticRupture
-from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource as NP
+from openquake.hazardlib.source.rupture import (
+    NonParametricProbabilisticRupture)
+from openquake.hazardlib.source.non_parametric import (
+    NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.base import BaseSeismicSource
 
@@ -89,10 +91,12 @@ class MultiFaultSource(BaseSeismicSource):
         self.rakes = rakes
         self.trt = tectonic_region_type
         super().__init__(source_id, name, tectonic_region_type)
-        self._create_inverted_index()
+        self.create_inverted_index()
 
-    def _create_inverted_index(self):
-        # Creates an inverted index structure
+    def create_inverted_index(self):
+        """
+        Creates an inverted index structure, i.e. a dictionary sec_id->index
+        """
         self.invx = {}
         for i, sec in enumerate(self.sections):
             self.invx[sec.sec_id] = i
@@ -101,12 +105,12 @@ class MultiFaultSource(BaseSeismicSource):
         """
         An iterator for the ruptures.
 
-        :param fromidx:
-        :param untilidx:
+        :param fromidx: start
+        :param untilidx: stop
         """
         # Create inverted index
         if 'invx' not in self.__dict__:
-            self._create_inverted_index()
+            self.create_inverted_index()
 
         # Iter ruptures
         untilidx = len(self.mags) if untilidx is None else untilidx
