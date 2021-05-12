@@ -89,7 +89,6 @@ class MultiFaultSource(BaseSeismicSource):
         self.pmfs = occurrence_probs
         self.mags = magnitudes
         self.rakes = rakes
-        self.trt = tectonic_region_type
         super().__init__(source_id, name, tectonic_region_type)
         self.create_inverted_index()
 
@@ -124,7 +123,8 @@ class MultiFaultSource(BaseSeismicSource):
             rake = self.rakes[i]
             hypo = self.sections[self.invx[idxs[0]]].surface.get_middle_point()
             yield NonParametricProbabilisticRupture(
-                self.mags[i], rake, self.trt, hypo, sfc, self.pmfs[i])
+                self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
+                self.pmfs[i])
 
     def count_ruptures(self):
         return len(self.mags)
