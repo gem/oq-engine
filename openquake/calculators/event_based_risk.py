@@ -290,7 +290,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.datastore.create_df(
                 'agg_loss_table', descr,
                 K=len(self.aggkey), L=len(oq.loss_names), limit_states=dmgs)
-        ws = self.datastore['weights']
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
         if oq.avg_losses:
@@ -303,6 +302,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
     def save_avg_losses(self):
         oq = self.oqparam
+        ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
         if oq.collect_rlzs:
             if oq.investigation_time:  # event_based
@@ -314,8 +314,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 self.avg_ratio = numpy.array([oq.time_ratio] * len(ws))
             else:  # scenario
                 self.avg_ratio = 1. / self.num_events
-        self.avg_losses = numpy.zeros((A, R, L), F32)
-        self.datastore.create_dset('avg_losses-rlzs', F32, (A, R, L))
+        self.avg_losses = numpy.zeros((self.A, R, self.L), F32)
+        self.datastore.create_dset('avg_losses-rlzs', F32, (self.A, R, self.L))
         self.datastore.set_shape_descr(
             'avg_losses-rlzs', asset_id=self.assetcol['id'], rlz=R,
             loss_type=oq.loss_names)
