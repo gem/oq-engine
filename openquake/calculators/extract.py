@@ -51,10 +51,6 @@ SOURCE_ID = stochastic.rupture_dt['source_id']
 memoized = lru_cache()
 
 
-class NotFound(Exception):
-    pass
-
-
 def lit_eval(string):
     """
     `ast.literal_eval` the string if possible, otherwise returns it unchanged
@@ -521,12 +517,14 @@ def extract_sources(dstore, what):
         logging.info('Extracting sources with ids: %s', source_ids)
         info = info[numpy.isin(info['source_id'], source_ids)]
         if len(info) == 0:
-            raise NotFound('There is no source with id %s' % source_ids)
+            raise getters.NotFound(
+                'There is no source with id %s' % source_ids)
     if codes is not None:
         logging.info('Extracting sources with codes: %s', codes)
         info = info[numpy.isin(info['code'], codes)]
         if len(info) == 0:
-            raise NotFound('There is no source with code in %s' % codes)
+            raise getters.NotFound(
+                'There is no source with code in %s' % codes)
     for code, rows in general.group_array(info, 'code').items():
         if limit < len(rows):
             logging.info('Code %s: extracting %d sources out of %s',

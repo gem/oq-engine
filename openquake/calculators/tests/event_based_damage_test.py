@@ -22,6 +22,7 @@ from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.event_based_damage import (
     case_11, case_12, case_13, case_14)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 
 
@@ -50,6 +51,10 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         # test event_based_damage, no aggregate_by
         self.run_calc(case_12.__file__, 'job_a.ini')
         self.check_damages('a_damage_table.txt', 'a_damages.txt')
+
+        # since there are not ruptures, exporting the ruptures is an error
+        with self.assertRaises(NotFound):
+            export(('ruptures', 'csv'), self.calc.datastore)
 
     def test_case_12b(self):
         # test event_based_damage, aggregate_by=taxonomy
