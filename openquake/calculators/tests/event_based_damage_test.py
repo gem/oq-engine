@@ -20,7 +20,7 @@ import numpy
 
 from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.event_based_damage import (
-    case_12, case_13, case_14)
+    case_11, case_12, case_13, case_14)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 
@@ -38,6 +38,13 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         for col in df.columns:
             df[col] = numpy.around(df[col])
         self.assertEqualFiles('expected/' + f2, gettemp(str(df)))
+
+    def test_case_11(self):
+        # test with double aggregate_by by Catalina
+        self.run_calc(case_11.__file__, 'job.ini')
+        [f1, f2] = export(('aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f1), f1, delta=1E-5)
+        self.assertEqualFiles('expected/' + strip_calc_id(f2), f2, delta=1E-5)
 
     def test_case_12a(self):
         # test event_based_damage, no aggregate_by
