@@ -896,5 +896,10 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/ruptures.csv', f)
         # [f] = export(('ruptures', 'xml'), self.calc.datastore)  # broken
         # self.assertEqualFiles('expected/ruptures.xml', files[0])
+
+        rups = extract(self.calc.datastore, 'ruptures')
+        csv = general.gettemp(rups.array)
+        self.assertEqualFiles('expected/full_ruptures.csv', csv)
+
         files = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf_data.csv', files[0])
