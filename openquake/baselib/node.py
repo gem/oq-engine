@@ -729,13 +729,14 @@ def node_from_xml(xmlfile, nodefactory=Node):
     return node_from_elem(root, nodefactory)
 
 
-def node_to_xml(node, output=sys.stdout, nsmap=None):
+def node_to_xml(node, output, nsmap=None):
     """
     Convert a Node object into a pretty .xml file without keeping
     everything in memory. If you just want the string representation
     use tostring(node).
 
     :param node: a Node-compatible object (ElementTree nodes are fine)
+    :param output: a binary output file
     :param nsmap: if given, shorten the tags with aliases
 
     """
