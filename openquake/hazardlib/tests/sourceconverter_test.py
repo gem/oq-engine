@@ -296,12 +296,8 @@ class MultiFaultSourceModelTestCase(unittest.TestCase):
         self.assertEqual(sec[1].sec_id, 's2')
         ssm = nrml.to_python(src_xml, conv)
         self.assertIsInstance(ssm, nrml.SourceModel)
-
-        rups = []
-        ssm[0][0].sections = sec  # fix sections
-        ssm[0][0].create_inverted_index()
-        for rup in ssm[0][0].iter_ruptures():
-            rups.append(rup)
+        ssm[0][0].create_inverted_index(sec)   # fix sections
+        rups = list(ssm[0][0].iter_ruptures())
 
         # Check data for the second rupture
         msg = 'Rake for rupture #0 is wrong'

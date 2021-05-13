@@ -156,11 +156,10 @@ def fix_geometry_sections(smdict):
     for smod in smodels:
         for sg in smod.src_groups:
             for src in sg:
-                if hasattr(src, 'sections'):
+                if hasattr(src, 'create_inverted_index'):
                     if not sections:
                         raise RuntimeError('Missing geometryModel files!')
-                    src.sections = sections
-                    src.create_inverted_index()
+                    src.create_inverted_index(sections)
 
 
 def _build_groups(full_lt, smdict):

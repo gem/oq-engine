@@ -16,8 +16,8 @@
 
 import os
 import unittest
-from openquake.hazardlib.source.multi_fault import (MultiFaultSource,
-                                                    FaultSection)
+from openquake.hazardlib.source.multi_fault import (
+    MultiFaultSource, FaultSection)
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
@@ -63,7 +63,7 @@ class MultiFaultTestCase(unittest.TestCase):
         rakes = [90.0, 90.0, 90.0, 90.0, 90.0, 90.0, 90.0]
 
         # Occurrence probabilities of occurrence
-        poes = [PMF([[0.90, 0], [0.10, 1]]),
+        pmfs = [PMF([[0.90, 0], [0.10, 1]]),
                 PMF([[0.90, 0], [0.10, 1]]),
                 PMF([[0.90, 0], [0.10, 1]]),
                 PMF([[0.90, 0], [0.10, 1]]),
@@ -73,21 +73,24 @@ class MultiFaultTestCase(unittest.TestCase):
 
         self.sections = sections
         self.rup_idxs = rup_idxs
-        self.poes = poes
+        self.pmfs = pmfs
         self.mags = rup_mags
         self.rakes = rakes
 
     def test01(self):
-        """ test instantiation and rupture generation """
         # test instantiation and rupture generation
-        src = MultiFaultSource("01", "test", "Moon Crust", self.sections,
-                               self.rup_idxs, self.poes, self.mags, self.rakes)
+        src = MultiFaultSource("01", "test", "Moon Crust",
+                               self.rup_idxs, self.pmfs, self.mags, self.rakes)
+        src.create_inverted_index(self.sections)
         rups = list(src.iter_ruptures())
         self.assertEqual(7, len(rups))
 
     def test02(self):
-        """ First test of _check_rupture_definition method """
-        rup_idxs = [['0'], ['1'], ['3']]
-        self.assertRaises(ValueError, MultiFaultSource, "01", "test",
-                          "Moon Crust", self.sections, rup_idxs,
-                          self.poes, self.mags, self.rakes)
+        # test create_inverted_index, '3' is not a known section ID
+        rup_idxs = [['0'], ['1'], ['3'], ['0'], ['1'], ['3'], ['0']]
+        mfs = MultiFaultSource("01", "test", "Moon Crust", rup_idxs,
+                               self.pmfs, self.mags, self.rakes)
+        with self.assertRaises(ValueError) as ctx:
+            mfs.create_inverted_index(self.sections)
+        self.assertEqual('Rupture #2: section "3" does not exists',
+                         str(ctx.exception))
