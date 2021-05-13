@@ -478,7 +478,7 @@ class RuptureGetter(object):
     def num_ruptures(self):
         return len(self.proxies)
 
-    def get_rupdict(self):  # used in extract_rupture_info
+    def get_rupdict(self):  # used in extract_event_info and show rupture
         """
         :returns: a dictionary with the parameters of the rupture
         """
@@ -488,6 +488,7 @@ class RuptureGetter(object):
             rupgeoms = dstore['rupgeoms']
             rec = self.proxies[0].rec
             geom = rupgeoms[rec['id']]
+            # duplicating rupture._get_rupture
             num_surfaces = int(geom[0])
             start = 2 * num_surfaces + 1
             dic['lons'], dic['lats'], dic['deps'] = [], [], []
