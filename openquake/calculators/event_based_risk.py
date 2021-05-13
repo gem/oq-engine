@@ -321,12 +321,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         Compute risk from GMFs or ruptures depending on what is stored
         """
         if 'gmf_data' not in self.datastore:  # start from ruptures
+            srcfilter = self.src_filter()
             smap = parallel.Starmap(start_ebrisk, h5=self.datastore.hdf5)
-            smap.monitor.save('srcfilter', self.src_filter())
+            smap.monitor.save('srcfilter', srcfilter)
             smap.monitor.save('crmodel', self.crmodel)
             smap.monitor.save('rlz_id', self.rlzs)
             for rg in getters.get_rupture_getters(
-                    self.datastore, self.oqparam.concurrent_tasks):
+                    self.datastore, self.oqparam.concurrent_tasks,
+                    srcfilter=srcfilter):
                 smap.submit((rg, self.param))
             smap.reduce(self.agg_dicts)
             gmf_bytes = self.datastore['gmf_info']['gmfbytes']

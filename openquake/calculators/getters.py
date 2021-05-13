@@ -392,18 +392,12 @@ def weight_ruptures(rup_array, srcfilter, trt_by, scenario):
     return proxies
 
 
-def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter='infer'):
+def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
     """
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
     :param ct: number of concurrent tasks
     :returns: a list of RuptureGetters
     """
-    if srcfilter == 'infer':
-        if 'sitecol' in dstore:
-            srcfilter = filters.SourceFilter(
-                dstore['sitecol'], dstore['oqparam'].maximum_distance)
-        else:
-            srcfilter = None
     full_lt = dstore['full_lt']
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim()
     rup_array = dstore['ruptures'][slc]

@@ -348,7 +348,8 @@ class EventBasedCalculator(base.HazardCalculator):
         # compute_gmfs in parallel
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
-        rgetters = get_rupture_getters(dstore, oq.concurrent_tasks * 1.25)
+        rgetters = get_rupture_getters(dstore, oq.concurrent_tasks * 1.25,
+                                       srcfilter=self.srcfilter)
         allargs = [(rgetter, self.param) for rgetter in rgetters]
         dstore.swmr_on()
         smap = parallel.Starmap(

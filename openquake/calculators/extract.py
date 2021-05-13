@@ -1293,7 +1293,7 @@ def extract_rupture_info(dstore, what):
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
     boundaries = []
-    for rgetter in getters.get_rupture_getters(dstore, srcfilter=None):
+    for rgetter in getters.get_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r in rup_data.to_array(proxies):

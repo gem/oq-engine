@@ -1074,6 +1074,6 @@ def view_rupture(token, dstore):
     rup_id = int(token.split(':')[1])
     slc = slice(rup_id, rup_id + 1)
     dicts = []
-    for rgetter in get_rupture_getters(dstore, slc=slc, srcfilter=None):
+    for rgetter in get_rupture_getters(dstore, slc=slc):
         dicts.append(rgetter.get_rupdict())
     return str(dicts)
