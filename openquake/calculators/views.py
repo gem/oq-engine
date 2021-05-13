@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import io
 import ast
 import os.path
 import numbers
@@ -36,8 +35,7 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib.scientific import losses_by_period, return_periods
-from openquake.commonlib.writers import (
-    build_header, scientificformat, write_csv)
+from openquake.commonlib.writers import build_header, scientificformat
 from openquake.calculators.extract import extract
 
 F32 = numpy.float32
@@ -1064,4 +1062,4 @@ def view_branch_ids(token, dstore):
         tbl.append(('source_model_lt', v, k))
     for k, v in full_lt.gsim_lt.shortener.items():
         tbl.append(('gsim_lt', v, k))
-    return text_table(tbl, ['logic_tree', 'abbrev', 'branch_id'])
+    return numpy.array(tbl, dt('logic_tree abbrev branch_id'))

@@ -35,6 +35,10 @@ code2cls = BaseRupture.init()
 weight = operator.attrgetter('weight')
 
 
+class NotFound(Exception):
+    pass
+
+
 def build_stat_curve(poes, imtls, stat, weights):
     """
     Build statistics by taking into account IMT-dependent weights
@@ -402,6 +406,8 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter='infer'):
     full_lt = dstore['full_lt']
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim()
     rup_array = dstore['ruptures'][slc]
+    if len(rup_array) == 0:
+        raise NotFound('There are no ruptures in %s' % dstore)
     rup_array.sort(order='trt_smr')  # avoid generating too many tasks
     scenario = 'scenario' in dstore['oqparam'].calculation_mode
     if srcfilter is None:
@@ -478,7 +484,7 @@ class RuptureGetter(object):
     def num_ruptures(self):
         return len(self.proxies)
 
-    def get_rupdict(self):  # used in extract_rupture_info
+    def get_rupdict(self):  # used in extract_event_info and show rupture
         """
         :returns: a dictionary with the parameters of the rupture
         """
@@ -488,6 +494,7 @@ class RuptureGetter(object):
             rupgeoms = dstore['rupgeoms']
             rec = self.proxies[0].rec
             geom = rupgeoms[rec['id']]
+            # duplicating rupture._get_rupture
             num_surfaces = int(geom[0])
             start = 2 * num_surfaces + 1
             dic['lons'], dic['lats'], dic['deps'] = [], [], []

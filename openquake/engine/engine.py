@@ -140,8 +140,9 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
         try:
             size_mb = dstore.getsize(key) / MB
         except (KeyError, AttributeError):
-            size_mb = None
-        keysize.append((key, size_mb))
+            size_mb = -1
+        if size_mb:
+            keysize.append((key, size_mb))
     ds_size = dstore.getsize() / MB
     logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
 
