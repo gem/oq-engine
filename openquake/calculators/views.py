@@ -36,6 +36,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.commonlib.writers import build_header, scientificformat
+from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
 
 F32 = numpy.float32
@@ -1063,3 +1064,16 @@ def view_branch_ids(token, dstore):
     for k, v in full_lt.gsim_lt.shortener.items():
         tbl.append(('gsim_lt', v, k))
     return numpy.array(tbl, dt('logic_tree abbrev branch_id'))
+
+
+@view.add('rupture')
+def view_rupture(token, dstore):
+    """
+    Show a rupture with its geometry
+    """
+    rup_id = int(token.split(':')[1])
+    slc = slice(rup_id, rup_id + 1)
+    dicts = []
+    for rgetter in get_rupture_getters(dstore, slc=slc, srcfilter=None):
+        dicts.append(rgetter.get_rupdict())
+    return str(dicts)
