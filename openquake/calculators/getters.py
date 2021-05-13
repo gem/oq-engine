@@ -23,7 +23,8 @@ from openquake.baselib import hdf5, general, performance, parallel
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib import probability_map, stats
 from openquake.hazardlib.calc import filters, gmf
-from openquake.hazardlib.source.rupture import BaseRupture, RuptureProxy
+from openquake.hazardlib.source.rupture import (
+    BaseRupture, RuptureProxy, to_arrays)
 from openquake.risklib.riskinput import rsi2str
 from openquake.commonlib import calc, datastore
 
@@ -457,6 +458,22 @@ def get_ebruptures(dstore):
     return ebrs
 
 
+def line(points):
+    return '(%s)' % ', '.join('%.5f %.5f %.5f' % tuple(p) for p in points)
+
+
+def multiline(array3RC):
+    """
+    :param array3RC: array of shape (3, R, C)
+    :returns: a MULTILINESTRING
+    """
+    D, R, C = array3RC.shape
+    assert D == 3, D
+    lines = 'MULTILINESTRING(%s)' % ', '.join(
+        line(array3RC[:, r, :].T) for r in range(R))
+    return lines
+
+
 # this is never called directly; get_rupture_getters is used instead
 class RuptureGetter(object):
     """
@@ -494,18 +511,9 @@ class RuptureGetter(object):
             rupgeoms = dstore['rupgeoms']
             rec = self.proxies[0].rec
             geom = rupgeoms[rec['id']]
-            # duplicating rupture._get_rupture
-            num_surfaces = int(geom[0])
-            start = 2 * num_surfaces + 1
-            dic['lons'], dic['lats'], dic['deps'] = [], [], []
-            for i in range(1, num_surfaces * 2, 2):
-                s1, s2 = int(geom[i]), int(geom[i + 1])
-                size = s1 * s2 * 3
-                arr = geom[start:start + size].reshape(3, -1)
-                dic['lons'].append(arr[0])
-                dic['lats'].append(arr[1])
-                dic['deps'].append(arr[2])
-                start += size
+            arrays = to_arrays(geom)  # one array per surface
+            for a, array in enumerate(arrays):
+                dic['surface_%d' % a] = multiline(array)
             rupclass, surclass = code2cls[rec['code']]
             dic['rupture_class'] = rupclass.__name__
             dic['surface_class'] = surclass.__name__
