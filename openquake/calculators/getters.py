@@ -465,7 +465,7 @@ def line(points):
 def multiline(array3RC):
     """
     :param array3RC: array of shape (3, R, C)
-    :returns: a tuple of tuples (
+    :returns: a MULTILINESTRING
     """
     D, R, C = array3RC.shape
     assert D == 3, D
