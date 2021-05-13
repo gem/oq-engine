@@ -1073,9 +1073,8 @@ class SourceConverter(RuptureConverter):
             idxs.append(rupnode.sectionIndexes.get('indexes').split(','))
         mags = numpy.array(mags)
         rakes = numpy.array(rakes)
-        # NB: passing an empty list of sections; the sections will be fixed
-        # later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, [], idxs, pmfs, mags, rakes)
+        # NB: the sections will be fixed later on, in source_reader
+        mfs = MultiFaultSource(sid, name, trt, idxs, pmfs, mags, rakes)
         return mfs
 
     def convert_sourceModel(self, node):

@@ -17,7 +17,6 @@
 Package :mod:`openquake.hazardlib.source` deals with various types
 of seismic sources.
 """
-import copy
 import logging
 from openquake.baselib import parallel
 from openquake.hazardlib import mfd
@@ -33,6 +32,7 @@ from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
 from openquake.hazardlib.source.multi_point import MultiPointSource
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
+from openquake.hazardlib.source.multi_fault import MultiFaultSource
 
 
 def splittable(src):

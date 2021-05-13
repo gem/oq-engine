@@ -42,6 +42,7 @@ class FaultSection(object):
         :class:`openquake.hazardlib.geo.surface.base.BaseSurface` which
         describes the 3D geometry of a part of a fault system.
     """
+
     def __init__(self, sec_id: str, surface):
         self.sec_id = sec_id
         self.surface = surface
@@ -81,21 +82,31 @@ class MultiFaultSource(BaseSeismicSource):
     MODIFICATIONS = {}
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
-                 sections: list, rupture_idxs: list,
-                 occurrence_probs: Union[list, np.ndarray],
+                 rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
                  magnitudes: list, rakes: list):
-        self.sections = sections
+        nrups = len(rupture_idxs)
+        assert len(occurrence_probs) == len(magnitudes) == len(rakes) == nrups
         self.rupture_idxs = rupture_idxs
         self.pmfs = occurrence_probs
         self.mags = magnitudes
         self.rakes = rakes
         super().__init__(source_id, name, tectonic_region_type)
-        self.create_inverted_index()
 
-    def create_inverted_index(self):
+    def create_inverted_index(self, sections):
         """
-        Creates an inverted index structure, i.e. a dictionary sec_id->index
+        Check sections and sreates an inverted index structure, i.e. a
+        dictionary sec_id->index
         """
+        assert sections
+        self.sections = sections
+        section_idxs = [s.sec_id for s in sections]
+        msg = 'Rupture #{:d}: section "{:s}" does not exists'
+        for i in range(len(self.mags)):
+            for idx in self.rupture_idxs[i]:
+                if idx not in section_idxs:
+                    raise ValueError(msg.format(i, idx))
+
+        # create the inverted index
         self.invx = {}
         for i, sec in enumerate(self.sections):
             self.invx[sec.sec_id] = i
@@ -107,11 +118,12 @@ class MultiFaultSource(BaseSeismicSource):
         :param fromidx: start
         :param untilidx: stop
         """
-        # Create inverted index
+        # check
         if 'invx' not in self.__dict__:
-            self.create_inverted_index()
+            raise RuntimeError(
+                'You forgot to call create_inverted_index in %s!' % self)
 
-        # Iter ruptures
+        # iter on the ruptures
         untilidx = len(self.mags) if untilidx is None else untilidx
         for i in range(fromidx, untilidx):
             idxs = self.rupture_idxs[i]
@@ -127,6 +139,9 @@ class MultiFaultSource(BaseSeismicSource):
                 self.pmfs[i])
 
     def count_ruptures(self):
+        """
+        :returns: the number of the ruptures in the source
+        """
         return len(self.mags)
 
     def get_min_max_mag(self):

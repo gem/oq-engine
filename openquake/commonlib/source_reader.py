@@ -149,17 +149,17 @@ def fix_geometry_sections(smdict):
     sections = []
     for gmod in gmodels:
         sections.extend(gmod.sections)
+    sections.sort(key=operator.attrgetter('sec_id'))
     nrml.check_unique([sec.sec_id for sec in sections])
 
     # fix the MultiFaultSources
     for smod in smodels:
         for sg in smod.src_groups:
             for src in sg:
-                if hasattr(src, 'sections'):
+                if hasattr(src, 'create_inverted_index'):
                     if not sections:
                         raise RuntimeError('Missing geometryModel files!')
-                    src.sections = sections
-                    src.create_inverted_index()
+                    src.create_inverted_index(sections)
 
 
 def _build_groups(full_lt, smdict):
@@ -234,8 +234,9 @@ def reduce_sources(sources_with_same_id):
 
 
 def _get_csm(full_lt, groups):
-    # extract a single source from multiple sources with the same ID
-    # and regroup the sources in non-atomic groups by TRT
+    # 1. extract a single source from multiple sources with the same ID
+    # 2. regroup the sources in non-atomic groups by TRT
+    # 3. reorder the sources by source_id
     atomic = []
     acc = general.AccumDict(accum=[])
     for grp in groups:
@@ -271,6 +272,8 @@ def _get_csm(full_lt, groups):
             src._wkt = src.wkt()
     src_groups.extend(atomic)
     _check_dupl_ids(src_groups)
+    for sg in src_groups:
+        sg.sources.sort(key=operator.attrgetter('source_id'))
     return CompositeSourceModel(full_lt, src_groups)
 
 
