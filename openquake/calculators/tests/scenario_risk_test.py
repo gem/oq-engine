@@ -51,7 +51,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/sites.csv', sitefile)
 
         [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_event.csv', fname)
+        self.assertEqualFiles('expected/risk_by_event.csv', fname)
 
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')

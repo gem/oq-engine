@@ -214,7 +214,7 @@ def export_agg_loss_table(ekey, dstore):
     """
     oq = dstore['oqparam']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    dest = dstore.build_fname('losses_by_event', '', 'csv')
+    dest = dstore.build_fname('risk_by_event', '', 'csv')
     md = dstore.metadata
     if 'scenario' not in oq.calculation_mode:
         md.update(dict(investigation_time=oq.investigation_time,
