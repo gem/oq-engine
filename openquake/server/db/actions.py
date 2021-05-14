@@ -273,7 +273,7 @@ DISPLAY_NAME = {
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Damage Distributions',
     'damages-stats': 'Asset Damage Statistics',
-    'agg_loss_table': 'Aggregated Risk By Event',
+    'risk_by_event': 'Aggregated Risk By Event',
     'events': 'Events',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',

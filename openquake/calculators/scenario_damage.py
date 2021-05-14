@@ -175,22 +175,22 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             self.datastore['events']['rlz_id'], minlength=self.R)
         if (ne == 0).any():
             logging.warning('There are realizations with zero events')
-        base.create_agg_loss_table(self)
+        base.create_risk_by_event(self)
         self.riskinputs = self.build_riskinputs('gmf')
 
     def combine(self, acc, res):
         """
-        Combine the results and grows the agg_loss_table
+        Combine the results and grows the risk_by_event
         """
         if res is None:
             raise MemoryError('You ran out of memory!')
-        with self.monitor('saving agg_loss_table', measuremem=True):
+        with self.monitor('saving risk_by_event', measuremem=True):
             aed = res.pop('aed', ())
             if len(aed) == 0:
                 return acc + res
             for name in aed.dtype.names:
                 hdf5.extend(
-                    self.datastore['agg_loss_table/' + name], aed[name])
+                    self.datastore['risk_by_event/' + name], aed[name])
             return acc + res
 
     def post_execute(self, result):
@@ -211,8 +211,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # reduction factor
         matrixsize = A * E * L * 4
-        realsize = self.datastore.getsize('agg_loss_table')
-        logging.info('Saving %s in agg_loss_table (instead of %s)',
+        realsize = self.datastore.getsize('risk_by_event')
+        logging.info('Saving %s in risk_by_event (instead of %s)',
                      humansize(realsize), humansize(matrixsize))
 
         # avg_ratio = ratio used when computing the averages
@@ -237,12 +237,12 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         dt = F32 if self.param['float_dmg_dist'] else U32
         dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
         dbe[:, :, 0] = tot
-        alt = self.datastore.read_df('agg_loss_table')
+        alt = self.datastore.read_df('risk_by_event')
         df = alt.groupby(['event_id', 'loss_id']).sum().reset_index()
         df['agg_id'] = A
         for col in df.columns:
-            hdf5.extend(self.datastore['agg_loss_table/' + col], df[col])
-        self.datastore.set_attrs('agg_loss_table', K=A)
+            hdf5.extend(self.datastore['risk_by_event/' + col], df[col])
+        self.datastore.set_attrs('risk_by_event', K=A)
 
         """
         rlz = self.datastore['events']['rlz_id']
@@ -278,7 +278,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         else:
             arr = self.datastore.sel('damages-stats', stat='mean')
         avg = arr.sum(axis=(0, 1))  # shape (L, D)
-        if not len(self.datastore['agg_loss_table/agg_id']):
+        if not len(self.datastore['risk_by_event/agg_id']):
             logging.warning('There is no damage at all!')
         elif 'avg_portfolio_damage' in self.datastore:
             df = views.portfolio_damage_error(

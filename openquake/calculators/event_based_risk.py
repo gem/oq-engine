@@ -134,13 +134,13 @@ def event_based_risk(df, param, monitor):
     if loss_by_AR:
         yield loss_by_AR
         loss_by_AR.clear()
-    alt = _build_agg_loss_table(loss_by_EK1)
+    alt = _build_risk_by_event(loss_by_EK1)
     if alt:
         yield alt
         alt.clear()
 
 
-def _build_agg_loss_table(loss_by_EK1):
+def _build_risk_by_event(loss_by_EK1):
     alt = {}
     for lni, ln in enumerate(loss_by_EK1):
         nnz = len(loss_by_EK1[ln])
@@ -276,14 +276,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 all(val == 0 for val in oq.minimum_asset_loss.values())):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
-        base.create_agg_loss_table(self)
+        base.create_risk_by_event(self)
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
         if oq.avg_losses:
             self.save_avg_losses()
         alt_nbytes = 4 * self.E * L
         if alt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
-            raise RuntimeError('The agg_loss_table is too big to be transfer'
+            raise RuntimeError('The risk_by_event is too big to be transfer'
                                'ed with %d tasks' % oq.concurrent_tasks)
         self.datastore.create_dset('gmf_info', gmf_info_dt)
 
@@ -353,11 +353,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             return
         lti = self.oqparam.lti
         self.oqparam.ground_motion_fields = False  # hack
-        with self.monitor('saving agg_loss_table'):
+        with self.monitor('saving risk_by_event'):
             for ln, ls in dic.items():
                 if isinstance(ls, pandas.DataFrame):
                     for name in ls.columns:
-                        dset = self.datastore['agg_loss_table/' + name]
+                        dset = self.datastore['risk_by_event/' + name]
                         hdf5.extend(dset, ls[name].to_numpy())
                 else:  # summing avg_losses, fast
                     for coo in ls:
@@ -365,14 +365,14 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
     def post_execute(self, dummy):
         """
-        Compute and store average losses from the agg_loss_table dataset,
+        Compute and store average losses from the risk_by_event dataset,
         and then loss curves and maps.
         """
         oq = self.oqparam
 
-        # sanity check on the agg_loss_table
-        alt = self.datastore.read_df('agg_loss_table', 'event_id')
-        K = self.datastore['agg_loss_table'].attrs.get('K', 0)
+        # sanity check on the risk_by_event
+        alt = self.datastore.read_df('risk_by_event', 'event_id')
+        K = self.datastore['risk_by_event'].attrs.get('K', 0)
         upper_limit = self.E * self.L * (K + 1)
         size = len(alt)
         assert size <= upper_limit, (size, upper_limit)
