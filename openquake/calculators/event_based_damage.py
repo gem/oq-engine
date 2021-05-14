@@ -180,14 +180,9 @@ class DamageCalculator(EventBasedRiskCalculator):
 
     def post_execute(self, dummy):
         oq = self.oqparam
-        L, Dc = self.dmgcsq.shape[1:]
-        """
-        for loss_id in range(L):
-            for dci in range(Dc):
-                dmgcsq = self.dmgcsq[:, loss_id, dci] * oq.time_ratio
-                dic['loss_id'] = loss_id
-        self.datastore.create_df('dmgcsq', pandas.DataFrame(dic))
-        """
+        A, L, Dc = self.dmgcsq.shape
+        dmgcsq = self.dmgcsq * oq.time_ratio
+        self.datastore['damages-rlzs'] = dmgcsq.reshape((A, 1, L, Dc))
         size = self.datastore.getsize('risk_by_event')
         logging.info('Building aggregated curves from %s of risk_by_event',
                      general.humansize(size))
