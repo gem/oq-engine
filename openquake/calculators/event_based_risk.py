@@ -276,20 +276,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 all(val == 0 for val in oq.minimum_asset_loss.values())):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
-
-        if 'risk' in oq.calculation_mode:
-            descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
-                     ('loss', F32), ('variance', F32)]
-            self.datastore.create_df(
-                'agg_loss_table', descr,
-                K=len(self.aggkey), L=len(oq.loss_names))
-        else:  # damage
-            dmgs = ' '.join(self.crmodel.damage_states[1:])
-            descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
-                     [(dc, F32) for dc in self.crmodel.get_dmg_csq()])
-            self.datastore.create_df(
-                'agg_loss_table', descr,
-                K=len(self.aggkey), L=len(oq.loss_names), limit_states=dmgs)
+        base.create_agg_loss_table(self)
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs)  # events by rlz
         if oq.avg_losses:

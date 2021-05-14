@@ -49,6 +49,7 @@ get_weight = operator.attrgetter('weight')
 get_imt = operator.attrgetter('imt')
 
 calculators = general.CallableDict(operator.attrgetter('calculation_mode'))
+U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -1290,3 +1291,25 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         data = numpy.array(lst, oq.gmf_data_dt())
         create_gmf_data(calc.datastore, imts, data=data)
     return sitecol, assetcol
+
+
+def create_agg_loss_table(calc):
+    """
+    Created an empty agg_loss_table with keys event_id, agg_id, loss_id
+    and fields for damages, losses and consequences
+    """
+    oq = calc.oqparam
+    dstore = calc.datastore
+    aggkey = calc.aggkey
+    crmodel = calc.crmodel
+    if 'risk' in oq.calculation_mode:
+        descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
+                 ('loss', F32), ('variance', F32)]
+        dstore.create_df('agg_loss_table', descr, K=len(aggkey),
+                         L=len(oq.loss_names))
+    else:  # damage
+        dmgs = ' '.join(crmodel.damage_states[1:])
+        descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
+                 [(dc, F32) for dc in crmodel.get_dmg_csq()])
+        dstore.create_df('agg_loss_table', descr, K=len(aggkey),
+                         L=len(oq.loss_names), limit_states=dmgs)
