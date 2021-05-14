@@ -95,9 +95,6 @@ def scenario_damage(riskinputs, param, monitor):
     res = {'d_event': d_event, 'd_asset': []}
     for name in consequences:
         res['avg_' + name] = []
-        res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
-        # using F64 here is necessary: with F32 the non-associativity
-        # of addition would hurt too much with multiple tasks
     seed = param['master_seed']
     num_events = param['num_events']  # per realization
     acc = []  # (aid, eid, lid, ds...)
@@ -236,24 +233,26 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
 
-        # damage by event: make sure the sum of the buildings is consistent
         rlz = self.datastore['events']['rlz_id']
         weights = self.datastore['weights'][:][rlz]
         tot = self.assetcol['number'].sum()
         dt = F32 if self.param['float_dmg_dist'] else U32
         dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
         dbe[:, :, 0] = tot
-        for e, dmg_by_lt in result['d_event'].items():
-            for li, dmg in enumerate(dmg_by_lt):
-                dbe[e, li,  0] = tot - dmg.sum()
-                dbe[e, li,  1:] = dmg
-        self.datastore['dmg_by_event'] = dbe
+        alt = self.datastore.read_df('agg_loss_table')
+        df = alt.groupby(['event_id', 'loss_id']).sum().reset_index()
+        df['agg_id'] = A
+        for col in df.columns:
+            hdf5.extend(self.datastore['agg_loss_table/' + col], df[col])
+        self.datastore.set_attrs('agg_loss_table', K=A)
+
+        """
         self.datastore['avg_portfolio_damage'] = avg_std(
             dbe.astype(float), weights)
         self.datastore.set_shape_descr(
             'avg_portfolio_damage',
             kind=['avg', 'std'], loss_type=ltypes, dmg_state=dstates)
-
+        """
         self.sanity_check()
 
         # consequence distributions
@@ -261,19 +260,14 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         del result['d_event']
         dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
         for name, csq in result.items():
-            if name.startswith('avg_'):
-                c_asset = numpy.zeros((A, R, L), F32)
-                for (l, r, a, stat) in result[name]:
-                    c_asset[a, r, l] = stat * avg_ratio[r]
-                self.datastore[name + '-rlzs'] = c_asset
-                set_rlzs_stats(self.datastore, name,
-                               asset_id=self.assetcol['id'],
-                               loss_type=oq.loss_names)
-            elif name.endswith('_by_event'):
-                arr = numpy.zeros(len(csq), dtlist)
-                for i, (eid, loss) in enumerate(csq.items()):
-                    arr[i] = (eid, rlz[eid], loss)
-                self.datastore[name] = arr
+            # name is something like avg_losses
+            c_asset = numpy.zeros((A, R, L), F32)
+            for (l, r, a, stat) in result[name]:
+                c_asset[a, r, l] = stat * avg_ratio[r]
+            self.datastore[name + '-rlzs'] = c_asset
+            set_rlzs_stats(self.datastore, name,
+                           asset_id=self.assetcol['id'],
+                           loss_type=oq.loss_names)
 
     def sanity_check(self):
         """

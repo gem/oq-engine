@@ -238,7 +238,7 @@ def export_event_loss_table(ekey, dstore):
     evs = events[df.event_id.to_numpy()]
     if 'scenario' not in oq.calculation_mode:
         df['rup_id'] = evs['rup_id']
-    if 'year' in evs.dtype.names:
+    if 'scenario' not in oq.calculation_mode and 'year' in evs.dtype.names:
         df['year'] = evs['year']
     df.sort_values(['event_id', 'loss_type'], inplace=True)
     writer.save(df, dest, comment=md)
@@ -353,7 +353,7 @@ def export_damages_csv(ekey, dstore):
                     comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
-
+'''
 @export.add(('dmg_by_event', 'csv'))
 def export_dmg_by_event(ekey, dstore):
     """
@@ -379,7 +379,7 @@ def export_dmg_by_event(ekey, dstore):
                     arr[loss_type][dmg_state] = dmg_by_event[ok, li, d]
             writer.save_block(arr, dest)
     return [fname]
-
+'''
 
 # emulate a Django point
 class Location(object):
