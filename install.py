@@ -71,7 +71,7 @@ class user:
     """
     # check platform
     if sys.platform == 'win32':
-        VENV = os.path.expanduser('~\\openquake')
+        VENV = os.path.expanduser('C:\\Program Files\\OpenQuake')
         OQ = os.path.join(VENV, '\\Scripts\\oq')
         OQDATA = os.path.expanduser('~\\oqdata')
     else:
