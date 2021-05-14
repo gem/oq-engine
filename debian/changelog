@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the `no_damage` field
   * Renamed the losses_by_event CSV exporter to risk_by_event.csv and
     made it work consistently for losses, damages and consequences
 

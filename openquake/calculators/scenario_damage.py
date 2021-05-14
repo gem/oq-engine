@@ -233,8 +233,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
 
-        rlz = self.datastore['events']['rlz_id']
-        weights = self.datastore['weights'][:][rlz]
         tot = self.assetcol['number'].sum()
         dt = F32 if self.param['float_dmg_dist'] else U32
         dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
@@ -247,6 +245,8 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.datastore.set_attrs('agg_loss_table', K=A)
 
         """
+        rlz = self.datastore['events']['rlz_id']
+        weights = self.datastore['weights'][:][rlz]
         self.datastore['avg_portfolio_damage'] = avg_std(
             dbe.astype(float), weights)
         self.datastore.set_shape_descr(
