@@ -85,8 +85,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqual(list(df.columns),
                          ['rlz', 'loss_type', 'dmg_state', 'value'])
 
-        # check dmg_by_event
-        [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
+        # check risk_by_event
+        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
         # check agg_damages extraction
@@ -109,10 +109,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_4b(self):
         self.run_calc(case_4b.__file__, 'job_haz.ini,job_risk.ini')
 
-        [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
+        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
-        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=5E-6)
 
@@ -122,9 +122,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=5E-6)
 
-        df = view('portfolio_damage_error', self.calc.datastore)
-        fname = gettemp(text_table(df))
-        self.assertEqualFiles('expected/portfolio_damage.rst', fname)
+        #df = view('portfolio_damage_error', self.calc.datastore)
+        #fname = gettemp(text_table(df))
+        #self.assertEqualFiles('expected/portfolio_damage.rst', fname)
 
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:
@@ -162,9 +162,11 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [npz] = export(('damages-rlzs', 'npz'), self.calc.datastore)
         self.assertEqual(strip_calc_id(npz), 'damages-rlzs.npz')
 
-        # check the agg_loss_table is readable by pandas
+        # check the risk_by_event is readable by pandas
+        K = self.calc.datastore.get_attr('risk_by_event', 'K')
         df = self.calc.datastore.read_df(
-            'agg_loss_table', ['event_id', 'loss_id', 'agg_id'])
+            'risk_by_event', ['event_id', 'loss_id', 'agg_id'],
+            dict(agg_id=K))
         self.assertEqual(len(df), 224)
         self.assertEqual(len(df[df.dmg_1 > 0]), 75)  # only 75/300 are nonzero
 
@@ -173,18 +175,12 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.run_calc(case_8.__file__, 'prejob.ini')
         self.run_calc(case_8.__file__, 'job.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
-        [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/dmg_by_event.csv', fname)
+        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/risk_by_event.csv', fname)
 
     def test_case_9(self):
         # case with noDamageLimit==0 that had NaNs in the past
         self.run_calc(case_9.__file__, 'job.ini')
-
-        # export/import dmg_by_event and check the total nodamage
-        [fname] = export(('dmg_by_event', 'csv'), self.calc.datastore)
-        df = read_csv(fname, index='event_id')
-        nodamage = df[df['rlz_id'] == 0]['structural~no_damage'].sum()
-        self.assertEqual(nodamage, 1068763.0)
 
         [fname] = export(('damages-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/damages.csv', fname)
@@ -192,8 +188,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_asset.csv', fname)
 
-        # check agg_loss_table
-        df = self.calc.datastore.read_df('agg_loss_table', 'event_id')
+        # check risk_by_event
+        K = self.calc.datastore.get_attr('risk_by_event', 'K')
+        df = self.calc.datastore.read_df('risk_by_event', 'event_id',
+                                         {'agg_id': K})
         dmg = df.loc[1937]  # damage caused by the event 1937
         self.assertEqual(dmg.dmg_1.sum(), 54)  # breaks in github
         self.assertEqual(dmg.dmg_2.sum(), 59)
@@ -209,14 +207,14 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # secondary perils without secondary simulations
         self.run_calc(case_11.__file__, 'job.ini')
         calc1 = self.calc.datastore
-        [fname] = export(('agg_loss_table', 'csv'), calc1)
+        [fname] = export(('risk_by_event', 'csv'), calc1)
         self.assertEqualFiles('expected/risk_by_event_1.csv', fname)
 
         # secondary perils with secondary simulations
         self.run_calc(case_11.__file__, 'job.ini',
                       secondary_simulations="{'LiqProb': 50}")
         calc2 = self.calc.datastore
-        [fname] = export(('agg_loss_table', 'csv'), calc2)
+        [fname] = export(('risk_by_event', 'csv'), calc2)
         self.assertEqualFiles('expected/risk_by_event_2.csv', fname)
 
         # check damages-rlzs
@@ -230,7 +228,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
         # losses due to liquefaction
         self.run_calc(case_11.__file__, 'job_risk.ini')
-        alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
+        alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
 
         aac(losses(0, alt), [0, 352, 905, 55, 199, 1999, 598, 798])
         aac(losses(1, alt), [4581, 0, 288, 2669, 2287, 6068, 3036, 0])
@@ -238,7 +236,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
         self.run_calc(case_11.__file__, 'job_risk.ini',
                       secondary_simulations='{}')
-        alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
+        alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
         aac(losses(0, alt), [4982, 3524, 3235, 1388, 4988, 4999, 4988, 4993])
         aac(losses(1, alt), [38175, 3, 903, 11122, 28599, 30341, 18978, 0])
         aac(losses(2, alt), [26412, 0, 21055, 44631, 36447, 0, 0, 0])

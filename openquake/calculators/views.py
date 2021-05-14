@@ -336,7 +336,7 @@ def view_totlosses(token, dstore):
 
 
 def alt_to_many_columns(alt, loss_names):
-    # convert an agg_loss_table in the format
+    # convert an risk_by_event in the format
     # (event_id, agg_id, loss_id, loss) =>
     # (event_id, agg_id, structural, nonstructural, ...)
     dic = dict(event_id=[])
@@ -354,8 +354,8 @@ def alt_to_many_columns(alt, loss_names):
 def _portfolio_loss(dstore):
     oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_rlzs()
-    K = dstore['agg_loss_table'].attrs.get('K', 0)
-    alt = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    alt = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     df = alt_to_many_columns(alt, oq.loss_names)
     eids = df.pop('event_id').to_numpy()
     loss = df.to_numpy()
@@ -390,8 +390,8 @@ def view_portfolio_loss(token, dstore):
     """
     oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_rlzs()
-    K = dstore['agg_loss_table'].attrs.get('K', 0)
-    alt_df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    alt_df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     weights = dstore['weights'][:]
     rlzs = dstore['events']['rlz_id']
     E = len(rlzs)
@@ -420,7 +420,7 @@ def view_portfolio_damage(token, dstore):
     extracted from the average damages
     """
     if 'aggcurves' in dstore:  # event_based_damage
-        K = dstore.get_attr('agg_loss_table', 'K')
+        K = dstore.get_attr('risk_by_event', 'K')
         df = dstore.read_df('aggcurves', sel=dict(agg_id=K, return_period=0))
         lnames = numpy.array(dstore['oqparam'].loss_names)
         df['loss_type'] = lnames[df.loss_id.to_numpy()]
@@ -986,8 +986,8 @@ def view_event_loss_table(token, dstore):
 
     $ oq show event_loss_table
     """
-    K = dstore['agg_loss_table'].attrs.get('K', 0)
-    df = dstore.read_df('agg_loss_table', 'event_id',
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('risk_by_event', 'event_id',
                         dict(agg_id=K, loss_id=0))
     df['std'] = numpy.sqrt(df.variance)
     df.sort_values('loss', ascending=False, inplace=True)
@@ -1018,8 +1018,8 @@ def view_delta_loss(token, dstore):
     num_events1 = num_events // 2
     periods = return_periods(efftime, num_events)[1:-1]
 
-    K = dstore['agg_loss_table'].attrs.get('K', 0)
-    df = dstore.read_df('agg_loss_table', 'event_id',
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('risk_by_event', 'event_id',
                         dict(agg_id=K, loss_id=li))
     if len(df) == 0:  # for instance no fatalities
         return {'delta': numpy.zeros(1)}

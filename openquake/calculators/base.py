@@ -1293,9 +1293,9 @@ def read_shakemap(calc, haz_sitecol, assetcol):
     return sitecol, assetcol
 
 
-def create_agg_loss_table(calc):
+def create_risk_by_event(calc):
     """
-    Created an empty agg_loss_table with keys event_id, agg_id, loss_id
+    Created an empty risk_by_event with keys event_id, agg_id, loss_id
     and fields for damages, losses and consequences
     """
     oq = calc.oqparam
@@ -1305,11 +1305,11 @@ def create_agg_loss_table(calc):
     if 'risk' in oq.calculation_mode:
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('loss', F32), ('variance', F32)]
-        dstore.create_df('agg_loss_table', descr, K=len(aggkey),
+        dstore.create_df('risk_by_event', descr, K=len(aggkey),
                          L=len(oq.loss_names))
     else:  # damage + consequences
         dmgs = ' '.join(crmodel.damage_states[1:])
         descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
                  [(dc, F32) for dc in crmodel.get_dmg_csq()])
-        dstore.create_df('agg_loss_table', descr, K=len(aggkey),
+        dstore.create_df('risk_by_event', descr, K=len(aggkey),
                          L=len(oq.loss_names), limit_states=dmgs)
