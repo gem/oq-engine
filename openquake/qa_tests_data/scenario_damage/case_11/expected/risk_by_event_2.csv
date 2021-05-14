@@ -1,9 +1,9 @@
-#,,,"generated_by='OpenQuake engine 3.12.0-git5e299bedff', start_date='2021-05-14T07:41:30', checksum=3590982611"
-event_id,loss_id,dmg_1,dmg_2
-1,0,5.40226E-01,4.36448E-01
-2,0,1.76152E+00,9.31032E-01
-3,0,2.16971E-01,2.62502E-03
-4,0,1.71490E-03,3.98280E-01
-5,0,6.37769E-04,3.99936E+00
-6,0,5.14469E-03,1.19484E+00
-7,0,4.35956E-03,1.59563E+00
+#,,,,"generated_by='OpenQuake engine 3.12.0-gitfae6bafba1', start_date='2021-05-14T08:12:20', checksum=3590982611"
+event_id,moderate,complete,loss_type,rlz_id
+1,5.40226E-01,4.36448E-01,structural,0
+2,1.76152E+00,9.31032E-01,structural,0
+3,2.16971E-01,2.62502E-03,structural,0
+4,1.71490E-03,3.98280E-01,structural,0
+5,6.37769E-04,3.99936E+00,structural,0
+6,5.14469E-03,1.19484E+00,structural,0
+7,4.35956E-03,1.59563E+00,structural,0
