@@ -205,9 +205,10 @@ def export_src_loss_table(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by scenario_risk, event_based_risk and ebrisk
+# this is used by all GMF-based risk calculators
+# NB: it exports only the event loss table, i.e. the totals
 @export.add(('agg_loss_table', 'csv'))
-def export_agg_loss_table(ekey, dstore):
+def export_event_loss_table(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object

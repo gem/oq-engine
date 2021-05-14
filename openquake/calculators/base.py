@@ -1300,14 +1300,14 @@ def create_agg_loss_table(calc):
     """
     oq = calc.oqparam
     dstore = calc.datastore
-    aggkey = calc.aggkey
+    aggkey = getattr(calc, 'aggkey', {})  # empty if not aggregate_by
     crmodel = calc.crmodel
     if 'risk' in oq.calculation_mode:
         descr = [('event_id', U32), ('agg_id', U32), ('loss_id', U8),
                  ('loss', F32), ('variance', F32)]
         dstore.create_df('agg_loss_table', descr, K=len(aggkey),
                          L=len(oq.loss_names))
-    else:  # damage
+    else:  # damage + consequences
         dmgs = ' '.join(crmodel.damage_states[1:])
         descr = ([('event_id', U32), ('agg_id', U32), ('loss_id', U8)] +
                  [(dc, F32) for dc in crmodel.get_dmg_csq()])
