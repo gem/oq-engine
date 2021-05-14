@@ -229,11 +229,10 @@ def export_event_loss_table(ekey, dstore):
         lstates = []
     lnames = numpy.array(oq.loss_names)
     df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
-    if 'loss' in df.columns:  # event_based_risk
-        df = views.alt_to_many_columns(df, oq.loss_names)
-    else:  # damage
-        df['loss_type'] = lnames[df.loss_id.to_numpy()]
-        del df['loss_id']
+    df['loss_type'] = lnames[df.loss_id.to_numpy()]
+    del df['loss_id']
+    if 'variance' in df.columns:
+        del df['variance']
     ren = {'dmg_%d' % i: lstate for i, lstate in enumerate(lstates, 1)}
     df.rename(columns=ren, inplace=True)
     evs = events[df.event_id.to_numpy()]
@@ -241,7 +240,7 @@ def export_event_loss_table(ekey, dstore):
         df['rup_id'] = evs['rup_id']
     if 'year' in evs.dtype.names:
         df['year'] = evs['year']
-    df.sort_values('event_id', inplace=True)
+    df.sort_values(['event_id', 'loss_type'], inplace=True)
     writer.save(df, dest, comment=md)
     return writer.getsaved()
 
