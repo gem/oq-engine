@@ -353,33 +353,6 @@ def export_damages_csv(ekey, dstore):
                     comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
-'''
-@export.add(('dmg_by_event', 'csv'))
-def export_dmg_by_event(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    damage_dt = build_damage_dt(dstore)
-    dt_list = [('event_id', U32), ('rlz_id', U16)] + [
-        (f, damage_dt.fields[f][0]) for f in damage_dt.names]
-    dmg_by_event = dstore[ekey[0]][()]  # shape E, L, D
-    events = dstore['events'][()]
-    writer = writers.CsvWriter(fmt='%g')
-    fname = dstore.build_fname('dmg_by_event', '', 'csv')
-    writer.save(numpy.zeros(0, dt_list), fname)
-    with open(fname, 'a') as dest:
-        for rlz_id in numpy.unique(events['rlz_id']):
-            ok, = numpy.where(events['rlz_id'] == rlz_id)
-            arr = numpy.zeros(len(ok), dt_list)
-            arr['event_id'] = events['id'][ok]
-            arr['rlz_id'] = rlz_id
-            for li, loss_type in enumerate(damage_dt.names):
-                for d, dmg_state in enumerate(damage_dt[loss_type].names):
-                    arr[loss_type][dmg_state] = dmg_by_event[ok, li, d]
-            writer.save_block(arr, dest)
-    return [fname]
-'''
 
 # emulate a Django point
 class Location(object):
