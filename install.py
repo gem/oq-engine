@@ -46,9 +46,13 @@ except ImportError:
     if sys.platform != 'win32':
         sys.exit('venv is missing! Please see the documentation of your Operating System to install it')
     else:
-        VENV = os.path.expanduser('C:\\Program Files\\OpenQuake')
-        OQ = os.path.join(VENV, '\\Scripts\\oq')
-        OQDATA = os.path.expanduser('~\\oqdata')
+        if os.path.exists('./python._pth.old'):
+            VENV = os.path.expanduser('C:\\Program Files\\OpenQuake')
+            OQ = os.path.join(VENV, '\\Scripts\\oq')
+            OQDATA = os.path.expanduser('~\\oqdata')
+        else:
+            sys.exit('venv is missing! Please see the documentation of your Operating System to install it')
+
 
 
 class server:
