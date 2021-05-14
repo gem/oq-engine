@@ -240,7 +240,7 @@ def export_event_loss_table(ekey, dstore):
         df['rup_id'] = evs['rup_id']
     if 'year' in evs.dtype.names:
         df['year'] = evs['year']
-    df.sort_values('event_id', inplace=True)
+    df.sort_values(['event_id', 'loss_type'], inplace=True)
     writer.save(df, dest, comment=md)
     return writer.getsaved()
 
