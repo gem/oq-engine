@@ -49,12 +49,23 @@ def agg_damages(dstore, slc, monitor):
     return dic
 
 
+def zero_dmgcsq(assetcol, crmodel):
+    """
+    :returns: an array of zeros of shape (A, L, Dc)
+    """
+    dmg_csq = crmodel.get_dmg_csq()
+    A = len(assetcol)
+    L = len(crmodel.loss_types)
+    Dc = len(dmg_csq) + 1  # damages + consequences
+    return numpy.zeros((A, L, Dc), F32)
+
+
 def event_based_damage(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
     :param param: a dictionary of parameters coming from the job.ini
     :param monitor: a Monitor instance
-    :returns: damages as a dictionary (eid, kid) -> LD
+    :returns: (damages (eid, kid) -> LDc plus damages (A, Dc))
     """
     mon_risk = monitor('computing risk', measuremem=False)
     dstore = datastore.read(param['hdf5path'])
@@ -67,37 +78,39 @@ def event_based_damage(df, param, monitor):
                 else numpy.zeros(len(assets_df), U16))
         crmodel = monitor.read('crmodel')
     dmg_csq = crmodel.get_dmg_csq()
-    L = len(crmodel.loss_types)
-    D = len(crmodel.damage_states)
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
-    DC = len(ci) + 1
+    dmgcsq = zero_dmgcsq(assets_df, crmodel)
+    A, L, Dc = dmgcsq.shape
+    D = len(crmodel.damage_states)
     with mon_risk:
-        dddict = general.AccumDict(accum=numpy.zeros((L, DC), F32))  # eid, kid
+        dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
         for taxo, asset_df in assets_df.groupby('taxonomy'):
             for sid, adf in asset_df.groupby('site_id'):
                 gmf_df = df[df.sid == sid]
                 if len(gmf_df) == 0:
                     continue
+                # working one site at the time
                 out = crmodel.get_output(taxo, adf, gmf_df)
                 eids = out['eids']
                 aids = out['assets']['ordinal']
                 for lti, lt in enumerate(out['loss_types']):
                     fractions = out[lt]
-                    A, E, D = fractions.shape
-                    ddd = numpy.zeros((A, E, DC), F32)
+                    Asid, E, D = fractions.shape
+                    ddd = numpy.zeros((Asid, E, Dc), F32)
                     ddd[:, :, :D] = fractions
                     for a, asset in enumerate(out['assets']):
                         ddd[a] *= asset['number']
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
                             ddd[a, :, ci[name]] = values
-                    tot = ddd.sum(axis=0)
+                    dmgcsq[aids, lti] += ddd.sum(axis=1)  # sum on the events
+                    tot = ddd.sum(axis=0)  # sum on the assets
                     for e, eid in enumerate(eids):
                         dddict[eid, K][lti] += tot[e]
                         if K:
                             for a, aid in enumerate(aids):
                                 dddict[eid, kids[aid]][lti] += ddd[a, e]
-    return to_dframe(dddict, ci, L)
+    return to_dframe(dddict, ci, L), dmgcsq
 
 
 def to_dframe(adic, ci, L):
@@ -138,6 +151,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         eids = self.datastore['gmf_data/eid'][:]
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
+        self.dmgcsq = zero_dmgcsq(self.assetcol, self.crmodel)
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             event_based_damage, self.gen_args(eids), h5=self.datastore.hdf5)
@@ -147,21 +161,33 @@ class DamageCalculator(EventBasedRiskCalculator):
 
     def combine(self, acc, res):
         """
-        :param acc: unused
-        :param res: DataFrame with fields (event_id, agg_id, loss_id, dmg1 ...)
+        :param acc:
+            unused
+        :param res:
+            DataFrame with fields (event_id, agg_id, loss_id, dmg1 ...)
+            plus array with damages and consequences of shape (A, Dc)
+
         Combine the results and grows agg_loss_table with fields
         (event_id, agg_id, loss_id) and (dmg_0, dmg_1, dmg_2, ...)
         """
-        if res is None:
-            raise MemoryError('You ran out of memory!')
+        df, dmgcsq = res
+        self.dmgcsq += dmgcsq
         with self.monitor('saving agg_loss_table', measuremem=True):
-            for name in res.columns:
+            for name in df.columns:
                 dset = self.datastore['agg_loss_table/' + name]
-                hdf5.extend(dset, res[name].to_numpy())
+                hdf5.extend(dset, df[name].to_numpy())
         return 1
 
     def post_execute(self, dummy):
         oq = self.oqparam
+        L, Dc = self.dmgcsq.shape[1:]
+        """
+        for loss_id in range(L):
+            for dci in range(Dc):
+                dmgcsq = self.dmgcsq[:, loss_id, dci] * oq.time_ratio
+                dic['loss_id'] = loss_id
+        self.datastore.create_df('dmgcsq', pandas.DataFrame(dic))
+        """
         size = self.datastore.getsize('agg_loss_table')
         logging.info('Building aggregated curves from %s of agg_loss_table',
                      general.humansize(size))

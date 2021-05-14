@@ -205,9 +205,10 @@ def export_src_loss_table(ekey, dstore):
     return writer.getsaved()
 
 
-# this is used by scenario_risk, event_based_risk and ebrisk
+# this is used by all GMF-based risk calculators
+# NB: it exports only the event loss table, i.e. the totals
 @export.add(('agg_loss_table', 'csv'))
-def export_agg_loss_table(ekey, dstore):
+def export_event_loss_table(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
@@ -221,19 +222,24 @@ def export_agg_loss_table(ekey, dstore):
                        risk_investigation_time=oq.risk_investigation_time
                        or oq.investigation_time))
     events = dstore['events'][()]
+    K = dstore.get_attr('agg_loss_table', 'K', 0)
     try:
-        K = dstore.get_attr('agg_loss_table', 'K', 0)
-        df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
-        if 'loss' in df.columns:  # event_based_risk
-            df = views.alt_to_many_columns(df, oq.loss_names)
-    except KeyError:  # scenario_damage + consequences
-        df = dstore.read_df('losses_by_event')
-        ren = {'loss_%d' % li: ln for li, ln in enumerate(oq.loss_names)}
-        df.rename(columns=ren, inplace=True)
-    if oq.calculation_mode in 'event_based_risk ebrisk':
-        evs = events[df.event_id.to_numpy()]
-        df['rlz_id'] = evs['rlz_id']
+        lstates = dstore.get_attr('agg_loss_table', 'limit_states').split()
+    except KeyError:  # ebrisk, no limit states
+        lstates = []
+    lnames = numpy.array(oq.loss_names)
+    df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    if 'loss' in df.columns:  # event_based_risk
+        df = views.alt_to_many_columns(df, oq.loss_names)
+    else:  # damage
+        df['loss_type'] = lnames[df.loss_id.to_numpy()]
+        del df['loss_id']
+    ren = {'dmg_%d' % i: lstate for i, lstate in enumerate(lstates, 1)}
+    df.rename(columns=ren, inplace=True)
+    evs = events[df.event_id.to_numpy()]
+    if 'scenario' not in oq.calculation_mode:
         df['rup_id'] = evs['rup_id']
+    if 'year' in evs.dtype.names:
         df['year'] = evs['year']
     df.sort_values('event_id', inplace=True)
     writer.save(df, dest, comment=md)
