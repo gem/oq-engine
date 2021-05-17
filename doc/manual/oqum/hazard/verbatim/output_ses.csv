@@ -1,0 +1,6 @@
+#,,,,,,,,,"generated_by='OpenQuake engine 3.12.0-gitd1bd4de1c8', start_date='2021-05-17T09:43:17', checksum=3171511446, investigation_time=50.0, ses_per_logic_tree_path=250"
+rup_id,multiplicity,mag,centroid_lon,centroid_lat,centroid_depth,trt,strike,dip,rake
+0,1,5.550000E+00,-1.544069E-02,5.503392E-02,5.000000E+00,Subduction Interface,0.000000E+00,9.000000E+01,0.000000E+00
+1,1,5.550000E+00,-1.544069E-02,5.503392E-02,5.000000E+00,Subduction Interface,4.499997E+01,5.000000E+01,0.000000E+00
+2,1,5.550000E+00,-1.544069E-02,5.503392E-02,5.000000E+00,Subduction Interface,8.999996E+01,5.000000E+01,0.000000E+00
+3,2,5.550000E+00,-1.544069E-02,5.503392E-02,5.000000E+00,Subduction Interface,3.150000E+02,5.000000E+01,0.000000E+00
