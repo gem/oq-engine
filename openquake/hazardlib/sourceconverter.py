@@ -1155,7 +1155,7 @@ Row = collections.namedtuple(
 
 
 NPRow = collections.namedtuple(  # used for nonParametric sources
-    'NPRow', 'id name code tectonicregion ruptures geom coords')
+    'NPRow', 'id name code tectonicregion geom coords')
 
 
 def _planar(surface):
@@ -1323,36 +1323,20 @@ class RowConverter(SourceConverter):
 
     def convert_nonParametricSeismicSource(self, node):
         nps = convert_nonParametricSeismicSource(self.fname, node)
-        ruptures = []
-        for rup, pmf_ in nps.data:
-            probs = [p for p, i in pmf_.data]
-            hypo = [rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z]
-            dic = dict(mag=rup.mag, rake=rup.rake, weight=rup.weight,
-                       probs_occur=probs, hypo=hypo)
-            ruptures.append(dic)
         return NPRow(
             node['id'],
             node['name'],
             'N',
             node['tectonicRegion'],
-            ruptures,
             'Polygon', [nps.polygon.coords])
 
     def convert_multiFaultSource(self, node):
         mfs = super().convert_multiFaultSource(node)
-        ruptures = []
-        for rup, pmf_ in mfs.data:
-            probs = [p for p, i in pmf_.data]
-            hypo = [rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z]
-            dic = dict(mag=rup.mag, rake=rup.rake, weight=rup.weight,
-                       probs_occur=probs, hypo=hypo)
-            ruptures.append(dic)
         return NPRow(
             node['id'],
             node['name'],
             'N',
             node['tectonicRegion'],
-            ruptures,
             'Polygon', [mfs.polygon.coords])
 
 # ################### MultiPointSource conversion ######################## #
