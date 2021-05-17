@@ -233,7 +233,7 @@ def install(inst, version):
         print('Created %s' % inst.VENV)
 
     if sys.platform == 'win32':
-        if (os.path.exists('\\python\\python._pth.old')):
+        if (os.path.exists('python\\python._pth.old')):
             pycmd = inst.VENV + '\\python.exe'
             print(f'python installation: {pycmd}')
         else:
