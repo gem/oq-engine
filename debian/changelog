@@ -1,6 +1,7 @@
   [Michele Simionato]
-  * Renamed the losses_by_event CSV exporter to risk_by_event.csv and
-    made it work consistently for losses, damages and consequences
+  * Renamed the `losses_by_event` CSV exporter to `risk_by_event` and
+    made it work consistently for losses, damages and consequences; also
+    removed the `no_damage` field
 
   [Marco Pagani, Michele Simionato]
   * Implemented MultiFaultSources

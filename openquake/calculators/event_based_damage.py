@@ -42,7 +42,7 @@ def agg_damages(dstore, slc, monitor):
     :returns: dict (agg_id, loss_id) -> [dmg1, dmg2, ...]
     """
     with dstore:
-        df = dstore.read_df('agg_loss_table', ['agg_id', 'loss_id'], slc=slc)
+        df = dstore.read_df('risk_by_event', ['agg_id', 'loss_id'], slc=slc)
         del df['event_id']
         agg = df.groupby(df.index).sum()
         dic = dict(zip(agg.index, agg.to_numpy()))
@@ -167,14 +167,14 @@ class DamageCalculator(EventBasedRiskCalculator):
             DataFrame with fields (event_id, agg_id, loss_id, dmg1 ...)
             plus array with damages and consequences of shape (A, Dc)
 
-        Combine the results and grows agg_loss_table with fields
+        Combine the results and grows risk_by_event with fields
         (event_id, agg_id, loss_id) and (dmg_0, dmg_1, dmg_2, ...)
         """
         df, dmgcsq = res
         self.dmgcsq += dmgcsq
-        with self.monitor('saving agg_loss_table', measuremem=True):
+        with self.monitor('saving risk_by_event', measuremem=True):
             for name in df.columns:
-                dset = self.datastore['agg_loss_table/' + name]
+                dset = self.datastore['risk_by_event/' + name]
                 hdf5.extend(dset, df[name].to_numpy())
         return 1
 
@@ -188,11 +188,11 @@ class DamageCalculator(EventBasedRiskCalculator):
                 dic['loss_id'] = loss_id
         self.datastore.create_df('dmgcsq', pandas.DataFrame(dic))
         """
-        size = self.datastore.getsize('agg_loss_table')
-        logging.info('Building aggregated curves from %s of agg_loss_table',
+        size = self.datastore.getsize('risk_by_event')
+        logging.info('Building aggregated curves from %s of risk_by_event',
                      general.humansize(size))
         builder = get_loss_builder(self.datastore)
-        alt_df = self.datastore.read_df('agg_loss_table')
+        alt_df = self.datastore.read_df('risk_by_event')
         del alt_df['event_id']
         dic = general.AccumDict(accum=[])
         columns = sorted(

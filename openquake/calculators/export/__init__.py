@@ -50,12 +50,12 @@ def keyfunc(ekey):
     """
     Extract the name before the slash:
 
-    >>> keyfunc(('agg_loss_table', 'csv'))
-    ('agg_loss_table', 'csv')
-    >>> keyfunc(('agg_loss_table/1', 'csv'))
-    ('agg_loss_table', 'csv')
-    >>> keyfunc(('agg_loss_table/1/0', 'csv'))
-    ('agg_loss_table', 'csv')
+    >>> keyfunc(('risk_by_event', 'csv'))
+    ('risk_by_event', 'csv')
+    >>> keyfunc(('risk_by_event/1', 'csv'))
+    ('risk_by_event', 'csv')
+    >>> keyfunc(('risk_by_event/1/0', 'csv'))
+    ('risk_by_event', 'csv')
     """
     fullname, ext = ekey
     return (fullname.split('/', 1)[0], ext)

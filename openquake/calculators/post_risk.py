@@ -112,8 +112,8 @@ def get_src_loss_table(dstore, L):
     :returns:
         (source_ids, array of losses of shape (Ns, L))
     """
-    K = dstore['agg_loss_table'].attrs.get('K', 0)
-    alt = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    alt = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     eids = alt.event_id.to_numpy()
     evs = dstore['events'][:][eids]
     rlz_ids = evs['rlz_id']
@@ -160,8 +160,8 @@ class PostRiskCalculator(base.RiskCalculator):
             assetcol = ds['assetcol']
             self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.L = len(oq.loss_names)
-        size = general.humansize(ds.getsize('agg_loss_table'))
-        logging.info('Stored %s in the agg_loss_table', size)
+        size = general.humansize(ds.getsize('risk_by_event'))
+        logging.info('Stored %s in the risk_by_event', size)
 
     def execute(self):
         oq = self.oqparam
@@ -188,13 +188,14 @@ class PostRiskCalculator(base.RiskCalculator):
         rlz_id = self.datastore['events']['rlz_id']
         if oq.collect_rlzs:
             rlz_id = numpy.zeros_like(rlz_id)
-        alt_df = self.datastore.read_df('agg_loss_table')
+        alt_df = self.datastore.read_df('risk_by_event')
         if self.reaggreate:
             idxs = numpy.concatenate([
                 reagg_idxs(self.num_tags, oq.aggregate_by),
                 numpy.array([K], int)])
             alt_df['agg_id'] = idxs[alt_df['agg_id'].to_numpy()]
-            alt_df = alt_df.groupby(['event_id', 'agg_id']).sum().reset_index()
+            alt_df = alt_df.groupby(
+                ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
         alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'

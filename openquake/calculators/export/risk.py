@@ -207,7 +207,7 @@ def export_src_loss_table(ekey, dstore):
 
 # this is used by all GMF-based risk calculators
 # NB: it exports only the event loss table, i.e. the totals
-@export.add(('agg_loss_table', 'csv'))
+@export.add(('risk_by_event', 'csv'))
 def export_event_loss_table(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
@@ -222,13 +222,13 @@ def export_event_loss_table(ekey, dstore):
                        risk_investigation_time=oq.risk_investigation_time
                        or oq.investigation_time))
     events = dstore['events'][()]
-    K = dstore.get_attr('agg_loss_table', 'K', 0)
+    K = dstore.get_attr('risk_by_event', 'K', 0)
     try:
-        lstates = dstore.get_attr('agg_loss_table', 'limit_states').split()
+        lstates = dstore.get_attr('risk_by_event', 'limit_states').split()
     except KeyError:  # ebrisk, no limit states
         lstates = []
     lnames = numpy.array(oq.loss_names)
-    df = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     df['loss_type'] = lnames[df.loss_id.to_numpy()]
     del df['loss_id']
     if 'variance' in df.columns:
@@ -238,7 +238,7 @@ def export_event_loss_table(ekey, dstore):
     evs = events[df.event_id.to_numpy()]
     if 'scenario' not in oq.calculation_mode:
         df['rup_id'] = evs['rup_id']
-    if 'year' in evs.dtype.names:
+    if 'scenario' not in oq.calculation_mode and 'year' in evs.dtype.names:
         df['year'] = evs['year']
     df.sort_values(['event_id', 'loss_type'], inplace=True)
     writer.save(df, dest, comment=md)
@@ -352,33 +352,6 @@ def export_damages_csv(ekey, dstore):
         writer.save(compose_arrays(assets, damages), fname,
                     comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
-
-
-@export.add(('dmg_by_event', 'csv'))
-def export_dmg_by_event(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    damage_dt = build_damage_dt(dstore)
-    dt_list = [('event_id', U32), ('rlz_id', U16)] + [
-        (f, damage_dt.fields[f][0]) for f in damage_dt.names]
-    dmg_by_event = dstore[ekey[0]][()]  # shape E, L, D
-    events = dstore['events'][()]
-    writer = writers.CsvWriter(fmt='%g')
-    fname = dstore.build_fname('dmg_by_event', '', 'csv')
-    writer.save(numpy.zeros(0, dt_list), fname)
-    with open(fname, 'a') as dest:
-        for rlz_id in numpy.unique(events['rlz_id']):
-            ok, = numpy.where(events['rlz_id'] == rlz_id)
-            arr = numpy.zeros(len(ok), dt_list)
-            arr['event_id'] = events['id'][ok]
-            arr['rlz_id'] = rlz_id
-            for li, loss_type in enumerate(damage_dt.names):
-                for d, dmg_state in enumerate(damage_dt[loss_type].names):
-                    arr[loss_type][dmg_state] = dmg_by_event[ok, li, d]
-            writer.save_block(arr, dest)
-    return [fname]
 
 
 # emulate a Django point

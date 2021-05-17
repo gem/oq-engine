@@ -30,7 +30,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
 
     def check_damages(self, f1, f2):
         df = self.calc.datastore.read_df(
-            'agg_loss_table', ['event_id', 'agg_id', 'loss_id']).sort_index()
+            'risk_by_event', ['event_id', 'agg_id', 'loss_id']).sort_index()
         for col in df.columns:
             df[col] = numpy.around(df[col])
         self.assertEqualFiles('expected/' + f1, gettemp(str(df)))
@@ -83,7 +83,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.run_calc(case_13.__file__, 'job_b.ini')
         self.check_damages('b_damage_table.txt', 'b_damages.txt')
 
-        [f] = export(('agg_loss_table', 'csv'), self.calc.datastore)
+        [f] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
 
     def test_case_13c(self):
