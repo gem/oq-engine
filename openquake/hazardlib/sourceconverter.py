@@ -1184,7 +1184,8 @@ class RowConverter(SourceConverter):
         trt = node.attrib.get('tectonicRegion')
         if trt and trt in self.discard_trts:
             return
-        return getattr(self, 'convert_' + striptag(node.tag))(node)
+        with context(self.fname, node):
+            return getattr(self, 'convert_' + striptag(node.tag))(node)
 
     def convert_mfdist(self, node):
         with context(self.fname, node):
@@ -1332,12 +1333,8 @@ class RowConverter(SourceConverter):
 
     def convert_multiFaultSource(self, node):
         mfs = super().convert_multiFaultSource(node)
-        return NPRow(
-            node['id'],
-            node['name'],
-            'N',
-            node['tectonicRegion'],
-            'Polygon', [mfs.polygon.coords])
+        return NPRow(node['id'], node['name'], 'F',
+                     node['tectonicRegion'], 'Polygon', mfs)
 
 # ################### MultiPointSource conversion ######################## #
 

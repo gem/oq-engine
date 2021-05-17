@@ -97,8 +97,13 @@ def to_wkt(geom, coords):
 
 
 # https://en.wikipedia.org/wiki/Well-known_text_representation_of_geometry
-def appendrow(row, rows, chatty):
-    wkt = to_wkt(row.geom, row.coords)
+def appendrow(row, rows, chatty, sections=()):
+    if row.code == 'F':  # row.coords is a multiFaultSource
+        row.coords.create_inverted_index(sections)
+        coords = [row.coords.polygon.coords]
+    else:
+        coords = row.polygon.coords
+    wkt = to_wkt(row.geom, coords)
     if wkt.startswith('POINT'):
         rows[row.code + '1'].append(row)
     elif wkt.startswith('LINESTRING'):
@@ -121,35 +126,42 @@ def appendrow(row, rows, chatty):
             raise exc.__class__(wkt)
 
 
-def main(what, fnames, chatty=False, *, outdir='.'):
+def main(what, fnames, chatty=False, *, outdir='.', geometry=''):
     """
     Convert source models into CSV files (or geopackages, if fiona is
     installed).
     """
     t0 = time.time()
+    if geometry:
+        fnames = [geometry] + fnames
+    sections = []
     for fname in fnames:
         logging.info('Reading %s', fname)
         converter.fname = fname
         name, _ext = os.path.splitext(os.path.basename(fname))
         root = nrml.read(fname)
         srcs = collections.defaultdict(list)  # geom_index -> rows
-        if 'nrml/0.4' in root['xmlns']:
+        if fname == geometry:
+            for srcnode in root.geometryModel:
+                sections.append(converter.convert_node(srcnode))
+        elif 'nrml/0.4' in root['xmlns']:
             for srcnode in root.sourceModel:
-                appendrow(converter.convert_node(srcnode), srcs, chatty)
-        else:
+                appendrow(converter.convert_node(srcnode),
+                          srcs, chatty, sections)
+        else:  # nrml/0.5
             for srcgroup in root.sourceModel:
                 trt = srcgroup['tectonicRegion']
                 for srcnode in srcgroup:
                     srcnode['tectonicRegion'] = trt
-                    appendrow(converter.convert_node(srcnode), srcs, chatty)
+                    appendrow(converter.convert_node(srcnode),
+                              srcs, chatty, sections)
         if what == 'csv':
             for kind, rows in srcs.items():
                 dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
                 logging.info('Saving %d sources on %s', len(rows), dest)
                 tups = []
                 for row in rows:
-                    tup = row[:-2] + (to_wkt(*row[-2:]),)
-                    tups.append(tup)
+                    tups.append(row[:-2] + (row.wkt,))
                 header = rows[0]._fields[:-2] + ('wkt',)
                 write_csv(dest, tups, header=header)
         else:  # gpkg
@@ -165,3 +177,4 @@ main.what = dict(help='csv or gpkg',
 main.fnames = dict(help='source model files in XML', nargs='+')
 main.chatty = 'display sources in progress'
 main.outdir = 'output directory'
+main.geometry = 'geometry model file'
