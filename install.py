@@ -75,10 +75,16 @@ class user:
     """
     Parameters for a user installation
     """
-    if (sys.platform == 'win32') and not (os.path.exists('./python._pth.old')):
-        VENV = os.path.expanduser('~\\openquake')
-        OQ = os.path.join(VENV, '\\Scripts\\oq')
-        OQDATA = os.path.expanduser('~\\oqdata')
+    if (sys.platform == 'win32'): 
+        if (os.path.exists('./python._pth.old')):
+            VENV = os.path.expanduser('C:\Program Files\\OpenQuake')
+            OQ = os.path.join(VENV, '\\Scripts\\oq')
+            OQDATA = os.path.expanduser('~\\oqdata')
+            print(f'the VENV for installation is {VENV}')
+        else:
+            VENV = os.path.expanduser('~\\openquake')
+            OQ = os.path.join(VENV, '\\Scripts\\oq')
+            OQDATA = os.path.expanduser('~\\oqdata')
     else:
         VENV = os.path.expanduser('~/openquake')
         OQ = os.path.join(VENV, '/bin/oq')
