@@ -894,8 +894,6 @@ hazard_uhs-std.csv
                       ses_per_logic_tree_path=100)
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', f)
-        # [f] = export(('ruptures', 'xml'), self.calc.datastore)  # broken
-        # self.assertEqualFiles('expected/ruptures.xml', files[0])
 
         rups = extract(self.calc.datastore, 'ruptures')
         csv = general.gettemp(rups.array)

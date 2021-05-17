@@ -168,8 +168,6 @@ class EventBasedTestCase(CalculatorTestCase):
         high_ses = (self.calc.datastore['events']['ses_id'] >= 65536).sum()
         self.assertGreater(high_ses, 1000)
 
-        [fname] = out['ruptures', 'xml']  # just check that it exists
-
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
@@ -253,10 +251,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_3.__file__, 'job.ini')
         [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', f)
-
-        # check the rupture multiplicity
-        [f] = export(('ruptures', 'xml'), self.calc.datastore)
-        self.assertEqualFiles('expected/ses.xml', f)
 
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', f)
@@ -385,8 +379,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_15.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname)
-        [fname] = export(('ruptures', 'xml'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.xml', fname)
 
     def test_case_16(self):
         # an example with site model raising warnings and autogridded exposure
@@ -411,16 +403,6 @@ class EventBasedTestCase(CalculatorTestCase):
         fnames = out['hcurves', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
-
-        # check that a single rupture file is exported even if there are
-        # several collections
-        [fname] = export(('ruptures', 'xml'), self.calc.datastore.parent)
-        self.assertEqualFiles('expected/ses.xml', fname)
-
-        # check that the exported file is parseable
-        rupcoll = nrml.to_python(fname, RuptureConverter(1))
-        self.assertEqual(list(rupcoll), [1])  # one group
-        self.assertEqual(len(rupcoll[1]), 3)  # three EBRuptures
 
         # check that GMFs are not stored
         with self.assertRaises(KeyError):
@@ -548,8 +530,6 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_mutex(self):
         out = self.run_calc(mutex.__file__, 'job.ini', exports='csv,xml')
-        [fname] = out['ruptures', 'xml']
-        self.assertEqualFiles('expected/ses.xml', fname, delta=1E-6)
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
