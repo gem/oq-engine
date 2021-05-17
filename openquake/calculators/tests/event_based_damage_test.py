@@ -43,6 +43,12 @@ class EventBasedDamageTestCase(CalculatorTestCase):
     def test_case_11(self):
         # test with double aggregate_by by Catalina
         self.run_calc(case_11.__file__, 'job.ini')
+
+        # check damages-rlzs
+        [f] = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+
+        # check aggcurves, agglosses
         [f1, f2] = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(f1), f1, delta=1E-5)
         self.assertEqualFiles('expected/' + strip_calc_id(f2), f2, delta=1E-5)

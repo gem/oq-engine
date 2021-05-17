@@ -183,6 +183,11 @@ class DamageCalculator(EventBasedRiskCalculator):
         A, L, Dc = self.dmgcsq.shape
         dmgcsq = self.dmgcsq * oq.time_ratio
         self.datastore['damages-rlzs'] = dmgcsq.reshape((A, 1, L, Dc))
+        set_rlzs_stats(self.datastore,
+                       'damages',
+                       asset_id=self.assetcol['id'],
+                       loss_type=oq.loss_names,
+                       dmgcsq=dmgcsq)
         size = self.datastore.getsize('risk_by_event')
         logging.info('Building aggregated curves from %s of risk_by_event',
                      general.humansize(size))
