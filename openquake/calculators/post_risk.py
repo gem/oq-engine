@@ -194,7 +194,8 @@ class PostRiskCalculator(base.RiskCalculator):
                 reagg_idxs(self.num_tags, oq.aggregate_by),
                 numpy.array([K], int)])
             alt_df['agg_id'] = idxs[alt_df['agg_id'].to_numpy()]
-            alt_df = alt_df.groupby(['event_id', 'agg_id']).sum().reset_index()
+            alt_df = alt_df.groupby(
+                ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
         alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
