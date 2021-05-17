@@ -49,6 +49,8 @@ except ImportError:
         if os.path.exists('./python._pth.old'):
             print(f'This is the installation from the installer windows')
         else:
+            folder = os.getcwd()
+            print(f'This is the folder {folder}')
             sys.exit('venv is missing! Please see the documentation of your Operating System to install it')
 
 
