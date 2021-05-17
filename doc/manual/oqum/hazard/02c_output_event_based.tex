@@ -7,15 +7,22 @@ calculation:
 
 \input{oqum/hazard/verbatim/output_event_based}
 
-Exporting the outputs from the ruptures will produce a CSV file containing
-similar to the one is shown below in Listing~\ref{lst:output_ruptures}.
+Exporting the outputs from the ruptures will produce a CSV file with the
+following colums:
 
-\input{oqum/hazard/verbatim/output_ses}
-\begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_ses.csv}
-  \caption{Example of CSV file containing a collection of ruptures}
-  \label{lst:output_ruptures}
-\end{listing}
+\begin{enumerate}
+\item \texttt{rup\_id}: incremental number identifying the rupture
+\item \texttt{multiplicity}: how many times the rupture
+occurs in the effective investigation time
+\item \texttt{mag}: float specifying the magnitude of the rupture
+\item \texttt{centroid\_lon}: longitude of the centroid of the rupture
+\item \texttt{centroid\_lat}: latitude of the centroid of the rupture
+\item \texttt{centroid\_depth}: depth (in km) of the centroid of the rupture
+\item \texttt{trt}: string specifying the tectonic region type
+\item \texttt{strike}: strike angle of the rupture surface
+\item \texttt{dip}: dip angle of the rupture surface
+\item \texttt{rake}: rake angle of the rupture surface
+\end{enumerate}
 
 The outputs from the \glspl{acr:gmf} can be exported in the csv
 format. Exporting the outputs from the \glspl{acr:gmf} in the 
