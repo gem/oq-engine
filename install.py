@@ -77,7 +77,7 @@ class user:
     """
     if (sys.platform == 'win32'): 
         if (os.path.exists('./python._pth.old')):
-            VENV = os.path.expanduser('C:\Program Files\\OpenQuake')
+            VENV = os.path.expanduser('C:\Program Files\\OpenQuake\\python')
             OQ = os.path.join(VENV, '\\Scripts\\oq')
             OQDATA = os.path.expanduser('~\\oqdata')
             print(f'the VENV for installation is {VENV}')
