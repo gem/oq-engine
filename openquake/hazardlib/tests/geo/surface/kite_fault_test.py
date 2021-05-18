@@ -20,7 +20,6 @@ import glob
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # This is needed
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.surface import KiteSurface
@@ -39,6 +38,7 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
     :param smsh:
         The kite surface
     """
+    from mpl_toolkits.mplot3d import Axes3D  # this is needed
 
     # Scaling factor on the z-axis
     scl = 0.1
