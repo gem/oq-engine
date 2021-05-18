@@ -1459,13 +1459,3 @@ def decompress(cbytes):
     gunzip compressed bytes into a Python object
     """
     return pickle.loads(zlib.decompress(cbytes))
-
-
-# ######################### other ######################################## #
-
-def dataclass(cls):
-    names = []
-    for name in vars(cls):
-        names.append(name)
-    cls.names = names
-    return cls

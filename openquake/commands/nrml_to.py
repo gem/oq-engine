@@ -103,7 +103,7 @@ def appendrow(row, rows, chatty, sections=()):
         coords = [row.coords.polygon.coords]
     else:
         coords = row.polygon.coords
-    wkt = to_wkt(row.geom, coords)
+    row.wkt = wkt = to_wkt(row.geom, coords)
     if wkt.startswith('POINT'):
         rows[row.code + '1'].append(row)
     elif wkt.startswith('LINESTRING'):
@@ -124,6 +124,14 @@ def appendrow(row, rows, chatty, sections=()):
             shapely.wkt.loads(wkt)  # sanity check
         except Exception as exc:
             raise exc.__class__(wkt)
+
+
+def to_tuple(row):
+    """
+    Convert a source Row into a tuple
+    """
+    ns = [a for a in row.__class__.__annotations__ if a not in 'geom coords']
+    return tuple(getattr(row, n) for n in ns)
 
 
 def main(what, fnames, chatty=False, *, outdir='.', geometry=''):
@@ -159,11 +167,9 @@ def main(what, fnames, chatty=False, *, outdir='.', geometry=''):
             for kind, rows in srcs.items():
                 dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
                 logging.info('Saving %d sources on %s', len(rows), dest)
-                tups = []
-                for row in rows:
-                    tups.append(row[:-2] + (row.wkt,))
-                header = rows[0]._fields[:-2] + ('wkt',)
-                write_csv(dest, tups, header=header)
+                header = [a for a in rows[0].__class__.__annotations__
+                          if a not in 'geom coords']
+                write_csv(dest, map(to_tuple, rows), header=header)
         else:  # gpkg
             gpkg = GeoPackager(name + '.gpkg')
             for kind, rows in srcs.items():

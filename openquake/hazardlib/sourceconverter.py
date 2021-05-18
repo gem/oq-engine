@@ -21,6 +21,10 @@ import collections
 import pickle
 import copy
 import logging
+try:
+    from dataclasses import dataclass
+except ImportError:
+    from openquake.baselib.python3compat import dataclass
 import numpy
 
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
@@ -1148,14 +1152,33 @@ class SourceConverter(RuptureConverter):
         return sg
 
 
-Row = collections.namedtuple(
-    'Row', 'id name code tectonicregion mfd magscalerel ruptaspectratio '
-    'upperseismodepth lowerseismodepth nodalplanedist hypodepthdist '
-    'geom coords')
+@dataclass
+class Row:
+    id: str
+    name: str
+    code: str
+    tectonicregion: str
+    mfd: str
+    magscalerel: str
+    ruptaspectratio: float
+    upperseismodepth: float
+    lowerseismodepth: float
+    nodalplanedist: list
+    hypodepthdist: list
+    geom: str
+    coords: list
+    wkt: str
 
 
-NPRow = collections.namedtuple(  # used for nonParametric sources
-    'NPRow', 'id name code tectonicregion geom coords')
+@dataclass
+class NPRow:
+    id: str
+    name: str
+    code: str
+    tectonicregion: str
+    geom: str
+    coords: list
+    wkt: str
 
 
 def _planar(surface):
@@ -1320,7 +1343,7 @@ class RowConverter(SourceConverter):
             numpy.nan,
             [{'rake': ~node.rake}],
             [],
-            geom, coords)
+            geom, coords, '')
 
     def convert_nonParametricSeismicSource(self, node):
         nps = convert_nonParametricSeismicSource(self.fname, node)
@@ -1329,12 +1352,12 @@ class RowConverter(SourceConverter):
             node['name'],
             'N',
             node['tectonicRegion'],
-            'Polygon', [nps.polygon.coords])
+            'Polygon', [nps.polygon.coords], '')
 
     def convert_multiFaultSource(self, node):
         mfs = super().convert_multiFaultSource(node)
         return NPRow(node['id'], node['name'], 'F',
-                     node['tectonicRegion'], 'Polygon', mfs)
+                     node['tectonicRegion'], 'Polygon', mfs, '')
 
 # ################### MultiPointSource conversion ######################## #
 
