@@ -30,7 +30,7 @@ from h5py._hl.group import Group
 import numpy
 import pandas
 
-from openquake.baselib import config, hdf5, general
+from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
@@ -38,7 +38,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.source import rupture
 from openquake.calculators import getters
-from openquake.commonlib import calc, util, oqvalidation, writers, datastore
+from openquake.commonlib import calc, util, oqvalidation, datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32

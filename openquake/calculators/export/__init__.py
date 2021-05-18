@@ -18,7 +18,7 @@
 import zipfile
 import logging
 from openquake.baselib.general import CallableDict
-from openquake.commonlib.writers import write_csv
+from openquake.baselib.writers import write_csv
 
 
 class MissingExporter(Exception):
