@@ -100,10 +100,8 @@ def to_wkt(geom, coords):
 def appendrow(row, rows, chatty, sections=()):
     if row.code == 'F':  # row.coords is a multiFaultSource
         row.coords.create_inverted_index(sections)
-        coords = [row.coords.polygon.coords]
-    else:
-        coords = row.coords
-    row.wkt = wkt = to_wkt(row.geom, coords)
+        row.coords = [row.coords.polygon.coords]
+    row.wkt = wkt = to_wkt(row.geom, row.coords)
     if wkt.startswith('POINT'):
         rows[row.code + '1'].append(row)
     elif wkt.startswith('LINESTRING'):
