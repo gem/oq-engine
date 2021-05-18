@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.surface import KiteSurface
+from openquake.hazardlib.geo.mesh import Mesh
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
@@ -67,6 +68,37 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
     plt.title(title)
     ax.invert_zaxis()
     plt.show()
+
+
+class KiteSurfaceWithNaNs(unittest.TestCase):
+
+    def setUp(self):
+        path = os.path.join(BASE_DATA_PATH, 'profiles07')
+        prf, _ = _read_profiles(path)
+        hsmpl = 4
+        vsmpl = 2
+        idl = False
+        alg = False
+        self.srfc = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
+
+        self.mesh = Mesh(lons=np.array([9.8, 10.1]),
+                         lats=np.array([45.1, 45.1]))
+
+        if PLOTTING:
+            title = 'Test mesh with NaNs'
+            ppp(prf, self.srfc, title)
+
+    def test_rjb_calculation(self):
+        dst = self.srfc.get_joyner_boore_distance(self.mesh)
+
+    def test_rrup_calculation(self):
+        dst = self.srfc.get_min_distance(self.mesh)
+
+    def test_rx_calculation(self):
+        dst = self.srfc.get_rx_distance(self.mesh)
+
+    def test_ry0_calculation(self):
+        dst = self.srfc.get_ry0_distance(self.mesh)
 
 
 class KiteSurfaceSimpleTests(unittest.TestCase):

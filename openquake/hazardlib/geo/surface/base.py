@@ -183,16 +183,23 @@ class BaseSurface:
         top_edge = self.mesh[0:1]
         mean_strike = self.get_strike()
 
+        ia = 0
+        ib = -1
+        if (self.__class__.__name__ == 'KiteSurface'):
+            idx = numpy.nonzero(numpy.isfinite(top_edge.lons[0, :]))[0]
+            ia = min(idx)
+            ib = max(idx)
+
         # Computing the distances between the sites and the two lines
         # perpendicular to the strike passing trough the two extremes
         # of the top of the rupture
-        dst1 = geodetic.distance_to_arc(top_edge.lons[0, 0],
-                                        top_edge.lats[0, 0],
+        dst1 = geodetic.distance_to_arc(top_edge.lons[0, ia],
+                                        top_edge.lats[0, ia],
                                         (mean_strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
 
-        dst2 = geodetic.distance_to_arc(top_edge.lons[0, -1],
-                                        top_edge.lats[0, -1],
+        dst2 = geodetic.distance_to_arc(top_edge.lons[0, ib],
+                                        top_edge.lats[0, ib],
                                         (mean_strike + 90.) % 360,
                                         mesh.lons, mesh.lats)
 
@@ -229,8 +236,14 @@ class BaseSurface:
         top_edge = self.mesh[0:1]
         dists = []
         if top_edge.lons.shape[1] < 3:
-
             i = 0
+
+            if ((self.__class__.__name__ == 'KiteSurface') and
+                (numpy.isnan(top_edge.lons[0, i]) or
+                 numpy.isnan(top_edge.lons[0, i+1]))):
+                msg = 'Rx calculation. Top of rupture has less than two points'
+                raise ValueError(msg)
+
             p1 = Point(
                 top_edge.lons[0, i],
                 top_edge.lats[0, i],
@@ -247,6 +260,12 @@ class BaseSurface:
         else:
 
             for i in range(top_edge.lons.shape[1] - 1):
+
+                if ((self.__class__.__name__ == 'KiteSurface') and
+                    (numpy.isnan(top_edge.lons[0, i]) or
+                     numpy.isnan(top_edge.lons[0, i+1]))):
+                    continue
+
                 p1 = Point(
                     top_edge.lons[0, i],
                     top_edge.lats[0, i],
