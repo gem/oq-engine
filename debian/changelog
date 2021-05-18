@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Updates Kotha et al. (2020) slope/geology model coefficients
+
   [Michele Simionato]
   * Added an early check for fragility functions in place of vulnerability
     functions or viceversa
