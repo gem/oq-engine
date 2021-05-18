@@ -35,15 +35,6 @@ def _get_finite_mesh(mesh):
     return Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
 
 
-def _get_finite_top_rupture(mesh):
-    ok = numpy.isfinite(mesh.lons.flat)
-    if numpy.all(ok):
-        return mesh[0:1]
-    ok = numpy.isfinite(mesh.lons[0, :])
-    return RectangularMesh(mesh.lons[0, ok], mesh.lats[0, ok],
-                           mesh.depths[0, ok])
-
-
 def _find_turning_points(mesh, tol=1.0):
     """
     Identifies the turning points in a rectangular mesh based on the
