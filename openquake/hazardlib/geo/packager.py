@@ -47,7 +47,7 @@ def fiona_type(value):
 
 class GeoPackager(object):
     """
-    An utility to store homogeneous lists of namedtuples as layers
+    An utility to store homogeneous lists of records as layers
     """
     def __init__(self, fname):
         if not fiona:
@@ -61,7 +61,7 @@ class GeoPackager(object):
         :param name:
             layer name
         :param rows:
-            a non-empty list of objects with attributes .geom, .coords
+            a non-empty list of records with attributes .geom, .coords
         """
         row = rows[0]
         properties = [(f, fiona_type(getattr(row, f)))
