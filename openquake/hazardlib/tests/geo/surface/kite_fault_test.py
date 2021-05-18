@@ -90,12 +90,31 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
 
     def test_rjb_calculation(self):
         dst = self.srfc.get_joyner_boore_distance(self.mesh)
+
+        if PLOTTING:
+            _ = plt.figure()
+            plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
+                        edgecolors='none', s=15)
+            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
+                     color='red')
+            plt.title('Rjb')
+            plt.show()
+
         if PLOTTING:
             title = 'Test mesh with NaNs'
             ppp(self.prf, self.srfc, title)
 
     def test_rrup_calculation(self):
         dst = self.srfc.get_min_distance(self.mesh)
+
+        if PLOTTING:
+            _ = plt.figure()
+            plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
+                        edgecolors='none', s=15)
+            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
+                     color='red')
+            plt.title('Rrup')
+            plt.show()
 
     def test_rx_calculation(self):
         dst = self.srfc.get_rx_distance(self.mesh)
@@ -231,6 +250,7 @@ class KiteSurfaceTestCase(unittest.TestCase):
         # we get exactly 7 edges.
         msh = srfc.mesh
         np.testing.assert_equal(msh.lons.shape, (7, 12))
+
         # Note that this mesh is flipped at the construction level
         self.assertTrue(np.all(np.abs(msh.depths[0, :]) < 1e-3))
         self.assertTrue(np.all(np.abs(msh.depths[6, :]-15.) < 1e-3))
@@ -242,8 +262,9 @@ class KiteSurfaceTestCase(unittest.TestCase):
         self.assertTrue(abs(dip-90) < 0.5, msg)
 
         strike = srfc.get_strike()
-        msg = "The value of strike computed is wrong: {:.3f}".format(strike)
-        self.assertTrue(abs(strike) < 0.01, msg)
+        msg = "The value of strike computed is wrong.\n"
+        msg += "computed: {:.3f} expected:".format(strike)
+        self.assertTrue(abs(strike-270) < 0.01, msg)
 
         if PLOTTING:
             title = 'Trivial case - Vertical fault'
@@ -320,7 +341,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         idl = False
         alg = False
         self.smsh = KiteSurface.from_profiles(self.profiles, self.v_sampl,
-                                             self.h_sampl, idl, alg)
+                                              self.h_sampl, idl, alg)
 
     def test_h_spacing(self):
         # Check v-spacing: two misaligned profiles - no top alignment
