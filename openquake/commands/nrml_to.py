@@ -33,7 +33,7 @@ import collections
 import shapely.wkt
 from openquake.hazardlib import nrml, sourceconverter
 from openquake.hazardlib.geo.packager import GeoPackager, fiona
-from openquake.commonlib.writers import write_csv
+from openquake.baselib.writers import write_csv
 
 
 converter = sourceconverter.RowConverter()

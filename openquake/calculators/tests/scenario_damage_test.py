@@ -23,7 +23,7 @@ import numpy
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
-from openquake.commonlib.writers import write_csv
+from openquake.baselib.writers import write_csv
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7, case_8, case_9, case_10, case_11)
