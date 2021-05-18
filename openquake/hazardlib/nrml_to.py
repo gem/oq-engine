@@ -102,7 +102,7 @@ def appendrow(row, rows, chatty, sections=()):
         row.coords.create_inverted_index(sections)
         coords = [row.coords.polygon.coords]
     else:
-        coords = row.polygon.coords
+        coords = row.coords
     row.wkt = wkt = to_wkt(row.geom, coords)
     if wkt.startswith('POINT'):
         rows[row.code + '1'].append(row)
@@ -118,7 +118,7 @@ def appendrow(row, rows, chatty, sections=()):
         rows[row.code + '6'].append(row)
     if chatty:
         print('=' * 79)
-        for col in row._fields:
+        for col in row.__class__.__annotations__:
             print(col, getattr(row, col))
         try:
             shapely.wkt.loads(wkt)  # sanity check

@@ -1170,6 +1170,9 @@ class Row:
     wkt: str
 
 
+Row.__init__.__defaults__ = ('',)  # wkt
+
+
 @dataclass
 class NPRow:
     id: str
