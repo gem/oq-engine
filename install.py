@@ -49,8 +49,6 @@ except ImportError:
         if os.path.exists('python\\python._pth.old'):
             print(f'This is method of the installation from the installer windows')
         else:
-            folder = os.getcwd()
-            print(f'This is the folder {folder}')
             sys.exit('venv is missing! Please see the documentation of your Operating System to install it')
 
 
@@ -77,8 +75,8 @@ class user:
     """
     Parameters for a user installation
     """
-    if (sys.platform == 'win32'): 
-        if (os.path.exists('python\\python._pth.old')):
+    if sys.platform == 'win32': 
+        if os.path.exists('python\\python._pth.old'):
             VENV = 'C:\Program Files\\OpenQuake\\python'
             OQ = os.path.join(VENV, '\\Scripts\\oq')
             OQDATA = os.path.expanduser('~\\oqdata')
