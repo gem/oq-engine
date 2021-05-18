@@ -161,7 +161,7 @@ import numpy
 def floatformat(fmt_string):
     """
     Context manager to change the default format string for the
-    function :func:`openquake.baselib.writers.scientificformat`.
+    function :func:`openquake.baselib.writers.write_csv`.
 
     :param fmt_string: the format to use; for instance '%13.9E'
     """
