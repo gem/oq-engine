@@ -183,6 +183,7 @@ class BaseSurface:
         top_edge = self.mesh[0:1]
         mean_strike = self.get_strike()
 
+        # Manage the case of kite fault surfaces
         ia = 0
         ib = -1
         if (self.__class__.__name__ == 'KiteSurface'):
@@ -235,6 +236,14 @@ class BaseSurface:
         """
         top_edge = self.mesh[0:1]
         dists = []
+
+        ia = 0
+        ib = top_edge.lons.shape[1] - 2
+        if (self.__class__.__name__ == 'KiteSurface'):
+            idxs = numpy.nonzero(numpy.isfinite(top_edge.lons[0, :]))[0]
+            ia = min(idxs)
+            ib = sorted(idxs)[-2]
+
         if top_edge.lons.shape[1] < 3:
             i = 0
 
@@ -282,7 +291,7 @@ class BaseSurface:
                     p2 = pt
 
                 # Computing azimuth and distance
-                if i == 0 or i == top_edge.lons.shape[1] - 2:
+                if i == ia or i == ib:
                     azimuth = p1.azimuth(p2)
                     tmp = geodetic.distance_to_semi_arc(p1.longitude,
                                                         p1.latitude,

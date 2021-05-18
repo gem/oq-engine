@@ -64,7 +64,6 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
         for i in range(smsh.mesh.lons.shape[1]):
             ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
                     smsh.mesh.depths[:, i]*scl, '-r', lw=0.5)
-
     plt.title(title)
     ax.invert_zaxis()
     plt.show()
@@ -74,22 +73,26 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
 
     def setUp(self):
         path = os.path.join(BASE_DATA_PATH, 'profiles07')
-        prf, _ = _read_profiles(path)
+        self.prf, _ = _read_profiles(path)
         hsmpl = 4
         vsmpl = 2
         idl = False
         alg = False
-        self.srfc = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
+        self.srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
 
-        self.mesh = Mesh(lons=np.array([9.8, 10.1]),
-                         lats=np.array([45.1, 45.1]))
-
-        if PLOTTING:
-            title = 'Test mesh with NaNs'
-            ppp(prf, self.srfc, title)
+        coo = []
+        step = 0.025
+        for lo in np.arange(9.9, 10.4, step):
+            for la in np.arange(44.6, 45.3, step):
+                coo.append([lo, la])
+        coo = np.array(coo)
+        self.mesh = Mesh(lons=coo[:, 0], lats=coo[:, 1])
 
     def test_rjb_calculation(self):
         dst = self.srfc.get_joyner_boore_distance(self.mesh)
+        if PLOTTING:
+            title = 'Test mesh with NaNs'
+            ppp(self.prf, self.srfc, title)
 
     def test_rrup_calculation(self):
         dst = self.srfc.get_min_distance(self.mesh)
@@ -97,8 +100,26 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
     def test_rx_calculation(self):
         dst = self.srfc.get_rx_distance(self.mesh)
 
+        if PLOTTING:
+            _ = plt.figure()
+            plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
+                        edgecolors='none', s=15)
+            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
+                     color='red')
+            plt.title('Rx')
+            plt.show()
+
     def test_ry0_calculation(self):
         dst = self.srfc.get_ry0_distance(self.mesh)
+
+        if PLOTTING:
+            _ = plt.figure()
+            plt.scatter(self.mesh.lons, self.mesh.lats, c=dst,
+                        edgecolors='none', s=15)
+            plt.plot(self.srfc.mesh.lons, self.srfc.mesh.lats, '.',
+                     color='red')
+            plt.title('Ry0')
+            plt.show()
 
 
 class KiteSurfaceSimpleTests(unittest.TestCase):

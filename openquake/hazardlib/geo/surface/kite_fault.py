@@ -182,10 +182,12 @@ class KiteSurface(BaseSurface):
             The average strike, in decimal degrees.
         """
         if self.strike is None:
-            idx = np.isfinite(self.mesh.lons)
-            azi = azimuth(self.mesh.lons[:-1, :], self.mesh.lats[:-1, :],
-                          self.mesh.lons[1:, :], self.mesh.lats[1:, :])
-            self.strike = np.mean(((azi[idx[:-1, :]]+0.001) % 360))
+            idx = np.nonzero(np.isfinite(self.mesh.lons[0, :]))[0]
+            azi = azimuth(self.mesh.lons[0, idx[:-1]],
+                          self.mesh.lats[0, idx[:-1]],
+                          self.mesh.lons[0, idx[1:]],
+                          self.mesh.lats[0, idx[1:]])
+            self.strike = np.mean((azi+0.001) % 360)
         return self.strike
 
     def get_top_edge_depth(self):
