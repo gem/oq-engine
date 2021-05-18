@@ -25,7 +25,7 @@ from openquake.hazardlib.nrml_to import convert_to
 CD = pathlib.Path(__file__).parent
 
 
-class CsvTestCase(unittest.TestCase):
+class TestCase(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
 
