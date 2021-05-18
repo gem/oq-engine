@@ -119,6 +119,7 @@ def get_csm(oq, full_lt, h5=None):
                               h5=h5 if h5 else None).reduce()
     if len(smdict) > 1:  # really parallel
         parallel.Starmap.shutdown()  # save memory
+    fix_geometry_sections(smdict)
     groups = _build_groups(full_lt, smdict)
 
     # checking the changes
@@ -127,6 +128,38 @@ def get_csm(oq, full_lt, h5=None):
         logging.info('Applied %d changes to the composite source model',
                      changes)
     return _get_csm(full_lt, groups)
+
+
+def fix_geometry_sections(smdict):
+    """
+    If there are MultiFaultSources, fix the sections according to the
+    GeometryModels (if any).
+    """
+    gmodels = []
+    smodels = []
+    for fname, mod in smdict.items():
+        if isinstance(mod, nrml.GeometryModel):
+            gmodels.append(mod)
+        elif isinstance(mod, nrml.SourceModel):
+            smodels.append(mod)
+        else:
+            raise RuntimeError('Unknown model %s' % mod)
+
+    # merge the sections
+    sections = []
+    for gmod in gmodels:
+        sections.extend(gmod.sections)
+    sections.sort(key=operator.attrgetter('sec_id'))
+    nrml.check_unique([sec.sec_id for sec in sections])
+
+    # fix the MultiFaultSources
+    for smod in smodels:
+        for sg in smod.src_groups:
+            for src in sg:
+                if hasattr(src, 'create_inverted_index'):
+                    if not sections:
+                        raise RuntimeError('Missing geometryModel files!')
+                    src.create_inverted_index(sections)
 
 
 def _build_groups(full_lt, smdict):
@@ -201,8 +234,9 @@ def reduce_sources(sources_with_same_id):
 
 
 def _get_csm(full_lt, groups):
-    # extract a single source from multiple sources with the same ID
-    # and regroup the sources in non-atomic groups by TRT
+    # 1. extract a single source from multiple sources with the same ID
+    # 2. regroup the sources in non-atomic groups by TRT
+    # 3. reorder the sources by source_id
     atomic = []
     acc = general.AccumDict(accum=[])
     for grp in groups:
@@ -238,6 +272,8 @@ def _get_csm(full_lt, groups):
             src._wkt = src.wkt()
     src_groups.extend(atomic)
     _check_dupl_ids(src_groups)
+    for sg in src_groups:
+        sg.sources.sort(key=operator.attrgetter('source_id'))
     return CompositeSourceModel(full_lt, src_groups)
 
 

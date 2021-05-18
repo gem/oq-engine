@@ -30,7 +30,7 @@ from h5py._hl.group import Group
 import numpy
 import pandas
 
-from openquake.baselib import config, hdf5, general
+from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
@@ -38,7 +38,7 @@ from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.source import rupture
 from openquake.calculators import getters
-from openquake.commonlib import calc, util, oqvalidation, writers, datastore
+from openquake.commonlib import calc, util, oqvalidation, datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -49,10 +49,6 @@ ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
 SOURCE_ID = stochastic.rupture_dt['source_id']
 memoized = lru_cache()
-
-
-class NotFound(Exception):
-    pass
 
 
 def lit_eval(string):
@@ -521,12 +517,14 @@ def extract_sources(dstore, what):
         logging.info('Extracting sources with ids: %s', source_ids)
         info = info[numpy.isin(info['source_id'], source_ids)]
         if len(info) == 0:
-            raise NotFound('There is no source with id %s' % source_ids)
+            raise getters.NotFound(
+                'There is no source with id %s' % source_ids)
     if codes is not None:
         logging.info('Extracting sources with codes: %s', codes)
         info = info[numpy.isin(info['code'], codes)]
         if len(info) == 0:
-            raise NotFound('There is no source with code in %s' % codes)
+            raise getters.NotFound(
+                'There is no source with code in %s' % codes)
     for code, rows in general.group_array(info, 'code').items():
         if limit < len(rows):
             logging.info('Code %s: extracting %d sources out of %s',
@@ -831,13 +829,6 @@ def extract_losses_by_asset(dstore, what):
         yield 'rlz-000', data
 
 
-@extract.add('agg_loss_table')
-def extract_agg_loss_table(dstore, what):
-    dic = group_array(dstore['agg_loss_table'][()], 'rlzi')
-    for rlzi in dic:
-        yield 'rlz-%03d' % rlzi, dic[rlzi]
-
-
 def _gmf(df, num_sites, imts):
     # convert data into the composite array expected by QGIS
     gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts])
@@ -1048,7 +1039,7 @@ def extract_event_info(dstore, eidx):
     """
     event = dstore['events'][int(eidx)]
     ridx = event['rup_id']
-    [getter] = getters.gen_rupture_getters(dstore, slc=slice(ridx, ridx + 1))
+    [getter] = getters.get_rupture_getters(dstore, slc=slice(ridx, ridx + 1))
     rupdict = getter.get_rupdict()
     rlzi = event['rlz_id']
     full_lt = dstore['full_lt']
@@ -1302,7 +1293,7 @@ def extract_rupture_info(dstore, what):
               ('strike', F32), ('dip', F32), ('rake', F32)]
     rows = []
     boundaries = []
-    for rgetter in getters.gen_rupture_getters(dstore):
+    for rgetter in getters.get_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
         rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
         for r in rup_data.to_array(proxies):
@@ -1337,7 +1328,7 @@ def extract_ruptures(dstore, what):
     bio = io.StringIO()
     first = True
     trts = list(dstore.getitem('full_lt').attrs['trts'])
-    for rgetter in getters.gen_rupture_getters(dstore):
+    for rgetter in getters.get_rupture_getters(dstore):
         rups = [rupture._get_rupture(proxy.rec, proxy.geom, rgetter.trt)
                 for proxy in rgetter.get_proxies(min_mag)]
         arr = rupture.to_csv_array(rups)

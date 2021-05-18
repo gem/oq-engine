@@ -51,7 +51,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
     def test_case_2(self):
         # case with 3 sites but gmvs only on 2 sites
         self.run_calc(case_2.__file__, 'job.ini')
-        alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
+        alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
         self.assertEqual(len(alt), 3)
         totloss = alt.loss.sum()
         aae(totloss, 1.82, decimal=4)
@@ -59,7 +59,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
     def test_case_3(self):
         # case with 13 sites, 10 eids, and several 0 values
         self.run_calc(case_3.__file__, 'job.ini')
-        alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
+        alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
         self.assertEqual(len(alt), 10)
         totloss = alt.loss.sum()
 
@@ -69,7 +69,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
 
     def test_ebr_2(self):
         self.run_calc(ebr_2.__file__, 'job_ebrisk.ini', exports='csv')
-        alt = self.calc.datastore.read_df('agg_loss_table', 'agg_id')
+        alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
         self.assertEqual(len(alt), 8)
         totloss = alt.loss.sum()
         aae(totloss, 15911.156, decimal=2)
@@ -82,7 +82,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_4.__file__, 'job_risk.ini',
                       hazard_calculation_id=str(calc0.calc_id))
         calc1 = self.calc.datastore  # event_based_risk
-        [fname] = export(('agg_loss_table', 'csv'), calc1)
+        [fname] = export(('risk_by_event', 'csv'), calc1)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=1E-5)
 

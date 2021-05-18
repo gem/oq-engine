@@ -20,6 +20,7 @@ import math
 import logging
 import numpy
 from scipy.stats import truncnorm, norm
+from scipy.sparse import diags
 from scipy import interpolate
 
 from openquake.baselib.general import CallableDict
@@ -212,11 +213,11 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     :param imts: list of required imts
     :returns: F(Z, mu) to calculate gmfs
     """
-    # create diag matrix with std values
-    std = numpy.array([shakemap['std'][str(im)] for im in imts])
-    sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
+    # create vector with std values
+    sig = numpy.array([shakemap['std'][str(im)] for im in imts]).flatten()
     # mu has unit (pctg), sig has unit ln(pctg)
-    return numpy.exp(sig @ Z + numpy.log(mu)) / PCTG
+    # multiply Z and sig column-wise and add mean
+    return numpy.exp((Z.T * sig).T + numpy.log(mu)) / PCTG
 
 
 @ calculate_gmfs.add('mmi')
@@ -230,13 +231,14 @@ def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
     :returns: F(Z, mu) to calculate gmfs
     """
     try:
-        # create diag matrix with std values
-        std = numpy.array(shakemap['std']['MMI'])
-        sig = numpy.diag(std.flatten())  # shape (M*N, M*N)
+        # create vector with std values
+        sig = numpy.array(shakemap['std']['MMI']).flatten()
     except ValueError as e:
         raise ValueError('No stds for MMI intensities supplied, only %s' %
                          ', '.join(shakemap['std'].dtype.names)) from e
-    return sig @ Z + mu
+
+    # multiply Z and sig column-wise and add mean
+    return (Z.T * sig).T + mu
 
 
 def to_gmfs(shakemap, gmf_dict, site_effects, trunclevel,

@@ -567,14 +567,12 @@ class CompositeRiskModel(collections.abc.Mapping):
 
     def asset_damage_dt(self, float_dmg_dist):
         """
-        :returns: a list [('aid', U32), ('eid', U32), ('lid', U8),
-                          ('moderate_0', U32), ...]
+        :returns: a composite dtype with damages and consequences
         """
         dt = F32 if float_dmg_dist else U32
-        dtlist = [('aid', U32), ('eid', U32), ('lid', U8)]
-        for dmg in self.damage_states[1:]:
-            dtlist.append((dmg, dt))
-        return dtlist
+        descr = ([('agg_id', U32), ('event_id', U32), ('loss_id', U8)] +
+                 [(dc, dt) for dc in self.get_dmg_csq()])
+        return numpy.dtype(descr)
 
     def reduce_cons_model(self, tagcol):
         """

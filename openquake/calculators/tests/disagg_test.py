@@ -22,7 +22,7 @@ import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.hazardlib.contexts import read_cmakers
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
@@ -186,7 +186,7 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')
-        fname = gettemp(view('mean_disagg', self.calc.datastore))
+        fname = gettemp(text_table(view('mean_disagg', self.calc.datastore)))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
         os.remove(fname)
 

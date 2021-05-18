@@ -112,8 +112,8 @@ def get_src_loss_table(dstore, L):
     :returns:
         (source_ids, array of losses of shape (Ns, L))
     """
-    K = dstore['agg_loss_table'].attrs.get('K', 0)
-    alt = dstore.read_df('agg_loss_table', 'agg_id', dict(agg_id=K))
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    alt = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     eids = alt.event_id.to_numpy()
     evs = dstore['events'][:][eids]
     rlz_ids = evs['rlz_id']
@@ -160,8 +160,8 @@ class PostRiskCalculator(base.RiskCalculator):
             assetcol = ds['assetcol']
             self.aggkey = assetcol.tagcol.get_aggkey(oq.aggregate_by)
         self.L = len(oq.loss_names)
-        size = general.humansize(ds.getsize('agg_loss_table'))
-        logging.info('Stored %s in the agg_loss_table', size)
+        size = general.humansize(ds.getsize('risk_by_event'))
+        logging.info('Stored %s in the risk_by_event', size)
 
     def execute(self):
         oq = self.oqparam
@@ -188,13 +188,14 @@ class PostRiskCalculator(base.RiskCalculator):
         rlz_id = self.datastore['events']['rlz_id']
         if oq.collect_rlzs:
             rlz_id = numpy.zeros_like(rlz_id)
-        alt_df = self.datastore.read_df('agg_loss_table')
+        alt_df = self.datastore.read_df('risk_by_event')
         if self.reaggreate:
             idxs = numpy.concatenate([
                 reagg_idxs(self.num_tags, oq.aggregate_by),
                 numpy.array([K], int)])
             alt_df['agg_id'] = idxs[alt_df['agg_id'].to_numpy()]
-            alt_df = alt_df.groupby(['event_id', 'agg_id']).sum().reset_index()
+            alt_df = alt_df.groupby(
+                ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
         alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
@@ -213,9 +214,6 @@ class PostRiskCalculator(base.RiskCalculator):
             agg_losses[k, r, lni] = df.loss.sum()
             krl_losses.append((k, r, lni, df.loss.to_numpy()))
             if len(krl_losses) >= blocksize:
-                size = len(krl_losses) * 8
-                logging.info('Sending %s of losses',
-                             general.humansize(size))
                 smap.submit((builder, krl_losses))
                 krl_losses[:] = []
         if krl_losses:
@@ -226,7 +224,7 @@ class PostRiskCalculator(base.RiskCalculator):
         time_ratio = oq.time_ratio / R if oq.collect_rlzs else oq.time_ratio
         self.datastore['agg_losses-rlzs'] = agg_losses * time_ratio
         set_rlzs_stats(self.datastore, 'agg_losses',
-                       agg_id=K + 1, loss_types=oq.loss_names, units=units)
+                       agg_id=K + 1, loss_type=oq.loss_names, units=units)
         self.datastore['agg_curves-rlzs'] = agg_curves
         set_rlzs_stats(self.datastore, 'agg_curves',
                        agg_id=K + 1, lti=self.L,
@@ -244,8 +242,9 @@ class PostRiskCalculator(base.RiskCalculator):
             dloss = views.view('delta_loss:%d' % li, self.datastore)
             if dloss['delta'].mean() > .1:  # more than 10% variation
                 logging.warning(
-                    'A big variation in the %s loss curve is expected:\n%s',
-                    ln, dloss)
+                    'A big variation in the %s loss curve is expected: try\n'
+                    '$ oq show delta_loss:%d %d', ln, li,
+                    self.datastore.calc_id)
         if not self.aggkey:
             return
         logging.info('Sanity check on agg_losses')

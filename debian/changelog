@@ -2,6 +2,21 @@
   * Updates Kotha et al. (2020) slope/geology model coefficients
 
   [Michele Simionato]
+  * Renamed the `losses_by_event` CSV exporter to `risk_by_event` and
+    made it work consistently for losses, damages and consequences; also
+    removed the `no_damage` field
+
+  [Marco Pagani, Michele Simionato]
+  * Implemented MultiFaultSources
+
+  [Michele Simionato]
+  * Fixed newlines in the CSV exports on Windows
+
+  [Graeme Weatherill]
+  * Added Ameri (2014) GMPE for the Rjb case
+
+  [Michele Simionato]
+  * Optimized the slow tasks in event_based calculations
   * Added an early check for fragility functions in place of vulnerability
     functions or viceversa
 

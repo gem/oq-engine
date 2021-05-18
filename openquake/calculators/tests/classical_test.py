@@ -24,7 +24,7 @@ from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import lt, contexts
 from openquake.commonlib import readinput
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import (
@@ -37,7 +37,7 @@ from openquake.qa_tests_data.classical import (
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
-    case_58, case_59, case_60, case_61, case_62, case_63, case_64)
+    case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -86,7 +86,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_1.__file__)
 
         if parallel.oq_distribute() != 'no':
-            info = view('job_info', self.calc.datastore)
+            info = text_table(view('job_info', self.calc.datastore))
             self.assertIn('task', info)
             self.assertIn('sent', info)
             self.assertIn('received', info)
@@ -129,7 +129,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_2.__file__, 'job.ini')
 
         # check view inputs
-        lines = view('inputs', self.calc.datastore).splitlines()
+        lines = text_table(view('inputs', self.calc.datastore)).splitlines()
         self.assertEqual(len(lines), 13)  # rst table with 13 rows
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
@@ -228,8 +228,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname,
                               delta=1E-5)
 
-        csv = general.gettemp(view('extreme_sites', self.calc.datastore))
-        self.assertEqualFiles('expected/extreme_sites.csv', csv)
+        csv = general.gettemp(
+            text_table(view('extreme_sites', self.calc.datastore)))
+        self.assertEqualFiles('expected/extreme_sites.rst', csv)
 
         # test extract/hcurves/rlz-0, used by the npz exports
         haz = vars(extract(self.calc.datastore, 'hcurves'))
@@ -611,7 +612,7 @@ hazard_uhs-std.csv
     def test_case_46(self):
         # SMLT with applyToBranches
         self.assert_curves_ok(["hazard_curve-mean.csv"], case_46.__file__,
-                               delta=1E-6)
+                              delta=1E-6)
 
     def test_case_47(self):
         # Mixture Model for Sigma using PEER (2018) Test Case 2.5b
@@ -880,3 +881,23 @@ hazard_uhs-std.csv
         self.run_calc(case_64.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f)
+
+    def test_case_65(self):
+        # Multi fault source
+        self.run_calc(case_65.__file__, 'job.ini')
+        [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f)
+
+        # make sure we are not breaking event_based
+        self.run_calc(case_65.__file__, 'job.ini',
+                      calculation_mode='event_based',
+                      ses_per_logic_tree_path=100)
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', f)
+
+        rups = extract(self.calc.datastore, 'ruptures')
+        csv = general.gettemp(rups.array)
+        self.assertEqualFiles('expected/full_ruptures.csv', csv)
+
+        files = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf_data.csv', files[0])

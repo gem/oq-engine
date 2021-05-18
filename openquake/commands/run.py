@@ -99,8 +99,7 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         if reuse_input:  # enable caching
             calc.oqparam.cachedir = datastore.get_datadir()
-        calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb,
-                 exports=exports, **params)
+        calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
@@ -144,7 +143,7 @@ def main(job_ini,
     jobs = create_jobs(job_ini, loglevel, hc_id=hc)
     for job in jobs:
         job.params.update(params)
-        job.params['exports'] = exports
+        job.params['exports'] = ','.join(exports)
     run_jobs(jobs)
 
 

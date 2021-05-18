@@ -110,6 +110,19 @@ def from_array(aw):
     return rups
 
 
+def to_arrays(geom):
+    arrays = []
+    num_surfaces = int(geom[0])
+    start = num_surfaces * 2 + 1
+    for i in range(1, 2 * num_surfaces, 2):
+        s1, s2 = int(geom[i]), int(geom[i + 1])
+        size = s1 * s2 * 3
+        array = geom[start:start + size].reshape(3, s1, s2)
+        arrays.append(array)
+        start += size
+    return arrays
+
+
 def _get_rupture(rec, geom=None, trt=None):
     # rec: a dictionary or a record
     # geom: if any, an array of floats32 convertible into a mesh
@@ -120,15 +133,7 @@ def _get_rupture(rec, geom=None, trt=None):
         geom = numpy.concatenate([[1], [len(rec['lons']), 1], points])
 
     # build surface
-    arrays = []
-    num_surfaces = int(geom[0])
-    start = num_surfaces * 2 + 1
-    for i in range(1, 2 * num_surfaces, 2):
-        s1, s2 = int(geom[i]), int(geom[i + 1])
-        size = s1 * s2 * 3
-        array = geom[start:start + size].reshape(3, s1, s2)
-        arrays.append(array)
-        start += size
+    arrays = to_arrays(geom)
     mesh = arrays[0]
     rupture_cls, surface_cls = code2cls[rec['code']]
     surface = object.__new__(surface_cls)
@@ -812,10 +817,10 @@ class RuptureProxy(object):
         """
         :returns:
             heuristic weight for the underlying rupture, depending on the
-            number of occurrences, number of samples and number of sites
+            number of occurrences and number of presumably affected sites
         """
         return self['n_occ'] * (
-            100 if self.nsites is None else max(self.nsites, 100))
+            10 if self.nsites is None else max(self.nsites, 10))
 
     def __getitem__(self, name):
         return self.rec[name]
