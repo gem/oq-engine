@@ -129,7 +129,7 @@ list(lazytree) will generated all of them. If your goal is to
 store the tree on the filesystem in XML format you should use
 a writing routine converting a subnode at the time, without
 requiring the full list of them. The routines provided by
-ElementTree are no good, however commonlib.writers
+ElementTree are no good, however baselib.writers
 provide an StreamingXMLWriter just for that purpose.
 
 Lazy trees should *not* be used unless it is absolutely necessary in
@@ -161,7 +161,7 @@ import numpy
 def floatformat(fmt_string):
     """
     Context manager to change the default format string for the
-    function :func:`openquake.commonlib.writers.scientificformat`.
+    function :func:`openquake.baselib.writers.scientificformat`.
 
     :param fmt_string: the format to use; for instance '%13.9E'
     """

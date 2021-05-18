@@ -29,7 +29,7 @@ from openquake.baselib.general import countby, gettemp
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter
 from openquake.commonlib.datastore import read
-from openquake.commonlib.writers import write_csv
+from openquake.baselib.writers import write_csv
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.calc import gmvs_to_poes
 from openquake.calculators.views import view
