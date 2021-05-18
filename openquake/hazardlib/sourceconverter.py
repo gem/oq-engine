@@ -23,7 +23,7 @@ import copy
 import logging
 try:
     from dataclasses import dataclass
-except ImportError:
+except ImportError:  # in Python 3.6
     from openquake.baselib.python3compat import dataclass
 import numpy
 
