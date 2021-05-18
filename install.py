@@ -47,7 +47,7 @@ except ImportError:
         sys.exit('venv is missing! Please see the documentation of your Operating System to install it')
     else:
         if os.path.exists('python\\python._pth.old'):
-            print(f'This is the installation from the installer windows')
+            print(f'This is method of the installation from the installer windows')
         else:
             folder = os.getcwd()
             print(f'This is the folder {folder}')
@@ -82,7 +82,6 @@ class user:
             VENV = 'C:\Program Files\\OpenQuake\\python'
             OQ = os.path.join(VENV, '\\Scripts\\oq')
             OQDATA = os.path.expanduser('~\\oqdata')
-            print(f'the VENV for installation is {VENV}')
         else:
             VENV = os.path.expanduser('~\\openquake')
             OQ = os.path.join(VENV, '\\Scripts\\oq')
@@ -235,10 +234,8 @@ def install(inst, version):
     if sys.platform == 'win32':
         if os.path.exists('python\\python._pth.old'):
             pycmd = inst.VENV + '\\python.exe'
-            print(f'python installation command: {pycmd}')
         else:
             pycmd = inst.VENV + '\\Scripts\\python.exe'
-            print(f'python installation: {pycmd}')
     else:
         pycmd = inst.VENV + '/bin/python'
     # upgrade pip
