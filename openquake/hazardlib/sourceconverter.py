@@ -21,6 +21,10 @@ import collections
 import pickle
 import copy
 import logging
+try:
+    from dataclasses import dataclass
+except ImportError:  # in Python 3.6
+    from openquake.baselib.python3compat import dataclass
 import numpy
 
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
@@ -1148,14 +1152,36 @@ class SourceConverter(RuptureConverter):
         return sg
 
 
-Row = collections.namedtuple(
-    'Row', 'id name code tectonicregion mfd magscalerel ruptaspectratio '
-    'upperseismodepth lowerseismodepth nodalplanedist hypodepthdist '
-    'geom coords')
+@dataclass
+class Row:
+    id: str
+    name: str
+    code: str
+    tectonicregion: str
+    mfd: str
+    magscalerel: str
+    ruptaspectratio: float
+    upperseismodepth: float
+    lowerseismodepth: float
+    nodalplanedist: list
+    hypodepthdist: list
+    geom: str
+    coords: list
+    wkt: str
 
 
-NPRow = collections.namedtuple(  # used for nonParametric sources
-    'NPRow', 'id name code tectonicregion ruptures geom coords')
+Row.__init__.__defaults__ = ('',)  # wkt
+
+
+@dataclass
+class NPRow:
+    id: str
+    name: str
+    code: str
+    tectonicregion: str
+    geom: str
+    coords: list
+    wkt: str
 
 
 def _planar(surface):
@@ -1184,7 +1210,8 @@ class RowConverter(SourceConverter):
         trt = node.attrib.get('tectonicRegion')
         if trt and trt in self.discard_trts:
             return
-        return getattr(self, 'convert_' + striptag(node.tag))(node)
+        with context(self.fname, node):
+            return getattr(self, 'convert_' + striptag(node.tag))(node)
 
     def convert_mfdist(self, node):
         with context(self.fname, node):
@@ -1319,41 +1346,21 @@ class RowConverter(SourceConverter):
             numpy.nan,
             [{'rake': ~node.rake}],
             [],
-            geom, coords)
+            geom, coords, '')
 
     def convert_nonParametricSeismicSource(self, node):
         nps = convert_nonParametricSeismicSource(self.fname, node)
-        ruptures = []
-        for rup, pmf_ in nps.data:
-            probs = [p for p, i in pmf_.data]
-            hypo = [rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z]
-            dic = dict(mag=rup.mag, rake=rup.rake, weight=rup.weight,
-                       probs_occur=probs, hypo=hypo)
-            ruptures.append(dic)
         return NPRow(
             node['id'],
             node['name'],
             'N',
             node['tectonicRegion'],
-            ruptures,
-            'Polygon', [nps.polygon.coords])
+            'Polygon', [nps.polygon.coords], '')
 
     def convert_multiFaultSource(self, node):
         mfs = super().convert_multiFaultSource(node)
-        ruptures = []
-        for rup, pmf_ in mfs.data:
-            probs = [p for p, i in pmf_.data]
-            hypo = [rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z]
-            dic = dict(mag=rup.mag, rake=rup.rake, weight=rup.weight,
-                       probs_occur=probs, hypo=hypo)
-            ruptures.append(dic)
-        return NPRow(
-            node['id'],
-            node['name'],
-            'N',
-            node['tectonicRegion'],
-            ruptures,
-            'Polygon', [mfs.polygon.coords])
+        return NPRow(node['id'], node['name'], 'F',
+                     node['tectonicRegion'], 'Polygon', mfs, '')
 
 # ################### MultiPointSource conversion ######################## #
 
