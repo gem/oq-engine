@@ -42,8 +42,14 @@ from urllib.request import urlopen
 try:
     import venv
 except ImportError:
-    sys.exit('venv is missing! If you are on Ubuntu, please run '
-             '`sudo apt install python3-venv`')
+    # check platform
+    if sys.platform != 'win32':
+        sys.exit('venv is missing! Please see the documentation of your Operating System to install it')
+    else:
+        if os.path.exists('python\\python._pth.old'):
+            print(f'This is method of the installation from the installer windows')
+        else:
+            sys.exit('venv is missing! Please see the documentation of your Operating System to install it')
 
 
 class server:
@@ -69,11 +75,15 @@ class user:
     """
     Parameters for a user installation
     """
-    # check platform
-    if sys.platform == 'win32':
-        VENV = os.path.expanduser('~\\openquake')
-        OQ = os.path.join(VENV, '\\Scripts\\oq')
-        OQDATA = os.path.expanduser('~\\oqdata')
+    if sys.platform == 'win32': 
+        if os.path.exists('python\\python._pth.old'):
+            VENV = 'C:\Program Files\\OpenQuake\\python'
+            OQ = os.path.join(VENV, '\\Scripts\\oq')
+            OQDATA = os.path.expanduser('~\\oqdata')
+        else:
+            VENV = os.path.expanduser('~\\openquake')
+            OQ = os.path.join(VENV, '\\Scripts\\oq')
+            OQDATA = os.path.expanduser('~\\oqdata')
     else:
         VENV = os.path.expanduser('~/openquake')
         OQ = os.path.join(VENV, '/bin/oq')
@@ -220,7 +230,10 @@ def install(inst, version):
         print('Created %s' % inst.VENV)
 
     if sys.platform == 'win32':
-        pycmd = inst.VENV + '/Scripts/python'
+        if os.path.exists('python\\python._pth.old'):
+            pycmd = inst.VENV + '\\python.exe'
+        else:
+            pycmd = inst.VENV + '\\Scripts\\python.exe'
     else:
         pycmd = inst.VENV + '/bin/python'
     # upgrade pip
