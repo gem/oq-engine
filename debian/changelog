@@ -20,6 +20,7 @@
   [Marco Pagani]
   * Numeric fix to the amplification with the convolution method
   * Implemented the BakerJayaram2008 cross correlation model
+  * Fixed the calculation of distances for kite surfaces with Nan values
 
   [Michele Simionato]
   * Fixed logic tree bug: MultiMFDs were not modified

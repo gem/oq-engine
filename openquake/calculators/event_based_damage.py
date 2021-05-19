@@ -188,7 +188,7 @@ class DamageCalculator(EventBasedRiskCalculator):
                        'damages',
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
-                       dmg_state=self.crmodel.get_dmg_csq())
+                       dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
         size = self.datastore.getsize('risk_by_event')
         logging.info('Building aggregated curves from %s of risk_by_event',
                      general.humansize(size))

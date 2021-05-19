@@ -886,18 +886,18 @@ hazard_uhs-std.csv
         # Multi fault source
         self.run_calc(case_65.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-4)
 
         # make sure we are not breaking event_based
         self.run_calc(case_65.__file__, 'job.ini',
                       calculation_mode='event_based',
                       ses_per_logic_tree_path=100)
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.csv', f)
+        self.assertEqualFiles('expected/ruptures.csv', f, delta=1E-4)
 
         rups = extract(self.calc.datastore, 'ruptures')
         csv = general.gettemp(rups.array)
-        self.assertEqualFiles('expected/full_ruptures.csv', csv)
+        self.assertEqualFiles('expected/full_ruptures.csv', csv, delta=1E-4)
 
         files = export(('gmf_data', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/gmf_data.csv', files[0])
+        self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
