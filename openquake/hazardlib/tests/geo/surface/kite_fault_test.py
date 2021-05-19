@@ -21,6 +21,7 @@ import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib.geo import Point, Line
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.geo.mesh import Mesh
@@ -168,6 +169,30 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
         ztor = srfc.get_top_edge_depth()
         self.assertAlmostEqual(20.0, ztor)
+
+    def test_compute_joyner_boore_distance(self):
+        # Create the mesh: two parallel profiles - no top alignment
+        hsmpl = 2
+        vsmpl = 2
+        idl = False
+        alg = False
+        srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+
+        plons = np.array([10.0, 10.15])
+        plats = np.array([45.0, 45.15])
+        mesh = Mesh(lons=plons, lats=plats)
+        dsts = srfc.get_joyner_boore_distance(mesh)
+
+        if PLOTTING:
+            _ = plt.figure()
+            plt.plot(srfc.mesh.lons, srfc.mesh.lats, '.', color='gray')
+            plt.plot(plons, plats, 'o')
+            plt.show()
+
+        # Distance computed here:
+        # https://www.movable-type.co.uk/scripts/latlong.html
+        expected = np.array([13.61, 0.0])
+        np.testing.assert_almost_equal(np.array(dsts), expected, decimal=2)
 
 
 class KiteSurfaceTestCase(unittest.TestCase):

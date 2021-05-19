@@ -25,8 +25,11 @@ import copy
 import numpy as np
 
 from pyproj import Geod
+from shapely.geometry import Polygon
+
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import Point, Line
+from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
@@ -88,6 +91,53 @@ class KiteSurface(BaseSurface):
         # TODO if the object is created without profiles we must extract them
         # from the mesh
         return kite_surface_node(self.profiles)
+
+    def get_joyner_boore_distance(self, mesh):
+
+        # Get indexes of the finite points composing the edges
+        iupp = np.nonzero(np.isfinite(self.mesh.lons[0, :]))[0]
+        ilow = np.flipud(np.nonzero(np.isfinite(self.mesh.lons[-1, :]))[0])
+        irig = np.nonzero(np.isfinite(self.mesh.lons[:, -1]))[0]
+        ilef = np.flipud(np.nonzero(np.isfinite(self.mesh.lons[:, 0]))[0])
+
+        # Building the polygon
+        pnts = []
+        pnts += list(zip(self.mesh.lons[0, iupp], self.mesh.lats[0, iupp],
+                         self.mesh.depths[0, iupp]))
+        pnts += list(zip(self.mesh.lons[irig, -1], self.mesh.lats[irig, -1],
+                         self.mesh.depths[irig, -1]))
+        pnts += list(zip(self.mesh.lons[-1, ilow], self.mesh.lats[-1, ilow],
+                         self.mesh.depths[-1, ilow]))
+        pnts += list(zip(self.mesh.lons[ilef, 0], self.mesh.lats[ilef, 0],
+                         self.mesh.depths[ilef, 0]))
+        perimeter = np.array(pnts)
+
+        distances = geodetic.min_geodetic_distance(
+            (perimeter[:, 0], perimeter[:, 1]), (mesh.lons, mesh.lats))
+
+        idxs = (distances < 40).nonzero()[0]  # indices on the first dimension
+        if not len(idxs):
+            # no point is close enough, return distances as they are
+            return distances
+
+        # Get the projection
+        proj = geo_utils.OrthographicProjection(
+            *geo_utils.get_spherical_bounding_box(perimeter[:, 0],
+                                                  perimeter[:, 1]))
+
+        # Mesh projected coordinates
+        mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
+
+        # Create the shapely Polygon using projected coordinates
+        xp, yp = proj(perimeter[:, 0], perimeter[:, 1])
+        polygon = Polygon([[x, y] for x, y in zip(xp, yp)])
+
+        # Calculate the distances
+        distances[idxs] = geo_utils.point_to_polygon_distance(
+            polygon, mesh_xx, mesh_yy)
+
+        return distances
+
 
     def _fix_right_hand(self):
         # This method fixes the mesh used to represent the grid surface so
