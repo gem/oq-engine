@@ -270,6 +270,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         ct = oq.concurrent_tasks or 1
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.param['collect_rlzs'] = oq.collect_rlzs
+        self.param['time_ratio'] = oq.time_ratio
+        self.param['tot_events'] = self.E
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_names)
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and

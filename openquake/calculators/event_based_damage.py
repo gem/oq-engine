@@ -100,10 +100,10 @@ def event_based_damage(df, param, monitor):
                     ddd = numpy.zeros((Asid, E, Dc), F32)
                     ddd[:, :, :D] = fractions
                     for a, asset in enumerate(out['assets']):
-                        ddd[a] *= asset['number']
+                        ddd[a] *= asset['number'] / param['tot_events']
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
-                            ddd[a, :, ci[name]] = values
+                            ddd[a, :, ci[name]] = values * param['time_ratio']
                     dmgcsq[aids, lti] += ddd.sum(axis=1)  # sum on the events
                     tot = ddd.sum(axis=0)  # sum on the assets
                     for e, eid in enumerate(eids):
@@ -182,7 +182,7 @@ class DamageCalculator(EventBasedRiskCalculator):
     def post_execute(self, dummy):
         oq = self.oqparam
         A, L, Dc = self.dmgcsq.shape
-        dmgcsq = self.dmgcsq * oq.time_ratio
+        dmgcsq = self.dmgcsq
         self.datastore['damages-rlzs'] = dmgcsq.reshape((A, 1, L, Dc))
         set_rlzs_stats(self.datastore,
                        'damages',
