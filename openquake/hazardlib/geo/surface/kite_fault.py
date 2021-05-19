@@ -102,14 +102,14 @@ class KiteSurface(BaseSurface):
 
         # Building the polygon
         pnts = []
-        pnts += [(lo, la, de) for lo, la, de in zip(self.mesh.lons[0, iupp],
-                 self.mesh.lats[0, iupp], self.mesh.depths[0, iupp])]
-        pnts += [(lo, la, de) for lo, la, de in zip(self.mesh.lons[irig, -1],
-                 self.mesh.lats[irig, -1], self.mesh.depths[irig, -1])]
-        pnts += [(lo, la, de) for lo, la, de in zip(self.mesh.lons[-1, ilow],
-                 self.mesh.lats[-1, ilow], self.mesh.depths[-1, ilow])]
-        pnts += [(lo, la, de) for lo, la, de in zip(self.mesh.lons[ilef, 0],
-                 self.mesh.lats[ilef, 0], self.mesh.depths[ilef, 0])]
+        pnts += list(self.mesh.lons[0, iupp], self.mesh.lats[0, iupp],
+                     self.mesh.depths[0, iupp])
+        pnts += list(self.mesh.lons[irig, -1], self.mesh.lats[irig, -1],
+                     self.mesh.depths[irig, -1])
+        pnts += list(self.mesh.lons[-1, ilow], self.mesh.lats[-1, ilow],
+                     self.mesh.depths[-1, ilow])
+        pnts += list(self.mesh.lons[ilef, 0], self.mesh.lats[ilef, 0],
+                     self.mesh.depths[ilef, 0])
         perimeter = np.array(pnts)
 
         distances = geodetic.min_geodetic_distance(
