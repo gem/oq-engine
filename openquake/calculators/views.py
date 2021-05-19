@@ -428,7 +428,6 @@ def view_portfolio_damage(token, dstore):
         del df['agg_id']
         del df['return_period']
         return df.set_index('loss_type')
-
     # dimensions assets, stat, loss_types, dmg_state
     if 'damages-stats' in dstore:
         attrs = get_shape_descr(dstore['damages-stats'].attrs['json'])

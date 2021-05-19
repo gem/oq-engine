@@ -179,6 +179,17 @@ class DamageCalculator(EventBasedRiskCalculator):
                 hdf5.extend(dset, df[name].to_numpy())
         return 1
 
+    def sanity_check(self, dmgcsq):
+        """
+        Compare agglosses with aggregate avglosses
+        """
+        df = self.datastore.read_df(
+            'aggcurves', sel=dict(agg_id=self.param['K'], return_period=0))
+        del df['agg_id']
+        agg = df.groupby('loss_id').sum().to_numpy()  # shape L, Dc
+        avg = dmgcsq.sum(axis=0)  # shape L, Dc
+        numpy.testing.assert_allclose(agg[:, 1:], avg[:, 1:], rtol=1e-5)
+
     def post_execute(self, dummy):
         oq = self.oqparam
         A, L, Dc = self.dmgcsq.shape
@@ -220,3 +231,4 @@ class DamageCalculator(EventBasedRiskCalculator):
         fix_dtype(dic, F32, columns)
         ls = ' '.join(self.crmodel.damage_states[1:])
         self.datastore.create_df('aggcurves', dic.items(), limit_states=ls)
+        self.sanity_check(dmgcsq)
