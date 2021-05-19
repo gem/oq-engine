@@ -7,30 +7,22 @@ calculation:
 
 \input{oqum/hazard/verbatim/output_event_based}
 
-This list in the inset above contains a set of ruptures (in blue) and their
-corresponding sets of ground motion fields (in red). Exporting the outputs
-from the ruptures will produce, for each realisation, an NRML file containing
-a collection of ruptures. An example is shown below in Listing~\ref{lst:output_ruptures}.
+Exporting the outputs from the ruptures will produce a CSV file with the
+following colums:
 
-\input{oqum/hazard/verbatim/output_ses}
-\begin{listing}[htbp]
-  \inputminted[firstline=1,firstnumber=1,fontsize=\footnotesize,frame=single,linenos,bgcolor=lightgray]{xml}{oqum/hazard/verbatim/output_ses.xml}
-  \caption{Example of NRML file containing a collection of ruptures}
-  \label{lst:output_ruptures}
-\end{listing}
-
-The text in red shows the part which describes the generated
-stochastic event sets and the investigation time covered. Inside the
-<SES> tag there is a list of integers (a single integer in this example)
-which are unique IDs for the seismic events associated to the rupture.
-In general a rupture can occur more than once and the number of events
-is given by the multiplicity attribute (in this case 1).
-
-The text in blue emphasises the portion of the text used to describe a
-rupture. The information provided describes entirely the geometry of the
-rupture as well as its rupturing properties (e.g. rake, magnitude). The
-rupture ID is an integer that represents each rupture uniquely: it should
-not be confused with the event ID.
+\begin{enumerate}
+\item \texttt{rup\_id}: incremental number identifying the rupture
+\item \texttt{multiplicity}: how many times the rupture
+occurs in the effective investigation time
+\item \texttt{mag}: float specifying the magnitude of the rupture
+\item \texttt{centroid\_lon}: longitude of the centroid of the rupture
+\item \texttt{centroid\_lat}: latitude of the centroid of the rupture
+\item \texttt{centroid\_depth}: depth (in km) of the centroid of the rupture
+\item \texttt{trt}: string specifying the tectonic region type
+\item \texttt{strike}: strike angle of the rupture surface
+\item \texttt{dip}: dip angle of the rupture surface
+\item \texttt{rake}: rake angle of the rupture surface
+\end{enumerate}
 
 The outputs from the \glspl{acr:gmf} can be exported in the csv
 format. Exporting the outputs from the \glspl{acr:gmf} in the 
@@ -40,7 +32,6 @@ file provides the association between the site ids in the \glspl{acr:gmf} csv
 file with their latitude and longitude coordinates.
 
 \input{oqum/hazard/verbatim/output_gmf_event_based}
-
 
 The \texttt{Events} output produces a csv file with fields \texttt{event\_id},
 \texttt{rup\_id} and \texttt{rlz\_id}. The \texttt{event\_id} is a 32 bit

@@ -35,7 +35,7 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib.scientific import losses_by_period, return_periods
-from openquake.commonlib.writers import build_header, scientificformat
+from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
 from openquake.calculators.extract import extract
 

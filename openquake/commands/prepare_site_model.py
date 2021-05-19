@@ -18,11 +18,11 @@
 import os
 import logging
 import numpy
-from openquake.baselib import performance
+from openquake.baselib import performance, writers
 from openquake.hazardlib import site, valid
 from openquake.hazardlib.geo.utils import assoc
 from openquake.risklib.asset import Exposure
-from openquake.commonlib import writers, datastore
+from openquake.commonlib import datastore
 
 SQRT2 = 1.414
 vs30_dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])

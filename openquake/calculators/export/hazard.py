@@ -26,14 +26,14 @@ import pandas
 
 from openquake.baselib.general import (
     group_array, deprecated, AccumDict, DictArray)
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, writers
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract, get_sites, get_info
 from openquake.calculators.export import export
 from openquake.calculators.getters import get_rupture_getters
-from openquake.commonlib import writers, hazard_writers, calc, util
+from openquake.commonlib import hazard_writers, calc, util
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -48,30 +48,6 @@ savez = numpy.savez_compressed
 def add_quotes(values):
     # used to source names in CSV files
     return ['"%s"' % val for val in values]
-
-
-@export.add(('ruptures', 'xml'))
-@deprecated(msg='This exporter will disappear in the future')
-def export_ruptures_xml(ekey, dstore):
-    """
-    :param ekey: export key, i.e. a pair (datastore key, fmt)
-    :param dstore: datastore object
-    """
-    fmt = ekey[-1]
-    oq = dstore['oqparam']
-    events = group_array(dstore['events'][()], 'rup_id')
-    ruptures_by_grp = AccumDict(accum=[])
-    for rgetter in get_rupture_getters(dstore):
-        ebrs = []
-        for proxy in rgetter.get_proxies():
-            events_by_ses = group_array(events[proxy['id']], 'ses_id')
-            ebr = proxy.to_ebr(rgetter.trt)
-            ebrs.append(ebr.export(events_by_ses))
-        ruptures_by_grp[rgetter.trt_smr].extend(ebrs)
-    dest = dstore.export_path('ses.' + fmt)
-    writer = hazard_writers.SESXMLWriter(dest)
-    writer.serialize(ruptures_by_grp, oq.investigation_time)
-    return [dest]
 
 
 @export.add(('ruptures', 'csv'))

@@ -16,12 +16,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.geo.packager import fiona
-from openquake.hazardlib.nrml_to import convert_to as main
+import pathlib
+import shutil
+import unittest
+import tempfile
+from openquake.hazardlib.nrml_to import convert_to
 
-main.fmt = dict(help='csv or gpkg',
-                choices=['csv', 'gpkg'] if fiona else ['csv'])
-main.fnames = dict(help='source model files in XML', nargs='+')
-main.chatty = 'display sources in progress'
-main.outdir = 'output directory'
-main.geometry = 'geometry model file'
+CD = pathlib.Path(__file__).parent
+
+
+class TestCase(unittest.TestCase):
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+
+    def test_multi_fault(self):
+        gmodel = CD / 'data/sections/sections_mix.xml'
+        smodel = CD / 'data/sections/sources.xml'
+        convert_to('csv', [smodel], geometry=gmodel, outdir=self.tmpdir)
+        convert_to('gpkg', [smodel], geometry=gmodel, outdir=self.tmpdir)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir)
