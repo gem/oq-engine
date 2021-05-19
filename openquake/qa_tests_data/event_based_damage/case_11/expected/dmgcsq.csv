@@ -1,8 +1,8 @@
-#,,,,,,,,,"generated_by='OpenQuake engine 3.12.0-git49693837bc', start_date='2021-05-12T16:24:41', checksum=1445836419, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
+#,,,,,,,,,"generated_by='OpenQuake engine 3.12.0-git922355accd', start_date='2021-05-19T09:45:31', checksum=1445836419, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
 number,nodamage,ds1,ds2,ds3,ds4,losses,county,taxonomy,loss_type
-8,1.40863E-01,1.59202E-02,2.03955E-04,0.00000E+00,3.01267E-03,3.35044E+01,Solano,tax1,structural
-8,1.42132E-01,1.12265E-02,5.16691E-03,1.18948E-03,2.85610E-04,7.48220E+01,Solano,tax2,structural
-5,9.85620E-02,4.88144E-04,0.00000E+00,0.00000E+00,9.49815E-04,1.88222E+01,Marin,tax1,structural
-3,5.91372E-02,2.92886E-04,0.00000E+00,0.00000E+00,5.69889E-04,1.88222E+01,Contra Costa,tax1,structural
-4,6.55008E-02,5.51750E-03,6.99577E-03,1.55396E-03,4.32014E-04,8.45511E+01,Contra Costa,tax3,structural
-28,5.06195E-01,3.34452E-02,1.23666E-02,2.74344E-03,5.25000E-03,2.30522E+02,*total*,*total*,structural
+8,1.40863E-01,1.59202E-02,2.03955E-04,0.00000E+00,3.01267E-03,6.70088E-01,Solano,tax1,structural
+8,1.42132E-01,1.12265E-02,5.16691E-03,1.18948E-03,2.85610E-04,1.49644E+00,Solano,tax2,structural
+5,9.85620E-02,4.88144E-04,0.00000E+00,0.00000E+00,9.49815E-04,3.76445E-01,Marin,tax1,structural
+3,5.91372E-02,2.92886E-04,0.00000E+00,0.00000E+00,5.69889E-04,3.76445E-01,Contra Costa,tax1,structural
+4,6.55008E-02,5.51750E-03,6.99577E-03,1.55396E-03,4.32014E-04,1.69102E+00,Contra Costa,tax3,structural
+28,5.06195E-01,3.34452E-02,1.23666E-02,2.74344E-03,5.25000E-03,4.61044E+00,*total*,*total*,structural
