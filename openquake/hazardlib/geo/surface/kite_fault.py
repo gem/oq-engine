@@ -102,9 +102,14 @@ class KiteSurface(BaseSurface):
 
         # Building the polygon
         pnts = []
-        for corner in [(0, iupp), (irig, -1), (-1, ilow), (ilef, 0)]:
-            pnts.extend(zip(self.mesh.lons[corner]. self.mesh.lats[corner],
-                            self.mesh.depths[corner]))
+        pnts += [(lo, la, de) for lo, la, de in zip(self.mesh.lons[0, iupp],
+                 self.mesh.lats[0, iupp], self.mesh.depths[0, iupp])]
+        pnts += [(lo, la, de) for lo, la, de in zip(self.mesh.lons[irig, -1],
+                 self.mesh.lats[irig, -1], self.mesh.depths[irig, -1])]
+        pnts += [(lo, la, de) for lo, la, de in zip(self.mesh.lons[-1, ilow],
+                 self.mesh.lats[-1, ilow], self.mesh.depths[-1, ilow])]
+        pnts += [(lo, la, de) for lo, la, de in zip(self.mesh.lons[ilef, 0],
+                 self.mesh.lats[ilef, 0], self.mesh.depths[ilef, 0])]
         perimeter = np.array(pnts)
 
         distances = geodetic.min_geodetic_distance(
@@ -132,6 +137,7 @@ class KiteSurface(BaseSurface):
             polygon, mesh_xx, mesh_yy)
 
         return distances
+
 
     def _fix_right_hand(self):
         # This method fixes the mesh used to represent the grid surface so
