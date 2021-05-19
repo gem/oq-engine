@@ -885,12 +885,10 @@ def build_damage_dt(dstore):
        a composite dtype loss_type -> (ds1, ds2, ...)
     """
     oq = dstore['oqparam']
-    damage_states = ['no_damage'] + list(
-        dstore.get_attr('crm', 'limit_states'))
-    dt_list = []
-    for ds in damage_states:
-        ds = str(ds)
-        dt_list.append((ds, F32))
+    attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
+    limit_states = list(dstore.get_attr('crm', 'limit_states'))
+    csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
+    dt_list = [(ds, F32) for ds in ['no_damage'] + limit_states + csqs]
     damage_dt = numpy.dtype(dt_list)
     loss_types = oq.loss_dt().names
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])

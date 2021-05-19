@@ -21,6 +21,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, general, parallel
+from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -180,14 +181,14 @@ class DamageCalculator(EventBasedRiskCalculator):
 
     def post_execute(self, dummy):
         oq = self.oqparam
-        L, Dc = self.dmgcsq.shape[1:]
-        """
-        for loss_id in range(L):
-            for dci in range(Dc):
-                dmgcsq = self.dmgcsq[:, loss_id, dci] * oq.time_ratio
-                dic['loss_id'] = loss_id
-        self.datastore.create_df('dmgcsq', pandas.DataFrame(dic))
-        """
+        A, L, Dc = self.dmgcsq.shape
+        dmgcsq = self.dmgcsq * oq.time_ratio
+        self.datastore['damages-rlzs'] = dmgcsq.reshape((A, 1, L, Dc))
+        set_rlzs_stats(self.datastore,
+                       'damages',
+                       asset_id=self.assetcol['id'],
+                       loss_type=oq.loss_names,
+                       dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
         size = self.datastore.getsize('risk_by_event')
         logging.info('Building aggregated curves from %s of risk_by_event',
                      general.humansize(size))
