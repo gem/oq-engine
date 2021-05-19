@@ -885,14 +885,9 @@ def build_damage_dt(dstore):
        a composite dtype loss_type -> (ds1, ds2, ...)
     """
     oq = dstore['oqparam']
-    dmg_csq = dstore['crmodel'].get_dmg_csq()
-    import pdb; pdb.set_trace()
     damage_states = ['no_damage'] + list(
         dstore.get_attr('crm', 'limit_states'))
-    dt_list = []
-    for ds in damage_states:
-        ds = str(ds)
-        dt_list.append((ds, F32))
+    dt_list = [(ds, F32) for ds in damage_states]
     damage_dt = numpy.dtype(dt_list)
     loss_types = oq.loss_dt().names
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])

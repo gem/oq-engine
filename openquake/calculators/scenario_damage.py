@@ -20,7 +20,7 @@ import logging
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, humansize
-from openquake.hazardlib.stats import set_rlzs_stats, avg_std
+from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.calculators import base, views
 
 U16 = numpy.uint16

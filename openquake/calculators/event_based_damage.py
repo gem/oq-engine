@@ -21,6 +21,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, general, parallel
+from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
@@ -187,7 +188,7 @@ class DamageCalculator(EventBasedRiskCalculator):
                        'damages',
                        asset_id=self.assetcol['id'],
                        loss_type=oq.loss_names,
-                       dmgcsq=dmgcsq)
+                       dmg_state=dmgcsq)
         size = self.datastore.getsize('risk_by_event')
         logging.info('Building aggregated curves from %s of risk_by_event',
                      general.humansize(size))
