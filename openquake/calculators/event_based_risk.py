@@ -223,7 +223,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     core_task = start_ebrisk
     is_stochastic = True
     precalc = 'event_based'
-    accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
+    accept_precalc = ['scenario', 'event_based', 'event_based_risk',
+                      'ebrisk', 'event_based_damage']
 
     def pre_execute(self):
         oq = self.oqparam
@@ -270,7 +271,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         ct = oq.concurrent_tasks or 1
         self.param['maxweight'] = int(oq.ebrisk_maxsize / ct)
         self.param['collect_rlzs'] = oq.collect_rlzs
-        self.param['time_ratio'] = oq.time_ratio
         self.param['tot_events'] = self.E
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_names)

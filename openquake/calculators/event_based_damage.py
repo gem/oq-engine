@@ -103,8 +103,7 @@ def event_based_damage(df, param, monitor):
                         ddd[a] *= asset['number']
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
-                            ddd[a, :, ci[name]] = values * (
-                                param['time_ratio'] * param['tot_events'])
+                            ddd[a, :, ci[name]] = values * param['tot_events']
                     dmgcsq[aids, lti] += ddd.sum(axis=1)  # sum on the events
                     tot = ddd.sum(axis=0)  # sum on the assets
                     for e, eid in enumerate(eids):
