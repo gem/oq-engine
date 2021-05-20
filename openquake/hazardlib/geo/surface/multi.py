@@ -160,6 +160,8 @@ class MultiSurface(BaseSurface):
         self.gc2u = None
         self.tmp_mesh = None
         self.gc_length = None
+        self.strike = self.get_strike()
+        self.dip = self.get_dip()
 
     def _get_edge_set(self, tol=0.1):
         """
