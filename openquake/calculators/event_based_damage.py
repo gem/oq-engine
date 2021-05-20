@@ -188,7 +188,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         del df['agg_id']
         agg = df.groupby('loss_id').sum().to_numpy()  # shape L, Dc
         avg = dmgcsq.sum(axis=0)  # shape L, Dc
-        numpy.testing.assert_allclose(agg[:, 1:], avg[:, 1:], rtol=1e-5)
+        numpy.testing.assert_allclose(agg[:, 1:], avg[:, 1:], rtol=1e-4)
 
     def post_execute(self, dummy):
         oq = self.oqparam
