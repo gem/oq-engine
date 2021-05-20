@@ -150,6 +150,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
         Compute risk from GMFs or ruptures depending on what is stored
         """
+        self.builder = get_loss_builder(self.datastore)  # check
         eids = self.datastore['gmf_data/eid'][:]
         logging.info('Processing {:_d} rows of gmf_data'.format(len(eids)))
         self.dmgcsq = zero_dmgcsq(self.assetcol, self.crmodel)
@@ -203,17 +204,16 @@ class DamageCalculator(EventBasedRiskCalculator):
         size = self.datastore.getsize('risk_by_event')
         logging.info('Building aggregated curves from %s of risk_by_event',
                      general.humansize(size))
-        builder = get_loss_builder(self.datastore)
         alt_df = self.datastore.read_df('risk_by_event')
         del alt_df['event_id']
         dic = general.AccumDict(accum=[])
         columns = sorted(
             set(alt_df.columns) - {'agg_id', 'loss_id', 'variance'})
-        periods = [0] + list(builder.return_periods)
+        periods = [0] + list(self.builder.return_periods)
         for (agg_id, loss_id), df in alt_df.groupby(
                 [alt_df.agg_id, alt_df.loss_id]):
             tots = [df[col].sum() * oq.time_ratio for col in columns]
-            curves = [builder.build_curve(df[col].to_numpy())
+            curves = [self.builder.build_curve(df[col].to_numpy())
                       for col in columns]
             for p, period in enumerate(periods):
                 dic['agg_id'].append(agg_id)
