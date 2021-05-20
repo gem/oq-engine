@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Fixed the sanity check in event_based_damage giving false warnings
+  * Fixed the corner case when there are zero events per realization in
+    scenario_damage
+
 python3-oq-engine (3.11.3-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
