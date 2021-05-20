@@ -1594,6 +1594,9 @@ class OqParam(valid.ParamSet):
         and number_of_logic_tree_samples must be greater than 1.
         """
         if self.calculation_mode == 'event_based_damage':
+            if not self.investigation_time:
+                ini = self.inputs['job_ini']
+                raise KeyError('Missing investigation_time in %s' % ini)
             self.collect_rlzs = True
             return True
         if self.collect_rlzs is False or self.hazard_calculation_id:
