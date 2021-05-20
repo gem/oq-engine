@@ -273,11 +273,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         """
         Sanity check on the total number of assets
         """
-        if self.R == 1:
-            arr = self.datastore.sel('damages-rlzs')  # shape (A, 1, L, D)
-        else:
-            arr = self.datastore.sel('damages-stats', stat='mean')
-        avg = arr.sum(axis=(0, 1))  # shape (L, D)
+        avg0 = self.datastore['damages-rlzs'][:, 0].sum(axis=0)  # (L, D)
         if not len(self.datastore['dd_data/aid']):
             logging.warning('There is no damage at all!')
         elif 'avg_portfolio_damage' in self.datastore:
@@ -285,7 +281,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 'avg_portfolio_damage', self.datastore)
             rst = views.rst_table(df)
             logging.info('Portfolio damage\n%s' % rst)
-        num_assets = avg.sum(axis=1)  # by loss_type
+        num_assets = avg0.sum(axis=1)
+        if self.oqparam.investigation_time:  # event_based_damage
+            num_assets *= self.oqparam.ses_ratio * self.param['num_events'][0]
         expected = self.assetcol['number'].sum()
         nums = set(num_assets) | {expected}
         if len(nums) > 1:
