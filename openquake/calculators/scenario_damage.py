@@ -271,8 +271,9 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
     def sanity_check(self):
         """
-        Sanity check on the total number of assets
+        Sanity check on the total number of buildings
         """
+        E0 = self.param['num_events'][0]
         avg0 = self.datastore['damages-rlzs'][:, 0].sum(axis=0)  # (L, D)
         if not len(self.datastore['dd_data/aid']):
             logging.warning('There is no damage at all!')
@@ -281,15 +282,16 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                 'avg_portfolio_damage', self.datastore)
             rst = views.rst_table(df)
             logging.info('Portfolio damage\n%s' % rst)
-        num_assets = avg0.sum(axis=1)
+        num_buildings = avg0.sum(axis=1)
         if self.oqparam.investigation_time:  # event_based_damage
-            num_assets *= self.oqparam.ses_ratio * self.param['num_events'][0]
+            # N = avg * S / E
+            num_buildings /= self.oqparam.ses_ratio * E0
         expected = self.assetcol['number'].sum()
-        nums = set(num_assets) | {expected}
+        nums = set(num_buildings) | {expected}
         if len(nums) > 1:
             numdic = dict(expected=expected)
-            for lt, num in zip(self.oqparam.loss_names, num_assets):
+            for lt, num in zip(self.oqparam.loss_names, num_buildings):
                 numdic[lt] = num
             logging.info(
                 'Due to rounding errors inherent in floating-point arithmetic,'
-                ' the total number of assets is not exact: %s', numdic)
+                ' the total number of buildings is not exact: %s', numdic)
