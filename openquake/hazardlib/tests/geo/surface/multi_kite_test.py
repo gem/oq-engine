@@ -101,60 +101,60 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         for es, expct in zip(ess, expected):
             np.testing.assert_array_almost_equal(es, expct)
 
+    # TODO
     def test_get_cartesian_edge_set(self):
         es = self.msrf._get_cartesian_edge_set()
-        print(es)
 
+    # TODO
     def test_get_strike(self):
         strike = self.msrf.get_strike()
-        print(strike)
 
-    # TODO fix error
+    # TODO
     def test_get_dip(self):
         dip = self.msrf.get_dip()
-        print(dip)
+        expected = 69.57436082462769
+        msg = 'Multi fault surface: dip is wrong'
+        self.assertAlmostEqual(dip, expected, msg)
 
+    # TODO
     def test_get_width(self):
         width = self.msrf.get_width()
         print(width)
 
+    # TODO
     def test_get_area(self):
         area = self.msrf.get_area()
-        print(area)
 
+    # TODO
     def test_get_bounding_box(self):
         bb = self.msrf.get_bounding_box()
-        print(bb)
 
+    # TODO
     def test_get_middle_point(self):
         midp = self.msrf.get_middle_point()
-        print(midp)
 
     # TODO remove NaNs
     def test_get_surface_boundaries(self):
         bnd = self.msrf.get_surface_boundaries()
-        print(bnd)
 
     # TODO test the updated attributes
     def test_setup_gc2_framework(self):
         gc2f = self.msrf._setup_gc2_framework()
 
+    # TODO
     def test_get_gc2_coordinates_for_rupture(self):
         es = self.msrf._get_cartesian_edge_set()
         gc2c = self.msrf._get_gc2_coordinates_for_rupture(es)
-        print(gc2c)
 
+    # TODO
     def test_get_generalised_coordinates(self):
         gcoo = self.msrf.get_generalised_coordinates(self.mesh.lons,
                                                      self.mesh.lats)
-        print(gcoo)
 
     # TODO fix the error
     def test_get_rx(self):
         dsts = self.msrf.get_rx_distance(self.mesh)
-        print(dsts)
 
     # TODO fix the error
     def test_get_ry0(self):
         dsts = self.msrf.get_ry0_distance(self.mesh)
-        print(dsts)
