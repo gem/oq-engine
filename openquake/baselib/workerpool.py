@@ -109,15 +109,13 @@ class WorkerMaster(object):
         """
         killed = []
         for host, _ in self.host_cores:
-            if not general.socket_ready((host, self.ctrl_port)):
-                continue
-            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
-            with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                sock.send('kill')
-                killed.append(host)
-        for popen in self.popens:
-            popen.kill()
-        self.popens = []
+            args = ['ssh', '-f', '-T', f'{self.remote_user}@{host}',
+                    'killall', '-u', 'openquake']
+            if host != '127.0.0.1':
+                logging.warning(
+                    '%s: if it hangs, check the ssh keys', ' '.join(args))
+            subprocess.run(args)
+            killed.append(host)
         return 'killed %s' % killed
 
     def status(self):
