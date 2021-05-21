@@ -349,7 +349,7 @@ class RiskModel(object):
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type, 'vulnerability']
         return vf(asset_df, gmf_df, col, rndgen,
-                  self.minimum_asset_loss[loss_type])
+                  self.minimum_asset_loss[loss_type]).set_index(['eid', 'aid'])
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
@@ -690,7 +690,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
                 if event:
-                    outs.append(rm(lt, assets, haz, col, rndgen))
+                    out = rm(lt, assets, haz, col, rndgen)
+                    outs.append(out)
                 else:  # classical
                     hcurve = haz.array[self.imtls(imt), 0]
                     outs.append(rm(lt, assets, hcurve))

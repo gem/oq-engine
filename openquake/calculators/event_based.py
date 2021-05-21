@@ -140,6 +140,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # weighting the heavy sources
         nrups = parallel.Starmap(
             count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
+            progress=logging.debug
         ).reduce()
         for src in sources:
             src.nsites = 1  # avoid 0 weight
@@ -309,7 +310,12 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_rlz_info({})  # store weights
         self.save_params()
         imp = calc.RuptureImporter(self.datastore)
-        imp.import_rups_events(rup_array, get_rupture_getters)
+        nr, ne = imp.import_rups_events(rup_array, get_rupture_getters)
+        if oq.investigation_time:
+            eff_time = (oq.investigation_time * oq.ses_per_logic_tree_path *
+                        len(self.datastore['weights']))
+            logging.info('{:_d} events and {:_d} ruptures in {:_d} years'.
+                         format(ne, nr, int(eff_time)))
 
     def execute(self):
         oq = self.oqparam

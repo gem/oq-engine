@@ -109,9 +109,9 @@ def event_based_risk(df, param, monitor):
                 taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
 
         for lni, ln in enumerate(crmodel.oqparam.loss_names):
-            alt = out[ln]
-            if len(alt) == 0:
+            if ln not in out or len(out[ln]) == 0:
                 continue
+            alt = out[ln].reset_index()
             with mon_agg:
                 loss_by_EK1[ln] += aggregate_losses(alt, K, kids, correl)
             if param['collect_rlzs']:

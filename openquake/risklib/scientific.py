@@ -1349,21 +1349,22 @@ class InsuredLosses(object):
         """
         for lt in self.policy_dict:
             o = out[lt]
-            policy = self.policy_dict[lt]
-            eids, aids, ilosses = [], [], []
-            for aid, df in o.groupby('aid'):
-                asset = asset_df.loc[aid]
-                avalue = asset['value-' + lt]
-                policy_idx = asset[self.policy_name]
-                ded, lim = policy[policy_idx]
-                ins = insured_losses(
-                    df.loss.to_numpy(), ded * avalue, lim * avalue)
-                eids.extend(df.eid)
-                aids.extend([aid] * len(df))
-                ilosses.extend(ins)
-            out[lt + '_ins'] = pandas.DataFrame(
-                dict(eid=U32(eids), aid=U32(aids), loss=ilosses,
-                     variance=numpy.zeros_like(ilosses)))
+            if len(o):
+                policy = self.policy_dict[lt]
+                eid_aids, ilosses = [], []
+                for aid, df in o.groupby('aid'):
+                    asset = asset_df.loc[aid]
+                    avalue = asset['value-' + lt]
+                    policy_idx = asset[self.policy_name]
+                    ded, lim = policy[policy_idx]
+                    ins = insured_losses(
+                        df.loss.to_numpy(), ded * avalue, lim * avalue)
+                    eid_aids.extend(df.index)
+                    ilosses.extend(ins)
+                eids, aids = zip(*eid_aids)
+                out[lt + '_ins'] = pandas.DataFrame(
+                    dict(eid=U32(eids), aid=U32(aids), loss=ilosses,
+                         variance=numpy.zeros_like(ilosses)))
 
 
 # not used anymore
