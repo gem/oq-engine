@@ -70,6 +70,11 @@ def aggregate_losses(alt, K, kids, correl):
     return lbe
 
 
+def split_df(df, maxsize=100_000):
+    for slc in general.gen_slices(0, len(df), maxsize):
+        yield df[slc]
+
+
 def event_based_risk(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
@@ -104,11 +109,7 @@ def event_based_risk(df, param, monitor):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         if len(gmf_df) == 0:
             continue
-        if not rndgen and len(asset_df) > 100:
-            items = asset_df.groupby('site_id')
-        else:
-            items = [(None, asset_df)]
-        for _, adf in items:
+        for adf in ([asset_df] if rndgen else split_df(asset_df)):
             with mon_risk:
                 out = crmodel.get_output(
                     taxo, adf, gmf_df, param['sec_losses'], rndgen)
