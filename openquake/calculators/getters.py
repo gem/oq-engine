@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import operator
 import numpy
 import pandas
@@ -413,7 +414,7 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
     else:  # parallelize the weighting of the ruptures
         proxies = parallel.Starmap.apply(
             weight_ruptures, (rup_array, srcfilter, full_lt.trt_by, scenario),
-            concurrent_tasks=ct
+            concurrent_tasks=ct, progress=logging.debug
         ).reduce(acc=[])
     maxweight = sum(proxy.weight for proxy in proxies) / (ct or 1)
     rgetters = []

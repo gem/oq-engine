@@ -140,6 +140,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # weighting the heavy sources
         nrups = parallel.Starmap(
             count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
+            progress=logging.debug
         ).reduce()
         for src in sources:
             src.nsites = 1  # avoid 0 weight
