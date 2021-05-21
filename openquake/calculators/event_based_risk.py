@@ -95,7 +95,7 @@ def event_based_risk(df, param, monitor):
     loss_by_EK1 = {ln: general.AccumDict(accum=numpy.zeros(2, F32))
                    for ln in crmodel.oqparam.loss_names}
     correl = param['asset_correlation']
-    if crmodel.oqparam.ignore_master_seed:
+    if crmodel.oqparam.ignore_master_seed or crmodel.oqparam.ignore_covs:
         rndgen = None
     else:
         rndgen = MultiEventRNG(
@@ -104,7 +104,7 @@ def event_based_risk(df, param, monitor):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         if len(gmf_df) == 0:
             continue
-        if crmodel.oqparam.ignore_master_seed and len(asset_df) > 1000:
+        if not rndgen and len(asset_df) > 100:
             items = asset_df.groupby('site_id')
         else:
             items = [(None, asset_df)]
