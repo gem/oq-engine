@@ -311,10 +311,11 @@ class EventBasedCalculator(base.HazardCalculator):
         self.save_params()
         imp = calc.RuptureImporter(self.datastore)
         nr, ne = imp.import_rups_events(rup_array, get_rupture_getters)
-        eff_time = (oq.investigation_time * oq.ses_per_logic_tree_path) * len(
-            self.datastore['weights'])
-        logging.info('{:_d} events and {:_d} ruptures in {:_d} years'.format(
-            ne, nr, eff_time))
+        if oq.investigation_time:
+            eff_time = (oq.investigation_time * oq.ses_per_logic_tree_path *
+                        len(self.datastore['weights']))
+            logging.info('{:_d} events and {:_d} ruptures in {:_d} years'.
+                         format(ne, nr, int(eff_time)))
 
     def execute(self):
         oq = self.oqparam
