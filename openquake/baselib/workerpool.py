@@ -1,9 +1,25 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2017-2021, GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
 import signal
 import shutil
 import getpass
-import logging
 import tempfile
 import subprocess
 import multiprocessing
@@ -75,8 +91,7 @@ class WorkerMaster(object):
             args += ['-m', 'openquake.baselib.workerpool', ctrl_url,
                      '-n', cores]
             if host != '127.0.0.1':
-                logging.warning(
-                    '%s: if it hangs, check the ssh keys', ' '.join(args))
+                print('%s: if it hangs, check the ssh keys', ' '.join(args))
             self.popens.append(subprocess.Popen(args))
             starting.append(host)
         return 'starting %s' % starting
@@ -105,15 +120,16 @@ class WorkerMaster(object):
 
     def kill(self):
         """
-        Send a "kill" command to all worker pools
+        Send a "killall" command to all worker pools to cleanup everything
+        in case of hard out of memory situations
         """
         killed = []
         for host, _ in self.host_cores:
             args = ['ssh', '-f', '-T', f'{self.remote_user}@{host}',
                     'killall', '-u', 'openquake']
+            cmd = ' '.join(args)
             if host != '127.0.0.1':
-                logging.warning(
-                    '%s: if it hangs, check the ssh keys', ' '.join(args))
+                print('%s: if it hangs, check the ssh keys', cmd)
             subprocess.run(args)
             killed.append(host)
         return 'killed %s' % killed
