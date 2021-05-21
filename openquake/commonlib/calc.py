@@ -282,7 +282,7 @@ class RuptureImporter(object):
     def import_rups_events(self, rup_array, get_rupture_getters):
         """
         Import an array of ruptures and store the associated events.
-        :returns: a list of RuptureGetters
+        :returns: (number of imported ruptures, number of imported events)
         """
         logging.info('Reordering the ruptures and storing the events')
         # order the ruptures by seed
@@ -299,7 +299,7 @@ class RuptureImporter(object):
         rgetters = get_rupture_getters(  # fast
             self.datastore, self.oqparam.concurrent_tasks)
         self._save_events(rup_array, rgetters)
-        return rgetters
+        return len(rup_array), rup_array['n_occ'].sum()
 
     def _save_events(self, rup_array, rgetters):
         # this is very fast compared to saving the ruptures
@@ -310,8 +310,6 @@ class RuptureImporter(object):
         # including the ones far away that will be discarded later on
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        logging.info('Associating event_id -> rlz_id for {:_d} events '
-                     'and {:_d} ruptures'.format(len(events), len(rup_array)))
         iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
         if len(events) < 1E5:
             it = itertools.starmap(self.get_eid_rlz, iterargs)

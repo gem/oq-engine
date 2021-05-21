@@ -689,7 +689,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
                 col = alias.get(imt, imt)
-                if event:
+                if event:  # set index
                     out = rm(lt, assets, haz, col, rndgen)
                     outs.append(out.set_index(['eid', 'aid']))
                 else:  # classical
@@ -705,8 +705,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                     dic[lt].loss += alt.loss * w
             elif len(weights) > 1:  # scenario_damage
                 dic[lt] = numpy.average(outs, weights=weights, axis=0)
-        for lt in self.loss_types:
-            dic[lt] = dic[lt].reset_index()
+        if event:  # reset index
+            for lt in self.loss_types:
+                dic[lt] = dic[lt].reset_index()
         # compute secondary losses, if any
         # FIXME: it should be moved up, before the computation of the mean
         for sec_loss in sec_losses:

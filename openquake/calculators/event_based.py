@@ -309,7 +309,11 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_rlz_info({})  # store weights
         self.save_params()
         imp = calc.RuptureImporter(self.datastore)
-        imp.import_rups_events(rup_array, get_rupture_getters)
+        nr, ne = imp.import_rups_events(rup_array, get_rupture_getters)
+        eff_time = (oq.investigation_time * oq.ses_per_logic_tree_path) * len(
+            self.datastore['weights'])
+        logging.info('{:_d} events and {:_d} ruptures in {:_d} years'.format(
+            ne, nr, eff_time))
 
     def execute(self):
         oq = self.oqparam
