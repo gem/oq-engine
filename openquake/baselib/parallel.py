@@ -988,7 +988,7 @@ def workers_stop():
     elif OQDIST == 'celery':
         app.control.shutdown()
     elif OQDIST == 'zmq':
-        workerpool.WorkerMaster().kill()
+        workerpool.WorkerMaster().stop()
     return 'stopped'
 
 
