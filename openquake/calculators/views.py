@@ -536,7 +536,7 @@ def view_assets_by_site(token, dstore):
     """
     taxonomies = dstore['assetcol/tagcol/taxonomy'][()]
     assets_by_site = dstore['assetcol'].assets_by_site()
-    data = ['taxonomy num_assets mean stddev min max num_sites'.split()]
+    data = ['taxonomy num_sites mean stddev min max num_assets'.split()]
     num_assets = AccumDict()
     for assets in assets_by_site:
         num_assets += {k: [len(v)] for k, v in group_array(
