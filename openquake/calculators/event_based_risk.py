@@ -70,7 +70,7 @@ def aggregate_losses(alt, K, kids, correl):
     return lbe
 
 
-def split_df(df, maxsize=100_000):
+def split_df(df, maxsize=20_000):
     n = len(df)
     if n <= maxsize:
         return [df]
