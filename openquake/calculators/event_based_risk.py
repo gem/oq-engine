@@ -71,8 +71,14 @@ def aggregate_losses(alt, K, kids, correl):
 
 
 def split_df(df, maxsize=100_000):
+    n = len(df)
+    if n <= maxsize:
+        return [df]
+    slices = []
     for slc in general.gen_slices(0, len(df), maxsize):
-        yield df[slc]
+        slices.append(df[slc])
+    print('split in %d' % len(slices))
+    return slices
 
 
 def event_based_risk(df, param, monitor):
