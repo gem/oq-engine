@@ -130,7 +130,7 @@ def event_based_risk(df, param, monitor):
                 with mon_agg:
                     alt = alt.reset_index()
                     loss_by_EK1[ln] += aggregate_losses(alt, K, kids, correl)
-                if param['collect_rlzs']:
+                if param['avg_losses'] and param['collect_rlzs']:
                     with mon_avg:
                         ldf = pandas.DataFrame(
                             dict(aid=alt.aid.to_numpy(), loss=alt.loss))
@@ -150,13 +150,7 @@ def event_based_risk(df, param, monitor):
                         loss_by_AR[ln].append(
                             sparse.coo_matrix(
                                 (tot.to_numpy(), (aids, rlzs)), AR))
-    if loss_by_AR:
-        yield loss_by_AR
-        loss_by_AR.clear()
-    alt = _build_risk_by_event(loss_by_EK1)
-    if alt:
-        yield alt
-        alt.clear()
+    return dict(avg=loss_by_AR, alt=_build_risk_by_event(loss_by_EK1))
 
 
 def _build_risk_by_event(loss_by_EK1):
@@ -229,7 +223,7 @@ def ebrisk(rupgetter, param, monitor):
             alldata[key] = U32(alldata[key])
         else:
             alldata[key] = F32(alldata[key])
-    yield from event_based_risk(pandas.DataFrame(alldata), param, monitor)
+    yield event_based_risk(pandas.DataFrame(alldata), param, monitor)
     if gmf_info:
         yield {'gmf_info': numpy.array(gmf_info, gmf_info_dt)}
 
@@ -365,7 +359,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     def agg_dicts(self, dummy, dic):
         """
         :param dummy: unused parameter
-        :param dic: dictionary of losses keyed by loss type
+        :param dic: dictionary with keys "avg", "alt", "gmf_info"
         """
         if not dic:
             return
@@ -375,14 +369,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         lti = self.oqparam.lti
         self.oqparam.ground_motion_fields = False  # hack
         with self.monitor('saving risk_by_event'):
-            for ln, ls in dic.items():
-                if isinstance(ls, pandas.DataFrame):
-                    for name in ls.columns:
-                        dset = self.datastore['risk_by_event/' + name]
-                        hdf5.extend(dset, ls[name].to_numpy())
-                else:  # summing avg_losses, fast
-                    for coo in ls:
-                        self.avg_losses[coo.row, coo.col, lti[ln]] += coo.data
+            for ln, ls in dic['alt'].items():
+                for name in ls.columns:
+                    dset = self.datastore['risk_by_event/' + name]
+                    hdf5.extend(dset, ls[name].to_numpy())
+            for ln, ls in dic['avg'].items():
+                for coo in ls:
+                    self.avg_losses[coo.row, coo.col, lti[ln]] += coo.data
 
     def post_execute(self, dummy):
         """
