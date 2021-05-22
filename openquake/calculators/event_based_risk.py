@@ -70,15 +70,19 @@ def aggregate_losses(alt, K, kids, correl):
     return lbe
 
 
-def split_df(df, maxsize=20_000):
+def split_df(df, cond, maxsize=1000):
+    """
+    :param df: a large dataframe
+    :param cond: boolean condition for splitting
+    :param maxsize: split dataframes larger than maxsize
+    :yields: dataframes smaller than maxsize
+    """
     n = len(df)
-    if n <= maxsize:
-        return [df]
-    slices = []
-    for slc in general.gen_slices(0, len(df), maxsize):
-        slices.append(df[slc])
-    print('split in %d' % len(slices))
-    return slices
+    if n <= maxsize or not cond:
+        yield df
+    else:
+        for slc in general.gen_slices(0, len(df), maxsize):
+            yield df[slc]
 
 
 def event_based_risk(df, param, monitor):
@@ -115,15 +119,16 @@ def event_based_risk(df, param, monitor):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         if len(gmf_df) == 0:
             continue
-        for adf in ([asset_df] if rndgen else split_df(asset_df)):
+        for adf in split_df(asset_df, rndgen is None):
             with mon_risk:
                 out = crmodel.get_output(
                     taxo, adf, gmf_df, param['sec_losses'], rndgen)
             for lni, ln in enumerate(crmodel.oqparam.loss_names):
                 if ln not in out or len(out[ln]) == 0:
                     continue
-                alt = out[ln].reset_index()
+                alt = out[ln]
                 with mon_agg:
+                    alt = alt.reset_index()
                     loss_by_EK1[ln] += aggregate_losses(alt, K, kids, correl)
                 if param['collect_rlzs']:
                     with mon_avg:
