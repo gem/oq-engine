@@ -70,6 +70,21 @@ def aggregate_losses(alt, K, kids, correl):
     return lbe
 
 
+def split_df(df, cond, maxsize=1000):
+    """
+    :param df: a large dataframe
+    :param cond: boolean condition for splitting
+    :param maxsize: split dataframes larger than maxsize
+    :yields: dataframes smaller than maxsize
+    """
+    n = len(df)
+    if n <= maxsize or not cond:
+        yield df
+    else:
+        for slc in general.gen_slices(0, len(df), maxsize):
+            yield df[slc]
+
+
 def event_based_risk(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
@@ -77,7 +92,7 @@ def event_based_risk(df, param, monitor):
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    mon_risk = monitor('computing risk', measuremem=True)
+    mon_risk = monitor('computing risk', measuremem=False)
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
     dstore = datastore.read(param['hdf5path'], parentdir=param['parentdir'])
@@ -95,7 +110,7 @@ def event_based_risk(df, param, monitor):
     loss_by_EK1 = {ln: general.AccumDict(accum=numpy.zeros(2, F32))
                    for ln in crmodel.oqparam.loss_names}
     correl = param['asset_correlation']
-    if crmodel.oqparam.ignore_master_seed:
+    if crmodel.oqparam.ignore_master_seed or crmodel.oqparam.ignore_covs:
         rndgen = None
     else:
         rndgen = MultiEventRNG(
@@ -104,33 +119,37 @@ def event_based_risk(df, param, monitor):
         gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
         if len(gmf_df) == 0:
             continue
-        with mon_risk:
-            out = crmodel.get_output(
-                taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
-
-        for lni, ln in enumerate(crmodel.oqparam.loss_names):
-            if ln not in out or len(out[ln]) == 0:
-                continue
-            alt = out[ln].reset_index()
-            with mon_agg:
-                loss_by_EK1[ln] += aggregate_losses(alt, K, kids, correl)
-            if param['collect_rlzs']:
-                with mon_avg:
-                    ldf = pandas.DataFrame(
-                        dict(aid=alt.aid.to_numpy(), loss=alt.loss))
-                    tot = ldf.groupby('aid').loss.sum()
-                    aids, rlzs = tot.index.to_numpy(), numpy.zeros_like(tot)
-                    loss_by_AR[ln].append(
-                        sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR))
-            elif param['avg_losses']:
-                with mon_avg:
-                    ldf = pandas.DataFrame(
-                        dict(aid=alt.aid.to_numpy(), loss=alt.loss,
-                             rlz=rlz_id[alt.eid.to_numpy()]))
-                    tot = ldf.groupby(['aid', 'rlz']).loss.sum()
-                    aids, rlzs = zip(*tot.index)
-                    loss_by_AR[ln].append(
-                        sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR))
+        for adf in split_df(asset_df, rndgen is None):
+            with mon_risk:
+                out = crmodel.get_output(
+                    taxo, adf, gmf_df, param['sec_losses'], rndgen)
+            for lni, ln in enumerate(crmodel.oqparam.loss_names):
+                if ln not in out or len(out[ln]) == 0:
+                    continue
+                alt = out[ln]
+                with mon_agg:
+                    alt = alt.reset_index()
+                    loss_by_EK1[ln] += aggregate_losses(alt, K, kids, correl)
+                if param['collect_rlzs']:
+                    with mon_avg:
+                        ldf = pandas.DataFrame(
+                            dict(aid=alt.aid.to_numpy(), loss=alt.loss))
+                        tot = ldf.groupby('aid').loss.sum()
+                        aids = tot.index.to_numpy()
+                        rlzs = numpy.zeros_like(tot)
+                        loss_by_AR[ln].append(
+                            sparse.coo_matrix(
+                                (tot.to_numpy(), (aids, rlzs)), AR))
+                elif param['avg_losses']:
+                    with mon_avg:
+                        ldf = pandas.DataFrame(
+                            dict(aid=alt.aid.to_numpy(), loss=alt.loss,
+                                 rlz=rlz_id[alt.eid.to_numpy()]))
+                        tot = ldf.groupby(['aid', 'rlz']).loss.sum()
+                        aids, rlzs = zip(*tot.index)
+                        loss_by_AR[ln].append(
+                            sparse.coo_matrix(
+                                (tot.to_numpy(), (aids, rlzs)), AR))
     if loss_by_AR:
         yield loss_by_AR
         loss_by_AR.clear()
