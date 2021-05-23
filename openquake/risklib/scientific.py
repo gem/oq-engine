@@ -81,12 +81,9 @@ class Sampler(object):
         self.lratios = lratios  # for the PM distribution
         self.cols = cols  # for the PM distribution
 
-    def get_losses(self, df, covs):
-        vals = df['val'].to_numpy()
-        if not self.rng or not covs:  # fast lane
-            losses = vals * df['mean'].to_numpy()
-        else:  # slow lane
-            losses = vals * getattr(self, 'sample' + self.distname)(df)
+    def get_losses(self, df):
+        losses = df['val'].to_numpy() * getattr(
+            self, 'sample' + self.distname)(df)
         return losses
 
     def sampleLN(self, df):
@@ -249,6 +246,9 @@ class VulnerabilityFunction(object):
         """
         if asset_df is None:  # in the tests
             asset_df = pandas.DataFrame(dict(aid=0, val=1), [0])
+        if rng is None and self.distribution_name != 'PM':
+            return self._fast(asset_df, gmf_df, col, minloss)
+
         ratio_df = self.interpolate(gmf_df, col)  # really fast
         if self.distribution_name == 'PM':  # special case
             lratios = F64(self.loss_ratios)
@@ -256,15 +256,34 @@ class VulnerabilityFunction(object):
         else:
             lratios = ()
             cols = None
-        df = ratio_df.join(asset_df, how='inner')
-        sampler = Sampler(self.distribution_name, rng, lratios, cols)
-        covs = not hasattr(self, 'covs') or self.covs.any()
-        losses = sampler.get_losses(df, covs)
+        df = ratio_df.join(asset_df, how='inner')  # joining on site_id
+        if rng:
+            losses = Sampler(
+                self.distribution_name, rng, lratios, cols).get_losses(df)
+        else:
+            losses = df['val'].to_numpy() * df['mean'].to_numpy()
         ok = losses > minloss
         if self.distribution_name == 'PM':  # special case
             variances = numpy.zeros(len(losses))
         else:
             variances = (losses * df['cov'].to_numpy())**2
+        return pandas.DataFrame(dict(eid=df.eid[ok], aid=df.aid[ok],
+                                     loss=losses[ok], variance=variances[ok]))
+
+    def _fast(self, asset_df, gmf_df, col, minloss):
+        gmvs = gmf_df[col].to_numpy()
+        gmvs_curve = numpy.piecewise(  # gmvs are clipped to max(iml)
+            gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
+        ok = gmvs_curve >= self.imls[0]  # indices over the minimum
+        curve_ok = gmvs_curve[ok]
+        dic = dict(eid=gmf_df.eid.to_numpy()[ok],
+                   mean=self._mlr_i1d(curve_ok),
+                   cov=self._cov_for(curve_ok))
+        ratio_df = pandas.DataFrame(dic, gmf_df.sid.to_numpy()[ok])
+        df = ratio_df.join(asset_df, how='inner')  # joining on site_id
+        losses = df['val'].to_numpy() * df['mean'].to_numpy()
+        variances = (losses * df['cov'].to_numpy())**2
+        ok = losses > minloss
         return pandas.DataFrame(dict(eid=df.eid[ok], aid=df.aid[ok],
                                      loss=losses[ok], variance=variances[ok]))
 
