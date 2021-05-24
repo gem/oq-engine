@@ -271,21 +271,26 @@ class VulnerabilityFunction(object):
                                      loss=losses[ok], variance=variances[ok]))
 
     def _fast(self, asset_df, gmf_df, col, minloss):
+        # asset_df and gmf_df on the same site
         gmvs = gmf_df[col].to_numpy()
         gmvs_curve = numpy.piecewise(  # gmvs are clipped to max(iml)
             gmvs, [gmvs > self.imls[-1]], [self.imls[-1], lambda x: x])
         ok = gmvs_curve >= self.imls[0]  # indices over the minimum
         curve_ok = gmvs_curve[ok]
-        dic = dict(eid=gmf_df.eid.to_numpy()[ok],
-                   mean=self._mlr_i1d(curve_ok),
-                   cov=self._cov_for(curve_ok))
-        ratio_df = pandas.DataFrame(dic, gmf_df.sid.to_numpy()[ok])
-        df = ratio_df.join(asset_df, how='inner')  # joining on site_id
-        losses = df['val'].to_numpy() * df['mean'].to_numpy()
-        variances = (losses * df['cov'].to_numpy())**2
-        ok = losses > minloss
-        return pandas.DataFrame(dict(eid=df.eid[ok], aid=df.aid[ok],
-                                     loss=losses[ok], variance=variances[ok]))
+        eids = gmf_df.eid.to_numpy()[ok]
+        means = self._mlr_i1d(curve_ok)
+        covs = self._cov_for(curve_ok)
+        dframes = []
+        for rec in asset_df.to_records():
+            losses = rec['val'] * means
+            ok = losses > minloss
+            ne = ok.sum()
+            dic = {'eid': eids[ok]}
+            dic['aid'] = numpy.ones(ne, U32) * rec['aid']
+            dic['loss'] = losses[ok]
+            dic['variance'] = (dic['loss'] * covs[ok])**2
+            dframes.append(pandas.DataFrame(dic))
+        return pandas.concat(dframes, ignore_index=True)
 
     def strictly_increasing(self):
         """
