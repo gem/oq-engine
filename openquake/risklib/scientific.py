@@ -1348,8 +1348,8 @@ class InsuredLosses(object):
         :param out: a dictionary of dataframes keyed by loss_type
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
+        o = out[lt]
         if lt in self.policy_dict and len(o):
-            o = out[lt]
             policy = self.policy_dict[lt]
             eid_aids, ilosses = [], []
             for aid, df in o.groupby('aid'):
