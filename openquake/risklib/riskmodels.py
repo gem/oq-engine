@@ -696,7 +696,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     hcurve = haz.array[self.imtls(imt), 0]
                     outs.append(rm(lt, assets, hcurve))
 
-            # average on the risk models (unsupported for classical_risk)
+            # average on the risk models (unsupported for classical)
             dic[lt] = outs[0]
             if hasattr(dic[lt], 'loss'):  # event_based_risk
                 if weights[0] != 1:
@@ -708,7 +708,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         # compute secondary losses, if any
         # FIXME: it should be moved up, before the computation of the mean
         for sec_loss in sec_losses:
-            sec_loss.update(dic, assets)
+            for lt in self.loss_types:
+                sec_loss.update(lt, dic, assets)
         return dic
 
     def get_rmodels_weights(self, loss_type, taxidx):

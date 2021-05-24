@@ -1342,29 +1342,29 @@ class InsuredLosses(object):
         self.policy_dict = policy_dict
         self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def update(self, out, asset_df):
+    def update(self, lt, out, asset_df):
         """
+        :param lt: a loss type string
         :param out: a dictionary of dataframes keyed by loss_type
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
-        for lt in self.policy_dict:
+        if lt in self.policy_dict and len(o):
             o = out[lt]
-            if len(o):
-                policy = self.policy_dict[lt]
-                eid_aids, ilosses = [], []
-                for aid, df in o.groupby('aid'):
-                    asset = asset_df.loc[aid]
-                    avalue = asset['value-' + lt]
-                    policy_idx = asset[self.policy_name]
-                    ded, lim = policy[policy_idx]
-                    ins = insured_losses(
-                        df.loss.to_numpy(), ded * avalue, lim * avalue)
-                    eid_aids.extend(df.index)
-                    ilosses.extend(ins)
-                eids, aids = zip(*eid_aids)
-                out[lt + '_ins'] = pandas.DataFrame(
-                    dict(eid=U32(eids), aid=U32(aids), loss=ilosses,
-                         variance=numpy.zeros_like(ilosses)))
+            policy = self.policy_dict[lt]
+            eid_aids, ilosses = [], []
+            for aid, df in o.groupby('aid'):
+                asset = asset_df.loc[aid]
+                avalue = asset['value-' + lt]
+                policy_idx = asset[self.policy_name]
+                ded, lim = policy[policy_idx]
+                ins = insured_losses(
+                    df.loss.to_numpy(), ded * avalue, lim * avalue)
+                eid_aids.extend(df.index)
+                ilosses.extend(ins)
+            eids, aids = zip(*eid_aids)
+            out[lt + '_ins'] = pandas.DataFrame(
+                dict(eid=U32(eids), aid=U32(aids), loss=ilosses,
+                     variance=numpy.zeros_like(ilosses)))
 
 
 # not used anymore
