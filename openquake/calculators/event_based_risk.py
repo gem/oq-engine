@@ -65,9 +65,29 @@ def aggregate_losses(alt, K, kids, correl):
     for eid, loss, x in zip(tot.index, tot.loss, tot.x):
         lbe[eid, K] += F32([loss, x])
     if correl:  # restore the variances
-        for k in lbe:
-            lbe[k][1] = lbe[k][1] ** 2
+        for ek in lbe:
+            lbe[ek][1] = lbe[ek][1] ** 2
     return lbe
+
+
+def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
+    """
+    :returns: a sparse coo matrix with the losses per asset and realization
+    """
+    if collect_rlzs:
+        ldf = pandas.DataFrame(
+            dict(aid=alt.aid.to_numpy(), loss=alt.loss))
+        tot = ldf.groupby('aid').loss.sum()
+        aids = tot.index.to_numpy()
+        rlzs = numpy.zeros_like(tot)
+        return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
+    else:
+        ldf = pandas.DataFrame(
+            dict(aid=alt.aid.to_numpy(), loss=alt.loss,
+                 rlz=rlz_id[alt.eid.to_numpy()]))
+        tot = ldf.groupby(['aid', 'rlz']).loss.sum()
+        aids, rlzs = zip(*tot.index)
+        return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
 def split_df(df, cond, maxsize=1000):
@@ -132,30 +152,10 @@ def event_based_risk(df, param, monitor):
                     loss_by_EK1[ln] += aggregate_losses(alt, K, kids, correl)
                 if param['avg_losses']:
                     with mon_avg:
-                        coo = calc_avg_losses(ln, alt, rlz_id, AR,
-                                              param['collect_rlzs'])
+                        coo = average_losses(ln, alt, rlz_id, AR,
+                                             param['collect_rlzs'])
                         loss_by_AR[ln].append(coo)
     return dict(avg=loss_by_AR, alt=_build_risk_by_event(loss_by_EK1))
-
-
-def calc_avg_losses(ln, alt, rlz_id, AR, collect_rlzs):
-    """
-    :returns: a sparse coo matrix with the losses per asset and realization
-    """
-    if collect_rlzs:
-        ldf = pandas.DataFrame(
-            dict(aid=alt.aid.to_numpy(), loss=alt.loss))
-        tot = ldf.groupby('aid').loss.sum()
-        aids = tot.index.to_numpy()
-        rlzs = numpy.zeros_like(tot)
-        return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
-    else:
-        ldf = pandas.DataFrame(
-            dict(aid=alt.aid.to_numpy(), loss=alt.loss,
-                 rlz=rlz_id[alt.eid.to_numpy()]))
-        tot = ldf.groupby(['aid', 'rlz']).loss.sum()
-        aids, rlzs = zip(*tot.index)
-        return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
 def _build_risk_by_event(loss_by_EK1):
