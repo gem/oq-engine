@@ -867,9 +867,8 @@ class HazardCalculator(BaseCalculator):
         R = self.R
         logging.info('There are %d realization(s)', R)
 
-        if oq.imtls:
-            self.datastore['weights'] = arr = build_weights(self.realizations)
-            self.datastore.set_attrs('weights', nbytes=arr.nbytes)
+        self.datastore['weights'] = arr = build_weights(self.realizations)
+        self.datastore.set_attrs('weights', nbytes=arr.nbytes)
 
         if ('event_based' in oq.calculation_mode and R >= TWO16
                 or R >= TWO32):
