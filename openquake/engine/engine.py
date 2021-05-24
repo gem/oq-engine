@@ -305,7 +305,6 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
                     new.params[param] = str(value)
                 new.params['description'] = '%s %s' % (
                     dic['description'], pars)
-                logging.info('Job with %s', pars)
                 jobs.append(new)
         else:
             jobs.append(
