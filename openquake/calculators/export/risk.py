@@ -336,6 +336,8 @@ def export_damages_csv(ekey, dstore):
                        or oq.investigation_time))
     if ekey[0].endswith('stats'):
         rlzs_or_stats = oq.hazard_stats()
+    elif oq.calculation_mode == 'event_based_damage':
+        rlzs_or_stats = ['rlz-000']  # collect_rlzs is True
     else:
         rlzs_or_stats = ['rlz-%03d' % r for r in range(len(rlzs))]
     name = ekey[0].split('-')[0]

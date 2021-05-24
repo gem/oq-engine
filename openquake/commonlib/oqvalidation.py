@@ -19,10 +19,12 @@
 
 import os
 import re
+import ast
 import json
 import inspect
 import logging
 import functools
+import collections
 import multiprocessing
 import numpy
 
@@ -1668,8 +1670,15 @@ class OqParam(valid.ParamSet):
 
     def __fromh5__(self, array, attrs):
         if isinstance(array, numpy.ndarray):  # old format <= 3.11
-            pars = dict(array)
-            if 'hazard_calculation_id' in pars:  # read hc_id only
-                self.hazard_calculation_id = int(pars['hazard_calculation_id'])
+            dd = collections.defaultdict(dict)
+            for (name_, literal_) in array:
+                name = python3compat.decode(name_)
+                literal = python3compat.decode(literal_)
+                if '.' in name:
+                    k1, k2 = name.split('.', 1)
+                    dd[k1][k2] = ast.literal_eval(literal)
+                else:
+                    dd[name] = ast.literal_eval(literal)
+            vars(self).update(dd)
         else:  # new format >= 3.12
             vars(self).update(json.loads(python3compat.decode(array)))
