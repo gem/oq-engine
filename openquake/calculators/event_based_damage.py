@@ -83,18 +83,19 @@ def event_based_damage(df, param, monitor):
     dmgcsq = zero_dmgcsq(assets_df, crmodel)
     A, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
+    loss_names = crmodel.oqparam.loss_names
     with mon_risk:
         dddict = general.AccumDict(accum=numpy.zeros((L, Dc), F32))  # eid, kid
-        for taxo, asset_df in assets_df.groupby('taxonomy'):
-            for sid, adf in asset_df.groupby('site_id'):
-                gmf_df = df[df.sid == sid]
-                if len(gmf_df) == 0:
-                    continue
-                # working one site at the time
+        for sid, asset_df in assets_df.groupby('site_id'):
+            # working one site at the time
+            gmf_df = df[df.sid == sid]
+            if len(gmf_df) == 0:
+                continue
+            for taxo, adf in asset_df.groupby('taxonomy'):
                 out = crmodel.get_output(taxo, adf, gmf_df)
-                eids = out['eids']
-                aids = out['assets']['ordinal']
-                for lti, lt in enumerate(out['loss_types']):
+                eids = gmf_df.eid.to_numpy()
+                aids = adf.index.to_numpy()
+                for lti, lt in enumerate(loss_names):
                     fractions = out[lt]
                     Asid, E, D = fractions.shape
                     ddd = numpy.zeros((Asid, E, Dc), F32)

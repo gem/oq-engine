@@ -53,9 +53,9 @@ class RiskInput(object):
                 haz = hazard_getter.get_hazard()
         with monitor('computing risk', measuremem=False):
             for taxo, assets in self.assets.groupby('taxonomy'):
-                if hasattr(haz, 'groupby'):  # DataFrame
+                if hasattr(haz, 'groupby'):  # DataFrame, scenario_damage
                     yield crmodel.get_output(taxo, assets, haz)
-                else:  # list of probability curves
+                else:  # list of probability curves, classical
                     for rlz, pc in enumerate(haz):
                         yield crmodel.get_output(taxo, assets, pc, rlz=rlz)
 
