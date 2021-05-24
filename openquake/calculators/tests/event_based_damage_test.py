@@ -20,7 +20,7 @@ import numpy
 
 from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.event_based_damage import (
-    case_11, case_12, case_13, case_14)
+    case_11, case_12, case_13, case_14, case_15)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
@@ -105,6 +105,19 @@ class EventBasedDamageTestCase(CalculatorTestCase):
     def test_case_14(self):
         # test event_based_damage, aggregate_by=NAME_1
         self.run_calc(case_14.__file__, 'job.ini')
+        [f1, f2] = export(('aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f1), f1, delta=1E-5)
+        self.assertEqualFiles('expected/' + strip_calc_id(f2), f2, delta=1E-5)
+
+    def test_case_15(self):
+        # test with sampling
+        self.run_calc(case_15.__file__, 'job.ini')
+
+        # check damages-rlzs
+        [f] = export(('damages-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+
+        # check aggcurves, agglosses
         [f1, f2] = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(f1), f1, delta=1E-5)
         self.assertEqualFiles('expected/' + strip_calc_id(f2), f2, delta=1E-5)
