@@ -90,7 +90,7 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def split_df(df, cond, maxsize=1000):
+def split_df(df, cond=True, maxsize=1000):
     """
     :param df: a large dataframe
     :param cond: boolean condition for splitting
