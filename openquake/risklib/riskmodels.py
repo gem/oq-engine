@@ -723,7 +723,8 @@ class CompositeRiskModel(collections.abc.Mapping):
             outs = []
             for rm in rmodels:
                 imt = rm.imt_by_lt[lt]
-                out = rm.interpolate(gmf_df, alias.get(imt, imt))
+                rf = rm.risk_functions[lt, 'vulnerability']
+                out = rf.interpolate(gmf_df, alias.get(imt, imt))
                 outs.append(out)
             dic[lt] = stats.average_df(outs, weights)
         return dic
