@@ -26,8 +26,9 @@ import pandas
 
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
-from openquake.baselib.general import AccumDict, cached_property, groupby
-from openquake.hazardlib import valid, nrml, InvalidFile
+from openquake.baselib.general import (
+    AccumDict, cached_property, groupby, gen_slices)
+from openquake.hazardlib import valid, nrml, stats, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
@@ -403,6 +404,21 @@ def get_riskmodel(taxonomy, oqparam, **extra):
     return RiskModel(oqparam.calculation_mode, taxonomy, **extra)
 
 
+def split_df(df, cond=True, maxsize=1000):
+    """
+    :param df: a large dataframe
+    :param cond: boolean condition for splitting
+    :param maxsize: split dataframes larger than maxsize
+    :yields: dataframes smaller than maxsize
+    """
+    n = len(df)
+    if n <= maxsize or not cond:
+        yield df
+    else:
+        for slc in gen_slices(0, len(df), maxsize):
+            yield df[slc]
+
+
 # ######################## CompositeRiskModel #########################
 
 class ValidationError(Exception):
@@ -710,6 +726,65 @@ class CompositeRiskModel(collections.abc.Mapping):
         for sec_loss in sec_losses:
             for lt in self.loss_types:
                 sec_loss.update(lt, dic, assets)
+        return dic
+
+    # called by event_based_risk fast
+    def gen_outputs(self, taxo, asset_df, gmf_df, param):
+        """
+        :param taxo: a taxonomy index
+        :param asset_df: a DataFrame of assets of the given taxonomy
+        :param gmf_df: a DataFrame of GMVs on the sites
+        :param param: a dictionary of extra parameters
+        :yields: dictionaries keyed by the loss type
+        """
+        ratios = self.get_interp_ratios(taxo, gmf_df)  # fast
+        minimum_asset_loss = self.oqparam.minimum_asset_loss
+        for adf in split_df(asset_df):
+            assets_by_sid = adf.groupby('site_id')
+            dic = {}
+            for ln, ratio_df in ratios.items():
+                min_loss = minimum_asset_loss[ln]
+                dic = dict(eid=[], aid=[], loss=[], variance=[])
+                n_oks = 0
+                for sid, adf in assets_by_sid:
+                    r = ratio_df[ratio_df.index == sid]
+                    if len(r) == 0:
+                        continue
+                    means = r['mean'].to_numpy()
+                    covs = r['cov'].to_numpy()
+                    eids = r['eid'].to_numpy()
+                    for aid, val in zip(adf.index, adf['value-' + ln]):
+                        losses = val * means
+                        ok = losses > min_loss
+                        n_ok = ok.sum()
+                        if n_ok:
+                            dic['eid'].append(eids[ok])
+                            dic['aid'].append(numpy.ones(n_ok, U32) * aid)
+                            dic['loss'].append(losses[ok])
+                            dic['variance'].append((losses[ok] * covs[ok])**2)
+                            n_oks += n_ok
+                if n_oks == 0:
+                    continue
+                for key, vals in dic.items():
+                    dic[key] = numpy.concatenate(vals)
+                dic[ln] = pandas.DataFrame(dic)
+            yield dic
+
+    def get_interp_ratios(self, taxo, gmf_df):
+        """
+        :returns: a dictionary loss_type -> loss ratios DataFrame
+        """
+        alias = {imt: 'gmv_%d' % i for i, imt in enumerate(self.primary_imtls)}
+        dic = {}  # lt -> ratio_df
+        for lt in self.loss_types:
+            rmodels, weights = self.get_rmodels_weights(lt, taxo)
+            outs = []
+            for rm in rmodels:
+                imt = rm.imt_by_lt[lt]
+                rf = rm.risk_functions[lt, 'vulnerability']
+                out = rf.interpolate(gmf_df, alias.get(imt, imt))
+                outs.append(out)
+            dic[lt] = stats.average_df(outs, weights)
         return dic
 
     def get_rmodels_weights(self, loss_type, taxidx):
