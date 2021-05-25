@@ -135,8 +135,7 @@ def event_based_risk(df, param, monitor):
         rndgen = None
     else:
         rndgen = MultiEventRNG(
-            param['master_seed'], numpy.unique(df.eid),
-            param['asset_correlation'])
+            param['master_seed'], df.eid.unique(), param['asset_correlation'])
 
     def outputs():
         for taxo, asset_df in assets_df.groupby('taxonomy'):

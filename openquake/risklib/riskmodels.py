@@ -728,7 +728,15 @@ class CompositeRiskModel(collections.abc.Mapping):
                 sec_loss.update(lt, dic, assets)
         return dic
 
+    # called by event_based_risk fast
     def gen_outputs(self, taxo, asset_df, gmf_df, param):
+        """
+        :param taxo: a taxonomy index
+        :param asset_df: a DataFrame of assets of the given taxonomy
+        :param gmf_df: a DataFrame of GMVs on the sites
+        :param param: a dictionary of extra parameters
+        :yields: dictionaries keyed by the loss type
+        """
         ratios = self.get_interp_ratios(taxo, gmf_df)  # fast
         minimum_asset_loss = self.oqparam.minimum_asset_loss
         for adf in split_df(asset_df):
