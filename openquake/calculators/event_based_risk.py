@@ -148,8 +148,7 @@ def event_based_risk(df, param, monitor):
                 yield crmodel.get_output(
                     taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
             else:
-                yield from crmodel.gen_outputs(
-                    taxo, asset_df, gmf_df, param['sec_losses'])
+                yield from crmodel.gen_outputs(taxo, asset_df, gmf_df, param)
 
     return aggreg(outputs(), crmodel, AR, kids, rlz_id, param, monitor)
 
