@@ -143,8 +143,11 @@ def event_based_risk(df, param, monitor):
             ebr_slow(taxo, asset_df, gmf_df, crmodel, AR, K, kids, rlz_id,
                      rndgen, param, loss_by_EK1, loss_by_AR, mons)
         else:
+            with mons[0]:
+                ratios = crmodel.get_interp_ratios(taxo, gmf_df)
+            mal = crmodel.oqparam.minimum_asset_loss
             for adf in split_df(asset_df):
-                ebr_fast(taxo, adf, gmf_df, crmodel, AR, K, kids, rlz_id,
+                ebr_fast(adf, ratios, mal, AR, K, kids, rlz_id,
                          param, loss_by_EK1, loss_by_AR, mons)
     return dict(avg=loss_by_AR, alt=_build_risk_by_event(loss_by_EK1))
 
@@ -170,14 +173,12 @@ def ebr_slow(taxo, asset_df, gmf_df, crmodel, AR, K, kids, rlz_id,
                 loss_by_AR[ln].append(coo)
 
 
-def ebr_fast(taxo, asset_df, gmf_df, crmodel, AR, K, kids, rlz_id,
+def ebr_fast(asset_df, ratios, minimum_asset_loss, AR, K, kids, rlz_id,
              param, loss_by_EK1, loss_by_AR, mons):
     mon_risk, mon_agg, mon_avg = mons
-    with mon_risk:
-        assets_by_sid = asset_df.groupby('site_id')
-        ratios = crmodel.get_interp_ratios(taxo, gmf_df)
+    assets_by_sid = asset_df.groupby('site_id')
     for ln, ratio_df in ratios.items():
-        min_loss = crmodel.oqparam.minimum_asset_loss[ln]
+        min_loss = minimum_asset_loss[ln]
         dic = dict(eid=[], aid=[], loss=[], variance=[])
         n_oks = 0
         for sid, adf in assets_by_sid:
