@@ -143,31 +143,31 @@ def event_based_risk(df, param, monitor):
             ebr_slow(taxo, asset_df, gmf_df, crmodel, AR, K, kids, rlz_id,
                      rndgen, param, loss_by_EK1, loss_by_AR, mons)
         else:
-            ebr_fast(taxo, asset_df, gmf_df, crmodel, AR, K, kids, rlz_id,
-                     param, loss_by_EK1, loss_by_AR, mons)
+            for adf in split_df(asset_df):
+                ebr_fast(taxo, adf, gmf_df, crmodel, AR, K, kids, rlz_id,
+                         param, loss_by_EK1, loss_by_AR, mons)
     return dict(avg=loss_by_AR, alt=_build_risk_by_event(loss_by_EK1))
 
 
 def ebr_slow(taxo, asset_df, gmf_df, crmodel, AR, K, kids, rlz_id,
              rndgen, param, loss_by_EK1, loss_by_AR, mons):
     mon_risk, mon_agg, mon_avg = mons
-    for adf in split_df(asset_df, rndgen is None):
-        with mon_risk:
-            out = crmodel.get_output(
-                taxo, adf, gmf_df, param['sec_losses'], rndgen)
-        for lni, ln in enumerate(crmodel.oqparam.loss_names):
-            if ln not in out or len(out[ln]) == 0:
-                continue
-            alt = out[ln]
-            with mon_agg:
-                alt = alt.reset_index()
-                loss_by_EK1[ln] += aggregate_losses(alt, K, kids,
-                                                    param['asset_correlation'])
-            if param['avg_losses']:
-                with mon_avg:
-                    coo = average_losses(ln, alt, rlz_id, AR,
-                                         param['collect_rlzs'])
-                    loss_by_AR[ln].append(coo)
+    with mon_risk:
+        out = crmodel.get_output(
+            taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
+    for lni, ln in enumerate(crmodel.oqparam.loss_names):
+        if ln not in out or len(out[ln]) == 0:
+            continue
+        alt = out[ln]
+        with mon_agg:
+            alt = alt.reset_index()
+            loss_by_EK1[ln] += aggregate_losses(alt, K, kids,
+                                                param['asset_correlation'])
+        if param['avg_losses']:
+            with mon_avg:
+                coo = average_losses(ln, alt, rlz_id, AR,
+                                     param['collect_rlzs'])
+                loss_by_AR[ln].append(coo)
 
 
 def ebr_fast(taxo, asset_df, gmf_df, crmodel, AR, K, kids, rlz_id,
