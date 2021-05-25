@@ -160,7 +160,8 @@ def event_based_risk(df, param, monitor):
             if len(gmf_df) == 0:
                 continue
             if rndgen:
-                yield ebr_slow(taxo, asset_df, gmf_df, crmodel, rndgen, param)
+                yield crmodel.get_output(
+                    taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
             else:
                 ratios = crmodel.get_interp_ratios(taxo, gmf_df)  # fast
                 mal = crmodel.oqparam.minimum_asset_loss
@@ -168,16 +169,6 @@ def event_based_risk(df, param, monitor):
                     yield ebr_fast(adf, ratios, mal, param)
 
     return aggreg(outputs(), crmodel, AR, kids, rlz_id, param, monitor)
-
-
-def ebr_slow(taxo, asset_df, gmf_df, crmodel, rnd, param):
-    out = crmodel.get_output(taxo, asset_df, gmf_df, param['sec_losses'], rnd)
-    dic = {}
-    for ln in crmodel.oqparam.loss_names:
-        if ln not in out or len(out[ln]) == 0:
-            continue
-        dic[ln] = out[ln]
-    return dic
 
 
 def ebr_fast(asset_df, ratios, minimum_asset_loss, param):
