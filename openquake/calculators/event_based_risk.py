@@ -84,7 +84,8 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
     else:
         ldf = pandas.DataFrame(
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy(),
-                 rlz=rlz_id[U32(alt.eid)]))
+                 rlz=rlz_id[U32(alt.eid)]))  # NB: with the U32 here
+        # the SURA calculation would fail with alt.eid being F64 (?)
         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
         aids, rlzs = zip(*tot.index)
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
@@ -105,6 +106,29 @@ def split_df(df, cond=True, maxsize=1000):
             yield df[slc]
 
 
+def aggreg(outputs, crmodel, AR, kids, rlz_id, param, monitor):
+    mon_agg = monitor('aggregating losses', measuremem=False)
+    mon_avg = monitor('averaging losses', measuremem=False)
+    loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
+    loss_by_EK1 = {ln: general.AccumDict(accum=numpy.zeros(2, F32))
+                   for ln in crmodel.oqparam.loss_names}
+    for out in outputs:
+        for lni, ln in enumerate(crmodel.oqparam.loss_names):
+            if ln not in out or len(out[ln]) == 0:
+                continue
+            alt = out[ln]
+            with mon_agg:
+                alt = alt.reset_index()
+                loss_by_EK1[ln] += aggregate_losses(
+                    alt, param['K'], kids, param['asset_correlation'])
+            if param['avg_losses']:
+                with mon_avg:
+                    coo = average_losses(ln, alt, rlz_id, AR,
+                                         param['collect_rlzs'])
+                    loss_by_AR[ln].append(coo)
+    return dict(avg=loss_by_AR, alt=_build_risk_by_event(loss_by_EK1))
+
+
 def event_based_risk(df, param, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_...
@@ -112,71 +136,53 @@ def event_based_risk(df, param, monitor):
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    mons = (monitor('computing risk', measuremem=False),
-            monitor('aggregating losses', measuremem=False),
-            monitor('averaging losses', measuremem=False))
     dstore = datastore.read(param['hdf5path'], parentdir=param['parentdir'])
-    K = param['K']
     with dstore, monitor('reading data'):
         if hasattr(df, 'start'):  # it is actually a slice
             df = dstore.read_df('gmf_data', slc=df)
         assets_df = dstore.read_df('assetcol/array', 'ordinal')
-        kids = dstore['assetcol/kids'][:] if K else ()
+        kids = dstore['assetcol/kids'][:] if param['K'] else ()
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if param['collect_rlzs'] else dstore['weights'][()]
     AR = len(assets_df), len(weights)
-    loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
-    loss_by_EK1 = {ln: general.AccumDict(accum=numpy.zeros(2, F32))
-                   for ln in crmodel.oqparam.loss_names}
     if crmodel.oqparam.ignore_master_seed or crmodel.oqparam.ignore_covs:
         rndgen = None
     else:
         rndgen = MultiEventRNG(
             param['master_seed'], numpy.unique(df.eid),
             param['asset_correlation'])
-    for taxo, asset_df in assets_df.groupby('taxonomy'):
-        gmf_df = df[numpy.isin(df.sid.to_numpy(), asset_df.site_id.to_numpy())]
-        if len(gmf_df) == 0:
-            continue
-        if rndgen:
-            ebr_slow(taxo, asset_df, gmf_df, crmodel, AR, K, kids, rlz_id,
-                     rndgen, param, loss_by_EK1, loss_by_AR, mons)
-        else:
-            with mons[0]:
-                ratios = crmodel.get_interp_ratios(taxo, gmf_df)
-            mal = crmodel.oqparam.minimum_asset_loss
-            for adf in split_df(asset_df):
-                ebr_fast(adf, ratios, mal, AR, K, kids, rlz_id,
-                         param, loss_by_EK1, loss_by_AR, mons)
-    return dict(avg=loss_by_AR, alt=_build_risk_by_event(loss_by_EK1))
+
+    def outputs():
+        for taxo, asset_df in assets_df.groupby('taxonomy'):
+            gmf_df = df[numpy.isin(df.sid.to_numpy(),
+                                   asset_df.site_id.to_numpy())]
+            if len(gmf_df) == 0:
+                continue
+            if rndgen:
+                yield ebr_slow(taxo, asset_df, gmf_df, crmodel, rndgen, param)
+            else:
+                ratios = crmodel.get_interp_ratios(taxo, gmf_df)  # fast
+                mal = crmodel.oqparam.minimum_asset_loss
+                for adf in split_df(asset_df):
+                    yield ebr_fast(adf, ratios, mal, param)
+
+    return aggreg(outputs(), crmodel, AR, kids, rlz_id, param, monitor)
 
 
-def ebr_slow(taxo, asset_df, gmf_df, crmodel, AR, K, kids, rlz_id,
-             rndgen, param, loss_by_EK1, loss_by_AR, mons):
-    mon_risk, mon_agg, mon_avg = mons
-    with mon_risk:
-        out = crmodel.get_output(
-            taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
-    for lni, ln in enumerate(crmodel.oqparam.loss_names):
+def ebr_slow(taxo, asset_df, gmf_df, crmodel, rnd, param):
+    out = crmodel.get_output(taxo, asset_df, gmf_df, param['sec_losses'], rnd)
+    dic = {}
+    for ln in crmodel.oqparam.loss_names:
         if ln not in out or len(out[ln]) == 0:
             continue
-        alt = out[ln]
-        with mon_agg:
-            alt = alt.reset_index()
-            loss_by_EK1[ln] += aggregate_losses(alt, K, kids,
-                                                param['asset_correlation'])
-        if param['avg_losses']:
-            with mon_avg:
-                coo = average_losses(ln, alt, rlz_id, AR,
-                                     param['collect_rlzs'])
-                loss_by_AR[ln].append(coo)
+        dic[ln] = out[ln]
+    return dic
 
 
-def ebr_fast(asset_df, ratios, minimum_asset_loss, AR, K, kids, rlz_id,
-             param, loss_by_EK1, loss_by_AR, mons):
-    mon_risk, mon_agg, mon_avg = mons
+def ebr_fast(asset_df, ratios, minimum_asset_loss, param):
     assets_by_sid = asset_df.groupby('site_id')
+    dic = {}
     for ln, ratio_df in ratios.items():
         min_loss = minimum_asset_loss[ln]
         dic = dict(eid=[], aid=[], loss=[], variance=[])
@@ -202,15 +208,8 @@ def ebr_fast(asset_df, ratios, minimum_asset_loss, AR, K, kids, rlz_id,
             continue
         for key, vals in dic.items():
             dic[key] = numpy.concatenate(vals)
-        with mon_agg:
-            alt = pandas.DataFrame(dic)
-            loss_by_EK1[ln] += aggregate_losses(alt, K, kids,
-                                                param['asset_correlation'])
-        if param['avg_losses']:
-            with mon_avg:
-                coo = average_losses(ln, alt, rlz_id, AR,
-                                     param['collect_rlzs'])
-                loss_by_AR[ln].append(coo)
+        dic[ln] = pandas.DataFrame(dic)
+    return dic
 
 
 def _build_risk_by_event(loss_by_EK1):
