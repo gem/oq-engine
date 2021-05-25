@@ -84,7 +84,7 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
     else:
         ldf = pandas.DataFrame(
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy(),
-                 rlz=rlz_id[alt.eid.to_numpy()]))
+                 rlz=rlz_id[U32(alt.eid)]))
         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
         aids, rlzs = zip(*tot.index)
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
