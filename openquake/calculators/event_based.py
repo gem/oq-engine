@@ -370,9 +370,9 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         size = self.datastore.getsize('gmf_data')
         logging.info(f'Stored {humansize(size)} of GMFs')
-        if size > 1024**3:
+        if size > 100 * 1024**2:
             logging.warning(
-                'There are more than 1 GB of GMFs, not computing avg_gmf')
+                'There are more than 100 MB of GMFs, not computing avg_gmf')
             return numpy.unique(self.datastore['gmf_data/eid'][:])
 
         rlzs = self.datastore['events']['rlz_id']
