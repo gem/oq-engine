@@ -2,7 +2,7 @@
 name: GDAL test action for Windows
 on:
   push:
-    branches: [ cleanup ]
+    branches: [ requirements ]
 jobs:
   install:
     runs-on: windows-latest
