@@ -27,7 +27,7 @@ import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property, groupby
-from openquake.hazardlib import valid, nrml, InvalidFile
+from openquake.hazardlib import valid, nrml, stats, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
 from openquake.risklib import scientific
 
@@ -710,6 +710,22 @@ class CompositeRiskModel(collections.abc.Mapping):
         for sec_loss in sec_losses:
             for lt in self.loss_types:
                 sec_loss.update(lt, dic, assets)
+        return dic
+
+    def get_interp_ratios(self, taxo, gmf_df):
+        """
+        :returns: a dictionary loss_type -> loss ratios DataFrame
+        """
+        alias = {imt: 'gmv_%d' % i for i, imt in enumerate(self.primary_imtls)}
+        dic = {}  # lt -> ratio_df
+        for lt in self.loss_types:
+            rmodels, weights = self.get_rmodels_weights(lt, taxo)
+            outs = []
+            for rm in rmodels:
+                imt = rm.imt_by_lt[lt]
+                out = rm.interpolate(gmf_df, alias.get(imt, imt))
+                outs.append(out)
+            dic[lt] = stats.average_df(outs, weights)
         return dic
 
     def get_rmodels_weights(self, loss_type, taxidx):

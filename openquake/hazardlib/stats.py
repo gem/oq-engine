@@ -19,6 +19,7 @@
 Utilities to compute mean and quantile curves
 """
 import numpy
+import pandas
 from scipy.stats import norm
 from openquake.baselib.general import agg_probs
 
@@ -311,3 +312,30 @@ def combine_probs(values_by_grp, cmakers, rlz):
             if rlz in rlzs:
                 probs.append(values[..., g])
     return agg_probs(*probs)
+
+
+def average_df(dframes, weights=None):
+    """
+    Compute weighted average of DataFrames with the same index and columns.
+
+    >>> df1 = pandas.DataFrame(dict(value=[1, 1, 1]), [1, 2, 3])
+    >>> df2 = pandas.DataFrame(dict(value=[2, 2, 2]), [1, 2, 3])
+    >>> average_df([df1, df2], [.4, .6])
+       value
+    1    1.6
+    2    1.6
+    3    1.6
+    """
+    d0 = dframes[0]
+    n = len(dframes)
+    if n == 1:
+        return d0
+    elif weights is None:
+        weights = numpy.ones(n)
+    elif len(weights) != n:
+        raise ValueError('There are %d weights for %d dataframes!' %
+                         (len(weights), n))
+    data = numpy.average([df.to_numpy() for df in dframes],
+                         weights=weights, axis=0)  # shape (E, C)
+    return pandas.DataFrame({
+        col: data[:, c] for c, col in enumerate(d0.columns)}, d0.index)
