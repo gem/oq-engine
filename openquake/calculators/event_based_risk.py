@@ -91,21 +91,6 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def split_df(df, cond=True, maxsize=1000):
-    """
-    :param df: a large dataframe
-    :param cond: boolean condition for splitting
-    :param maxsize: split dataframes larger than maxsize
-    :yields: dataframes smaller than maxsize
-    """
-    n = len(df)
-    if n <= maxsize or not cond:
-        yield df
-    else:
-        for slc in general.gen_slices(0, len(df), maxsize):
-            yield df[slc]
-
-
 def aggreg(outputs, crmodel, AR, kids, rlz_id, param, monitor):
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
@@ -163,44 +148,10 @@ def event_based_risk(df, param, monitor):
                 yield crmodel.get_output(
                     taxo, asset_df, gmf_df, param['sec_losses'], rndgen)
             else:
-                ratios = crmodel.get_interp_ratios(taxo, gmf_df)  # fast
-                mal = crmodel.oqparam.minimum_asset_loss
-                for adf in split_df(asset_df):
-                    yield ebr_fast(adf, ratios, mal, param)
+                yield from crmodel.gen_outputs(
+                    taxo, asset_df, gmf_df, param['sec_losses'])
 
     return aggreg(outputs(), crmodel, AR, kids, rlz_id, param, monitor)
-
-
-def ebr_fast(asset_df, ratios, minimum_asset_loss, param):
-    assets_by_sid = asset_df.groupby('site_id')
-    dic = {}
-    for ln, ratio_df in ratios.items():
-        min_loss = minimum_asset_loss[ln]
-        dic = dict(eid=[], aid=[], loss=[], variance=[])
-        n_oks = 0
-        for sid, adf in assets_by_sid:
-            r = ratio_df[ratio_df.index == sid]
-            if len(r) == 0:
-                continue
-            means = r['mean'].to_numpy()
-            covs = r['cov'].to_numpy()
-            eids = r['eid'].to_numpy()
-            for aid, val in zip(adf.index, adf['value-' + ln]):
-                losses = val * means
-                ok = losses > min_loss
-                n_ok = ok.sum()
-                if n_ok:
-                    dic['eid'].append(eids[ok])
-                    dic['aid'].append(numpy.ones(n_ok, U32) * aid)
-                    dic['loss'].append(losses[ok])
-                    dic['variance'].append((losses[ok] * covs[ok])**2)
-                    n_oks += n_ok
-        if n_oks == 0:
-            continue
-        for key, vals in dic.items():
-            dic[key] = numpy.concatenate(vals)
-        dic[ln] = pandas.DataFrame(dic)
-    return dic
 
 
 def _build_risk_by_event(loss_by_EK1):
