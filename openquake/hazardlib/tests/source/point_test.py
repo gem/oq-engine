@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -14,8 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+import numpy
 from openquake.hazardlib.const import TRT
-from openquake.hazardlib.source.point import PointSource
+from openquake.hazardlib.source.point import PointSource, CollapsedPointSource
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from openquake.hazardlib.scalerel.peer import PeerMSR
@@ -26,6 +27,8 @@ from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.tests.geo.surface import \
     _planar_test_data as planar_surface_test_data
 from openquake.hazardlib.tests import assert_pickleable
+
+aac = numpy.testing.assert_allclose
 
 
 def make_point_source(lon=1.2, lat=3.4, **kwargs):
@@ -359,8 +362,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
             ]
             self.assertTrue(isinstance(actual_rupture,
                                        ParametricProbabilisticRupture))
-            self.assertEqual(actual_rupture.occurrence_rate,
-                             expected_occurrence_rate)
+            self.assertAlmostEqual(actual_rupture.occurrence_rate,
+                                   expected_occurrence_rate)
             self.assertIs(actual_rupture.temporal_occurrence_model, tom)
             self.assertEqual(actual_rupture.tectonic_region_type, trt)
             surface = actual_rupture.surface
@@ -370,6 +373,11 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
             self.assertEqual(tr, surface.top_right)
             self.assertEqual(bl, surface.bottom_left)
             self.assertEqual(br, surface.bottom_right)
+
+        # check avg_ruptures
+        avg_ruptures = list(point_source.avg_ruptures())
+        self.assertEqual([pr.hypocenter.depth for pr in avg_ruptures],
+                         [9.2, 9.2])  # weighted mean between 9 and 10
 
     def test_high_magnitude(self):
         rupture = self._get_rupture(min_mag=9, max_mag=10, hypocenter_depth=8,
@@ -421,3 +429,23 @@ class PointSourceMaxRupProjRadiusTestCase(unittest.TestCase):
         source = make_point_source(nodal_plane_distribution=np_dist, mfd=mfd)
         radius = source._get_max_rupture_projection_radius()
         self.assertAlmostEqual(radius, 3.8712214)
+
+
+class CollapsedPointSourceTestCase(unittest.TestCase):
+    def test(self):
+        ps1 = make_point_source(lon=1.2, lat=3.4)
+        ps2 = make_point_source(
+            lon=1.3, lat=3.4, hypocenter_distribution=PMF([(.5, 4), (.5, 3)]))
+        aac(ps1.get_annual_occurrence_rates(),
+            [(3.5, 9.9e-06), (4.5, 9.9e-08)])
+        aac(ps2.get_annual_occurrence_rates(),
+            [(3.5, 9.9e-06), (4.5, 9.9e-08)])
+        cps = CollapsedPointSource('1', [ps1, ps2])
+        aac(cps.location.x, 1.25)
+        aac(cps.location.y, 3.4)
+        aac(cps.location.z, 3.75)
+        rates = cps.get_annual_occurrence_rates()
+        aac(rates, [(3.5, 1.98e-05), (4.5, 1.98e-07)])
+        aac(ps1.count_ruptures(), 2)
+        aac(ps2.count_ruptures(), 4)
+        aac(cps.count_ruptures(), 6)

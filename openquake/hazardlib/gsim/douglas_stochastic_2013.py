@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports 
+Module exports
 :class:`DouglasEtAl2013StochasticSD001Q200K005`
 :class:`DouglasEtAl2013StochasticSD001Q200K020`
 :class:`DouglasEtAl2013StochasticSD001Q200K040`
@@ -136,10 +136,13 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: The required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: The required distance parameter is hypocentral distance
-    REQUIRES_DISTANCES = set(('rhypo',))
+    REQUIRES_DISTANCES = {'rhypo'}
+
+    #: Definined for a reference velocity of 1100 m/s (Table 4)
+    DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

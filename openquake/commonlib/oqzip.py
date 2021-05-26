@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ import os.path
 import logging
 from openquake.baselib import general
 from openquake.risklib.asset import Exposure
-from openquake.commonlib import readinput, logictree
+from openquake.commonlib import readinput, logictree, oqvalidation
 
 
 def zip_all(directory):
@@ -53,14 +53,16 @@ def zip_source_model(ssmLT, archive_zip='', log=logging.info):
     archive_zip = archive_zip or os.path.join(basedir, 'ssmLT.zip')
     if os.path.exists(archive_zip):
         sys.exit('%s exists already' % archive_zip)
-    oq = mock.Mock(inputs={'source_model_logic_tree': ssmLT})
+    smlt = logictree.SourceModelLogicTree(ssmLT)
+    files = list(smlt.hdf5_files) + smlt.info.smpaths
+    oq = mock.Mock(inputs={'source_model_logic_tree': ssmLT},
+                   random_seed=42, number_of_logic_tree_samples=0,
+                   sampling_method='early_weights')
     checksum = readinput.get_checksum32(oq)
     checkfile = os.path.join(os.path.dirname(ssmLT), 'CHECKSUM.txt')
     with open(checkfile, 'w') as f:
         f.write(str(checksum))
-    files = [os.path.abspath(ssmLT), os.path.abspath(checkfile)]
-    for fs in logictree.collect_info(ssmLT).smpaths.values():
-        files.extend(fs)
+    files.extend([os.path.abspath(ssmLT), os.path.abspath(checkfile)])
     general.zipfiles(files, archive_zip, log=log, cleanup=True)
     return archive_zip
 
@@ -92,12 +94,13 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
         if os.path.exists(archive_zip):
             sys.exit('%s exists already' % archive_zip)
     # do not validate to avoid permissions error on the export_dir
-    oq = oq or readinput.get_oqparam(job_ini, validate=False)
+    oq = oq or oqvalidation.OqParam(**readinput.get_params(job_ini))
     if risk_ini:
         risk_ini = os.path.normpath(os.path.abspath(risk_ini))
-        risk_inputs = readinput.get_params([risk_ini])['inputs']
-        del risk_inputs['job_ini']
-        oq.inputs.update(risk_inputs)
+        oqr = readinput.get_oqparam(risk_ini)
+        del oqr.inputs['job_ini']
+        oq.inputs.update(oqr.inputs)
+        oq.shakemap_uri.update(oqr.shakemap_uri)
     files = readinput.get_input_files(oq)
     if risk_ini:
         files = [risk_ini] + files

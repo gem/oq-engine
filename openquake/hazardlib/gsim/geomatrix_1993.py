@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -62,10 +62,10 @@ class Geomatrix1993SSlabNSHMP2008(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters are magnitude and top of rupture depth
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'ztor'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     #: Required distance measure is rrup (closest distance to rupture)
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     # Shear-wave velocity for reference soil conditions in [m s-1])
     REQUIRES_SITES_PARAMETERS = set()

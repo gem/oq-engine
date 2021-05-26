@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<consequenceModel id="example" assetCategory="buildings" lossCategory="structural">
+
+  <description>Simple consequence model</description>
+  <limitStates>LS1 LS2</limitStates>
+
+  <consequenceFunction id="RM" dist="LN">
+    <params ls="LS1" mean="0.04" stddev="0.00"/>
+    <params ls="LS2" mean="0.16" stddev="0.00"/>
+  </consequenceFunction>
+
+  <consequenceFunction id="W" dist="LN">
+    <params ls="LS1" mean="0.04" stddev="0.00"/>
+    <params ls="LS2" mean="0.16" stddev="0.00"/>
+  </consequenceFunction>
+
+  <consequenceFunction id="RC" dist="LN">
+    <params ls="LS1" mean="0.04" stddev="0.00"/>
+    <params ls="LS2" mean="0.16" stddev="0.00"/>
+  </consequenceFunction>
+
+</consequenceModel>
+
+</nrml>

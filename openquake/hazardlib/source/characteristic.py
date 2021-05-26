@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,15 +17,12 @@
 Module :mod:`openquake.hazardlib.source.characteristic` defines
 :class:`CharacteristicFaultSource`.
 """
-import numpy
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.baselib.slots import with_slots
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 
 
-@with_slots
 class CharacteristicFaultSource(ParametricSeismicSource):
     """
     Characteristic source typology represents seismicity occuring on a generic
@@ -55,9 +52,7 @@ class CharacteristicFaultSource(ParametricSeismicSource):
     as a LiteralNode object.
     """
     code = b'X'
-    _slots_ = ParametricSeismicSource._slots_ + 'surface rake'.split()
-
-    MODIFICATIONS = set(('set_geometry',))
+    MODIFICATIONS = {'set_geometry'}
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, temporal_occurrence_model, surface, rake,
@@ -78,7 +73,16 @@ class CharacteristicFaultSource(ParametricSeismicSource):
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1
 
-    def iter_ruptures(self):
+    def get_fault_surface_area(self):
+        """
+        Computes the area covered by the surface of the fault.
+
+        :returns:
+            A float defining the area of the surface of the fault [km^2]
+        """
+        return self.surface.get_area()
+
+    def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.

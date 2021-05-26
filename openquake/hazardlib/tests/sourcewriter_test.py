@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,9 +28,12 @@ from openquake.hazardlib import nrml
 
 NONPARAM = os.path.join(os.path.dirname(__file__),
                         'source_model/nonparametric-source.xml')
+NONPARAM_KITE = os.path.join(os.path.dirname(__file__),
+                             'source_model/nonparametric-kite.xml')
 MIXED = os.path.join(os.path.dirname(__file__),
                      'source_model/mixed.xml')
-
+SLIP_RATE = os.path.join(os.path.dirname(__file__),
+                         'source_model/complex-fault-source.xml')
 ALT_MFDS = os.path.join(os.path.dirname(__file__),
                         'source_model/alternative-mfds_4test.xml')
 
@@ -43,12 +46,15 @@ MUTEX = os.path.join(os.path.dirname(__file__),
 MULTIPOINT = os.path.join(os.path.dirname(__file__),
                           'source_model/multi-point-source.xml')
 
+MULTIFAULT = os.path.join(os.path.dirname(__file__),
+                          'source_model/multi-fault-source.xml')
+
 GRIDDED = os.path.join(os.path.dirname(__file__),
                        'source_model/gridded.xml')
 
 TOML = os.path.join(os.path.dirname(__file__), 'expected_sources.toml')
 
-conv = SourceConverter(50., 1., 10, 0.1, 10.)
+conv = SourceConverter(50., 1., 20, 0.1, 10.)
 
 
 class SourceWriterTestCase(unittest.TestCase):
@@ -57,10 +63,13 @@ class SourceWriterTestCase(unittest.TestCase):
         smodel = nrml.to_python(fname, conv)
         fd, name = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):
-            write_source_model(name, smodel)
+            written = write_source_model(name, smodel)
         with open(name + '.toml', 'w') as f:
             tomldump(smodel, f)
-        if open(name).read() != open(fname).read():
+        if len(written) == 2:  # .xml + .hdf5
+            assert os.path.exists(written[1])
+            os.remove(written[1])
+        elif open(name).read() != open(fname).read():
             raise Exception('Different files: %s %s' % (name, fname))
         os.remove(name)
         os.remove(name + '.toml')
@@ -69,11 +78,18 @@ class SourceWriterTestCase(unittest.TestCase):
     def test_mixed(self):
         self.check_round_trip(MIXED)
 
+    def test_nonparam_kite(self):
+        self.check_round_trip(NONPARAM_KITE)
+
+    def test_multi_fault(self):
+        self.check_round_trip(MULTIFAULT)
+
     def test_nonparam(self):
         [[src]] = self.check_round_trip(NONPARAM)
-
-        # test GriddedSource
         self.assertFalse(src.is_gridded())
+
+    def test_gridded(self):
+        self.check_round_trip(GRIDDED)
 
     def test_alt_mfds(self):
         self.check_round_trip(ALT_MFDS)
@@ -83,6 +99,9 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def test_mutex(self):
         self.check_round_trip(MUTEX)
+
+    def test_slip_rate(self):
+        self.check_round_trip(SLIP_RATE)
 
     def test_multipoint(self):
         smodel = self.check_round_trip(MULTIPOINT)

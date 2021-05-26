@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,15 +19,18 @@ import os
 import sys
 import unittest
 import numpy
+from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.probability_map import combine
-from openquake.calculators import getters
-from openquake.calculators.views import view
+from openquake.hazardlib.contexts import read_cmakers
+from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.tests.classical_test import check_disagg_by_src
 from openquake.qa_tests_data.disagg import (
-    case_1, case_2, case_3, case_4, case_5, case_6, case_master)
+    case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_master)
+
+aae = numpy.testing.assert_almost_equal
 
 
 class DisaggregationTestCase(CalculatorTestCase):
@@ -44,7 +47,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         return out
 
     def test_case_1(self):
-        out = self.assert_curves_ok(
+        self.assert_curves_ok(
             ['rlz-0-PGA-sid-0-poe-0_Lon_Lat.csv',
              'rlz-0-PGA-sid-0-poe-0_Mag.csv',
              'rlz-0-PGA-sid-0-poe-0_Mag_Dist.csv',
@@ -60,56 +63,49 @@ class DisaggregationTestCase(CalculatorTestCase):
             case_1.__file__,
             fmt='csv')
 
-        # check disagg_by_src, poe=0.02, 0.1, imt=PGA, SA(0.025)
-        self.assertEqual(len(out['disagg_by_src', 'csv']), 4)
-        for fname in out['disagg_by_src', 'csv']:
-            self.assertEqualFiles('expected_output/%s' % strip_calc_id(fname),
-                                  fname)
-
-        # disaggregation by source group
-        rlzs_assoc = self.calc.datastore['csm_info'].get_rlzs_assoc()
-        ws = [rlz.weight for rlz in rlzs_assoc.realizations]
-        pgetter = getters.PmapGetter(self.calc.datastore, ws)
-        pgetter.init()
-        pmaps = []
-        for grp in sorted(pgetter.dstore['poes']):
-            pmaps.append(pgetter.get_mean(grp))
-        # make sure that the combination of the contributions is okay
-        pmap = pgetter.get_mean()  # total mean map
-        cmap = combine(pmaps)  # combination of the mean maps per source group
-        for sid in pmap:
-            numpy.testing.assert_almost_equal(pmap[sid].array, cmap[sid].array)
-
     def test_case_2(self):
         # this is a case with disagg_outputs = Mag and 4 realizations
+        # site #0 is partially discarded
         if sys.platform == 'darwin':
             raise unittest.SkipTest('MacOSX')
-        self.assert_curves_ok([
-            'rlz-0-SA(0.1)-sid-0.xml',
-            'rlz-0-SA(0.1)-sid-1.xml'], case_2.__file__)
+        self.assert_curves_ok(
+            ['rlz-0-SA(0.1)-sid-0.xml',
+             'rlz-0-SA(0.1)-sid-1.xml',
+             'rlz-1-SA(0.1)-sid-0.xml',
+             'rlz-1-SA(0.1)-sid-1.xml',
+             'rlz-2-SA(0.1)-sid-1.xml',
+             'rlz-3-SA(0.1)-sid-1.xml'],
+            case_2.__file__)
 
         # check that the CSV exporter does not break
         fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 2)  # number of CSV files
-
-        fnames = export(('disagg', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 2)  # 2 sid x 1 key x 1 poe x 1 imt
         for fname in fnames:
             self.assertEqualFiles(
                 'expected_output/%s' % strip_calc_id(fname), fname)
 
-        # test extract disagg_layer
+        # test extract disagg_layer for Mag
         aw = extract(self.calc.datastore, 'disagg_layer?kind=Mag&'
                      'imt=SA(0.1)&poe_id=0')
         self.assertEqual(aw.dtype.names,
-                         ('site_id', 'lon', 'lat', 'rlz', 'poes'))
-        self.assertEqual(aw['poes'].shape, (2, 15))  # 2 rows
+                         ('site_id', 'lon', 'lat',
+                          'lon_bins', 'lat_bins', 'Mag-SA(0.1)-None',
+                          'iml-SA(0.1)-None'))
+
+        # check the custom_site_id
+        aw = extract(self.calc.datastore, 'sitecol?field=custom_site_id')
+        self.assertEqual(list(aw), [100, 200])
+
+        # check the site_model backarc and vs30measured fields
+        sitecol = self.calc.datastore['sitecol']
+        numpy.testing.assert_equal(sitecol.vs30measured, [0, 1])
+        numpy.testing.assert_equal(sitecol.backarc, [0, 1])
 
     def test_case_3(self):
         # a case with poes_disagg too large
         with self.assertRaises(SystemExit) as ctx:
             self.run_calc(case_3.__file__, 'job.ini')
-        self.assertEqual(str(ctx.exception), 'Cannot do any disaggregation')
+        self.assertEqual(str(ctx.exception),
+                         'Cannot do any disaggregation: zero hazard')
 
     def test_case_4(self):
         # this is case with number of lon/lat bins different for site 0/site 1
@@ -124,24 +120,73 @@ class DisaggregationTestCase(CalculatorTestCase):
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
     def test_case_5(self):
-        # this exercise gridded nonparametric sources
+        # test gridded nonparametric sources
         self.run_calc(case_5.__file__, 'job.ini')
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
+        # there is a collapsed nonparametric source with len(probs_occur)==3
+
     def test_case_6(self):
         # test with international date line
         self.run_calc(case_6.__file__, 'job.ini')
+
+        # test CSV export
         fnames = export(('disagg', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
+        # test the CSVs are readable
+        for fname in fnames:
+            hdf5.read_csv(fname)
+
+        # test extract disagg_layer for Lon_Lat
+        aw = extract(self.calc.datastore, 'disagg_layer?kind=Lon_Lat&'
+                     'imt=PGA&poe_id=0')
+        self.assertEqual(
+            aw.dtype.names,
+            ('site_id', 'lon', 'lat', 'lon_bins', 'lat_bins',
+             'Lon_Lat-PGA-0.002105', 'iml-PGA-0.002105'))
+
+        aae(aw.mag, [6.5, 6.75, 7., 7.25])
+        aae(aw.dist, [0., 25., 50., 75., 100., 125., 150., 175., 200.,
+                      225., 250., 275., 300.])
+        aae(aw.eps, [-3., 3.])  # 6 bins -> 1 bin
+        self.assertEqual(aw.trt, [b'Active Shallow Crust'])
+
+        check_disagg_by_src(self.calc.datastore)
+
+    def test_case_7(self):
+        # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
+        self.run_calc(case_7.__file__, 'job.ini')
+        cmakers = read_cmakers(self.calc.datastore)
+        ctxs0 = cmakers[0].read_ctxs(self.calc.datastore)
+        ctxs1 = cmakers[1].read_ctxs(self.calc.datastore)
+        self.assertEqual(len(ctxs0), 7)  # rlz-0, the closest to the mean
+        self.assertEqual(len(ctxs1), 2)  # rlz-1, the one to discard
+        # checking that the wrong realization is indeed discarded
+        pd = self.calc.datastore['performance_data'][:]
+        pd = pd[pd['operation'] == b'disaggregate']
+        self.assertEqual(pd['counts'], 1)  # because g_by_z is empty
+
+        haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
+        self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
+        self.assertEqual(haz[1], 0.18757115242025785)
+
+        # test normal disaggregation
+        [fname] = export(('disagg', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/rlz-0-PGA-sid-0-poe-1_TRT.csv', fname)
+
+        # test conditional disaggregation
+        [fname] = export(('disagg_traditional', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/rlz-0-PGA-sid-0-poe-1-cond_TRT.csv',
+                              fname)
+
     def test_case_master(self):
-        # this tests exercise the case of a complex logic tree; it also
-        # prints the warning on poe_agg very different from the expected poe
+        # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')
-        fname = gettemp(view('mean_disagg', self.calc.datastore))
+        fname = gettemp(text_table(view('mean_disagg', self.calc.datastore)))
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
         os.remove(fname)
 
@@ -152,17 +197,4 @@ class DisaggregationTestCase(CalculatorTestCase):
                 self.assertEqualFiles(
                     'expected_output/%s' % strip_calc_id(fname), fname)
 
-        # test_disagg_by_src
-        dbs = self.calc.datastore['disagg_by_src']
-        self.assertEqual(sorted(dbs), ['poe-0.01-PGA-sid-0',
-                                       'poe-0.01-PGA-sid-1',
-                                       'poe-0.01-SA(0.25)-sid-0',
-                                       'poe-0.01-SA(0.25)-sid-1',
-                                       'poe-0.05-PGA-sid-0',
-                                       'poe-0.05-PGA-sid-1',
-                                       'poe-0.05-SA(0.25)-sid-0',
-                                       'poe-0.05-SA(0.25)-sid-1'])
-        arr = dbs['poe-0.01-PGA-sid-0'][()]
-        numpy.testing.assert_almost_equal(
-            arr, [0.00000000e+00, 0.00000000e+00,
-                  5.38093847e-05, 9.94706034e-03])
+        check_disagg_by_src(self.calc.datastore)

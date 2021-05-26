@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4#
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -122,9 +122,7 @@ def get_vulnerability_functions_05(node, fname):
                 len(loss_ratios), len(imls))
             vmodel[imt, vf_id] = (
                 scientific.VulnerabilityFunctionWithPMF(
-                    vf_id, imt, imls, numpy.array(loss_ratios),
-                    all_probs))
-            # the seed will be set by readinput.get_crmodel
+                    vf_id, imt, imls, F64(loss_ratios), all_probs))
         else:
             with context(fname, vfun):
                 loss_ratios = ~vfun.meanLRs
@@ -141,7 +139,7 @@ def get_vulnerability_functions_05(node, fname):
                                  vfun.covLRs.lineno))
             with context(fname, vfun):
                 vmodel[imt, vf_id] = scientific.VulnerabilityFunction(
-                    vf_id, imt, imls, loss_ratios, coefficients,
+                    vf_id, imt, imls, F64(loss_ratios), coefficients,
                     vfun['dist'])
     return vmodel
 
@@ -162,11 +160,12 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     with context(fname, ff):
         ffs = ff[1:]
         imls = ff.imls
-    nodamage = imls.attrib.get('noDamageLimit')
+    # NB: noDamageLimit=None is now treated as noDamageLimit=0
+    nodamage = imls.attrib.get('noDamageLimit', 0)
     if nodamage == 0:
-        # use a cutoff to avoid log(0) in GMPE.to_distribution_values
-        logging.warning('Found a noDamageLimit=0 in %s, line %s, '
-                        'using %g instead', fname, ff.lineno, min_iml)
+        # use a cutoff to avoid log(0) in to_distribution_values
+        logging.debug('Using noDamageLimit=%g in %s, line %s', min_iml,
+                      fname, ff.lineno)
         nodamage = min_iml
     with context(fname, imls):
         attrs = dict(format=ff['format'],
@@ -182,20 +181,20 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
     if ff['format'] == 'continuous':
         minIML = float(imls['minIML'])
         if minIML == 0:
-            # use a cutoff to avoid log(0) in GMPE.to_distribution_values
+            # use a cutoff to avoid log(0) in to_distribution_values
             logging.warning('Found minIML=0 in %s, line %s, using %g instead',
                             fname, imls.lineno, min_iml)
             minIML = min_iml
         attrs['minIML'] = minIML
         attrs['maxIML'] = float(imls['maxIML'])
-        array = numpy.zeros(LS, [('mean', F64), ('stddev', F64)])
+        array = numpy.zeros((LS, 2), F64)
         for i, ls, node in zip(range(LS), limit_states, ff[1:]):
             if ls != node['ls']:
                 with context(fname, node):
-                    raise InvalidFile('expected %s, found' %
+                    raise InvalidFile('expected %s, found %s' %
                                       (ls, node['ls']))
-            array['mean'][i] = node['mean']
-            array['stddev'][i] = node['stddev']
+            array[i, 0] = node['mean']
+            array[i, 1] = node['stddev']
     elif ff['format'] == 'discrete':
         attrs['imls'] = ~imls
         valid.check_levels(attrs['imls'], attrs['imt'], min_iml)
@@ -204,12 +203,12 @@ def ffconvert(fname, limit_states, ff, min_iml=1E-10):
         for i, ls, node in zip(range(LS), limit_states, ff[1:]):
             with context(fname, node):
                 if ls != node['ls']:
-                    raise InvalidFile('expected %s, found' %
+                    raise InvalidFile('expected %s, found %s' %
                                       (ls, node['ls']))
                 poes = (~node if isinstance(~node, list)
                         else valid.probabilities(~node))
                 if len(poes) != num_poes:
-                    raise InvalidFile('expected %s, found' %
+                    raise InvalidFile('expected %s, found %s' %
                                       (num_poes, len(poes)))
                 array[i, :] = poes
     # NB: the format is constrained in nrml.FragilityNode to be either
@@ -255,7 +254,7 @@ def get_consequence_model(node, fname):
         node['assetCategory']  # make sure it is there
         node['lossCategory']  # make sure it is there
         cfs = node[2:]
-    functions = {}
+    coeffs = {}
     for cf in cfs:
         with context(fname, cf):
             params = []
@@ -269,12 +268,11 @@ def get_consequence_model(node, fname):
                         raise ValueError("Expected '%s', got '%s'" %
                                          (ls, param['ls']))
                     params.append((param['mean'], param['stddev']))
-            functions[cf['id']] = scientific.ConsequenceFunction(
-                cf['id'], cf['dist'], params)
+            coeffs[cf['id']] = [p[0] for p in params]
     attrs = node.attrib.copy()
     attrs.update(description=description, limitStates=limitStates)
     cmodel = scientific.ConsequenceModel(**attrs)
-    cmodel.update(functions)
+    cmodel.update(coeffs)
     return cmodel
 
 
@@ -302,8 +300,8 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
     new.append((Node('limitStates', {}, ' '.join(limit_states))))
     for ffs in node[2:]:
         IML = ffs.IML
-        # NB: noDamageLimit = None is different than zero
-        nodamage = ffs.attrib.get('noDamageLimit')
+        # NB: noDamageLimit=None is now treated as noDamageLimit=0
+        nodamage = ffs.attrib.get('noDamageLimit', 0)
         ff = Node('fragilityFunction', {'format': fmt})
         ff['id'] = ~ffs.taxonomy
         ff['shape'] = convert_type[ffs.attrib.get('type', 'lognormal')]
@@ -312,8 +310,7 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
                 attr = dict(imt=IML['IMT'],
                             minIML=IML['minIML'],
                             maxIML=IML['maxIML'])
-                if nodamage is not None:
-                    attr['noDamageLimit'] = nodamage
+                attr['noDamageLimit'] = nodamage
                 ff.append(Node('imls', attr))
             for ffc in ffs[2:]:
                 with context(fname, ffc):
@@ -326,7 +323,6 @@ def convert_fragility_model_04(node, fname, fmcounter=itertools.count(1)):
             with context(fname, IML):
                 imls = ' '.join(map(str, (~IML)[1]))
                 attr = dict(imt=IML['IMT'])
-            if nodamage is not None:
                 attr['noDamageLimit'] = nodamage
             ff.append(Node('imls', attr, imls))
             for ffd in ffs[2:]:
@@ -400,7 +396,7 @@ def update_validators():
         'occupants': valid.positivefloat,
         'value': valid.positivefloat,
         'retrofitted': valid.positivefloat,
-        'number': valid.compose(valid.positivefloat, valid.nonzero),
+        'number': valid.compose(valid.nonzero, valid.positivefloat),
         'vulnerabilitySetID': str,  # any ASCII string is fine
         'vulnerabilityFunctionID': str,  # any ASCII string is fine
         'lossCategory': valid.utf8,  # a description field

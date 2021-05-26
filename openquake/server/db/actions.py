@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,7 +22,8 @@ import operator
 from datetime import datetime
 
 from openquake.hazardlib import valid
-from openquake.baselib import datastore, general
+from openquake.baselib import general
+from openquake.commonlib import datastore
 from openquake.calculators.export import export
 from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
@@ -70,7 +71,7 @@ def set_status(db, job_id, status):
     :param status: status string
     """
     assert status in (
-        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed'
+        'created', 'submitted', 'executing', 'complete', 'aborted', 'failed',
         'deleted'), status
     if status in ('created', 'complete', 'failed', 'aborted', 'deleted'):
         is_running = 0
@@ -86,20 +87,32 @@ def set_status(db, job_id, status):
     return cursor.rowcount
 
 
-def create_job(db, datadir):
+def create_job(db, datadir, calculation_mode='to be set',
+               description='just created', user_name=None, hc_id=None):
     """
     Create job for the given user, return it.
 
     :param db:
         a :class:`openquake.server.dbapi.Db` instance
     :param datadir:
-        Data directory of the user who owns/started this job.
+        data directory of the user who owns/started this job.
+    :param calculation_mode:
+        job kind
+    :param description:
+        description of the job
+    :param user_name:
+        name of the user running the job
+    :param hc_id:
+        ID of the parent job (if any)
     :returns:
         the job ID
     """
     calc_id = get_calc_id(db, datadir) + 1
-    job = dict(id=calc_id, is_running=1, description='just created',
-               user_name=getpass.getuser(), calculation_mode='to be set',
+    # NB: is_running=1 is needed to make views_test.py happy on Jenkins
+    job = dict(id=calc_id, is_running=1, description=description,
+               user_name=user_name or getpass.getuser(),
+               calculation_mode=calculation_mode,
+               hazard_calculation_id=hc_id,
                ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
     return db('INSERT INTO job (?S) VALUES (?X)',
               job.keys(), job.values()).lastrowid
@@ -237,8 +250,9 @@ def list_outputs(db, job_id, full=True):
                 break
             out.append('%4d | %s' % (o.id, o.display_name))
         if truncated:
-            out.append('Some outputs where not shown. You can see the full '
-                       'list with the command\n`oq engine --list-outputs`')
+            out.append(
+                'Some outputs were not shown. You can see the full list '
+                f'with the command\n`oq engine --list-outputs {job_id}`')
     return out
 
 
@@ -257,31 +271,24 @@ def get_outputs(db, job_id):
 DISPLAY_NAME = {
     'asset_risk': 'Exposure + Risk',
     'gmf_data': 'Ground Motion Fields',
-    'dmg_by_asset': 'Average Asset Damages',
-    'dmg_by_event': 'Aggregate Event Damages',
-    'losses_by_asset': 'Average Asset Losses',
-    'losses_by_event': 'Aggregate Event Losses',
-    'events': 'Events',
-    'damages-rlzs': 'Asset Damage Distribution',
+    'damages-rlzs': 'Asset Damage Distributions',
     'damages-stats': 'Asset Damage Statistics',
+    'risk_by_event': 'Aggregated Risk By Event',
+    'events': 'Events',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
     'loss_curves-rlzs': 'Asset Loss Curves',
     'loss_curves-stats': 'Asset Loss Curves Statistics',
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
-    'agg_maps-rlzs': 'Aggregate Loss Maps',
-    'agg_maps-stats': 'Aggregate Loss Maps Statistics',
     'agg_curves-rlzs': 'Aggregate Loss Curves',
     'agg_curves-stats': 'Aggregate Loss Curves Statistics',
     'agg_losses-rlzs': 'Aggregate Losses',
     'agg_losses-stats': 'Aggregate Losses Statistics',
     'agg_risk': 'Total Risk',
     'agglosses': 'Aggregate Asset Losses',
-    'tot_losses-rlzs': 'Total Losses',
-    'tot_losses-stats': 'Total Losses Statistics',
-    'tot_curves-rlzs': 'Total Loss Curves',
-    'tot_curves-stats': 'Total Loss Curves Statistics',
+    'aggcurves': 'Aggregate Risk Curves',
+    'avg_gmf': 'Average Ground Motion Field',
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'ruptures': 'Earthquake Ruptures',
@@ -289,8 +296,8 @@ DISPLAY_NAME = {
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
     'disagg': 'Disaggregation Outputs',
-    'disagg_by_src': 'Disaggregation by Source',
     'realizations': 'Realizations',
+    'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
     'input': 'Input Files'
 }
@@ -347,7 +354,18 @@ def del_calc(db, job_id, user, force=False):
     dependent = db(
         "SELECT id FROM job WHERE hazard_calculation_id=?x "
         "AND status != 'deleted'", job_id)
-    if not force and dependent:
+    job_ids = [dep.id for dep in dependent]
+    if not force and job_id in job_ids:  # jobarray
+        err = []
+        for jid in job_ids:
+            res = del_calc(db, jid, user, force=True)
+            if "error" in res:
+                err.append(res["error"])
+        if err:
+            return {"error": ' '.join(err)}
+        else:
+            return {"success": 'children_of_%s' % job_id}
+    elif not force and dependent:
         return {"error": 'Cannot delete calculation %d: there '
                 'are calculations '
                 'dependent from it: %s' % (job_id, [j.id for j in dependent])}
@@ -417,22 +435,6 @@ def get_output(db, output_id):
     out = db('SELECT output.*, ds_calc_dir FROM output, job '
              'WHERE oq_job_id=job.id AND output.id=?x', output_id, one=True)
     return out.ds_key, out.oq_job_id, os.path.dirname(out.ds_calc_dir)
-
-
-def save_performance(db, job_id, records):
-    """
-    Save in the database the performance information about the given job.
-
-    :param db: a :class:`openquake.server.dbapi.Db` instance
-    :param job_id: a job ID
-    :param records: a list of performance records
-    """
-    # NB: rec['counts'] is a numpy.uint64 which is not automatically converted
-    # into an int in Ubuntu 12.04, so we convert it manually below
-    rows = [(job_id, rec['operation'], rec['time_sec'], rec['memory_mb'],
-             int(rec['counts'])) for rec in records]
-    db.insert('performance',
-              'job_id operation time_sec memory_mb counts'.split(), rows)
 
 
 # used in make_report

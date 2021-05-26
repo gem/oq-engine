@@ -7,22 +7,38 @@ how to install the engine. If you have already installed it and have
 issues running calculations you should go [here for hazard calculations](
 faq-hazard.md) and [here for risk calculations](faq-risk.md).
 
+******
+
+### Help! What is the recommended hardware to run engine calculations?
+
+It depends on your use case and your level of expertise. Most of our users
+are scientists with little IT experience and/or little support from their IT
+departments. For them we recommend to buy a very powerful server and not
+a cluster, which is complex to manage. A server with 256 GB of RAM
+and 64 real cores is currently powerful enough to run all of the calculations
+in the GEM global hazard and risk mosaic. If you have larger calculations
+and IT expertise, for a cluster setup see the [hardware suggestions](hardware-suggestions.md) and [cluster](installing/cluster.md) pages.
+
 ### Help! I have a multi-node cluster and I'm in trouble
 
 If you are running the OpenQuake Engine on a multi-node cluster you should also
 have a look at [FAQ related to cluster deployments](faq-cluster.md).
 
-******
+### Help! Should I disable Hyperthreading?
 
-### Python 2.7 compatibility 
-
-Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is **[OpenQuake Engine version 2.9 (Jeffreys)](https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine)**.
+It depends. If you have memory issues, for sure you should disable
+HyperThreading since it will save you a lot of memory.
+If memory is not not a issue, enabling HyperThreading may still be a bad
+idea: depending on the hardware and the software (in particular the patches
+for Spectre/Meltdown) it may slow down your system. The only way to assess
+the effect of HyperThreading is to run a (big) calculation with HyperThreading
+and one without, and then compare the runtimes.
 
 ******
 
 ### Different installation methods
 
-The OpenQuake Engine has at least three installation methods. To choose the one that best fits your needs take a look at the **[installation overview](installing/overview.md)**.
+The OpenQuake Engine has several installation methods. To choose the one that best fits your needs take a look at the **[installation overview](installing/README.md)**.
 
 ******
 
@@ -32,26 +48,21 @@ Binary packages are provided for the following 64bit operating systems:
 - [Windows 10](installing/windows.md)
 - [macOS 10.9+](installing/macos.md)
 - Linux [Ubuntu 16.04+](installing/ubuntu.md) and [RedHat/CentOS 7 and 8 and Fedora 29+](installing/rhel.md) via _deb_ and _rpm_
-- Any other generic Linux distribution via a [self-installable binary distribution](installing/linux-generic.md)
+- Any other generic Linux distribution via the [universal installer](installing/universal.md)
 - [Docker](installing/docker.md) hosts
 
 A 64bit operating system **is required**. Please refer to each OS specific page for details about requirements.
-
-#### Windows 7 compatibility
-
-**Windows 7** is **deprecated** as a platform for running the Engine since it is reaching the [End-of-Life](https://www.microsoft.com/en-us/windowsforbusiness/end-of-windows-7-support). Compatibility with Windows 7 will be removed in next Engine releases. Please upgrade your Windows installation to Windows 10.
 
 ******
 
 ### Unsupported operating systems
 
+- Windows 7 may or may not work and we will not provide support for it
 Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies are satisfied; these configurations are known to work:
 - Ubuntu 16.04 (Xenial) packages work on **Mint Linux 18** and on **Debian 9.0** (Stretch)
 - Ubuntu 18.04 (Bionic) packages work on **Mint Linux 19** and on **Debian 10.0** (Buster)
 
 These configurations however are not tested by our [continuous integration system](https://ci.openquake.org) and we cannot guarantee on the quality of the results. Use at your own risk.
-
-Another installation option for unsupported Linux systems is provided by the **[self-installable binary distribution for generic Linux](installing/linux-generic.md)**.
 
 ******
 
@@ -61,18 +72,17 @@ The OpenQuake Engine **requires a 64bit operating system**. Starting with versio
 
 ******
 
-### Celery support
+### MPI support
 
-Starting with OpenQuake Engine 2.0 Celery isn't needed (and not recommended) on a single machine setup; the OpenQuake Engine is able to use all the available CPU cores even without Celery.
-Celery must be enabled on a cluster / multi-node setup. To enable it please refer to the [multiple nodes installation guidelines](installing/cluster.md).
+MPI is not supported by the OpenQuake Engine. Task distribution across network interconnected nodes is done via *zmq*. The worker nodes must have read access to a shared file system writeable from the master node. Data transfer is made on TCP/IP connection.
+
+MPI support may be added in the future if sponsored by someone. If you would like to help support development of OpenQuake, please contact us at [partnership@globalquakemodel.org](mailto:partnership@globalquakemodel.org).
 
 ******
 
-### MPI support
+### Python 2.7 compatibility 
 
-MPI is not supported by the OpenQuake Engine. Task distribution across network interconnected nodes is made via *Celery* and *RabbitMQ* as broker. No filesystem sharing is needed between the nodes and data transfer is made on plain TCP/IP connection. For a cluster setup see the [hardware suggestions](hardware-suggestions.md) and [cluster](installing/cluster.md) pages.
-
-MPI support may be added in the future if sponsored by someone. If you would like to help support development of OpenQuake, please contact us at [partnership@globalquakemodel.org](mailto:partnership@globalquakemodel.org).
+Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is **[OpenQuake Engine version 2.9 (Jeffreys)](https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine)**.
 
 ******
 
@@ -145,7 +155,9 @@ More information is available on [Running the OpenQuake Engine](running/unix.md)
 
 ### DbServer ports
 
-The default port for the DbServer (configured via the `openquake.cfg` configuration file) is `1908` or `1907`.
+The default port for the DbServer (configured via the `openquake.cfg`
+configuration file) is `1908` (for a development installation) or `1907`
+(for a package installation).
 
 ******
 
@@ -225,5 +237,5 @@ sudo /Applications/Python\ 3.6/install_certificates.command
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
   * Contact us on IRC: irc.freenode.net, channel #openquake

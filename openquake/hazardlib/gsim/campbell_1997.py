@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -51,13 +51,13 @@ class Campbell1997(GMPE):
     ])
 
     #: Requires vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and top of rupture depth
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is closest distance to rupture. In the
-    #: publication, Rseis is used. We assume Rrup=Rseis, justified by 
+    #: publication, Rseis is used. We assume Rrup=Rseis, justified by
     #: our calculations matching the verification tables
     REQUIRES_DISTANCES = set(('rrup', ))
 
@@ -74,7 +74,7 @@ class Campbell1997(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        R = (dists.rrup)
+        R = dists.rrup
         M = rup.mag
         # get constants
         Ssr = self.get_Ssr_term(sites.vs30)
@@ -83,11 +83,11 @@ class Campbell1997(GMPE):
         F = self.get_fault_term(rake)
 
         # compute mean
-        mean = -3.512 + (0.904 * M) - (1.328 * np.log(np.sqrt(R**2
-               + (0.149 * np.exp(0.647 * M))**2))) \
-               + (1.125 - 0.112 * np.log(R) - 0.0957 * M) * F \
-               + (0.440 - 0.171 * np.log(R)) * Ssr \
-               + (0.405 - 0.222 * np.log(R)) * Shr
+        mean = -3.512 + (0.904 * M) - (
+            1.328 * np.log(np.sqrt(R**2 + (0.149 * np.exp(0.647 * M))**2))) \
+            + (1.125 - 0.112 * np.log(R) - 0.0957 * M) * F \
+            + (0.440 - 0.171 * np.log(R)) * Ssr \
+            + (0.405 - 0.222 * np.log(R)) * Shr
         stddevs = self.get_stddevs(mean, stddev_types)
         return mean, stddevs
 
@@ -126,7 +126,7 @@ class Campbell1997(GMPE):
         sigma = 0.39 + np.zeros(mean.shape)
         sigma[mean < 0.068] = 0.55
         idx = np.logical_and(mean >= 0.068, mean <= 0.21)
-        sigma[idx] = 0.173- 0.140 * np.log(mean[idx])
+        sigma[idx] = 0.173 - 0.140 * np.log(mean[idx])
         stddevs = []
         for stddev in stddev_types:
             if stddev == const.StdDev.TOTAL:

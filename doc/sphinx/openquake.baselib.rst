@@ -1,14 +1,6 @@
 openquake.baselib package
 =========================
 
-openquake.baselib.datastore module
-------------------------------------
-
-.. automodule:: openquake.baselib.datastore
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 general
 --------------------------------
 
@@ -69,14 +61,6 @@ sap
 ----------------------------
 
 .. automodule:: openquake.baselib.sap
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-slots
-------------------------------
-
-.. automodule:: openquake.baselib.slots
     :members:
     :undoc-members:
     :show-inheritance:

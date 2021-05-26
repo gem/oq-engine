@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,6 +69,10 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
         PGA,
         SA
     ])
+
+    #: Vs30 value representing typical rock conditions in Switzerland.
+    #: confirmed by the Swiss GMPE group
+    DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

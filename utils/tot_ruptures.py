@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,8 +20,8 @@
 Determine the total number of ruptures in all the calculations in oqdata
 """
 import glob
-from openquake.baselib.datastore import get_datadir, read
-from openquake.calculators.views import rst_table
+from openquake.commonlib.datastore import get_datadir, read
+from openquake.calculators.views import text_table
 
 
 def main(datadir):
@@ -37,12 +37,12 @@ def main(datadir):
             except (KeyError, AttributeError):  # not a calculation
                 continue
             try:
-                tot_ruptures = dstore['csm_info/sg_data']['totrup'].sum()
+                tot_ruptures = dstore['full_lt/sg_data']['totrup'].sum()
             except KeyError:
                 tot_ruptures = 0
             else:
                 lst.append((descr, tot_ruptures))
-    print(rst_table(lst, ['calculation', 'total number of ruptures']))
+    print(text_table(lst, ['calculation', 'total number of ruptures']))
 
 
 if __name__ == '__main__':

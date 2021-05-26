@@ -19,7 +19,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <assets>
             <asset
             id="125"
-            number="1.1000000E+01"
+            number="11"
             taxonomy="LWAL_H1"
             >
                 <location lat="-3.3467800E+01" lon="-7.0663400E+01"/>
@@ -32,7 +32,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="395"
-            number="2.0000000E+00"
+            number="2"
             taxonomy="LWAL_H8"
             >
                 <location lat="-3.3434400E+01" lon="-7.0663400E+01"/>
@@ -45,7 +45,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="2544"
-            number="2.5600000E+02"
+            number="256"
             taxonomy="W+WLI_H1"
             >
                 <location lat="-3.3434400E+01" lon="-7.0721700E+01"/>
@@ -58,7 +58,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="2925"
-            number="9.6000000E+01"
+            number="96"
             taxonomy="MR_H2_DNO"
             >
                 <location lat="-3.3384400E+01" lon="-7.0680000E+01"/>
@@ -71,7 +71,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="3518"
-            number="1.1000000E+02"
+            number="110"
             taxonomy="MR_H2_DNO"
             >
                 <location lat="-3.3567800E+01" lon="-7.0688400E+01"/>
@@ -84,7 +84,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="4102"
-            number="1.4500000E+02"
+            number="145"
             taxonomy="MR_H1_DNO"
             >
                 <location lat="-3.3451100E+01" lon="-7.0688400E+01"/>
@@ -97,7 +97,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="4351"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="CR+PC_LWAL_H1"
             >
                 <location lat="-3.3359400E+01" lon="-7.0613400E+01"/>
@@ -110,7 +110,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="4498"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="LWAL_H1_DNO"
             >
                 <location lat="-3.3342800E+01" lon="-7.0638400E+01"/>
@@ -123,7 +123,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="5229"
-            number="1.1000000E+01"
+            number="11"
             taxonomy="MR_H1_DNO"
             >
                 <location lat="-3.3351100E+01" lon="-7.0630000E+01"/>
@@ -136,7 +136,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="7180"
-            number="3.0000000E+00"
+            number="3"
             taxonomy="LWAL_H1_DNO"
             >
                 <location lat="-3.3526100E+01" lon="-7.0513400E+01"/>
@@ -149,7 +149,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="8309"
-            number="1.1300000E+02"
+            number="113"
             taxonomy="MR_H1_DNO"
             >
                 <location lat="-3.3517800E+01" lon="-7.0555000E+01"/>
@@ -162,7 +162,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="9712"
-            number="4.0000000E+01"
+            number="40"
             taxonomy="MCF_H2"
             >
                 <location lat="-3.3542800E+01" lon="-7.0613400E+01"/>
@@ -175,7 +175,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="9810"
-            number="1.1300000E+02"
+            number="113"
             taxonomy="MR_H2_DNO"
             >
                 <location lat="-3.3534400E+01" lon="-7.0630000E+01"/>
@@ -188,7 +188,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="10963"
-            number="1.8000000E+01"
+            number="18"
             taxonomy="MR_H3_DNO"
             >
                 <location lat="-3.3559400E+01" lon="-7.0621700E+01"/>
@@ -201,7 +201,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="11445"
-            number="1.9000000E+01"
+            number="19"
             taxonomy="LWAL_H1"
             >
                 <location lat="-3.3459400E+01" lon="-7.0563400E+01"/>
@@ -214,7 +214,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="11898"
-            number="3.0000000E+00"
+            number="3"
             taxonomy="MCF_H3"
             >
                 <location lat="-3.3467800E+01" lon="-7.0530000E+01"/>
@@ -227,7 +227,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="13070"
-            number="1.0000000E+01"
+            number="1"
             taxonomy="LWAL_H2"
             >
                 <location lat="-3.3392800E+01" lon="-7.0488400E+01"/>
@@ -240,7 +240,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="13075"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="LWAL_H2"
             >
                 <location lat="-3.3451100E+01" lon="-7.0480000E+01"/>
@@ -253,7 +253,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="13215"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="LWAL_H2_DNO"
             >
                 <location lat="-3.3467800E+01" lon="-7.0446700E+01"/>
@@ -266,7 +266,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="13694"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="LWAL_H7"
             >
                 <location lat="-3.3417800E+01" lon="-7.0455000E+01"/>
@@ -279,7 +279,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="13811"
-            number="2.9000000E+01"
+            number="29"
             taxonomy="MCF_H1"
             >
                 <location lat="-3.3392800E+01" lon="-7.0513400E+01"/>
@@ -292,7 +292,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="14474"
-            number="9.0000000E+00"
+            number="9"
             taxonomy="MR_H1"
             >
                 <location lat="-3.3392800E+01" lon="-7.0513400E+01"/>
@@ -305,7 +305,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15063"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MUR+ADO_H1"
             >
                 <location lat="-3.3409400E+01" lon="-7.0480000E+01"/>
@@ -318,7 +318,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="15333"
-            number="1.9000000E+01"
+            number="19"
             taxonomy="MUR_H2"
             >
                 <location lat="-3.3401100E+01" lon="-7.0571700E+01"/>
@@ -331,7 +331,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="16977"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="LWAL_H5"
             >
                 <location lat="-3.3342800E+01" lon="-7.0563400E+01"/>
@@ -344,7 +344,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="17738"
-            number="4.0000000E+00"
+            number="4"
             taxonomy="MCF_H2_DNO"
             >
                 <location lat="-3.3359400E+01" lon="-7.0530000E+01"/>
@@ -357,7 +357,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="18310"
-            number="3.0000000E+00"
+            number="3"
             taxonomy="MR_H1_DNO"
             >
                 <location lat="-3.3334400E+01" lon="-7.0538400E+01"/>
@@ -370,7 +370,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="18570"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MR_H2"
             >
                 <location lat="-3.3367800E+01" lon="-7.0463400E+01"/>
@@ -383,7 +383,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="20843"
-            number="2.6000000E+01"
+            number="26"
             taxonomy="LWAL_H2_DNO"
             >
                 <location lat="-3.3451100E+01" lon="-7.0738400E+01"/>
@@ -396,7 +396,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="21067"
-            number="4.6000000E+01"
+            number="46"
             taxonomy="UNK"
             >
                 <location lat="-3.3451100E+01" lon="-7.0721700E+01"/>
@@ -409,7 +409,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="22263"
-            number="6.0000000E+00"
+            number="6"
             taxonomy="LWAL_H2"
             >
                 <location lat="-3.3484400E+01" lon="-7.0871700E+01"/>
@@ -422,7 +422,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="23352"
-            number="1.1000000E+01"
+            number="11"
             taxonomy="MCF_H2"
             >
                 <location lat="-3.3484400E+01" lon="-7.0863400E+01"/>
@@ -435,7 +435,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="23792"
-            number="2.0000000E+00"
+            number="2"
             taxonomy="MCF_H3"
             >
                 <location lat="-3.3501100E+01" lon="-7.0780000E+01"/>
@@ -448,7 +448,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="24204"
-            number="2.3000000E+01"
+            number="23"
             taxonomy="MR_H1_DNO"
             >
                 <location lat="-3.3492800E+01" lon="-7.0888400E+01"/>
@@ -461,7 +461,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="26747"
-            number="4.0000000E+00"
+            number="4"
             taxonomy="LWAL_H6"
             >
                 <location lat="-3.3442800E+01" lon="-7.0580000E+01"/>
@@ -474,7 +474,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="28198"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="LWAL_H5"
             >
                 <location lat="-3.3509400E+01" lon="-7.0571700E+01"/>
@@ -487,7 +487,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="29566"
-            number="1.3400000E+02"
+            number="134"
             taxonomy="W+WLI_H1"
             >
                 <location lat="-3.3501100E+01" lon="-7.0538400E+01"/>
@@ -500,7 +500,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="29734"
-            number="2.1000000E+01"
+            number="21"
             taxonomy="W+WS"
             >
                 <location lat="-3.3467800E+01" lon="-7.0505000E+01"/>
@@ -513,7 +513,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="29776"
-            number="5.0000000E+00"
+            number="5"
             taxonomy="CR+PC_LWAL_H2"
             >
                 <location lat="-3.3426100E+01" lon="-7.0613400E+01"/>
@@ -526,7 +526,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="32774"
-            number="4.0000000E+00"
+            number="4"
             taxonomy="MCF_H3_DNO"
             >
                 <location lat="-3.3409400E+01" lon="-7.0838400E+01"/>
@@ -539,7 +539,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="32964"
-            number="7.0000000E+00"
+            number="7"
             taxonomy="MR_H1"
             >
                 <location lat="-3.3459400E+01" lon="-7.0855000E+01"/>
@@ -552,7 +552,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="34903"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MUR_H3"
             >
                 <location lat="-3.3417800E+01" lon="-7.0813400E+01"/>
@@ -565,7 +565,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="34928"
-            number="3.0000000E+00"
+            number="3"
             taxonomy="MUR_H3"
             >
                 <location lat="-3.3392800E+01" lon="-7.0796700E+01"/>
@@ -578,7 +578,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="37720"
-            number="4.0000000E+00"
+            number="4"
             taxonomy="MUR_H3"
             >
                 <location lat="-3.3342800E+01" lon="-7.0755000E+01"/>
@@ -591,7 +591,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="40032"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MCF_H3"
             >
                 <location lat="-3.3401100E+01" lon="-7.0730000E+01"/>
@@ -604,7 +604,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="41207"
-            number="2.0000000E+00"
+            number="2"
             taxonomy="LWAL_H7"
             >
                 <location lat="-3.3484400E+01" lon="-7.0646700E+01"/>
@@ -617,7 +617,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="41570"
-            number="6.1000000E+01"
+            number="61"
             taxonomy="MR_H1"
             >
                 <location lat="-3.3526100E+01" lon="-7.0638400E+01"/>
@@ -630,7 +630,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="41937"
-            number="3.0000000E+00"
+            number="3"
             taxonomy="LWAL_H5"
             >
                 <location lat="-3.3376100E+01" lon="-7.0538400E+01"/>
@@ -643,7 +643,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="42450"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MUR+ST_H1"
             >
                 <location lat="-3.3367800E+01" lon="-7.0588400E+01"/>
@@ -656,7 +656,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="42972"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="CR+PC_LWAL_H3"
             >
                 <location lat="-3.3576100E+01" lon="-7.0580000E+01"/>
@@ -669,7 +669,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="43082"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="ER+ETR_H2"
             >
                 <location lat="-3.3617800E+01" lon="-7.0613400E+01"/>
@@ -682,7 +682,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="43222"
-            number="8.0000000E+00"
+            number="8"
             taxonomy="LWAL_H1"
             >
                 <location lat="-3.3567800E+01" lon="-7.0496700E+01"/>
@@ -695,7 +695,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="43883"
-            number="8.0000000E+01"
+            number="80"
             taxonomy="MCF_H1"
             >
                 <location lat="-3.3576100E+01" lon="-7.0605000E+01"/>
@@ -708,7 +708,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="45607"
-            number="4.3000000E+01"
+            number="43"
             taxonomy="MUR_H1"
             >
                 <location lat="-3.3584400E+01" lon="-7.0571700E+01"/>
@@ -721,7 +721,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="46410"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="ER+ETR_H1"
             >
                 <location lat="-3.3701100E+01" lon="-7.0613400E+01"/>
@@ -734,7 +734,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="47888"
-            number="2.0000000E+00"
+            number="2"
             taxonomy="UNK"
             >
                 <location lat="-3.3592800E+01" lon="-7.0455000E+01"/>
@@ -747,7 +747,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="49790"
-            number="5.0000000E+00"
+            number="5"
             taxonomy="W+WLI_H1"
             >
                 <location lat="-3.3576100E+01" lon="-7.0430000E+01"/>
@@ -760,7 +760,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="53290"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MR_H1_DNO"
             >
                 <location lat="-3.3276100E+01" lon="-7.0680000E+01"/>
@@ -773,7 +773,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="54955"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MUR_H2"
             >
                 <location lat="-3.3167800E+01" lon="-7.0680000E+01"/>
@@ -786,7 +786,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="55611"
-            number="1.2000000E+01"
+            number="12"
             taxonomy="W+WLI_H1"
             >
                 <location lat="-3.3234400E+01" lon="-7.0696700E+01"/>
@@ -799,7 +799,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="57071"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MCF_H1"
             >
                 <location lat="-3.3309400E+01" lon="-7.0763400E+01"/>
@@ -812,7 +812,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="58040"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MR_H2_DNO"
             >
                 <location lat="-3.3317800E+01" lon="-7.0813400E+01"/>
@@ -825,7 +825,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="58475"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MUR_H2"
             >
                 <location lat="-3.3367800E+01" lon="-7.0888400E+01"/>
@@ -838,7 +838,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="58711"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="UNK"
             >
                 <location lat="-3.3292800E+01" lon="-7.0830000E+01"/>
@@ -851,7 +851,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="60991"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="W+WLI_H1"
             >
                 <location lat="-3.3092800E+01" lon="-7.0863400E+01"/>
@@ -864,7 +864,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="61370"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="W+WS"
             >
                 <location lat="-3.3092800E+01" lon="-7.0855000E+01"/>
@@ -877,7 +877,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="61627"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="CR+PC_LWAL_H1"
             >
                 <location lat="-3.3609400E+01" lon="-7.0671700E+01"/>
@@ -890,7 +890,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="65616"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MUR+ADO_H2"
             >
                 <location lat="-3.3576100E+01" lon="-7.0713400E+01"/>
@@ -903,7 +903,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="66110"
-            number="1.2000000E+01"
+            number="12"
             taxonomy="MUR_H2"
             >
                 <location lat="-3.3617800E+01" lon="-7.0696700E+01"/>
@@ -916,7 +916,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="66623"
-            number="3.6000000E+01"
+            number="36"
             taxonomy="W+WLI_H1"
             >
                 <location lat="-3.3567800E+01" lon="-7.0730000E+01"/>
@@ -929,7 +929,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="66821"
-            number="6.0000000E+00"
+            number="6"
             taxonomy="W+WLI_H2"
             >
                 <location lat="-3.3601100E+01" lon="-7.0730000E+01"/>
@@ -942,7 +942,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="68039"
-            number="3.0000000E+00"
+            number="3"
             taxonomy="MCF_H1_DNO"
             >
                 <location lat="-3.3784400E+01" lon="-7.0705000E+01"/>
@@ -955,7 +955,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="70088"
-            number="3.0000000E+00"
+            number="3"
             taxonomy="MUR_H2"
             >
                 <location lat="-3.3759400E+01" lon="-7.0746700E+01"/>
@@ -968,7 +968,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="70302"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="UNK"
             >
                 <location lat="-3.3801100E+01" lon="-7.0796700E+01"/>
@@ -981,7 +981,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="71094"
-            number="4.0000000E+00"
+            number="4"
             taxonomy="W+WS"
             >
                 <location lat="-3.3676100E+01" lon="-7.0713400E+01"/>
@@ -994,7 +994,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="73029"
-            number="5.0000000E+00"
+            number="5"
             taxonomy="MCF_H1"
             >
                 <location lat="-3.3909400E+01" lon="-7.0746700E+01"/>
@@ -1007,7 +1007,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="74675"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MUR+ST_H1"
             >
                 <location lat="-3.3801100E+01" lon="-7.0746700E+01"/>
@@ -1020,7 +1020,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="77999"
-            number="7.0000000E+00"
+            number="7"
             taxonomy="MR_H1_DNO"
             >
                 <location lat="-3.3767800E+01" lon="-7.1321700E+01"/>
@@ -1033,7 +1033,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="78105"
-            number="5.0000000E+00"
+            number="5"
             taxonomy="MR_H1_DNO"
             >
                 <location lat="-3.3601100E+01" lon="-7.1230000E+01"/>
@@ -1046,7 +1046,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="79052"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MUR+ADO_H1"
             >
                 <location lat="-3.3667800E+01" lon="-7.1113400E+01"/>
@@ -1059,7 +1059,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="79350"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MUR_H1"
             >
                 <location lat="-3.3684400E+01" lon="-7.1255000E+01"/>
@@ -1072,7 +1072,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="79527"
-            number="4.0000000E+00"
+            number="4"
             taxonomy="MUR_H1"
             >
                 <location lat="-3.3567800E+01" lon="-7.0988400E+01"/>
@@ -1085,7 +1085,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="79648"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MUR_H2"
             >
                 <location lat="-3.3626100E+01" lon="-7.1230000E+01"/>
@@ -1098,7 +1098,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="79920"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="UNK"
             >
                 <location lat="-3.3767800E+01" lon="-7.1296700E+01"/>
@@ -1111,7 +1111,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="79965"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="UNK"
             >
                 <location lat="-3.3659400E+01" lon="-7.1246700E+01"/>
@@ -1124,7 +1124,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="84055"
-            number="2.0000000E+00"
+            number="2"
             taxonomy="W+WLI_H1"
             >
                 <location lat="-3.3459400E+01" lon="-7.1255000E+01"/>
@@ -1137,7 +1137,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="85191"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="W+WLI_H2"
             >
                 <location lat="-3.3992800E+01" lon="-7.1655000E+01"/>
@@ -1150,7 +1150,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="85210"
-            number="2.0000000E+00"
+            number="2"
             taxonomy="W+WLI_H2"
             >
                 <location lat="-3.3942800E+01" lon="-7.1621700E+01"/>
@@ -1163,7 +1163,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="87215"
-            number="2.0000000E+00"
+            number="2"
             taxonomy="MR_H3_DNO"
             >
                 <location lat="-3.3676100E+01" lon="-7.0963400E+01"/>
@@ -1176,7 +1176,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="89559"
-            number="1.3000000E+01"
+            number="13"
             taxonomy="W+WLI_H1"
             >
                 <location lat="-3.3692800E+01" lon="-7.1096700E+01"/>
@@ -1189,7 +1189,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="90034"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="LWAL_H3"
             >
                 <location lat="-3.3742800E+01" lon="-7.0871700E+01"/>
@@ -1202,7 +1202,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="90213"
-            number="3.0000000E+00"
+            number="3"
             taxonomy="MCF_H1_DNO"
             >
                 <location lat="-3.3742800E+01" lon="-7.0880000E+01"/>
@@ -1215,7 +1215,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="90833"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MR_H3_DNO"
             >
                 <location lat="-3.3726100E+01" lon="-7.0955000E+01"/>
@@ -1228,7 +1228,7 @@ xmlns:gml="http://www.opengis.net/gml"
             </asset>
             <asset
             id="93170"
-            number="1.0000000E+00"
+            number="1"
             taxonomy="MUR_H2"
             >
                 <location lat="-3.3542800E+01" lon="-7.0821700E+01"/>

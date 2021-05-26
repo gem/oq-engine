@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -78,16 +78,16 @@ class BindiEtAl2014Rjb(GMPE):
     ])
 
     #: Required site parameter is only Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and rake (eq. 1).
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: Required distance measure is Rjb (eq. 1).
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
-    def __init__(self, adjustment_factor=1.0):
-        super().__init__()
+    def __init__(self, adjustment_factor=1.0, **kwargs):
+        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(adjustment_factor)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -285,7 +285,7 @@ class BindiEtAl2014RjbEC8NoSOF(BindiEtAl2014RjbEC8):
     classification, but style-of-faulting is neglected
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def _get_mean(self, C, rup, dists, sites):
         """
@@ -405,7 +405,7 @@ class BindiEtAl2014RhypEC8NoSOF(BindiEtAl2014RhypEC8):
     and style-of-faulting is unspecfied.
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def _get_mean(self, C, rup, dists, sites):
         """

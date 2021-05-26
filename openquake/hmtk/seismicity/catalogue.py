@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2019 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2021 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -545,15 +545,15 @@ class Catalogue(object):
             for attrib in vars(self):
                 atts = getattr(self, attrib)
                 attn = getattr(catalogue, attrib)
-                if attrib is 'end_year':
+                if attrib == 'end_year':
                     setattr(self, attrib, max(atts, attn))
-                elif attrib is 'start_year':
+                elif attrib == 'start_year':
                     setattr(self, attrib, min(atts, attn))
-                elif attrib is 'data':
+                elif attrib == 'data':
                     pass
-                elif attrib is 'number_earthquakes':
+                elif attrib == 'number_earthquakes':
                     setattr(self, attrib, atts + attn)
-                elif attrib is 'processes':
+                elif attrib == 'processes':
                     if atts != attn:
                         raise ValueError('The catalogues cannot be merged' +
                                          ' since the they have' +

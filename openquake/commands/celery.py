@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,6 @@ try:
 except ImportError:
     pass
 else:
-    from openquake.baselib import sap
     from openquake.engine.celeryconfig import broker_url, result_backend
 
     def status():
@@ -77,12 +76,11 @@ else:
             for active in sum(actives.values(), []):
                 print(active['hostname'], active['args'])
 
-    @sap.script
-    def celery(cmd):
+    def main(cmd):
         """
         Return information about the celery workers
         """
         globals()[cmd]()
 
-    celery.arg('cmd', 'celery command',
-               choices='status inspect'.split())
+    main.cmd = dict(help='celery command',
+                    choices='status inspect'.split())

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,17 +19,14 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 """
 import copy
 import math
-import numpy
 from openquake.baselib.python3compat import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.baselib.slots import with_slots
 
 
-@with_slots
 class SimpleFaultSource(ParametricSeismicSource):
     """
     Simple fault source typology represents seismicity occurring on a fault
@@ -84,13 +81,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         for the lowest magnitude value.
     """
     code = b'S'
-    _slots_ = ParametricSeismicSource._slots_ + '''upper_seismogenic_depth
-    lower_seismogenic_depth fault_trace dip rake hypo_list
-    slip_list'''.split()
-
-    MODIFICATIONS = set(('set_geometry',
-                         'adjust_dip',
-                         'set_dip'))
+    MODIFICATIONS = {'set_geometry', 'adjust_dip', 'set_dip',
+                     'adjust_mfd_from_slip'}
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -130,7 +122,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
@@ -156,9 +148,7 @@ class SimpleFaultSource(ParametricSeismicSource):
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
             num_rup = num_rup_along_length * num_rup_along_width
-
             occurrence_rate = mag_occ_rate / float(num_rup)
-
             for first_row in range(num_rup_along_width):
                 for first_col in range(num_rup_along_length):
                     mesh = whole_fault_mesh[first_row: first_row + rup_rows,
@@ -189,6 +179,19 @@ class SimpleFaultSource(ParametricSeismicSource):
                                     hypocenter, surface, occurrence_rate_hypo,
                                     self.temporal_occurrence_model,
                                     rupture_slip_direction)
+
+    def get_fault_surface_area(self):
+        """
+        Computes the area covered by the surface of the fault.
+
+        :returns:
+            A float defining the area of the surface of the fault [km^2]
+        """
+        sfc = SimpleFaultSurface.from_fault_data(
+            self.fault_trace,
+            self.upper_seismogenic_depth, self.lower_seismogenic_depth,
+            self.dip, 1.0)
+        return sfc.get_area()
 
     def count_ruptures(self):
         """
@@ -278,6 +281,30 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.dip = dip
         self.rupture_mesh_spacing = spacing
 
+    def modify_adjust_mfd_from_slip(self, slip_rate, rigidity):
+        """
+        :slip_rate:
+            A float defining slip rate [in mm]
+        :rigidity:
+            A float defining material rigidity [in GPa]
+        """
+        # Check that the current src has a TruncatedGRMFD MFD
+        msg = 'This modification works only when the source MFD is a '
+        msg += 'TruncatedGRMFD'
+        assert self.mfd.__class__.__name__ == 'TruncatedGRMFD', msg
+        # Compute moment
+        area = self.get_fault_surface_area() * 1e6  # area in m^2
+        rigidity *= 1e9  # rigidity in Pa
+        slip_rate *= 1e-3  # slip rate in m
+        mo = rigidity * area * slip_rate
+        # Update the MFD
+        min_mag = self.mfd.min_mag
+        max_mag = self.mfd.max_mag
+        bin_w = self.mfd.bin_width
+        b_val = self.mfd.b_val
+        self.mfd = mfd.TruncatedGRMFD.from_moment(min_mag, max_mag, bin_w,
+                                                  b_val, mo)
+
     def modify_adjust_dip(self, increment):
         """
         Modifies the dip by an incremental value
@@ -309,9 +336,14 @@ class SimpleFaultSource(ParametricSeismicSource):
         if len(mag_rates) == 1:  # not splittable
             yield self
             return
+        if not hasattr(self, '_nr'):
+            self.count_ruptures()
         for i, (mag, rate) in enumerate(mag_rates):
+            # This is needed in order to reproduce the logic in the
+            # `rupture_count` method
+            if rate == 0:
+                continue
             src = copy.copy(self)
-            del src._nr
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]
             yield src

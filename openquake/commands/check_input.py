@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,24 +15,38 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import sys
-from openquake.baselib import sap
-from openquake.commonlib import readinput
+import logging
+from unittest import mock
+from openquake.risklib.asset import Exposure
+from openquake.commonlib import readinput, logs
 from openquake.calculators import base
 from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml  # this is necessary
 
 
-@sap.script
-def check_input(job_ini_or_zip_or_nrml):
-    if job_ini_or_zip_or_nrml.endswith('.xml'):
-        try:
-            print(nrml.to_python(job_ini_or_zip_or_nrml))
-        except Exception as exc:
-            sys.exit(exc)
-    else:
-        calc = base.calculators(readinput.get_oqparam(job_ini_or_zip_or_nrml))
-        calc.read_inputs()
+def main(job_ini_or_zip_or_nrmls):
+    if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
+        os.environ['OQ_DISTRIBUTE'] = 'processpool'
+    for job_ini_or_zip_or_nrml in job_ini_or_zip_or_nrmls:
+        if job_ini_or_zip_or_nrml.endswith('.xml'):
+            try:
+                node = nrml.to_python(job_ini_or_zip_or_nrml)
+                if node.tag.endswith('exposureModel'):
+                    err = Exposure.check(job_ini_or_zip_or_nrml)
+                    if err:
+                        logging.warning(err)
+                else:
+                    logging.info('Checked %s', job_ini_or_zip_or_nrml)
+            except Exception as exc:
+                sys.exit(exc)
+        else:
+            with logs.init('calc', job_ini_or_zip_or_nrml) as log:
+                calc = base.calculators(log.get_oqparam(), log.calc_id)
+                base.BaseCalculator.gzip_inputs = lambda self: None  # disable
+                with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
+                    calc.read_inputs()
 
 
-check_input.arg('job_ini_or_zip_or_nrml', 'Check the input')
+main.job_ini_or_zip_or_nrmls = dict(help='Check the input', nargs='+')

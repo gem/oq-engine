@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,10 @@ Utility functions of general interest.
 """
 import os
 import sys
+import zlib
 import copy
 import math
+import pickle
 import socket
 import random
 import atexit
@@ -34,15 +36,20 @@ import tempfile
 import importlib
 import itertools
 import subprocess
+import multiprocessing
+from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 from decorator import decorator
 from openquake.baselib.python3compat import decode
 
+U8 = numpy.uint8
 U16 = numpy.uint16
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
+BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-'
+mp = multiprocessing.get_context('spawn')
 
 
 def duplicated(items):
@@ -195,12 +202,14 @@ def ceil(a, b):
     return int(math.ceil(float(a) / b))
 
 
-def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
+def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
+                   sort=False):
     """
     :param items: an iterator over items
     :param max_weight: the max weight to split on
     :param weight: a function returning the weigth of a given item
     :param key: a function returning the kind of a given item
+    :param sort: if True, sort the items by reverse weight before splitting
 
     Group together items of the same kind until the total weight exceeds the
     `max_weight` and yield `WeightedSequence` instances. Items
@@ -223,7 +232,7 @@ def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey):
         raise ValueError('max_weight=%s' % max_weight)
     ws = WeightedSequence([])
     prev_key = 'Unspecified'
-    for item in items:
+    for item in sorted(items, key=weight, reverse=True) if sort else items:
         w = weight(item)
         k = key(item)
         if w < 0:  # error
@@ -338,13 +347,8 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
         # another shortcut
         assert a == b, (a, b)
         return
-    if hasattr(a, '_slots_'):  # record-like objects
-        assert a._slots_ == b._slots_
-        for x in a._slots_:
-            assert_close(getattr(a, x), getattr(b, x), rtol, atol, x)
-        return
     if hasattr(a, 'keys'):  # dict-like objects
-        assert a.keys() == b.keys()
+        assert a.keys() == b.keys(), set(a).symmetric_difference(set(b))
         for x in a:
             if x != '__geom__':
                 assert_close(a[x], b[x], rtol, atol, x)
@@ -368,7 +372,7 @@ def assert_close(a, b, rtol=1e-07, atol=0, context=None):
 _tmp_paths = []
 
 
-def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
+def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     """Create temporary file with the given content.
 
     Please note: the temporary file can be deleted by the caller or not.
@@ -383,13 +387,13 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp"):
         if not os.path.exists(dir):
             os.makedirs(dir)
     fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
-    _tmp_paths.append(path)
-    if content:
-        fh = os.fdopen(fh, "wb")
-        if hasattr(content, 'encode'):
-            content = content.encode('utf8')
-        fh.write(content)
-        fh.close()
+    if remove:
+        _tmp_paths.append(path)
+    with os.fdopen(fh, "wb") as fh:
+        if content:
+            if hasattr(content, 'encode'):
+                content = content.encode('utf8')
+            fh.write(content)
     return path
 
 
@@ -452,7 +456,28 @@ def run_in_process(code, *args):
         print(exc.cmd[-1], file=sys.stderr)
         raise
     if out:
+        out = out.rstrip(b'\x1b[?1034h')
+        # this is absurd, but it happens: just importing a module can
+        # produce escape sequences in stdout, see for instance
+        # https://bugs.python.org/issue19884
         return eval(out, {}, {})
+
+
+@contextmanager
+def start_many(func, allargs, **kw):
+    """
+    Start multiple processes simultaneously
+    """
+    procs = []
+    for args in allargs:
+        proc = mp.Process(target=func, args=args, kwargs=kw)
+        proc.start()
+        procs.append(proc)
+    try:
+        yield
+    finally:
+        for proc in procs:
+            proc.join()
 
 
 class CodeDependencyError(Exception):
@@ -594,10 +619,10 @@ class AccumDict(dict):
      >>> acc - 1
      {'a': 1, 'b': 0}
 
-    The multiplication has been defined::
+    The multiplication has been defined:
 
-     >>> prob1 = AccumDict(a=0.4, b=0.5)
-     >>> prob2 = AccumDict(b=0.5)
+     >>> prob1 = AccumDict(dict(a=0.4, b=0.5))
+     >>> prob2 = AccumDict(dict(b=0.5))
      >>> prob1 * prob2
      {'a': 0.4, 'b': 0.25}
      >>> prob1 * 1.2
@@ -605,7 +630,7 @@ class AccumDict(dict):
      >>> 1.2 * prob1
      {'a': 0.48, 'b': 0.6}
 
-    And even the power::
+    And even the power:
 
     >>> prob2 ** 2
     {'b': 0.25}
@@ -623,10 +648,11 @@ class AccumDict(dict):
     accumulator, therefore each key has a different accumulator, which
     initially is the empty list (in this case).
     """
-    def __init__(self, dic=None, accum=None, **kw):
+    def __init__(self, dic=None, accum=None, keys=()):
+        for key in keys:
+            self[key] = copy.deepcopy(accum)
         if dic:
             self.update(dic)
-        self.update(kw)
         self.accum = accum
 
     def __iadd__(self, other):
@@ -638,10 +664,10 @@ class AccumDict(dict):
                     # specialized for speed
                     self[k].extend(v)
                 else:
-                    self[k] = self[k] + v
+                    self[k] += v
         else:  # add other to all elements
             for k in self:
-                self[k] = self[k] + other
+                self[k] += other
         return self
 
     def __add__(self, other):
@@ -655,12 +681,12 @@ class AccumDict(dict):
         if hasattr(other, 'items'):
             for k, v in other.items():
                 try:
-                    self[k] = self[k] - v
+                    self[k] -= self[k]
                 except KeyError:
                     self[k] = v
         else:  # subtract other to all elements
             for k in self:
-                self[k] = self[k] - other
+                self[k] -= other
         return self
 
     def __sub__(self, other):
@@ -722,77 +748,46 @@ class AccumDict(dict):
                                for key, value in self.items()})
 
 
-# return a dict imt -> slice and the total number of levels
-def _slicedict_n(imt_dt):
-    n = 0
-    slicedic = {}
-    for imt in imt_dt.names:
-        shp = imt_dt[imt].shape
-        n1 = n + (shp[0] if shp else 1)
-        slicedic[imt] = slice(n, n1)
-        n = n1
-    return slicedic, n
+def copyobj(obj, **kwargs):
+    """
+    :returns: a shallow copy of obj with some changed attributes
+    """
+    new = copy.copy(obj)
+    for k, v in kwargs.items():
+        setattr(new, k, v)
+    return new
 
 
 class DictArray(Mapping):
     """
-    A small wrapper over a dictionary of arrays serializable to HDF5:
-
-    >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-    >>> from openquake.baselib import hdf5
-    >>> with hdf5.File('/tmp/x.h5', 'w') as f:
-    ...      f['d'] = d
-    ...      f['d']
-    <DictArray
-    PGA: [0.01 0.02 0.04]
-    PGV: [0.1 0.2]>
-
-    The DictArray maintains the lexicographic order of the keys.
+    A small wrapper over a dictionary of arrays with the same lenghts.
+    Ordered by the lexicographic order of the keys.
     """
     def __init__(self, imtls):
-        self.dt = dt = numpy.dtype(
-            [(str(imt), F64,
-              (len(imls),) if hasattr(imls, '__len__') else (1,))
-             for imt, imls in sorted(imtls.items())])
-        self.slicedic, num_levels = _slicedict_n(dt)
-        self.array = numpy.zeros(num_levels, F64)
-        lenset = set()
-        for imt, imls in imtls.items():
-            self[imt] = imls
-            try:
-                lenset.add(len(imls))
-            except TypeError:
-                lenset.add(1)
-        if len(lenset) == 1:
-            self.L1 = lenset.pop()
-        else:
-            self.L1 = None
-
-    def new(self, array):
-        """
-        Convert an array of compatible length into a DictArray:
-
-        >>> d = DictArray({'PGA': [0.01, 0.02, 0.04], 'PGV': [0.1, 0.2]})
-        >>> d.new(numpy.arange(0, 5, 1))  # array of lenght 5 = 3 + 2
-        <DictArray
-        PGA: [0 1 2]
-        PGV: [3 4]>
-        """
-        assert len(self.array) == len(array)
-        arr = object.__new__(self.__class__)
-        arr.dt = self.dt
-        arr.slicedic = self.slicedic
-        arr.array = array
-        return arr
+        levels = imtls[next(iter(imtls))]
+        self.L1 = len(levels)
+        self.size = len(imtls) * self.L1
+        self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
+                               for imt, imls in sorted(imtls.items())])
+        self.array = numpy.zeros(self.size, F64)
+        self.slicedic = {}
+        n = 0
+        for imt, imls in sorted(imtls.items()):
+            if len(imls) != self.L1:
+                raise ValueError('imt=%s has %d levels, expected %d' %
+                                 (imt, len(imls), self.L1))
+            self.slicedic[imt] = slc = slice(n, n + self.L1)
+            self.array[slc] = imls
+            n += self.L1
 
     def __call__(self, imt):
         return self.slicedic[imt]
 
     def __getitem__(self, imt):
-        return self.array[self.slicedic[imt]]
+        return self.array[self(imt)]
 
     def __setitem__(self, imt, array):
-        self.array[self.slicedic[imt]] = array
+        self.array[self(imt)] = array
 
     def __iter__(self):
         for imt in self.dt.names:
@@ -800,21 +795,6 @@ class DictArray(Mapping):
 
     def __len__(self):
         return len(self.dt.names)
-
-    def __toh5__(self):
-        carray = numpy.zeros(1, self.dt)
-        for imt in self:
-            carray[imt] = self[imt]
-        return carray, {}
-
-    def __fromh5__(self, carray, attrs):
-        self.array = carray[:].view(F64)
-        self.dt = dt = numpy.dtype(
-            [(str(imt), F64, len(carray[0][imt]))
-             for imt in carray.dtype.names])
-        self.slicedic, num_levels = _slicedict_n(dt)
-        for imt in carray.dtype.names:
-            self[imt] = carray[0][imt]
 
     def __eq__(self, other):
         arr = self.array == other.array
@@ -872,6 +852,79 @@ def groupby2(records, kfield, vfield):
     return list(dic.items())  # Python3 compatible
 
 
+def get_bins(values, nbins, key=None, minval=None, maxval=None):
+    """
+    :param values: an array of N floats (or arrays)
+    :returns: an array of N bin indices plus an array of B bins
+    """
+    assert len(values)
+    if key is not None:
+        values = numpy.array([key(val) for val in values])
+    if minval is None:
+        minval = values.min()
+    if maxval is None:
+        maxval = values.max()
+    if minval == maxval:
+        bins = [minval] * nbins
+    else:
+        bins = numpy.arange(minval, maxval, (maxval-minval) / nbins)
+    return numpy.searchsorted(bins, values, side='right'), bins
+
+
+def groupby_grid(xs, ys, deltax, deltay):
+    """
+    :param xs: an array of P abscissas
+    :param ys: an array of P ordinates
+    :param deltax: grid spacing on the x-axis
+    :param deltay: grid spacing on the y-axis
+    :returns:
+        dictionary centroid -> indices (of the points around each centroid)
+    """
+    lx, ly = len(xs), len(ys)
+    assert lx == ly, (lx, ly)
+    assert lx > 1, lx
+    assert deltax > 0, deltax
+    assert deltay > 0, deltay
+    xmin = xs.min()
+    xmax = xs.max()
+    ymin = ys.min()
+    ymax = ys.max()
+    nx = numpy.ceil((xmax - xmin) / deltax)
+    ny = numpy.ceil((ymax - ymin) / deltay)
+    assert nx > 0, nx
+    assert ny > 0, ny
+    xbins = get_bins(xs, nx, None, xmin, xmax)[0]
+    ybins = get_bins(ys, ny, None, ymin, ymax)[0]
+    acc = AccumDict(accum=[])
+    for p, ij in enumerate(zip(xbins, ybins)):
+        acc[ij].append(p)
+    dic = {}
+    for (i, j), ps in acc.items():
+        idxs = numpy.array(ps)
+        dic[xs[idxs].mean(), ys[idxs].mean()] = idxs
+    return dic
+
+
+def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
+    """
+    >>> values = numpy.arange(10)
+    >>> for group in groupby_bin(values, 3):
+    ...     print(group)
+    [0, 1, 2]
+    [3, 4, 5]
+    [6, 7, 8, 9]
+    """
+    if len(values) == 0:  # do nothing
+        return values
+    idxs = get_bins(values, nbins, key, minval, maxval)[0]
+    acc = AccumDict(accum=[])
+    for idx, val in zip(idxs, values):
+        if isinstance(idx, numpy.ndarray):
+            idx = tuple(idx)  # make it hashable
+        acc[idx].append(val)
+    return acc.values()
+
+
 def _reducerecords(group):
     records = list(group)
     return numpy.array(records, records[0].dtype)
@@ -886,10 +939,18 @@ def group_array(array, *kfields):
 
 def multi_index(shape, axis=None):
     """
-    :param shape: a shape of lenght L with P = S1 * S2 * ... * SL
+    :param shape: a shape of lenght L
     :param axis: None or an integer in the range 0 .. L -1
     :yields:
-        P tuples of indices with a slice(None) at the axis position (if any)
+        tuples of indices with a slice(None) at the axis position (if any)
+
+    >>> for slc in multi_index((2, 3), 0): print(slc)
+    (slice(None, None, None), 0, 0)
+    (slice(None, None, None), 0, 1)
+    (slice(None, None, None), 0, 2)
+    (slice(None, None, None), 1, 0)
+    (slice(None, None, None), 1, 1)
+    (slice(None, None, None), 1, 2)
     """
     if any(s >= TWO16 for s in shape):
         raise ValueError('Shape too big: ' + str(shape))
@@ -902,10 +963,12 @@ def multi_index(shape, axis=None):
         yield tuple(lst)
 
 
-def fast_agg(indices, values=None, axis=0):
+def fast_agg(indices, values=None, axis=0, factor=None, M=None):
     """
     :param indices: N indices in the range 0 ... M - 1 with M < N
     :param values: N values (can be arrays)
+    :param factor: if given, a multiplicate factor (or weight) for the values
+    :param M: maximum index; if None, use max(indices) + 1
     :returns: M aggregated values (can be arrays)
 
     >>> values = numpy.array([[.1, .11], [.2, .22], [.3, .33], [.4, .44]])
@@ -920,14 +983,16 @@ def fast_agg(indices, values=None, axis=0):
         raise ValueError('There are %d values but %d indices' %
                          (N, len(indices)))
     shp = values.shape[1:]
+    if M is None:
+        M = max(indices) + 1
     if not shp:
-        return numpy.bincount(indices, values)
-    M = max(indices) + 1
+        return numpy.bincount(indices, values, M)
     lst = list(shp)
     lst.insert(axis, M)
     res = numpy.zeros(lst, values.dtype)
     for mi in multi_index(shp, axis):
-        res[mi] = numpy.bincount(indices, values[mi])
+        vals = values[mi] if factor is None else values[mi] * factor
+        res[mi] = numpy.bincount(indices, vals, M)
     return res
 
 
@@ -951,10 +1016,15 @@ def fast_agg2(tags, values=None, axis=0):
     return uniq, fast_agg(indices, values, axis)
 
 
-def fast_agg3(structured_array, kfield, vfields):
+def fast_agg3(structured_array, kfield, vfields, factor=None):
     """
     Aggregate a structured array with a key field (the kfield)
     and some value fields (the vfields).
+
+    >>> data = numpy.array([(1, 2.4), (1, 1.6), (2, 2.5)],
+    ...                    [('aid', U16), ('val', F32)])
+    >>> fast_agg3(data, 'aid', ['val'])
+    array([(1, 4. ), (2, 2.5)], dtype=[('aid', '<u2'), ('val', '<f4')])
     """
     allnames = structured_array.dtype.names
     assert kfield in allnames, kfield
@@ -965,7 +1035,7 @@ def fast_agg3(structured_array, kfield, vfields):
     dic = {}
     dtlist = [(kfield, structured_array.dtype[kfield])]
     for name in vfields:
-        dic[name] = fast_agg(indices, structured_array[name])
+        dic[name] = fast_agg(indices, structured_array[name], factor=factor)
         dtlist.append((name, structured_array.dtype[name]))
     res = numpy.zeros(len(uniq), dtlist)
     res[kfield] = uniq
@@ -1075,6 +1145,8 @@ def random_filter(objects, reduction_factor, seed=42):
     list compared to the original list.
     """
     assert 0 < reduction_factor <= 1, reduction_factor
+    if reduction_factor == 1:  # do not reduce
+        return objects
     rnd = random.Random(seed)
     out = []
     for obj in objects:
@@ -1087,13 +1159,15 @@ def random_histogram(counts, nbins, seed):
     """
     Distribute a total number of counts on a set of bins homogenously.
 
-    >>> random_histogram(1, 2, 42)
+    >>> random_histogram(1, 2, seed=42)
     array([1, 0])
-    >>> random_histogram(100, 5, 42)
+    >>> random_histogram(100, 5, seed=42)
     array([28, 18, 17, 19, 18])
-    >>> random_histogram(10000, 5, 42)
+    >>> random_histogram(10000, 5, seed=42)
     array([2043, 2015, 2050, 1930, 1962])
     """
+    if nbins == 1:
+        return numpy.array([counts])
     numpy.random.seed(seed)
     return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
 
@@ -1212,14 +1286,13 @@ def println(msg):
     sys.stdout.flush()
 
 
-def debug(templ, *args):
+def debug(line):
     """
     Append a debug line to the file /tmp/debug.txt
     """
-    msg = templ % args if args else templ
     tmp = tempfile.gettempdir()
     with open(os.path.join(tmp, 'debug.txt'), 'a', encoding='utf8') as f:
-        f.write(msg + '\n')
+        f.write(line + '\n')
 
 
 builtins.debug = debug
@@ -1258,20 +1331,131 @@ def getsizeof(o, ids=None):
     return nbytes
 
 
-def add_defaults(array, **kw):
+def get_duplicates(array, *fields):
     """
-    :param array: a structured array
-    :param kw: a dictionary field name -> default value
-    :returns: a new array with additional fields with default values
+    :returns: a dictionary {key: num_dupl} for duplicate records
     """
-    dtlist = [(name, array.dtype[name]) for name in array.dtype.names]
-    for k, v in kw.items():
-        if k not in array.dtype.names:
-            dtlist.append((k, type(v)))
-    new = numpy.zeros(array.shape, dtlist)
-    for name in array.dtype.names:
-        new[name] = array[name]
-    for k, v in kw.items():
-        if k not in array.dtype.names:
-            new[k] = v
+    uniq = numpy.unique(array[list(fields)])
+    if len(uniq) == len(array):  # no duplicates
+        return {}
+    return {k: len(g) for k, g in group_array(array, *fields).items()
+            if len(g) > 1}
+
+
+def add_columns(a, b, on, cols=None):
+    """
+    >>> a_dt = [('aid', int), ('eid', int), ('loss', float)]
+    >>> b_dt = [('ordinal', int), ('custom_site_id', int)]
+    >>> a = numpy.array([(1, 0, 2.4), (2, 0, 2.2),
+    ...                  (1, 1, 2.1), (2, 1, 2.3)], a_dt)
+    >>> b = numpy.array([(0, 20126), (1, 20127), (2, 20128)], b_dt)
+    >>> add_columns(a, b, 'aid', ['custom_site_id'])
+    array([(1, 0, 2.4, 20127), (2, 0, 2.2, 20128), (1, 1, 2.1, 20127),
+           (2, 1, 2.3, 20128)],
+          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('custom_site_id', '<i8')])
+    """
+    if cols is None:
+        cols = b.dtype.names
+    dtlist = []
+    for name in a.dtype.names:
+        dtlist.append((name, a.dtype[name]))
+    for name in cols:
+        dtlist.append((name, b.dtype[name]))
+    new = numpy.zeros(len(a), dtlist)
+    for name in a.dtype.names:
+        new[name] = a[name]
+    idxs = a[on]
+    for name in cols:
+        new[name] = b[name][idxs]
     return new
+
+
+def categorize(values, nchars=2):
+    """
+    Takes an array with duplicate values and categorize it, i.e. replace
+    the values with codes of length nchars in base64. With nchars=2 4096
+    unique values can be encoded, if there are more nchars must be increased
+    otherwise a ValueError will be raised.
+
+    :param values: an array of V non-unique values
+    :param nchars: number of characters in base64 for each code
+    :returns: an array of V non-unique codes
+
+    >>> categorize([1,2,2,3,4,1,1,2]) # 8 values, 4 unique ones
+    array([b'AA', b'AB', b'AB', b'AC', b'AD', b'AA', b'AA', b'AB'],
+          dtype='|S2')
+    """
+    uvalues = numpy.unique(values)
+    mvalues = 64 ** nchars  # maximum number of unique values
+    if len(uvalues) > mvalues:
+        raise ValueError(
+            f'There are too many unique values ({len(uvalues)} > {mvalues})')
+    prod = itertools.product(*[BASE64] * nchars)
+    dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
+    return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
+
+
+def get_nbytes_msg(sizedict, size=8):
+    """
+    :param sizedict: mapping name -> num_dimensions
+    :returns: (size of the array in bytes, descriptive message)
+
+    >>> get_nbytes_msg(dict(nsites=2, nbins=5))
+    (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
+    """
+    nbytes = numpy.prod(list(sizedict.values())) * size
+    prod = ' * '.join('({}={:_d})'.format(k, int(v))
+                      for k, v in sizedict.items())
+    return nbytes, '%s * %d bytes = %s' % (prod, size, humansize(nbytes))
+
+
+def gen_subclasses(cls):
+    """
+    :returns: the subclasses of `cls`, ordered by name
+    """
+    for subclass in sorted(cls.__subclasses__(), key=lambda cls: cls.__name__):
+        yield subclass
+        yield from gen_subclasses(subclass)
+
+
+def pprod(p, axis=None):
+    """
+    Probability product 1 - prod(1-p)
+    """
+    return 1. - numpy.prod(1. - p, axis)
+
+
+def agg_probs(*probs):
+    """
+    Aggregate probabilities with the usual formula 1 - (1 - P1) ... (1 - Pn)
+    """
+    acc = 1. - probs[0]
+    for prob in probs[1:]:
+        acc *= 1. - prob
+    return 1. - acc
+
+# #################### COMPRESSION/DECOMPRESSION ##################### #
+
+# Compressing the task outputs makes everything slower, so you should NOT
+# do that, except in one case. The case if when you have a lot of workers
+# (say 320) sending a lot of data (say 320 GB) to a master node which is
+# not able to keep up. Then the zmq queue fills all of the avalaible RAM
+# until the master node blows up. With compression you can reduce the queue
+# size a lot (say one order of magnitude).
+# Therefore by losing a bit of speed (say 3%) you can convert a failing
+# calculation into a successful one.
+
+
+def compress(obj):
+    """
+    gzip a Python object
+    """
+    # level=1: compress the least, but fast, good choice for us
+    return zlib.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL), level=1)
+
+
+def decompress(cbytes):
+    """
+    gunzip compressed bytes into a Python object
+    """
+    return pickle.loads(zlib.decompress(cbytes))

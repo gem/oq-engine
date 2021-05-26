@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -87,6 +87,7 @@ def get_heteroskedastic_tau(imt, mag):
     """
     Returns the magnitude dependent inter-event variability using the
     model of Abrahamson et al (2014).
+
     :param dict C:
         Coefficients dictionary
     :param float mag:
@@ -213,15 +214,18 @@ class TromansEtAl2019(GMPE):
 
     #: Required rupture parameters are magnitude, others will be taken from
     #: the GMPE
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure will be set by the GMPE
-    REQUIRES_DISTANCES = set(())
+    REQUIRES_DISTANCES = set()
 
     def __init__(self, gmpe_name, branch="central",
                  homoskedastic_sigma=False,  scaling_factor=None,
-                 vskappa=None, phi_ds2s=True):
-        super().__init__(gmpe_name=gmpe_name)
+                 vskappa=None, phi_ds2s=True, **kwargs):
+        super().__init__(gmpe_name=gmpe_name, branch=branch,
+                         homoskedastic_sigma=homoskedastic_sigma,
+                         scaling_factor=scaling_factor, vskappa=vskappa,
+                         phi_ds2s=phi_ds2s, **kwargs)
         self.gmpe = registry[gmpe_name]()
         # Update the required_parameters
         for name in uppernames:
@@ -305,14 +309,15 @@ class TromansEtAl2019SigmaMu(TromansEtAl2019):
     """
     #: Required rupture parameters are magnitude and style of faulting, others
     #: will be taken from the GMPE
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     def __init__(self, gmpe_name, branch="central", sigma_mu_epsilon=0.0,
                  homoskedastic_sigma=False,  scaling_factor=None,
-                 vskappa=None):
+                 vskappa=None, **kwargs):
         super().__init__(gmpe_name=gmpe_name, branch=branch,
                          homoskedastic_sigma=homoskedastic_sigma,
-                         scaling_factor=scaling_factor, vskappa=vskappa)
+                         scaling_factor=scaling_factor, vskappa=vskappa,
+                         **kwargs)
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):

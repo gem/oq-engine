@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2013-2019 GEM Foundation
+# Copyright (c) 2013-2021 GEM Foundation
 #
 # openquake is free software: you can redistribute it and/or modify it
 # under the terms of the gnu affero general public license as published
@@ -59,13 +59,13 @@ class HongGoda2007(GMPE):
     ])
 
     #: The required site parameter is vs30, see equation 1, page 20.
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: The required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: The required distance parameter is 'Joyner-Boore' distance
-    REQUIRES_DISTANCES = set(('rjb',))
+    REQUIRES_DISTANCES = {'rjb'}
 
     #: GMPE not tested against independent implementation
     non_verified = True

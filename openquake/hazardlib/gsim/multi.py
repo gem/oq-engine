@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -59,7 +59,7 @@ class MultiGMPE(GMPE, collections.abc.Mapping):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameter is magnitude, others will be set later
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance metrics will be set by the GMPEs
     REQUIRES_DISTANCES = set()

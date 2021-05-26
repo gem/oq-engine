@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,10 +24,11 @@ import logging
 import threading
 import subprocess
 
-from openquake.baselib import config, zeromq as z, workerpool as w
+from openquake.baselib import (
+    config, zeromq as z, workerpool as w, parallel as p)
 from openquake.baselib.general import socket_ready, detach_process
-from openquake.baselib.parallel import safely_call
 from openquake.commonlib import logs
+from openquake.engine import __version__
 from openquake.server.db import actions
 from openquake.server import dbapi
 from openquake.server import __file__ as server_path
@@ -40,9 +41,6 @@ db.cmd = lambda action, *args: getattr(actions, action)(db, *args)
 # NB: I am increasing the timeout from 5 to 20 seconds to see if the random
 # OperationalError: "database is locked" disappear in the WebUI tests
 
-ZMQ = os.environ.get(
-    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
-
 DBSERVER_PORT = int(os.environ.get('OQ_DBSERVER_PORT') or config.dbserver.port)
 
 
@@ -52,13 +50,12 @@ class DbServer(object):
     """
     def __init__(self, db, address, num_workers=5):
         self.db = db
-        self.master_host = address[0]
         self.frontend = 'tcp://%s:%s' % address
         self.backend = 'inproc://dbworkers'
         self.num_workers = num_workers
         self.pid = os.getpid()
-        if ZMQ:
-            self.zmaster = w.WorkerMaster(address[0], **config.zworkers)
+        if p.OQDIST == 'zmq':
+            self.zmaster = w.WorkerMaster(**config.zworkers)
         else:
             self.zmaster = None
 
@@ -70,17 +67,18 @@ class DbServer(object):
                 if cmd == 'getpid':
                     sock.send(self.pid)
                     continue
-                elif cmd.startswith('zmq_') and self.zmaster:
-                    msg = getattr(self.zmaster, cmd[4:])()
+                elif cmd.startswith('workers_'):
+                    # engine.run_jobs calls logs.dbcmd(cmd)
+                    msg = getattr(p, cmd)()
                     logging.info(msg)
                     sock.send(msg)
                     continue
                 try:
                     func = getattr(actions, cmd)
                 except AttributeError:  # SQL string
-                    sock.send(safely_call(self.db, (cmd,) + args))
+                    sock.send(p.safely_call(self.db, (cmd,) + args))
                 else:  # action
-                    sock.send(safely_call(func, (self.db,) + args))
+                    sock.send(p.safely_call(func, (self.db,) + args))
 
     def start(self):
         """
@@ -96,14 +94,14 @@ class DbServer(object):
             dworkers.append(sock)
         logging.warning('DB server started with %s on %s, pid %d',
                         sys.executable, self.frontend, self.pid)
-        if ZMQ:
+        if p.OQDIST == 'zmq':
             # start task_in->task_server streamer thread
-            c = config.zworkers
-            threading.Thread(
-                target=w._streamer, args=(self.master_host,), daemon=True
-            ).start()
+            threading.Thread(target=w._streamer, daemon=True).start()
             logging.warning('Task streamer started on port %d',
-                            int(c.ctrl_port) + 1)
+                            int(config.zworkers.ctrl_port) + 1)
+            if 'git' not in __version__:
+                # in production installations start the zworkers
+                self.zmaster.start()
         # start frontend->backend proxy for the database workers
         try:
             z.zmq.proxy(z.bind(self.frontend, z.zmq.ROUTER),
@@ -111,14 +109,15 @@ class DbServer(object):
         except (KeyboardInterrupt, z.zmq.ContextTerminated):
             for sock in dworkers:
                 sock.running = False
-                sock.zsocket.close()
+                if hasattr(sock, 'zsocket'):  # actually used
+                    sock.zsocket.close()
             logging.warning('DB server stopped')
         finally:
             self.stop()
 
     def stop(self):
         """Stop the DbServer and the zworkers if any"""
-        if ZMQ:
+        if p.OQDIST == 'zmq':
             self.zmaster.stop()
             z.context.term()
         self.db.close()
@@ -180,8 +179,7 @@ def ensure_on():
             waiting_seconds -= 1
 
 
-def run_server(dbpath=os.path.expanduser(config.dbserver.file),
-               dbhostport=None, loglevel='WARN', foreground=False):
+def run_server(dbhostport=None, loglevel='WARN', foreground=False):
     """
     Run the DbServer on the given database file and port. If not given,
     use the settings in openquake.cfg.
@@ -196,7 +194,7 @@ def run_server(dbpath=os.path.expanduser(config.dbserver.file),
         addr = (config.dbserver.listen, DBSERVER_PORT)
 
     # create the db directory if needed
-    dirname = os.path.dirname(dbpath)
+    dirname = os.path.dirname(os.path.expanduser(config.dbserver.file))
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 

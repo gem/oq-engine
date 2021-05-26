@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2019 GEM Foundation
+# Copyright (C) 2010-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,11 +24,12 @@ import numpy
 from numpy.testing import assert_allclose
 
 from openquake.baselib.general import assert_close
+from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import site, geo, mfd, pmf, scalerel, tests as htests
 from openquake.hazardlib import source, sourceconverter as s
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.commonlib import tests, readinput
-from openquake.commonlib.source import CompositionInfo
+from openquake.commonlib.logictree import FullLogicTree
 from openquake.hazardlib import nrml
 
 # directory where the example files are
@@ -109,7 +110,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             temporal_occurrence_model=PoissonTOM(50.))
-        point.num_ruptures = point.count_ruptures()
         return point
 
     @property
@@ -142,9 +142,8 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
             polygon=polygon,
-            area_discretization=2,
+            area_discretization=1,
             temporal_occurrence_model=PoissonTOM(50.))
-        area.num_ruptures = area.count_ruptures()
         return area
 
     @property
@@ -173,7 +172,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             temporal_occurrence_model=PoissonTOM(50.),
             hypo_list=numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]),
             slip_list=numpy.array([[90, 0.7], [135, 0.3]]))
-        simple.num_ruptures = simple.count_ruptures()
         return simple
 
     @property
@@ -215,7 +213,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             edges=edges,
             rake=30.0,
             temporal_occurrence_model=PoissonTOM(50.))
-        cmplx.num_ruptures = cmplx.count_ruptures()
         return cmplx
 
     @property
@@ -241,7 +238,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             surface=surface,
             rake=30.0,
             temporal_occurrence_model=PoissonTOM(50.))
-        char.num_ruptures = char.count_ruptures()
         return char
 
     @property
@@ -284,7 +280,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             surface=complex_surface,
             rake=60.0,
             temporal_occurrence_model=PoissonTOM(50.0))
-        char.num_ruptures = char.count_ruptures()
         return char
 
     @property
@@ -316,7 +311,6 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             surface=multi_surface,
             rake=90.0,
             temporal_occurrence_model=PoissonTOM(50.0))
-        char.num_ruptures = char.count_ruptures()
         return char
 
     def test_point_to_hazardlib(self):
@@ -517,6 +511,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
             width_of_mfd_bin=1.,  # for Truncated GR MFDs
             area_source_discretization=1.)
         [np] = nrml.read(NONPARAMETRIC_SOURCE).sourceModel
+        converter.fname = NONPARAMETRIC_SOURCE
         converter.convert_node(np)
 
     def test_alternative_mfds(self):
@@ -654,20 +649,17 @@ class SourceGroupTestCase(unittest.TestCase):
     def test_repr(self):
         self.assertEqual(
             repr(self.source_collector['Volcanic']),
-            '<SourceGroup #0 Volcanic, 3 source(s), -1 effective rupture(s)>')
+            '<SourceGroup Volcanic, 3 source(s)>')
         self.assertEqual(
             repr(self.source_collector['Stable Continental Crust']),
-            '<SourceGroup #0 Stable Continental Crust, 1 source(s), '
-            '-1 effective rupture(s)>'
+            '<SourceGroup Stable Continental Crust, 1 source(s)>'
         )
         self.assertEqual(
             repr(self.source_collector['Subduction Interface']),
-            '<SourceGroup #0 Subduction Interface, 1 source(s), '
-            '-1 effective rupture(s)>')
+            '<SourceGroup Subduction Interface, 1 source(s)>')
         self.assertEqual(
             repr(self.source_collector['Active Shallow Crust']),
-            '<SourceGroup #0 Active Shallow Crust, 2 source(s), -1'
-            ' effective rupture(s)>')
+            '<SourceGroup Active Shallow Crust, 2 source(s)>')
 
 
 class RuptureConverterTestCase(unittest.TestCase):
@@ -719,7 +711,7 @@ class CompositeSourceModelTestCase(unittest.TestCase):
 
         # check the attributes of the groups are set
         [grp0, grp1] = csm.src_groups
-        for grp in csm.src_groups:
+        for grp in [grp0, grp1]:
             self.assertEqual(grp.src_interdep, 'indep')
             self.assertEqual(grp.rup_interdep, 'indep')
         self.assertEqual(repr(csm.gsim_lt), '''\
@@ -727,63 +719,43 @@ class CompositeSourceModelTestCase(unittest.TestCase):
 Active Shallow Crust,b1,[SadighEtAl1997],w=0.5
 Active Shallow Crust,b2,[ChiouYoungs2008],w=0.5
 Subduction Interface,b3,[SadighEtAl1997],w=1.0>''')
-        assoc = csm.info.get_rlzs_assoc()
-        [rlz] = assoc.realizations
-        self.assertEqual(assoc.gsim_by_trt[rlz.ordinal],
+        [rlz] = csm.full_lt.get_realizations()
+        self.assertEqual(csm.full_lt.gsim_by_trt(rlz),
                          {'Subduction Interface': '[SadighEtAl1997]',
                           'Active Shallow Crust': '[ChiouYoungs2008]'})
-        # ignoring the end of the tuple, with the uid field
         self.assertEqual(rlz.ordinal, 0)
-        self.assertEqual(rlz.sm_lt_path, ('b1', 'b4', 'b7'))
+        self.assertEqual(rlz.sm_lt_path, ('b1', 'b5', 'b7'))
         self.assertEqual(rlz.gsim_lt_path, ('b2', 'b3'))
         self.assertEqual(rlz.weight['default'], 1.)
-        self.assertEqual(
-            str(assoc), "<RlzsAssoc(size=2, rlzs=1)>")
 
     def test_many_rlzs(self):
         oqparam = tests.get_oqparam('classical_job.ini')
         oqparam.number_of_logic_tree_samples = 0
+        oqparam.split_sources = False
         csm = readinput.get_composite_source_model(oqparam)
-        self.assertEqual(len(csm), 9)  # the smlt example has 1 x 3 x 3 paths;
-        # there are 2 distinct tectonic region types, so 18 src_groups
+        self.assertEqual(len(csm.sm_rlzs), 9)  # example with 1 x 3 x 3 paths
+        # there are 2 distinct tectonic region types and 18 src_groups
         self.assertEqual(sum(1 for tm in csm.src_groups), 18)
 
-        rlzs_assoc = csm.info.get_rlzs_assoc()
-        rlzs = rlzs_assoc.realizations
+        rlzs = csm.full_lt.get_realizations()
         self.assertEqual(len(rlzs), 18)  # the gsimlt has 1 x 2 paths
         # counting the sources in each TRT model (after splitting)
         self.assertEqual(
-            [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2],
             list(map(len, csm.src_groups)))
-
-        # removing 9 src_groups out of 18
-        def count_ruptures(src_group_id):
-            if src_group_id % 2 == 1:  # Active Shallow Crust
-                return 0
-            else:
-                return 1
-        csm.info.update_eff_ruptures(count_ruptures)
-        assoc = csm.info.get_rlzs_assoc()
-        expected_assoc = "<RlzsAssoc(size=9, rlzs=9)>"
-        self.assertEqual(str(assoc), expected_assoc)
-        self.assertEqual(len(assoc.realizations), 9)
-
-        # removing all src_groups
-        csm.info.update_eff_ruptures(lambda t: 0)
-        self.assertEqual(csm.info.get_rlzs_assoc().realizations, [])
 
     def test_oversampling(self):
         from openquake.qa_tests_data.classical import case_17
         oq = readinput.get_oqparam(
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         csm = readinput.get_composite_source_model(oq)
-        csm.info.update_eff_ruptures(lambda tm: 1)
-        assoc = csm.info.get_rlzs_assoc()
-        self.assertEqual(str(assoc), "<RlzsAssoc(size=2, rlzs=5)>")
 
-        # check CompositionInfo serialization
-        dic, attrs = csm.info.__toh5__()
-        new = object.__new__(CompositionInfo)
+        # check FullLogicTree serialization
+        dic, attrs = csm.full_lt.__toh5__()
+        new = object.__new__(FullLogicTree)
         new.__fromh5__(dic, attrs)
-        self.assertEqual(repr(new), repr(csm.info).
-                         replace('0.20000000000000004', '0.2'))
+        self.assertEqual(repr(new), repr(csm.full_lt).
+                         replace('0.6000000000000001', '0.6'))
+
+    def tearDown(self):
+        Starmap.shutdown()

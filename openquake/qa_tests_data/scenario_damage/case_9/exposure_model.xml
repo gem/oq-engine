@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="ex1"
+    taxonomySource="GEM taxonomy"
+    >
+        <description />
+        <conversions>
+            <costTypes>
+                <costType name="structural" type="aggregated" unit="USD"/>
+            </costTypes>
+        </conversions>
+        <tagNames>
+            Region Provincia Municipio Material
+        </tagNames>
+        <assets>
+            <asset
+            id="asset_126"
+            number="150"
+            taxonomy="MR_LWAL-DNO_H2"
+            >
+                <location lat="1.9429170E+01" lon="-7.0458950E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7732358E+07"/>
+                </costs>
+                <tags Material="Masonry with reinforcement" Municipio="MOCA" Provincia="ESPAILLAT" Region="REGIÓN CIBAO NORTE"/>
+            </asset>
+            <asset
+            id="asset_400"
+            number="13"
+            taxonomy="MR_LWAL-DNO_H3"
+            >
+                <location lat="1.9608640E+01" lon="-7.0450300E+01"/>
+                <costs>
+                    <cost type="structural" value="1.7160982E+06"/>
+                </costs>
+                <tags Material="Masonry with reinforcement" Municipio="JAMAO AL NORTE" Provincia="ESPAILLAT" Region="REGIÓN CIBAO NORTE"/>
+            </asset>
+            <asset
+            id="asset_2658"
+            number="24"
+            taxonomy="MR_LWAL-DNO_H3"
+            >
+                <location lat="1.8847970E+01" lon="-7.0376470E+01"/>
+                <costs>
+                    <cost type="structural" value="3.1681813E+06"/>
+                </costs>
+                <tags Material="Masonry with reinforcement" Municipio="PIEDRA BLANCA" Provincia="MONSEÑOR NOUEL" Region="REGIÓN CIBAO SUR"/>
+            </asset>
+            <asset
+            id="asset_3062"
+            number="123"
+            taxonomy="MUR_LWAL-DNO_H1"
+            >
+                <location lat="1.9102170E+01" lon="-6.9863030E+01"/>
+                <costs>
+                    <cost type="structural" value="2.1254400E+06"/>
+                </costs>
+                <tags Material="Unreinforced Masonry" Municipio="VILLA RIVA" Provincia="DUARTE" Region="REGIÓN CIBAO NORDESTE"/>
+            </asset>
+            <asset
+            id="asset_3678"
+            number="9"
+            taxonomy="MCF_LWAL-DNO_H3"
+            >
+                <location lat="1.9296170E+01" lon="-6.9427570E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1880680E+06"/>
+                </costs>
+                <tags Material="Masonry with reinforcement" Municipio="SAMANÁ" Provincia="SAMANÁ" Region="REGIÓN CIBAO NORDESTE"/>
+            </asset>
+            <asset
+            id="asset_4291"
+            number="8"
+            taxonomy="MCF_LWAL-DNO_H3"
+            >
+                <location lat="1.9665660E+01" lon="-7.1654010E+01"/>
+                <costs>
+                    <cost type="structural" value="1.0560604E+06"/>
+                </costs>
+                <tags Material="Masonry with reinforcement" Municipio="PEPILLO SALCEDO" Provincia="MONTE CRISTI" Region="REGIÓN CIBAO NOROESTE"/>
+            </asset>
+            <asset
+            id="asset_4550"
+            number="1"
+            taxonomy="CR_LFINF-DUH_H4"
+            >
+                <location lat="1.9585650E+01" lon="-7.0945680E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3872000E+06"/>
+                </costs>
+                <tags Material="Concrete" Municipio="ESPERANZA" Provincia="VALVERDE" Region="REGIÓN CIBAO NOROESTE"/>
+            </asset>
+            <asset
+            id="asset_4704"
+            number="719"
+            taxonomy="W-WS_LPB-DNO_H1"
+            >
+                <location lat="1.9683030E+01" lon="-7.1084450E+01"/>
+                <costs>
+                    <cost type="structural" value="1.2424320E+07"/>
+                </costs>
+                <tags Material="Wood" Municipio="LAGUNA SALADA" Provincia="VALVERDE" Region="REGIÓN CIBAO NOROESTE"/>
+            </asset>
+            <asset
+            id="asset_5444"
+            number="15"
+            taxonomy="MR_LWAL-DNO_H3"
+            >
+                <location lat="1.8392830E+01" lon="-7.0772530E+01"/>
+                <costs>
+                    <cost type="structural" value="1.9801133E+06"/>
+                </costs>
+                <tags Material="Masonry with reinforcement" Municipio="PUEBLO VIEJO" Provincia="AZUA" Region="REGIÓN VALDESIA"/>
+            </asset>
+            <asset
+            id="asset_7469"
+            number="4"
+            taxonomy="W-WWD_LWAL-DNO_H1"
+            >
+                <location lat="1.8111390E+01" lon="-7.1120000E+01"/>
+                <costs>
+                    <cost type="structural" value="6.9120000E+04"/>
+                </costs>
+                <tags Material="Wood" Municipio="LA CIÉNAGA" Provincia="BARAHONA" Region="REGIÓN ENRIQUILLO"/>
+            </asset>
+            <asset
+            id="asset_8638"
+            number="23"
+            taxonomy="MR_LWAL-DNO_H1"
+            >
+                <location lat="1.8968470E+01" lon="-7.1326670E+01"/>
+                <costs>
+                    <cost type="structural" value="8.2800000E+05"/>
+                </costs>
+                <tags Material="Masonry with reinforcement" Municipio="SAN JUAN" Provincia="SAN JUAN" Region="REGIÓN EL VALLE"/>
+            </asset>
+            <asset
+            id="asset_10106"
+            number="1"
+            taxonomy="MCF_LWAL-DNO_H3"
+            >
+                <location lat="1.9047410E+01" lon="-6.9813020E+01"/>
+                <costs>
+                    <cost type="structural" value="1.3200755E+05"/>
+                </costs>
+                <tags Material="Masonry with reinforcement" Municipio="SABANÍ GRANDE DE BOY?" Provincia="MONTE PLATA" Region="REGIÓN HIGUAMO"/>
+            </asset>
+            <asset
+            id="asset_10208"
+            number="48"
+            taxonomy="CR_LFINF-DUH_H2"
+            >
+                <location lat="1.8850250E+01" lon="-7.0056370E+01"/>
+                <costs>
+                    <cost type="structural" value="1.1985408E+07"/>
+                </costs>
+                <tags Material="Concrete" Municipio="PERALVILLO" Provincia="MONTE PLATA" Region="REGIÓN HIGUAMO"/>
+            </asset>
+        </assets>
+    </exposureModel>
+</nrml>

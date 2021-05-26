@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,17 +20,13 @@ import shutil
 import json
 import logging
 import os
-import sys
 import tempfile
-import subprocess
-import threading
+import multiprocessing
 import traceback
 import signal
 import zlib
-import pickle
 import urllib.parse as urlparse
 import re
-import numpy
 import psutil
 from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
@@ -41,12 +37,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore
+from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
-from openquake.hazardlib import nrml, gsim
-
-from openquake.commonlib import readinput, oqvalidation, logs
+from openquake.hazardlib import nrml, gsim, valid
+from openquake.commonlib import readinput, oqvalidation, logs, datastore
+from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
@@ -62,6 +58,8 @@ from wsgiref.util import FileWrapper
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
 
+Process = multiprocessing.get_context('spawn').Process
+
 
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -69,8 +67,6 @@ NOT_IMPLEMENTED = 501
 XML = 'application/xml'
 JSON = 'application/json'
 HDF5 = 'application/x-hdf'
-
-DEFAULT_LOG_LEVEL = 'info'
 
 #: For exporting calculation outputs, the client can request a specific format
 #: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
@@ -121,27 +117,28 @@ def _get_base_url(request):
     return base_url
 
 
-def _prepare_job(request, candidates):
+def _prepare_job(request, ini):
     """
     Creates a temporary directory, move uploaded files there and
-    select the job file by looking at the candidate names.
+    select the job file by looking at the .ini extension.
 
     :returns: full path of the job_file
     """
     temp_dir = tempfile.mkdtemp()
-    inifiles = []
     arch = request.FILES.get('archive')
     if arch is None:
         # move each file to a new temp dir, using the upload file names,
         # not the temporary ones
+        inifiles = []
         for each_file in request.FILES.values():
             new_path = os.path.join(temp_dir, each_file.name)
             shutil.move(each_file.temporary_file_path(), new_path)
-            if each_file.name in candidates:
+            if each_file.name.endswith(ini):
                 inifiles.append(new_path)
-        return inifiles
-    # else extract the files from the archive into temp_dir
-    return readinput.extract_from_zip(arch, candidates)
+    else:  # extract the files from the archive into temp_dir
+        inifiles = readinput.extract_from_zip(arch, ini)
+    inifiles.sort()
+    return inifiles
 
 
 @csrf_exempt
@@ -212,6 +209,21 @@ def get_available_gsims(request):
     return HttpResponse(content=json.dumps(gsims), content_type=JSON)
 
 
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_ini_defaults(request):
+    """
+    Return a list of ini attributes with a default value
+    """
+    ini_defs = {}
+    for name in dir(oqvalidation.OqParam):
+        obj = getattr(oqvalidation.OqParam, name)
+        if (isinstance(obj, valid.Param)
+                and obj.default is not valid.Param.NODEFAULT):
+            ini_defs[name] = obj.default
+    return HttpResponse(content=json.dumps(ini_defs), content_type=JSON)
+
+
 def _make_response(error_msg, error_line, valid):
     response_data = dict(error_msg=error_msg,
                          error_line=error_line,
@@ -276,6 +288,60 @@ def validate_nrml(request):
         return _make_response(error_msg=None, error_line=None, valid=True)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def validate_zip(request):
+    """
+    Leverage the engine libraries to check if a given zip archive is a valid
+    calculation input
+
+    :param request:
+        a `django.http.HttpRequest` object containing a zip archive
+
+    :returns: a JSON object, containing:
+        * 'valid': a boolean indicating if the provided archive is valid
+        * 'error_msg': the error message, if any error was found
+                       (None otherwise)
+    """
+    archive = request.FILES.get('archive')
+    if not archive:
+        return HttpResponseBadRequest('Missing archive file')
+    job_zip = archive.temporary_file_path()
+    try:
+        oq = readinput.get_oqparam(job_zip)
+        base.calculators(oq, calc_id=None).read_inputs()
+    except Exception as exc:
+        return _make_response(str(exc), None, valid=False)
+    else:
+        return _make_response(None, None, valid=True)
+
+
+@require_http_methods(['GET'])
+@cross_domain_ajax
+def hmap_png(request, calc_id, imt_id, poe_id):
+    """
+    Get a PNG image with the relevant mean hazard map, if available
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
+    try:
+        from PIL import Image
+        response = HttpResponse(content_type="image/png")
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            arr = ds['png/hmap_%s_%s' % (imt_id, poe_id)][:]
+        Image.fromarray(arr).save(response, format='png')
+        return response
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s\n%s' % (exc.__class__.__name__, exc, tb),
+            content_type='text/plain', status=500)
+
+
 @require_http_methods(['GET'])
 @cross_domain_ajax
 def calc(request, calc_id):
@@ -305,9 +371,10 @@ def calc_list(request, id=None):
     Responses are in JSON.
     """
     base_url = _get_base_url(request)
+    # always filter calculation list unless user is a superuser
     calc_data = logs.dbcmd('get_calcs', request.GET,
                            utils.get_valid_users(request),
-                           utils.get_acl_on(request), id)
+                           not utils.is_superuser(request), id)
 
     response_data = []
     username = psutil.Process(os.getpid()).username()
@@ -329,6 +396,8 @@ def calc_list(request, id=None):
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
+        if not response_data:
+            return HttpResponseNotFound()
         [response_data] = response_data
 
     return HttpResponse(content=json.dumps(response_data),
@@ -351,9 +420,11 @@ def calc_abort(request, calc_id):
         message = {'error': 'Job %s is not running' % job.id}
         return HttpResponse(content=json.dumps(message), content_type=JSON)
 
-    if not utils.user_has_permission(request, job.user_name):
+    # only the owner or superusers can abort a calculation
+    if (job.user_name not in utils.get_valid_users(request) and
+            not utils.is_superuser(request)):
         message = {'error': ('User %s has no permission to abort job %s' %
-                             (job.user_name, job.id))}
+                             (request.user, job.id))}
         return HttpResponse(content=json.dumps(message), content_type=JSON,
                             status=403)
 
@@ -450,29 +521,26 @@ def calc_run(request):
         calculation. They can be uploaded as separate files, or zipped
         together.
     """
-    hazard_job_id = request.POST.get('hazard_job_id')
     job_ini = request.POST.get('job_ini')
-
-    if hazard_job_id:
-        hazard_job_id = int(hazard_job_id)
-        candidates = [job_ini] if job_ini else ("job_risk.ini", "job.ini")
+    hazard_job_id = request.POST.get('hazard_job_id')
+    if hazard_job_id:  # "continue" button
+        ini = job_ini if job_ini else "risk.ini"
     else:
-        candidates = [job_ini] if job_ini else (
-            "job_hazard.ini", "job_haz.ini", "job.ini")
-    result = safely_call(_prepare_job, (request, candidates))
+        ini = job_ini if job_ini else ".ini"
+    result = safely_call(_prepare_job, (request, ini))
     if result.tb_str:
         return HttpResponse(json.dumps(result.tb_str.splitlines()),
                             content_type=JSON, status=500)
     inifiles = result.get()
     if not inifiles:
-        msg = 'Could not find any file of the form %s' % str(candidates)
+        msg = 'Could not find any file of the form *%s' % ini
         logging.error(msg)
         return HttpResponse(content=json.dumps([msg]), content_type=JSON,
                             status=500)
 
     user = utils.get_user(request)
     try:
-        job_id, pid = submit_job(inifiles[0], user, hazard_job_id)
+        job_id = submit_job(inifiles[0], user, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -480,46 +548,24 @@ def calc_run(request):
         response_data = exc_msg.splitlines()
         status = 500
     else:
-        response_data = dict(job_id=job_id, status='created', pid=pid)
+        response_data = dict(status='created', job_id=job_id)
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
 
 
-RUNCALC = '''\
-import os, sys, pickle
-from openquake.commonlib import logs
-from openquake.engine import engine
-if __name__ == '__main__':
-    oqparam = pickle.loads(%(pik)r)
-    logs.init(%(job_id)s)
-    with logs.handle(%(job_id)s):
-        engine.run_calc(
-            %(job_id)s, oqparam, '', %(hazard_job_id)s,
-           username='%(username)s')
-    os.remove(__file__)
-'''
-
-
-def submit_job(job_ini, username, hazard_job_id=None):
+def submit_job(job_ini, username, hc_id):
     """
     Create a job object from the given job.ini file in the job directory
-    and run it in a new process. Returns the job ID and PID.
+    and run it in a new process.
+
+    :returns: a job ID
     """
-    job_id = logs.init('job')
-    oq = engine.job_from_file(
-        job_ini, job_id, username, hazard_calculation_id=hazard_job_id)
-    pik = pickle.dumps(oq, protocol=0)  # human readable protocol
-    code = RUNCALC % dict(job_id=job_id, hazard_job_id=hazard_job_id, pik=pik,
-                          username=username)
-    tmp_py = gettemp(code, suffix='.py')
-    # print(code, tmp_py)  # useful when debugging
-    devnull = subprocess.DEVNULL
-    popen = subprocess.Popen([sys.executable, tmp_py],
-                             stdin=devnull, stdout=devnull, stderr=devnull)
-    threading.Thread(target=popen.wait).start()
-    logs.dbcmd('update_job', job_id, {'pid': popen.pid})
-    return job_id, popen.pid
+    jobs = engine.create_jobs(
+        [job_ini], config.distribution.log_level, None, username, hc_id)
+    proc = Process(target=engine.run_jobs, args=(jobs,))
+    proc.start()
+    return jobs[0].calc_id
 
 
 @require_http_methods(['GET'])
@@ -667,34 +713,22 @@ def extract(request, calc_id, what):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name):
         return HttpResponseForbidden()
-
+    path = request.get_full_path()
+    n = len(request.path_info)
+    query_string = unquote_plus(path[n:])
     try:
         # read the data and save them on a temporary .npz file
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
             fd, fname = tempfile.mkstemp(
                 prefix=what.replace('/', '-'), suffix='.npz')
             os.close(fd)
-            n = len(request.path_info)
-            query_string = unquote_plus(request.get_full_path()[n:])
-            aw = _extract(ds, what + query_string)
-            a = {}
-            for key, val in vars(aw).items():
-                key = str(key)  # can be a numpy.bytes_
-                if key.startswith('_'):
-                    continue
-                elif isinstance(val, str):
-                    # without this oq extract would fail
-                    a[key] = numpy.array(val.encode('utf-8'))
-                elif isinstance(val, dict):
-                    # this is hack: we are losing the values
-                    a[key] = list(val)
-                else:
-                    a[key] = val
-            numpy.savez_compressed(fname, **a)
+            obj = _extract(ds, what + query_string)
+            hdf5.save_npz(obj, fname)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
-            content='%s: %s\n%s' % (exc.__class__.__name__, exc, tb),
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, path, tb),
             content_type='text/plain', status=500)
 
     # stream the data back
@@ -736,35 +770,19 @@ def calc_datastore(request, job_id):
     return response
 
 
-@cross_domain_ajax
-@require_http_methods(['GET'])
-def calc_oqparam(request, job_id):
-    """
-    Return the calculation parameters as a JSON
-    """
-    job = logs.dbcmd('get_job', int(job_id))
-    if job is None:
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
-        return HttpResponseForbidden()
-
-    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        oq = ds['oqparam']
-    return HttpResponse(content=json.dumps(vars(oq)), content_type=JSON)
-
-
 def web_engine(request, **kwargs):
-    return render(request, "engine/index.html",
-                  dict())
+    return render(request, "engine/index.html", {})
 
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        hmaps = 'png' in ds
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     return render(request, "engine/get_outputs.html",
-                  dict(calc_id=calc_id, size_mb=size_mb))
+                  dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps))
 
 
 @csrf_exempt

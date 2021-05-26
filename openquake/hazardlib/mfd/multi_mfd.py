@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -45,6 +45,8 @@ ALIAS = dict(min_mag='minMag', max_mag='maxMag',
 
 TOML2PY = dict(_minMag='min_mag', _maxMag='max_mag',
                _aValue='a_val', _bValue='b_val',
+               _cornerMag='corner_mag',
+               _slipRate='slip_rate',
                _binWidth='bin_width',
                _characteristicMag='char_mag',
                _characteristicRate='char_rate',
@@ -127,6 +129,7 @@ class MultiMFD(BaseMFD):
             kwargs['bin_width'] = [width_of_mfd_bin]
         for field in kwargs:
             self.check_size(field, kwargs[field])
+        self.modification = ()
 
     def check_size(self, field, values):
         if len(values) not in (1, self.size):
@@ -145,7 +148,10 @@ class MultiMFD(BaseMFD):
                     args.append(arr[0])
                 else:
                     args.append(arr[i])
-            yield self.mfd_class(*args)
+            mfd = self.mfd_class(*args)
+            if self.modification:
+                mfd.modify(*self.modification)
+            yield mfd
 
     def __len__(self):
         return self.size
@@ -177,5 +183,4 @@ class MultiMFD(BaseMFD):
         Apply a modification to the underlying point sources, with the
         same parameters for all sources
         """
-        for src in self:
-            src.modify(modification, parameters)
+        self.modification = (modification, parameters)

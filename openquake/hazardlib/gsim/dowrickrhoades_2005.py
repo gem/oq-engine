@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,12 +21,12 @@ Module exports :class:`DowrickRhoades2005Asc`,:class:`DowrickRhoades2005SInter`
 :class:`DowrickRhoades2005SSlab`, and :class:`DowrickRhoades2005Volc`.
 """
 import numpy as np
-from openquake.hazardlib.gsim.base import IPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI
 
 
-class DowrickRhoades2005Asc(IPE):
+class DowrickRhoades2005Asc(GMPE):
     """
     Implements IPE developed by D.J. Dowrick and D.A. Rhoades published as
     "Revised models for attenuation of Modified Mercalli Intensity in
@@ -60,16 +60,16 @@ class DowrickRhoades2005Asc(IPE):
 
     #: The only site parameter is vs30 used to map to site class to distinguish
     # between rock, stiff soil and soft soil
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake and hypocentral
     # depth rake is for determining fault style flags. Hypo depth is for
     # subduction GMPEs
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
 
     #: Required distance measure is rrup (paragraphy x, page xx) which is
     # defined as nearest distance to the source.
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

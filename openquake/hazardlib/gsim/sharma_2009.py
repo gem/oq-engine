@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -78,16 +78,16 @@ class SharmaEtAl2009(GMPE):
 
     #: Required site parameter Vs30 is used to set binary rock/soil
     #: classification dummy variable, see equation (1) on p. 1200.
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and rake, see
     #: equation (1) on p. 1200. Rake is used to distinguish between
     #: reverse and strike-slip faulting, and to detect mis-application
     #: of GMPE to normal faulting.
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: Required distance measure is Joyner-Boore distance, see p. 1200
-    REQUIRES_DISTANCES = set(('rjb',))
+    REQUIRES_DISTANCES = {'rjb'}
 
     ALREADY_WARNED = False  # warn the first time only
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,8 +28,9 @@ import sys
 import numpy
 
 from openquake.calculators import base
-from openquake.baselib import datastore, general
-from openquake.commonlib import readinput, oqvalidation, writers
+from openquake.calculators.export import export
+from openquake.baselib import general, parallel, writers
+from openquake.commonlib import datastore, readinput, oqvalidation, logs
 
 
 NOT_DARWIN = sys.platform != 'darwin'
@@ -43,7 +44,7 @@ class DifferentFiles(Exception):
 
 def strip_calc_id(fname):
     name = os.path.basename(fname)
-    return re.sub(r'_\d+\.', '.', name)
+    return re.sub(r'_\d+', '', name)
 
 
 def columns(line):
@@ -85,8 +86,11 @@ collect_csv = {}  # outputname -> lines
 orig_write_csv = writers.write_csv
 
 
-def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None):
-    fname = orig_write_csv(dest, data, sep, fmt, header, comment)
+def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
+              renamedict=None):
+    fname = orig_write_csv(dest, data, sep, fmt, header, comment, renamedict)
+    if fname is None:  # writing on StringIO
+        return
     lines = open(fname).readlines()[:3]
     name = re.sub(r'[\d\.]+', '.', strip_calc_id(fname))
     collect_csv[name] = lines
@@ -100,6 +104,7 @@ class CalculatorTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         builtins.open = check_open
+        export.sanity_check = True
         cls.duration = general.AccumDict()
         if OQ_CALC_OUTPUTS:
             writers.write_csv = write_csv
@@ -110,15 +115,14 @@ class CalculatorTestCase(unittest.TestCase):
         """
         self.testdir = os.path.dirname(testfile) if os.path.isfile(testfile) \
             else testfile
-        inis = [os.path.join(self.testdir, ini) for ini in job_ini.split(',')]
-        params = readinput.get_params(inis, **kw)
-
+        params = readinput.get_params(os.path.join(self.testdir, job_ini), kw)
         oqvalidation.OqParam.calculation_mode.validator.choices = tuple(
             base.calculators)
         oq = oqvalidation.OqParam(**params)
         oq.validate()
         # change this when debugging the test
-        return base.calculators(oq)
+        log = logs.init('calc', params)
+        return base.calculators(oq, log.calc_id)
 
     def run_calc(self, testfile, job_ini, **kw):
         """
@@ -129,7 +133,8 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc = self.get_calc(testfile, inis[0], **kw)
         self.edir = tempfile.mkdtemp()
         with self.calc._monitor:
-            result = self.calc.run(export_dir=self.edir)
+            result = self.calc.run(export_dir=self.edir,
+                                   exports=kw.get('exports', ''))
         self.calc.datastore.close()
         duration = {inis[0]: self.calc._monitor.duration}
         if len(inis) == 2:
@@ -137,7 +142,8 @@ class CalculatorTestCase(unittest.TestCase):
             calc = self.get_calc(
                 testfile, inis[1], hazard_calculation_id=str(hc_id), **kw)
             with calc._monitor:
-                exported = calc.run(export_dir=self.edir)
+                exported = calc.run(export_dir=self.edir,
+                                    exports=kw.get('exports', ''))
                 result.update(exported)
             duration[inis[1]] = calc._monitor.duration
             self.calc = calc
@@ -215,7 +221,11 @@ class CalculatorTestCase(unittest.TestCase):
         """
         Make sure the content of the exported file is the expected one
         """
-        with open8(os.path.join(self.calc.oqparam.export_dir, fname)) as got:
+        if not os.path.isabs(fname):
+            fname = os.path.join(self.calc.oqparam.export_dir, fname)
+        if self.OVERWRITE_EXPECTED:
+            open8(fname, 'w').write(expected_content)
+        with open8(fname) as got:
             self.assertEqual(expected_content, got.read())
 
     def assertEventsByRlz(self, events_by_rlz):
@@ -243,8 +253,9 @@ class CalculatorTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        print('durations =', cls.duration)
+        parallel.Starmap.shutdown()
         builtins.open = orig_open
+        export.sanity_check = False
         if OQ_CALC_OUTPUTS:
             if not os.path.exists(OUTPUTS):
                 os.mkdir(OUTPUTS)

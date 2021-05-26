@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -31,21 +31,16 @@ class StochasticEventSetTestCase(unittest.TestCase):
         source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
         # it has a single group containing 15 mutex sources
         [group] = nrml.to_python(source_model)
+        for i, src in enumerate(group):
+            src.id = i
         aae([src.mutex_weight for src in group],
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])
-        seed = 42
-        start = 0
-        for i, src in enumerate(group):
-            src.id = i
-            nr = src.num_ruptures
-            src.serial = start + seed
-            start += nr
-        param = dict(ses_per_logic_tree_path=10, filter_distance='rjb',
+        param = dict(ses_per_logic_tree_path=10, ses_seed=42,
                      gsims=[SiMidorikawa1999SInter()])
         sf = calc.filters.SourceFilter(None, {})
         dic = sum(sample_ruptures(group, sf, param), {})
-        self.assertEqual(len(dic['rup_array']), 5)
+        self.assertEqual(len(dic['rup_array']), 8)
         self.assertEqual(len(dic['calc_times']), 15)  # mutex sources
 
         # test no filtering 1
@@ -54,4 +49,4 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
         # test no filtering 2
         ruptures = sum(sample_ruptures(group, sf, param), {})['rup_array']
-        self.assertEqual(len(ruptures), 5)
+        self.assertEqual(len(ruptures), 8)

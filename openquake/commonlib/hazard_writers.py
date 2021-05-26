@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -357,91 +357,6 @@ def rupture_to_element(rup, parent=None):
     return parent
 
 
-class SESXMLWriter(object):
-    """
-    :param dest:
-        File path (including filename) or a file-like object for XML results to
-        be saved to.
-    :param str sm_lt_path:
-        Source model logic tree branch identifier of the logic tree realization
-        which produced this collection of stochastic event sets.
-    :param gsim_lt_path:
-        GSIM logic tree branch identifier of the logic tree realization which
-        produced this collection of stochastic event sets.
-    """
-    def __init__(self, dest):
-        self.dest = dest
-
-    def serialize(self, data, investigation_time):
-        """
-        Serialize a collection of stochastic event sets to XML.
-
-        :param data:
-            A dictionary src_group_id -> list of
-            :class:`openquake.commonlib.calc.Rupture` objects.
-            Each Rupture should have the following attributes:
-
-            * `rupid`
-            * `events_by_ses`
-            * `magnitude`
-            * `strike`
-            * `dip`
-            * `rake`
-            * `tectonic_region_type`
-            * `is_from_fault_source` (a `bool`)
-            * `is_multi_surface` (a `bool`)
-            * `lons`
-            * `lats`
-            * `depths`
-
-            If `is_from_fault_source` is `True`, the rupture originated from a
-            simple or complex fault sources. In this case, `lons`, `lats`, and
-            `depths` should all be 2D arrays (of uniform shape). These
-            coordinate triples represent nodes of the rupture mesh.
-
-            If `is_from_fault_source` is `False`, the rupture originated from a
-            point or area source. In this case, the rupture is represented by a
-            quadrilateral planar surface. This planar surface is defined by 3D
-            vertices. In this case, the rupture should have the following
-            attributes:
-
-            * `top_left_corner`
-            * `top_right_corner`
-            * `bottom_right_corner`
-            * `bottom_left_corner`
-
-            Each of these should be a triple of `lon`, `lat`, `depth`.
-
-            If `is_multi_surface` is `True`, the rupture originated from a
-            multi-surface source. In this case, `lons`, `lats`, and `depths`
-            should have uniform length. The length should be a multiple of 4,
-            where each segment of 4 represents the corner points of a planar
-            surface in the following order:
-
-            * top left
-            * top right
-            * bottom left
-            * bottom right
-
-            Each of these should be a triple of `lon`, `lat`, `depth`.
-
-        :param investigation_time:
-            Investigation time parameter specified in the job.ini
-        """
-        with open(self.dest, 'wb') as fh:
-            root = et.Element('nrml')
-            ses_container = et.SubElement(root, 'ruptureCollection')
-            ses_container.set('investigationTime', str(investigation_time))
-            for grp_id in sorted(data):
-                attrs = dict(
-                    id=grp_id,
-                    tectonicRegion=data[grp_id][0].tectonic_region_type)
-                sg = et.SubElement(ses_container, 'ruptureGroup', attrs)
-                for rupture in data[grp_id]:
-                    rupture_to_element(rupture, sg)
-            nrml.write(list(root), fh)
-
-
 class HazardMapWriter(object):
     """
     :param dest:
@@ -623,7 +538,7 @@ class DisaggXMLWriter(object):
                 for idxs, value in numpy.ndenumerate(result.matrix):
                     prob = et.SubElement(diss_matrix, 'prob')
 
-                    index = ','.join([str(x) for x in idxs])
+                    index = ','.join(str(x) for x in idxs)
                     prob.set('index', index)
                     prob.set('value', scientificformat(value))
 

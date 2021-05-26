@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,9 +16,31 @@
 
 # pylint: disable=missing-docstring,protected-access
 
+import unittest
+import numpy as np
 from openquake.hazardlib.mfd import TruncatedGRMFD
 
 from openquake.hazardlib.tests.mfd.base_test import BaseMFDTestCase
+
+
+class TruncatedGRMFDFromMomentTestCase(unittest.TestCase):
+
+    def test_instantiation(self):
+        min_mag = 0.0
+        max_mag = 7.0
+        bin_width = 0.01
+        b_val = 1.0
+        moment_rate = 4.5e16
+        mfd = TruncatedGRMFD.from_moment(min_mag, max_mag, bin_width, b_val,
+                                         moment_rate)
+        rates = np.array(mfd.get_annual_occurrence_rates())
+        computed = np.sum(10**(1.5*rates[:, 0] + 9.1) * rates[:, 1])
+        msg = "Scalar Mo rate from MFD does not match the original one"
+        self.assertAlmostEqual(moment_rate, computed, msg=msg, delta=1e14)
+
+        # test for a_val = -inf
+        with self.assertRaises(ValueError):
+            TruncatedGRMFD(min_mag, max_mag, bin_width, -np.inf, b_val)
 
 
 class TruncatedGRMFDConstraintsTestCase(BaseMFDTestCase):

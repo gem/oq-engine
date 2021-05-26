@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -69,22 +69,17 @@ class StarmapTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         parallel.Starmap.init()  # initialize the pool
-        if parallel.oq_distribute() == 'zmq':
-            err = workerpool.check_status()
-            if err:
-                raise unittest.SkipTest(err)
 
     def test_apply(self):
         res = parallel.Starmap.apply(
-            get_length, (numpy.arange(10), self.monitor),
-            concurrent_tasks=3).reduce()
+            get_length, (numpy.arange(10),), concurrent_tasks=3).reduce()
         self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
 
     # this case is non-trivial since there is a key, so two groups are
     # generated even if everything is run in a single core
     def test_apply_no_tasks(self):
         res = parallel.Starmap.apply(
-            get_length, ('aaabb', self.monitor),
+            get_length, ('aaabb',),
             concurrent_tasks=0, key=lambda char: char)
         # chunks [['a', 'a', 'a'], ['b', 'b']]
         partial_sums = sorted(dic['n'] for dic in res)
@@ -92,7 +87,7 @@ class StarmapTestCase(unittest.TestCase):
 
     def test_apply_maxweight(self):
         res = parallel.Starmap.apply(
-            get_length, ('aaabb', self.monitor), maxweight=2,
+            get_length, ('aaabb',), maxweight=2,
             key=lambda char: char)
         # chunks ['aa', 'ab', 'b']
         partial_sums = sorted(dic['n'] for dic in res)
@@ -120,7 +115,6 @@ class StarmapTestCase(unittest.TestCase):
 
     def test_supertask(self):
         # this test has 4 supertasks generating 4 + 5 + 3 + 5 = 17 subtasks
-        # and 5 real outputs (one from the yield {})
         allargs = [('aaaaeeeeiii',),
                    ('uuuuaaaaeeeeiii',),
                    ('aaaaaaaaeeeeiii',),
@@ -137,9 +131,12 @@ class StarmapTestCase(unittest.TestCase):
         with hdf5.File(tmp, 'r') as h5:
             num = general.countby(h5['performance_data'][()], 'operation')
             self.assertEqual(num[b'waiting'], 4)
-            self.assertEqual(num[b'total supertask'], 5)  # outputs
+            self.assertEqual(num[b'total supertask'], 4)  # tasks
             self.assertEqual(num[b'total get_length'], 17)  # subtasks
-            self.assertGreater(len(h5['task_info']), 0)
+            info = h5['task_info'][()]
+            dic = dict(general.fast_agg3(info, 'taskname', ['received']))
+            self.assertGreater(dic[b'get_length'], 0)
+            self.assertGreater(dic[b'supertask'], 0)
         shutil.rmtree(tmpdir)
 
     def test_countletters(self):
@@ -154,12 +151,11 @@ class StarmapTestCase(unittest.TestCase):
 
 class ThreadPoolTestCase(unittest.TestCase):
     def test(self):
-        monitor = parallel.Monitor()
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'threadpool'}):
             parallel.Starmap.init()
             try:
                 res = parallel.Starmap.apply(
-                    get_length, (numpy.arange(10), monitor),
+                    get_length, (numpy.arange(10),),
                     concurrent_tasks=3).reduce()
                 self.assertEqual(res, {'n': 10})  # chunks [4, 4, 2]
             finally:
@@ -175,7 +171,8 @@ def pool_starmap(func, allargs, h5):
     import multiprocessing
     with multiprocessing.get_context('spawn').Pool() as pool:
         for i, res in enumerate(pool.starmap(func, allargs)):
-            perf = numpy.array([(func.__name__, 0, 0, i)], performance.perf_dt)
+            perf = numpy.array([(func.__name__, 0, 0, i, i)],
+                               performance.perf_dt)
             hdf5.extend(h5['performance_data'], perf)
             yield res
 

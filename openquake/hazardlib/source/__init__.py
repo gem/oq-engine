@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,7 +17,8 @@
 Package :mod:`openquake.hazardlib.source` deals with various types
 of seismic sources.
 """
-import copy
+import logging
+from openquake.baselib import parallel
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.rupture import BaseRupture, \
 ParametricProbabilisticRupture, NonParametricProbabilisticRupture
@@ -29,7 +30,9 @@ from openquake.hazardlib.source.complex_fault import (
     ComplexFaultSource, MINWEIGHT)
 from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
 from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
-from openquake.hazardlib.source.multi import MultiPointSource
+from openquake.hazardlib.source.multi_point import MultiPointSource
+from openquake.hazardlib.source.kite_fault import KiteFaultSource
+from openquake.hazardlib.source.multi_fault import MultiFaultSource
 
 
 def splittable(src):
@@ -38,3 +41,25 @@ def splittable(src):
     """
     return (src.__class__.__iter__ is not BaseSeismicSource.__iter__
             and getattr(src, 'mutex_weight', 1) == 1 and src.splittable)
+
+
+def check_complex_fault(src):
+    """
+    Make sure all the underlying rupture surfaces are valid
+    """
+    for rup in src.iter_ruptures():
+        try:
+            rup.surface.get_dip()
+        except Exception as exc:
+            yield '%s: %s' % (src.source_id, exc)
+            break
+
+
+def check_complex_faults(srcs):
+    """
+    Check the geometries of the passed complex fault sources
+    """
+    sources = [(src,) for src in srcs if src.code == b'C']
+    for err in parallel.Starmap(check_complex_fault, sources):
+        logging.error(err)
+    parallel.Starmap.shutdown()

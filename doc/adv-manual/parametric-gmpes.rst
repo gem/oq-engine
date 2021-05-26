@@ -1,52 +1,49 @@
 Parametric GMPEs
 ===================================
 
-Most of the Ground Motion Prediction Equations (GMPEs) in hazardlib are
-classes that can be instantiated without arguments, however there is
-now a growing number of exceptions to the rule. Here I will describe
-some of the parametric GMPEs we have, as well as give some guidance for
+Most of the Ground Motion Prediction Equations (GMPEs) in hazardlib
+are classes that can be instantiated without arguments. However, there
+is now a growing number of exceptions. Here I will describe some of
+the parametric GMPEs we have, as well as give some guidance for
 authors wanting to implement a parametric GMPE.
 
 Signature of a GMPE class
 -------------------------
 
-The best advice for an implementor of a new GMPE is *do not define an
-__init__ method*. It is not necessary, since the ``__init__`` will
-be inherited from the superclass. If you need to perform some
-initialization please define an ``init()`` method without arguments
-and the engine will call it. Here is an example:
+The more robust way to define parametric GMPEs is to use
+a ``**kwargs`` signature (robust against subclassing):
 
 .. code-block:: python
 
-    from openquake.hazardlib.gsim.base import GMPE
+ from openquake.hazardlib.gsim.base import GMPE
 
-    class MyGMPE(GMPE):
-       def init(self):
-           # doing some initialization here
+ class MyGMPE(GMPE):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # doing some initialization here
 
-The signature of the base ``GMPE.__init__`` method is ``**kwargs``.
-Such dictionary is stored in ``self.kwargs`` and your
-``init()`` method can operate on the passed arguments in this way, if need
-there is. Normally (i.e. for nonparametric GMPEs) ``self.kwargs`` is the
-empty dictionary, but it can be arbitrarily nested, with only one limitation:
+
+The call to ``super().__init__`` will set a ``self.kwargs`` attribute
+and perform a few checks, like raising a warning if the GMPE is experimental.
+In absence of parameters ``self.kwargs`` is the empty dictionary, but in general
+it is non-empty and it can be arbitrarily nested, with only one limitation:
 it must be a *dictionary of literal Python
 objects* so that it admits a TOML representation.
 
-TOML is a simple format
-similar to the ``.ini`` format but hierarchical that is described here
-https://github.com/toml-lang/toml#user-content-example and it is used
-by lots of people in the IT world. The advantage of TOML is that it is
-a lot more readable than JSON and XML and simpler than YAML: moreover,
-it is perfect for serializing into text literal Python objects like
-dictionaries and lists. The serialization feature is essential for the
-engine since the GMPEs are read from the GMPE logic tree file which is a
-text file, a because the GMPEs are saved into the datastore as a text,
-in the dataset ``csm_info/gsim_lt/branches``.
+TOML is a simple format similar to the ``.ini`` format but
+hierarchical (see https://github.com/toml-lang/toml#user-content-example).
+It is used by lots of people in the IT world, not only in Python.
+The advantage of TOML is that it is a lot more readable than JSON and XML and
+simpler than YAML: moreover, it is perfect for serializing into text literal
+Python objects like dictionaries and lists. The serialization feature
+is essential for the engine since the GMPEs are read from the GMPE
+logic tree file which is a text file, and because the GMPEs are saved
+into the datastore as text, in the dataset ``full_lt/gsim_lt``.
 
-The examples below will make it clear how it works.
+The examples below will clarify how it works.
 
 GMPETable
-------------------------
+---------
 
 Historically, the first parametric GMPE was the GMPETable, introduced many
 years ago to support the Canada model. The GMPETable class has a single
@@ -121,15 +118,88 @@ without TOML:
        </logicTreeBranch>
 
 This is a legacy syntax, which is still supported and will likely be supported
-forever, but we recommend you to use the new TOML-based syntax, which is
+forever, but we recommend to use the new TOML-based syntax, which is
 more general. The old syntax has the limitation of being non-hierarchic,
 making it impossible to define MultiGMPEs involving parametric GMPEs:
 this is why we switched to TOML.
 
+File-dependent GMPEs
+-----------------------------------------
+
+It is possible to define other GMPEs taking one or more filenames as parameters.
+Everything will work provided you respect the following rules:
+
+1. there is a naming convention on the file parameters, that must end with
+   the suffix ``_file`` or ``_table``
+2. the files must be read at GMPE initialization time
+   (i.e. in the ``__init__`` method)
+3. they must be read with the ``GMPE.open`` method, NOT with the
+   ``open`` builtin;
+4. in the gsim logic tree file you must use **relative** path names
+   
+The constraint on the argument names makes it possible for the engine
+to collect all the files required by the GMPEs; moreover, since the path names
+are relative, the `oq zip` command can work making it easy to ship runnable
+calculations. The engine also stores
+in the datastore a copy of all of the required input files. Without the copy,
+it would not be possible from the datastore
+to reconstruct the inputs, thus making it impossible to dump and restore
+calculations from a server to a different machine.
+
+The constraint about reading at initialization time makes it possible
+for the engine to work on a cluster. The issue is that GMPEs are
+instantiated in the controller and used in the worker nodes, which
+*do not have access to the same filesystem*.
+If the files are read after instantiation, you will get a file not
+found error when running on a cluster.
+
+The reason why you cannot use the standard ``open`` builtin to read the
+files is that the engine must be able to read the GMPE inputs from the
+datastore copies (think of the case when the ``calc_XXX.hdf5`` has been
+copied to a different machine). In order to do that, there is some
+magic based on the naming convention. For instance, if your GMPE must
+read a text file with argument name `text_file` you should write
+the following code:
+
+.. code-block:: python
+
+    class GMPEWithTextFile(GMPE):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            with self.open(kwargs['text_file']) as myfile:  # good
+                self.text = myfile.read().decode('utf-8')
+
+You should NOT write the following, because it will break the
+engine, for instance by making it impossible to export the
+results of a calculation:
+
+.. code-block:: python
+
+    class GMPEWithTextFile(GMPE):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            with open(kwargs['text_file']) as myfile:  # bad
+                self.text = myfile.read()
+
+NB: writing
+
+.. code-block:: python
+
+    class GMPEWithTextFile(GMPE):
+        def __init__(self, text_file):
+            super().__init__(text_file=text_file)
+            with self.open(text_file) as myfile:  # good
+                self.text = myfile.read().decode('utf-8')
+
+would work but it is discouraged. It is best to keep the ``**kwargs``
+signature so that the call to ``super().__init__(**kwargs)`` will
+work out-of-the-box even if in the future subclasses of `GMPEWithTextFile`
+with different parameters will appear: this is defensive programming.
+
 MultiGMPE
 -----------------
 
-The second example of parametric GMPE is the MultiGMPE class. A MultiGMPE
+Another example of parametric GMPE is the MultiGMPE class. A MultiGMPE
 is a dictionary of GMPEs, keyed by Intensity Measure Type. It is useful
 in geotechnical applications and in general in any situation where you
 have GMPEs depending on the IMTs. You can find an example in our test
@@ -202,3 +272,25 @@ passed to the underlying class will be
     'avg_periods': [0.5, 1.0, 2.0],
     'corr_func': "baker_jayaram"}
 
+
+ModifiableGMPE
+----------------
+
+In engine 3.10 we introduced a ``ModifiableGMPE`` class which is able
+to modify the behavior of an underlying GMPE. Here is an example of
+use in the logic tree file:
+
+.. code-block:: xml
+
+                    <uncertaintyModel>
+                        [ModifiableGMPE]
+                        gmpe.AkkarEtAlRjb2014 = {}
+                        set_between_epsilon.epsilon_tau = 0.5
+                    </uncertaintyModel>
+
+Here `set_between_epsilon` is simply shifting the mean with the formula
+`mean -> mean + epsilon_tau * inter_event`. In the future ``ModifiableGMPE``
+will likely grow more methods. If you want to understand how it works you
+should look at the source code:
+                    
+https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py

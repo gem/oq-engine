@@ -7,43 +7,34 @@
 The main documentation, intended for end users, is available under the [documentation area](../doc/installing/docker.md)
 
 
-## Container customization
-
-### Python3 base image (required by all images)
-
-```bash
-$ docker build -t openquake/base -f Dockerfile.base .
-```
-
 ### OpenQuake Engine (single node)
 
 ```bash
 $ docker build -t openquake/engine -f Dockerfile.engine .
 ```
 
-### OpenQuake Engine master node container (cluster)
-
-```bash
-$ docker build -t openquake/engine-master -f Dockerfile.master .
-```
-
-### OpenQuake Engine worker node container (cluster)
-
-```bash
-$ docker build -t openquake/engine-worker -f Dockerfile.worker .
-```
-
 ### Custom build args
 
 ```bash
 --build-arg oq_branch=master      ## oq-engine branch
---build-arg tools_branch=mater    ## oq standalone tools branch
 ```
+
+### Testing the image
+To create a development image use the following command:
+
+```bash
+$ docker build -t openquake/engine:dev -f Dockerfile.dev .
+```
+
+### Testing
+If you want to use the nightly build instead of the latest, the files are in the docker folder.
+
+Please note that the nightly image is meant for testing purposes and not for production.
 
 ### Debug
 
 It's possible to enter a container as `root`, for debug purposes, running
 
 ```bash
-$ docker exec -u 0 -t -i oq-cluster-master /bin/bash
+$ docker run -u 0 -t -i  openquake/engine:nightly /bin/bash
 ```

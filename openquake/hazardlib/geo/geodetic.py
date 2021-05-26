@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -520,8 +520,7 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
     # http://en.wikipedia.org/wiki/Spherical_trigonometry#Napier.27s_Pentagon
     angle = numpy.arccos(
         (numpy.sin(numpy.radians(t_angle))
-         * numpy.sin(distance_to_target / EARTH_RADIUS))
-    )
+         * numpy.sin(distance_to_target / EARTH_RADIUS)))
     return (numpy.pi / 2 - angle) * EARTH_RADIUS
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -60,13 +60,13 @@ class BooreEtAl1997GeometricMean(GMPE):
     ])
 
     #: Required site parameters is Vs30.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and rake.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
     #: Required distance measure is Rjb.
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -81,7 +81,6 @@ class BooreEtAl1997GeometricMean(GMPE):
                 self._compute_magnitude_scaling(rup.mag, C) +
                 self._compute_distance_scaling(dists.rjb, C) +
                 self._compute_site_term(sites.vs30, C))
-
         stddevs = self._get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
         return mean, stddevs
@@ -209,7 +208,7 @@ class BooreEtAl1997GeometricMeanUnspecified(BooreEtAl1997GeometricMean):
     rake to be defined.
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def _compute_style_of_faulting_term(self, rup, C):
         """
@@ -255,7 +254,7 @@ class BooreEtAl1997ArbitraryHorizontalUnspecified(
     when the style of faulting is not specified
     """
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def _compute_style_of_faulting_term(self, rup, C):
         """

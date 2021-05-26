@@ -1,4 +1,5 @@
-id,taxonomy,lon,lat,occupants~mean,occupants~stddev
-"a3","tax1",-122.02000,38.11300,9.34504E-03,9.00674E-03
-"a2","tax1",-122.01000,38.11300,1.15083E-02,1.16555E-02
-"a1","tax1",-122.00000,38.11300,1.08631E-02,7.59403E-03
+#,,,,"generated_by='OpenQuake engine 3.12.0-gitc3cab7e3ce', start_date='2021-03-05T05:04:20', checksum=3590982611, investigation_time=None, risk_investigation_time=None"
+asset_id,taxonomy,lon,lat,occupants
+a3,tax1,-122.02000,38.11300,8.66732E-03
+a2,tax1,-122.01000,38.11300,1.00358E-02
+a1,tax1,-122.00000,38.11300,1.23368E-02

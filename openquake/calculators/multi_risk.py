@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,8 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import csv
+import json
 import logging
 import numpy
+import pandas
 import shapely
 from openquake.baselib import hdf5, general
 from openquake.hazardlib import valid, geo, InvalidFile
@@ -43,17 +45,18 @@ def get_dmg_csq(crm, assets_by_site, gmf):
     D = len(crm.damage_states)
     out = numpy.zeros((A, L, 1, D + 1), F32)
     for assets, gmv in zip(assets_by_site, gmf):
+        df = pandas.DataFrame(dict(peril=[gmv]))
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
-            for l, loss_type in enumerate(crm.loss_types):
+            for li, loss_type in enumerate(crm.loss_types):
                 # NB: risk logic trees are not yet supported in multi_risk
-                [rm], [w] = crm.get_rmodels_weights(taxonomy)
-                fracs = rm.scenario_damage(loss_type, assets, [gmv])
+                [rm], [w] = crm.get_rmodels_weights(loss_type, taxonomy)
+                fracs = rm.scenario_damage(loss_type, assets, df, 'peril')
                 for asset, frac in zip(assets, fracs):
-                    dmg = asset['number'] * frac[0, :D]
-                    csq = asset['value-' + loss_type] * frac[0, D]
-                    out[asset['ordinal'], l, 0, :D] = dmg
-                    out[asset['ordinal'], l, 0, D] = csq
+                    dmg = asset['number'] * frac  # shape (1, D)
+                    csq = crm.compute_csq(asset, frac, loss_type)
+                    out[asset['ordinal'], li, 0, :D] = dmg
+                    out[asset['ordinal'], li, 0, D] = csq['losses']
     return out
 
 
@@ -63,19 +66,19 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     dtlist = []
     field2tup = {}
     occupants = [name for name in assetcol.array.dtype.names
-                 if name.startswith('occupants') and
-                 not name.endswith('_None')]
+                 if name.startswith('occupants')]
     for name, dt in assetcol.array.dtype.descr:
-        if name not in {'area', 'occupants_None', 'ordinal'}:
+        if name not in {'area', 'value-occupants', 'ordinal', 'id'}:
             dtlist.append((name, dt))
     dtlist.sort()
+    dtlist.insert(0, ('id', '<S100'))
     if not loss_types:  # missing ASH
         loss_types = ['structural']  # for LAVA, LAHAR, PYRO
-    for l, loss_type in enumerate(loss_types):
+    for li, loss_type in enumerate(loss_types):
         for d, ds in enumerate(damage_states + ['loss']):
             for p, peril in enumerate(perils):
                 field = ds + '-' + loss_type + '-' + peril
-                field2tup[field] = (p, l, 0, d)
+                field2tup[field] = (p, li, 0, d)
                 dtlist.append((field, F32))
         for peril in binary_perils:
             dtlist.append(('loss-' + loss_type + '-' + peril, F32))
@@ -161,16 +164,16 @@ class MultiRiskCalculator(base.RiskCalculator):
     core_task = None  # no parallel
     is_stochastic = True
 
-    def save_multi_peril(self):
+    def import_perils(self):  # called in pre_execute
         """
         Read the hazard fields as csv files, associate them to the sites
         and create the `hazard` dataset.
         """
         oq = self.oqparam
         perils, fnames = zip(*oq.inputs['multi_peril'].items())
-        dt = [(haz, float) for haz in perils]
+        dt = numpy.dtype([(haz, float) for haz in perils])
         N = len(self.sitecol)
-        self.datastore['multi_peril'] = z = numpy.zeros(N, dt)
+        self.datastore.create_dset('multi_peril', dt, (N,), fillvalue=None)
         for name, fname in zip(perils, fnames):
             tofloat = (valid.positivefloat if name == 'ASH'
                        else valid.probability)
@@ -184,9 +187,11 @@ class MultiRiskCalculator(base.RiskCalculator):
             if peril.sum() == 0:
                 logging.warning('No sites were affected by %s' % name)
             self.datastore['multi_peril'][name] = peril
-        self.datastore.set_attrs('multi_peril', nbytes=z.nbytes)
 
     def execute(self):
+        """
+        Compute the perils without any parallelization
+        """
         dstates = self.crmodel.damage_states
         ltypes = self.crmodel.loss_types
         theperils = self.oqparam.inputs['multi_peril']
@@ -222,10 +227,10 @@ class MultiRiskCalculator(base.RiskCalculator):
         """
         Compute aggregated risk
         """
-        md = extract(self.datastore, 'exposure_metadata')
-        categories = [cat.replace('value-', 'loss-') for cat in md] + [
+        md = json.loads(extract(self.datastore, 'exposure_metadata').json)
+        categories = [n.replace('value-', 'loss-') for n in md['names']] + [
             ds + '-structural' for ds in self.crmodel.damage_states]
-        multi_risk = list(md.array)
+        multi_risk = md['names']
         multi_risk += sorted(
             set(arr.dtype.names) -
             set(self.datastore['assetcol/array'].dtype.names))

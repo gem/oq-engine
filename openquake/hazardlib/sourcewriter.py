@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Source model XML Writer
 """
@@ -24,10 +23,12 @@ import os
 import toml
 import operator
 import numpy
+from openquake.baselib import hdf5
 from openquake.baselib.general import CallableDict, groupby
 from openquake.baselib.node import Node, node_to_dict
 from openquake.hazardlib import nrml, sourceconverter, pmf
-from openquake.hazardlib.source import NonParametricSeismicSource
+from openquake.hazardlib.source import (
+    NonParametricSeismicSource, check_complex_fault)
 from openquake.hazardlib.tom import PoissonTOM
 
 obj_to_node = CallableDict(lambda obj: obj.__class__.__name__)
@@ -56,7 +57,7 @@ def build_area_source_geometry(area_source):
     lower_depth_node = Node(
         "lowerSeismoDepth", text=area_source.lower_seismogenic_depth)
     return Node(
-        "areaGeometry", {'discretization': area_source.area_discretization},
+        "areaGeometry",
         nodes=[polygon_node, upper_depth_node, lower_depth_node])
 
 
@@ -182,9 +183,35 @@ def build_truncated_gr_mfd(mfd):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
+    if hasattr(mfd, 'slip_rate'):
+        return Node("truncGutenbergRichterMFD",
+                    {"bValue": mfd.b_val, "slipRate": mfd.slip_rate,
+                     "rigidity": mfd.rigidity,
+                     "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
     return Node("truncGutenbergRichterMFD",
                 {"aValue": mfd.a_val, "bValue": mfd.b_val,
                  "minMag": mfd.min_mag, "maxMag": mfd.max_mag})
+
+
+@obj_to_node.add('TaperedGRMFD')
+def build_tapered_gr_mfd(mfd):
+    """
+    Parses the truncated Gutenberg Richter MFD as a Node
+
+    :param mfd:
+        MFD as instance of :class:
+        `openquake.hazardlib.mfd.tapered_gr_mfd.TaperedGRMFD`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    return Node(
+        "taperedGutenbergRichterMFD", {
+            "aValue": mfd.a_val,
+            "bValue": mfd.b_val,
+            "cornerMag": mfd.corner_mag,
+            "minMag": mfd.min_mag,
+            "maxMag": mfd.max_mag
+        })
 
 
 @obj_to_node.add('ArbitraryMFD')
@@ -266,7 +293,7 @@ def build_nodal_plane_dist(npd):
             "nodalPlane", {"dip": npd.dip, "probability": prob,
                            "strike": npd.strike, "rake": npd.rake})
         npds.append(nodal_plane)
-    sourceconverter.check_dupl(dist)
+    sourceconverter.fix_dupl(dist)
     return Node("nodalPlaneDist", nodes=npds)
 
 
@@ -285,7 +312,7 @@ def build_hypo_depth_dist(hdd):
     for (prob, depth) in hdd.data:
         dist.append((prob, depth))
         hdds.append(Node("hypoDepth", {"depth": depth, "probability": prob}))
-    sourceconverter.check_dupl(dist)
+    sourceconverter.fix_dupl(dist)
     return Node("hypoDepthDist", nodes=hdds)
 
 
@@ -390,9 +417,7 @@ def get_source_attributes(source):
     :returns:
         Dictionary of source attributes
     """
-    attrs = {"id": source.source_id,
-             "name": source.name,
-             "tectonicRegion": source.tectonic_region_type}
+    attrs = {"id": source.source_id, "name": source.name}
     if isinstance(source, NonParametricSeismicSource):
         if source.data[0][0].weight is not None:
             weights = []
@@ -467,6 +492,8 @@ def build_rupture_node(rupt, probs_occur):
         name = 'complexFaultRupture'
     elif geom == 'griddedSurface':
         name = 'griddedRupture'
+    elif geom == 'kiteSurface':
+        name = 'kiteSurface'
     return Node(name, {'probs_occur': probs_occur}, nodes=rupt_nodes)
 
 
@@ -555,6 +582,8 @@ def build_complex_fault_source_node(fault_source):
     :returns:
         Instance of :class:`openquake.baselib.node.Node`
     """
+    list(check_complex_fault(fault_source))  # check get_dip
+
     # Parse geometry
     source_nodes = [build_complex_fault_geometry(fault_source)]
     # Parse common fault source attributes
@@ -562,6 +591,35 @@ def build_complex_fault_source_node(fault_source):
     return Node("complexFaultSource",
                 get_source_attributes(fault_source),
                 nodes=source_nodes)
+
+
+@obj_to_node.add('MultiFaultSource')
+def build_multi_fault_source_node(multi_fault_source):
+    """
+    Parses a MultiFaultSource to a Node class
+
+    :param multi_fault_source:
+        Multi fault source as instance of :class:
+        `openquake.hazardlib.source.multi_fault.MultiFaultSource`
+    :returns:
+        Instance of :class:`openquake.baselib.node.Node`
+    """
+    rup_nodes = []  # multiPlanesRupture
+    for rup_idxs, pmf_, mag, rake in zip(
+            multi_fault_source.rupture_idxs,
+            multi_fault_source.pmfs,
+            multi_fault_source.mags,
+            multi_fault_source.rakes):
+        probs = ' '.join(map(str, [pair[0] for pair in pmf_.data]))
+        nodes = [Node('magnitude', text=str(mag)),
+                 Node('sectionIndexes', {'indexes': ','.join(rup_idxs)}),
+                 Node('rake', text=str(rake))]
+        rup_node = Node('multiPlanesRupture', {'probs_occur': probs},
+                        nodes=nodes)
+        rup_nodes.append(rup_node)
+    return Node("multiFaultSource",
+                get_source_attributes(multi_fault_source),
+                nodes=rup_nodes)
 
 
 @obj_to_node.add('SourceGroup')
@@ -611,6 +669,18 @@ def build_source_model(csm):
 
 # ##################### generic source model writer ####################### #
 
+def extract_ddict(src_groups):
+    """
+    :returns: a dictionary source_id -> attr -> value
+    """
+    ddict = {}
+    for src_group in src_groups:
+        for src in src_group:
+            if src.is_gridded():
+                ddict[src.source_id] = src.todict()
+    return ddict
+
+
 def write_source_model(dest, sources_or_groups, name=None,
                        investigation_time=None):
     """
@@ -624,25 +694,51 @@ def write_source_model(dest, sources_or_groups, name=None,
         Name of the source model (if missing, extracted from the filename)
     """
     if isinstance(sources_or_groups, nrml.SourceModel):
-        with open(dest, 'wb') as f:
-            nrml.write([obj_to_node(sources_or_groups)], f, '%s')
-        return
-    if isinstance(sources_or_groups[0], sourceconverter.SourceGroup):
+        groups = sources_or_groups.src_groups
+        attrs = dict(name=sources_or_groups.name,
+                     investigation_time=sources_or_groups.investigation_time)
+    elif isinstance(sources_or_groups[0], sourceconverter.SourceGroup):
         groups = sources_or_groups
+        attrs = dict(investigation_time=investigation_time)
     else:  # passed a list of sources
         srcs_by_trt = groupby(
             sources_or_groups, operator.attrgetter('tectonic_region_type'))
         groups = [sourceconverter.SourceGroup(trt, srcs_by_trt[trt])
                   for trt in srcs_by_trt]
-    name = name or os.path.splitext(os.path.basename(dest))[0]
-    nodes = list(map(obj_to_node, sorted(groups)))
-    attrs = {"name": name}
-    if investigation_time is not None:
-        attrs['investigation_time'] = investigation_time
+        attrs = dict(investigation_time=investigation_time)
+    if name or 'name' not in attrs:
+        attrs['name'] = name or os.path.splitext(os.path.basename(dest))[0]
+    if attrs['investigation_time'] is None:
+        del attrs['investigation_time']
+    nodes = list(map(obj_to_node, groups))
+    ddict = extract_ddict(groups)
+    if ddict:
+        # remove duplicate content from nodes
+        for grp_node in nodes:
+            for src_node in grp_node:
+                if src_node["id"] in ddict:
+                    src_node.nodes = []
+        # save HDF5 file
+        dest5 = os.path.splitext(dest)[0] + '.hdf5'
+        with hdf5.File(dest5, 'w') as h:
+            for src_id, dic in ddict.items():
+                for k, v in dic.items():
+                    key = '%s/%s' % (src_id, k)
+                    if isinstance(v, numpy.ndarray):
+                        h.create_dataset(key, v.shape, v.dtype,
+                                         compression='gzip',
+                                         compression_opts=9)
+                        h[key][:] = v
+                    else:
+                        h[key] = v
+
     source_model = Node("sourceModel", attrs, nodes=nodes)
     with open(dest, 'wb') as f:
         nrml.write([source_model], f, '%s')
-    return dest
+    if ddict:
+        return [dest, dest5]
+    else:
+        return [dest]
 
 
 def tomldump(obj, fileobj=None):

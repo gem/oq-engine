@@ -1,263 +1,362 @@
-This is a major release featuring several important fixes and
-improvements, especially to the event based and disaggregation
-calculators, plus a new task queue. More than 220 pull requests were merged.
-
-For the complete list
-of changes, see the changelog:
-https://github.com/gem/oq-engine/blob/engine-3.7/debian/changelog
-
-Disaggregation
---------------
+This is a major release featuring several optimizations, new features,
+and bug fixes. Nearly 400 pull requests were merged.
+
+For the complete list of changes, see the changelog:
+https://github.com/gem/oq-engine/blob/engine-3.11/debian/changelog
+
+Here are the highlights.
+
+# New features
+
+The classical PSHA calculator has a brand new optimization called
+*point source gridding*, based on the idea of using a raw grid of point
+sources for distant sites and a fine grid for close sites.
+The feature is still experimental and not enabled by default, but the
+first results are very encouraging: up to 3× improvement in the runtimes
+of a few large continental models without reduction in the accuracy of the
+results. The point source gridding optimization is documented here:
+
+https://docs.openquake.org/oq-engine/advanced/point-source-gridding.html
+
+and you are invited to try it.
+
+There is also a new syntax to perform sensitivity analysis, i.e. to
+run multiple calculations with different values of one (or more)
+parameters. This can be used to test the sensitivity to the parameters
+used in the point source gridding approximation, but in general it
+works for any global parameter. An example to assess the sensitivity
+to the integration distance is the following:
+```
+sensitivity_analysis = {'maximum_distance': [200, 300]}
+```
+Finally, now the engine can automatically download and run
+calculations from an URL containing a .zip archive. For instance
+
+```
+$ oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+```
+
+# Hazard calculators
+
+The memory occupation of classical PSHA calculations has been reduced
+significantly; for instance, models that used to require
+over 100 GB of RAM on the master node now runs with less than 32 GB
+on the master node. We also optimized the calculation of the
+probability of exceedence by carefully generating arrays with a size
+smaller than the CPU cache (that can give a speedup of a factor 2 or 3).
+
+A time-honored performance hack in event based calculations with full
+enumeration of the logic-tree has been finally removed: now the number 
+of generated ruptures is consistent with the case of sampling of the 
+logic-tree. This helps removing a source of confusion that was always
+present before. Event based calculations involving full-enumeration
+of the logic-tree are likely to require additional runtime now, but 
+the calculations are manageable, whereas previously they might not
+have run to completion.
+
+The scenario and event based calculators have been fully unified
+within the engine internals. As a consequence, the parameter controlling
+the rupture seeds is now always `ses_seed`. Before it was `ses_seed` in
+event based but `random_seed` in scenario, a potential source of 
+confusion for the users since `random_seed` was also used for the 
+logic-tree sampling. 
+Please read the [FAQ section on the seeds](https://github.com/gem/oq-engine/blob/engine-3.11/doc/faq-risk.md#what-implications-do-random_seed-ses_seed-and-master_seed-have-on-my-calculation) used by the engine for more details.
+
+We changed the algorithm generating the rupture seeds, thus the engine
+will not produce the same GMFs as before, but they will still be
+statistically equivalent.
+
+We refined the "minimum_intensity" approximation, by making it more precise:
+ground motion values below the specified threshold are replaced with zeros and
+not stored *if and only if* they are below the threshold for *all* intensity measure types.
+
+We improved the task distribution in event based calculations, because sometimes
+it was producing too many tasks and sometimes sending the
+tasks to the workers was excessively slow.
+
+We changed the task distribution also in scenario calculations: now we
+parallelize by `number_of_ground_motion_fields` if there are more than
+10 sites. This improved a lot the performance in cases with many
+thousands of sites.
+
+The `scenario` and `event_based` calculators (including `ebrisk`) now generate
+and store as a pandas-friendly dataset the (geometrically) averaged GMF
+on the events. This is useful for plotting and debugging purposes.
+
+We reduced the data transfer due to the GMPEs (in particular the Kotha
+GMPEs): in some cases, this can make a huge difference (we saw a 10x
+reduction in the newest model for Europe) while for most models you
+may not see any sensible difference.
+
+The preclassical calculator has been made faster and improved to
+determine the source weights more reliably, thus reducing the slow
+task issue in classical calculations. Now all sources are split and
+prefiltered with a KDTree in the preclassical phase.
+
+We changed the semantics of the `pointsource_distance` approximation:
+before it was ignoring finite size effects, now it is just averaging them,
+so it is much more precise than before.
+
+For calculations with a few sites now we store the classical ruptures in a
+single pandas-friendly dataset, including information about the
+generating sources.
+
+We worked on improving the UCERF calculator, doing some minor optimizations, 
+but a lot more could be done to improve its performance.
+
+# Risk calculators
+
+The `scenario_risk` and `event_based_risk` calculator have been unified, as
+well as the `scenario_damage` and `event_based_damage` calculators, so do not
+worry if when running a `scenario_risk` calculation the progress log will say
+that you are running an `event_based_risk` calculation. The core calculation
+logic used for the calculations within the engine is the same now.
+
+We added the ability to compute aggregate losses to the scenario calculators
+and aggregate loss curves to the `event_based_risk` calculator. Notice, however,
+that they are still less efficient than the `ebrisk` calculator, which should
+be the preferred calculator when attempting to compute aggregated loss curves.
+
+We optimized the case of many tags so that now it is possible to
+aggregate by asset ID or by site ID by setting in the job.ini file
+
+```ini
+  aggregate_by = id  # compute loss curves for each asset
+  aggregate_by = site_id  # compute loss curves aggregated by site
+```
+
+This works up to many thousands of assets/sites; previously it was 
+simply impossible due to memory issues.
+
+There was a huge speedup in large `ebrisk` calculations due to the removal of
+zero losses (we measured a 7x speedup in a calculation in test runs for NRCan).
+
+The risk model (which comprises fragility functions, vulnerability functions,
+consequence models, and taxonomy mapping tables) is now stored in a 
+pandas-friendly way; that improves by two orders of magnitude the 
+saving time in calculations with many thousands of vulnerability/fragility functions.
+
+The `scenario_damage` calculator is more efficient than before and it stores
+the damage distributions in a pandas-friendly way. It also stores a
+dataset `avg_portfolio_damage` useful for comparison purposes.
+
+The CSV exporters have been updated to use pandas, thus improving the
+performance. Moreover various exporters have been changed in order to
+unify the aggregate losses outputs between `ebrisk`,
+`event_based_risk` and `scenario_risk` calculators. The most notable
+change is that the exporter for the loss curves aggregated by tag now
+also exports the total loss curve (in the same file). Here is an example:
+
+https://github.com/gem/oq-engine/blob/engine-3.11/openquake/qa_tests_data/event_based_risk/case_6c/expected/agg_curves_eb.csv
+
+# Logic trees
+
+We made the engine smarter in the presence of different sources with
+the same ID, which are unavoidable in presence of logic trees changing
+the source parameters. Now internally the engine uses an unique
+ID. For instance in the case of two different sources with ID "A", the
+engine will generate two IDs: "A;0" and "A;1". The information about
+the sources is now stored in a pandas-friendly dataset `source_info`
+with an unique index `source_id`.
+
+Whe changed the internal storage of the PoEs in classical calculations
+to allow a substantial optimization of performance and memory
+occupation: this improvement is visible only in calculations with particularly
+complex logic trees. While at it, we fixed a bug in the sampling logic 
+affecting some models in engine 3.10.
+
+We changed the string representation of the realizations to make it
+more compact (before it was practically impossible to print out the
+full names of the realizations for some models, because the strings were too long).
+
+We added a check on valid branch ID names: only letters, digits and the
+caracter "-", "_" an "." are accepted.
+
+We added a new type of uncertainty for the seismic sources
+called `TruncatedGRFromSlipAbsolute`. That required adding
+a classmethod `TruncatedGRMFD.from_slip_rate` and to update the I/O
+routines to recognize the `slip_rate` parameter.
 
-We fixed a bug in disaggregations with nonparametric sources:
-they were being incorrectly discarded.
+# hazardlib/HTMK
 
-We fixed a bug in disaggregations crossing the international
-date line: the lon-lat bins were incorrectly computed.
+We introduced a new MFD parameter `slipRate` and implemented a new GMPE
+`AvgPoeGMPE` performing averages on the probabilities of exceedence:
+this is an alternative approach to the `AvgGMPE`, which performs
+geometric averages on the GMFs.
 
-We fixed the filtering procedure by discarding ruptures
-over the integration distance that were incorrectly not discarded before.
+The `AvgGMPE`, introduced over an year ago, has been extended to work
+also for scenario and event based calculations and has been documented here:
 
-We implemented various optimizations to make it possible to run
-calculation with many sites (where many means less than a thousand,
-disaggregating is still expensive).
+https://docs.openquake.org/oq-engine/advanced/mean-ground-motion-field.html
 
-We changed the exporter for `disagg_by_src` to export filenames
-containing the site ID and not longitude and latitude, consistently
-with the other disaggregation exporters.
+The `ModifiableGMPE` was enhanced with new methods set_scale_median_scalar,
+set_scale_median_vector, set_scale_total_sigma_scalar,
+set_scale_total_sigma_vector, set_fixed_total_sigma,
+set_total_std_as_tau_plus_delta, add_delta_std_to_total_std.
 
-We generate the output `disagg_by_src` even in the
-case of multiple realizations, but only the chosen realization is considered.
-
-There is a new configuration parameter `max_sites_disagg` which can be used
-to constraint the maximum number of disaggregation sites; the default is 10.
-
-We added an experimental API `extract/disagg_layer` to extract the
-disaggregation outputs for multiple sites at once.
-
-Event based
------------
-
-There was a crucial change in the event based calculators: we moved
-from 64 bit event IDs to 32 bit event IDs. The change was necessary to
-accomodate Excel users, because Excel silently converts 64 bit
-integers to floats and truncates the numbers, thus causing the IDs to
-be non-unique. This is not a problem of the engine per se, but it
-caused endless trouble in the past, so it has been fixed at the source.
-
-Users taking advantage of the relation `rupture_ID = event_ID //
-2 ** 32` will have to change their scripts and extract the rupture_ID
-from the events table instead, since the relation does not hold true
-anymore. The others will not see any change, except that the event
-IDs in their event loss table will be smaller numbers.
+[Richard Styron](https://github.com/cossatot) introduced a tapered 
+Gutenberg-Richter MFD, closely following its implementation in the
+USGS NSHMP-HAZ code.
 
-When exporting the event loss table a new field `rupture_id` will be
-visible. The event loss table has been unified (as much as possible)
-between scenario, event based and event based calculations.
+[Marco Pagani](https://github.com/mmpagani) introduced a new distance 
+called  'closest_point' and a method to create a `TruncatedGRMFD` 
+from a value of scalar seismic moment. Moreover he also introduced 
+a KiteSurface class and and KiteFaultSource class, which at the moment 
+are still considered experimental.
 
-We added a new output `Events` which is a CSV with
-fields id, rup_id, rlz_id where `id` is the 32 bit event ID, `rup_id`
-is the rupture ID and `rlz_id` is the realization ID.
- 
-We fixed the multiplicity value exported in the `ses.xml` file:
-now it is consistent with value exported in the `ruptures.csv` file
-even in the case of full enumeration.
+[Viktor Polak](https://github.com/viktor76525) contributed the GMPE Parker et al (2020).
+He also contributed the Hassani and Atkinson (2020) GMPE and added a new
+site parameter `fpeak`. Finally he contributed the GMPEs Chao et al. (2020)
+and Phung et al. (2020).
 
-We fixed a bug which was causing a wrong bounding box to be exported
-in the `ruptures.csv` file (with a lon<->lat inversion).
+[Laurentiu Danciu](https://github.com/danciul) and 
+[Athanasios Papadopoulos](https://github.com/thpap) contributed several
+intensity prediction equations for use in the Swiss National Earthquake Risk Model.
+The new IPEs refer to models obtained from the ECOS (2009), Faccioli and 
+Cauzzi (2006), Bindi et al. (2011), and Baumont et al. (2018) studies.
+They also extended the `ModifiableGMPE` class to allow amplification of the
+intensity of the parent IPE based on a new `amplfactor` site parameter.
 
-The `ruptures.csv` exporter has been changed to use a comma as separator and
-not a tab, to be consistent with all other exporters.
+[Graeme Weatherill](https://github.com/g-weatherill) made some updates to 
+the GMPEs used in the European Seismic Hazard Model 2020 (ESHM20).
 
-We extended the computation of the rupture loss table to the `ebrisk`
-calculator.
+[Claudia Mascandola](https://github.com/mascandola) contributed the
+GMPE Lanzano et al. (2019) and the NI15 regional GMPE by Lanzano et al. (2016).
 
-We changed `ebrisk` to produce an output `avg_losses-stats`, consistently
-with the `event_based_risk` calculator.
+We changed the `SourceWriter` not to save the `area_source_discretization`
+on each source when writing the XML files, otherwise the same parameter
+in the `job.ini` file would be ignored, which is normally undesirable.
 
-We added a check for missing `risk_investigation_time` in `ebrisk`
-calculations.
+# Bugs
 
-A substantial amount of work was spent to reduce the problem of slow tasks
-in the `ebrisk` calculator. Now the task distribution is a lot better, the
-memory consumption is greatly reduced and data transfer is a lot less
-than before.
+A regression entered in the `classical_risk` and `classical_damage`
+calculators in engine 3.10 causing an increase of the data transfer
+in hazard curves. That was killing the performance in the case of
+calculations with many thousands of sites. Fixed after a report by the
+[EUCENTRE](https://www.eucentre.it/).
 
-The ability to compute insured losses has been restored experimentally
-from the `ebrisk` calculator. It works in a different way than before
-and it is not documented on purpose. But if you are interested in
-testing it you can get in touch with us.
+The exporters for the hazard maps and UHS were exporting zeros in the case of
+`individual_curves = true`. Fixed after the report by Jian Ma 
+(https://groups.google.com/g/openquake-users/c/43flYFzOMoo/m/tpYFqv1pBAAJ).
 
-Hazardlib
----------
+In presence of an unknown parameter in the `job.ini` file - typically because
+of a mispelling - the log was disappearing; this has been fixed.
 
-Graeme Weatherill contributed a few updates of the Kotha et al. (2019)
-GMPE with new coefficients using a robust linear mixed regression
-analysis. There are three new subclasses for modelling site amplifications:
-see https://github.com/gem/oq-engine/pull/4957 for the details.
+The boolean fields `vs30measured` and `backarc` were not cast correctly
+when read from a CSV field (the engine was reading the zeros as true values).
+Fixed after the report by Peter Pažák (https://groups.google.com/u/0/g/openquake-users/c/-8Abgea_Pu8/m/IHM0o68rDgAJ).
 
-Graeme also contributed four site amplification models for SERA (see
-https://github.com/gem/oq-engine/pull/4968 for the details) and a
-preliminary scalable backbone GMPE for application to the stable
-cratonic parts of Europe, based on an analysis of epistemic
-uncertainty in the NGA East suite
-(see https://github.com/gem/oq-engine/pull/4988).
+We fixed a wrong check raising a `ValueError` incorrectly in the case of
+multi-exposures with multiple cost types.
 
-Kris Vanneste updated the coefficients table of the Atkinson (2015) GMPE
-to the latest version of the published paper.
+We fixed a bug in the calculation of average losses in
+`scenario_risk` computations: events with zero losses that were
+incorrectly discarded.
 
-Guillaume Daniel contributed an implementation of the (Ameri) 2017 GMPE.
-
-We added a new rupture-site metric: the azimuth to the closest point on the
-rupture.
-
-There was a bug fix in the Youngs and Coppersmith (1985)
-GMPE: due to numerical issues, instantiating the GMPE with the classmethod
-`YoungsCoppersmith1985MFD.from_total_moment_rate` was producing wrong
-numbers.
-
-There were some internal changes to the GMPE instantiation mechanism,
-so that now users of hazardlib do not need to call the `.init()` method
-manually.
-
-Other Hazard
-------------
-
-There was a subtle bug introduced in engine 3.3 that went unnoticed for
-nearly a year: due to a change in the prefiltering mechanism,
-for complex fault sources producing large ruptures
-some ruptures at the limit of the integration distance
-could be incorrectly discarded, thus producing a lower hazard.
-This was discovered in the South America model, where there are complex
-fault sources with magnitudes up to 9.65.
-
-There was a memory issue in the GMPE logic tree sampling procedure, visibile
-for logic trees with billions of branches, like in the SERA model. This
-has been fixed, by not keeping the full tree in memory, similarly to
-what we do for the source model logic tree.
-
-The source weighting algorithm has been improved, thus reducing even more the
-issue of slow tasks in classical calculations. There was also some
-refactoring of the internals of classical calculations
-
-There were spurious warnings of kind `RuntimeWarning: invalid value
-encountered in greater` introduced by some debug code in engine 3.6
-for calculations with a site model; they have been removed.
-
-We added a clearer error message when the user try to use a correlation
-model with truncation_level = 0.
-
-We removed the output `sourcegroups.csv` which was of little interest to the
-final users.
-
-Risk
-----
-
-We restored the ability to accept loss ratios > 1, but only for
-vulnerability functions of kind LN, i.e. using the LogNormal distribution.
-
-We fixed a bug for vulnerability functions of kind BT, i.e. using the Beta
-distribution: the seed was not set properly and the results were not
-reproducible.
-
-There was a bug when importing the GMFs from a CSV file, if the sites were
-not ordered by lon, lat, causing the wrong risk to be computed.
-
-There was a bug in the `realizations` exporter for scenarios with
-parametric GSIMs, where newlines were not quoted.
-
-We added some metadata to the risk CSV exporters, in particular the
-`risk_investigation_time`.
-
-We now raise a clear error for unquoted WKT geometries in multi-risk
-calculations.
-
-We now raise a clear error when the `aggregate_by` flag is used in calculators
-different from `ebrisk`.
-
-We optimized the aggregation facilities of the engine by leveraging
-on `numpy.bincount`, with a speedup of more than an order of magnitude.
-
-We changed the default value for the `site_effects` parameter to false;
-this is necessary for the ShakeMap calculator since recent USGS
-ShakeMaps are taking into account the site effects already and we need
-to avoid overamplification.
-
-When exporting the realizations from a ShakeMap risk calculation the
-`branch_path` field has now the value `FromShakemap` instead of
-`FromFile`.
-
-IT
---
-
-There were three major IT projects in this release.
-
-1. There was a substantial amount of work on the *zmq distribution
-mechanism* which now works correctly on clusters. It is still in an
-experimental status and there a few minor features to be tuned, but we
-are already running our production calculations with it, with many
-advantages with respect to using the celery/rabbitmq combo. In the
-future we plan to abandon celery/rabbitmq in favor of the pure zmq
-mechanism.  You can already already use the new approach by following
-the documentation.
-
-2. Extra-large classical calculations (i.e. Australia) are always been prone to
-run out of memory, due to the sheer amount of data to transfer.  The
-solution has been the introduction of a *task queue* acting before the
-rabbitmq/zmq queue. For instance, in a cluster with celery instead of
-sending 10,000 tasks to rabbitmq at once, causing the system to go out
-of memory, the engine sends the tasks to the task queue, from which
-only one task at the time is sent at rabbitmq, once there is a free
-core. Thanks to this mechanism it is also possible to control the
-number of cores used by the engine by setting the parameter
-`num_cores` in the `job.ini`. If it is not set, all of the available
-cores are used, but it can be set to a smaller number to leave some
-cores free for other purposes.
-
-3. For several releases the engine has been producing a couple of files
-calc_XXX.hdf5 and cache_XXX.hdf5 for each calculation. The *cache file*
-has been finally removed. It was introduced as a hack to work around some
-limitations of HDF5, causing a lot of data duplication. It is not neeeded
-anymore, since we are now using the SWMR feature of h5py properly. This
-was a major effort requiring nearly 25 pull requests to be completed.
-
-There were also a few minor fixes/changes.
-
-The `-l` switch in `oq engine --run` finally works and in particular it is
-possible to see the debug logs when `-l debug` is passed on the command line.
-
-Deleting a calculation from the command-line or from the WebUI
-now only hides the calculation from the user. The calculation is actually
-kept in the database and can be restored.
-
-It is still possible to really delete the calculations of an user with
-the command `oq reset`. Still, it has been made safer and only datastores
-corresponding to calculations in the database are removed.
-
-Calculations that fail in the validation phase, before starting, are
-now hidden to the user, to avoid littering. The error message
-is still clearly displayed to the user in all cases (command-line, Web UI,
-QGIS plugin)
-
-We fixed/changed several APIs for interacting with the QGIS plugin.
-
-Moreover, we worked at the documentation, with various improvements both to the
-manual and to the GitHub repository.
-
-Libraries and Python 3.7
-------------------------
-
-We upgraded numpy to version 1.16, scipy to 1.3 and h5py to 2.9:
-with such libraries the engine works with Python 3.7. Actually, we have
-a cluster in production using it and we have switched the development to
-Python 3.7. However, we are still providing
-Python 3.6 in our packages with the goal of migrating to 3.7
-in the future. The migration to numpy 1.16 required disabling
-OpenBLAS threads to avoid oversubscription: therefore importing the
-engine sets the environment variable OPENBLAS_NUM_THREADS to '1'.
-
-Supported operating systems
----------------------------
-
-Support for the operating system Fedora 28 has ceased because it reached the
-End-Of-Life. Support for Fedora 31 (currently in beta) has been introduced.
+Now `ignore_covs = 0` effectively sets *all* the coefficients of variation
+in the input vulnerability functions to zero, 
+even when using the Beta distribution, which was not the case in previous 
+versions.
+
+# New checks and warnings
+
+We removed some annoying warnings in classical_damage calculations
+in the case of hazard curves with PoEs == 1.
+
+The engine logs a warning in case of a suspiciously large seed dependency
+in event-based/scenario calculations.
+
+The engine raises an early error if the parameter `soil_intensities`
+is set with an amplification method which is not "convolution".
+
+The engine raises an early error in case of zero probabilities in the hypocenter
+distribution or the nodal plane distribution in the XML source files.
+
+We added a check on the vulnerability functions
+with the Beta distribution: the mean loss ratios cannot contain zeros unless the
+corresponding coefficients of variation are zeros too.
+
+Now we perform the disaggregation checks before starting the classical
+part of the calculation, so that the user gets an early error in case
+of wrong parameters.
+
+The engine warns the user if it discover a situation with zero losses
+corresponding to non-zero GMFs.
+
+We now accept vulnerability functions for taxonomies missing in the
+exposure: such functions are just ignored. This is useful since it
+means that a vulnerability model file prepared for a full exposure
+can be used on a reduced exposure missing some taxonomy strings.
+
+# oq commands
+
+We replaced the command `oq workers inspect` with `oq workers status`.
+
+We renamed `oq recompute_losses` as `oq reaggregate` and made it to work
+properly.
+
+We enhanced the command `oq compare` and extended it also to the `avg_gmf`
+outputs.
+
+We improved a fixed a few `oq plot` subcommands.
+
+We enhanced `oq plot sources` to plot point sources and to manage the
+internationa date line.
+
+We fixed a bug in `oq prepare_site_model` ` when `sites.csv` is
+the same as the `vs30.csv` file and there is a grid spacing parameter.
+
+The command `oq nrml_to` has been documented.
+
+# WebUI/WebAPI/QGIS plugin
+
+If the authentication is off now the WebUI shows the calculations of
+all users and not only the calculations of the current user.
+
+We improved the submission of calculations to the WebAPI: now they can
+be run on a full cluster, `serialize_jobs` is honored and the log level is
+configurable with a variable `log_level` in the file `openquake.cfg`.
+
+We updated the QGIS plugin to reflect the changes in the engine outputs.
+
+# Other
+
+The flag `--reuse-hazard` has been replaced by a flag `-reuse-input`
+that allows the user to reuse only source models and exposures. This is safer
+than trying to reuse the GMFs, which should be done with the `--hc`
+option instead.
+
+The `num_cores` parameter has been moved from the `job.ini` file to the
+`openquake.cfg` file and now it works as expected.
+
+There was a lot of work on secondary perils, both on the hazard and on
+the risk side, but the feature is still not ready for primetime.
+
+# Packaging
+
+We now have a universal installer working on Linux, Windows and Mac
+(see https://github.com/gem/oq-engine/blob/master/doc/installing/universal.md).
+
+The universal installer is now the only supported way to install the engine on Mac
+and generic Linux systems. It works by using a pre-installed Python, which can
+be Python 3.6.x, 3.7.x. or 3.8.x. Python 3.9 is not supported yet; if you have an older
+Python (≤3.5) you must install a newer, supported version of Python
+and only then proceed with installing the engine.
+
+For Debian-based systems the universal installer works just fine, but we also
+provide packages that include their own Python (version 3.8).
+
+For RedHat-based systems we also provides packages that include their
+own Python (version 3.6). Notice that due to the change of policy of
+RedHat about the CentOS operating system, it is not clear if we will
+keep supporting it with the packages, but the universal installer will work.
+
+We upgraded h5py to version 2.10 (for performance improvements) and shapely
+to version 1.7.1 (to unofficially support macOS Big Sur). Notice that 
+*macOS Big Sur is still not officially supported* since we cannot reliably 
+run tests for the engine on Big Sur, given that GitHub's
+Continuous Integration system does not support it yet. But we know of
+several users for whom the engine works on Big Sur, via the universal
+installer. The latest generation of MacBooks based on the Apple M1 CPU
+architecture, i.e., the MacBook Air (M1, 2020), Mac mini (M1, 2020), 
+and the MacBook Pro (13-inch, M1, 2020) are not officially supported.

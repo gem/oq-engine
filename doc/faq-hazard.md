@@ -31,13 +31,37 @@ $ oq engine --run job.ini --reuse-hazard --exports csv
 Hazard maps and UHS can be regenerated from an existing calculation
 quite efficiently.
 
+### How do I set the pointsource_distance?
+
+In several hazard models (for instance Australia, Canada, etc) it is
+possible to improve significantly the performance by tuning a parameter
+called `pointsource_distance`. The parameter is discussed in the [advanced
+manual](https://docs.openquake.org/oq-engine/advanced/common-mistakes.html#pointsource-distance). You can calibrate the value of the `pointsource_distance`
+by taking a few reference sites, computing the hazard map values there, and
+then playing with the parameter until you get good performance without loosing
+too much precision.
+
+## disaggregation calculations
+
+### I am getting an error "disaggregation matrix is too large"!
+
+This means that you have too many disaggregation bins. Please act on the
+binning parameters, i.e. on `mag_bin_width`, `distance_bin_width`,
+`coordinate_bin_width`, `num_epsilon_bins`. The most relevant parameter is
+`coordinate_bin_width` which is quadratic: for instance by changing from
+`coordinate_bin_width=0.1` to `coordinate_bin_width=1.0` the size of your
+disaggregation matrix will be reduced by 100 times.
+
 ## event based calculations
 
 ### What is the relation between sources, ruptures, events and realizations?
 
 A single rupture can produce multiple seismic events during the
-investigation time. In the engine a rupture is uniquely identified by
-a rupture ID, a.k.a. `serial`, which is a 32 bit positive integer.
+investigation time. How many depends on the number of stochastic event sets,
+on the rupture occurrence rate and on the `ses_seed` parameters, as
+[explained here](https://docs.openquake.org/oq-engine/advanced/rupture-sampling.html).
+In the engine a rupture is uniquely identified by
+a rupture ID, which is a 32 bit positive integer.
 Starting from engine 3.7, seismic events are uniquely identified by an
 event ID, which is a 32 bit positive integer. The relation
 between event ID and rupture ID is given encoded in the `events` table
@@ -68,9 +92,9 @@ postprocessing:
 ```python
 In[3]: calc.datastore.open('r')  # open the datastore for reading
 ```
-The inner format of the databook is not guaranteed to be the same
+The inner format of the datastore is not guaranteed to be the same
 across releases and it is not documented, so this approach is
-recommended only to the most adventurous people.
+recommended to the most adventurous people.
 
 ### how do I plot/analyze/postprocess the results of a calculation?
 

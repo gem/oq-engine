@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -65,11 +65,11 @@ class Allen2012(GMPE):
     #: Required rupture parameters are magnitude and hypocentral depth, see
     #: paragraph 'Regression of Model Coefficients', page 32 and tables 7 and
     #: 8, pages 35, 36
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is closest distance to rupture, see paragraph
     #: 'Regression of Model Coefficients', page 32
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

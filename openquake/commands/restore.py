@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,13 +24,11 @@ import os.path
 import zipfile
 import sqlite3
 import requests
-from openquake.baselib import sap
 from openquake.baselib.general import safeprint
 from openquake.server.dbapi import Db
 
 
-@sap.script
-def restore(archive, oqdata):
+def main(archive, oqdata):
     """
     Build a new oqdata directory from the data contained in the zip archive
     """
@@ -55,7 +53,7 @@ def restore(archive, oqdata):
             detect_types=sqlite3.PARSE_DECLTYPES)
     n = 0
     for fname in os.listdir(oqdata):
-        mo = re.match('calc_(\d+)\.hdf5', fname)
+        mo = re.match(r'calc_(\d+)\.hdf5', fname)
         if mo:
             job_id = int(mo.group(1))
             fullname = os.path.join(oqdata, fname)[:-5]  # strip .hdf5
@@ -68,5 +66,5 @@ def restore(archive, oqdata):
               % (n, oqdata, dt))
 
 
-restore.arg('archive', 'path to a zip file')
-restore.arg('oqdata', 'path to an oqdata directory')
+main.archive = 'path to a zip file'
+main.oqdata = 'path to an oqdata directory'

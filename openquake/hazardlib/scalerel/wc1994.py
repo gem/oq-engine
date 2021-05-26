@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,7 +37,6 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
         """
-        assert rake is None or -180 <= rake <= 180
         if rake is None:
             # their "All" case
             return 10.0 ** (-3.49 + 0.91 * mag)
@@ -55,7 +54,6 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
         """
         Standard deviation for WC1994. Magnitude is ignored.
         """
-        assert rake is None or -180 <= rake <= 180
         if rake is None:
             # their "All" case
             return 0.24
@@ -73,7 +71,6 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
         """
         Standard deviation on the magnitude for the WC1994 area relation.
         """
-        assert rake is None or -180 <= rake <= 180
         if rake is None:
             # their "All" case
             return 0.24
@@ -100,7 +97,6 @@ class WC1994(BaseMSRSigma, BaseASRSigma):
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
         """
-        assert rake is None or -180 <= rake <= 180
         if rake is None:
             # their "All" case
             return 4.07 + 0.98 * log10(area)

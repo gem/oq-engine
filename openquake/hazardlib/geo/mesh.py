@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,7 +31,6 @@ from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils as geo_utils
 
 F32 = numpy.float32
-point3d = numpy.dtype([('lon', F32), ('lat', F32), ('depth', F32)])
 
 
 def sqrt(array):
@@ -43,23 +42,25 @@ def sqrt(array):
     return numpy.sqrt(array)
 
 
-def surface_to_array(surface):
+def surface_to_arrays(surface):
     """
-    :param surface: a Surface object
-    :returns: a 3D array of shape (3, N, M)
+    :param surface: a (Multi)Surface object
+    :returns: a list of S arrays of shape (3, N, M)
     """
     if hasattr(surface, 'surfaces'):  # multiplanar surfaces
-        n = len(surface.surfaces)
-        arr = numpy.zeros((3, n, 4), F32)
-        for i, surf in enumerate(surface.surfaces):
-            arr[:, i] = surf.mesh.array
-        return arr
+        lst = []
+        for surf in surface.surfaces:
+            arr = surf.mesh.array
+            if len(arr.shape) == 2:  # PlanarSurface
+                arr = arr.reshape(3, 1, 4)
+            lst.append(arr)
+        return lst
     mesh = surface.mesh
     if len(mesh.lons.shape) == 1:  # 1D mesh
         shp = (3, 1) + mesh.lons.shape
     else:  # 2D mesh
         shp = (3,) + mesh.lons.shape
-    return mesh.array.reshape(shp)
+    return [mesh.array.reshape(shp)]
 
 
 class Mesh(object):
@@ -68,10 +69,9 @@ class Mesh(object):
     efficient way of keeping those collections in memory.
 
     :param lons:
-        A numpy array of longitude values of points. Array may be
-        of arbitrary shape.
+        A numpy array of longitudes. Can be 1D or 2D.
     :param lats:
-        Numpy array of latitude values. The array must be of the same
+        Numpy array of latitudes. The array must be of the same
         shape as ``lons``.
     :param depths:
         Either ``None``, which means that all points the mesh consists
@@ -101,8 +101,8 @@ class Mesh(object):
             return numpy.zeros(self.shape)
 
     def __init__(self, lons, lats, depths=None):
-        assert ((lons.shape == lats.shape) and
-                (depths is None or depths.shape == lats.shape)
+        assert ((lons.shape == lats.shape) and len(lons.shape) in (1, 2)
+                and (depths is None or depths.shape == lats.shape)
                 ), (lons.shape, lats.shape)
         assert lons.size > 0
         if depths is None:

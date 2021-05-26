@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,10 @@
 
 import os
 import time
+import pickle
 import getpass
+import operator
+import itertools
 from datetime import datetime
 import psutil
 import numpy
@@ -31,9 +34,10 @@ from openquake.baselib import hdf5
 # Can't read data (address of object past end of allocation)
 # this is why below I am using '<S50' byte strings
 perf_dt = numpy.dtype([('operation', '<S50'), ('time_sec', float),
-                       ('memory_mb', float), ('counts', int)])
+                       ('memory_mb', float), ('counts', int),
+                       ('task_no', numpy.int16)])
 task_info_dt = numpy.dtype(
-    [('taskname', '<S50'), ('taskno', numpy.uint32),
+    [('taskname', '<S50'), ('task_no', numpy.uint32),
      ('weight', numpy.float32), ('duration', numpy.float32),
      ('received', numpy.int64), ('mem_gb', numpy.float32)])
 
@@ -43,7 +47,7 @@ def init_performance(hdf5file, swmr=False):
     :param hdf5file: file name of hdf5.File instance
     """
     fname = isinstance(hdf5file, str)
-    h5 = hdf5.File(hdf5file) if fname else hdf5file
+    h5 = hdf5.File(hdf5file, 'a') if fname else hdf5file
     if 'performance_data' not in h5:
         hdf5.create(h5, 'performance_data', perf_dt)
     if 'task_info' not in h5:
@@ -57,6 +61,35 @@ def init_performance(hdf5file, swmr=False):
             raise ValueError('%s: %s' % (hdf5file, exc))
     if fname:
         h5.close()
+
+
+def performance_view(dstore):
+    """
+    Returns the performance view as a numpy array.
+    """
+    pdata = dstore['performance_data']
+    pdata.refresh()
+    data = sorted(pdata[()], key=operator.itemgetter(0))
+    out = []
+    for operation, group in itertools.groupby(data, operator.itemgetter(0)):
+        counts = 0
+        time = 0
+        mem = 0
+        for rec in group:
+            counts += rec['counts']
+            time += rec['time_sec']
+            mem = max(mem, rec['memory_mb'])
+        out.append((operation, time, mem, counts))
+    out.sort(key=operator.itemgetter(1), reverse=True)  # sort by time
+    mems = dstore['task_info']['mem_gb']
+    maxmem = ', maxmem=%.1f GB' % mems.max() if len(mems) else ''
+    if hasattr(dstore, 'calc_id'):
+        operation = 'calc_%d%s' % (dstore.calc_id, maxmem)
+    else:
+        operation = 'operation'
+    dtlist = [(operation, perf_dt['operation'])]
+    dtlist.extend((n, perf_dt[n]) for n in perf_dt.names[1:-1])
+    return numpy.array(out, dtlist)
 
 
 def _pairs(items):
@@ -121,6 +154,7 @@ class Monitor(object):
         self.counts = 0
         self.address = None
         self.username = getpass.getuser()
+        self.task_no = -1  # overridden in parallel
 
     @property
     def dt(self):
@@ -153,7 +187,8 @@ class Monitor(object):
         if self.counts:
             time_sec = self.duration
             memory_mb = self.mem / 1024. / 1024. if self.measuremem else 0
-            data.append((self.operation, time_sec, memory_mb, self.counts))
+            data.append((self.operation, time_sec, memory_mb, self.counts,
+                         self.task_no))
         return numpy.array(data, perf_dt)
 
     def __enter__(self):
@@ -233,6 +268,35 @@ class Monitor(object):
                          counts=0, mem=0, duration=0)
         vars(new).update(kw)
         return new
+
+    def save(self, key, obj):
+        """
+        :param key: key in the _tmp.hdf5 file
+        :param obj: big object to store in pickle format
+        :returns: True is saved, False if not because the key was taken
+        """
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        f = hdf5.File(tmp, 'a') if os.path.exists(tmp) else hdf5.File(tmp, 'w')
+        with f:
+            if key in f:  # already saved
+                return False
+            if isinstance(obj, numpy.ndarray):
+                f[key] = obj
+            else:
+                f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
+        return True
+
+    def read(self, key):
+        """
+        :param key: key in the _tmp.hdf5 file
+        :return: unpickled object
+        """
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        with hdf5.File(tmp, 'r') as f:
+            data = f[key][()]
+            if data.shape:
+                return data
+            return pickle.loads(data)
 
     def __repr__(self):
         calc_id = ' #%s ' % self.calc_id if self.calc_id else ' '

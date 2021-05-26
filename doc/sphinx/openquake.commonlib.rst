@@ -1,6 +1,14 @@
 openquake.commonlib package
 ===========================
 
+openquake.commonlib.datastore module
+------------------------------------
+
+.. automodule:: openquake.commonlib.datastore
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 calc module
 ---------------------------------
 
@@ -50,10 +58,10 @@ readinput module
     :show-inheritance:
 
 
-source module
+source_reader module
 ---------------------------------
 
-.. automodule:: openquake.commonlib.source
+.. automodule:: openquake.commonlib.source_reader
     :members:
     :undoc-members:
     :show-inheritance:

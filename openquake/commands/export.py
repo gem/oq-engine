@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,22 +17,21 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 
-from openquake.baselib import general, performance, sap
-from openquake.commonlib import util
+from openquake.baselib import general, performance
+from openquake.commonlib import datastore
 from openquake.calculators.export import export as export_
 
 
 # the export is tested in the demos
-@sap.script
-def export(datastore_key, calc_id=-1, exports='csv', export_dir='.'):
+def main(datastore_key, calc_id: int = -1, *, exports='csv', export_dir='.'):
     """
     Export an output from the datastore. To see the available datastore
-    keys, use the command `oq info --exports`.
+    keys, use the command `oq info exports`.
     """
-    dstore = util.read(calc_id)
+    dstore = datastore.read(calc_id)
     parent_id = dstore['oqparam'].hazard_calculation_id
     if parent_id:
-        dstore.parent = util.read(parent_id)
+        dstore.parent = datastore.read(parent_id)
     dstore.export_dir = export_dir
     with performance.Monitor('export', measuremem=True) as mon:
         for fmt in exports.split(','):
@@ -44,7 +43,7 @@ def export(datastore_key, calc_id=-1, exports='csv', export_dir='.'):
     dstore.close()
 
 
-export.arg('datastore_key', 'datastore key')
-export.arg('calc_id', 'number of the calculation', type=int)
-export.opt('exports', 'export formats (comma separated)')
-export.opt('export_dir', 'export directory', '-d')
+main.datastore_key = 'datastore key'
+main.calc_id = 'number of the calculation'
+main.exports = 'export formats (comma separated)'
+main.export_dir = dict(help='export directory', abbrev='-d')

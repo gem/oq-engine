@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2019 GEM Foundation
+# Copyright (C) 2016-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -126,7 +126,7 @@ def apply_sql_script(conn, fname):
 # errors are not trapped on purpose, since transactions should be managed
 # in client code
 class UpgradeManager(object):
-    """
+    r"""
     The package containing the upgrade scripts should contain an instance
     of the UpgradeManager called `upgrader` in the __init__.py file. It
     should also specify the initializations parameters
@@ -142,7 +142,7 @@ class UpgradeManager(object):
     UPGRADES = 'openquake/server/db/schema/upgrades/'
 
     def __init__(self, upgrade_dir, version_table='revision_info',
-                 version_pattern='\d\d\d\d', flag_pattern='(-slow|-danger)?'):
+                 version_pattern=r'\d\d\d\d', flag_pattern='(-slow|-danger)?'):
         self.upgrade_dir = upgrade_dir
         self.version_table = version_table
         self.version_pattern = version_pattern
@@ -150,7 +150,7 @@ class UpgradeManager(object):
         self.pattern = r'^(%s)%s-([\w\-_]+)\.(sql|py)$' % (
             version_pattern, flag_pattern)
         self.upgrades_url = self.ENGINE_URL + self.UPGRADES
-        if re.match('[\w_\.]+', version_table) is None:
+        if re.match(r'[\w_\.]+', version_table) is None:
             raise ValueError(version_table)
         self.starting_version = None  # will be updated after the run
 
@@ -292,7 +292,7 @@ class UpgradeManager(object):
         """
         Extract the OpenQuake upgrade scripts from the links in the GitHub page
         """
-        link_pattern = '>\s*{0}\s*<'.format(self.pattern[1:-1])
+        link_pattern = r'>\s*{0}\s*<'.format(self.pattern[1:-1])
         page = urllib.request.urlopen(self.upgrades_url).read()
         for mo in re.finditer(link_pattern, page):
             scriptname = mo.group(0)[1:-1].strip()

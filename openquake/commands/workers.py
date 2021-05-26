@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,27 +15,23 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys
 import getpass
-from openquake.baselib import sap, config, workerpool
+from openquake.baselib import config, parallel as p
 
 
-ro_commands = ('status', 'inspect')
-
-
-@sap.script
-def workers(cmd):
+def main(cmd):
     """
-    start/stop/restart the workers, or return their status
+    start/stop the workers, or return their status
     """
-    if (cmd not in ro_commands and config.dbserver.multi_user and
-            getpass.getuser() != 'openquake'):
+    if (cmd != 'status' and config.dbserver.multi_user and
+            getpass.getuser() not in 'openquake'):
         sys.exit('oq workers only works in single user mode')
+    if p.OQDIST in ('dask', 'celery', 'zmq'):
+        print(getattr(p, 'workers_' + cmd)())
+    else:
+        print('Nothing to do: oq_distribute=%s' % p.OQDIST)
 
-    master = workerpool.WorkerMaster(config.dbserver.host,
-                                     **config.zworkers)
-    print(getattr(master, cmd)())
 
-
-workers.arg('cmd', 'command',
-            choices='start stop status restart inspect'.split())
+main.cmd = dict(help='command', choices='start stop status wait kill'.split())

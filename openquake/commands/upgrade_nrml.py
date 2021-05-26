@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,6 @@ import shutil
 import operator
 from xml.etree.ElementTree import iterparse
 
-from openquake.baselib import sap
 from openquake.baselib.general import groupby
 from openquake.baselib.node import context, striptag, Node
 from openquake.hazardlib.nrml import NRML05
@@ -82,7 +81,7 @@ def get_vulnerability_functions_04(fname):
 
 def upgrade_file(path, multipoint):
     """Upgrade to the latest NRML version"""
-    node0 = nrml.read(path, chatty=False)[0]
+    node0 = nrml.read(path)[0]
     shutil.copy(path, path + '.bak')  # make a backup of the original file
     tag = striptag(node0.tag)
     gml = True
@@ -113,8 +112,7 @@ def upgrade_file(path, multipoint):
 # NB: this works only for migrations from NRML version 0.4 to 0.5
 # we will implement a more general solution when we will need to pass
 # to version 0.6
-@sap.script
-def upgrade_nrml(directory, dry_run, multipoint):
+def main(directory, dry_run=False, multipoint=False):
     """
     Upgrade all the NRML files contained in the given directory to the latest
     NRML version. Works by walking all subdirectories.
@@ -152,6 +150,6 @@ def upgrade_nrml(directory, dry_run, multipoint):
                         print('Not upgrading', path)
 
 
-upgrade_nrml.arg('directory', 'directory to consider')
-upgrade_nrml.flg('dry_run', 'test the upgrade without replacing the files')
-upgrade_nrml.flg('multipoint', 'replace PointSources with MultiPointSources')
+main.directory = 'directory to consider'
+main.dry_run = 'test the upgrade without replacing the files'
+main.multipoint = 'replace PointSources with MultiPointSources'

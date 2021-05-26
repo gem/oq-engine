@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -59,13 +59,13 @@ class Atkinson2015(GMPE):
 
     #: No required site parameters, the GMPE is derived for B/C site
     #: amplification factors
-    REQUIRES_SITES_PARAMETERS = set(())
+    REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is hypocentral distance
-    REQUIRES_DISTANCES = set(('rhypo',))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     #: GMPE not tested against independent implementation so raise
     #: not verified warning

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -146,3 +146,7 @@ class ClassicalDamageTestCase(CalculatorTestCase):
     def test_case_master(self):
         if NOT_DARWIN:  # skip on macOS
             self.check(case_master)
+            fnames = export(('hcurves', 'xml'), self.calc.datastore)
+            for fname in fnames:
+                self.assertEqualFiles(
+                    'expected/%s' % strip_calc_id(fname), fname)

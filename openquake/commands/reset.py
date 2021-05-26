@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,15 +20,14 @@ import sys
 import time
 import signal
 import getpass
-from openquake.baselib import sap, config
+from openquake.baselib import config
 from openquake.commonlib import logs
 from openquake.engine.utils import confirm
 from openquake.server import dbserver
 from openquake.commands.purge import purge_one, purge_all
 
 
-@sap.script
-def reset(yes):
+def main(yes=False):
     """
     Remove all the datastores and the database of the current user
     """
@@ -57,4 +56,4 @@ def reset(yes):
             print('Removed %s' % dbpath)
 
 
-reset.flg('yes', 'confirmation')
+main.yes = 'confirmation'

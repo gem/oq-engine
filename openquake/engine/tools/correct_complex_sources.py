@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -80,6 +80,7 @@ def fix(fname, outname=None):
                 fix_source_node(src_node)
     with open(outname or fname, 'wb') as out:
         nrml.write([root.sourceModel], out, xmlns=xmlns)
+
 
 if __name__ == '__main__':
     fname = sys.argv[1]

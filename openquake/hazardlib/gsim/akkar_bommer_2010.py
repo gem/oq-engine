@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -63,11 +63,7 @@ class AkkarBommer2010(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -76,21 +72,21 @@ class AkkarBommer2010(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 2, page 199.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and stiff and soft soil).
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and rake (eq. 1, page 199).
-    REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
 
     #: Required distance measure is RRup (eq. 1, page 199).
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
+
+    #: Reference Vs30. See page 2983 (top or right column)
+    DEFINED_FOR_REFERENCE_VELOCITY = 760.0
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -313,6 +309,10 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.TOTAL
     ])
+
+    #: Vs30 value representing typical rock conditions in Switzerland.
+    #: confirmed by the Swiss GMPE group
+    DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

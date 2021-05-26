@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,8 +19,12 @@ import sys
 import runpy
 from functools import partial
 import numpy
-from openquake.baselib import sap
 from openquake.hazardlib import nrml
+from openquake.hazardlib.geo.geodetic import geodetic_distance
+from openquake.hazardlib.contexts import Timer
+from openquake.commonlib import readinput, calc, logs, datastore
+from openquake.calculators.base import calculators
+from openquake.calculators.extract import extract, WebExtractor
 
 
 class OpenQuake(object):
@@ -29,10 +33,6 @@ class OpenQuake(object):
     engine utilities for work in the interactive interpreter.
     """
     def __init__(self):
-        from openquake.baselib.datastore import read
-        from openquake.hazardlib.geo.geodetic import geodetic_distance
-        from openquake.commonlib import readinput, calc
-        from openquake.calculators.extract import extract
         try:
             from matplotlib import pyplot
             self.plt = pyplot
@@ -41,7 +41,7 @@ class OpenQuake(object):
             pass
         self.lookfor = partial(numpy.lookfor, module='openquake')
         self.extract = extract
-        self.read = read
+        self.read = datastore.read
         self.nrml = nrml
         self.get__exposure = readinput.get_exposure
         self.get_oqparam = readinput.get_oqparam
@@ -50,11 +50,40 @@ class OpenQuake(object):
         self.get_exposure = readinput.get_exposure
         self.make_hmap = calc.make_hmap
         self.geodetic_distance = geodetic_distance
-        # TODO: more utilities when be added when deemed useful
+        self.Timer = Timer
+        # TODO: more utilities will be added when deemed useful
+
+    def get_calc(self, job_ini):
+        log = logs.init("job", job_ini)
+        log.__enter__()
+        return calculators(log.get_oqparam(), log.calc_id)
+
+    def webex(self, calc_id, what):
+        """Extract data from a remote calculation"""
+        ex = WebExtractor(calc_id)
+        try:
+            return ex.get(what)
+        finally:
+            ex.close()
+
+    def ex(self, calc_id, what):
+        """Extract data from a local engine server"""
+        ex = WebExtractor(calc_id, 'http://localhost:8800', '', '')
+        try:
+            return ex.get(what)
+        finally:
+            ex.close()
+
+    def read_ruptures(self, calc_id, field):
+        dstore = read(calc_id)
+        lst = []
+        for name, dset in dstore.items():
+            if name.startswith('rup_'):
+                lst.append(dset[field][:])
+        return numpy.concatenate(lst)
 
 
-@sap.script
-def shell(script=None, args=()):
+def main(script=None, args=()):
     """
     Start an embedded (i)python instance with a global object "o" or
     run a Python script in the engine environment.
@@ -73,5 +102,5 @@ def shell(script=None, args=()):
                       local=dict(o=o))
 
 
-shell.arg('script', 'python script to run (if any)')
-shell.arg('args', 'arguments to pass to the script', nargs='*')
+main.script = 'python script to run (if any)'
+main.args = dict(help='arguments to pass to the script', nargs='*')

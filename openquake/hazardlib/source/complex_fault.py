@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,10 +20,8 @@ defines :class:`ComplexFaultSource`.
 import copy
 import numpy
 
-from openquake.baselib.slots import with_slots
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.source.rupture_collection import split
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
@@ -127,7 +125,6 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
     return rupture_slices
 
 
-@with_slots
 class ComplexFaultSource(ParametricSeismicSource):
     """
     Complex fault source typology represents seismicity occurring on a fault
@@ -149,8 +146,7 @@ class ComplexFaultSource(ParametricSeismicSource):
     """
     code = b'C'
     # a slice of the rupture_slices, thus splitting the source
-    _slots_ = ParametricSeismicSource._slots_ + '''edges rake'''.split()
-    MODIFICATIONS = set(('set_geometry',))
+    MODIFICATIONS = {'set_geometry'}
 
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, magnitude_scaling_relationship,
@@ -166,7 +162,19 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.edges = edges
         self.rake = rake
 
-    def iter_ruptures(self):
+    def get_fault_surface_area(self):
+        """
+        Computes the area covered by the surface of the fault.
+
+        :returns:
+            A float defining the area of the surface of the fault [km^2]
+        """
+        # The mesh spacing is hardcoded to guarantee stability in the values
+        # computed
+        sfc = ComplexFaultSurface.from_fault_data(self.edges, 2.0)
+        return sfc.get_area()
+
+    def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
@@ -179,7 +187,6 @@ class ComplexFaultSource(ParametricSeismicSource):
         whole_fault_mesh = whole_fault_surface.mesh
         cell_center, cell_length, cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())
-
         for mag, mag_occ_rate in self.get_annual_occurrence_rates():
             # min_mag is inside get_annual_occurrence_rates
             if mag_occ_rate == 0:
@@ -239,17 +246,18 @@ class ComplexFaultSource(ParametricSeismicSource):
         self.rupture_mesh_spacing = spacing
 
     def __iter__(self):
-        if self.num_ruptures <= MINWEIGHT:
-            yield self  # not splittable
-            return
         mag_rates = self.get_annual_occurrence_rates()
+        if len(mag_rates) == 1:  # not splittable
+            yield self
+            return
+        if not hasattr(self, '_nr'):
+            self.count_ruptures()
         for i, (mag, rate) in enumerate(mag_rates):
             src = copy.copy(self)
-            del src._nr
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]
-            for s in split(src):
-                yield s
+            src.source_id = '%s:%d' % (self.source_id, i)
+            yield src
 
     @property
     def polygon(self):

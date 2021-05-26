@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -64,5 +64,4 @@ class PoissonTOMTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(
             pne,
             numpy.array([[0.6376282, 0.6703200, 0.7046881],
-                         [0.7408182, 0.7788008, 0.8187308]])
-        )
+                         [0.7408182, 0.7788008, 0.8187308]]))

@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-# vim: syntax=dockerfile
-#
-# Copyright (C) 2019 GEM Foundation
+# Copyright (C) 2019-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,37 +12,34 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+FROM python:3.8-slim AS compile-image
+LABEL maintainer="GEM Foundation <devops@openquake.org>" \
+       vendor="GEM Foundation"
+RUN useradd -m -u 1000 -s /bin/bash openquake
+RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev
+ARG oq_branch
 
-FROM openquake/base
-LABEL maintainer="Daniele Viganò <daniele@openquake.org>" \
-      vendor="GEM Foundation"
+# Create venv
+ENV VIRTUAL_ENV=/opt/openquake
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-ARG oq_branch=master
-ARG tools_branch=master
-
-ENV PATH /opt/openquake/bin:$PATH
-ADD https://api.github.com/repos/gem/oq-engine/git/refs/heads/$oq_branch /tmp/nocache.json
-RUN pip3 --disable-pip-version-check -q install -r https://raw.githubusercontent.com/gem/oq-engine/$oq_branch/requirements-py36-linux64.txt \
-                -r https://raw.githubusercontent.com/gem/oq-engine/$oq_branch/requirements-extra-py36-linux64.txt && \
-    pip3 --disable-pip-version-check -q install https://github.com/gem/oq-engine/archive/$oq_branch.zip && \
-    for app in oq-platform-standalone oq-platform-ipt oq-platform-taxtweb oq-platform-taxonomy; do \
-        if curl --output /dev/null --silent --head --fail --location https://github.com/gem/${app}/archive/$tools_branch.zip ; then \
-           pip3 --disable-pip-version-check -q install https://github.com/gem/${app}/archive/$tools_branch.zip; \
-        else \
-           pip3 --disable-pip-version-check -q install https://github.com/gem/${app}/archive/master.zip; \
-        fi \
-    done
-
-
-USER openquake
+#clone repository and install engine 
+RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \ 
+    pip --disable-pip-version-check install . -r requirements-py38-linux64.txt --no-warn-script-location
+#
+FROM python:3.8-slim AS build-image
+COPY --from=compile-image /opt/openquake/ /opt/openquake/
 ENV LANG en_US.UTF-8
+RUN useradd -m -u 1000 -s /bin/bash openquake
+USER openquake
 ENV HOME /home/openquake
 WORKDIR ${HOME}
-RUN mkdir oqdata
-
+ENV PATH="/opt/openquake/bin:$PATH"
+#
 ADD scripts/oq-start.sh ${HOME}
-
+RUN mkdir oqdata 
 EXPOSE 8800:8800
 STOPSIGNAL SIGINT
 ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["./oq-start.sh"]
+CMD ["./oq-start.sh"]  

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2019 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,7 @@ from openquake.baselib import sap, hdf5, datastore
 from openquake.calculators.getters import PmapGetter
 
 
-@sap.script
-def combine_mean_curves(calc_big, calc_small):
+def combine_mean_curves(calc_big: int, calc_small: int):
     """
     Combine the hazard curves coming from two different calculations.
     The result will be the hazard curves of calc_big, updated on the sites
@@ -55,8 +54,8 @@ def combine_mean_curves(calc_big, calc_small):
     print('Generated %s' % out)
 
 
-combine_mean_curves.arg('calc_big', 'first calculation', type=int)
-combine_mean_curves.arg('calc_small', 'second calculation', type=int)
+combine_mean_curves.calc_big = 'first calculation'
+combine_mean_curves.calc_small = 'second calculation'
 
 if __name__ == '__main__':
-    combine_mean_curves.callfunc()
+    sap.run(combine_mean_curves)

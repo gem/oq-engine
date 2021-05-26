@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2019 GEM Foundation
+# Copyright (C) 2010-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,6 @@
 """Engine: A collection of fundamental functions for initializing and running
 calculations."""
 
-import io
 import os
 import re
 import sys
@@ -28,8 +27,9 @@ import time
 import signal
 import getpass
 import logging
-import traceback
+import itertools
 import platform
+from os.path import getsize
 import psutil
 import numpy
 try:
@@ -39,15 +39,14 @@ except ImportError:
         "Do nothing"
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
-from openquake.baselib import (
-    parallel, general, config, __version__, zeromq as z)
+from openquake.baselib import parallel, general, config, __version__
+from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput, oqzip
-from openquake.calculators import base, views, export
+from openquake.commonlib import readinput
+from openquake.calculators import base, export
 from openquake.commonlib import logs
 
 OQ_API = 'https://api.openquake.org'
-TERMINATE = config.distribution.terminate_workers_on_revoke
 OQ_DISTRIBUTE = parallel.oq_distribute()
 
 MB = 1024 ** 2
@@ -58,71 +57,37 @@ GET_JOBS = '''--- executing or submitted
 SELECT * FROM job WHERE status IN ('executing', 'submitted')
 AND is_running=1 AND pid > 0 ORDER BY id'''
 
-if OQ_DISTRIBUTE == 'zmq':
 
-    def set_concurrent_tasks_default(calc):
-        """
-        Set the default for concurrent_tasks based on the available
-        worker pools .
-        """
-        num_workers = 0
-        w = config.zworkers
-        for host, _cores in [hc.split() for hc in w.host_cores.split(',')]:
-            url = 'tcp://%s:%s' % (host, w.ctrl_port)
-            with z.Socket(url, z.zmq.REQ, 'connect') as sock:
-                if not general.socket_ready(url):
-                    logs.LOG.warn('%s is not running', host)
-                    continue
-                num_workers += sock.send('get_num_workers')
-        parallel.Starmap.num_cores = num_workers
-        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
-        OqParam.concurrent_tasks.default = num_workers * 2
-        logs.LOG.warn('Using %d zmq workers', num_workers)
+def get_zmq_ports():
+    """
+    :returns: an array with the receiver ports
+    """
+    start, stop = config.dbserver.receiver_ports.split('-')
+    return numpy.arange(int(start), int(stop))
 
-elif OQ_DISTRIBUTE.startswith('celery'):
-    import celery.task.control  # noqa: E402
 
-    def set_concurrent_tasks_default(calc):
-        """
-        Set the default for concurrent_tasks based on the number of available
-        celery workers.
-        """
-        stats = celery.task.control.inspect(timeout=1).stats()
-        if not stats:
-            logs.LOG.critical("No live compute nodes, aborting calculation")
-            logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
-            sys.exit(1)
-        ncores = sum(stats[k]['pool']['max-concurrency'] for k in stats)
-        parallel.Starmap.num_cores = ncores
-        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
-        OqParam.concurrent_tasks.default = ncores * 2
-        logs.LOG.warn('Using %s, %d cores', ', '.join(sorted(stats)), ncores)
+def set_concurrent_tasks_default(calc):
+    """
+    Look at the number of available workers and update the parameter
+    OqParam.concurrent_tasks.default. Abort the calculations if no
+    workers are available. Do nothing for trivial distributions.
+    """
+    if OQ_DISTRIBUTE in 'no processpool':  # do nothing
+        num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.Starmap.CT // 2
+        logging.warning('Using %d cores on %s', num_workers, platform.node())
+        return
 
-    def celery_cleanup(terminate):
-        """
-        Release the resources used by an openquake job.
-        In particular revoke the running tasks (if any).
+    num_workers = sum(total for host, running, total
+                      in parallel.workers_wait())
+    if num_workers == 0:
+        logging.critical("No live compute nodes, aborting calculation")
+        logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
+        sys.exit(1)
 
-        :param bool terminate: the celery revoke command terminate flag
-        :param tasks: celery tasks
-        """
-        # Using the celery API, terminate and revoke and terminate any running
-        # tasks associated with the current job.
-        tasks = parallel.Starmap.running_tasks
-        if tasks:
-            logs.LOG.warn('Revoking %d tasks', len(tasks))
-        else:  # this is normal when OQ_DISTRIBUTE=no
-            logs.LOG.debug('No task to revoke')
-        while tasks:
-            task = tasks.pop()
-            tid = task.task_id
-            celery.task.control.revoke(tid, terminate=terminate)
-            logs.LOG.debug('Revoked task %s', tid)
-
-else:
-
-    def set_concurrent_tasks_default(calc):
-        parallel.Starmap.oversubmit = calc.oqparam.oversubmit
+    parallel.Starmap.CT = num_workers * 2
+    parallel.Starmap.num_cores = num_workers
+    OqParam.concurrent_tasks.default = num_workers * 2
+    logging.warning('Using %d %s workers', num_workers, OQ_DISTRIBUTE)
 
 
 def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
@@ -137,7 +102,9 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
-    rlzs = dstore['csm_info'].rlzs
+    if 'avg_gmf' in dskeys:
+        dskeys.remove('avg_gmf')  # hide
+    rlzs = dstore['full_lt'].rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
     hdf5 = dstore.hdf5
@@ -148,9 +115,10 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if 'avg_losses-stats' in dstore or (
-            'avg_losses-rlzs' in dstore and len(rlzs)):
-        dskeys.add('avg_losses-stats')
+    if len(rlzs) > 1 and not oq.individual_curves and not oq.collect_rlzs:
+        for out in ['avg_losses-rlzs', 'agg_losses-rlzs', 'agg_curves-rlzs']:
+            if out in dskeys:
+                dskeys.remove(out)
     if 'curves-rlzs' in dstore and len(rlzs) == 1:
         dskeys.add('loss_curves-rlzs')
     if 'curves-stats' in dstore and len(rlzs) > 1:
@@ -158,12 +126,8 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
-    if 'all_loss_ratios' in dskeys:
-        dskeys.remove('all_loss_ratios')  # export only specific IDs
     if 'ruptures' in dskeys and 'scenario' in calcmode:
         exportable.remove('ruptures')  # do not export, as requested by Vitor
-    if 'rup_loss_table' in dskeys:  # keep it hidden for the moment
-        dskeys.remove('rup_loss_table')
     if 'hmaps' in dskeys and not oq.hazard_maps:
         dskeys.remove('hmaps')  # do not export the hazard maps
     if logs.dbcmd('get_job', dstore.calc_id) is None:
@@ -174,11 +138,12 @@ def expose_outputs(dstore, owner=getpass.getuser(), status='complete'):
     keysize = []
     for key in sorted(dskeys & exportable):
         try:
-            size_mb = dstore.get_attr(key, 'nbytes') / MB
+            size_mb = dstore.getsize(key) / MB
         except (KeyError, AttributeError):
-            size_mb = None
-        keysize.append((key, size_mb))
-    ds_size = os.path.getsize(dstore.filename) / MB
+            size_mb = -1
+        if size_mb:
+            keysize.append((key, size_mb))
+    ds_size = dstore.getsize() / MB
     logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
 
 
@@ -187,7 +152,7 @@ class MasterKilled(KeyboardInterrupt):
 
 
 def inhibitSigInt(signum, _stack):
-    logs.LOG.warn('Killing job, please wait')
+    logging.warning('Killing job, please wait')
 
 
 def manage_signals(signum, _stack):
@@ -199,19 +164,22 @@ def manage_signals(signum, _stack):
     :param _stack: the current frame object, ignored
     """
     # Disable further CTRL-C to allow tasks revocation when Celery is used
-    if OQ_DISTRIBUTE.startswith('celery'):
+    if OQ_DISTRIBUTE == 'celery':
         signal.signal(signal.SIGINT, inhibitSigInt)
 
     if signum == signal.SIGINT:
+        parallel.workers_stop()
         raise MasterKilled('The openquake master process was killed manually')
 
     if signum == signal.SIGTERM:
+        parallel.workers_stop()
         raise SystemExit('Terminated')
 
     if hasattr(signal, 'SIGHUP'):  # there is no SIGHUP on Windows
         # kill the calculation only if os.getppid() != _PPID, i.e. the
         # controlling terminal died; in the workers, do nothing
         if signum == signal.SIGHUP and os.getppid() != _PPID:
+            parallel.workers_stop()
             raise MasterKilled(
                 'The openquake master lost its controlling terminal')
 
@@ -232,51 +200,13 @@ def register_signals():
         pass
 
 
-def job_from_file(job_ini, job_id, username, **kw):
-    """
-    Create a full job profile from a job config file.
-
-    :param job_ini:
-        Path to a job.ini file
-    :param job_id:
-        ID of the created job
-    :param username:
-        The user who will own this job profile and all results
-    :param kw:
-         Extra parameters including `calculation_mode` and `exposure_file`
-    :returns:
-        an oqparam instance
-    """
-    hc_id = kw.get('hazard_calculation_id')
-    try:
-        oq = readinput.get_oqparam(job_ini, hc_id=hc_id)
-    except Exception:
-        logs.dbcmd('finish', job_id, 'deleted')
-        raise
-    if 'calculation_mode' in kw:
-        oq.calculation_mode = kw.pop('calculation_mode')
-    if 'description' in kw:
-        oq.description = kw.pop('description')
-    if 'exposure_file' in kw:  # hack used in commands.engine
-        fnames = kw.pop('exposure_file').split()
-        if fnames:
-            oq.inputs['exposure'] = fnames
-        elif 'exposure' in oq.inputs:
-            del oq.inputs['exposure']
-    logs.dbcmd('update_job', job_id,
-               dict(calculation_mode=oq.calculation_mode,
-                    description=oq.description,
-                    user_name=username,
-                    hazard_calculation_id=hc_id))
-    return oq
-
-
-def poll_queue(job_id, pid, poll_time):
+def poll_queue(job_id, poll_time):
     """
     Check the queue of executing/submitted jobs and exit when there is
     a free slot.
     """
-    if config.distribution.serialize_jobs:
+    offset = config.distribution.serialize_jobs - 1
+    if offset >= 0:
         first_time = True
         while True:
             jobs = logs.dbcmd(GET_JOBS)
@@ -285,104 +215,142 @@ def poll_queue(job_id, pid, poll_time):
                 for job in failed:
                     logs.dbcmd('update_job', job,
                                {'status': 'failed', 'is_running': 0})
-            elif any(job.id < job_id for job in jobs):
+            elif any(j.id < job_id - offset for j in jobs):
                 if first_time:
-                    logs.LOG.warn('Waiting for jobs %s', [j.id for j in jobs])
+                    logging.warning(
+                        'Waiting for jobs %s', [j.id for j in jobs
+                                                if j.id < job_id - offset])
                     logs.dbcmd('update_job', job_id,
-                               {'status': 'submitted', 'pid': pid})
+                               {'status': 'submitted', 'pid': _PID})
                     first_time = False
                 time.sleep(poll_time)
             else:
                 break
-    logs.dbcmd('update_job', job_id, {'status': 'executing', 'pid': _PID})
 
 
-def run_calc(job_id, oqparam, exports, hazard_calculation_id=None, **kw):
+def run_calc(log):
     """
     Run a calculation.
 
-    :param job_id:
-        ID of the current job
-    :param oqparam:
-        :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param exports:
-        A comma-separated string of export types.
+    :param log:
+        LogContext of the current job
     """
     register_signals()
-    setproctitle('oq-job-%d' % job_id)
-    calc = base.calculators(oqparam, calc_id=job_id)
-    logging.info('%s running %s [--hc=%s]',
-                 getpass.getuser(),
-                 calc.oqparam.inputs['job_ini'],
-                 calc.oqparam.hazard_calculation_id)
-    logging.info('Using engine version %s', __version__)
-    msg = check_obsolete_version(oqparam.calculation_mode)
-    if msg:
-        logs.LOG.warn(msg)
-    calc.from_engine = True
-    tb = 'None\n'
-    try:
-        if not oqparam.hazard_calculation_id:
-            if 'input_zip' in oqparam.inputs:  # starting from an archive
-                with open(oqparam.inputs['input_zip'], 'rb') as arch:
-                    data = numpy.array(arch.read())
-            else:
-                logs.LOG.info('Zipping the input files')
-                bio = io.BytesIO()
-                oqzip.zip_job(oqparam.inputs['job_ini'], bio, (), oqparam,
-                              logging.debug)
-                data = numpy.array(bio.getvalue())
-                del bio
-            calc.datastore['input/zip'] = data
-            calc.datastore.set_attrs('input/zip', nbytes=data.nbytes)
-            del data  # save memory
-
-        poll_queue(job_id, _PID, poll_time=15)
-        if OQ_DISTRIBUTE.endswith('pool'):
-            logs.LOG.warning('Using %d cores on %s',
-                             parallel.Starmap.num_cores, platform.node())
-        if OQ_DISTRIBUTE == 'zmq':
-            logs.dbcmd('zmq_start')  # start zworkers
-            logs.dbcmd('zmq_wait')  # wait for them to go up
-        set_concurrent_tasks_default(calc)
-        t0 = time.time()
-        calc.run(exports=exports,
-                 hazard_calculation_id=hazard_calculation_id, **kw)
-        logs.LOG.info('Exposing the outputs to the database')
-        expose_outputs(calc.datastore)
-        duration = time.time() - t0
-        records = views.performance_view(calc.datastore, add_calc_id=False)
-        logs.dbcmd('save_performance', job_id, records)
-        calc.datastore.close()
-        logs.LOG.info('Calculation %d finished correctly in %d seconds',
-                      job_id, duration)
-        logs.dbcmd('finish', job_id, 'complete')
-    except BaseException as exc:
-        if isinstance(exc, MasterKilled):
-            msg = 'aborted'
+    setproctitle('oq-job-%d' % log.calc_id)
+    with log:
+        oqparam = log.get_oqparam()
+        calc = base.calculators(oqparam, log.calc_id)
+        logging.info('%s running %s [--hc=%s]',
+                     getpass.getuser(),
+                     calc.oqparam.inputs['job_ini'],
+                     calc.oqparam.hazard_calculation_id)
+        logging.info('Using engine version %s', __version__)
+        msg = check_obsolete_version(oqparam.calculation_mode)
+        if msg:
+            logging.warning(msg)
+        calc.from_engine = True
+        if config.zworkers['host_cores']:
+            set_concurrent_tasks_default(calc)
         else:
-            msg = 'failed'
-        tb = traceback.format_exc()
-        try:
-            logs.LOG.critical(tb)
-            logs.dbcmd('finish', job_id, msg)
-        except BaseException:  # an OperationalError may always happen
-            sys.stderr.write(tb)
-        raise
-    finally:
-        # if there was an error in the calculation, this part may fail;
-        # in such a situation, we simply log the cleanup error without
-        # taking further action, so that the real error can propagate
-        if OQ_DISTRIBUTE == 'zmq':  # stop zworkers
-            logs.dbcmd('zmq_stop')
-        try:
-            if OQ_DISTRIBUTE.startswith('celery'):
-                celery_cleanup(TERMINATE)
-        except BaseException:
-            # log the finalization error only if there is no real error
-            if tb == 'None\n':
-                logs.LOG.error('finalizing', exc_info=True)
+            logging.warning('Assuming %d %s workers',
+                            parallel.Starmap.num_cores, OQ_DISTRIBUTE)
+        t0 = time.time()
+        calc.run()
+        logging.info('Exposing the outputs to the database')
+        expose_outputs(calc.datastore)
+        path = calc.datastore.filename
+        size = general.humansize(getsize(path))
+        logging.info('Stored %s on %s in %d seconds',
+                     size, path, time.time() - t0)
+        calc.datastore.close()
+        for line in logs.dbcmd('list_outputs', log.calc_id, False):
+            general.safeprint(line)
+        # sanity check to make sure that the logging on file is working
+        if (log.log_file and log.log_file != os.devnull and
+                getsize(log.log_file) == 0):
+            logging.warning('The log file %s is empty!?' % log.log_file)
     return calc
+
+
+def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
+                user_name=None, hc_id=None, multi=False):
+    """
+    Create job records on the database.
+
+    :returns: a list of LogContext objects
+    """
+    if len(job_inis) > 1 and not hc_id and not multi:  # first job as hc
+        job = logs.init("job", job_inis[0], log_level, log_file,
+                        user_name, hc_id)
+        hc_id = job.calc_id
+        jobs = [job]
+        job_inis = job_inis[1:]
+    else:
+        jobs = []
+    for job_ini in job_inis:
+        if isinstance(job_ini, dict):
+            dic = job_ini
+        else:
+            # NB: `get_params` must NOT log, since the logging is not
+            # configured yet, otherwise the log will disappear :-(
+            dic = readinput.get_params(job_ini)
+        dic['hazard_calculation_id'] = hc_id
+        if 'sensitivity_analysis' in dic:
+            analysis = valid.dictionary(dic['sensitivity_analysis'])
+            for values in itertools.product(*analysis.values()):
+                new = logs.init('job', dic.copy(), log_level, None,
+                                user_name, hc_id)
+                pars = dict(zip(analysis, values))
+                for param, value in pars.items():
+                    new.params[param] = str(value)
+                new.params['description'] = '%s %s' % (
+                    dic['description'], pars)
+                jobs.append(new)
+        else:
+            jobs.append(
+                logs.init('job', dic, log_level, None, user_name, hc_id))
+    if multi:
+        for job in jobs:
+            job.multi = True
+    return jobs
+
+
+def run_jobs(jobs):
+    """
+    Run jobs using the specified config file and other options.
+
+    :param jobs:
+        List of LogContexts
+    """
+    jobarray = len(jobs) > 1 and jobs[0].multi
+    try:
+        poll_queue(jobs[0].calc_id, poll_time=15)
+        # wait for an empty slot or a CTRL-C
+    except BaseException:
+        # the job aborted even before starting
+        for job in jobs:
+            logs.dbcmd('finish', job.calc_id, 'aborted')
+        return jobs
+    else:
+        for job in jobs:
+            dic = {'status': 'executing', 'pid': _PID}
+            logs.dbcmd('update_job', job.calc_id, dic)
+    try:
+        if config.zworkers['host_cores'] and parallel.workers_status() == []:
+            print('Asking the DbServer to start the workers')
+            logs.dbcmd('workers_start')  # start the workers
+        allargs = [(job,) for job in jobs]
+        if jobarray:
+            with general.start_many(run_calc, allargs):
+                pass
+        else:
+            for job in jobs:
+                run_calc(job)
+    finally:
+        if config.zworkers['host_cores']:
+            print('Stopping the workers')
+            parallel.workers_stop()
+    return jobs
 
 
 def version_triple(tag):
@@ -419,7 +387,25 @@ def check_obsolete_version(calculation_mode='WebUI'):
         tag_name = json.loads(decode(data))['tag_name']
         current = version_triple(__version__)
         latest = version_triple(tag_name)
+    except KeyError:  # 'tag_name' not found
+        # NOTE: for unauthenticated requests, the rate limit allows for up
+        # to 60 requests per hour. Therefore, sometimes the api returns the
+        # following message:
+        # b'{"message":"API rate limit exceeded for aaa.aaa.aaa.aaa. (But'
+        # ' here\'s the good news: Authenticated requests get a higher rate'
+        # ' limit. Check out the documentation for more details.)",'
+        # ' "documentation_url":'
+        # ' "https://developer.github.com/v3/#rate-limiting"}'
+        msg = ('An error occurred while calling %s/engine/latest to check'
+               ' if the installed version of the engine is up to date.\n'
+               '%s' % (OQ_API, data.decode('utf8')))
+        logging.warning(msg)
+        return
     except Exception:  # page not available or wrong version tag
+        msg = ('An error occurred while calling %s/engine/latest to check'
+               ' if the installed version of the engine is up to date.' %
+               OQ_API)
+        logging.warning(msg, exc_info=True)
         return
     if current < latest:
         return ('Version %s of the engine is available, but you are '

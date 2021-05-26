@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,10 +29,8 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import utils as geo_utils
-from openquake.baselib.slots import with_slots
 
 
-@with_slots
 class PlanarSurface(BaseSurface):
     """
     Planar rectangular surface with two sides parallel to the Earth surface.
@@ -65,10 +63,6 @@ class PlanarSurface(BaseSurface):
     #: downdip perpendicular to top edge from top left corner, expressed
     #: as a fraction of the surface's area.
     IMPERFECT_RECTANGLE_TOLERANCE = 0.002
-
-    _slots_ = ('strike dip width length '
-               'corner_lons corner_lats corner_depths '
-               'normal d uv1 uv2 zero_zero').split()
 
     @property
     def surface_nodes(self):
@@ -168,12 +162,12 @@ class PlanarSurface(BaseSurface):
         return self
 
     @classmethod
-    def from_array(cls, array3N):
+    def from_array(cls, array34):
         """
-        :param array3N: an array of shape (3, N)
+        :param array34: an array of shape (3, 4) in order tl, tr, bl, br
         :returns: a :class:`PlanarSurface` instance
         """
-        tl, tr, bl, br = [Point(*p) for p in array3N.T]
+        tl, tr, bl, br = [Point(*p) for p in array34.T]
         strike = tl.azimuth(tr)
         dip = numpy.degrees(
             numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
@@ -181,6 +175,19 @@ class PlanarSurface(BaseSurface):
         # in the datastore, which means it is correct and there is no need to
         # check it again; also the check would fail because of a bug, see
         # https://github.com/gem/oq-engine/issues/3392
+        self = cls(strike, dip, tl, tr, br, bl, check=False)
+        return self
+
+    @classmethod
+    def from_ucerf(cls, array43):
+        """
+        :param array43: an array of shape (4, 3) in order tl, tr, br, bl
+        :returns: a :class:`PlanarSurface` instance
+        """
+        tl, tr, br, bl = [Point(*p) for p in array43]
+        strike = tl.azimuth(tr)
+        dip = numpy.degrees(
+            numpy.arcsin((bl.depth - tl.depth) / tl.distance(bl)))
         self = cls(strike, dip, tl, tr, br, bl, check=False)
         return self
 
@@ -537,9 +544,8 @@ class PlanarSurface(BaseSurface):
         make use of the mesh.
         """
         return geodetic.distance_to_arc(
-            self.corner_lons[0], self.corner_lats[0], self.strike, mesh.lons,
-            mesh.lats
-        )
+            self.corner_lons[0], self.corner_lats[0], self.strike,
+            mesh.lons, mesh.lats)
 
     def get_ry0_distance(self, mesh):
         """
@@ -618,13 +624,13 @@ class PlanarSurface(BaseSurface):
         """
         The corners lons/lats in WKT-friendly order (clockwise)
         """
-        return ([self.corner_lons.take([0, 1, 3, 2, 0])],
-                [self.corner_lats.take([0, 1, 3, 2, 0])])
+        return (self.corner_lons.take([0, 1, 3, 2, 0]),
+                self.corner_lats.take([0, 1, 3, 2, 0]))
 
     def get_surface_boundaries_3d(self):
         """
         The corners lons/lats/depths in WKT-friendly order (clockwise)
         """
-        return ([self.corner_lons.take([0, 1, 3, 2, 0])],
-                [self.corner_lats.take([0, 1, 3, 2, 0])],
-                [self.corner_depths.take([0, 1, 3, 2, 0])])
+        return (self.corner_lons.take([0, 1, 3, 2, 0]),
+                self.corner_lats.take([0, 1, 3, 2, 0]),
+                self.corner_depths.take([0, 1, 3, 2, 0]))

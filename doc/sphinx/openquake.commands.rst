@@ -49,26 +49,10 @@ info command
     :undoc-members:
     :show-inheritance:
 
-plot_agg_curve command
-----------------------------------------
-
-.. automodule:: openquake.commands.plot_agg_curve
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 plot command
 ------------------------------
 
 .. automodule:: openquake.commands.plot
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-plot_sites command
-------------------------------------
-
-.. automodule:: openquake.commands.plot_sites
     :members:
     :undoc-members:
     :show-inheritance:
@@ -81,10 +65,10 @@ purge command
     :undoc-members:
     :show-inheritance:
 
-reduce command
+sample command
 --------------------------------
 
-.. automodule:: openquake.commands.reduce
+.. automodule:: openquake.commands.sample
     :members:
     :undoc-members:
     :show-inheritance:

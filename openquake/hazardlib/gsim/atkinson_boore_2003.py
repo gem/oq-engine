@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -61,10 +61,7 @@ class AtkinsonBoore2003SInter(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see table 1, page 1715
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the random horizontal
     #: component:
@@ -74,23 +71,24 @@ class AtkinsonBoore2003SInter(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see table 1, page 1715
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+        const.StdDev.INTRA_EVENT}
+
+    DEFINED_FOR_REFERENCE_VELOCITY = 600
 
     #: Required site parameters is Vs30, used to distinguish between NEHRP
     #: soil classes, see paragraph 'Functional Form', page 1706
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and focal depth, see equation
     #: 1, page 1706
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is closest distance to rupture, see equation
     #: 1, page 1706
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -354,7 +352,7 @@ class AtkinsonBoore2003SInterNSHMP2008(AtkinsonBoore2003SInter):
         """
         # fix hypocentral depth to 20 km. Create new rupture context to avoid
         # changing the original one
-        new_rup = copy.deepcopy(rup)
+        new_rup = copy.copy(rup)
         new_rup.hypo_depth = 20.
 
         mean, stddevs = super().get_mean_and_stddevs(

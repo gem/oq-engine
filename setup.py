@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -56,38 +56,39 @@ PY_MODULES = ['openquake.commands.__main__']
 
 install_requires = [
     'setuptools',
-    'h5py >=2.9, <2.10',
-    'numpy >=1.16, <1.17',
-    'scipy >=1.3, <1.4',
-    'pyzmq <18.2',
+    'h5py >=2.10, <2.11',
+    'numpy >=1.18, <1.20',
+    'scipy >=1.3, <1.7',
+    'pandas >=0.25, <1.3',
+    'pyzmq <20.0',
     'psutil >=2.0, <5.7',
-    'shapely >=1.3, <1.7',
-    'docutils >=0.11, <0.15',
+    'shapely >=1.7, <1.8',
+    'docutils >=0.11',
     'decorator >=4.3',
     'django >=1.11, <2.3',
-    'matplotlib >=1.5, <3.2',
-    'requests >=2.20, <2.23',
+    'matplotlib',
+    'requests >=2.20, <3.0',
     'pyshp ==1.2.3',
-    'PyYAML',
     'toml',
+    'pyproj >=1.9',
 ]
 
 extras_require = {
-    'setproctitle': ["setproctitle"],
-    'prctl': ["python-prctl ==1.6.1"],
     'celery':  ["celery >=4.0, <4.4"],
-    'dask':  ["dask", "distributed"],
-    'pam': ["python-pam", "django-pam"],
-    'plotting':  [
-        'basemap >=1.0',
-        'pyproj >=1.9',
+    'cluster': ["python-pam",
+                "django-pam",
+                "gunicorn",
+                "python-prctl ==1.6.1",
+                "setproctitle"],
+    'osgeo':  [
+        'GDAL >= 2.4',
     ],
-    'platform': ["GDAL >=2.3, <3"],
     'dev':  [
         'pytest >=4.5',
         'flake8 >=3.5, <3.8',
         'pdbpp',
         'ipython',
+        'silx == 0.10',
     ]
 }
 

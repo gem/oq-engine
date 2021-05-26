@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2019 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ types.
 import ast
 import operator
 import functools
+import numpy
 
 # NB: (MS) the management of the IMTs implemented here is complex, it would
 # be better to have a single IMT class, but it is as it is for legacy reasons
@@ -112,6 +113,8 @@ class IMT(tuple, metaclass=IMTMeta):
         return tuple(getattr(self, field) for field, check in self._fields)
 
     def __lt__(self, other):
+        if not self._fields:
+            return self[0] < other[0]  # ordered by name
         return (self[0], self[1] or 0, self[2] or 0) < (
             other[0], other[1] or 0, other[2] or 0)
 
@@ -222,37 +225,12 @@ class MMI(IMT):
     and on humans and their structures.
     """
 
+
 class JMA(IMT):
     """
     Modified Mercalli intensity, a Roman numeral describing the severity
     of an earthquake in terms of its effects on the earth's surface
     and on humans and their structures.
-    """
-
-# geotechnical IMTs
-
-
-class PGDfLatSpread(IMT):
-    """
-    Permanent ground defomation (m) from lateral spread
-    """
-
-
-class PGDfSettle(IMT):
-    """
-    Permanent ground defomation (m) from settlement
-    """
-
-
-class PGDfSlope(IMT):
-    """
-    Permanent ground deformation (m) from slope failure
-    """
-
-
-class PGDfRupture(IMT):
-    """
-    Permanent ground deformation (m) from co-seismic rupture
     """
 
 
@@ -262,3 +240,39 @@ class ASH(IMT):
     """
     Level of the ash fall in millimeters
     """
+
+
+# secondary perils
+
+class Disp(IMT):
+    """
+    Displacement
+    """
+
+
+class DispProb(IMT):
+    """
+    Displacement probability
+    """
+
+
+class LiqProb(IMT):
+    """
+    Liquefaction probability
+    """
+
+
+class PGDMax(IMT):
+    """
+    Maximum between vert_settlement and lat_spread
+    """
+    def __call__(self, vert_settlement, lat_spread):
+        return numpy.maximum(vert_settlement, lat_spread)
+
+
+class PGDGeomMean(IMT):
+    """
+    Geometric mean between vert_settlement and lat_spread
+    """
+    def __call__(cls, vert_settlement, lat_spread):
+        return numpy.sqrt(vert_settlement * lat_spread)

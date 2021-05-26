@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2019 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -64,16 +64,16 @@ class BindiEtAl2017Rjb(GMPE):
     ])
 
     #: Required site parameter is only Vs30
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is Rjb
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
-    def __init__(self, adjustment_factor=1.0):
-        super().__init__()
+    def __init__(self, adjustment_factor=1.0, **kwargs):
+        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(float(adjustment_factor))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):

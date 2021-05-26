@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2019 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -63,11 +63,11 @@ class BooreEtAl1993GSCBest(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', ))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is Rjb distance
     #: see paragraph 'Predictor Variables', page 6.
-    REQUIRES_DISTANCES = set(('rjb', ))
+    REQUIRES_DISTANCES = {'rjb'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """

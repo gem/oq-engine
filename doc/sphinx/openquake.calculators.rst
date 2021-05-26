@@ -72,10 +72,10 @@ event_based module
     :undoc-members:
     :show-inheritance:
 
-event_based_risk module
+post_risk module
 ---------------------------------------------
 
-.. automodule:: openquake.calculators.event_based_risk
+.. automodule:: openquake.calculators.post_risk
     :members:
     :undoc-members:
     :show-inheritance:
@@ -88,13 +88,6 @@ reportwriter module
     :undoc-members:
     :show-inheritance:
 
-scenario module
--------------------------------------
-
-.. automodule:: openquake.calculators.scenario
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 scenario_damage module
 --------------------------------------------
@@ -108,22 +101,6 @@ scenario_risk module
 ------------------------------------------
 
 .. automodule:: openquake.calculators.scenario_risk
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ucerf_event_classical module
---------------------------------------------------
-
-.. automodule:: openquake.calculators.ucerf_classical
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ucerf_event_based module
-----------------------------------------------
-
-.. automodule:: openquake.calculators.ucerf_event_based
     :members:
     :undoc-members:
     :show-inheritance:

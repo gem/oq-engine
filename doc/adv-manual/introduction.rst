@@ -1,17 +1,18 @@
 Introduction
 =======================================
 
-This manual is for advanced users, i.e.  people that already know how
-to use the engine.  If you have just started and the only thing you
-have tried to run are the OpenQuake demos, this manual is NOT for
-you. Beginners should study the `official manual
-<https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual>`_
-first. This manual is for users running *large* calculations who have
-already read the official manual.
+This manual is for advanced users, i.e.  people who already know how to use the
+engine and have already read the official manual cover-to-cover. 
+If you have just started on your journey of using and working with the
+OpenQuake engine, this manual is probably NOT for you. Beginners should study
+the `official manual
+<https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual>`_ first.
+This manual is intended for users who are either running *large* calculations or
+those who are interested in programatically interacting with the datastore. 
 
 For the purposes of this manual a calculation is large if it cannot be run,
 i.e. if it runs out of memory, it fails with strange errors (rabbitmq
-errors, pickling errors, ...) or it just takes too long to complete.
+errors, pickling errors, etc.) or it just takes too long to complete.
 
 There are various reasons why a calculation can be too large. 90% of the
 times it is because the user is making some mistakes and she is trying to

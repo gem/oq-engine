@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2019 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,7 +33,8 @@ def encode(val):
     :param: a unicode or bytes object
     :returns: bytes
     """
-    if isinstance(val, (list, tuple)):  # encode a list or tuple of strings
+    if isinstance(val, (list, tuple, numpy.ndarray)):
+        # encode a sequence of strings
         return [encode(v) for v in val]
     elif isinstance(val, str):
         return val.encode('utf-8')
@@ -51,12 +52,11 @@ def decode(val):
     """
     if isinstance(val, (list, tuple, numpy.ndarray)):
         return [decode(v) for v in val]
-    elif isinstance(val, str):
-        # it was an already decoded unicode object
-        return val
-    else:
+    elif hasattr(val, 'decode'):
         # assume it is an encoded bytes object
         return val.decode('utf-8')
+    else:
+        return str(val)
 
 
 def zip(arg, *args):
@@ -103,3 +103,14 @@ def with_metaclass(meta, *bases):
                 return type.__new__(mcl, name, (), d)
             return meta(name, bases, d)
     return metaclass('temporary_class', None, {})
+
+
+def dataclass(cls):
+    """
+    A poor man dataclass decorator for use in Python 3.6
+    """
+    def __init__(self, *args):
+        for arg, name in zip(args, cls.__annotations__):
+            setattr(self, name, arg)
+    cls.__init__ = __init__
+    return cls

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2019 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -36,8 +36,7 @@ class WorkerPoolTestCase(unittest.TestCase):
         hostport = '127.0.0.1', int(cls.z['ctrl_port']) + 1
         if not socket_ready(hostport):
             raise unittest.SkipTest('The task streamer is off')
-        cls.master = WorkerMaster(
-            '127.0.0.1', cls.z['ctrl_port'], host_cores)
+        cls.master = WorkerMaster(cls.z['ctrl_port'], host_cores)
         cls.master.start()
 
     def test(self):
