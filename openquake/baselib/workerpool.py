@@ -91,7 +91,7 @@ class WorkerMaster(object):
             args += ['-m', 'openquake.baselib.workerpool', ctrl_url,
                      '-n', cores]
             if host != '127.0.0.1':
-                print('%s: if it hangs, check the ssh keys' % ' '.join(args))
+                print(' '.join(args))
             self.popens.append(subprocess.Popen(args))
             starting.append(host)
         return 'starting %s' % starting
