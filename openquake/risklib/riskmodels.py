@@ -691,14 +691,13 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param sec_losses: a list of SecondaryLoss instances
         :param rndgen: a MultiEventRNG instance
         :param rlz: a realization index (or None)
-        :returns: a dictionary of arrays
+        :returns: a dictionary keyed by loss type
         """
         primary = self.primary_imtls
         alias = {imt: 'gmv_%d' % i for i, imt in enumerate(primary)}
         event = hasattr(haz, 'eid')
         eids = haz.eid.to_numpy() if event else [None]
-        dic = dict(eids=eids, assets=assets.to_records(), rlzi=rlz,
-                   loss_types=self.loss_types, haz=haz)
+        dic = {}
         for lt in self.loss_types:
             outs = []
             rmodels, weights = self.get_rmodels_weights(lt, taxo)

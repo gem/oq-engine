@@ -24,45 +24,22 @@ F32 = numpy.float32
 
 class RiskInput(object):
     """
-    Contains all the assets and hazard values associated to a given
-    imt and site.
+    Site specific inputs.
 
     :param hazard_getter:
-        a callable returning the hazard data for a given realization
-    :param assets_by_site:
-        array of assets, one per site
+        a callable returning the hazard data for all realizations
+    :param asset_df:
+        a DataFrame of assets on the given site
     """
-    def __init__(self, hazard_getter, assets):
+    def __init__(self, hazard_getter, asset_df):
         self.hazard_getter = hazard_getter
-        self.assets = assets
-        self.weight = len(assets)
-        self.aids = assets.ordinal.to_numpy()
-
-    def gen_outputs(self, crmodel, monitor, haz=None):
-        """
-        Group the assets per taxonomy and compute the outputs by using the
-        underlying riskmodels. Yield one output per realization.
-
-        :param crmodel: a CompositeRiskModel instance
-        :param monitor: a monitor object used to measure the performance
-        """
-        self.monitor = monitor
-        hazard_getter = self.hazard_getter
-        if haz is None:
-            with monitor('getting hazard', measuremem=False):
-                haz = hazard_getter.get_hazard()
-        with monitor('computing risk', measuremem=False):
-            for taxo, assets in self.assets.groupby('taxonomy'):
-                if hasattr(haz, 'groupby'):  # DataFrame, scenario_damage
-                    yield crmodel.get_output(taxo, assets, haz)
-                else:  # list of probability curves, classical
-                    for rlz, pc in enumerate(haz):
-                        yield crmodel.get_output(taxo, assets, pc, rlz=rlz)
+        self.asset_df = asset_df
+        self.weight = len(asset_df)
 
     def __repr__(self):
         [sid] = self.hazard_getter.sids
         return '<%s sid=%s, %d asset(s)>' % (
-            self.__class__.__name__, sid, len(self.aids))
+            self.__class__.__name__, sid, len(self.asset_df))
 
 
 def str2rsi(key):
