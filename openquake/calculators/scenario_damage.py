@@ -248,11 +248,15 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         del result['d_asset']
         del result['d_event']
         dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
+        ne = self.param['num_events']
         for name, csq in result.items():
             if name.startswith('avg_'):
                 c_asset = numpy.zeros((A, R, L), F32)
                 for (l, r, a, stat) in result[name]:
-                    c_asset[a, r, l] = stat * oq.ses_ratio
+                    if oq.investigation_time:  # event_based_damage
+                        c_asset[a, r, l] = stat * oq.ses_ratio
+                    else:  # scenario_damage
+                        c_asset[a, r, l] = stat / ne[r]
                 self.datastore[name + '-rlzs'] = c_asset
                 set_rlzs_stats(self.datastore, name,
                                asset_id=self.assetcol['id'],
