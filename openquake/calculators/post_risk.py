@@ -198,10 +198,7 @@ class PostRiskCalculator(base.RiskCalculator):
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
         alt_df['rlz_id'] = rlz_id[alt_df.event_id.to_numpy()]
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
-        dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-                else 'processpool')  # use only the local cores
-        smap = parallel.Starmap(post_risk, h5=self.datastore.hdf5,
-                                distribute=dist)
+        smap = parallel.Starmap(post_risk, h5=self.datastore.hdf5)
         # producing concurrent_tasks/2 = num_cores tasks
         blocksize = int(numpy.ceil(
             (K + 1) * self.R / (oq.concurrent_tasks // 2 or 1)))
