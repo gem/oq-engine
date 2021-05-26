@@ -100,7 +100,7 @@ def event_based_damage(df, param, monitor):
                     Asid, E, D = fractions.shape
                     ddd = numpy.zeros((Asid, E, Dc), F32)
                     ddd[:, :, :D] = fractions
-                    for a, asset in enumerate(out['assets']):
+                    for a, asset in enumerate(adf.to_records()):
                         ddd[a] *= asset['number']
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():

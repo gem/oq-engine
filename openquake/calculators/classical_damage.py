@@ -39,16 +39,20 @@ def classical_damage(riskinputs, param, monitor):
         dictionaries asset_ordinal -> damage(R, L, D)
     """
     crmodel = monitor.read('crmodel')
+    mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
         R = ri.hazard_getter.num_rlzs
         L = len(crmodel.lti)
         D = len(crmodel.damage_states)
         result = AccumDict(accum=numpy.zeros((R, L, D), F32))
-        for out in ri.gen_outputs(crmodel, monitor):
-            r = out['rlzi']
-            for li, loss_type in enumerate(crmodel.loss_types):
-                for a, frac in zip(out['assets']['ordinal'], out[loss_type]):
-                    result[a][r, li] = frac
+        with mon:
+            haz = ri.hazard_getter.get_hazard()
+        for taxo, assets in ri.assets.groupby('taxonomy'):
+            for rlz, pcurve in enumerate(haz):
+                out = crmodel.get_output(taxo, assets, pcurve, rlz=rlz)
+                for li, loss_type in enumerate(crmodel.loss_types):
+                    for a, frac in zip(assets.ordinal, out[loss_type]):
+                        result[a][rlz, li] = frac
         yield result
 
 

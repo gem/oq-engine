@@ -39,28 +39,33 @@ def classical_risk(riskinputs, param, monitor):
     result = dict(loss_curves=[], stat_curves=[])
     weights = [w['default'] for w in param['weights']]
     statnames, stats = zip(*param['stats'])
+    mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
         A = len(ri.assets)
         L = len(crmodel.lti)
         R = ri.hazard_getter.num_rlzs
         loss_curves = numpy.zeros((R, L, A), object)
         avg_losses = numpy.zeros((R, L, A))
-        for out in ri.gen_outputs(crmodel, monitor):
-            r = out['rlzi']
-            for li, loss_type in enumerate(crmodel.loss_types):
-                # loss_curves has shape (A, C)
-                for i, asset in enumerate(out['assets']):
-                    loss_curves[r, li, i] = lc = out[loss_type][i]
-                    aid = asset['ordinal']
-                    avg = scientific.average_loss(lc)
-                    avg_losses[r, li, i] = avg
-                    lcurve = (lc['loss'], lc['poe'], avg)
-                    result['loss_curves'].append((li, r, aid, lcurve))
+        with mon:
+            haz = ri.hazard_getter.get_hazard()
+        for taxo, asset_df in ri.assets.groupby('taxonomy'):
+            for rlz, pcurve in enumerate(haz):
+                out = crmodel.get_output(taxo, asset_df, pcurve, rlz=rlz)
+                for li, loss_type in enumerate(crmodel.loss_types):
+                    # loss_curves has shape (A, C)
+                    for i, asset in enumerate(asset_df.to_records()):
+                        loss_curves[rlz, li, i] = lc = out[loss_type][i]
+                        aid = asset['ordinal']
+                        avg = scientific.average_loss(lc)
+                        avg_losses[rlz, li, i] = avg
+                        lcurve = (lc['loss'], lc['poe'], avg)
+                        result['loss_curves'].append((li, rlz, aid, lcurve))
 
         # compute statistics
         for li, loss_type in enumerate(crmodel.loss_types):
-            for i, asset in enumerate(out['assets']):
-                avg_stats = compute_stats(avg_losses[:, li, i], stats, weights)
+            for i, asset in enumerate(ri.assets.to_records()):
+                avg_stats = compute_stats(
+                    avg_losses[:, li, i], stats, weights)
                 losses = loss_curves[0, li, i]['loss']
                 all_poes = numpy.array(
                     [loss_curves[r, li, i]['poe'] for r in range(R)])

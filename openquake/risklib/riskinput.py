@@ -38,27 +38,6 @@ class RiskInput(object):
         self.weight = len(assets)
         self.aids = assets.ordinal.to_numpy()
 
-    def gen_outputs(self, crmodel, monitor, haz=None):
-        """
-        Group the assets per taxonomy and compute the outputs by using the
-        underlying riskmodels. Yield one output per realization.
-
-        :param crmodel: a CompositeRiskModel instance
-        :param monitor: a monitor object used to measure the performance
-        """
-        self.monitor = monitor
-        hazard_getter = self.hazard_getter
-        if haz is None:
-            with monitor('getting hazard', measuremem=False):
-                haz = hazard_getter.get_hazard()
-        with monitor('computing risk', measuremem=False):
-            for taxo, assets in self.assets.groupby('taxonomy'):
-                if hasattr(haz, 'groupby'):  # DataFrame, scenario_damage
-                    yield crmodel.get_output(taxo, assets, haz)
-                else:  # list of probability curves, classical
-                    for rlz, pc in enumerate(haz):
-                        yield crmodel.get_output(taxo, assets, pc, rlz=rlz)
-
     def __repr__(self):
         [sid] = self.hazard_getter.sids
         return '<%s sid=%s, %d asset(s)>' % (

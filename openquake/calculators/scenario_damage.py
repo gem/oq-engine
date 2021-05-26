@@ -99,19 +99,23 @@ def scenario_damage(riskinputs, param, monitor):
     num_events = param['num_events']  # per realization
     acc = []  # (aid, eid, lid, ds...)
     sec_sims = param['secondary_simulations'].items()
+    mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
-        # here instead F32 floats are ok
+        with mon:
+            df = ri.hazard_getter.get_hazard()
         R = ri.hazard_getter.num_rlzs
-        for out in ri.gen_outputs(crmodel, monitor):
-            for r in range(R):
-                ne = num_events[r]  # total number of events
-                ok = out['haz'].rlz.to_numpy() == r  # events beloging to rlz r
-                if ok.sum() == 0:
-                    continue
-                eids = out['eids'][ok]
+        for r in range(R):
+            ne = num_events[r]  # total number of events
+            ok = df.rlz.to_numpy() == r  # events beloging to rlz r
+            if ok.sum() == 0:
+                continue
+            gmf_df = df[ok]
+            eids = gmf_df.eid.to_numpy()
+            for taxo, asset_df in ri.assets.groupby('taxonomy'):
+                assets = asset_df.to_records()
+                out = crmodel.get_output(taxo, asset_df, gmf_df)
                 for lti, loss_type in enumerate(crmodel.loss_types):
-                    for asset, fractions in zip(
-                            out['assets'], out[loss_type][:, ok]):
+                    for asset, fractions in zip(assets, out[loss_type]):
                         aid = asset['ordinal']
                         if float_dmg_dist:
                             damages = fractions * asset['number']
