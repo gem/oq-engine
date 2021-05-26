@@ -23,10 +23,11 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5
-from openquake.hazardlib.stats import compute_stats2
+from openquake.hazardlib.stats import compute_stats, compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
     extract, build_damage_dt, build_damage_array, sanitize)
+from openquake.calculators.views import view
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib import writers
@@ -301,20 +302,26 @@ def modal_damage_array(data, damage_dt):
     return arr
 
 
+# used by event_based_damage, scenario_damage, classical_damage
 @export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
     dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    data = dstore[ekey[0]]
+    data = dstore['damages-rlzs']  # shape (A, R, L, D)
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     md = dstore.metadata
     if oq.investigation_time:
         md.update(dict(investigation_time=oq.investigation_time,
                        risk_investigation_time=oq.risk_investigation_time))
+    event_rates = view('event_rates', dstore)
+    data = numpy.array(
+        [data[:, r] * event_rates[r] for r in range(len(rlzs))])  # shape RALD
     if ekey[0].endswith('stats'):
         rlzs_or_stats = oq.hazard_stats()
+        ws = dstore['weights'][:]
+        data = compute_stats(data, rlzs_or_stats.values(), ws)
     else:
         rlzs_or_stats = ['rlz-%03d' % r for r in range(len(rlzs))]
     name = ekey[0].split('-')[0]
@@ -322,9 +329,9 @@ def export_damages_csv(ekey, dstore):
         name = 'avg_' + name
     for i, ros in enumerate(rlzs_or_stats):
         if oq.modal_damage_state:
-            damages = modal_damage_array(data[:, i], dmg_dt)
+            damages = modal_damage_array(data[i], dmg_dt)
         else:
-            damages = build_damage_array(data[:, i], dmg_dt)
+            damages = build_damage_array(data[i], dmg_dt)
         fname = dstore.build_fname(name, ros, ekey[1])
         writer.save(compose_arrays(assets, damages), fname,
                     comment=md, renamedict=dict(id='asset_id'))
@@ -351,9 +358,9 @@ def export_dmg_by_event(ekey, dstore):
             arr = numpy.zeros(len(ok), dt_list)
             arr['event_id'] = events['id'][ok]
             arr['rlz_id'] = rlz_id
-            for l, loss_type in enumerate(damage_dt.names):
+            for li, loss_type in enumerate(damage_dt.names):
                 for d, dmg_state in enumerate(damage_dt[loss_type].names):
-                    arr[loss_type][dmg_state] = dmg_by_event[ok, l, d]
+                    arr[loss_type][dmg_state] = dmg_by_event[ok, li, d]
             writer.save_block(arr, dest)
     return [fname]
 
@@ -413,10 +420,10 @@ def export_agglosses(ekey, dstore):
     losses = []
     header = ['rlz_id', 'loss_type', 'unit', 'mean', 'stddev']
     for r in range(len(agglosses)):
-        for l, lt in enumerate(loss_dt.names):
+        for li, lt in enumerate(loss_dt.names):
             unit = unit_by_lt[lt]
-            mean = agglosses[r, l]['mean']
-            stddev = agglosses[r, l]['stddev']
+            mean = agglosses[r, li]['mean']
+            stddev = agglosses[r, li]['stddev']
             losses.append((r, lt, unit, mean, stddev))
     dest = dstore.build_fname('agglosses', '', 'csv')
     writers.write_csv(dest, losses, header=header, comment=dstore.metadata)

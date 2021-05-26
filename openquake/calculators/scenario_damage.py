@@ -211,18 +211,12 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         realsize = self.datastore.getsize('dd_data')
         logging.info('Saving %s in dd_data (instead of %s)',
                      humansize(realsize), humansize(matrixsize))
-
-        # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
-        if oq.investigation_time:  # event_based_damage
-            avg_ratio = numpy.array([oq.ses_ratio] * R)
-        else:  # scenario_damage
-            avg_ratio = 1. / self.param['num_events']
 
         # damage by asset
         d_asset = numpy.zeros((A, R, L, D), F32)
         for (l, r, a, tot) in result['d_asset']:
-            d_asset[a, r, l] = tot * avg_ratio[r]
+            d_asset[a, r, l] = tot / self.param['num_events'][r]
         self.datastore['damages-rlzs'] = d_asset
         set_rlzs_stats(self.datastore,
                        'damages',
@@ -254,11 +248,15 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         del result['d_asset']
         del result['d_event']
         dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
+        ne = self.param['num_events']
         for name, csq in result.items():
             if name.startswith('avg_'):
                 c_asset = numpy.zeros((A, R, L), F32)
                 for (l, r, a, stat) in result[name]:
-                    c_asset[a, r, l] = stat * avg_ratio[r]
+                    if oq.investigation_time:  # event_based_damage
+                        c_asset[a, r, l] = stat * oq.ses_ratio
+                    else:  # scenario_damage
+                        c_asset[a, r, l] = stat / ne[r]
                 self.datastore[name + '-rlzs'] = c_asset
                 set_rlzs_stats(self.datastore, name,
                                asset_id=self.assetcol['id'],
