@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved `post_risk` to use all the cores in a cluster, since it
+    was using the master only
   * Fixed a too strict check on the minimum intensities of parent an child
     calculations
   * Extended the ebrisk calculator to compute at the same time both the
