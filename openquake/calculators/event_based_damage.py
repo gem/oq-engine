@@ -198,10 +198,10 @@ class DamageCalculator(EventBasedRiskCalculator):
         A, L, Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
-        for a, n in enumerate(self.assetcol['number']):
-            for li in range(L):
-                self.dmgcsq[a, li, 0] = (
-                    n * self.E - self.dmgcsq[a, li, 1:D].sum())
+        number = self.assetcol['number']
+        for li in range(L):
+            self.dmgcsq[:, li, 0] = (
+                number * self.E - self.dmgcsq[:, li, 1:D].sum(axis=1))
         dmgcsq = self.dmgcsq * time_ratio
         self.datastore['damages-rlzs'] = dmgcsq.reshape((A, 1, L, Dc))
         set_rlzs_stats(self.datastore,
