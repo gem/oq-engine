@@ -405,14 +405,24 @@ def view_portfolio_loss(token, dstore):
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_names)
 
 
-@view.add('portfolio_damages')
-def portfolio_damage_error(token, dstore):
+@view.add('portfolio_dmgdist')
+def portfolio_dmgdist(token, dstore):
     """
-    The portfolio damages extracted from damages-rlzs
+    The portfolio damages extracted from the first realization of damages-rlzs
     """
+    oq = dstore['oqparam']
+    if oq.calculation_mode == 'event_based_damage':
+        time = dstore.get_attr('gmf_data', 'effective_time') / len(
+            dstore['events'])  # time per event
+    else:  # scenario_damage
+        time = 1
     attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
-    arr = dstore['damages-rlzs'][:, :, 0, :].sum(axis=0)
-    return text_table(arr, attrs['dmg_state'])
+    arr = dstore['damages-rlzs'][:, 0].sum(axis=0) * time  # shape (L, D)
+    tbl = numpy.zeros(len(arr), dt(['loss_type'] + attrs['dmg_state']))
+    tbl['loss_type'] = attrs['loss_type']
+    for dsi, ds in enumerate(attrs['dmg_state']):
+        tbl[ds] = arr[:, dsi]
+    return tbl
 
 
 @view.add('portfolio_damage')
