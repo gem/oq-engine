@@ -410,14 +410,8 @@ def portfolio_dmgdist(token, dstore):
     """
     The portfolio damages extracted from the first realization of damages-rlzs
     """
-    oq = dstore['oqparam']
-    if oq.calculation_mode == 'event_based_damage':
-        time = dstore.get_attr('gmf_data', 'effective_time') / len(
-            dstore['events'])  # time per event
-    else:  # scenario_damage
-        time = 1
     attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
-    arr = dstore['damages-rlzs'][:, 0].sum(axis=0) * time  # shape (L, D)
+    arr = dstore['damages-rlzs'][:, 0].sum(axis=0)  # shape (L, Dc)
     tbl = numpy.zeros(len(arr), dt(['loss_type'] + attrs['dmg_state']))
     tbl['loss_type'] = attrs['loss_type']
     for dsi, ds in enumerate(attrs['dmg_state']):
@@ -1088,3 +1082,21 @@ def view_rupture(token, dstore):
     for rgetter in get_rupture_getters(dstore, slc=slc):
         dicts.append(rgetter.get_rupdict())
     return str(dicts)
+
+
+@view.add('event_rates')
+def view_event_rates(token, dstore):
+    """
+    Show the number of events per realization multiplied by risk_time/eff_time
+    """
+    oq = dstore['oqparam']
+    R = dstore['full_lt'].get_num_rlzs()
+    if oq.calculation_mode != 'event_based_damage':
+        return numpy.ones(R)
+    time_ratio = (oq.risk_investigation_time or oq.investigation_time) / (
+        oq.ses_per_logic_tree_path * oq.investigation_time)
+    if oq.collect_rlzs:
+        return numpy.array([len(dstore['events']) * time_ratio / R])
+    else:
+        rlzs = dstore['events']['rlz_id']
+        return numpy.bincount(rlzs, minlength=R) * time_ratio
