@@ -92,6 +92,9 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
 
 
 def aggreg(outputs, crmodel, AR, kids, rlz_id, param, monitor):
+    """
+    :returns: (avg_losses, agg_loss_table)
+    """
     mon_agg = monitor('aggregating losses', measuremem=False)
     mon_avg = monitor('averaging losses', measuremem=False)
     loss_by_AR = {ln: [] for ln in crmodel.oqparam.loss_names}
