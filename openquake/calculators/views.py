@@ -950,3 +950,18 @@ def view_zero_losses(token, dstore):
 
 def _get(df, sid):
     return df.loc[sid].to_dict()
+
+
+@view.add('event_rates')
+def view_event_rates(token, dstore):
+    """
+    Show the number of events per realization multiplied by risk_time/eff_time
+    """
+    oq = dstore['oqparam']    
+    R = len(dstore['weights'])
+    if oq.calculation_mode == 'scenario_damage':
+        return numpy.ones(R)
+    time_ratio = (oq.risk_investigation_time or oq.investigation_time) / (
+        oq.ses_per_logic_tree_path * oq.investigation_time)
+    rlzs = dstore['events']['rlz_id']
+    return numpy.bincount(rlzs, minlength=R) * time_ratio
