@@ -24,24 +24,22 @@ F32 = numpy.float32
 
 class RiskInput(object):
     """
-    Contains all the assets and hazard values associated to a given
-    imt and site.
+    Site specific inputs.
 
     :param hazard_getter:
-        a callable returning the hazard data for a given realization
-    :param assets_by_site:
-        array of assets, one per site
+        a callable returning the hazard data for all realizations
+    :param asset_df:
+        a DataFrame of assets on the given site
     """
-    def __init__(self, hazard_getter, assets):
+    def __init__(self, hazard_getter, asset_df):
         self.hazard_getter = hazard_getter
-        self.assets = assets
-        self.weight = len(assets)
-        self.aids = assets.ordinal.to_numpy()
+        self.asset_df = asset_df
+        self.weight = len(asset_df)
 
     def __repr__(self):
         [sid] = self.hazard_getter.sids
         return '<%s sid=%s, %d asset(s)>' % (
-            self.__class__.__name__, sid, len(self.aids))
+            self.__class__.__name__, sid, len(self.asset_df))
 
 
 def str2rsi(key):

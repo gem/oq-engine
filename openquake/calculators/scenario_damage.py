@@ -111,7 +111,7 @@ def scenario_damage(riskinputs, param, monitor):
                 continue
             gmf_df = df[ok]
             eids = gmf_df.eid.to_numpy()
-            for taxo, asset_df in ri.assets.groupby('taxonomy'):
+            for taxo, asset_df in ri.asset_df.groupby('taxonomy'):
                 assets = asset_df.to_records()
                 out = crmodel.get_output(taxo, asset_df, gmf_df)
                 for lti, loss_type in enumerate(crmodel.loss_types):

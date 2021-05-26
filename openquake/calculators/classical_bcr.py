@@ -46,7 +46,7 @@ def classical_bcr(riskinputs, param, monitor):
     for ri in riskinputs:
         with mon:
             haz = ri.hazard_getter.get_hazard()
-        for taxo, assets in ri.assets.groupby('taxonomy'):
+        for taxo, assets in ri.asset_df.groupby('taxonomy'):
             for rlz, pcurve in enumerate(haz):
                 out = crmodel.get_output(taxo, assets, pcurve, rlz=rlz)
                 for asset, (eal_orig, eal_retro, bcr) in zip(
