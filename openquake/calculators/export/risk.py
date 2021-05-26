@@ -302,6 +302,7 @@ def modal_damage_array(data, damage_dt):
     return arr
 
 
+# used by event_based_damage, scenario_damage, classical_damage
 @export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
