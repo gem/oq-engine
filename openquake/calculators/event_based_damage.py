@@ -80,7 +80,7 @@ def event_based_damage(df, param, monitor):
         crmodel = monitor.read('crmodel')
     dmg_csq = crmodel.get_dmg_csq()
     ci = {dc: i + 1 for i, dc in enumerate(dmg_csq)}
-    dmgcsq = zero_dmgcsq(assets_df, crmodel)
+    dmgcsq = zero_dmgcsq(assets_df, crmodel)  # shape (A, L, Dc)
     A, L, Dc = dmgcsq.shape
     D = len(crmodel.damage_states)
     loss_names = crmodel.oqparam.loss_names
@@ -91,9 +91,9 @@ def event_based_damage(df, param, monitor):
             gmf_df = df[df.sid == sid]
             if len(gmf_df) == 0:
                 continue
+            eids = gmf_df.eid.to_numpy()
             for taxo, adf in asset_df.groupby('taxonomy'):
                 out = crmodel.get_output(taxo, adf, gmf_df)
-                eids = gmf_df.eid.to_numpy()
                 aids = adf.index.to_numpy()
                 for lti, lt in enumerate(loss_names):
                     fractions = out[lt]
@@ -196,6 +196,12 @@ class DamageCalculator(EventBasedRiskCalculator):
         oq = self.oqparam
         time_ratio = oq.time_ratio / len(self.datastore['weights'])
         A, L, Dc = self.dmgcsq.shape
+        D = len(self.crmodel.damage_states)
+        # fix no_damage distribution for events with zero damage
+        for a, n in enumerate(self.assetcol['number']):
+            for li in range(L):
+                self.dmgcsq[a, li, 0] = (
+                    n * self.E - self.dmgcsq[a, li, 1:D].sum())
         dmgcsq = self.dmgcsq * time_ratio
         self.datastore['damages-rlzs'] = dmgcsq.reshape((A, 1, L, Dc))
         set_rlzs_stats(self.datastore,

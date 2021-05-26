@@ -243,22 +243,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for col in df.columns:
             hdf5.extend(self.datastore['risk_by_event/' + col], df[col])
         self.datastore.set_attrs('risk_by_event', K=A)
-
-        """
-        rlz = self.datastore['events']['rlz_id']
-        weights = self.datastore['weights'][:][rlz]
-        self.datastore['avg_portfolio_damage'] = avg_std(
-            dbe.astype(float), weights)
-        self.datastore.set_shape_descr(
-            'avg_portfolio_damage',
-            kind=['avg', 'std'], loss_type=ltypes, dmg_state=dstates)
-        """
         self.sanity_check()
 
         # consequence distributions
         del result['d_asset']
         del result['d_event']
-        dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
         for name, csq in result.items():
             # name is something like avg_losses
             c_asset = numpy.zeros((A, R, L), F32)
