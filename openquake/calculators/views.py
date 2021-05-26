@@ -958,8 +958,8 @@ def view_event_rates(token, dstore):
     Show the number of events per realization multiplied by risk_time/eff_time
     """
     oq = dstore['oqparam']    
-    R = len(dstore['weights'])
-    if oq.calculation_mode == 'scenario_damage':
+    R = dstore['full_lt'].get_num_rlzs()
+    if oq.calculation_mode != 'event_based_damage':
         return numpy.ones(R)
     time_ratio = (oq.risk_investigation_time or oq.investigation_time) / (
         oq.ses_per_logic_tree_path * oq.investigation_time)
