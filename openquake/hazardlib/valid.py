@@ -233,7 +233,7 @@ class Choices(Choice):
         return tuple(values)
 
 
-export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz')
+export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz', 'hdf5')
 
 
 class Regex(object):
@@ -1129,7 +1129,7 @@ class MetaParamSet(type):
 
 
 # used in commonlib.oqvalidation
-class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
+class ParamSet(metaclass=MetaParamSet):
     """
     A set of valid interrelated parameters. Here is an example
     of usage:
@@ -1257,6 +1257,11 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     def __iter__(self):
         for item in sorted(vars(self).items()):
             yield item
+
+    def __repr__(self):
+        names = sorted(n for n in vars(self) if not n.startswith('_'))
+        nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
+        return '<%s %s>' % (self.__class__.__name__, nameval)
 
 
 class RjbEquivalent(object):

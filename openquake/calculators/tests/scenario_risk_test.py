@@ -16,12 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
 import numpy
+import os
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
     case_6a, case_7, case_8, case_10, occupants, case_master,
-    case_shakemap)
+    case_shakemap, case_shapefile)
 
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
@@ -50,8 +50,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/gmf-FromFile.csv', fname)
         self.assertEqualFiles('expected/sites.csv', sitefile)
 
-        [fname] = export(('agg_loss_table', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/losses_by_event.csv', fname)
+        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/risk_by_event.csv', fname)
 
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job_risk.ini', exports='csv')
@@ -69,7 +69,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # test agglosses
         tot = extract(self.calc.datastore, 'agg_losses/occupants')
-        aac(tot.array, [0.031787], atol=1E-5)
+        aac(tot.array, [0.03104], atol=1E-5)
 
         # test agglosses with *
         tbl = extract(self.calc.datastore, 'agg_losses/occupants?taxonomy=*')
@@ -92,7 +92,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/totlosses.txt', fname)
 
         [fname] = out['agg_losses-rlzs', 'csv']
-        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-6)
+        self.assertEqualFiles('expected/agglosses.csv', fname, delta=1E-5)
 
     def test_occupants(self):
         out = self.run_calc(occupants.__file__, 'job_haz.ini,job_risk.ini',
@@ -162,19 +162,16 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
 
-        # check losses by taxonomy
-        agglosses = extract(self.calc.datastore, 'agg_losses/structural?'
-                            'taxonomy=*').array  # shape (T, R) = (3, 2)
-        if sys.platform != 'darwin':
-            self.assertEqualFiles('expected/agglosses_taxo.txt',
-                                  gettemp(str(agglosses)))
+        # extract losses by taxonomy
+        extract(self.calc.datastore, 'agg_losses/structural?'
+                'taxonomy=*').array  # shape (T, R) = (3, 2)
 
         # extract agglosses with a * and a selection
         obj = extract(self.calc.datastore, 'agg_losses/structural?'
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2728.7131]])  # extracted from avg_losses-stats
+        aac(obj.array, [[2786.1294]], atol=.001)  # from avg_losses-stats
 
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
@@ -231,5 +228,29 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agglosses.csv', fname)
 
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)
+
+    def test_case_shapefile(self):
+        self.run_calc(case_shapefile.__file__, 'prepare_job.ini')
+        pre_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_shapefile.__file__, 'job.ini',
+                      hazard_calculation_id=pre_id)
+        sitecol = self.calc.datastore['sitecol']
+        self.assertEqual(len(sitecol), 7)
+        gmfdict = dict(extract(self.calc.datastore, 'gmf_data'))
+        gmfa = gmfdict['rlz-000']
+        self.assertEqual(gmfa.shape, (7,))
+        self.assertEqual(gmfa.dtype.names,
+                         ('lon', 'lat', 'MMI'))
+        [fname] = export(('agg_losses-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/agglosses.csv', fname)
+
+        [fname] = export(('realizations', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/realizations.csv', fname)
+
+        # also test case if shapefiles are together in a zip file
+        self.run_calc(case_shapefile.__file__, 'job_zipped.ini',
+                      hazard_calculation_id=pre_id)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)

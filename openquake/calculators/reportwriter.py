@@ -23,7 +23,9 @@ Utilities to build a report writer generating a .rst report for a calculation
 import os
 import sys
 import logging
-from openquake.baselib import parallel
+import numpy
+import pandas
+
 from openquake.baselib.python3compat import encode, decode
 from openquake.commonlib import readinput, logs
 from openquake.calculators import views
@@ -65,7 +67,7 @@ class ReportWriter(object):
         except KeyError:
             num_rlzs = '?'
         versions = sorted(dstore['/'].attrs.items())
-        self.text += '\n\n' + views.rst_table(versions)
+        self.text += '\n\n' + views.text_table(versions)
         self.text += '\n\nnum_sites = %d, num_levels = %d, num_rlzs = %s' % (
             len(dstore['sitecol']), oq.imtls.size, num_rlzs)
 
@@ -74,7 +76,11 @@ class ReportWriter(object):
         if obj:
             text = '\n::\n\n' + indent(str(obj))
         else:
-            text = views.view(name, self.dstore)
+            res = views.view(name, self.dstore)
+            if isinstance(res, (numpy.ndarray, pandas.DataFrame)):
+                text = views.text_table(res)
+            else:
+                text = res
         if text:
             title = self.title[name]
             line = '-' * len(title)
@@ -126,27 +132,24 @@ def build_report(job_ini, output_dir=None):
     :param output_dir:
         the directory where the report is written (default the input directory)
     """
-    calc_id = logs.init()
-    oq = readinput.get_oqparam(job_ini)
-    if 'source_model_logic_tree' in oq.inputs:
-        oq.calculation_mode = 'preclassical'
-    oq.ground_motion_fields = False
-    output_dir = output_dir or os.path.dirname(job_ini)
-    from openquake.calculators import base  # ugly
-    calc = base.calculators(oq, calc_id)
-    calc.save_params()  # needed to save oqparam
+    with logs.init('calc', job_ini) as log:
+        oq = log.get_oqparam()
+        if 'source_model_logic_tree' in oq.inputs:
+            oq.calculation_mode = 'preclassical'
+        oq.ground_motion_fields = False
+        output_dir = output_dir or os.path.dirname(job_ini)
+        from openquake.calculators import base  # ugly
+        calc = base.calculators(oq, log.calc_id)
+        calc.save_params()  # needed to save oqparam
 
-    # some taken is care so that the real calculation is not run:
-    # the goal is to extract information about the source management only
-    calc.pre_execute()
-    if oq.calculation_mode == 'preclassical':
-        calc.execute()
-    logging.info('Making the .rst report')
-    rw = ReportWriter(calc.datastore)
-    try:
+        # some taken is care so that the real calculation is not run:
+        # the goal is to extract information about the source management only
+        calc.pre_execute()
+        if oq.calculation_mode == 'preclassical':
+            calc.execute()
+        logging.info('Making the .rst report')
+        rw = ReportWriter(calc.datastore)
         rw.make_report()
-    finally:
-        parallel.Starmap.shutdown()
     report = (os.path.join(output_dir, 'report.rst') if output_dir
               else calc.datastore.export_path('report.rst'))
     try:

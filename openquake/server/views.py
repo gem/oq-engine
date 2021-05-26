@@ -18,7 +18,6 @@
 
 import shutil
 import json
-import time
 import logging
 import os
 import tempfile
@@ -38,11 +37,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore, hdf5, config
+from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim, valid
-from openquake.commonlib import readinput, oqvalidation, logs
+from openquake.commonlib import readinput, oqvalidation, logs, datastore
 from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
@@ -541,8 +540,7 @@ def calc_run(request):
 
     user = utils.get_user(request)
     try:
-        job_id = submit_job(
-            inifiles[0], user, hazard_calculation_id=hazard_job_id)
+        job_id = submit_job(inifiles[0], user, hazard_job_id)
     except Exception as exc:  # no job created, for instance missing .xml file
         # get the exception message
         exc_msg = str(exc)
@@ -556,20 +554,18 @@ def calc_run(request):
                         status=status)
 
 
-def submit_job(job_ini, username, **kw):
+def submit_job(job_ini, username, hc_id):
     """
     Create a job object from the given job.ini file in the job directory
-    and run it in a new process. Returns a PID.
+    and run it in a new process.
+
+    :returns: a job ID
     """
-    # errors in validating oqparam are reported immediately
-    params = readinput.get_params(job_ini)
-    job_id = logs.init('job')
-    params['_job_id'] = job_id
-    proc = Process(target=engine.run_jobs,
-                   args=([params], config.distribution.log_level, None,
-                         '', username), kwargs=kw)
+    jobs = engine.create_jobs(
+        [job_ini], config.distribution.log_level, None, username, hc_id)
+    proc = Process(target=engine.run_jobs, args=(jobs,))
     proc.start()
-    return job_id
+    return jobs[0].calc_id
 
 
 @require_http_methods(['GET'])

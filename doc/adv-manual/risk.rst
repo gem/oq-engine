@@ -141,111 +141,10 @@ ratio conditioned on the shaking intensity and ignoring the uncertainty.
 This tradeoff of not propagating the vulnerabilty uncertainty to the loss
 estimates can lead to a significant boost in performance and tractability.
 
-
-The ebrisk calculator
----------------------
-
-Even with all the tricks in the book, some problems cannot be solved
-with the traditional ``event_based_risk`` calculator, in particular
-when there are too many hazard sites. Suppose for instance that you
-have a very detailed exposure for Canada with 462,000 hazard sites,
-and a corresponding site model covering all of the sites. 
-It would be a pity to lose such detailed information by aggregating 
-the assets onto a coarser grid, but this may be the only viable option 
-for the traditional ``event_based_risk`` calculator.
-
-The issue is that the ``event_based_risk`` cannot work well with
-so many sites, unless you reduce your investigation_time considerably. 
-If the investigation_time is long enough for a reasonable computation,
-you will most likely run into issues such as:
-
-1. running out of memory when computing the GMFs
-2. running out of disk space when saving the GMFs
-3. running out of memory when reading the GMFs
-4. having an impossibly slow risk calculation
-
-The solution - in theory - would be to split Canada in regions, but this comes
-with its own problems. For instance,
-
-1. one has to compute the ruptures for all Canada in a single run, to
-   make sure that the random seeds are consistent for all regions
-2. then one has to run several calculations starting from the
-   ruptures, one per sub-region
-3. finally one has to carefully aggregate the results from the different
-   calculations
-
-Such steps are tedious, time consuming and very much error prone.
-
-In order to solve such issues a new calculator, tentatively called ``ebrisk``,
-has been introduced in engine 3.4. For small calculations the ``ebrisk`` calculator
-will not be much better than the ``event_based_risk`` calculator, but
-the larger your calculation is, the better it will work, and in situations
-like the Canada example here it can be orders of
-magnitude more efficient, both in speed and memory consumption.
-The reason why the ``ebrisk`` calculator is so efficient is that
-it computes the GMFs in memory instead of reading them from the datastore.
-
-The older ``event_based_risk`` calculator
-works by storing the GMFs in the hazard phase of the calculation and
-by reading them in the risk phase. For small to medium sized risk
-calculations, this approach has the following advantages:
-
-1. if the GMFs calculation is expensive, it is good to avoid repeating
-   it when you change a risk parameter without changing the hazard parameters
-2. it is convenient to have the GMFs saved on disk to debug issues
-   with the calculation
-3. except for huge calculations, writing and reading the GMFs is fast,
-   since they stored in a very optimized HDF5 format
-   
-On the other hand, there are other considerations for large national or 
-continental risk calculations:
-
-1. these larger risk calculations are typically dominated by the
-   reading time of the GMFs, which happens concurrently
-2. saving disk space matters, as such large calculations can generate
-   hundreds of gigabytes or even terabytes of GMFs that cannot be stored
-   conveniently
-
-So, in practice, in very large calculations the strategy of computing the
-GMFs on-the-fly wins over over the strategy of saving them to disk and this is
-why the ``ebrisk`` calculator exists.
-
-Differences with the event_based_risk calculator
-------------------------------------------------
-
-The ``event_based_risk`` calculator parallelizes by hazard sites: it splits
-the exposure in spatial blocks and then each task reads the GMFs for each site
-in the block it gets.
-
-The ``ebrisk`` calculator instead parallelizes by ruptures: it splits
-the ruptures in blocks and then each task generates the corresponding GMFs
-on the fly.
-
-Since the amount of data in ruptures form is typically two orders of
-magnitude smaller than the amount of data in GMFs, and since the GMF-generation
-is fast, the ``ebrisk`` calculator is able to beat the ``event_based_risk``
-calculator.
-
-Moreover, since each task in the ``ebrisk`` calculator gets sent the entire
-exposure, it is able to aggregate the losses without problems, while the
-``event_based_risk`` calculator has troubles doing that — even if each task
-has access to all events, it only receives a subset of the exposure, so it
-cannot aggregate on the assets. Starting from engine 3.11 the
-``event_based_risk`` calculator can compute aggregate losses and aggregate
-loss curves, but in an inefficient way, by collection partial returns
-from all tasks and aggregating them. That means that your calculation
-can easily run out of memory or can be extremely slow, while it would work
-much better by setting ``calculation_mode=ebrisk``.
-
-Aggregation of average annual losses, is computed simply by 
-summing the component values. The algorithm is linear and both the 
-``event_based_risk`` calculator and the ``ebrisk`` calculator are capable of
-this aggregation, but the first calculator is more efficient.
-
-The asset loss table and the agg_loss_table
+The asset loss table
 -------------------------------------------
 
-When performing an event based risk (or ebrisk) calculation the engine
+When performing an event based risk calculation the engine
 keeps in memory a table with the losses for each asset and each event,
 for each loss type. It is usually impossible to fully store such table,
 because it is extremely large; for instance, for 1 million assets, 1
@@ -277,7 +176,7 @@ calculation. Clearly it is a matter of compromise: by sacrificing precision
 it is possible to reduce enourmously the size of the stored asset loss table
 and to make an impossible calculation possible.
 
-NB: starting from engine 3.11 the asset loss table is stored if the user
+Starting from engine 3.11 the asset loss table is stored if the user
 specifies
 
 ``aggregate_by = id``
@@ -295,19 +194,19 @@ multi-tag). For instance, the tag ``occupancy`` has the three values
 
 ``aggregate_by = occupancy``
 
-the engine will store a pandas DataFrame with field ``agg_id`` with 4
-possible value: 0 for "Residential", 1 for "Industrial", 2 for "Commercial"
-and 3 for the full aggregation.
+the engine will store a pandas DataFrame called ``risk_by_event` with a
+field ``agg_id`` with 4 possible value: 0 for "Residential", 1 for
+"Industrial", 2 for "Commercial" and 3 for the full aggregation.
 
 NB: if the parameter ``aggregate_by`` is not specified, the engine will
-still compute the ``agg_loss_table`` but then the ``agg_id`` field will
+still compute the aggregate loss table but then the ``agg_id`` field will
 have a single value 0 corresponding to the total portfolio losses.
 
 The Probable Maximum Loss (PML) and the loss curves
 ---------------------------------------------------
 
-Given an effective investigation time, a return period and an
-``agg_loss_table``, the engine is able to compute a PML for each
+Given an effective investigation time and a return period,
+the engine is able to compute a PML for each
 aggregation tag. It does so by using the function
 ``openquake.risklib.scientific.losses_by_period`` which takes in input
 an array of cumulative losses associated to the aggregation tag, a
@@ -408,3 +307,84 @@ you the mean and quantile loss curves in a format like the following one::
 If you do not set the ``aggregate_by`` parameter
 you will still able to compute the total loss curve 
 (for the entire portfolio of assets), and the total average losses.
+
+Aggregating by multiple tags
+----------------------------
+
+The engine also supports aggregation my multiple tags. For instance
+the second event based risk demo (the file ``job_eb.ini``) has a line
+
+   ``aggregate_by = NAME_1, taxonomy``
+
+and it is able to aggregate both on geographic region (``NAME_1``) and
+on taxonomy. There are 25 possible combinations, that you can see with
+the command::
+
+   $ oq show agg_keys
+   | NAME_1_ | taxonomy_ | NAME_1      | taxonomy                   |
+   +---------+-----------+-------------+----------------------------+
+   | 1       | 1         | Mid-Western | Wood                       |
+   | 1       | 2         | Mid-Western | Adobe                      |
+   | 1       | 3         | Mid-Western | Stone-Masonry              |
+   | 1       | 4         | Mid-Western | Unreinforced-Brick-Masonry |
+   | 1       | 5         | Mid-Western | Concrete                   |
+   | 2       | 1         | Far-Western | Wood                       |
+   | 2       | 2         | Far-Western | Adobe                      |
+   | 2       | 3         | Far-Western | Stone-Masonry              |
+   | 2       | 4         | Far-Western | Unreinforced-Brick-Masonry |
+   | 2       | 5         | Far-Western | Concrete                   |
+   | 3       | 1         | West        | Wood                       |
+   | 3       | 2         | West        | Adobe                      |
+   | 3       | 3         | West        | Stone-Masonry              |
+   | 3       | 4         | West        | Unreinforced-Brick-Masonry |
+   | 3       | 5         | West        | Concrete                   |
+   | 4       | 1         | East        | Wood                       |
+   | 4       | 2         | East        | Adobe                      |
+   | 4       | 3         | East        | Stone-Masonry              |
+   | 4       | 4         | East        | Unreinforced-Brick-Masonry |
+   | 4       | 5         | East        | Concrete                   |
+   | 5       | 1         | Central     | Wood                       |
+   | 5       | 2         | Central     | Adobe                      |
+   | 5       | 3         | Central     | Stone-Masonry              |
+   | 5       | 4         | Central     | Unreinforced-Brick-Masonry |
+   | 5       | 5         | Central     | Concrete                   |
+
+The lines in this table are associated to the *generalized aggregation ID*,
+``agg_id`` which is an index going from ``0`` (meaning aggregate assets with
+NAME_1=*Mid-Western* and taxonomy=*Wood*) to ``24`` (meaning aggregate assets
+with NAME_1=*Mid-Western* and taxonomy=*Wood*); moreover ``agg_id=25`` means
+full aggregation.
+
+The ``agg_id`` field enters in ``risk_by_event`` and in outputs like
+the aggregate losses; for instance::
+
+   $ oq show agg_losses-rlzs
+   | agg_id | rlz | loss_type     | value       |
+   +--------+-----+---------------+-------------+
+   | 0      | 0   | nonstructural | 2_327_008   |
+   | 0      | 0   | structural    | 937_852     |
+   +--------+-----+---------------+-------------+
+   | ...    + ... + ...           + ...         +
+   +--------+-----+---------------+-------------+
+   | 25     | 1   | nonstructural | 100_199_448 |
+   | 25     | 1   | structural    | 157_885_648 |
+
+The exporter (``oq export agg_losses-rlzs``) converts back the ``agg_id``
+to the proper combination of tags; ``agg_id=25``, i.e. full aggregation,
+is replaced with the string ``*total*``.
+
+By knowing the number of events, the number of aggregation keys and the
+number of loss types, it is possible to give an upper limit to the size
+of ``risk_by_event``. In the demo there are 1703 events, 26 aggregation
+keys and 2 loss types, so ``risk_by_event`` contains at most
+
+  1703 * 26 * 2 = 88,556 rows
+
+This is an upper limit, since some combination can produce zero losses
+and are not stored, especially if the ``minimum_asset_loss`` feature is
+used. In the case of the demo actually only 20,877 rows are nonzero::
+
+   $ oq show risk_by_event
+          event_id  agg_id  loss_id           loss      variance
+   ...
+   [20877 rows x 5 columns]

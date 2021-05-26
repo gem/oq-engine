@@ -42,11 +42,11 @@ def main(job_ini_or_zip_or_nrmls):
             except Exception as exc:
                 sys.exit(exc)
         else:
-            oq = readinput.get_oqparam(job_ini_or_zip_or_nrml)
-            calc = base.calculators(oq, logs.init())
-            base.BaseCalculator.gzip_inputs = lambda self: None  # disable
-            with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
-                calc.read_inputs()
+            with logs.init('calc', job_ini_or_zip_or_nrml) as log:
+                calc = base.calculators(log.get_oqparam(), log.calc_id)
+                base.BaseCalculator.gzip_inputs = lambda self: None  # disable
+                with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
+                    calc.read_inputs()
 
 
 main.job_ini_or_zip_or_nrmls = dict(help='Check the input', nargs='+')

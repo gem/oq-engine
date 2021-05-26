@@ -16,9 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import sys
+import pprint
 import logging
-from openquake.baselib import datastore
-from openquake.commonlib import logs
+from openquake.commonlib import logs, datastore
 from openquake.calculators.extract import WebExtractor
 from openquake.engine import engine
 from openquake.server import dbserver
@@ -26,8 +26,8 @@ from openquake.server import dbserver
 
 def main(calc_id):
     """
-    Import a remote calculation into the local database. server, username
-    and password must be specified in an openquake.cfg file.
+    Import a remote calculation into the local database. Server, username
+    and password must be specified in the openquake.cfg file.
     NB: calc_id can be a local pathname to a datastore not already
     present in the database: in that case it is imported in the db.
     """
@@ -51,6 +51,7 @@ def main(calc_id):
         webex.dump('%s/calc_%d.hdf5' % (datadir, calc_id))
         webex.close()
     with datastore.read(calc_id) as dstore:
+        pprint.pprint(dstore.get_attrs('/'))
         engine.expose_outputs(dstore, status='complete')
     logging.info('Imported calculation %s successfully', calc_id)
 

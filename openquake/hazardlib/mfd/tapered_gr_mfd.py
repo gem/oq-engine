@@ -28,7 +28,7 @@ class TaperedGRMFD(BaseMFD):
     Gutenberg-Richter MFD up to a ``corner_mag`` above which an exponential
     taper is applied; see Kagan (2002a, Geophysical Journal International)
     for details. This implementation is based on
-    the United States National Seismic Hazard Map Project code 
+    the United States National Seismic Hazard Map Project code
     (https://github.com/usgs/nshmp-haz).
 
     :param min_mag:
@@ -41,7 +41,7 @@ class TaperedGRMFD(BaseMFD):
         ``max_mag - bin_width / 2``.
     :param corner_mag:
         The magnitude above which the exponential tapering of the earthquake
-        frequency (rate) occurs. Rates below this magnitude are identical to 
+        frequency (rate) occurs. Rates below this magnitude are identical to
         a Gutenberg-Richter with the same ``a`` and ``b`` values.
     :param bin_width:
         A positive float value -- the width of a single histogram bin.

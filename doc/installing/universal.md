@@ -1,49 +1,97 @@
-# The universal installation script
+# Universal installation script
 
-Since version 3.11 there is an universal installation script that works on any platform, provided you have Python (3.6, 3.7 or 3.8) installed. The script allows to perform three different kind of installations:
+Since version 3.11 there is a universal installation script that works on any platform, provided you have Python 3.6, 3.7, or 3.8 installed. 
 
-1. `devel` installation
-2. `user` installation
-3. `server` installation (only for linux)
+- **Note 1**: Python 3.9 and 3.10 are not yet supported.
+- **Note 2**: This script will install the OpenQuake engine in its own virtual environment. Users who need to use any additional Python packages (eg. Jupyter, Spyder) along with the OpenQuake engine should install those packages within this virtual environment.
+- **Note 3**: The virtual environment `openquake` and its corresponding folder will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts.
+- **Note 4**: Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html
+
+The script allows the user to select between three different kinds of installations:
+
+1. `devel` installation (Windows, macOS, and Linux)
+2. `user` installation (Windows, macOS, and Linux)
+3. `server` installation (only available for Linux)
 
 ## `devel` installation
 
-Scientists wanting to develop new GMPEs or new features for the engine should use the `devel` installation:
+Users who intend to modify the engine codebase or add new features for the engine should use the `devel` installation:
+
+on macOS and Linux:
 ```
 $ git clone https://github.com/gem/oq-engine.git
 $ cd oq-engine && /usr/bin/python3 install.py devel
 ```
+
+on Windows:
+```
+C:\>git clone https://github.com/gem/oq-engine.git
+C:\>cd oq-engine 
+C:\>python install.py devel
+```
+
 This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine
-in development mode on it. Then, after activating the virtualenv with
+in development mode in this environment. Then, after activating the virtual environment with
+
+on macOS and Linux:
 ```
 $ source $HOME/openquake/bin/activate
 ```
-it will be possible to develop with the engine. Calculation data will be stored in `$HOME/oqdata`.
-NB: this approach will work on Windows too, provided you adapt the commands to your situation
-(i.e. instead of /usr/bin/python3 use the path of the Python you want to use and instead of
-`source $HOME/openquake/bin/activate` there will be an `openquake/bin/activate.bat`).
+
+on Windows:
+```
+C:\>%USERPROFILE%\openquake\Scripts\activate.bat
+```
+
+It should now be possible to develop with the engine. Calculation data will be stored in `$HOME/oqdata`.
 
 ## `user` installation
 
-If you do not need to develop with the engine, but only to use it as an application, you want the `user` installation (on windows/mac) or the `server` installation (on linux). The `user` installation is the way to go also on linux, in the case you do not have root permissions on the machine. There is no need to clone the engine repository, you just need to download the installation script:
+If you do not need to modify the engine codebase or develop new features with the engine, but intend to use it as an application, you should install the `user` installation (on Windows / macOS) or the `server` installation (on Linux). The `user` installation is also the recommended option for Linux, in the case where you do not have root permissions on the machine. There is no need to clone the engine repository, you just need to download the installation script:
+
+on macOS and Linux:
 ```
 $ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 $ /usr/bin/python3 install.py user
 ```
+
+on Windows:
+```
+C:\>curl.exe -LO https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+C:\>python install.py user
+```
+
 This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine on it.
-After that, you can activate the virtualenv with
+After that, you can activate the virtual environment with
+
+on macOS and Linux:
 ```
 $ source $HOME/openquake/bin/activate
 ```
-or even call directly
+
+on Windows:
+```
+C:\>%USERPROFILE%\openquake\Scripts\activate.bat
+```
+
+You can also invoke the `oq` command without activating the virtual environment by directly calling
+
+on macOS and Linux:
 ```
 $HOME/openquake/bin/oq
 ```
-without activating the virtualenv. Calculation data will be stored in `$HOME/oqdata`.
+
+on Windows:
+```
+C:\>%USERPROFILE%\openquake\Scripts\oq
+```
+
+Calculation data will be stored in `$HOME/oqdata`.
+
 
 ## `server` installation
 
-If you are on linux and you have root permissions the recommended installation method is `server`: in that case, the engine will work
+If you are on a Linux machine _and_ you have root permissions, the recommended installation method is `server`. In this case, the engine will work
 with multiple users and two system V services will be automatically installed and started: `openquake-dbserver` and `openquake-webui`.
 
 ```
@@ -56,7 +104,7 @@ Calculation data will be stored in `/var/lib/openquake/oqdata`.
 
 ## cluster installations
 
-It is possible to install the engine on a linux cluster, but it requires additional steps. You should see the page about [clusters](cluster.md).
+It is possible to install the engine on a Linux cluster, but it requires additional steps. You should see the page about [clusters](cluster.md).
 
 ## Cloud
 
@@ -69,19 +117,31 @@ If for some reason you want to use an older version you can specify the version 
 ```
 $ python3 install.py user --version=3.10
 ```
-## Disinstalling the engine
 
-To disinstall use the --remove flag:
+## Uninstalling the engine
+
+To uninstall the engine, use the --remove flag:
+
+on macOS and Linux:
 ```
 $ python3 install.py devel --remove
 $ python3 install.py user --remove
 $ sudo -H /usr/bin/python3 install.py server --remove
 ```
-The calculation data (in `$HOME/oqdata` or `/var/lib/openquake/oqdata`) will NOT be removed.
-You will have to remove the directories manually, if you wish so.
+
+on Windows:
+```
+C:\>cd %USERPROFILE%
+C:\>python install.py devel --remove
+C:\>python install.py user --remove
+```
+
+The calculation data (in `$HOME/oqdata` or `/var/lib/openquake/oqdata`) _WILL NOT_ be removed.
+You will have to remove these two directories manually, if needed.
+
 ***
 
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/forum/?fromgroups#!forum/openquake-users
+  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/u/0/g/openquake-users
   * Contact us on IRC: irc.freenode.net, channel #openquake

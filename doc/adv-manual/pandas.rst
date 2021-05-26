@@ -10,7 +10,7 @@ then you can process the hazard curves as follows:
 
 .. code-block:: python
 
-  >>> from openquake.baselib.datastore import read
+  >>> from openquake.commonlib.datastore import read
   >>> dstore = read(42)
   >>> df = dstore.read_df('hcurves-stats', index='lvl',
   ...                     sel=dict(imt='PGA', stat='mean', site_id=0))

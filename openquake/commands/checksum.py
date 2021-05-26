@@ -18,8 +18,7 @@
 import sys
 import unittest.mock as mock
 import os.path
-from openquake.commonlib import readinput
-from openquake.commonlib import util
+from openquake.commonlib import readinput, datastore
 
 
 def main(thing):
@@ -38,11 +37,12 @@ def main(thing):
         if not os.path.exists(job_file):
             sys.exit('%s does not correspond to an existing file' % job_file)
     if job_id:
-        dstore = util.read(job_id)
+        dstore = datastore.read(job_id)
         checksum = dstore['/'].attrs['checksum32']
     elif job_file.endswith('.xml'):  # assume it is a smlt file
         inputs = {'source_model_logic_tree': job_file}
-        checksum = readinput.get_checksum32(mock.Mock(inputs=inputs))
+        checksum = readinput.get_checksum32(
+            mock.Mock(inputs=inputs, random_seed=42))
     else:
         oq = readinput.get_oqparam(job_file)
         checksum = readinput.get_checksum32(oq)

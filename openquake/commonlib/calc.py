@@ -108,9 +108,10 @@ def compute_hazard_maps(curves, imls, poes):
     ``poes``.
 
     :param curves:
-        2D array of floats. Each row represents a curve, where the values
-        in the row are the PoEs (Probabilities of Exceedance) corresponding to
-        ``imls``. Each curve corresponds to a geographical location.
+        Array of floats of shape N x L. Each row represents a curve, where the
+        values in the row are the PoEs (Probabilities of Exceedance)
+        corresponding to the ``imls``.
+        Each curve corresponds to a geographical location.
     :param imls:
         Intensity Measure Levels associated with these hazard ``curves``. Type
         should be an array-like of floats.
@@ -271,17 +272,19 @@ class RuptureImporter(object):
         eid_rlz = []
         for rup in proxies:
             ebr = EBRupture(Mock(rup_id=rup['seed']), rup['source_id'],
-                            rup['et_id'], rup['n_occ'], e0=rup['e0'])
+                            rup['trt_smr'], rup['n_occ'], e0=rup['e0'])
             ebr.scenario = 'scenario' in self.oqparam.calculation_mode
             for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid, rup['id'], rlz_id))
         return numpy.array(eid_rlz, events_dt)
 
-    def import_rups(self, rup_array):
+    def import_rups_events(self, rup_array, get_rupture_getters):
         """
-        Import an array of ruptures in the proper format
+        Import an array of ruptures and store the associated events.
+        :returns: (number of imported ruptures, number of imported events)
         """
+        oq = self.oqparam
         logging.info('Reordering the ruptures and storing the events')
         # order the ruptures by seed
         rup_array.sort(order='seed')
@@ -294,33 +297,31 @@ class RuptureImporter(object):
         rup_array['geom_id'] = rup_array['id']
         rup_array['id'] = numpy.arange(nr)
         self.datastore['ruptures'] = rup_array
-        self.save_events(rup_array)
+        rgetters = get_rupture_getters(  # fast
+            self.datastore, self.oqparam.concurrent_tasks)
+        self._save_events(rup_array, rgetters)
+        nr, ne = len(rup_array), rup_array['n_occ'].sum()
+        if oq.investigation_time:
+            eff_time = (oq.investigation_time * oq.ses_per_logic_tree_path *
+                        len(self.datastore['weights']))
+            logging.info('There are {:_d} events and {:_d} ruptures in {:_d} '
+                         'years'.format(ne, nr, int(eff_time)))
 
-    def save_events(self, rup_array):
-        """
-        :param rup_array: an array of ruptures with fields et_id
-        :returns: a list of RuptureGetters
-        """
-        from openquake.calculators.getters import gen_rupture_getters
+    def _save_events(self, rup_array, rgetters):
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
         self.check_overflow(E)  # check the number of events
         events = numpy.zeros(E, rupture.events_dt)
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        rgetters = gen_rupture_getters(
-            self.datastore, self.oqparam.concurrent_tasks)
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        logging.info('Associating event_id -> rlz_id for {:_d} events '
-                     'and {:_d} ruptures'.format(len(events), len(rup_array)))
         iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
         if len(events) < 1E5:
             it = itertools.starmap(self.get_eid_rlz, iterargs)
         else:
             it = parallel.Starmap(
-                self.get_eid_rlz, iterargs, progress=logging.debug,
-                h5=self.datastore.hdf5)
+                self.get_eid_rlz, iterargs, progress=logging.debug)
         i = 0
         for eid_rlz in it:
             for er in eid_rlz:

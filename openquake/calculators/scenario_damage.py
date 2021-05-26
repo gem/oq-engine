@@ -18,10 +18,9 @@
 
 import logging
 import numpy
-import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, humansize
-from openquake.hazardlib.stats import set_rlzs_stats, avg_std
+from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.calculators import base, views
 
 U16 = numpy.uint16
@@ -88,6 +87,7 @@ def scenario_damage(riskinputs, param, monitor):
     L = len(crmodel.loss_types)
     D = len(crmodel.damage_states)
     consequences = crmodel.get_consequences()
+
     # algorithm used to compute the discrete damage distributions
     float_dmg_dist = param['float_dmg_dist']
     z = numpy.zeros((L, D - 1), F32 if float_dmg_dist else U32)
@@ -95,59 +95,58 @@ def scenario_damage(riskinputs, param, monitor):
     res = {'d_event': d_event, 'd_asset': []}
     for name in consequences:
         res['avg_' + name] = []
-        res[name + '_by_event'] = AccumDict(accum=numpy.zeros(L, F64))
-        # using F64 here is necessary: with F32 the non-associativity
-        # of addition would hurt too much with multiple tasks
     seed = param['master_seed']
     num_events = param['num_events']  # per realization
     acc = []  # (aid, eid, lid, ds...)
     sec_sims = param['secondary_simulations'].items()
+    mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
-        # here instead F32 floats are ok
+        with mon:
+            df = ri.hazard_getter.get_hazard()
         R = ri.hazard_getter.num_rlzs
-        for out in ri.gen_outputs(crmodel, monitor):
-            for r in range(R):
-                ne = num_events[r]  # total number of events
-                ok = out.rlzs == r  # events beloging to realization r
-                if ok.sum() == 0:
-                    continue
-                eids = out.eids[ok]
+        for r in range(R):
+            ne = num_events[r]  # total number of events
+            ok = df.rlz.to_numpy() == r  # events beloging to rlz r
+            if ok.sum() == 0:
+                continue
+            gmf_df = df[ok]
+            eids = gmf_df.eid.to_numpy()
+            for taxo, asset_df in ri.asset_df.groupby('taxonomy'):
+                assets = asset_df.to_records()
+                out = crmodel.get_output(taxo, asset_df, gmf_df)
                 for lti, loss_type in enumerate(crmodel.loss_types):
-                    for asset, fractions in zip(
-                            out.assets, out[loss_type][:, ok]):
+                    for asset, fractions in zip(assets, out[loss_type]):
                         aid = asset['ordinal']
                         if float_dmg_dist:
                             damages = fractions * asset['number']
                             if sec_sims:
                                 run_sec_sims(
-                                    damages, out.haz[ok], sec_sims, seed + aid)
+                                    damages, gmf_df, sec_sims, seed + aid)
                         else:
                             damages = bin_ddd(
                                 fractions, asset['number'], seed + aid)
                         # damages has shape E', D with E' == len(eids)
+                        csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for e, ddd in enumerate(damages):
                             dmg = ddd[1:]
                             if dmg.sum():
-                                eid = eids[e]  # (aid, eid, l) is unique
-                                acc.append((aid, eid, lti) + tuple(dmg))
+                                eid = eids[e]  # (aid, eid, lti) is unique
+                                conseq = tuple(csq[name][e] for name in csq)
+                                acc.append(
+                                    (aid, eid, lti) + tuple(dmg) + conseq)
                                 d_event[eid][lti] += ddd[1:]
                         tot = damages.sum(axis=0)  # (E', D) -> D
                         nodamage = asset['number'] * (ne - len(damages))
                         tot[0] += nodamage
                         res['d_asset'].append((lti, r, aid, tot))
-                        # TODO: use the ddd, not the fractions in compute_csq
-                        csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for name, values in csq.items():
                             res['avg_%s' % name].append(
                                 (lti, r, asset['ordinal'], values.sum(axis=0)))
-                            by_event = res[name + '_by_event']
-                            for eid, value in zip(eids, values):
-                                by_event[eid][lti] += value
     res['aed'] = numpy.array(acc, param['asset_damage_dt'])
     return res
 
 
-@base.calculators.add('scenario_damage', 'event_based_damage')
+@base.calculators.add('scenario_damage')
 class ScenarioDamageCalculator(base.RiskCalculator):
     """
     Damage calculator
@@ -175,24 +174,26 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         self.param['asset_damage_dt'] = self.crmodel.asset_damage_dt(
             oq.float_dmg_dist or num_floats)
         self.param['master_seed'] = oq.master_seed
-        self.param['num_events'] = numpy.bincount(  # events by rlz
-            self.datastore['events']['rlz_id'])
-        self.datastore.create_dframe(
-            'dd_data', self.param['asset_damage_dt'], 'gzip')
+        self.param['num_events'] = ne = numpy.bincount(  # events by rlz
+            self.datastore['events']['rlz_id'], minlength=self.R)
+        if (ne == 0).any():
+            logging.warning('There are realizations with zero events')
+        base.create_risk_by_event(self)
         self.riskinputs = self.build_riskinputs('gmf')
 
     def combine(self, acc, res):
         """
-        Combine the results and grows dd_data
+        Combine the results and grows the risk_by_event
         """
         if res is None:
             raise MemoryError('You ran out of memory!')
-        with self.monitor('saving dd_data', measuremem=True):
+        with self.monitor('saving risk_by_event', measuremem=True):
             aed = res.pop('aed', ())
             if len(aed) == 0:
                 return acc + res
             for name in aed.dtype.names:
-                hdf5.extend(self.datastore['dd_data/' + name], aed[name])
+                hdf5.extend(
+                    self.datastore['risk_by_event/' + name], aed[name])
             return acc + res
 
     def post_execute(self, result):
@@ -213,14 +214,14 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # reduction factor
         matrixsize = A * E * L * 4
-        realsize = self.datastore.getsize('dd_data')
-        logging.info('Saving %s in dd_data (instead of %s)',
+        realsize = self.datastore.getsize('risk_by_event')
+        logging.info('Saving %s in risk_by_event (instead of %s)',
                      humansize(realsize), humansize(matrixsize))
 
         # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
         if oq.investigation_time:  # event_based_damage
-            avg_ratio = numpy.array([oq.ses_ratio] * R)
+            avg_ratio = numpy.array([oq.time_ratio] * R)
         else:  # scenario_damage
             avg_ratio = 1. / self.param['num_events']
 
@@ -235,44 +236,30 @@ class ScenarioDamageCalculator(base.RiskCalculator):
                        loss_type=oq.loss_names,
                        dmg_state=dstates)
 
-        # damage by event: make sure the sum of the buildings is consistent
-        rlz = self.datastore['events']['rlz_id']
-        weights = self.datastore['weights'][:][rlz]
         tot = self.assetcol['number'].sum()
         dt = F32 if self.param['float_dmg_dist'] else U32
         dbe = numpy.zeros((self.E, L, D), dt)  # shape E, L, D
         dbe[:, :, 0] = tot
-        for e, dmg_by_lt in result['d_event'].items():
-            for li, dmg in enumerate(dmg_by_lt):
-                dbe[e, li,  0] = tot - dmg.sum()
-                dbe[e, li,  1:] = dmg
-        self.datastore['dmg_by_event'] = dbe
-        self.datastore['avg_portfolio_damage'] = avg_std(
-            dbe.astype(float), weights)
-        self.datastore.set_shape_descr(
-            'avg_portfolio_damage',
-            kind=['avg', 'std'], loss_type=ltypes, dmg_state=dstates)
-
+        alt = self.datastore.read_df('risk_by_event')
+        df = alt.groupby(['event_id', 'loss_id']).sum().reset_index()
+        df['agg_id'] = A
+        for col in df.columns:
+            hdf5.extend(self.datastore['risk_by_event/' + col], df[col])
+        self.datastore.set_attrs('risk_by_event', K=A)
         self.sanity_check()
 
         # consequence distributions
         del result['d_asset']
         del result['d_event']
-        dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
         for name, csq in result.items():
-            if name.startswith('avg_'):
-                c_asset = numpy.zeros((A, R, L), F32)
-                for (l, r, a, stat) in result[name]:
-                    c_asset[a, r, l] = stat * avg_ratio[r]
-                self.datastore[name + '-rlzs'] = c_asset
-                set_rlzs_stats(self.datastore, name,
-                               asset_id=self.assetcol['id'],
-                               loss_type=oq.loss_names)
-            elif name.endswith('_by_event'):
-                arr = numpy.zeros(len(csq), dtlist)
-                for i, (eid, loss) in enumerate(csq.items()):
-                    arr[i] = (eid, rlz[eid], loss)
-                self.datastore[name] = arr
+            # name is something like avg_losses
+            c_asset = numpy.zeros((A, R, L), F32)
+            for (l, r, a, stat) in result[name]:
+                c_asset[a, r, l] = stat * avg_ratio[r]
+            self.datastore[name + '-rlzs'] = c_asset
+            set_rlzs_stats(self.datastore, name,
+                           asset_id=self.assetcol['id'],
+                           loss_type=oq.loss_names)
 
     def sanity_check(self):
         """
@@ -283,12 +270,12 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         else:
             arr = self.datastore.sel('damages-stats', stat='mean')
         avg = arr.sum(axis=(0, 1))  # shape (L, D)
-        if not len(self.datastore['dd_data/aid']):
+        if not len(self.datastore['risk_by_event/agg_id']):
             logging.warning('There is no damage at all!')
         elif 'avg_portfolio_damage' in self.datastore:
             df = views.portfolio_damage_error(
                 'avg_portfolio_damage', self.datastore)
-            rst = views.rst_table(df)
+            rst = views.text_table(df, ext='org')
             logging.info('Portfolio damage\n%s' % rst)
         num_assets = avg.sum(axis=1)  # by loss_type
         expected = self.assetcol['number'].sum()

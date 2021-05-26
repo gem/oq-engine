@@ -1,5 +1,0 @@
-#,,,,"generated_by='OpenQuake engine 3.12.0-git9e2d8f2fb3', start_date='2021-03-01T01:59:26', checksum=3590982611, investigation_time=1.0, risk_investigation_time=50.0"
-event_id,structural,rlz_id,rup_id,year
-0,1.60056E+02,0,0,1
-1,1.27197E+02,0,1,1
-2,1.39241E+02,0,1,1

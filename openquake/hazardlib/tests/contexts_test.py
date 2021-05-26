@@ -23,7 +23,7 @@ from openquake.hazardlib.const import TRT
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.contexts import (
-    Effect, RuptureContext, _collapse, _make_pmap, ContextMaker, get_distances)
+    Effect, RuptureContext, _collapse, get_pmap, ContextMaker, get_distances)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
@@ -43,6 +43,7 @@ intensities = {
     '5.0': numpy.array([1.2, 1.1, .7, .69, .6, .5]),
     '5.5': numpy.array([1.5, 1.2, .89, .85, .82, .6]),
     '6.0': numpy.array([2.0, 1.5, .9, .85, .81, .6])}
+tom = PoissonTOM(50.)
 
 
 class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
@@ -166,15 +167,11 @@ class EffectTestCase(unittest.TestCase):
 
 
 def compose(ctxs, poe):
-    pnes = [ctx.get_probability_no_exceedance(poe) for ctx in ctxs]
+    pnes = [ctx.get_probability_no_exceedance(poe, tom) for ctx in ctxs]
     return 1. - numpy.prod(pnes), pnes
 
 
 class CollapseTestCase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        RuptureContext.temporal_occurrence_model = PoissonTOM(50.)
-
     def test_param(self):
         ctxs = [RuptureContext([('occurrence_rate', .001)]),
                 RuptureContext([('occurrence_rate', .002)])]
@@ -207,7 +204,7 @@ class CollapseTestCase(unittest.TestCase):
             c2, pnes2 = compose(_collapse(ctxs), poe)
             aac(c1, c2)  # the same
 
-    def test_make_pmap(self):
+    def test_get_pmap(self):
         trunclevel = 3
         imtls = DictArray({'PGA': [0.01]})
         gsims = [valid.gsim('AkkarBommer2010')]
@@ -223,7 +220,7 @@ class CollapseTestCase(unittest.TestCase):
             ctx.rjb = numpy.array([99.])
             ctxs.append(ctx)
         cmaker = ContextMaker(
-            'TRT', gsims, dict(imtls=imtls, truncation_level=trunclevel,
-                               investigation_time=50))
-        pmap = _make_pmap(ctxs, cmaker)
+            'TRT', gsims, dict(imtls=imtls, truncation_level=trunclevel))
+        cmaker.tom = PoissonTOM(time_span=50)
+        pmap = get_pmap(ctxs, cmaker)
         numpy.testing.assert_almost_equal(pmap[0].array, 0.066381)

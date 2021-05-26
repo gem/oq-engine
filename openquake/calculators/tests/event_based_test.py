@@ -26,10 +26,10 @@ import numpy.testing
 
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.general import countby, gettemp
-from openquake.baselib.datastore import read
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourceconverter import RuptureConverter
-from openquake.commonlib.writers import write_csv
+from openquake.commonlib.datastore import read
+from openquake.baselib.writers import write_csv
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.calc import gmvs_to_poes
 from openquake.calculators.views import view
@@ -157,13 +157,16 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         out = self.run_calc(case_1.__file__, 'job.ini', exports='csv,xml')
+
+        etime = self.calc.datastore.get_attr('gmf_data', 'effective_time')
+        self.assertEqual(etime, 80000.)  # ses_per_logic_tree_path = 80000
+        imts = self.calc.datastore.get_attr('gmf_data', 'imts')
+        self.assertEqual(imts, 'PGA')
         self.check_avg_gmf()
 
         # make sure ses_id >= 65536 is valid
         high_ses = (self.calc.datastore['events']['ses_id'] >= 65536).sum()
         self.assertGreater(high_ses, 1000)
-
-        [fname] = out['ruptures', 'xml']  # just check that it exists
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles(
@@ -200,7 +203,7 @@ class EventBasedTestCase(CalculatorTestCase):
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
         self.assertEqual(einfo['rlzi'], 0)
-        self.assertEqual(einfo['et_id'], 0)
+        self.assertEqual(einfo['trt_smr'], 0)
         aac(einfo['occurrence_rate'], 0.6)
         aac(einfo['hypo'], [0., 0., 4.])
 
@@ -219,6 +222,10 @@ class EventBasedTestCase(CalculatorTestCase):
 
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/minimum-intensity-gmf-data.csv', fname)
+
+        # test gmf_data.hdf5 exporter
+        [fname] = export(('gmf_data', 'hdf5'), self.calc.datastore)
+        self.assertIn('gmf-data_', fname)
 
     def test_case_2(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
@@ -244,10 +251,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_3.__file__, 'job.ini')
         [f, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf-data.csv', f)
-
-        # check the rupture multiplicity
-        [f] = export(('ruptures', 'xml'), self.calc.datastore)
-        self.assertEqualFiles('expected/ses.xml', f)
 
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', f)
@@ -376,8 +379,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_15.__file__, 'job.ini')
         [fname] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', fname)
-        [fname] = export(('ruptures', 'xml'), self.calc.datastore)
-        self.assertEqualFiles('expected/ruptures.xml', fname)
 
     def test_case_16(self):
         # an example with site model raising warnings and autogridded exposure
@@ -402,16 +403,6 @@ class EventBasedTestCase(CalculatorTestCase):
         fnames = out['hcurves', 'csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
-
-        # check that a single rupture file is exported even if there are
-        # several collections
-        [fname] = export(('ruptures', 'xml'), self.calc.datastore.parent)
-        self.assertEqualFiles('expected/ses.xml', fname)
-
-        # check that the exported file is parseable
-        rupcoll = nrml.to_python(fname, RuptureConverter(1))
-        self.assertEqual(list(rupcoll), [1])  # one group
-        self.assertEqual(len(rupcoll[1]), 3)  # three EBRuptures
 
         # check that GMFs are not stored
         with self.assertRaises(KeyError):
@@ -476,7 +467,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-4)
         sio = io.StringIO()
-        write_csv(sio, self.calc.datastore.getitem('sitecol'))
+        write_csv(sio, self.calc.datastore['sitecol'].array)
         tmp = gettemp(sio.getvalue())
         self.assertEqualFiles('expected/sitecol.csv', tmp)
 
@@ -539,8 +530,6 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_mutex(self):
         out = self.run_calc(mutex.__file__, 'job.ini', exports='csv,xml')
-        [fname] = out['ruptures', 'xml']
-        self.assertEqualFiles('expected/ses.xml', fname, delta=1E-6)
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 

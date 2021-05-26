@@ -1,14 +1,6 @@
 openquake.baselib package
 =========================
 
-openquake.baselib.datastore module
-------------------------------------
-
-.. automodule:: openquake.baselib.datastore
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 general
 --------------------------------
 

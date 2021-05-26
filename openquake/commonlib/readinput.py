@@ -25,6 +25,7 @@ import zlib
 import pickle
 import shutil
 import zipfile
+import pathlib
 import logging
 import tempfile
 import functools
@@ -220,6 +221,8 @@ def get_params(job_ini, kw={}):
     :returns:
         A dictionary of parameters
     """
+    if isinstance(job_ini, pathlib.Path):
+        job_ini = str(job_ini)
     if job_ini.startswith(('http://', 'https://')):
         resp = requests.get(job_ini)
         job_ini = gettemp(suffix='.zip')
@@ -254,12 +257,13 @@ def get_params(job_ini, kw={}):
     return params
 
 
-def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
+def get_oqparam(job_ini, pkg=None, calculators=None, kw={}):
     """
     Parse a dictionary of parameters from an INI-style config file.
 
     :param job_ini:
-        Path to configuration file/archive or dictionary of parameters
+        Path to configuration file/archive or
+        dictionary of parameters with at least a key "calculation_mode"
     :param pkg:
         Python package where to find the configuration file (optional)
     :param calculators:
@@ -267,11 +271,9 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
         valid choices for `calculation_mode`
     :param kw:
         Dictionary of strings to override the job parameters
-    :param validate:
-        Flag. By default it is true and the parameters are validated
     :returns:
         An :class:`openquake.commonlib.oqvalidation.OqParam` instance
-        containing the validate and casted parameters/values parsed from
+        containing the validated and casted parameters/values parsed from
         the job.ini file as well as a subdictionary 'inputs' containing
         absolute paths to all of the files referenced in the job.ini, keyed by
         the parameter name.
@@ -305,9 +307,7 @@ def get_oqparam(job_ini, pkg=None, calculators=None, kw={}, validate=1):
                 {imt: imtls[imt]})
         job_ini['save_disk_space'] = 'true'
     oqparam = OqParam(**job_ini)
-    if validate and '_job_id' not in job_ini:
-        oqparam.check_source_model()
-        oqparam.validate()
+    oqparam.validate()
     return oqparam
 
 
@@ -577,37 +577,49 @@ def get_gsim_lt(oqparam, trts=('*',)):
 
 def get_ruptures(fname_csv):
     """
-    Read ruptures in CSV format and return an ArrayWrapper
+    Read ruptures in CSV format and return an ArrayWrapper.
+
+    :param fname_csv: path to the CSV file
     """
     if not rupture.BaseRupture._code:
         rupture.BaseRupture.init()  # initialize rupture codes
     code = rupture.BaseRupture.str2code
     aw = hdf5.read_csv(fname_csv, rupture.rupture_dt)
-    trts = aw.trts
     rups = []
     geoms = []
     n_occ = 1
     for u, row in enumerate(aw.array):
         hypo = row['lon'], row['lat'], row['dep']
         dic = json.loads(row['extra'])
-        mesh = F32(json.loads(row['mesh']))
-        s1, s2 = mesh.shape[1:]
+        meshes = F32(json.loads(row['mesh']))  # num_surfaces 3D arrays
+        num_surfaces = len(meshes)
+        shapes = []
+        points = []
+        minlons = []
+        maxlons = []
+        minlats = []
+        maxlats = []
+        for mesh in meshes:
+            shapes.extend(mesh.shape[1:])
+            points.extend(mesh.flatten())  # lons + lats + deps
+            minlons.append(mesh[0].min())
+            minlats.append(mesh[1].min())
+            maxlons.append(mesh[0].max())
+            maxlats.append(mesh[1].max())
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['seed'] = row['seed']
-        rec['minlon'] = minlon = mesh[0].min()
-        rec['minlat'] = minlat = mesh[1].min()
-        rec['maxlon'] = maxlon = mesh[0].max()
-        rec['maxlat'] = maxlat = mesh[1].max()
+        rec['minlon'] = minlon = min(minlons)
+        rec['minlat'] = minlat = min(minlats)
+        rec['maxlon'] = maxlon = max(maxlons)
+        rec['maxlat'] = maxlat = max(maxlats)
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
         rate = dic.get('occurrence_rate', numpy.nan)
-        tup = (u, row['seed'], 'no-source', trts.index(row['trt']),
+        tup = (u, row['seed'], 'no-source', aw.trts.index(row['trt']),
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, 0)
         rups.append(tup)
-        points = mesh.flatten()  # lons + lats + deps
-        # FIXME: extend to MultiSurfaces
-        geoms.append(numpy.concatenate([[1], [s1, s2], points]))
+        geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
     if not rups:
         return ()
     dic = dict(geom=numpy.array(geoms, object))
@@ -707,12 +719,12 @@ def save_source_info(csm, h5):
     lens = []
     for sg in csm.src_groups:
         for src in sg:
-            lens.append(len(src.et_ids))
+            lens.append(len(src.trt_smrs))
             row = [src.source_id, src.grp_id, src.code,
                    0, 0, 0, csm.full_lt.trti[src.tectonic_region_type], 0]
             wkts.append(src._wkt)
             data[src.id] = row
-    logging.info('There are %d groups and %d sources with len(et_ids)=%.2f',
+    logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), sum(len(sg) for sg in csm.src_groups),
                  numpy.mean(lens))
     csm.source_info = data  # src_id -> row
@@ -721,7 +733,20 @@ def save_source_info(csm, h5):
         # avoid hdf5 damned bug by creating source_info in advance
         hdf5.create(h5, 'source_info', source_info_dt, attrs=attrs)
         h5['source_wkt'] = numpy.array(wkts, hdf5.vstr)
-        h5['et_ids'] = csm.get_et_ids()
+        h5['trt_smrs'] = csm.get_trt_smrs()
+        h5['toms'] = numpy.array(
+            [get_tom_name(sg) for sg in csm.src_groups], hdf5.vstr)
+
+
+def get_tom_name(sg):
+    """
+    :param sg: a source group instance
+    :returns: name of the associated temporal occurrence model
+    """
+    if sg.temporal_occurrence_model:
+        return sg.temporal_occurrence_model.__class__.__name__
+    else:
+        return 'PoissonTOM'
 
 
 def _check_csm(csm, oqparam, h5):
@@ -795,13 +820,13 @@ def get_composite_source_model(oqparam, h5=None):
                 csm.full_lt = full_lt
             if h5:
                 # avoid errors with --reuse_hazard
-                h5['et_ids'] = csm.get_et_ids()
+                h5['trt_smrs'] = csm.get_trt_smrs()
                 hdf5.create(h5, 'source_info', source_info_dt)
             _check_csm(csm, oqparam, h5)
             return csm
 
     # read and process the composite source model from the input files
-    csm = get_csm(oqparam, full_lt,  h5)
+    csm = get_csm(oqparam, full_lt, h5)
     save_source_info(csm, h5)
     if oqparam.cachedir and not oqparam.is_ucerf():
         logging.info('Saving %s', fname)
@@ -909,8 +934,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != asset_hazard_distance:
-            logging.info('Using asset_hazard_distance=%d km instead of %d km',
-                         haz_distance, asset_hazard_distance)
+            logging.debug('Using asset_hazard_distance=%d km instead of %d km',
+                          haz_distance, asset_hazard_distance)
     else:
         haz_distance = asset_hazard_distance
 
@@ -923,8 +948,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
         for sid, assets in zip(sitecol.sids, assets_by):
             assets_by_site[sid] = assets
             num_assets += len(assets)
-        logging.info(
-            'Associated %d assets to %d sites', num_assets, len(sitecol))
+        logging.info('Associated {:_d} assets to {:_d} sites'.format(
+            num_assets, len(sitecol)))
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
@@ -1127,6 +1152,19 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     return good, total
 
 
+def get_shapefiles(dirname):
+    """
+    :param dirname: directory containing the shapefiles
+    :returns: list of shapefiles
+    """
+    out = []
+    extensions = ('.shp', '.dbf', '.prj', '.shx')
+    for fname in os.listdir(dirname):
+        if fname.endswith(extensions):
+            out.append(os.path.join(dirname, fname))
+    return out
+
+
 def get_input_files(oqparam, hazard=False):
     """
     :param oqparam: an OqParam instance
@@ -1134,6 +1172,20 @@ def get_input_files(oqparam, hazard=False):
     :returns: input path names in a specific order
     """
     fnames = set()  # files entering in the checksum
+    uri = oqparam.shakemap_uri
+    if isinstance(uri, dict) and uri:
+        # local files
+        for key, val in uri.items():
+            if key == 'fname' or key.endswith('_url'):
+                val = val.replace('file://', '')
+                fname = os.path.join(oqparam.base_path, val)
+                if os.path.exists(fname):
+                    uri[key] = fname
+                    fnames.add(fname)
+        # additional separate shapefiles
+        if uri['kind'] == 'shapefile' and not uri['fname'].endswith('.zip'):
+            fnames.update(get_shapefiles(os.path.dirname(fname)))
+
     for key in oqparam.inputs:
         fname = oqparam.inputs[key]
         if hazard and key not in ('source_model_logic_tree',

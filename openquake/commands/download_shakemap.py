@@ -18,7 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import numpy
 from openquake.baselib import performance
-from openquake.hazardlib.shakemap import download_array
+from openquake.hazardlib.shakemap.parsers import get_array
 
 
 def main(id):
@@ -27,6 +27,6 @@ def main(id):
     """
     with performance.Monitor('shakemap', measuremem=True) as mon:
         dest = '%s.npy' % id
-        numpy.save(dest, download_array(id))
+        numpy.save(dest, get_array("usgs_id", id))
     print(mon)
     print('Saved %s' % dest)

@@ -19,11 +19,11 @@ import io
 import os
 import json
 import logging
+import numpy
 
-from openquake.baselib import datastore, hdf5
-from openquake.commonlib.writers import write_csv
-from openquake.commonlib import util
-from openquake.calculators.views import view, rst_table
+from openquake.baselib import hdf5
+from openquake.commonlib import datastore
+from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract
 
 
@@ -43,13 +43,11 @@ def print_(aw):
             return
         vars(aw).update(attrs)
     if hasattr(aw, 'shape_descr'):
-        print(rst_table(aw.to_dframe()))
-    elif hasattr(aw, 'array') and aw.dtype.names:
-        sio = io.StringIO()
-        write_csv(sio, aw.array)
-        print(sio.getvalue())
+        print(text_table(aw.to_dframe(), ext='org'))
     elif hasattr(aw, 'array'):
-        print(aw.array)
+        print(text_table(aw.array, ext='org'))
+    elif isinstance(aw, numpy.ndarray):
+        print(text_table(aw, ext='org'))
     else:
         print(aw)
 
@@ -65,7 +63,7 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
         rows = []
         for calc_id in datastore.get_calc_ids(datadir):
             try:
-                ds = util.read(calc_id)
+                ds = datastore.read(calc_id)
                 oq = ds['oqparam']
                 cmode, descr = oq.calculation_mode, oq.description
             except Exception:
@@ -80,22 +78,19 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
             print('#%d %s: %s' % row)
         return
 
-    ds = util.read(calc_id)
+    ds = datastore.read(calc_id)
 
     # this part is experimental
     if view.keyfunc(what) in view:
-        print(view(what, ds))
+        print_(view(what, ds))
     elif what.split('/', 1)[0] in extract:
-        obj = extract(ds, what, *extra)
-        if isinstance(obj, hdf5.ArrayWrapper):
-            print_(obj)
-        elif hasattr(obj, 'dtype') and obj.dtype.names:
-            print(write_csv(io.StringIO(), obj))
-        else:
-            print(obj)
+        print_(extract(ds, what, *extra))
     elif what in ds:
         obj = ds.getitem(what)
-        if hasattr(obj, 'items'):  # is a group of datasets
+        if '__pdcolumns__' in obj.attrs:
+            df = ds.read_df(what)
+            print(df.sort_values(df.columns[0]))
+        elif hasattr(obj, 'items'):  # is a group of datasets
             print(obj)
         else:  # is a single dataset
             obj.refresh()  # for SWMR mode

@@ -1,4 +1,3 @@
-
 | Test ID | Description |
 |---------|-------------|
 | case_1  | Checks .npz export, raises error when all source are discarded and checks wrong .ini | 
@@ -38,7 +37,7 @@
 | case_35 | |
 | case_36 | |
 | case_37 | |
-| case_38 | |
+| case_38 | Example with custom_site_id|
 | case_39 | |
 | case_40 | |
 | case_41 | |
@@ -61,4 +60,8 @@
 | case_58 | Test for the truncatedGRFromSlipAbsolute epistemic uncertainty |
 | case_59 | Test for NRCan15SiteTerm |
 | case_60 | |
-| case_61 | Test the Kite Fault with info for Simple Fault |
+| case_61 | |
+| case_62 | Tests a sample model from SHERIFS |
+| case_63 | Test for GMM with soiltype |
+| case_64 | |
+| case_65 | Test for the multi fault source |

@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-from openquake.commonlib import util
+from openquake.commonlib import datastore
 import h5py
 
 
@@ -23,7 +23,7 @@ def main(key, calc_id: int = -1):
     """
     Show the attributes of a HDF5 dataset in the datastore.
     """
-    ds = util.read(calc_id)
+    ds = datastore.read(calc_id)
     try:
         attrs = h5py.File.__getitem__(ds.hdf5, key).attrs
     except KeyError:
