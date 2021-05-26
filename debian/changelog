@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Improved `post_risk` to use all the cores in a cluster, since it
+    was using the master only
   * Improved the validation of the investigation_time in event_based_damage
   * Renamed the `losses_by_event` CSV exporter to `risk_by_event` and
     made it work consistently for losses, damages and consequences; also
