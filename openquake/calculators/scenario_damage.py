@@ -121,8 +121,7 @@ def scenario_damage(riskinputs, param, monitor):
                             damages = fractions * asset['number']
                             if sec_sims:
                                 run_sec_sims(
-                                    damages, out['haz'][ok], sec_sims,
-                                    seed + aid)
+                                    damages, gmf_df, sec_sims, seed + aid)
                         else:
                             damages = bin_ddd(
                                 fractions, asset['number'], seed + aid)
