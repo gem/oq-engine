@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import ast
+import json
 import os.path
 import numbers
 import operator
@@ -404,13 +405,14 @@ def view_portfolio_loss(token, dstore):
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_names)
 
 
-@view.add('portfolio_damage_error')
+@view.add('portfolio_damages')
 def portfolio_damage_error(token, dstore):
     """
-    The damages and errors for the full portfolio, extracted from
-    the asset damage table.
+    The portfolio damages extracted from damages-rlzs
     """
-    return dstore.read_df('avg_portfolio_damage')
+    attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
+    arr = dstore['damages-rlzs'][:, :, 0, :].sum(axis=0)
+    return text_table(arr, attrs['dmg_state'])
 
 
 @view.add('portfolio_damage')
