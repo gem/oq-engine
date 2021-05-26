@@ -30,7 +30,7 @@ from openquake.qa_tests_data.scenario_damage import (
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
-from openquake.calculators.views import view, text_table
+from openquake.calculators.views import view
 
 aac = numpy.testing.assert_allclose
 
@@ -39,8 +39,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     def assert_ok(self, pkg, job_ini, exports='csv', kind='damages'):
         test_dir = os.path.dirname(pkg.__file__)
-        out = self.run_calc(test_dir, job_ini, exports=exports,
-                            collapse_threshold='0')
+        out = self.run_calc(test_dir, job_ini, exports=exports)
         try:
             got = out['%s-rlzs' % kind, exports]
         except KeyError:

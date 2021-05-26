@@ -181,7 +181,7 @@ class DamageCalculator(EventBasedRiskCalculator):
                 hdf5.extend(dset, df[name].to_numpy())
         return 1
 
-    def sanity_check(self, dmgcsq):
+    def sanity_check(self, time_ratio):
         """
         Compare agglosses with aggregate avglosses
         """
@@ -189,7 +189,7 @@ class DamageCalculator(EventBasedRiskCalculator):
             'aggcurves', sel=dict(agg_id=self.param['K'], return_period=0))
         del df['agg_id']
         agg = df.groupby('loss_id').sum().to_numpy()  # shape L, Dc
-        avg = dmgcsq.sum(axis=0)  # shape L, Dc
+        avg = self.dmgcsq.sum(axis=0) * self.E * time_ratio  # shape L, Dc
         numpy.testing.assert_allclose(agg[:, 1:], avg[:, 1:], rtol=1e-4)
 
     def post_execute(self, dummy):
@@ -202,11 +202,12 @@ class DamageCalculator(EventBasedRiskCalculator):
         for li in range(L):
             self.dmgcsq[:, li, 0] = (
                 number * self.E - self.dmgcsq[:, li, 1:D].sum(axis=1))
-        dmgcsq = self.dmgcsq * time_ratio
-        self.datastore['damages-rlzs'] = dmgcsq.reshape((A, 1, L, Dc))
+        self.dmgcsq /= self.E
+        self.datastore['damages-rlzs'] = self.dmgcsq.reshape((A, 1, L, Dc))
         set_rlzs_stats(self.datastore,
                        'damages',
                        asset_id=self.assetcol['id'],
+                       rlz=[0],
                        loss_type=oq.loss_names,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
         size = self.datastore.getsize('risk_by_event')
@@ -239,4 +240,4 @@ class DamageCalculator(EventBasedRiskCalculator):
         fix_dtype(dic, F32, columns)
         ls = ' '.join(self.crmodel.damage_states[1:])
         self.datastore.create_df('aggcurves', dic.items(), limit_states=ls)
-        self.sanity_check(dmgcsq)
+        self.sanity_check(time_ratio)
