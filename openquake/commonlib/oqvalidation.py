@@ -307,6 +307,11 @@ investigation_time:
   Example: *investigation_time = 50*.
   Default: no default
 
+limit_states:
+   Limit states used in damage calculations.
+   Example: *limit_states = moderate, complete*
+   Default: no default
+
 lrem_steps_per_interval:
   Used in the vulnerability functions.
   Example: *lrem_steps_per_interval  = 1*.
@@ -756,6 +761,7 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
+    limit_states = valid.Param(valid.namelist, [])
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
