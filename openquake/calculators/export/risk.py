@@ -23,11 +23,10 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, writers
-from openquake.hazardlib.stats import compute_stats, compute_stats2
+from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
     extract, build_damage_dt, build_damage_array, sanitize)
-from openquake.calculators.views import view
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -328,25 +327,20 @@ def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
     dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    data = dstore['damages-rlzs'][:]  # shape (A, R, L, D)
+    orig = dstore['damages-rlzs'][:]  # shape (A, R, L, D)
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     md = dstore.metadata
     if oq.investigation_time:
+        rit = oq.risk_investigation_time or oq.investigation_time
         md.update(dict(investigation_time=oq.investigation_time,
-                       risk_investigation_time=oq.risk_investigation_time))
-    event_rates = view('event_rates', dstore)
-    if oq.collect_rlzs:
-        R = 1
-        data = data.transpose(1, 0, 2, 3) * event_rates[0]
+                       risk_investigation_time=rit))
+        rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
     else:
-        R = len(rlzs)
-        data = numpy.array(  # shape RALD
-            [data[:, r] * event_rates[r] for r in range(len(rlzs))])
+        rate = 1
+    R = 1 if oq.collect_rlzs else len(rlzs)
     if ekey[0].endswith('stats'):
         rlzs_or_stats = oq.hazard_stats()
-        ws = dstore['weights'][:]
-        data = compute_stats(data, rlzs_or_stats.values(), ws)
     else:
         rlzs_or_stats = ['rlz-%03d' % r for r in range(R)]
     name = ekey[0].split('-')[0]
@@ -354,9 +348,9 @@ def export_damages_csv(ekey, dstore):
         name = 'avg_' + name
     for i, ros in enumerate(rlzs_or_stats):
         if oq.modal_damage_state:
-            damages = modal_damage_array(data[i], dmg_dt)
+            damages = modal_damage_array(orig[:, i] * rate, dmg_dt)
         else:
-            damages = build_damage_array(data[i], dmg_dt)
+            damages = build_damage_array(orig[:, i] * rate, dmg_dt)
         fname = dstore.build_fname(name, ros, ekey[1])
         writer.save(compose_arrays(assets, damages), fname,
                     comment=md, renamedict=dict(id='asset_id'))
