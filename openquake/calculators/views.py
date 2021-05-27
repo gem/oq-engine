@@ -957,7 +957,7 @@ def view_event_rates(token, dstore):
     """
     Show the number of events per realization multiplied by risk_time/eff_time
     """
-    oq = dstore['oqparam']    
+    oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_rlzs()
     if oq.calculation_mode != 'event_based_damage':
         return numpy.ones(R)
@@ -965,3 +965,21 @@ def view_event_rates(token, dstore):
         oq.ses_per_logic_tree_path * oq.investigation_time)
     rlzs = dstore['events']['rlz_id']
     return numpy.bincount(rlzs, minlength=R) * time_ratio
+
+
+@view.add('sum')
+def view_sum(token, dstore):
+    """
+    Show the sum of an array on the first axis; used to debug the damages
+    """
+    _, arrayname = token.split(':')  # called as sum:damages-rlzs
+    dset = dstore[arrayname]
+    A, R, L, *D = dset.shape
+    cols = ['RL', 'sum']
+    arr = dset[:].sum(axis=(0, 3))  # shape R, L
+    z = numpy.zeros(R * L, [('RL', object), ('sum', object)])
+    for r, ar in enumerate(arr):
+        for li, a in enumerate(ar):
+            for c, col in enumerate(cols):
+                z[r * L + li][col] = a if c > 0 else (r, li)
+    return rst_table(z, fmt='%f')
