@@ -22,6 +22,7 @@ import os.path
 import numbers
 import operator
 import functools
+import itertools
 import collections
 import logging
 import numpy
@@ -1100,3 +1101,26 @@ def view_event_rates(token, dstore):
     else:
         rlzs = dstore['events']['rlz_id']
         return numpy.bincount(rlzs, minlength=R) * time_ratio
+
+
+def tup2str(tups):
+    return ['_'.join(map(str, t)) for t in tups]
+
+
+@view.add('sum')
+def view_sum(token, dstore):
+    """
+    Show the sum of an array on the first axis
+    """
+    _, arrayname = token.split(':')  # called as sum:damages-rlzs
+    dset = dstore[arrayname]
+    A, R, L, *D = dset.shape
+    cols = ['RL'] + tup2str(itertools.product(*[range(d) for d in D]))
+    arr = dset[:].sum(axis=0)  # shape R, L, *D
+    z = numpy.zeros(R * L, dt(cols))
+    for r, ar in enumerate(arr):
+        for li, a in enumerate(ar):
+            a = a.flatten()
+            for c, col in enumerate(cols):
+                z[r * L + li][col] = a[c-1] if c > 0 else (r, li)
+    return z
