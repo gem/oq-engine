@@ -120,20 +120,24 @@ def std_curve(values, weights=None):
     return res
 
 
-# NB: for equal weights and sorted values the quantile is computed a
+# NB: for equal weights and sorted values the quantile is computed as
 # numpy.interp(q, [1/N, 2/N, ..., N/N], values)
 def quantile_curve(quantile, curves, weights=None):
     """
-    Compute the weighted quantile aggregate of a set of curves.
+    Compute the weighted quantile aggregate of an array or list of arrays
 
     :param quantile:
         Quantile value to calculate. Should be in the range [0.0, 1.0].
     :param curves:
-        Array of R PoEs (possibly arrays)
+        R arrays
     :param weights:
-        Array-like of weights, 1 for each input curve, or None
+        R weights with sum 1, or None
     :returns:
-        A numpy array representing the quantile aggregate
+        A numpy array representing the quantile of the underlying arrays
+
+    >>> arr = numpy.array([.15, .25, .3, .4, .5, .6, .75, .8, .9])
+    >>> quantile_curve(.8, arr)
+    array(0.76)
     """
     if not isinstance(curves, numpy.ndarray):
         curves = numpy.array(curves)
