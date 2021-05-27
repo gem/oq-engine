@@ -315,6 +315,7 @@ def export_damages_csv(ekey, dstore):
         rit = oq.risk_investigation_time or oq.investigation_time
         md.update(dict(investigation_time=oq.investigation_time,
                        risk_investigation_time=rit))
+    if oq.calculation_mode == 'event_based_damage':
         rate = len(dstore['events']) * oq.ses_ratio / len(rlzs)
     else:
         rate = 1
