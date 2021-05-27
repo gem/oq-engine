@@ -411,11 +411,14 @@ def portfolio_dmgdist(token, dstore):
     """
     The portfolio damages extracted from the first realization of damages-rlzs
     """
-    attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
-    arr = dstore['damages-rlzs'][:, 0].sum(axis=0)  # shape (L, Dc)
-    tbl = numpy.zeros(len(arr), dt(['loss_type'] + attrs['dmg_state']))
-    tbl['loss_type'] = attrs['loss_type']
-    for dsi, ds in enumerate(attrs['dmg_state']):
+    oq = dstore['oqparam']
+    dstates = ['no_damage'] + oq.limit_states
+    D = len(dstates)
+    arr = dstore['damages-rlzs'][:, 0, :, :D].sum(axis=0)  # shape (L, D)
+    tbl = numpy.zeros(len(arr), dt(['loss_type', 'total'] + dstates))
+    tbl['loss_type'] = oq.loss_names
+    tbl['total'] = arr.sum(axis=1)
+    for dsi, ds in enumerate(dstates):
         tbl[ds] = arr[:, dsi]
     return tbl
 
@@ -1110,7 +1113,7 @@ def tup2str(tups):
 @view.add('sum')
 def view_sum(token, dstore):
     """
-    Show the sum of an array on the first axis
+    Show the sum of an array of shape (A, R, L, ...) on the first axis
     """
     _, arrayname = token.split(':')  # called as sum:damages-rlzs
     dset = dstore[arrayname]
