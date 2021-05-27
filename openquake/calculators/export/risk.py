@@ -327,7 +327,7 @@ def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
     dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    orig = dstore['damages-rlzs'][:]  # shape (A, R, L, D)
+    orig = dstore[ekey[0]][:]  # shape (A, R, L, D)
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     md = dstore.metadata
