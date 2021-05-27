@@ -271,7 +271,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         """
         Sanity check on the total number of buildings
         """
-        E0 = self.param['num_events'][0]
         avg0 = self.datastore['damages-rlzs'][:, 0].sum(axis=0)  # (L, D)
         if not len(self.datastore['dd_data/aid']):
             logging.warning('There is no damage at all!')
@@ -281,9 +280,6 @@ class ScenarioDamageCalculator(base.RiskCalculator):
             rst = views.rst_table(df)
             logging.info('Portfolio damage\n%s' % rst)
         num_buildings = avg0.sum(axis=1)
-        if self.oqparam.investigation_time:  # event_based_damage
-            # N = avg * T / E
-            num_buildings /= self.oqparam.ses_ratio * E0
         expected = self.assetcol['number'].sum()
         nums = set(num_buildings) | {expected}
         if len(nums) > 1:
