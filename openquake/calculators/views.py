@@ -63,8 +63,8 @@ def form(value):
     '1.000E-04'
     >>> form(1003.4)
     '1_003'
-    >>> form(103.4)
-    '103'
+    >>> form(103.41)
+    '103.4'
     >>> form(9.3)
     '9.30000'
     >>> form(-1.2)
@@ -82,7 +82,7 @@ def form(value):
         elif numpy.isnan(value):
             return 'NaN'
         else:  # in the range 10-1000
-            return str(int(value))
+            return str(round(value, 1))
     elif isinstance(value, bytes):
         return decode(value)
     elif isinstance(value, str):
