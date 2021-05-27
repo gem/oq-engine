@@ -873,7 +873,7 @@ def get_crmodel(oqparam):
     risklist = get_risk_functions(oqparam)
     if not hasattr(oqparam, 'limit_states'):
         oqparam.limit_states = risklist.limit_states
-    else:
+    elif 'damage' in oqparam.calculation_mode:
         assert oqparam.limit_states == risklist.limit_states
     consdict = {}
     if 'consequence' in oqparam.inputs:
