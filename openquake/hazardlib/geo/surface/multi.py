@@ -314,8 +314,6 @@ class MultiSurface(BaseSurface):
         dips = numpy.array([numpy.mean(surf.get_dip()) for surf in
                             self.surfaces])
 
-        print(dips)
-
         ok = numpy.logical_and(numpy.isfinite(dips), numpy.isfinite(areas))
         dips = dips[ok]
         areas = areas[ok]
