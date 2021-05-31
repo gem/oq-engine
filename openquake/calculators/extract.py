@@ -767,9 +767,11 @@ def extract_agg_damages(dstore, what):
         for the given tags
     """
     loss_type, tags = get_loss_type_tags(what)
-    if 'damages-rlzs' in dstore:  # scenario_damage
-        lti = dstore['oqparam'].lti[loss_type]
-        losses = dstore['damages-rlzs'][:, :, lti]
+    if 'damages-rlzs' in dstore:
+        oq = dstore['oqparam']
+        lti = oq.lti[loss_type]
+        D = len(oq.limit_states) + 1
+        losses = dstore['damages-rlzs'][:, :, lti, :D]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], losses, tags)
