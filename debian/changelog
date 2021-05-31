@@ -1,3 +1,6 @@
+  [Graeme Weatherill]
+  * Updates Kotha et al. (2020) slope/geology model coefficients
+
   [Michele Simionato]
   * Improved `post_risk` to use all the cores in a cluster, since it
     was using the master only
