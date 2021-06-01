@@ -138,7 +138,7 @@ def to_dframe(adic, ci, L):
     return pandas.DataFrame(dic)
 
 
-def worse_dmgdist(df, agg_id, loss_id, dic):
+def worst_dmgdist(df, agg_id, loss_id, dic):
     cols = [col for col in df.columns if col.startswith('dmg_')]
     event_id = df[cols[-1]].to_numpy().argmax()
     dic['event_id'].append(event_id)
@@ -241,7 +241,7 @@ class DamageCalculator(EventBasedRiskCalculator):
             wdd[col] = []
         for (agg_id, loss_id), df in alt_df.groupby(
                 [alt_df.agg_id, alt_df.loss_id]):
-            worse_dmgdist(df, agg_id, loss_id, wdd)
+            worst_dmgdist(df, agg_id, loss_id, wdd)
             tots = [df[col].sum() * time_ratio for col in columns]
             curves = [self.builder.build_curve(df[col].to_numpy())
                       for col in columns]
@@ -258,6 +258,6 @@ class DamageCalculator(EventBasedRiskCalculator):
         fix_dic(dic, columns)
         fix_dic(wdd, columns[:D-1])
         ls = ' '.join(self.crmodel.damage_states[1:])
-        self.datastore.create_df('worse_dmgdist', wdd.items(), limit_states=ls)
+        self.datastore.create_df('worst_dmgdist', wdd.items(), limit_states=ls)
         self.datastore.create_df('aggcurves', dic.items(), limit_states=ls)
         self.sanity_check(time_ratio)
