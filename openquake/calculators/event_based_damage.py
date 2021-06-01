@@ -210,10 +210,10 @@ class DamageCalculator(EventBasedRiskCalculator):
                 ['loss_id', 'return_period']):
             if period == 0:
                 del df['agg_id']
-                agg = df.groupby('loss_id').sum().to_numpy()  # shape L, Dc
-                avg = self.dmgcsq.sum(axis=0) * self.E * time_ratio  # L, Dc
-                numpy.testing.assert_allclose(
-                    agg[:, 1:], avg[:, 1:], rtol=1e-4)
+                agg = df.sum().to_numpy()[2:]  # shape Dc
+                avg = self.dmgcsq[:, loss_id, 1:].sum(axis=0) * (
+                    self.E * time_ratio)  # shape Dc
+                numpy.testing.assert_allclose(agg, avg, rtol=1e-4)
             else:
                 tot = sum(df[col].sum() for col in df.columns
                           if col.startswith('dmg_'))
