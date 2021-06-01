@@ -1,9 +1,14 @@
 Stochastic Event-based Damage Demo
 ----------------------------------
 
-In this example, we study the sensitivity from the `random_seed` parameter
-for an event based damage calculation with 50 samples taken from 486
-potential realizations. The single command
+This example computes average damage distributions and damages at a return
+period of 500 years for an event based damage calculation with 50 samples
+taken from 486 potential realizations. Moreover, by uncommenting the line
+
+# sensitivity_analysis = {"random_seed": [100, 200, 300]}
+
+it is possible study the sensitivity from the `random_seed`
+parameter. The single command
 
 $ oq engine --run job.ini
 
