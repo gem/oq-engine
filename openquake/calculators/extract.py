@@ -206,12 +206,17 @@ def extract_realizations(dstore, dummy):
     """
     Extract an array of realizations. Use it as /extract/realizations
     """
+    dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     oq = dstore['oqparam']
+    if oq.collect_rlzs:
+        arr = numpy.zeros(1, dt)
+        arr['weight'] = 1
+        arr['branch_path'] = '"one-effective-rlz"'
+        return arr
     scenario = 'scenario' in oq.calculation_mode
     rlzs = dstore['full_lt'].rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
-    dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     arr = numpy.zeros(len(rlzs), dt)
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
