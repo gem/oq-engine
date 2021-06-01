@@ -1251,12 +1251,14 @@ def return_periods(eff_time, num_losses):
     return U32(periods)
 
 
-def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
+def losses_by_period(losses, return_periods, num_events=None,
+                     eff_time=None, sort=True):
     """
     :param losses: simulated losses
     :param return_periods: return periods of interest
     :param num_events: the number of events (>= number of losses)
     :param eff_time: investigation_time * ses_per_logic_tree_path
+    :param sort: if True, sort the losses (otherwise assume they are sorted)
     :returns: interpolated losses for the return periods, possibly with NaN
 
     NB: the return periods must be ordered integers >= 1. The interpolated
@@ -1284,7 +1286,8 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None):
             % (num_events, num_losses))
     if eff_time is None:
         eff_time = return_periods[-1]
-    losses = numpy.sort(losses)
+    if sort:
+        losses = numpy.sort(losses)
     # num_losses < num_events: just add zeros
     num_zeros = num_events - num_losses
     if num_zeros:
@@ -1328,9 +1331,10 @@ class LossCurvesMapsBuilder(object):
                 - risk_investigation_time / return_periods)
 
     # used in post_risk
-    def build_curve(self, losses, rlzi=0):
+    def build_curve(self, losses, rlzi=0, sort=True):
         return losses_by_period(
-            losses, self.return_periods, self.num_events[rlzi], self.eff_time)
+            losses, self.return_periods, self.num_events[rlzi], self.eff_time,
+            sort)
 
 
 class InsuredLosses(object):

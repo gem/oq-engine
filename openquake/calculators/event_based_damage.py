@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import operator
 import numpy
 import pandas
 
@@ -140,12 +141,11 @@ def to_dframe(adic, ci, L):
 
 def worst_dmgdist(df, agg_id, loss_id, dic):
     cols = [col for col in df.columns if col.startswith('dmg_')]
-    event_id = df[cols[-1]].to_numpy().argmax()
-    dic['event_id'].append(event_id)
+    idx = df[cols[-1]].to_numpy().argmax()
     dic['loss_id'].append(loss_id)
     dic['agg_id'].append(agg_id)
-    for col in cols:
-        dic[col].append(df[col].to_numpy()[event_id])
+    for col in ['event_id'] + cols:
+        dic[col].append(df[col].to_numpy()[idx])
 
 
 @base.calculators.add('event_based_damage')
@@ -165,7 +165,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
 
     def execute(self):
-        """
+        """df[cols[-1]]
         Compute risk from GMFs or ruptures depending on what is stored
         """
         self.builder = get_loss_builder(self.datastore)  # check
@@ -231,10 +231,9 @@ class DamageCalculator(EventBasedRiskCalculator):
         logging.info('Building aggregated curves from %s of risk_by_event',
                      general.humansize(size))
         alt_df = self.datastore.read_df('risk_by_event')
-        del alt_df['event_id']
         dic = general.AccumDict(accum=[])
-        columns = sorted(
-            set(alt_df.columns) - {'agg_id', 'loss_id', 'variance'})
+        columns = sorted(set(alt_df.columns) -
+                         {'event_id', 'agg_id', 'loss_id', 'variance'})
         periods = [0] + list(self.builder.return_periods)
         wdd = {'agg_id': [], 'loss_id': [], 'event_id': []}
         for col in columns[:D-1]:
@@ -243,8 +242,9 @@ class DamageCalculator(EventBasedRiskCalculator):
                 [alt_df.agg_id, alt_df.loss_id]):
             worst_dmgdist(df, agg_id, loss_id, wdd)
             tots = [df[col].sum() * time_ratio for col in columns]
-            curves = [self.builder.build_curve(df[col].to_numpy())
-                      for col in columns]
+            array = sort_tuples(df[columns].to_numpy(), D-2)  # shape E, D
+            curves = [self.builder.build_curve(arr, sort=False)
+                      for arr in array.T]
             for p, period in enumerate(periods):
                 dic['agg_id'].append(agg_id)
                 dic['loss_id'].append(loss_id)
@@ -261,3 +261,11 @@ class DamageCalculator(EventBasedRiskCalculator):
         self.datastore.create_df('worst_dmgdist', wdd.items(), limit_states=ls)
         self.datastore.create_df('aggcurves', dic.items(), limit_states=ls)
         self.sanity_check(time_ratio)
+
+
+def sort_tuples(array, complete):
+    tuples = []
+    for row in array:
+        tuples.append(tuple(row))
+    tuples.sort(key=operator.itemgetter(complete))
+    return numpy.array(tuples)  # shape E, D
