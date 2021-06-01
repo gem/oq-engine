@@ -973,7 +973,12 @@ class Exposure(object):
         strfields = self.tagcol.tagnames + self.occupancy_periods.split()
         for fname in self.datafiles:
             with open(fname, encoding='utf-8-sig') as f:
-                fields = next(csv.reader(f))
+                try:
+                    fields = next(csv.reader(f))
+                except UnicodeDecodeError:
+                    msg = ("%s is not encoded as UTF-8\ntry oq shell "
+                           "and then o.fix_latin1('%s')" % (fname, fname))
+                    raise RuntimeError(msg)
                 header = set(self.fieldmap.get(f, f) for f in fields)
                 for field in fields:
                     if field not in strfields:
@@ -1016,7 +1021,8 @@ class Exposure(object):
             # check_dupl is False only in oq prepare_site_model since
             # in that case we are only interested in the asset locations
             if check_dupl and asset_id in asset_refs:
-                raise nrml.DuplicatedID(asset_id)
+                raise nrml.DuplicatedID('asset_id=%s while processing %s' % (
+                    asset_id, param['fname']))
             asset_refs.add(param['asset_prefix'] + asset_id)
             self._add_asset(idx, asset, param)
 
