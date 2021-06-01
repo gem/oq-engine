@@ -38,6 +38,16 @@ def fix_dtype(dic, dtype, names):
         dic[name] = dtype(dic[name])
 
 
+def fix_dic(dic, columns):
+    fix_dtype(dic, U16, ['agg_id'])
+    fix_dtype(dic, U8, ['loss_id'])
+    if 'event_id' in dic:
+        fix_dtype(dic, U32, ['event_id'])
+    if 'return_period' in dic:
+        fix_dtype(dic, U32, ['return_period'])
+    fix_dtype(dic, F32, columns)
+
+
 def agg_damages(dstore, slc, monitor):
     """
     :returns: dict (agg_id, loss_id) -> [dmg1, dmg2, ...]
@@ -124,11 +134,18 @@ def to_dframe(adic, ci, L):
             dic['loss_id'].append(lti)
             for sname, si in ci.items():
                 dic[sname].append(dd[lti, si])
-    fix_dtype(dic, U32, ['event_id'])
-    fix_dtype(dic, U16, ['agg_id'])
-    fix_dtype(dic, U8, ['loss_id'])
-    fix_dtype(dic, F32, ci)
+    fix_dic(dic, ci)
     return pandas.DataFrame(dic)
+
+
+def worst_dmgdist(df, agg_id, loss_id, dic):
+    cols = [col for col in df.columns if col.startswith('dmg_')]
+    event_id = df[cols[-1]].to_numpy().argmax()
+    dic['event_id'].append(event_id)
+    dic['loss_id'].append(loss_id)
+    dic['agg_id'].append(agg_id)
+    for col in cols:
+        dic[col].append(df[col].to_numpy()[event_id])
 
 
 @base.calculators.add('event_based_damage')
@@ -219,8 +236,12 @@ class DamageCalculator(EventBasedRiskCalculator):
         columns = sorted(
             set(alt_df.columns) - {'agg_id', 'loss_id', 'variance'})
         periods = [0] + list(self.builder.return_periods)
+        wdd = {'agg_id': [], 'loss_id': [], 'event_id': []}
+        for col in columns[:D-1]:
+            wdd[col] = []
         for (agg_id, loss_id), df in alt_df.groupby(
                 [alt_df.agg_id, alt_df.loss_id]):
+            worst_dmgdist(df, agg_id, loss_id, wdd)
             tots = [df[col].sum() * time_ratio for col in columns]
             curves = [self.builder.build_curve(df[col].to_numpy())
                       for col in columns]
@@ -234,10 +255,9 @@ class DamageCalculator(EventBasedRiskCalculator):
                 else:
                     for col, curve in zip(columns, curves):
                         dic[col].append(curve[p - 1])
-        fix_dtype(dic, U16, ['agg_id'])
-        fix_dtype(dic, U8, ['loss_id'])
-        fix_dtype(dic, U32, ['return_period'])
-        fix_dtype(dic, F32, columns)
+        fix_dic(dic, columns)
+        fix_dic(wdd, columns[:D-1])
         ls = ' '.join(self.crmodel.damage_states[1:])
+        self.datastore.create_df('worst_dmgdist', wdd.items(), limit_states=ls)
         self.datastore.create_df('aggcurves', dic.items(), limit_states=ls)
         self.sanity_check(time_ratio)
