@@ -242,9 +242,10 @@ class DamageCalculator(EventBasedRiskCalculator):
                 [alt_df.agg_id, alt_df.loss_id]):
             worst_dmgdist(df, agg_id, loss_id, wdd)
             tots = [df[col].sum() * time_ratio for col in columns]
-            array = sort_tuples(df[columns].to_numpy(), D-2)  # shape E, D
-            curves = [self.builder.build_curve(arr, sort=False)
-                      for arr in array.T]
+            array = df.to_records()
+            array.sort(order=columns[D-2])  # sort by highest damage state
+            curves = [self.builder.build_curve(array[col], sort=False)
+                      for col in columns]
             for p, period in enumerate(periods):
                 dic['agg_id'].append(agg_id)
                 dic['loss_id'].append(loss_id)
@@ -261,11 +262,3 @@ class DamageCalculator(EventBasedRiskCalculator):
         self.datastore.create_df('worst_dmgdist', wdd.items(), limit_states=ls)
         self.datastore.create_df('aggcurves', dic.items(), limit_states=ls)
         self.sanity_check(time_ratio)
-
-
-def sort_tuples(array, complete):
-    tuples = []
-    for row in array:
-        tuples.append(tuple(row))
-    tuples.sort(key=operator.itemgetter(complete))
-    return numpy.array(tuples)  # shape E, D
