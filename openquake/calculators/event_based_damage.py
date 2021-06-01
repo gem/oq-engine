@@ -200,14 +200,28 @@ class DamageCalculator(EventBasedRiskCalculator):
 
     def sanity_check(self, time_ratio):
         """
-        Compare agglosses with aggregate avglosses
+        Compare agglosses with aggregate avglosses and check that
+        damaged buildings < total buildings
         """
-        df = self.datastore.read_df(
-            'aggcurves', sel=dict(agg_id=self.param['K'], return_period=0))
-        del df['agg_id']
-        agg = df.groupby('loss_id').sum().to_numpy()  # shape L, Dc
-        avg = self.dmgcsq.sum(axis=0) * self.E * time_ratio  # shape L, Dc
-        numpy.testing.assert_allclose(agg[:, 1:], avg[:, 1:], rtol=1e-4)
+        ac_df = self.datastore.read_df(
+            'aggcurves', sel=dict(agg_id=self.param['K']))
+        number = self.assetcol['number'].sum()
+        for (loss_id, period), df in ac_df.groupby(
+                ['loss_id', 'return_period']):
+            if period == 0:
+                del df['agg_id']
+                agg = df.groupby('loss_id').sum().to_numpy()  # shape L, Dc
+                avg = self.dmgcsq.sum(axis=0) * self.E * time_ratio  # L, Dc
+                numpy.testing.assert_allclose(
+                    agg[:, 1:], avg[:, 1:], rtol=1e-4)
+            else:
+                tot = sum(df[col].sum() for col in df.columns
+                          if col.startswith('dmg_'))
+                if tot > number:
+                    logging.error('For loss type %s, return_period=%d the '
+                                  'damaged buildings are %d > %d!',
+                                  self.oqparam.loss_names[loss_id],
+                                  period, tot, number)
 
     def post_execute(self, dummy):
         oq = self.oqparam
