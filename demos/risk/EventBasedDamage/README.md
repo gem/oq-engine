@@ -4,7 +4,9 @@ Stochastic Event-based Damage Demo
 This example computes average damage distributions, aggregate damage
 distributions and damages at a return period of 500 years for an event
 based damage calculation with 50 samples taken from 486 potential
-realizations. Moreover, by uncommenting the line
+realizations. There are 1047 buildings on 6 assets on 6 distinct sites.
+
+By uncommenting the line
 
 # sensitivity_analysis = {"random_seed": [100, 200, 300]}
 
