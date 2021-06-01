@@ -257,7 +257,8 @@ class DamageCalculator(EventBasedRiskCalculator):
             worst_dmgdist(df, agg_id, loss_id, wdd)
             tots = [df[col].sum() * time_ratio for col in columns]
             array = df.to_records()
-            array.sort(order=columns[D-2])  # sort by highest damage state
+            array.sort(order=list(reversed(columns[:D-1])))
+            # sort by dmg_4, dmg_3, dmg_2, dmg_1
             curves = [self.builder.build_curve(array[col], sort=False)
                       for col in columns]
             for p, period in enumerate(periods):
