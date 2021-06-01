@@ -24,6 +24,7 @@ from openquake.qa_tests_data.event_based_damage import (
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
+from openquake.calculators.extract import extract
 
 
 class EventBasedDamageTestCase(CalculatorTestCase):
@@ -121,3 +122,7 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         [f1, f2] = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(f1), f1, delta=1E-5)
         self.assertEqualFiles('expected/' + strip_calc_id(f2), f2, delta=1E-5)
+
+        # check extract
+        dic = vars(extract(self.calc.datastore, 'damages-rlzs'))
+        self.assertEqual(list(dic), ['rlz-000', '_extra'])

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
+from unittest.mock import Mock
 from functools import lru_cache
 import collections
 import logging
@@ -917,8 +918,11 @@ def build_damage_array(data, damage_dt):
 
 @extract.add('damages-rlzs')
 def extract_damages_npz(dstore, what):
+    oq = dstore['oqparam']
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
+    if oq.collect_rlzs:
+        rlzs = [Mock(ordinal=0)]
     data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
