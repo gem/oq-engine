@@ -485,9 +485,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 cname, tagname = byname.split('_by_')
-                func = scientific.consequence[cname]
                 cs = coeffs[asset[tagname]][loss_type]
-                csq[cname] = func(cs, asset, fractions[:, 1:], loss_type)
+                csq[cname] = scientific.consequence(
+                    cname, cs, asset, fractions[:, 1:], loss_type)
         return csq
 
     def init(self):
@@ -501,8 +501,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 kind='consequence').items():
             if dic:
                 dtlist = [(lt, F32) for lt, kind in dic]
-                coeffs = numpy.zeros(
-                    len(self.risklist.limit_states), dtlist)
+                coeffs = numpy.zeros(len(self.risklist.limit_states), dtlist)
                 for (lt, kind), cf in dic.items():
                     coeffs[lt] = cf
                 self.consdict['losses_by_taxonomy'][riskid] = coeffs

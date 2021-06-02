@@ -1390,19 +1390,19 @@ def make_epsilons(matrix, seed, correlation):
 
 # ####################### Consequences ##################################### #
 
-consequence = CallableDict()
-
-
-@consequence.add('losses')
-def economic_losses(coeffs, asset, dmgdist, loss_type):
+def consequence(cname, coeffs, asset, dmgdist, loss_type):
     """
+    :param cname: kind of consequence
     :param coeffs: coefficients per damage state
     :param asset: asset record
     :param dmgdist: an array of probabilies of shape (E, D - 1)
     :param loss_type: loss type string
     :returns: array of economic losses of length E
     """
-    return dmgdist @ coeffs * asset['value-' + loss_type]
+    if cname == 'losses':
+        return dmgdist @ coeffs * asset['value-' + loss_type]
+    else:
+        raise NotImplementedError('Consequence %s' % cname)
 
 
 if __name__ == '__main__':
