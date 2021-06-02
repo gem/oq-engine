@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
+from unittest.mock import Mock
 from functools import lru_cache
 import collections
 import logging
@@ -206,12 +207,17 @@ def extract_realizations(dstore, dummy):
     """
     Extract an array of realizations. Use it as /extract/realizations
     """
+    dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     oq = dstore['oqparam']
+    if oq.collect_rlzs:
+        arr = numpy.zeros(1, dt)
+        arr['weight'] = 1
+        arr['branch_path'] = '"one-effective-rlz"'
+        return arr
     scenario = 'scenario' in oq.calculation_mode
     rlzs = dstore['full_lt'].rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
-    dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     arr = numpy.zeros(len(rlzs), dt)
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
@@ -912,8 +918,11 @@ def build_damage_array(data, damage_dt):
 
 @extract.add('damages-rlzs')
 def extract_damages_npz(dstore, what):
+    oq = dstore['oqparam']
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
+    if oq.collect_rlzs:
+        rlzs = [Mock(ordinal=0)]
     data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
