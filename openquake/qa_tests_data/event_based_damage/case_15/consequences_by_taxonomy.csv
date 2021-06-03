@@ -1,4 +1,4 @@
-taxonomy,cname,loss_type,moderate,complete
+taxonomy,consequence,loss_type,moderate,complete
 Concrete,losses,structural,0.31,1
 Adobe,losses,structural,0.31,1
 Stone-Masonry,losses,structural,0.31,1

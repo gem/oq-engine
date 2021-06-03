@@ -1388,27 +1388,27 @@ def make_epsilons(matrix, seed, correlation):
 
 # ####################### Consequences ##################################### #
 
-def consequence(cname, coeffs, asset, dmgdist, loss_type):
+def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     """
-    :param cname: kind of consequence
+    :param consequence: kind of consequence
     :param coeffs: coefficients per damage state
     :param asset: asset record
     :param dmgdist: an array of probabilies of shape (E, D - 1)
     :param loss_type: loss type string
     :returns: array of economic losses of length E
     """
-    if cname == 'losses':
+    if consequence == 'losses':
         return dmgdist @ coeffs * asset['value-' + loss_type]
-    elif cname == 'collapsed':
+    elif consequence == 'collapsed':
         return dmgdist @ coeffs * asset['number']
-    elif cname == 'injured':
+    elif consequence == 'injured':
         return dmgdist @ coeffs * asset['occupants_night']
-    elif cname == 'fatalities':
+    elif consequence == 'fatalities':
         return dmgdist @ coeffs * asset['occupants_night']
-    elif cname == 'homeless':
+    elif consequence == 'homeless':
         return dmgdist @ coeffs * asset['occupants_night']
     else:
-        raise NotImplementedError('Consequence %s' % cname)
+        raise NotImplementedError('Consequence %s' % consequence)
 
 
 if __name__ == '__main__':
