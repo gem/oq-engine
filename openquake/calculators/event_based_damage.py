@@ -247,8 +247,8 @@ class DamageCalculator(EventBasedRiskCalculator):
         alt_df = self.datastore.read_df('risk_by_event')
         del alt_df['event_id']
         dic = general.AccumDict(accum=[])
-        columns = sorted(
-            set(alt_df.columns) - {'agg_id', 'loss_id', 'variance'})
+        columns = [col for col in alt_df.columns
+                   if col not in {'agg_id', 'loss_id', 'variance'}]
         periods = [0] + list(self.builder.return_periods)
         wdd = {'agg_id': [], 'loss_id': [], 'event_id': []}
         for col in columns[:D-1]:
