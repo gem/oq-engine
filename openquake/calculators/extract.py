@@ -74,6 +74,7 @@ def get_info(dstore):
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
+                limit_states=oq.limit_states,
                 tagnames=oq.aggregate_by)
 
 
@@ -676,6 +677,27 @@ def extract_tot_curves(dstore, what):
     return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
 
 
+@extract.add('dmg_curves')
+def extract_dmg_curves(dstore, what):
+    """
+    Aggregate damages curves from the event_based_damage calculator:
+
+    /extract/dmg_curves?agg_id=0&loss_type=occupants
+
+    Returns an ArrayWrapper of shape (P, D1) with attribute return_periods
+    """
+    info = get_info(dstore)
+    qdic = parse(what + '&kind=mean', info)
+    [li] = qdic['loss_type']  # loss type index
+    [agg_id] = qdic.get('agg_id', [0])
+    df = dstore.read_df('aggcurves', 'return_period',
+                        dict(agg_id=agg_id, loss_id=li))
+    cols = [col for col in df.columns if col.startswith('dmg_')]
+    return ArrayWrapper(df[cols].to_numpy(),
+                        dict(return_period=df.index.to_numpy(),
+                             limit_states=info['limit_states']))
+
+
 @extract.add('agg_curves')
 def extract_agg_curves(dstore, what):
     """
@@ -777,10 +799,10 @@ def extract_agg_damages(dstore, what):
         oq = dstore['oqparam']
         lti = oq.lti[loss_type]
         D = len(oq.limit_states) + 1
-        losses = dstore['damages-rlzs'][:, :, lti, :D]
+        damages = dstore['damages-rlzs'][:, :, lti, :D]
     else:
         raise KeyError('No damages found in %s' % dstore)
-    return _filter_agg(dstore['assetcol'], losses, tags)
+    return _filter_agg(dstore['assetcol'], damages, tags)
 
 
 @extract.add('aggregate')

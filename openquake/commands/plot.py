@@ -599,6 +599,33 @@ def make_figure_agg_curves(extractors, what):
     return plt
 
 
+def make_figure_dmg_curves(extractors, what):
+    """
+    $ oq plot "dmg_curves?agg_id=0&loss_type=structural" -1
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    got = {}  # (calc_id, limit_state) -> curve
+    for i, ex in enumerate(extractors):
+        aw = ex.get(what)
+        P, D1 = aw.shape
+        if P < 2:
+            raise RuntimeError('Not enough return periods: %d' % P)
+        for lsi, ls in enumerate(aw.limit_states):
+            got[ex.calc_id, ls] = aw[:, lsi]
+    oq = ex.oqparam
+    periods = aw.return_period
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('risk_inv_time=%dy' % oq.risk_investigation_time)
+    ax.set_ylabel('buildings')
+    for ck, arr in got.items():
+        ax.loglog(periods, arr, '-', label='%s_%s' % ck)
+        ax.loglog(periods, arr, '.')
+    ax.grid(True)
+    ax.legend()
+    return plt
+
+
 def make_figure_tot_curves(extractors, what):
     """
     $ oq plot "tot_curves?loss_type=structural&kind=rlz-000&absolute=1"
