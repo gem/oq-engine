@@ -1,3 +1,0 @@
-#,,,,,,"generated_by='OpenQuake engine 3.12.0-gitdba9da0060', start_date='2021-06-02T08:46:10', checksum=4270381458, risk_investigation_time=1.0, num_events=16904, effective_time=10000.0, limit_states='moderate complete'"
-number,nodamage,moderate,complete,fatalities,losses,loss_type
-1047,8.84327E+03,4.41208E+00,1.56412E+00,7.63365E+00,3.32473E+04,structural
