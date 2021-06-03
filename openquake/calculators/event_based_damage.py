@@ -255,7 +255,7 @@ class DamageCalculator(EventBasedRiskCalculator):
                 dic['loss_id'].append(loss_id)
                 dic['return_period'].append(period)
                 for col, curve in zip(columns, curves):
-                    dic[col].append(curve[p - 1])
+                    dic[col].append(curve[p])
         fix_dic(dic, columns)
         fix_dic(wdd, columns[:D-1])
         ls = ' '.join(self.crmodel.damage_states[1:])
