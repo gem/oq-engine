@@ -1,4 +1,4 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.12.0-git8f4408bfaa', start_date='2021-06-01T10:47:00', checksum=3590982611, risk_investigation_time=1.0, num_events=481, effective_time=500.0, limit_states='slight moderate extreme complete'"
+#,,,,,,,"generated_by='OpenQuake engine 3.12.0-gitf4c877b62e', start_date='2021-06-03T08:17:38', checksum=3590982611, risk_investigation_time=1.0, num_events=481, effective_time=500.0, limit_states='slight moderate extreme complete'"
 return_period,slight,moderate,extreme,complete,losses,NAME_1,loss_type
 2,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,Mid-Western,structural
 5,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,Mid-Western,structural

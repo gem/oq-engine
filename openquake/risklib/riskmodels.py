@@ -485,24 +485,23 @@ class CompositeRiskModel(collections.abc.Mapping):
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 cname, tagname = byname.split('_by_')
-                func = scientific.consequence[cname]
                 cs = coeffs[asset[tagname]][loss_type]
-                csq[cname] = func(cs, asset, fractions[:, 1:], loss_type)
+                csq[cname] = scientific.consequence(
+                    cname, cs, asset, fractions[:, 1:], loss_type)
         return csq
 
     def init(self):
         oq = self.oqparam
         if self.risklist:
             oq.set_risk_imts(self.risklist)
-        # extract the consequences from the risk models, if any
+        # LEGACY: extract the consequences from the risk models, if any
         if 'losses_by_taxonomy' not in self.consdict:
             self.consdict['losses_by_taxonomy'] = {}
         for riskid, dic in self.risklist.groupby_id(
                 kind='consequence').items():
             if dic:
                 dtlist = [(lt, F32) for lt, kind in dic]
-                coeffs = numpy.zeros(
-                    len(self.risklist.limit_states), dtlist)
+                coeffs = numpy.zeros(len(self.risklist.limit_states), dtlist)
                 for (lt, kind), cf in dic.items():
                     coeffs[lt] = cf
                 self.consdict['losses_by_taxonomy'][riskid] = coeffs

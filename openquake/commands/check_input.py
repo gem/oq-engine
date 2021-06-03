@@ -20,7 +20,7 @@ import sys
 import logging
 from unittest import mock
 from openquake.risklib.asset import Exposure
-from openquake.commonlib import readinput, logs
+from openquake.commonlib import logs
 from openquake.calculators import base
 from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml  # this is necessary

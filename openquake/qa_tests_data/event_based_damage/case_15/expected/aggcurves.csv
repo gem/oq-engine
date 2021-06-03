@@ -1,3 +1,3 @@
-#,,,,"generated_by='OpenQuake engine 3.12.0-git8f4408bfaa', start_date='2021-06-01T10:47:12', checksum=4270381458, risk_investigation_time=1.0, num_events=16904, effective_time=10000.0, limit_states='moderate complete'"
-return_period,moderate,complete,losses,loss_type
-500,2.81074E+01,1.10558E+02,1.35253E+06,structural
+#,,,,,"generated_by='OpenQuake engine 3.12.0-gitf4c877b62e', start_date='2021-06-03T08:17:47', checksum=4270381458, risk_investigation_time=1.0, num_events=16904, effective_time=10000.0, limit_states='moderate complete'"
+return_period,moderate,complete,fatalities,losses,loss_type
+500,2.81074E+01,1.10558E+02,5.39553E+02,1.35253E+06,structural

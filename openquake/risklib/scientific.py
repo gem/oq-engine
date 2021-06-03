@@ -30,8 +30,6 @@ import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
 
-from openquake.baselib.general import CallableDict
-
 F64 = numpy.float64
 F32 = numpy.float32
 U32 = numpy.uint32
@@ -1394,19 +1392,27 @@ def make_epsilons(matrix, seed, correlation):
 
 # ####################### Consequences ##################################### #
 
-consequence = CallableDict()
-
-
-@consequence.add('losses')
-def economic_losses(coeffs, asset, dmgdist, loss_type):
+def consequence(cname, coeffs, asset, dmgdist, loss_type):
     """
+    :param cname: kind of consequence
     :param coeffs: coefficients per damage state
     :param asset: asset record
     :param dmgdist: an array of probabilies of shape (E, D - 1)
     :param loss_type: loss type string
     :returns: array of economic losses of length E
     """
-    return dmgdist @ coeffs * asset['value-' + loss_type]
+    if cname == 'losses':
+        return dmgdist @ coeffs * asset['value-' + loss_type]
+    elif cname == 'collapsed':
+        return dmgdist @ coeffs * asset['number']
+    elif cname == 'injured':
+        return dmgdist @ coeffs * asset['occupants_night']
+    elif cname == 'fatalities':
+        return dmgdist @ coeffs * asset['occupants_night']
+    elif cname == 'homeless':
+        return dmgdist @ coeffs * asset['occupants_night']
+    else:
+        raise NotImplementedError('Consequence %s' % cname)
 
 
 if __name__ == '__main__':

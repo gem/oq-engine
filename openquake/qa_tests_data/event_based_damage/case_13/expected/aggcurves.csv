@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.12.0-git8f4408bfaa', start_date='2021-06-01T10:46:59', checksum=3590982611, risk_investigation_time=50.0, num_events=42, effective_time=1000.0, limit_states='LS1 LS2'"
+#,,,,"generated_by='OpenQuake engine 3.12.0-git085a08ffa2', start_date='2021-06-03T07:55:49', checksum=3590982611, risk_investigation_time=50.0, num_events=42, effective_time=1000.0, limit_states='LS1 LS2'"
 return_period,LS1,LS2,losses,loss_type
 50,2.46952E+02,2.50282E+01,1.29094E+04,structural
 100,2.12452E+02,1.94534E+02,1.58494E+02,structural
