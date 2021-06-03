@@ -165,7 +165,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         """
 
     def execute(self):
-        """df[cols[-1]]
+        """
         Compute risk from GMFs or ruptures depending on what is stored
         """
         self.builder = get_loss_builder(self.datastore)  # check
