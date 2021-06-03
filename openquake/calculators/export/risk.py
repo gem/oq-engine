@@ -556,8 +556,7 @@ def export_aggcurves_csv(ekey, dstore):
         df[tagname] = tags[df.agg_id]
     df['loss_type'] = lossnames[df.loss_id.to_numpy()]
     del df['loss_id']
-    dest1 = dstore.export_path('%s.%s' % ekey)
-    dest2 = dstore.export_path('dmgcsq.%s' % ekey[1])
+    dest = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
     md['risk_investigation_time'] = (oq.risk_investigation_time or
@@ -568,18 +567,7 @@ def export_aggcurves_csv(ekey, dstore):
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
     dmg_states = ['nodamage'] + md['limit_states'].split()
 
-    # aggregate damages/consequences
-    dmgcsq = df[df.return_period == 0].set_index('agg_id')  # length K+1
-    agg_number = dstore['agg_number'][dmgcsq.index.to_numpy()]
-    dmgs = [col for col in df.columns if col.startswith('dmg_')]
-    dmg0 = agg_number * E * oq.time_ratio - dmgcsq[dmgs].to_numpy().sum(axis=1)
-    dmgcsq.insert(0, 'dmg_0', dmg0)
-    dmgcsq.insert(0, 'number', agg_number)
-    del dmgcsq['return_period']
-    writer.save(rename(dmgcsq, dmg_states), dest2, comment=md)
-
     # aggcurves
     del df['agg_id']
-    writer.save(rename(df[df.return_period > 0], dmg_states),
-                dest1, comment=md)
-    return [dest1, dest2]
+    writer.save(rename(df, dmg_states), dest, comment=md)
+    return [dest]

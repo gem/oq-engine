@@ -198,7 +198,7 @@ class DamageCalculator(EventBasedRiskCalculator):
                 hdf5.extend(dset, df[name].to_numpy())
         return 1
 
-    def sanity_check(self, time_ratio):
+    def sanity_check(self):
         """
         Compare agglosses with aggregate avglosses and check that
         damaged buildings < total buildings
@@ -208,24 +208,16 @@ class DamageCalculator(EventBasedRiskCalculator):
         number = self.assetcol['number'].sum()
         for (loss_id, period), df in ac_df.groupby(
                 ['loss_id', 'return_period']):
-            if period == 0:
-                del df['agg_id']
-                agg = df.sum().to_numpy()[2:]  # shape Dc
-                avg = self.dmgcsq[:, loss_id, 1:].sum(axis=0) * (
-                    self.E * time_ratio)  # shape Dc
-                numpy.testing.assert_allclose(agg, avg, rtol=1e-4)
-            else:
-                tot = sum(df[col].sum() for col in df.columns
-                          if col.startswith('dmg_'))
-                if tot > number:
-                    logging.error('For loss type %s, return_period=%d the '
-                                  'damaged buildings are %d > %d!',
-                                  self.oqparam.loss_names[loss_id],
-                                  period, tot, number)
+            tot = sum(df[col].sum() for col in df.columns
+                      if col.startswith('dmg_'))
+            if tot > number:
+                logging.error('For loss type %s, return_period=%d the '
+                              'damaged buildings are %d > %d!',
+                              self.oqparam.loss_names[loss_id],
+                              period, tot, number)
 
     def post_execute(self, dummy):
         oq = self.oqparam
-        time_ratio = oq.time_ratio / len(self.datastore['weights'])
         A, L, Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
         # fix no_damage distribution for events with zero damage
@@ -249,29 +241,24 @@ class DamageCalculator(EventBasedRiskCalculator):
         dic = general.AccumDict(accum=[])
         columns = [col for col in alt_df.columns
                    if col not in {'agg_id', 'loss_id', 'variance'}]
-        periods = [0] + list(self.builder.return_periods)
+        periods = list(self.builder.return_periods)
         wdd = {'agg_id': [], 'loss_id': [], 'event_id': []}
         for col in columns[:D-1]:
             wdd[col] = []
         for (agg_id, loss_id), df in alt_df.groupby(
                 [alt_df.agg_id, alt_df.loss_id]):
             worst_dmgdist(df, agg_id, loss_id, wdd)
-            tots = [df[col].sum() * time_ratio for col in columns]
             curves = [self.builder.build_curve(df[col].to_numpy())
                       for col in columns]
             for p, period in enumerate(periods):
                 dic['agg_id'].append(agg_id)
                 dic['loss_id'].append(loss_id)
                 dic['return_period'].append(period)
-                if p == 0:
-                    for col, tot in zip(columns, tots):
-                        dic[col].append(tot)
-                else:
-                    for col, curve in zip(columns, curves):
-                        dic[col].append(curve[p - 1])
+                for col, curve in zip(columns, curves):
+                    dic[col].append(curve[p])
         fix_dic(dic, columns)
         fix_dic(wdd, columns[:D-1])
         ls = ' '.join(self.crmodel.damage_states[1:])
         self.datastore.create_df('worst_dmgdist', wdd.items(), limit_states=ls)
         self.datastore.create_df('aggcurves', dic.items(), limit_states=ls)
-        self.sanity_check(time_ratio)
+        self.sanity_check()
