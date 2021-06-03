@@ -742,7 +742,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             dic = {}
             for ln, ratio_df in ratios.items():
                 min_loss = minimum_asset_loss[ln]
-                dic = dict(eid=[], aid=[], loss=[], variance=[])
+                d = dict(eid=[], aid=[], loss=[], variance=[])
                 n_oks = 0
                 for sid, adf in assets_by_sid:
                     r = ratio_df[ratio_df.index == sid]
@@ -756,16 +756,16 @@ class CompositeRiskModel(collections.abc.Mapping):
                         ok = losses > min_loss
                         n_ok = ok.sum()
                         if n_ok:
-                            dic['eid'].append(eids[ok])
-                            dic['aid'].append(numpy.ones(n_ok, U32) * aid)
-                            dic['loss'].append(losses[ok])
-                            dic['variance'].append((losses[ok] * covs[ok])**2)
+                            d['eid'].append(eids[ok])
+                            d['aid'].append(numpy.ones(n_ok, U32) * aid)
+                            d['loss'].append(losses[ok])
+                            d['variance'].append((losses[ok] * covs[ok])**2)
                             n_oks += n_ok
                 if n_oks == 0:
                     continue
-                for key, vals in dic.items():
-                    dic[key] = numpy.concatenate(vals)
-                dic[ln] = pandas.DataFrame(dic)
+                for key, vals in d.items():
+                    d[key] = numpy.concatenate(vals)
+                dic[ln] = pandas.DataFrame(d)
             yield dic
 
     def get_interp_ratios(self, taxo, gmf_df):
