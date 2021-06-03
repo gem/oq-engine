@@ -480,14 +480,14 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param loss_type: loss type as a string
         :returns: a dict consequence_name -> array of length E
         """
-        csq = {}  # cname -> values per event
+        csq = {}  # consequence -> values per event
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
-                cname, tagname = byname.split('_by_')
+                consequence, tagname = byname.split('_by_')
                 cs = coeffs[asset[tagname]][loss_type]
-                csq[cname] = scientific.consequence(
-                    cname, cs, asset, fractions[:, 1:], loss_type)
+                csq[consequence] = scientific.consequence(
+                    consequence, cs, asset, fractions[:, 1:], loss_type)
         return csq
 
     def init(self):
@@ -592,15 +592,15 @@ class CompositeRiskModel(collections.abc.Mapping):
     def reduce_cons_model(self, tagcol):
         """
         Convert the dictionaries tag -> coeffs in the consequence model
-        into dictionaries tag index -> coeffs (one per cname)
+        into dictionaries tag index -> coeffs (one per consequence)
         """
-        for cname_by_tagname, dic in self.consdict.items():
+        for consequence_by_tagname, dic in self.consdict.items():
             # for instance losses_by_taxonomy
-            cname, tagname = cname_by_tagname.split('_by_')
+            consequence, tagname = consequence_by_tagname.split('_by_')
             tagidx = tagcol.get_tagidx(tagname)
             newdic = {tagidx[tag]: cf for tag, cf in dic.items()
                       if tag in tagidx}  # tag in the exposure
-            self.consdict[cname_by_tagname] = newdic
+            self.consdict[consequence_by_tagname] = newdic
 
     @cached_property
     def taxonomy_dict(self):
@@ -616,9 +616,9 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: the list of available consequences
         """
         csq = []
-        for cname_by_tagname, arr in self.consdict.items():
+        for consequence_by_tagname, arr in self.consdict.items():
             if len(arr):
-                csq.append(cname_by_tagname.split('_by_')[0])
+                csq.append(consequence_by_tagname.split('_by_')[0])
         return csq
 
     def get_dmg_csq(self):

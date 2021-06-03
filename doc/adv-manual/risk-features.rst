@@ -88,7 +88,7 @@ coefficients depends on the taxonomy and the consequence model can be
 represented as a CSV file like the following:
 
 ===================	========	============	========	==========	===========	==========	
- taxonomy          	 cname  	 loss_type  	 slight 	 moderate 	 extensive 	 complete 	
+ taxonomy          	 consequence  	 loss_type  	 slight 	 moderate 	 extensive 	 complete 	
 -------------------	--------	------------	--------	----------	-----------	----------	
  CR_LFINF-DUH_H2   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
  CR_LFINF-DUH_H4   	 losses 	 structural 	 0.05   	 0.25     	 0.6       	 1        	
@@ -109,17 +109,10 @@ The framework is meant to be used for generic consequences,
 not necessarily limited to earthquakes, because since version 3.6 the engine
 provides a multi-hazard risk calculator.
 
-The second field of the header, the ``cname``, is a string identifying
-the kind of consequence we are considering. It is important because it
-is associated to the name of the plugin function to use to compute the
-consequence; right now (engine 3.8) we only support
-``cname="losses"``, but this will change in the future. The `cname` is
-also used when saving the consequence outputs in the datastore; right
-now we are storing only ``losses_by_event`` and ``losses_by_asset``
-but additional outputs  ``<cname>_by_event`` and ``<cname>_by_asset``
-will be stored in the future, should the CSV file contain references
-to additional plugin functions. For instance we could have outputs
-``fatalities_by_event`` and ``fatalities_by_asset``.
+The second field of the header, the ``consequence``, is a string
+identifying the kind of consequence we are considering. It is
+important because it is associated to the name of the plugin function
+to use to compute the consequence.
 
 The other fields in the header are the loss_type and the damage states.
 For instance the coefficient 0.25 for "moderate" means that the cost to
