@@ -211,10 +211,10 @@ class DamageCalculator(EventBasedRiskCalculator):
             tot = sum(df[col].sum() for col in df.columns
                       if col.startswith('dmg_'))
             if tot > number:
-                logging.error('For loss type %s, return_period=%d the '
-                              'damaged buildings are %d > %d!',
-                              self.oqparam.loss_names[loss_id],
-                              period, tot, number)
+                logging.info('For loss type %s, return_period=%d the '
+                             'damaged buildings are %d > %d, but it is okay',
+                             self.oqparam.loss_names[loss_id],
+                             period, tot, number)
 
     def post_execute(self, dummy):
         oq = self.oqparam
