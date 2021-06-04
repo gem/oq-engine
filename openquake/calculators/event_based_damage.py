@@ -23,7 +23,7 @@ import pandas
 from openquake.baselib import hdf5, general, parallel
 from openquake.hazardlib.stats import set_rlzs_stats
 from openquake.commonlib import datastore
-from openquake.calculators import base
+from openquake.calculators import base, scenario_damage
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 from openquake.calculators.post_risk import get_loss_builder
 
@@ -111,6 +111,13 @@ def event_based_damage(df, param, monitor):
                     ddd = numpy.zeros((Asid, E, Dc), F32)
                     ddd[:, :, :D] = fractions
                     for a, asset in enumerate(adf.to_records()):
+                        # NB: uncomment the lines below to see the performance
+                        # disaster of scenario_damage.bin_ddd; for instance
+                        # the Messina tests in oq-risk-tests becomes 10x
+                        # slower even if it has only 25_736 assets:
+                        # scenario_damage.bin_ddd(
+                        #     fractions[a], asset['number'],
+                        #     param['master_seed'] + a)
                         ddd[a] *= asset['number']
                         csq = crmodel.compute_csq(asset, fractions[a], lt)
                         for name, values in csq.items():
