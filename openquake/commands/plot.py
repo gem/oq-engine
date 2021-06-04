@@ -599,27 +599,28 @@ def make_figure_agg_curves(extractors, what):
     return plt
 
 
-def make_figure_dmg_curves(extractors, what):
+def make_figure_csq_curves(extractors, what):
     """
-    $ oq plot "dmg_curves?agg_id=0&loss_type=structural" -1
+    $ oq plot "csq_curves?agg_id=0&loss_type=structural&consequence=losses" -1
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
     got = {}  # (calc_id, limit_state) -> curve
     for i, ex in enumerate(extractors):
         aw = ex.get(what)
-        P, D1 = aw.shape
+        P, C = aw.shape
         if P < 2:
             raise RuntimeError('Not enough return periods: %d' % P)
-        for lsi, ls in enumerate(aw.limit_states):
-            got[ex.calc_id, ls] = aw[:, lsi]
+        for c, csq in enumerate(aw.consequences):
+            if csq in what:
+                got[ex.calc_id, csq] = aw[:, c]
     oq = ex.oqparam
     periods = aw.return_period
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlabel('risk_inv_time=%dy' % oq.risk_investigation_time)
-    ax.set_ylabel('buildings')
+    ax.set_ylabel(csq)
     for ck, arr in got.items():
-        ax.loglog(periods, arr, '-', label='%s_%s' % ck)
+        ax.loglog(periods, arr, '-', label=ck[0])
         ax.loglog(periods, arr, '.')
     ax.grid(True)
     ax.legend()

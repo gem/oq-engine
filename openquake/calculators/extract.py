@@ -677,12 +677,12 @@ def extract_tot_curves(dstore, what):
     return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
 
 
-@extract.add('dmg_curves')
-def extract_dmg_curves(dstore, what):
+@extract.add('csq_curves')
+def extract_csq_curves(dstore, what):
     """
     Aggregate damages curves from the event_based_damage calculator:
 
-    /extract/dmg_curves?agg_id=0&loss_type=occupants
+    /extract/csq_curves?agg_id=0&loss_type=occupants
 
     Returns an ArrayWrapper of shape (P, D1) with attribute return_periods
     """
@@ -692,10 +692,10 @@ def extract_dmg_curves(dstore, what):
     [agg_id] = qdic.get('agg_id', [0])
     df = dstore.read_df('aggcurves', 'return_period',
                         dict(agg_id=agg_id, loss_id=li))
-    cols = [col for col in df.columns if col.startswith('dmg_')]
+    cols = [col for col in df.columns if col not in 'agg_id loss_id']
     return ArrayWrapper(df[cols].to_numpy(),
                         dict(return_period=df.index.to_numpy(),
-                             limit_states=info['limit_states']))
+                             consequences=cols))
 
 
 @extract.add('agg_curves')
