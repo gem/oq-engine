@@ -113,7 +113,7 @@ def event_based_damage(df, param, monitor):
                     for a, asset in enumerate(adf.to_records()):
                         # NB: uncomment the lines below to see the performance
                         # disaster of scenario_damage.bin_ddd; for instance
-                        # the Messina tests in oq-risk-tests becomes 10x
+                        # the Messina test in oq-risk-tests becomes 10x
                         # slower even if it has only 25_736 assets:
                         # scenario_damage.bin_ddd(
                         #     fractions[a], asset['number'],
