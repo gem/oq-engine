@@ -50,7 +50,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
-from openquake.risklib import asset, riskmodels
+from openquake.risklib import asset, riskmodels, scientific
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
@@ -884,6 +884,9 @@ def get_crmodel(oqparam):
             dic = group_array(
                 hdf5.read_csv(fname, dtypedict).array, 'consequence')
             for consequence, group in dic.items():
+                if consequence not in scientific.KNOWN_CONSEQUENCES:
+                    raise InvalidFile('Unknown consequence %s in %s' %
+                                      (consequence, fname))
                 bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
                          for tag, grp in group_array(group, by).items()}
                 consdict['%s_by_%s' % (consequence, by)] = bytag

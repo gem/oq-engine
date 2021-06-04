@@ -35,6 +35,7 @@ F32 = numpy.float32
 U32 = numpy.uint32
 U16 = numpy.uint16
 U8 = numpy.uint8
+KNOWN_CONSEQUENCES = 'losses collapsed injured fatalities homeless'
 
 
 def pairwise(iterable):
@@ -762,7 +763,10 @@ class MultiEventRNG(object):
         self.asset_correlation = asset_correlation
         self.rng = {}
         for eid in eids:
-            ph = numpy.random.Philox(self.master_seed + eid)
+            # NB: int below is necessary for totally mysterious reasons:
+            # a calculation on cluster1 #41904 failed with a floating
+            # point seed, but I cannot reproduce the issue
+            ph = numpy.random.Philox(int(self.master_seed + eid))
             self.rng[eid] = numpy.random.Generator(ph)
 
     def _get_eps(self, eid, corrcache):
@@ -1395,9 +1399,11 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     :param asset: asset record
     :param dmgdist: an array of probabilies of shape (E, D - 1)
     :param loss_type: loss type string
-    :returns: array of economic losses of length E
+    :returns: array of shape E
     """
-    if consequence == 'losses':
+    if consequence not in KNOWN_CONSEQUENCES:
+        raise NotImplementedError(consequence)
+    elif consequence == 'losses':
         return dmgdist @ coeffs * asset['value-' + loss_type]
     elif consequence == 'collapsed':
         return dmgdist @ coeffs * asset['number']
@@ -1407,8 +1413,6 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
         return dmgdist @ coeffs * asset['occupants_night']
     elif consequence == 'homeless':
         return dmgdist @ coeffs * asset['occupants_night']
-    else:
-        raise NotImplementedError('Consequence %s' % consequence)
 
 
 if __name__ == '__main__':
