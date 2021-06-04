@@ -763,7 +763,10 @@ class MultiEventRNG(object):
         self.asset_correlation = asset_correlation
         self.rng = {}
         for eid in eids:
-            ph = numpy.random.Philox(self.master_seed + eid)
+            # NB: int below is necessary for totally mysterious reasons:
+            # a calculation on cluster1 #41904 failed with a floating
+            # point seed, but I cannot reproduce the issue
+            ph = numpy.random.Philox(int(self.master_seed + eid))
             self.rng[eid] = numpy.random.Generator(ph)
 
     def _get_eps(self, eid, corrcache):
