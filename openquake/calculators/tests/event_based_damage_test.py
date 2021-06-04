@@ -35,11 +35,12 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         for col in df.columns:
             df[col] = numpy.around(df[col])
         self.assertEqualFiles('expected/' + f1, gettemp(str(df)))
-        df = self.calc.datastore.read_df(
-            'aggcurves', ['agg_id', 'loss_id']).sort_index()
-        for col in df.columns:
-            df[col] = numpy.around(df[col])
-        self.assertEqualFiles('expected/' + f2, gettemp(str(df)))
+        if 'aggcurves' in self.calc.datastore:
+            df = self.calc.datastore.read_df(
+                'aggcurves', ['agg_id', 'loss_id']).sort_index()
+            for col in df.columns:
+                df[col] = numpy.around(df[col])
+            self.assertEqualFiles('expected/' + f2, gettemp(str(df)))
 
     def test_case_11(self):
         # test with double aggregate_by by Catalina
