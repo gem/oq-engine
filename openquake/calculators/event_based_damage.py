@@ -241,6 +241,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         dic = general.AccumDict(accum=[])
         columns = [col for col in alt_df.columns
                    if col not in {'agg_id', 'loss_id', 'variance'}]
+        csqs = [col for col in columns if not col.startswith('dmg_')]
         periods = list(self.builder.return_periods)
         wdd = {'agg_id': [], 'loss_id': [], 'event_id': []}
         for col in columns[:D-1]:
@@ -248,17 +249,18 @@ class DamageCalculator(EventBasedRiskCalculator):
         for (agg_id, loss_id), df in alt_df.groupby(
                 [alt_df.agg_id, alt_df.loss_id]):
             worst_dmgdist(df, agg_id, loss_id, wdd)
-            curves = [self.builder.build_curve(df[col].to_numpy())
-                      for col in columns]
+            curves = [self.builder.build_curve(df[csq].to_numpy())
+                      for csq in csqs]
             for p, period in enumerate(periods):
                 dic['agg_id'].append(agg_id)
                 dic['loss_id'].append(loss_id)
                 dic['return_period'].append(period)
-                for col, curve in zip(columns, curves):
+                for col, curve in zip(csqs, curves):
                     dic[col].append(curve[p])
-        fix_dic(dic, columns)
+        fix_dic(dic, csqs)
         fix_dic(wdd, columns[:D-1])
         ls = ' '.join(self.crmodel.damage_states[1:])
         self.datastore.create_df('worst_dmgdist', wdd.items(), limit_states=ls)
-        self.datastore.create_df('aggcurves', dic.items(), limit_states=ls)
-        self.sanity_check()
+        if csqs:
+            self.datastore.create_df('aggcurves', dic.items(), limit_states=ls)
+            self.sanity_check()

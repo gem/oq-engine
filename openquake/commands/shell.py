@@ -90,6 +90,18 @@ class OpenQuake(object):
             f.write(data)
         print('Converted %s: WARNING: it may still be wrong' % fname)
 
+    def poe2period(self, poe):
+        """
+        Converts probabilities into return periods
+        """
+        return -1/numpy.log(1-poe)
+
+    def period2poe(self, t):
+        """
+        Converts return periods into probabilities
+        """
+        return 1-numpy.exp(-1/t)
+
 
 def main(script=None, args=()):
     """
