@@ -972,7 +972,7 @@ class Exposure(object):
         floatfields = set()
         strfields = self.tagcol.tagnames + self.occupancy_periods.split()
         for fname in self.datafiles:
-            with open(fname, encoding='utf-8-sig') as f:
+            with open(fname, encoding='utf-8-sig', errors='ignore') as f:
                 try:
                     fields = next(csv.reader(f))
                 except UnicodeDecodeError:

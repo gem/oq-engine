@@ -826,7 +826,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
-    with open(fname, encoding='utf-8-sig') as f:
+    with open(fname, encoding='utf-8-sig', errors='ignore') as f:
         while True:
             first = next(f)
             if first.startswith('#'):
