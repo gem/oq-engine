@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended the damage calculators to generic consequences
   * Renamed cname -> consequence in the CSV input files
   * Made sure the CSV writer writes in UTF-8
 
