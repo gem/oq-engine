@@ -52,6 +52,19 @@ def bin_ddd(fractions, n, seed):
     return ddd
 
 
+def bin_ddd2(fractions, n, rng):
+    """
+    Converting fractions into discrete damage distributions using bincount
+    """
+    n = int(n)
+    ED = fractions.shape  # shape (E, D)
+    csum = fractions.cumsum(axis=1).flatten()
+    idxs = numpy.searchsorted(csum, rng.random(n))
+    arr = numpy.bincount(idxs, minlength=ED[1]).reshape(ED)
+    print(arr)
+    return arr
+
+
 def run_sec_sims(damages, haz, sec_sims, seed):
     """
     :param damages: array of shape (E, D) for a given asset
@@ -100,6 +113,7 @@ def scenario_damage(riskinputs, param, monitor):
     acc = []  # (aid, eid, lid, ds...)
     sec_sims = param['secondary_simulations'].items()
     mon = monitor('getting hazard', measuremem=False)
+    rng = numpy.random.default_rng(param['master_seed'])
     for ri in riskinputs:
         with mon:
             df = ri.hazard_getter.get_hazard()
@@ -123,8 +137,8 @@ def scenario_damage(riskinputs, param, monitor):
                                 run_sec_sims(
                                     damages, gmf_df, sec_sims, seed + aid)
                         else:
-                            damages = bin_ddd(
-                                fractions, asset['number'], seed + aid)
+                            damages = bin_ddd2(
+                                fractions, asset['number'], rng)
                         # damages has shape E', D with E' == len(eids)
                         csq = crmodel.compute_csq(asset, fractions, loss_type)
                         for e, ddd in enumerate(damages):
