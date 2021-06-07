@@ -2,8 +2,8 @@ The problem
 --------------------------
 
 As it is well known, the main road to scientific programming in Python
-is numpy-oriented programming. The recipe is simple: DOT NOT USE
-PYTHON CLASSES, USE NUMPY ARRAYS EVERYWHERE.
+is numpy-oriented programming. The recipe is simple: **dot not use
+python classes, use numpy arrays everywhere**.
 
 Unfortunaly hazardlib was designed over 10 years ago as a
 class-oriented library, full of complex hierarchies with plenty of
@@ -58,10 +58,7 @@ instance now we have `Context` objects which are closer to numpy
 arrays than `Rupture` objects. However, we are at the very beginning,
 and very far for the ideal goal.
 
-To be clear, the ideal goal would be to
-
-**remove completely all class hierarchies, turn all methods into functions
-taking in input only numpy arrays or simple types**
+To be clear, the ideal goal would be to **remove completely all class hierarchies, turn all methods into functions taking in input only numpy arrays or simple types**.
 
 The ideal goal is out of reach (by far), so we will have to comprimise
 significantly; moreover, since we have hundreds of users of hazardlib,
