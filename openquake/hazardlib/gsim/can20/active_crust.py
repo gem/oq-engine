@@ -29,6 +29,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
     CampbellBozorgnia2014)
+from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 
 METRES_PER_KM = 1000.
 
@@ -230,3 +231,78 @@ class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
         CB14_vs[vs30 >= 1100] = F + CB14_760
 
         return CB14_vs
+
+
+class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
+    """
+    Abrahamson et al., 2014 with CanadaSHM6 modifications to amplification
+    factors for vs30 > 1100 and the removal of the basin term (i.e., returns
+    mean values on the GMM-centered z1pt0 value).
+
+    Please also see the information in the header.
+    """
+    REQUIRES_SITES_PARAMETERS = {'vs30measured', 'vs30'}
+    experimental = True
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+
+        CanadaSHM6 edits: modified linear site term for Vs30 > 1100
+                          removed basin term
+        """
+
+        sites.vs30 = sites.vs30.astype(float)  # bug in ASK14 if vs30 is int?
+
+        # get the necessary set of coefficients
+        C = self.COEFFS[imt]
+        # compute median sa on rock (vs30=1180m/s). Used for site response
+        # term calculation
+        sa1180 = np.exp(self._get_sa_at_1180(C, imt, sites, rup, dists))
+
+        # get the mean value
+        mean = (self._get_basic_term(C, rup, dists) +
+                self._get_faulting_style_term(C, rup) +
+                self._get_site_response_term_CanadaSHM6(C, imt, sites.vs30,
+                                                        sa1180) +
+                self._get_hanging_wall_term(C, dists, rup) +
+                self._get_top_of_rupture_depth_term(C, imt, rup)
+                )
+        mean += self._get_regional_term(C, imt, sites.vs30, dists.rrup)
+        # get standard deviations
+        stddevs = self._get_stddevs(C, imt, rup, sites, stddev_types, sa1180,
+                                    dists)
+        return mean, stddevs
+
+    def _get_site_response_term_CanadaSHM6(self, C, imt, vs30, sa1180):
+        """
+        CanadaSHM6 edits: modified linear site term for Vs30 > 1100
+        """
+        # Native site factor for ASK14
+        ASK14_vs = self._get_site_response_term(C, imt, vs30, sa1180)
+
+        # Need site factors at Vs30 = 760, 1100 and 2000 to calculate
+        # CanadaSHM6 hard rock site factors
+        ASK14_1100 = self._get_site_response_term(C, imt, np.array([1100.]),
+                                                  np.array([0.]))
+        ASK14_760 = self._get_site_response_term(C, imt, np.array([760.]),
+                                                 np.array([0.]))
+        ASK14_2000 = self._get_site_response_term(C, imt, np.array([2000.]),
+                                                  np.array([0.]))
+
+        # ASK14 amplification factors relative to Vs30=760 to be consistent
+        # with CanadaSHM6 hardrock site factor
+        ASK14_1100div760 = ASK14_1100[0] - ASK14_760[0]
+        ASK14_2000div760 = ASK14_2000[0] - ASK14_760[0]
+
+        # CanadaSHM6 hard rock site factor
+        F = CanadaSHM6_hardrock_site_factor(ASK14_1100div760,
+                                            ASK14_2000div760,
+                                            vs30[vs30 >= 1100.], imt)
+
+        # for Vs30 > 1100 add ASK14 amplification at 760 and CanadaSHM6 factor
+        ASK14_vs[vs30 >= 1100.] = F + ASK14_760
+
+        return ASK14_vs
