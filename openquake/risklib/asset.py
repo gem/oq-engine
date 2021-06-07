@@ -855,7 +855,7 @@ class Exposure(object):
     @staticmethod
     def read(fnames, calculation_mode='', region_constraint='',
              ignore_missing_costs=(), check_dupl=True,
-             tagcol=None, by_country=False):
+             tagcol=None, by_country=False, errors=None):
         """
         Call `Exposure.read(fnames)` to get an :class:`Exposure` instance
         keeping all the assets in memory.
@@ -875,7 +875,8 @@ class Exposure(object):
             else:
                 prefix = ''
             allargs.append((fname, calculation_mode, region_constraint,
-                            ignore_missing_costs, check_dupl, prefix, tagcol))
+                            ignore_missing_costs, check_dupl, prefix,
+                            tagcol, errors))
         exp = None
         for exposure in itertools.starmap(Exposure.read_exp, allargs):
             if exp is None:  # first time
@@ -898,7 +899,7 @@ class Exposure(object):
     @staticmethod
     def read_exp(fname, calculation_mode='', region_constraint='',
                  ignore_missing_costs=(), check_dupl=True,
-                 asset_prefix='', tagcol=None, monitor=None):
+                 asset_prefix='', tagcol=None, errors=None, monitor=None):
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
         param['asset_prefix'] = asset_prefix
@@ -918,7 +919,7 @@ class Exposure(object):
                 exposure.retrofitted or calculation_mode == 'classical_bcr',
                 ignore_missing_costs)
         else:
-            array = exposure._read_csv()
+            array = exposure._read_csv(errors)
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
             ['occupants'])
         exposure._populate_from(array, param, check_dupl)
@@ -964,7 +965,7 @@ class Exposure(object):
                               (wrong, self.datafiles))
         return sorted(set(fields))
 
-    def _read_csv(self):
+    def _read_csv(self, errors=None):
         """
         :yields: asset nodes
         """
@@ -972,12 +973,13 @@ class Exposure(object):
         floatfields = set()
         strfields = self.tagcol.tagnames + self.occupancy_periods.split()
         for fname in self.datafiles:
-            with open(fname, encoding='utf-8-sig') as f:
+            with open(fname, encoding='utf-8-sig', errors=errors) as f:
                 try:
                     fields = next(csv.reader(f))
                 except UnicodeDecodeError:
                     msg = ("%s is not encoded as UTF-8\ntry oq shell "
-                           "and then o.fix_latin1('%s')" % (fname, fname))
+                           "and then o.fix_latin1('%s')\nor set "
+                           "ignore_encoding_errors=true" % (fname, fname))
                     raise RuntimeError(msg)
                 header = set(self.fieldmap.get(f, f) for f in fields)
                 for field in fields:
@@ -1009,7 +1011,7 @@ class Exposure(object):
             conv[f] = float
             rename[f] = 'occupants_' + field
         for fname in self.datafiles:
-            array = hdf5.read_csv(fname, conv, rename).array
+            array = hdf5.read_csv(fname, conv, rename, errors=errors).array
             array['lon'] = numpy.round(array['lon'], 5)
             array['lat'] = numpy.round(array['lat'], 5)
             yield from array

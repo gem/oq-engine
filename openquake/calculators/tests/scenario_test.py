@@ -20,9 +20,12 @@ from numpy.testing import assert_almost_equal as aae
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
-    case_9, case_10, case_11, case_12, case_13, case_14, case_15, case_16)
+    case_9, case_10, case_11, case_12, case_13, case_14, case_15,
+    case_16, case_17)
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
+from openquake.calculators.views import text_table
 from openquake.calculators.tests import CalculatorTestCase
 
 
@@ -161,5 +164,11 @@ class ScenarioTestCase(CalculatorTestCase):
             sorted(assetcol.array.dtype.names),
             sorted(['id', 'ordinal', 'lon', 'lat', 'site_id', 'number', 'area',
                     'value-contents', 'value-nonstructural', 'value-occupants',
-                    'occupants_night', 'value-structural', 'taxonomy', 'NAME_2',
-                    'ID_2', 'ID_1', 'OCCUPANCY', 'NAME_1']))
+                    'occupants_night', 'value-structural', 'taxonomy',
+                    'NAME_2', 'ID_2', 'ID_1', 'OCCUPANCY', 'NAME_1']))
+
+    def test_case_17(self):
+        # CSV exposure in latin1
+        self.run_calc(case_17.__file__, 'job.ini')
+        tbl = text_table(self.calc.datastore['agg_keys'][:], ext='org')
+        self.assertEqualFiles('agg_keys.org', gettemp(tbl))
