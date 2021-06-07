@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Forbidded multiple inheritance in GMPE hierarchies
   * Added parameter `ignore_encoding_errors` to the job.ini
   * Extended the damage calculators to generic consequences
   * Renamed cname -> consequence in the CSV input files
