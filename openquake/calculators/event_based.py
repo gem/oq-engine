@@ -288,6 +288,8 @@ class EventBasedCalculator(base.HazardCalculator):
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ
                 aw['n_occ'] *= ngmfs * num_gsims[aw['trt_smr']]
+        else:
+            raise InvalidFile("Something wrong in %s" % oq.inputs['job_ini'])
         rup_array = aw.array
         hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
