@@ -43,7 +43,7 @@ the other hand, there is only one person maintaining it.
 It is clearly impossible to refactor hazardlib manually, but we could
 investigate ways to automatize at least some kinds of refactoring.
 Vectorizing by rupture is very hard, must be done on a case-by-case hand
-a certainly cannot be automatized.
+and certainly cannot be automatized.
 
 Towards a numpy-oriented hazardlib
 ----------------------------------
@@ -60,8 +60,8 @@ and very far for the ideal goal.
 
 To be clear, the ideal goal would be to
 
-*remove completely all class hierarchies, turn all methods into functions
-taking in input only numpy arrays or simple types*
+**remove completely all class hierarchies, turn all methods into functions
+taking in input only numpy arrays or simple types**
 
 The ideal goal is out of reach (by far), so we will have to comprimise
 significantly; moreover, since we have hundreds of users of hazardlib,
@@ -156,6 +156,10 @@ it will break use code. We will have to replace in hundreds of places
 We will need to thing of a multi-step strategy, going from the current
 class-oriented IMTs to numpy-oriented IMTs without breaking anything
 until the very last step.
+
+It would be nice to be able to vectorize by IMT. But that will be difficult
+even, having numpy-oriented IMTs. At minimum one will have to refactor the
+usage of the CoeffsTable.
 
 This is going to be long (months/years). It is also possible that we will
 never reach the ideal. Also, in the normal case with many sites (national
