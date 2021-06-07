@@ -816,17 +816,18 @@ def _read_csv(fileobj, compositedt):
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
 def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
-             index=None):
+             index=None, errors=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
     :param renamedict: aliases for the fields to rename
     :param sep: separator (default comma)
     :param index: if not None, returns a pandas DataFrame
+    :param errors: passed to the underlying open function (default None)
     :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
-    with open(fname, encoding='utf-8-sig') as f:
+    with open(fname, encoding='utf-8-sig', errors=errors) as f:
         while True:
             first = next(f)
             if first.startswith('#'):

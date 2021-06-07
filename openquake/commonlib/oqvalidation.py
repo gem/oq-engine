@@ -208,6 +208,11 @@ distance_bin_width:
 ebrisk_maxsize:
   INTERNAL
 
+ignore_encoding_errors:
+  If set, skip characters with non-UTF8 encoding
+  Example: *ignore_encoding_errors = true*.
+  Default: False
+
 ignore_master_seed:
   If set, estimate analytically the uncertainty on the losses due to the
   uncertainty on the vulnerability functions.
@@ -739,6 +744,7 @@ class OqParam(valid.ParamSet):
     distance_bin_width = valid.Param(valid.positivefloat)
     float_dmg_dist = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
+    ignore_encoding_errors = valid.Param(valid.boolean, False)
     ignore_master_seed = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
