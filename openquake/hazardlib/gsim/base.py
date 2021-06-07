@@ -204,6 +204,9 @@ class MetaGSIM(abc.ABCMeta):
     it performs some checks against typos.
     """
     def __new__(meta, name, bases, dic):
+        if len(bases) > 1:
+            raise TypeError('Multiple inheritance is forbidden: %s(%s)' % (
+                name, ', '.join(b.__name__ for b in bases)))
         for k, v in dic.items():
             if isinstance(v, set):
                 dic[k] = frozenset(v)
