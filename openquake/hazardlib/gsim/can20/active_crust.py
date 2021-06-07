@@ -434,9 +434,7 @@ class CanSHM6_ActiveCrust_ChiouYoungs2014(GMPE):
         Linear site-term of CY14 from ._get_mean()
 
         """
-
         F = (C['phi1'] * np.log(vs30 / 1130).clip(-np.inf, 0))
-
         return F
 
     def _get_ln_y_ref(self, rup, dists, C):
@@ -524,7 +522,6 @@ class CanSHM6_ActiveCrust_ChiouYoungs2014(GMPE):
         off in our calculation.
         """
         centered_dpp = 0.
-
         return centered_dpp
 
     def _get_stddevs(self, sites, rup, C, stddev_types, ln_y_ref, exp1, exp2):
