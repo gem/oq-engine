@@ -157,7 +157,11 @@ We will need to thing of a multi-step strategy, going from the current
 class-oriented IMTs to numpy-oriented IMTs without breaking anything
 until the very last step.
 
-It would be nice to be able to vectorize by IMT. But that will be difficult
+It is important to notice that there is unwanted complication in the IMTs,
+since we support everywhere the `sa_damping` field which is actually
+hard-coded to 5.0 in all CoeffsTable. It would be nice to remove it.
+
+It would also be nice to be able to vectorize by IMT. But that will be difficult
 even, having numpy-oriented IMTs. At minimum one will have to refactor the
 usage of the CoeffsTable.
 
