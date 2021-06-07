@@ -60,7 +60,7 @@ and very far for the ideal goal.
 
 To be clear, the ideal goal would be to **remove completely all class hierarchies, turn all methods into functions taking in input only numpy arrays or simple types**.
 
-The ideal goal is out of reach (by far), so we will have to comprimise
+The ideal goal is out of reach (by far), so we will have to compromise
 significantly; moreover, since we have hundreds of users of hazardlib,
 we always must keep in main that any nontrivial refactoring would break
 user code.
