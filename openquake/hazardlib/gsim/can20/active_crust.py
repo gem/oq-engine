@@ -83,7 +83,6 @@ class CanSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
 
     Please also see the information in the header.
     """
-    experimental = True
 
     def _get_site_scaling(self, C, pga_rock, sites, period, rjb):
         """
