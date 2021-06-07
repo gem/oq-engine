@@ -23,7 +23,7 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.gsim.projects.acme_base import (
-    CoeffsTableACME, get_phi_ss_at_quantile_ACME)
+    get_phi_ss_at_quantile_ACME)
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
@@ -534,7 +534,7 @@ class AlAtikSigmaModel(GMPE):
         return phi
 
 # PHI_SS2S coefficients, table 2.2 HID
-PHI_S2SS_BRB = CoeffsTableACME(sa_damping=5., table="""\
+PHI_S2SS_BRB = CoeffsTable(logratio=True, sa_damping=5., table="""\
     imt   phi_s2ss  
     PGA     0.0000 
     0.001   0.0000
@@ -547,8 +547,8 @@ PHI_S2SS_BRB = CoeffsTableACME(sa_damping=5., table="""\
     """)
 
 # Phi_ss coefficients for the global model
-PHI_SS_GLOBAL_LINEAR = CoeffsTableACME(sa_damping=5., table="""\
-imt     mean_a   var_a  mean_b  var_b
+PHI_SS_GLOBAL_LINEAR = CoeffsTable(logratio=True, sa_damping=5., table="""\
+imt     mean_a   var_a  mean_b  var_bs
 pgv     0.5034  0.0609  0.3585  0.0316
 pga     0.5477  0.0731  0.3505  0.0412
 0.010   0.5477  0.0731  0.3505  0.0412
