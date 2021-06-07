@@ -42,4 +42,4 @@ def get_phi_ss_at_quantile_ACME(phi_model, quantile):
                 "b": _at_percentile(phi_model[imt]["mean_b"],
                                     phi_model[imt]["var_b"],
                                     quantile)}
-    return CoeffsTable(sa_damping=5., table=coeffs, logratio=True)
+    return CoeffsTable(logratio=False, sa_damping=5., table=coeffs)
