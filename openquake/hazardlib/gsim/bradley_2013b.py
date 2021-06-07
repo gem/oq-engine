@@ -132,7 +132,7 @@ class Bradley2013bChchCBD(Bradley2013LHC):
 
         # Add 'additional sigma' specified in the Canterbury Seismic
         # Hazard Model to total sigma. This equals zero for the base model.
-        additional_sigma = self._compute_additional_sigma()
+        additional_sigma = self.additional_sigma
 
         ret = []
         for stddev_type in stddev_types:
@@ -246,12 +246,7 @@ class Bradley2013bChchCBD(Bradley2013LHC):
 
         return dS2S
 
-    def _compute_additional_sigma(self):
-        """
-        Additional "epistemic" uncertainty version of the model. Not applied to
-        regular version of the model
-        """
-        return 0
+    additional_sigma = 0
 
 
 class Bradley2013bChchWest(Bradley2013bChchCBD):
@@ -348,14 +343,7 @@ class Bradley2013bChchCBDAdditionalSigma(Bradley2013bChchCBD):
     "Seismic hazard modelling for the recovery of Christchurch",
     Earthquake Spectra, 30(1), 17-29.
     """
-
-    def _compute_additional_sigma(self):
-        """
-        Additional "epistemic" uncertainty version of the model. The value
-        is not published, only available from G. McVerry
-        (pers. communication 9/8/18).
-        """
-        return 0.35
+    additional_sigma = .35
 
 
 class Bradley2013bChchWestAdditionalSigma(Bradley2013bChchWest):
@@ -366,14 +354,7 @@ class Bradley2013bChchWestAdditionalSigma(Bradley2013bChchWest):
     "Seismic hazard modelling for the recovery of Christchurch",
     Earthquake Spectra, 30(1), 17-29.
     """
-
-    def _compute_additional_sigma(self):
-        """
-        Additional "epistemic" uncertainty version of the model. The value
-        is not published, only available from G. McVerry
-        (pers. communication 9/8/18).
-        """
-        return 0.35
+    additional_sigma = .35
 
 
 class Bradley2013bChchEastAdditionalSigma(Bradley2013bChchEast):
@@ -384,14 +365,7 @@ class Bradley2013bChchEastAdditionalSigma(Bradley2013bChchEast):
     "Seismic hazard modelling for the recovery of Christchurch",
     Earthquake Spectra, 30(1), 17-29.
     """
-
-    def _compute_additional_sigma(self):
-        """
-        Additional "epistemic" uncertainty version of the model. The value
-        is not published, only available from G. McVerry
-        (pers. communication 9/8/18).
-        """
-        return 0.35
+    additional_sigma = .35
 
 
 class Bradley2013bChchNorthAdditionalSigma(Bradley2013bChchNorth):
@@ -402,14 +376,7 @@ class Bradley2013bChchNorthAdditionalSigma(Bradley2013bChchNorth):
     "Seismic hazard modelling for the recovery of Christchurch",
     Earthquake Spectra, 30(1), 17-29.
     """
-
-    def _compute_additional_sigma(self):
-        """
-        Additional "epistemic" uncertainty version of the model. The value
-        is not published, only available from G. McVerry
-        (pers. communication 9/8/18).
-        """
-        return 0.35
+    additional_sigma = .35
 
 
 class Bradley2013AdditionalSigma(Bradley2013LHC):
@@ -450,7 +417,7 @@ class Bradley2013AdditionalSigma(Bradley2013LHC):
 
         # Add 'additional sigma' specified in the Canterbury Seismic
         # Hazard Model to total sigma
-        additional_sigma = self._compute_additional_sigma()
+        additional_sigma = self.additional_sigma
 
         ret = []
         for stddev_type in stddev_types:
@@ -472,13 +439,7 @@ class Bradley2013AdditionalSigma(Bradley2013LHC):
 
         return ret
 
-    def _compute_additional_sigma(self):
-        """
-        Additional "epistemic" uncertainty version of the model. The value
-        is not published, only available from G. McVerry
-        (pers. communication 9/8/18).
-        """
-        return 0.35
+    additional_sigma = .35
 
 
 class Bradley2013bChchMaps(Bradley2013bChchCBD):
@@ -506,8 +467,7 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
     """
     #: Required site parameters are Vs30 (eq. 13b), Vs30 measured flag (eq. 20)
     #: and Z1.0 (eq. 13b), longitude and latitude.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured', 'z1pt0', 'lon',
-                                     'lat'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0', 'lon', 'lat'}
 
     #: This implementation is non-verified because the author of the model does
     #: not have code that can be made available.
@@ -585,14 +545,14 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         srf_phi = np.array(np.ones(np.shape(in_cbd)))
         srf_tau = np.array(np.ones(np.shape(in_cbd)))
         if in_cshm is True:
-            srf_sigma[in_cbd == True] = self._get_SRF_sigma(imt_per)
-            srf_phi[in_cbd == True] = self._get_SRF_phi(imt_per)
+            srf_sigma[in_cbd == 1] = self._get_SRF_sigma(imt_per)
+            srf_phi[in_cbd == 1] = self._get_SRF_phi(imt_per)
             # The tau reduction term is not used in this implementation
             # srf_tau[in_cbd == True] = self._get_SRF_tau(imt_per)
 
         # Add 'additional sigma' specified in the Canterbury Seismic
         # Hazard Model to total sigma
-        additional_sigma = self._compute_additional_sigma()
+        additional_sigma = self.additional_sigma
 
         ret = []
         for stddev_type in stddev_types:
@@ -677,9 +637,4 @@ class Bradley2013bChchMapsAdditionalSigma(Bradley2013bChchMaps):
     "Seismic hazard modelling for the recovery of Christchurch",
     Earthquake Spectra, 30(1), 17-29.
     """
-
-    def _compute_additional_sigma(self):
-        """
-        Additional "epistemic" uncertainty version of the model.
-        """
-        return 0.35
+    additional_sigma = .35
