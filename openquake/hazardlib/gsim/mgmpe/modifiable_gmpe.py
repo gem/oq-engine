@@ -100,7 +100,7 @@ class ModifiableGMPE(GMPE):
 
         # Save the stds
         for key, val in zip(working_std_types, ostds):
-            setattr(self, key, val)
+            setattr(self, key.name, val)
         self.mean = omean
 
         # Apply sequentially the modifications
@@ -110,7 +110,7 @@ class ModifiableGMPE(GMPE):
         # Return the standard deviation types as originally requested
         outs = []
         for key in stddev_types:
-            outs.append(getattr(self, key))
+            outs.append(getattr(self, key.name))
 
         return self.mean, outs
 
@@ -126,15 +126,15 @@ class ModifiableGMPE(GMPE):
             the epsilon value used to constrain the between event variability
         """
         # Index for the between event standard deviation
-        key = const.StdDev.INTER_EVENT
+        key = const.StdDev.INTER_EVENT.name
         self.mean = self.mean + epsilon_tau * getattr(self, key)
 
         # Set between event variability to 0
-        keya = const.StdDev.TOTAL
+        keya = const.StdDev.TOTAL.name
         setattr(self, key, np.zeros_like(getattr(self, keya)))
 
         # Set total variability equal to the within-event one
-        keyb = const.StdDev.INTRA_EVENT
+        keyb = const.StdDev.INTRA_EVENT.name
         setattr(self, keya, getattr(self, keyb))
 
     def set_scale_median_scalar(self, sites, rup, dists, imt, scaling_factor):

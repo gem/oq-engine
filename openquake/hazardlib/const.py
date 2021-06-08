@@ -17,6 +17,7 @@
 Module :mod:`openquake.hazardlib.const` defines various constants.
 """
 from enum import Enum
+import numpy
 
 
 class TRT(Enum):
@@ -84,6 +85,7 @@ class StdDev(Enum):
     """
     GSIM standard deviation represents ground shaking variability at a site.
     """
+    TOTAL = 'Total'
     #: Standard deviation representing ground shaking variability
     #: within different events.
     INTER_EVENT = 'Inter event'
@@ -95,4 +97,6 @@ class StdDev(Enum):
     #: the total ground shaking variability, and is the only one that
     #: is used for calculating a probability of intensity exceedance
     #: (see :func:`openquake.hazardlib.gsim.base.get_poes`).
-    TOTAL = 'Total'
+
+
+std = numpy.array(list(StdDev))
