@@ -84,15 +84,15 @@ class StdDev(Enum):
     """
     GSIM standard deviation represents ground shaking variability at a site.
     """
-    TOTAL = 1
     #: Standard deviation representing ground shaking variability
     #: within different events.
-    INTER_EVENT = 2
+    INTER_EVENT = 'Inter event'
     #: Standard deviation representing ground shaking variability
     #: within a single event.
-    INTRA_EVENT = 3
+    INTRA_EVENT = 'Intra event'
     #: Total standard deviation, defined as the square root of the sum
     #: of inter- and intra-event squared standard deviations, represents
     #: the total ground shaking variability, and is the only one that
     #: is used for calculating a probability of intensity exceedance
     #: (see :func:`openquake.hazardlib.gsim.base.get_poes`).
+    TOTAL = 'Total'
