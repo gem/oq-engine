@@ -23,7 +23,6 @@ from openquake.baselib.general import DictArray
 from openquake.hazardlib.source import NonParametricSeismicSource
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.sourceconverter import SourceConverter
-from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo.surface import PlanarSurface, SimpleFaultSurface
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.geodetic import point_at
@@ -40,7 +39,7 @@ from openquake.hazardlib import nrml
 
 
 def _create_rupture(distance, magnitude,
-                    tectonic_region_type=TRT.ACTIVE_SHALLOW_CRUST):
+                    tectonic_region_type="Active Shallow Crust"):
     # Return a rupture with a fixed geometry located at a given r_jb distance
     # from a site located at (0.0, 0.0).
     # parameter float distance:
@@ -72,7 +71,7 @@ def _create_rupture(distance, magnitude,
 
 
 def _create_non_param_sourceA(rjb, magnitude, pmf,
-                              tectonic_region_type=TRT.ACTIVE_SHALLOW_CRUST):
+                              tectonic_region_type="Active Shallow Crust"):
     # Create a non-parametric source
     rupture = _create_rupture(rjb, magnitude)
     pmf = pmf
@@ -89,14 +88,14 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                               PMF([(0.7, 0), (0.3, 1)]))
         self.src3 = _create_non_param_sourceA(10., 6.0,
                                               PMF([(0.7, 0), (0.3, 1)]),
-                                              TRT.GEOTHERMAL)
+                                              "Geothermal")
         site = Site(Point(0.0, 0.0), 800, z1pt0=100., z2pt5=1.)
         s_filter = SourceFilter(SiteCollection([site]), {})
         self.sites = s_filter
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.3]})
         gsim = SadighEtAl1997()
         gsim.minimum_distance = 12  # test minimum_distance
-        self.gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: gsim}
+        self.gsim_by_trt = {"Active Shallow Crust": gsim}
 
     def test_hazard_curve_X(self):
         # Test the former calculator
@@ -124,7 +123,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
     def test_hazard_curve_B(self):
         # Test simple calculation
         group = SourceGroup(
-            TRT.ACTIVE_SHALLOW_CRUST, [self.src2], 'test', 'indep', 'indep')
+            "Active Shallow Crust", [self.src2], 'test', 'indep', 'indep')
         groups = [group]
         curves = calc_hazard_curves(groups,
                                     self.sites,
@@ -147,7 +146,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                 (rupture, PMF([(0.6, 0), (0.4, 1)]))]
         data[0][0].weight = 0.5
         data[1][0].weight = 0.5
-        src = NonParametricSeismicSource('0', 'test', TRT.ACTIVE_SHALLOW_CRUST,
+        src = NonParametricSeismicSource('0', 'test', "Active Shallow Crust",
                                          data)
         src.id = 0
         src.grp_id = 0
@@ -167,7 +166,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         # Test that the uniformity of a group (in terms of tectonic region)
         # is correctly checked
         self.assertRaises(
-            AssertionError, SourceGroup, TRT.ACTIVE_SHALLOW_CRUST,
+            AssertionError, SourceGroup, "Active Shallow Crust",
             [self.src1, self.src3], 'test', 'indep', 'indep')
 
 

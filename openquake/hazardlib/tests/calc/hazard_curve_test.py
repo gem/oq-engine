@@ -18,7 +18,7 @@ import numpy
 
 import openquake.hazardlib
 from openquake.baselib.parallel import Starmap, sequential_apply
-from openquake.hazardlib import const, nrml, valid
+from openquake.hazardlib import nrml, valid
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
@@ -42,7 +42,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
         sources = [
             openquake.hazardlib.source.PointSource(
                 source_id='point1', name='point1',
-                tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
+                tectonic_region_type="Active Shallow Crust",
                 mfd=openquake.hazardlib.mfd.EvenlyDiscretizedMFD(
                     min_mag=4, bin_width=1, occurrence_rates=[5]
                 ),
@@ -63,7 +63,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
             ),
             openquake.hazardlib.source.PointSource(
                 source_id='point2', name='point2',
-                tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
+                tectonic_region_type="Active Shallow Crust",
                 mfd=openquake.hazardlib.mfd.EvenlyDiscretizedMFD(
                     min_mag=4, bin_width=2, occurrence_rates=[5, 6, 7]
                 ),
@@ -88,7 +88,7 @@ class HazardCurvesFiltersTestCase(unittest.TestCase):
                  openquake.hazardlib.site.Site(Point(10, 10.6, 1), 3, 2, 3),
                  openquake.hazardlib.site.Site(Point(10, 10.7, -1), 4, 2, 3)]
         sitecol = openquake.hazardlib.site.SiteCollection(sites)
-        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        gsims = {"Active Shallow Crust": SadighEtAl1997()}
         truncation_level = 1
         imts = {'PGA': [0.1, 0.5, 1.3]}
         s_filter = SourceFilter(sitecol, MagDepDistance.new('30'))
