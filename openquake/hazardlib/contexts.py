@@ -246,7 +246,8 @@ class ContextMaker(object):
         self.vtype = []
         self.coeffs = []
         for gsim in gsims:
-            self.stype.append(float_struct(gsim.REQUIRES_RUPTURE_PARAMETERS))
+            self.stype.append(float_struct(gsim.REQUIRES_PARAMETERS,
+                                           gsim.REQUIRES_RUPTURE_PARAMETERS))
             self.vtype.append(float_struct(gsim.REQUIRES_SITES_PARAMETERS,
                                            gsim.REQUIRES_DISTANCES))
             all_coeffs = [table.on(self.imts)
@@ -272,18 +273,19 @@ class ContextMaker(object):
         """
         Yields scalar, vector, allcoeffs, slc for each context
         """
-        U = len(ctxs)
-        scalar = numpy.zeros(U, self.stype[g])
+        stype = self.stype[g]
+        vtype = self.vtype[g]
         start = 0
-        for scal, ctx in zip(scalar, ctxs):
+        for ctx in ctxs:
+            scalar = numpy.zeros(1, stype)[0]
             n = len(ctx.sids)
             stop = start + n
-            vector = numpy.zeros((n, 1), self.vtype[g])
-            for name in vector.dtype.names:
+            vector = numpy.zeros((n, 1), vtype)
+            for name in vtype.names:
                 vector[name][:, 0] = getattr(ctx, name)
-            for name in self.stype[g].names:
-                scal[name] = getattr(ctx, name)
-            yield scal, vector, self.coeffs[g], slice(start, stop)
+            for name in stype.names:
+                scalar[name] = getattr(ctx, name)
+            yield scalar, vector, self.coeffs[g], slice(start, stop)
             stop = start
 
     def read_ctxs(self, dstore, slc=None):

@@ -263,6 +263,10 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: this GSIM can calculate.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = abc.abstractproperty()
 
+    #: optional dictionary param_name -> param_type for the GSIM
+    #: instantiation parameters; used only for jittable GSIMs
+    REQUIRES_PARAMETERS = {}
+
     #: Set of site parameters names this GSIM needs. The set should include
     #: strings that match names of the attributes of a :class:`site
     #: <openquake.hazardlib.site.Site>` object.
