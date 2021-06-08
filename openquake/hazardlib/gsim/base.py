@@ -762,28 +762,16 @@ class CoeffsTable(object):
     """
     num_instances = 0
 
-    def __init__(self, **kwargs):
-        if 'table' not in kwargs:
-            raise TypeError('CoeffsTable requires "table" kwarg')
+    def __init__(self, table, **kwargs):
         self._coeffs = {}  # cache
         self.logratio = kwargs.pop('logratio', True)
-        table = kwargs.pop('table')
-        self.sa_coeffs = {}
-        self.non_sa_coeffs = {}
         sa_damping = kwargs.pop('sa_damping', None)
         if kwargs:
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
-        if isinstance(table, str):
+        if isinstance(table, str):  # common case
             self._setup_table_from_str(table, sa_damping)
-        elif isinstance(table, dict):
-            for imt in table:
-                if imt.name == 'SA':
-                    self.sa_coeffs[imt] = table[imt]
-                else:
-                    self.non_sa_coeffs[imt] = table[imt]
-        else:
-            raise TypeError("CoeffsTable cannot be constructed with inputs "
-                            "of the form '%s'" % table.__class__.__name__)
+        else:  # in ngs_east
+            self._coeffs.update(table)
         self.__class__.num_instances += 1
 
     def _setup_table_from_str(self, table, sa_damping):
@@ -808,13 +796,22 @@ class CoeffsTable(object):
                 if imt_name not in imt_module.registry:
                     raise ValueError('unknown IMT %r' % imt_name)
                 imt = imt_module.registry[imt_name]()
-                self.non_sa_coeffs[imt] = imt_coeffs
             else:
                 if sa_damping is None:
                     raise TypeError('attribute "sa_damping" is required '
                                     'for tables defining SA')
                 imt = imt_module.SA(sa_period, sa_damping)
-                self.sa_coeffs[imt] = imt_coeffs
+            self._coeffs[imt] = imt_coeffs
+
+    @property
+    def sa_coeffs(self):
+        return {imt: self._coeffs[imt] for imt in self._coeffs
+                if imt.name == 'SA'}
+
+    @property
+    def non_sa_coeffs(self):
+        return {imt: self._coeffs[imt] for imt in self._coeffs
+                if imt.name != 'SA'}
 
     def __getitem__(self, imt):
         """
@@ -830,14 +827,6 @@ class CoeffsTable(object):
         """
         try:
             return self._coeffs[imt]
-        except KeyError:
-            pass
-        if imt.name != 'SA':
-            self._coeffs[imt] = c = self.non_sa_coeffs[imt]
-            return c
-        try:
-            self._coeffs[imt] = c = self.sa_coeffs[imt]
-            return c
         except KeyError:
             pass
 

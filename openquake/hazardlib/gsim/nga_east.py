@@ -301,8 +301,7 @@ def get_phi_ss_at_quantile(phi_model, quantile):
                                     quantile),
                 "b": _at_percentile(phi_model[imt]["mean_b"],
                                     phi_model[imt]["var_b"],
-                                    quantile)
-                }
+                                    quantile)}
     return CoeffsTable(sa_damping=5., table=coeffs)
 
 
