@@ -19,7 +19,7 @@ Module :mod:`openquake.hazardlib.const` defines various constants.
 from enum import Enum
 
 
-class TRT:
+class TRT(Enum):
     """
     Container for constants that define some of the common Tectonic Region
     Types.
@@ -35,7 +35,7 @@ class TRT:
     INDUCED = 'Induced'
 
 
-class IMC:
+class IMC(Enum):
     """
     The intensity measure component is the component of interest
     of ground shaking for an
