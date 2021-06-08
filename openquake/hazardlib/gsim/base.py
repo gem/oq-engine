@@ -774,6 +774,10 @@ class CoeffsTable(object):
             self._coeffs.update(table)
         self.__class__.num_instances += 1
 
+        first = self._coeffs[next(iter(self._coeffs))]  # dictionary
+        self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
+                              [(name, float) for name in first])
+
     def _setup_table_from_str(self, table, sa_damping):
         """
         Builds the input tables from a string definition
@@ -825,9 +829,9 @@ class CoeffsTable(object):
             If ``imt`` is not available in the table and no interpolation
             can be done.
         """
-        try:
+        try:  # see if already in cache
             return self._coeffs[imt]
-        except KeyError:
+        except KeyError:  # populate the cache
             pass
 
         max_below = min_above = None

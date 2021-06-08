@@ -337,7 +337,7 @@ class CoeffsTableTestCase(unittest.TestCase):
              SA(period=10.0, damping=5): {"a": 10.0, "b": 20.0}})
 
     def test_table_bad_instantiation(self):
-        # If instantiated with anything other than string or tuple should
+        # If instantiated with anything other than string or dict should
         # raise an error
         with self.assertRaises(AttributeError):
             CoeffsTable(sa_damping=5, table=5)
