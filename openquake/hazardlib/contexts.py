@@ -20,6 +20,7 @@ import os
 import abc
 import copy
 import time
+import inspect
 import logging
 import warnings
 import itertools
@@ -173,7 +174,8 @@ def gen_poes(ctxs, cmaker):
             if cmaker.single_site_opt[g] and C > 1 and (nsites == 1).all():
                 mean_std = gsim.get_mean_std1(ctx, cmaker.imts)
             else:
-                mean_std = gsim.get_mean_std(ctxs, cmaker.imts)
+                mean_std = gsim.get_mean_std(
+                    ctxs, cmaker.imts, cmaker.gen_params, g)
         with cmaker.poe_mon:
             # builds poes of shape (N, L, G)
             poes[:, :, g] = gsim.get_poes(
@@ -182,6 +184,16 @@ def gen_poes(ctxs, cmaker):
     for ctx, n in zip(ctxs, nsites):
         yield poes[s:s+n]
         s += n
+
+
+def float_struct(*allnames):
+    """
+    :returns: a composite dtype of float64 fields
+    """
+    ns = []
+    for names in allnames:
+        ns.extend(names)
+    return numpy.dtype([(n, numpy.float64) for n in ns])
 
 
 class ContextMaker(object):
@@ -230,6 +242,17 @@ class ContextMaker(object):
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
+        self.stype = []
+        self.vtype = []
+        self.coeffs = []
+        for gsim in gsims:
+            self.stype.append(float_struct(gsim.REQUIRES_RUPTURE_PARAMETERS))
+            self.vtype.append(float_struct(gsim.REQUIRES_SITES_PARAMETERS,
+                                           gsim.REQUIRES_DISTANCES))
+            all_coeffs = [table.on(self.imts)
+                          for name, table in inspect.getmembers(gsim.__class__)
+                          if name.startswith('COEFFS')]
+            self.coeffs.append(all_coeffs)
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -244,6 +267,24 @@ class ContextMaker(object):
         # instantiate monitors
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
+
+    def gen_params(self, g, ctxs):
+        """
+        Yields scalar, vector, allcoeffs, slc for each context
+        """
+        U = len(ctxs)
+        scalar = numpy.zeros(U, self.stype[g])
+        start = 0
+        for scal, ctx in zip(scalar, ctxs):
+            n = len(ctx.sids)
+            stop = start + n
+            vector = numpy.zeros((n, 1), self.vtype[g])
+            for name in vector.dtype.names:
+                vector[name][:, 0] = getattr(ctx, name)
+            for name in self.stype[g].names:
+                scal[name] = getattr(ctx, name)
+            yield scal, vector, self.coeffs[g], slice(start, stop)
+            stop = start
 
     def read_ctxs(self, dstore, slc=None):
         """

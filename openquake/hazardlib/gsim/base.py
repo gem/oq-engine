@@ -547,7 +547,7 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
-    def get_mean_std(self, ctxs, imts):
+    def get_mean_std(self, ctxs, imts, gen_params, g):
         """
         :returns: an array of shape (2, N, M) with means and stddevs
         """
@@ -555,20 +555,25 @@ class GMPE(GroundShakingIntensityModel):
         M = len(imts)
         arr = numpy.zeros((2, N, M))
         num_tables = CoeffsTable.num_instances
-        start = 0
-        for ctx in ctxs:
-            stop = start + len(ctx.sids)
-            new = ctx.roundup(self.minimum_distance)
-            for m, imt in enumerate(imts):
-                mean, [std] = self.get_mean_and_stddevs(ctx, ctx, new, imt,
-                                                        [const.StdDev.TOTAL])
-                arr[0, start:stop, m] = mean
-                arr[1, start:stop, m] = std
-                if CoeffsTable.num_instances > num_tables:
-                    raise RuntimeError('Instantiating CoeffsTable inside '
-                                       '%s.get_mean_and_stddevs' %
-                                       self.__class__.__name__)
-            start = stop
+        if hasattr(self, 'get_mean_stds'):  # fast lane
+            for scalar, vector, allcoeffs, slc in gen_params(g, ctxs):
+                arr[:, slc, :] = self.__class__.get_mean_stds(
+                    scalar, vector, b'T', *allcoeffs)
+        else:  # slow lane
+            start = 0
+            for ctx in ctxs:
+                stop = start + len(ctx.sids)
+                new = ctx.roundup(self.minimum_distance)
+                for m, imt in enumerate(imts):
+                    mean, [std] = self.get_mean_and_stddevs(
+                        ctx, ctx, new, imt, [const.StdDev.TOTAL])
+                    arr[0, start:stop, m] = mean
+                    arr[1, start:stop, m] = std
+                    if CoeffsTable.num_instances > num_tables:
+                        raise RuntimeError('Instantiating CoeffsTable inside '
+                                           '%s.get_mean_and_stddevs' %
+                                           self.__class__.__name__)
+                start = stop
         return arr
 
     def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctxs=()):
@@ -818,6 +823,19 @@ class CoeffsTable(object):
     def non_sa_coeffs(self):
         return {imt: self._coeffs[imt] for imt in self._coeffs
                 if imt.name != 'SA'}
+
+    def on(self, imts):
+        """
+        :param imts: a list of IMTs
+        :returns: a structured array with the coefficients for each IMT
+        """
+        arr = numpy.zeros(len(imts), self.dt)
+        for m, imt in enumerate(imts):
+            arr[m]['imt'] = imt.name
+            arr[m]['period'] = imt.period
+            for n, v in self._coeffs[imt].items():
+                arr[m][n] = v
+        return arr
 
     def __getitem__(self, imt):
         """
