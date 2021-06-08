@@ -77,7 +77,7 @@ class RaghukanthIyengar2007TestCase(BaseGSIMTestCase):
         gmpe = self.GSIM_CLASS()
         rctx.mag = np.array([6.5])
         dctx.rhypo = np.array([100.])
-        im_type = sorted(gmpe.COEFFS_BEDROCK.sa_coeffs.keys())[0]
+        im_type = sorted(gmpe.COEFFS_BEDROCK.sa_coeffs)[0]
         std_types = list(gmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
 
         # set critical value to trigger warning

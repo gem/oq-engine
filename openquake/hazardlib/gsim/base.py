@@ -766,6 +766,7 @@ class CoeffsTable(object):
         if 'table' not in kwargs:
             raise TypeError('CoeffsTable requires "table" kwarg')
         self._coeffs = {}  # cache
+        self.logratio = kwargs.pop('logratio', True)
         table = kwargs.pop('table')
         self.sa_coeffs = {}
         self.non_sa_coeffs = {}
@@ -853,11 +854,15 @@ class CoeffsTable(object):
         if max_below is None or min_above is None:
             raise KeyError(imt)
 
-        # ratio tends to 1 when target period tends to a minimum
-        # known period above and to 0 if target period is close
-        # to maximum period below.
-        ratio = ((math.log(imt.period) - math.log(max_below.period))
-                 / (math.log(min_above.period) - math.log(max_below.period)))
+        if self.logratio:  # regular case
+            # ratio tends to 1 when target period tends to a minimum
+            # known period above and to 0 if target period is close
+            # to maximum period below.
+            ratio = ((math.log(imt.period) - math.log(max_below.period)) /
+                     (math.log(min_above.period) - math.log(max_below.period)))
+        else:  # in the ACME project
+            ratio = ((imt.period - max_below.period) /
+                     (min_above.period - max_below.period))
         max_below = self.sa_coeffs[max_below]
         min_above = self.sa_coeffs[min_above]
         self._coeffs[imt] = c = {
