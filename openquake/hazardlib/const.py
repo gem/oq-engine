@@ -16,25 +16,10 @@
 """
 Module :mod:`openquake.hazardlib.const` defines various constants.
 """
+from enum import Enum
 
 
-class ConstantContainer(object):
-    """
-    Class that doesn't support instantiation.
-
-    >>> ConstantContainer()
-    Traceback (most recent call last):
-        ...
-    AssertionError: do not create objects ConstantContainer, \
-use class properties instead
-    """
-    def __init__(self):
-        raise AssertionError('do not create objects %s, '
-                             'use class properties instead'
-                             % type(self).__name__)
-
-
-class TRT(ConstantContainer):
+class TRT:
     """
     Container for constants that define some of the common Tectonic Region
     Types.
@@ -50,7 +35,7 @@ class TRT(ConstantContainer):
     INDUCED = 'Induced'
 
 
-class IMC(ConstantContainer):
+class IMC:
     """
     The intensity measure component is the component of interest
     of ground shaking for an
@@ -75,7 +60,7 @@ class IMC(ConstantContainer):
     #: Defined at Boore et al. (2006, Bull. Seism. Soc. Am. 96, 1502-1511)
     #: and is used for all the NGA GMPEs.
     RotD50 = 'Average Horizontal (RotD50)'
-    #: 
+    #:
     RotD100 = 'Horizontal Maximum Direction (RotD100)'
     #: A randomly chosen horizontal component.
     RANDOM_HORIZONTAL = 'Random horizontal'
@@ -95,19 +80,19 @@ class IMC(ConstantContainer):
     PEAK_SRSS_HORIZONTAL = 'Peak square root of sum of squares of horizontals'
 
 
-class StdDev(ConstantContainer):
+class StdDev(Enum):
     """
     GSIM standard deviation represents ground shaking variability at a site.
     """
+    TOTAL = 1
     #: Standard deviation representing ground shaking variability
     #: within different events.
-    INTER_EVENT = 'Inter event'
+    INTER_EVENT = 2
     #: Standard deviation representing ground shaking variability
     #: within a single event.
-    INTRA_EVENT = 'Intra event'
+    INTRA_EVENT = 3
     #: Total standard deviation, defined as the square root of the sum
     #: of inter- and intra-event squared standard deviations, represents
     #: the total ground shaking variability, and is the only one that
     #: is used for calculating a probability of intensity exceedance
     #: (see :func:`openquake.hazardlib.gsim.base.get_poes`).
-    TOTAL = 'Total'
