@@ -102,6 +102,7 @@ class ModifiableGMPE(GMPE):
         for key, val in zip(working_std_types, ostds):
             setattr(self, key, val)
         self.mean = omean
+        print('Original:', getattr(self, const.StdDev.TOTAL))
 
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
@@ -112,6 +113,7 @@ class ModifiableGMPE(GMPE):
         for key in stddev_types:
             outs.append(getattr(self, key))
 
+        print('>>', outs)
         return self.mean, outs
 
     def apply_swiss_amplification(self, sites, rup, dists, imt):
@@ -204,6 +206,7 @@ class ModifiableGMPE(GMPE):
         """
         tau = getattr(self, const.StdDev.INTER_EVENT)
         total_stddev = (tau**2 + np.sign(delta) * delta**2)**0.5
+        print(tau, delta, total_stddev)
         setattr(self, const.StdDev.TOTAL, total_stddev)
 
     @staticmethod
