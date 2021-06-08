@@ -904,7 +904,7 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
 
     def test_case_67(self):
-        # Modifiable GMPE with set_total_std_as_tau_plus_delta
+        # Canada SHM6
         self.run_calc(case_67.__file__, 'job.ini')
         #self.assert_curves_ok(['hcurves-PGA.csv', 'hcurves-SA(0.2).csv',
         #                       'hcurves-SA(2.0).csv', 'uhs.csv'],
