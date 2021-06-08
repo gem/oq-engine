@@ -2,11 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-6th Generation Seismic Hazard Model of Canada (CanadaSHM6) Active Crust GMMs.
+Preliminary versions of the 6th Generation Seismic Hazard Model of Canada
+(CanadaSHM6) Active Crust GMMs.
 
 The GMMs are not valid for PGV and outside of the period range of 0.1 - 10.0s.
 
-Documentation is available in:
+Warning: These GMMs are non-final and are subject to change.
+
+The final documentation for the GMMs is being prepared. Preliminary
+documentation is available in:
 
 - Kolaj, M., Halchuk, S., Adams, J., Allen, T.I. (2020): Sixth Generation
   Seismic Hazard Model of Canada: input files to produce values proposed for
@@ -83,6 +87,8 @@ class CanSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
 
     Please also see the information in the header.
     """
+
+    experimental = True
 
     def _get_site_scaling(self, C, pga_rock, sites, period, rjb):
         """
