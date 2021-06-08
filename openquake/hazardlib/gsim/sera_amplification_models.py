@@ -552,9 +552,7 @@ class SandikkayaDinsever2018(GMPE):
 
         if isinstance(phi_0, dict):
             # Input phi_0 model
-            iphi_0 = {}
-            for key in phi_0:
-                iphi_0[from_string(key)] = phi_0[key]
+            iphi_0 = {from_string(key): phi_0[key] for key in phi_0}
             self.phi_0 = CoeffsTable(sa_damping=5, table=iphi_0)
         else:
             # No input phi_0 model
