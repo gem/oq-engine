@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a limit of 12 characters to IMT names
   * Forbidded multiple inheritance in GMPE hierarchies
   * Added parameter `ignore_encoding_errors` to the job.ini
   * Extended the damage calculators to generic consequences
