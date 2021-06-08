@@ -161,9 +161,9 @@ class ModifiableGMPE(GMPE):
         :param scaling_factor:
             Factor to scale the standard deviations
         """
-        total_stddev = getattr(self, const.StdDev.TOTAL)
+        total_stddev = getattr(self, const.StdDev.TOTAL.name)
         total_stddev *= scaling_factor
-        setattr(self, const.StdDev.TOTAL, total_stddev)
+        setattr(self, const.StdDev.TOTAL.name, total_stddev)
 
     def set_scale_total_sigma_vector(self, sites, rup, dists, imt,
                                      scaling_factor):
@@ -174,9 +174,9 @@ class ModifiableGMPE(GMPE):
             CoeffsTable
         """
         C = scaling_factor[imt]
-        total_stddev = getattr(self, const.StdDev.TOTAL)
+        total_stddev = getattr(self, const.StdDev.TOTAL.name)
         total_stddev *= C["scaling_factor"]
-        setattr(self, const.StdDev.TOTAL, total_stddev)
+        setattr(self, const.StdDev.TOTAL.name, total_stddev)
 
     def set_fixed_total_sigma(self, sites, rup, dists, imt, total_sigma):
         """
@@ -185,15 +185,15 @@ class ModifiableGMPE(GMPE):
             IMT-dependent total standard deviation as a CoeffsTable
         """
         C = total_sigma[imt]
-        shp = getattr(self, const.StdDev.TOTAL).shape
-        setattr(self, const.StdDev.TOTAL, C["total_sigma"] + np.zeros(shp))
+        shp = getattr(self, const.StdDev.TOTAL.name).shape
+        setattr(self, const.StdDev.TOTAL.name, C["total_sigma"] + np.zeros(shp))
 
     def add_delta_std_to_total_std(self, sites, rup, dists, imt, delta):
         """
         :param delta:
             A delta std e.g. a phi S2S to be removed from total
         """
-        total_stddev = getattr(self, const.StdDev.TOTAL)
+        total_stddev = getattr(self, const.StdDev.TOTAL.name)
         total_stddev = (total_stddev**2 + np.sign(delta) * delta**2)**0.5
         setattr(self, const.StdDev.TOTAL, total_stddev)
 
@@ -202,9 +202,9 @@ class ModifiableGMPE(GMPE):
         :param delta:
             A delta std e.g. a phi SS to be combined with between std, tau.
         """
-        tau = getattr(self, const.StdDev.INTER_EVENT)
+        tau = getattr(self, const.StdDev.INTER_EVENT.name)
         total_stddev = (tau**2 + np.sign(delta) * delta**2)**0.5
-        setattr(self, const.StdDev.TOTAL, total_stddev)
+        setattr(self, const.StdDev.TOTAL.name, total_stddev)
 
     @staticmethod
     def _dict_to_coeffs_table(input_dict, name):
