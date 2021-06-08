@@ -186,7 +186,8 @@ class ModifiableGMPE(GMPE):
         """
         C = total_sigma[imt]
         shp = getattr(self, const.StdDev.TOTAL.name).shape
-        setattr(self, const.StdDev.TOTAL.name, C["total_sigma"] + np.zeros(shp))
+        setattr(self, const.StdDev.TOTAL.name,
+                C["total_sigma"] + np.zeros(shp))
 
     def add_delta_std_to_total_std(self, sites, rup, dists, imt, delta):
         """
@@ -195,7 +196,7 @@ class ModifiableGMPE(GMPE):
         """
         total_stddev = getattr(self, const.StdDev.TOTAL.name)
         total_stddev = (total_stddev**2 + np.sign(delta) * delta**2)**0.5
-        setattr(self, const.StdDev.TOTAL, total_stddev)
+        setattr(self, const.StdDev.TOTAL.name, total_stddev)
 
     def set_total_std_as_tau_plus_delta(self, sites, rup, dists, imt, delta):
         """

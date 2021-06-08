@@ -30,9 +30,8 @@ from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import NRCan15SiteTerm
 class NRCan15SiteTermTestCase(unittest.TestCase):
 
     def test_instantiation(self):
-        """ Tests the instantiation """
         mgmpe = NRCan15SiteTerm(gmpe_name='BooreEtAl2014')
-        #
+
         # Check the assigned IMTs
         expected = set([PGA, SA, PGV])
         self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES == expected,
@@ -46,7 +45,7 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT ==
                         expected, msg='The IM component is wrong')
         # Check the standard deviations
-        expected = set(['Intra event', 'Total', 'Inter event'])
+        expected = set(const.StdDev)
         self.assertTrue(mgmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES == expected,
                         msg='The standard deviations assigned are wrong')
         # Check the required distances
@@ -55,7 +54,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
                         msg='The assigned distance types are wrong')
 
     def test_gm_calculation_soilBC(self):
-        """ Test mean and std calculation - AB06 on BC soil"""
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
         # Set parameters
@@ -78,7 +76,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected)
 
     def test_gm_calculationAB06_hard_bedrock(self):
-        """ Test mean and std calculation - AB06 on vs30 hard bedrock"""
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
         # Set parameters
@@ -101,7 +98,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected)
 
     def test_gm_calculationAB06(self):
-        """ Test mean and std calculation - AB06 on vs30 higher than 760 """
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
         # Set parameters
@@ -124,7 +120,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected)
 
     def test_gm_calculationBA08(self):
-        """ Test mean and std calculation - BA08 - Vs30 constant"""
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='BooreAtkinson2008')
         # Set parameters
@@ -147,7 +142,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected)
 
     def test_gm_calculationBA08_1site(self):
-        """ Test mean and std calculation - BA08 - Vs30 constant"""
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='BooreAtkinson2008')
         # Set parameters
@@ -171,7 +165,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
 
 
     def test_gm_calculationBA08_vs30variable(self):
-        """ Test mean and std calculation - BA08 - Vs30 variable"""
         # Modified gmpe
         mgmpe = NRCan15SiteTerm(gmpe_name='BooreAtkinson2008')
         # Set parameters
@@ -194,9 +187,8 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds[:-1], stds_expected[:-1])
 
     def test_raise_error(self):
-        """ Tests that exception is raised """
         with self.assertRaises(AttributeError):
-            mgmpe = NRCan15SiteTerm(gmpe_name='FukushimaTanaka1990')
+            NRCan15SiteTerm(gmpe_name='FukushimaTanaka1990')
 
     def test_set_vs30_attribute(self):
         mgmpe = NRCan15SiteTerm(gmpe_name='Campbell2003SHARE')
