@@ -252,7 +252,7 @@ class ContextMaker(object):
                                            gsim.REQUIRES_DISTANCES))
             all_coeffs = [table.on(self.imts)
                           for name, table in inspect.getmembers(gsim.__class__)
-                          if name.startswith('COEFFS')]
+                          if table.__class__.__name__ == "CoeffsTable"]
             self.coeffs.append(all_coeffs)
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
@@ -524,9 +524,10 @@ class ContextMaker(object):
             ctx.mag = mag
             ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             means = []
-            for gsim in self.gsims:
+            for g, gsim in enumerate(self.gsims):
                 try:
-                    mean = gsim.get_mean_std([ctx], self.imts)[0, 0]
+                    mean = gsim.get_mean_std(
+                        [ctx], self.imts, self.gen_params, g)[0, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
                 means.append(mean.max())

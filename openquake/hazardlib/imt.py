@@ -105,6 +105,7 @@ class IMT(tuple, metaclass=IMTMeta):
     """
     _fields = ()
     _defaults = None
+    period = 0
 
     @property
     def name(self):
@@ -133,7 +134,6 @@ class PGA(IMT):
     Peak ground acceleration during an earthquake measured in units
     of ``g``, times of gravitational acceleration.
     """
-    period = 0.0
 
 
 class PGV(IMT):

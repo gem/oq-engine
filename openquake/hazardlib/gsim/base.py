@@ -837,7 +837,7 @@ class CoeffsTable(object):
         for m, imt in enumerate(imts):
             arr[m]['imt'] = imt.name
             arr[m]['period'] = imt.period
-            for n, v in self._coeffs[imt].items():
+            for n, v in self[imt].items():
                 arr[m][n] = v
         return arr
 
