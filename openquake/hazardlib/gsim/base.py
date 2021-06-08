@@ -775,6 +775,8 @@ class CoeffsTable(object):
         self.__class__.num_instances += 1
 
         first = self._coeffs[next(iter(self._coeffs))]  # dictionary
+        if not isinstance(first, dict):
+            first = {'value': first}
         self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
                               [(name, float) for name in first])
 

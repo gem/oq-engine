@@ -339,5 +339,5 @@ class CoeffsTableTestCase(unittest.TestCase):
     def test_table_bad_instantiation(self):
         # If instantiated with anything other than string or dict should
         # raise an error
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(TypeError):
             CoeffsTable(sa_damping=5, table=5)
