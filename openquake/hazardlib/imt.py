@@ -72,6 +72,9 @@ class IMTMeta(type):
     Metaclass setting __slots__, __new__ and the properties of IMT classes
     """
     def __new__(mcs, name, bases, dct):
+        if len(name) > 12:
+            raise NameError(
+                'An IMT class name must be shorter than 12 chars: %s' % name)
         dct['__slots__'] = ()
         cls = type.__new__(mcs, name, bases, dct)
         fields = ''
