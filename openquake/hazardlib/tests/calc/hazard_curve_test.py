@@ -287,6 +287,6 @@ class SingleSiteOptTestCase(unittest.TestCase):
             print(child)
         got = hcurve.array[:, 0]
         exp = [0.103379, 0.468937, 0.403896, 0.278772, 0.213645, 0.142985,
-               0.103438, 0.079094, 0.062861, 0.051344, 0.04066 , 0.031589,
+               0.103438, 0.079094, 0.062861, 0.051344, 0.04066, 0.031589,
                0.024935]
         numpy.testing.assert_allclose(got, exp, atol=1E-5)
