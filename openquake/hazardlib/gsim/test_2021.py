@@ -23,13 +23,13 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-@jittable
+#@jittable
 def _compute_term1(C, mag):
     mag_diff = mag - 6
     return C['c2'] * mag_diff + C['c3'] * mag_diff ** 2
 
 
-@jittable
+#@jittable
 def _compute_term2(C, mag, rjb):
     RM = np.sqrt(rjb ** 2 + (C['c7'] ** 2) *
                  np.exp(-1.25 + 0.227 * mag) ** 2)
@@ -64,7 +64,7 @@ class Test2021(GMPE):
     4.00  -0.74  1.86 -0.31  0.92  0.46  0.0017   6.9  0.61  0.62  0.66  0.45  0.12
     """)
 
-    @jittable
+    #@jittable
     def calc_mean(out, param, sites, coeffs):
         mag, rjb = param['mag'], sites['rjb']
         for m, C in enumerate(coeffs):
@@ -75,7 +75,7 @@ class Test2021(GMPE):
             elif C['period'] == 4.0:
                 out[:, m] /= 0.559
 
-    @jittable
+    #@jittable
     def calc_stdt(out, param, sites, coeffs):
         mag, rjb = param['mag'], sites['rjb']
         for m, C in enumerate(coeffs):
