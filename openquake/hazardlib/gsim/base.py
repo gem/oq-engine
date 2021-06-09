@@ -259,6 +259,10 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: this GSIM can calculate.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = abc.abstractproperty()
 
+    #: optional dictionary param_name -> param_type for the GSIM
+    #: instantiation parameters; used only for jittable GSIMs
+    REQUIRES_PARAMETERS = {}
+
     #: Set of site parameters names this GSIM needs. The set should include
     #: strings that match names of the attributes of a :class:`site
     #: <openquake.hazardlib.site.Site>` object.
@@ -350,7 +354,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, AdaptedWarning)
 
-    @abc.abstractmethod
+    # @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Calculate and return mean value of intensity distribution and it's
@@ -543,28 +547,37 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
-    def get_mean_std(self, ctxs, imts):
+    def get_mean_std(self, ctxs, cmaker, gsim_idx):
         """
         :returns: an array of shape (2, N, M) with means and stddevs
         """
+        ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
-        M = len(imts)
+        M = len(cmaker.imts)
         arr = numpy.zeros((2, N, M))
-        num_tables = CoeffsTable.num_instances
-        start = 0
-        for ctx in ctxs:
-            stop = start + len(ctx.sids)
-            new = ctx.roundup(self.minimum_distance)
-            for m, imt in enumerate(imts):
-                mean, [std] = self.get_mean_and_stddevs(ctx, ctx, new, imt,
-                                                        [const.StdDev.TOTAL])
-                arr[0, start:stop, m] = mean
-                arr[1, start:stop, m] = std
-                if CoeffsTable.num_instances > num_tables:
-                    raise RuntimeError('Instantiating CoeffsTable inside '
-                                       '%s.get_mean_and_stddevs' %
-                                       self.__class__.__name__)
-            start = stop
+        calc_mean = getattr(self.__class__, 'calc_mean', None)
+        calc_stdt = getattr(self.__class__, 'calc_stdt', None)
+        if calc_mean:  # fast lane
+            if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
+                ctxs = [cmaker.multi(ctxs)]
+            for param, sites, clist, slc in cmaker.gen_params(gsim_idx, ctxs):
+                calc_mean(arr[0, slc], param, sites, *clist)
+                calc_stdt(arr[1, slc], param, sites, *clist)
+        else:  # slow lane
+            num_tables = CoeffsTable.num_instances
+            start = 0
+            for ctx in ctxs:
+                stop = start + len(ctx.sids)
+                for m, imt in enumerate(cmaker.imts):
+                    mean, [std] = self.get_mean_and_stddevs(
+                        ctx, ctx, ctx, imt, [const.StdDev.TOTAL])
+                    arr[0, start:stop, m] = mean
+                    arr[1, start:stop, m] = std
+                    if CoeffsTable.num_instances > num_tables:
+                        raise RuntimeError('Instantiating CoeffsTable inside '
+                                           '%s.get_mean_and_stddevs' %
+                                           self.__class__.__name__)
+                start = stop
         return arr
 
     def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctxs=()):
@@ -814,6 +827,19 @@ class CoeffsTable(object):
     def non_sa_coeffs(self):
         return {imt: self._coeffs[imt] for imt in self._coeffs
                 if imt.name != 'SA'}
+
+    def on(self, imts):
+        """
+        :param imts: a list of IMTs
+        :returns: a structured array with the coefficients for each IMT
+        """
+        arr = numpy.zeros(len(imts), self.dt)
+        for m, imt in enumerate(imts):
+            arr[m]['imt'] = imt.name
+            arr[m]['period'] = imt.period
+            for n, v in self[imt].items():
+                arr[m][n] = v
+        return arr
 
     def __getitem__(self, imt):
         """

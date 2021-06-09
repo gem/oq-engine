@@ -132,7 +132,7 @@ def compute_disagg(dstore, slc, cmaker, hmap4, magi, bin_edges, monitor):
         res = {'trti': cmaker.trti, 'magi': magi}
         with ms_mon:
             # compute mean and std (N * U * M * G * 16 bytes)
-            disagg.set_mean_std(ctxs, imts, cmaker.gsims)
+            disagg.set_mean_std(ctxs, cmaker)
 
         # disaggregate by site, IMT
         for s, iml3 in enumerate(hmap4):

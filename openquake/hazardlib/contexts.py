@@ -20,6 +20,7 @@ import os
 import abc
 import copy
 import time
+import inspect
 import logging
 import warnings
 import itertools
@@ -163,18 +164,11 @@ def gen_poes(ctxs, cmaker):
     :yields: poes of shape (N, L, G)
     """
     nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
-    C = len(ctxs)
     N = nsites.sum()
     poes = numpy.zeros((N, cmaker.loglevels.size, len(cmaker.gsims)))
-    if cmaker.single_site_opt.any():
-        ctx = cmaker.multi(ctxs)
     for g, gsim in enumerate(cmaker.gsims):
         with cmaker.gmf_mon:
-            # builds mean_std of shape (2, N, M)
-            if cmaker.single_site_opt[g] and C > 1 and (nsites == 1).all():
-                mean_std = gsim.get_mean_std1(ctx, cmaker.imts)
-            else:
-                mean_std = gsim.get_mean_std(ctxs, cmaker.imts)
+            mean_std = gsim.get_mean_std(ctxs, cmaker, g)
         with cmaker.poe_mon:
             # builds poes of shape (N, L, G)
             poes[:, :, g] = gsim.get_poes(
@@ -183,6 +177,16 @@ def gen_poes(ctxs, cmaker):
     for ctx, n in zip(ctxs, nsites):
         yield poes[s:s+n]
         s += n
+
+
+def float_struct(*allnames):
+    """
+    :returns: a composite dtype of float64 fields
+    """
+    ns = []
+    for names in allnames:
+        ns.extend(names)
+    return numpy.dtype([(n, numpy.float64) for n in ns])
 
 
 class ContextMaker(object):
@@ -200,8 +204,6 @@ class ContextMaker(object):
         self.collapse_level = param.get('collapse_level', False)
         self.trt = trt
         self.gsims = gsims
-        self.single_site_opt = numpy.array(
-            [hasattr(gsim, 'get_mean_std1') for gsim in gsims])
         self.maximum_distance = (
             param.get('maximum_distance') or MagDepDistance({}))
         self.investigation_time = param.get('investigation_time')
@@ -231,6 +233,18 @@ class ContextMaker(object):
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
+        self.stype = []
+        self.vtype = []
+        self.clist = []
+        for gsim in gsims:
+            self.stype.append(float_struct(gsim.REQUIRES_PARAMETERS,
+                                           gsim.REQUIRES_RUPTURE_PARAMETERS))
+            self.vtype.append(float_struct(gsim.REQUIRES_SITES_PARAMETERS,
+                                           gsim.REQUIRES_DISTANCES))
+            clist = [table.on(self.imts)
+                     for name, table in inspect.getmembers(gsim.__class__)
+                     if table.__class__.__name__ == "CoeffsTable"]
+            self.clist.append(clist)
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -246,6 +260,29 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
+
+    def gen_params(self, gsim_idx, ctxs):
+        """
+        Yields param, sites, allcoeffs, slice for each context
+        """
+        stype = self.stype[gsim_idx]
+        vtype = self.vtype[gsim_idx]
+        clist = self.clist[gsim_idx]
+        start = 0
+        for ctx in ctxs:
+            n = ctx.size()
+            if n > 1:
+                param = numpy.zeros(n, stype)
+            else:
+                param = numpy.zeros(1, stype)[0]
+            stop = start + n
+            sites = numpy.zeros(n, vtype)
+            for name in vtype.names:
+                sites[name] = getattr(ctx, name)
+            for name in stype.names:
+                param[name] = getattr(ctx, name)
+            yield param, sites, clist, slice(start, stop)
+            start = stop
 
     def read_ctxs(self, dstore, slc=None):
         """
@@ -483,9 +520,9 @@ class ContextMaker(object):
             ctx.mag = mag
             ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             means = []
-            for gsim in self.gsims:
+            for g, gsim in enumerate(self.gsims):
                 try:
-                    mean = gsim.get_mean_std([ctx], self.imts)[0, 0]
+                    mean = gsim.get_mean_std([ctx], self, g)[0, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
                 means.append(mean.max())
@@ -847,7 +884,7 @@ class RuptureContext(BaseContext):
         of magnitudes and it refers to a single site, returns the size of
         the array, otherwise returns 1.
         """
-        if isinstance(self.mag, numpy.ndarray) and len(self.vs30) == 1:
+        if isinstance(self.mag, numpy.ndarray):
             return len(self.mag)
         return 1
 
