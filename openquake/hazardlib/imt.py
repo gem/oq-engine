@@ -118,8 +118,8 @@ class IMT(tuple, metaclass=IMTMeta):
     def __lt__(self, other):
         if not self._fields:
             return self[0] < other[0]  # ordered by name
-        return (self[0], self[1] or 0, self[2] or 0) < (
-            other[0], other[1] or 0, other[2] or 0)
+        return (self[0], self[1], self[2] or 0) < (
+            other[0], other[1], other[2] or 0)
 
     def __repr__(self):
         if not self._fields:  # return the name
