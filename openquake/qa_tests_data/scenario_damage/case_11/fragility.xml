@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+>
+    <fragilityModel
+    assetCategory="building"
+    id="Vitor-provided"
+    lossCategory="structural"
+    >
+        <description>
+            Fragility model for liquefaction
+        </description>
+        <limitStates>
+            moderate complete
+        </limitStates>
+        <fragilityFunction
+        format="continuous"
+        id="A"
+        shape="logncdf"
+        >
+            <imls imt="PGDMax" minIML=".1" maxIML="10"/>
+            <params ls="moderate" mean="0.12" stddev="0.03"/>
+            <params ls="complete" mean="0.20" stddev="0.04"/>
+        </fragilityFunction>
+        <fragilityFunction
+        format="continuous"
+        id="B"
+        shape="logncdf"
+        >
+            <imls imt="PGDMax" minIML=".1" maxIML="10"/>
+            <params ls="moderate" mean="0.15" stddev="0.04"/>
+            <params ls="complete" mean="0.25" stddev="0.05"/>
+        </fragilityFunction>
+    </fragilityModel>
+</nrml>

@@ -1,4 +1,235 @@
   [Michele Simionato]
+  * Added a limit of 12 characters to IMT names
+  * Forbidded multiple inheritance in GMPE hierarchies
+  * Added parameter `ignore_encoding_errors` to the job.ini
+  * Extended the damage calculators to generic consequences
+  * Renamed cname -> consequence in the CSV input files
+  * Made sure the CSV writer writes in UTF-8
+
+  [Graeme Weatherill]
+  * Updates Kotha et al. (2020) slope/geology model coefficients
+
+  [Michele Simionato]
+  * Improved `post_risk` to use all the cores in a cluster, since it
+    was using the master only
+  * Improved the validation of the investigation_time in event_based_damage
+  * Renamed the `losses_by_event` CSV exporter to `risk_by_event` and
+    made it work consistently for losses, damages and consequences; also
+    removed the `no_damage` field
+
+  [Marco Pagani, Michele Simionato]
+  * Implemented MultiFaultSources
+  * Added method for computing rjb to kite surfaces
+
+  [Michele Simionato]
+  * Fixed newlines in the CSV exports on Windows
+
+  [Graeme Weatherill]
+  * Added Ameri (2014) GMPE for the Rjb case
+
+  [Michele Simionato]
+  * Optimized the slow tasks in event_based calculations
+  * Added an early check for fragility functions in place of vulnerability
+    functions or viceversa
+
+  [Marco Pagani]
+  * Numeric fix to the amplification with the convolution method
+  * Implemented the BakerJayaram2008 cross correlation model
+  * Fixed the calculation of distances for kite surfaces with Nan values
+
+  [Michele Simionato]
+  * Fixed logic tree bug: MultiMFDs were not modified
+  * Internal: added a view composite_source_model to show the sources by group
+
+  [Nicolas Schmid]
+  * Added possibility to use *.shp files instead of *.xml files when
+    doing risk calculations from shakemaps.
+
+  [Michele Simionato]
+  * Rewritten the event_based_damage calculation to support `aggregate_by`
+  * Made it possible to run an event based risk calculation starting from a
+    parent ran by a different user
+
+  [Pablo Heresi]
+  * Implemented Idini et al (2017) GSIM.
+  * Added dynamic site parameter 'soiltype'
+
+  [Michele Simionato]
+  * Added support for traditional disaggregation
+  * Removed the global site parameter `reference_siteclass` and turned
+    `backarc`, `z1pt0` and `z2pt` into dynamic site parameters
+  * Internal: storing the SiteCollection in a pandas-friendly way
+  * Added HDF5 exporter/importer for the GMFs
+  * Replaced XML exposures with CSV exposures in the demos
+
+  [Claudia Mascandola]
+  * Fix to LanzanoEtAl2016 in presence of a "bas" term in the site model
+
+  [Nicolas Schmid]
+  * Improve performance for ShakeMap calculations when spatialcorr and crosscorr
+    are both set to 'no'
+  * Add feature to do ShakeMap calculations for vulnerability models using MMI.
+
+  [Michele Simionato]
+  * Added a flag `ignore_master_seed` (false by default)
+  * Estimated the uncertainty on the losses due to the uncertainty in the
+    vulnerability functions in event_based_risk and scenario_risk calculations
+  * Supported exposures with generic CSV fields thanks to the `exposureFields`
+    mapping
+  * Honored `custom_site_id` in the hazard curves and UHS CSV exporters
+  * Added a check for the case of `aValue=-Inf` in the truncatedGR MFD
+  * Extended the engine to read XML ShakeMaps from arbitrary sources (in
+    particular local path names and web sites different from the USGS site)
+  * Fixed hdf5.dumps that was generating invalid JSON for Windows pathnames,
+    thus breaking the QGIS plugin on Windows
+  * Fixed `readinput.get_ruptures` to be able to read ruptures in engine 3.11
+    format
+  * scenario_risk calculations starting from ruptures in CSV format now
+    honor the parameter number_of_ground_motion_fields
+
+  [Nicolas Schmid]
+  * Optimized spatial covariance calculations for ShakeMaps (more than 10x)
+  * Adjusted logic in cross correlation matrix for ShakeMaps; now calculations
+    are skipped for corr='no'
+
+  [Michele Simionato]
+  * Added a `cholesky_limit` to forbid large Cholesky decompositions in ShakeMap
+    calculations
+  * Weighted the heavy sources in parallel in event based calculations
+  * Supported zero coefficient of variations with the beta distribution
+  * Fixed a bug in the agg_curves exporter with aggregate_by=id
+  * Internal: changed how the agg_loss_table is stored
+  * Fixed the avg_losses exporter when aggregate_by=id
+  * Fully merged the calculators scenario_risk, event_based_risk and ebrisk and
+    ensured independency from the number of tasks even for the "BT" and "PM"
+    distributions
+  * Storing the agg_loss_table as 64 bit floats instead of 32 bit floats
+  * Changed the algorithm used to generate the epsilons to avoid storing the
+    epsilon matrix
+
+python3-oq-engine (3.11.2-1~xenial01) xenial; urgency=low
+
+  [Matteo Nastasi]
+  * Fixed setup.py 'pyproj' dependency
+
+  [Antonio Ettorre]
+  * Fixed docker builder
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 02 Mar 2021 09:22:59 +0000
+
+python3-oq-engine (3.11.1-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed memory regression in ebrisk calculations
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 01 Mar 2021 09:30:46 +0000
+
+python3-oq-engine (3.11.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Extended the `collapse_logic_tree` feature to scenarios and event based
+    calculations
+  * Extended the taxonomy mapping feature to multiple loss types
+  * The error was not stored in the database if the calculation failed
+    before starting
+  * Made ground_motion_fields=true mandatory in event_based_risk
+
+  [Robin Gee]
+  * Added a check for missing `soil_intensities` in classical calculations
+    with site amplification
+
+  [Michele Simionato]
+  * Documented all the parameters in a job.ini file, and removed some
+    obsolete ones
+  * Added a CSV exporter for the output `avg_gmf`
+  * Fixed reporting in case of `CorrelationButNoInterIntraStdDevs` errors
+  * Better error message when the rupture is far away from the sitesa
+  * Made the calculation report exportable with `--exports rst`
+  * The boolean fields `vs30measured` and `backarc` where not cast correctly
+    when read from a CSV field (the engine read them always as True)
+  * Extended `oq plot` to draw more than 2 plots
+  * Raised an early error for zero probabilities in the hypocenter distribution
+    or the nodal plane distribution
+  * Extended the autostart zmq distribution logic to celery and dask
+  * Stored the _poes during the classical phase and not after, to save time
+  * Implemented a memory-saving logic in the classical calculator based on
+    the `memory.limit` parameter in openquake.cfg;
+
+  [Richard Styron]
+  * Added TaperedGRMFD to hazardlib
+
+  [Michele Simionato]
+  * Fixed a wrong check failing in the case of multi-exposures with multiple
+    cost types
+  * Removed a check causing a false error "Missing vulnerability function
+    for taxonomy"
+  * Consequence functions associated to a taxonomy missing in the exposure
+    are now simply discarded, instead of raising an error
+  * Added a warning when there are zero losses for nonzero GMFs
+  * Added a command `oq plot avg_gmf?imt=IMT`
+  * Internal: stored `avg_gmf` as a DataFrame
+  * Honored the `individual_curves` parameter in avg_losses, agg_losses and
+    and agg_curves (i.e. by default only expose the statistical results)
+  * Refactored the `oq commands` and removed the redundant `oq help` since
+    there is `oq --help` instead
+  * Support for input URLs associated to an input archive
+  * Introduced `deformation_component` parameter in the secondary perils
+  * Optimized the storage of the risk model with a speedup of 60x
+    for a calculation with ~50,000 fragility functions (2 minutes->2seconds)
+    and a 3x reduction on disk space
+  * Accepted aggregate_by=id in scenario/event based calculations
+  * Accepted aggregate_by=site_id in scenario/event based calculations
+  * Removed the generation of asset loss maps from event_based_risk
+  * Made the "Aggregate Losses" output in scenario_risk consistent with
+    event_based_risk and scenario_risk and supported `aggregate_by`
+  * Perform the disaggregation checks before starting the classical part
+  * Changed the "Aggregate Loss Curves" CSV exporter to generate a file for
+    each realization, for consistency with the other exporters
+  * The ebrisk outputs "Total Losses" and "Total Loss Curves" are now included
+    in the outputs "Aggregate Losses" and "Aggregate Curves"
+  * Introduced an `agg_loss_table` dataset and optimized the generation of
+    aggregate loss curves (up to 100x speedup)
+  * Removed misleading zero losses in agg_losses.csv
+  * Fixed `oq recompute_losses` and renamed it to `oq reaggregate`
+  * Bug fix: ignore_covs=true now sets the coefficient of variations to zero
+
+  [Anirudh Rao]
+  * Improved error handling of bad or zero coefficients of variation
+    for the Beta distribution for vulnerability
+
+  [Michele Simionato]
+  * Fixed 32 bit rounding issues in scenario_risk: now the total losses and
+    and the sum of the average losses are much closer
+  * Internal: made the loss type `occupants` a bit less special
+  * Documented `oq to_nrml`
+
+  [Claudia Mascandola]
+  * Added the Lanzano et al. (2019) GMPE
+
+  [Michele Simionato]
+  * Honored `minimum_asset_loss` also in the fully aggregated loss table,
+    not only in the partially aggregated loss tables and average losses
+  * Bug fixed: the log was disappearing in presence of an unrecognized
+    variable in the job.ini
+  * Implemented `minimum_asset_loss` in scenario_risk for consistency
+    with the `ebrisk` calculator
+  * Added a command `oq plot gridded_sources?`
+  * Fixed `oq recompute_losses` to expose the outputs to the database
+  * Fixed `oq engine --run --params` that was not working for
+    the `pointsource_distance`
+  * Changed the meaning of the `pointsource_distance` approximation
+
+  [Marco Pagani, Michele Simionato, Thomas Chartier]
+  * Added experimental version of KiteSource and KiteSurface
+
+  [Michele Simionato]
+  * Changed the serialization of ruptures to support MultiSurfaces
+  * Fixed a small bug of logic in the WebUI: if the authentication is
+    turned off, everyone must be able to see all calculations
+  * Fixed a bug in the calculation of averages losses in scenario_risk
+    calculations in presence of sites with zero hazard
+  * Optimized the prefiltering by using a KDTree
+  * Experimental: implemented gridding of point sources
   * Reduced slow tasks due to big complex fault sources
   * Moved the parameter `num_cores` into openquake.cfg
   * Internal: introduced the environment variable OQ_REDUCE
@@ -18,7 +249,7 @@
   * Stored the damage distributions in a pandas-friendly way and extended
     `DataStore.read_df` to accept multi-indices
 
- [Viktor Polak]
+  [Viktor Polak]
   * Added the Phung et al. (2020) GMPE
 
   [Michele Simionato]
@@ -68,7 +299,9 @@
     moment
   * Added a method to the modifiable GMPE to add (or subtract) a delta std
   * Added a method to the modifiable GMPE to set the total std as the sum of
-	tau plus a delta
+    tau plus a delta
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 23 Feb 2021 13:54:18 +0000
 
 python3-oq-engine (3.10.1-1~xenial01) xenial; urgency=low
 

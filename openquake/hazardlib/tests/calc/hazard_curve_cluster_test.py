@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2016-2020 GEM Foundation
+# Copyright (C) 2016-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,7 +19,6 @@ import numpy as np
 import unittest
 
 from openquake.hazardlib import nrml
-from openquake.hazardlib.const import TRT
 from openquake.hazardlib.geo import Point
 from openquake.baselib.general import DictArray
 from openquake.hazardlib.site import Site, SiteCollection
@@ -42,7 +41,7 @@ class HazardCurvesClusterTestCase01(unittest.TestCase):
         self.sg = getattr(nrml.to_python(testfile, sc), 'src_groups')
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.2, 0.3, 1.0]})
         gsim = SadighEtAl1997()
-        self.gsim_by_trt = {TRT.ACTIVE_SHALLOW_CRUST: gsim}
+        self.gsim_by_trt = {"Active Shallow Crust": gsim}
         site = Site(Point(1.0, -0.1), 800, z1pt0=30., z2pt5=1.)
         self.sites = SiteCollection([site])
 

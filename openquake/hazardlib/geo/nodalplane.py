@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -57,7 +57,7 @@ class NodalPlane(object):
         Check if ``dip`` is in range ``(0, 90]``
         and raise ``ValueError`` otherwise.
         """
-        if not 0 < dip <= 90:
+        if not 0 < dip < 90.000001:  # some tolerance for numeric errors
             raise ValueError('dip %g is out of range (0, 90]' % dip)
 
     @classmethod
@@ -75,5 +75,6 @@ class NodalPlane(object):
         Check if ``rake`` is in range ``(-180, 180]``
         and raise ``ValueError`` otherwise.
         """
-        if not (rake == 'undefined' or -180 < rake <= 180):
+        if not (rake == 'undefined' or -180 < rake < 180.000001):
+            # some tolerance for numeric errors
             raise ValueError('rake %g is out of range (-180, 180]' % rake)

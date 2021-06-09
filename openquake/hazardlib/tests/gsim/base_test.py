@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,7 +31,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.gsim.base import ContextMaker, to_distribution_values
+from openquake.hazardlib.gsim.base import ContextMaker
 
 aac = numpy.testing.assert_allclose
 
@@ -334,25 +334,10 @@ class CoeffsTableTestCase(unittest.TestCase):
             table1.sa_coeffs,
             {SA(period=0.1, damping=5): {"a": 1.0, "b": 2.0},
              SA(period=1.0, damping=5): {"a": 5.0, "b": 10.0},
-             SA(period=10.0, damping=5): {"a": 10.0, "b": 20.0}}
-            )
-
-    def test_table_dict_instantiation(self):
-        # Check that the table instantiates with pre-defined dictionaries
-        table1 = CoeffsTable(sa_damping=5, table=self.coefficient_string)
-        # Create target dictionary
-        coeffs = deepcopy(table1.non_sa_coeffs)
-        coeffs.update(table1.sa_coeffs)
-        table2 = CoeffsTable(sa_damping=5,
-                             table=coeffs)
-        self.assertDictEqual(table1.sa_coeffs, table2.sa_coeffs)
-        self.assertDictEqual(table1.non_sa_coeffs, table2.non_sa_coeffs)
+             SA(period=10.0, damping=5): {"a": 10.0, "b": 20.0}})
 
     def test_table_bad_instantiation(self):
-        # If instantiated with anything other than string or tuple should
-        # raise a TypeError
-        with self.assertRaises(TypeError) as te:
+        # If instantiated with anything other than string or dict should
+        # raise an error
+        with self.assertRaises(TypeError):
             CoeffsTable(sa_damping=5, table=5)
-        self.assertEqual(str(te.exception),
-                         "CoeffsTable cannot be constructed with "
-                         "inputs of the form 'int'")

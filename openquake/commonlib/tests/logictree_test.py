@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2020 GEM Foundation
+# Copyright (C) 2010-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import codecs
 import unittest
@@ -2154,9 +2155,9 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     def test_sampling_early_weights(self):
         fname_ini = os.path.join(
             os.path.join(DATADIR, 'source_specific_uncertainty'), 'job.ini')
-        oqparam = readinput.get_oqparam(
-            fname_ini, number_of_logic_tree_samples='10',
-            sampling_method='early_weights')
+        oqparam = readinput.get_oqparam(fname_ini)
+        oqparam.number_of_logic_tree_samples = 10
+        oqparam.sampling_method = 'early_weights'
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b23', 'b1_b24', 'b1_b25', 'b1_b26',
@@ -2172,9 +2173,9 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     def test_sampling_late_weights(self):
         fname_ini = os.path.join(
             os.path.join(DATADIR, 'source_specific_uncertainty'), 'job.ini')
-        oqparam = readinput.get_oqparam(
-            fname_ini, number_of_logic_tree_samples='10',
-            sampling_method='late_weights')
+        oqparam = readinput.get_oqparam(fname_ini)
+        oqparam.number_of_logic_tree_samples = 10
+        oqparam.sampling_method = 'late_weights'
         full_lt = readinput.get_full_lt(oqparam)
         rlzs = full_lt.get_realizations()  # 10 realizations
         paths = ['b1_b22', 'b1_b23', 'b1_b25', 'b1_b26',
@@ -2299,7 +2300,9 @@ taxo2,taxo2,1
 taxo3,taxo3,1
 '''
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
-            logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+            inp = dict(taxonomy_mapping=gettemp(xml))
+            oq = unittest.mock.Mock(inputs=inp, loss_names=['structural'])
+            readinput.taxonomy_mapping(oq, self.taxonomies)
         self.assertIn("{'taxo4'} are in the exposure but not in",
                       str(ctx.exception))
 
@@ -2312,7 +2315,9 @@ taxo4,taxo1,.5
 taxo4,taxo2,.4
 '''
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
-            logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+            inp = dict(taxonomy_mapping=gettemp(xml))
+            oq = unittest.mock.Mock(inputs=inp, loss_names=['structural'])
+            readinput.taxonomy_mapping(oq, self.taxonomies)
         self.assertIn("the weights do not sum up to 1 for taxo4",
                       str(ctx.exception))
 
@@ -2324,11 +2329,13 @@ taxo4,taxo2,.5
 taxo3,taxo3,1
 taxo4,taxo1,.5
 '''
-        arr, lst = logictree.taxonomy_mapping(gettemp(xml), self.taxonomies)
+        inp = dict(taxonomy_mapping=gettemp(xml))
+        oq = unittest.mock.Mock(inputs=inp, loss_names=['structural'])
+        lst = readinput.taxonomy_mapping(oq, self.taxonomies)['structural']
         self.assertEqual(lst, [[('?', 1)],
-                               [('taxo1', 1.0)],
-                               [('taxo2', 1.0)],
-                               [('taxo3', 1.0)],
+                               [('taxo1', 1)],
+                               [('taxo2', 1)],
+                               [('taxo3', 1)],
                                [('taxo2', 0.5), ('taxo1', 0.5)]])
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,6 @@
 
 import shutil
 import json
-import time
 import logging
 import os
 import tempfile
@@ -38,11 +37,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 
-from openquake.baselib import datastore, hdf5, config
+from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles
 from openquake.baselib.parallel import safely_call
 from openquake.hazardlib import nrml, gsim, valid
-from openquake.commonlib import readinput, oqvalidation, logs
+from openquake.commonlib import readinput, oqvalidation, logs, datastore
 from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
@@ -118,27 +117,28 @@ def _get_base_url(request):
     return base_url
 
 
-def _prepare_job(request, candidates):
+def _prepare_job(request, ini):
     """
     Creates a temporary directory, move uploaded files there and
-    select the job file by looking at the candidate names.
+    select the job file by looking at the .ini extension.
 
     :returns: full path of the job_file
     """
     temp_dir = tempfile.mkdtemp()
-    inifiles = []
     arch = request.FILES.get('archive')
     if arch is None:
         # move each file to a new temp dir, using the upload file names,
         # not the temporary ones
+        inifiles = []
         for each_file in request.FILES.values():
             new_path = os.path.join(temp_dir, each_file.name)
             shutil.move(each_file.temporary_file_path(), new_path)
-            if each_file.name in candidates:
+            if each_file.name.endswith(ini):
                 inifiles.append(new_path)
-        return inifiles
-    # else extract the files from the archive into temp_dir
-    return readinput.extract_from_zip(arch, candidates)
+    else:  # extract the files from the archive into temp_dir
+        inifiles = readinput.extract_from_zip(arch, ini)
+    inifiles.sort()
+    return inifiles
 
 
 @csrf_exempt
@@ -521,22 +521,19 @@ def calc_run(request):
         calculation. They can be uploaded as separate files, or zipped
         together.
     """
-    hazard_job_id = request.POST.get('hazard_job_id')
     job_ini = request.POST.get('job_ini')
-
-    if hazard_job_id:
-        hazard_job_id = int(hazard_job_id)
-        candidates = [job_ini] if job_ini else ("job_risk.ini", "job.ini")
+    hazard_job_id = request.POST.get('hazard_job_id')
+    if hazard_job_id:  # "continue" button
+        ini = job_ini if job_ini else "risk.ini"
     else:
-        candidates = [job_ini] if job_ini else (
-            "job_hazard.ini", "job_haz.ini", "job.ini")
-    result = safely_call(_prepare_job, (request, candidates))
+        ini = job_ini if job_ini else ".ini"
+    result = safely_call(_prepare_job, (request, ini))
     if result.tb_str:
         return HttpResponse(json.dumps(result.tb_str.splitlines()),
                             content_type=JSON, status=500)
     inifiles = result.get()
     if not inifiles:
-        msg = 'Could not find any file of the form %s' % str(candidates)
+        msg = 'Could not find any file of the form *%s' % ini
         logging.error(msg)
         return HttpResponse(content=json.dumps([msg]), content_type=JSON,
                             status=500)
@@ -557,22 +554,18 @@ def calc_run(request):
                         status=status)
 
 
-def submit_job(job_ini, username, hazard_calculation_id=None):
+def submit_job(job_ini, username, hc_id):
     """
     Create a job object from the given job.ini file in the job directory
-    and run it in a new process. Returns a PID.
+    and run it in a new process.
+
+    :returns: a job ID
     """
-    # errors in validating oqparam are reported immediately
-    params = vars(readinput.get_oqparam(job_ini))
-    job_id = logs.init('job')
-    params['_job_id'] = job_id
-    # errors in the calculation are not reported but are visible in the log
-    proc = Process(target=engine.run_jobs,
-                   args=([params], config.distribution.log_level, None,
-                         '', username),
-                   kwargs={'hazard_calculation_id': hazard_calculation_id})
+    jobs = engine.create_jobs(
+        [job_ini], config.distribution.log_level, None, username, hc_id)
+    proc = Process(target=engine.run_jobs, args=(jobs,))
     proc.start()
-    return job_id
+    return jobs[0].calc_id
 
 
 @require_http_methods(['GET'])

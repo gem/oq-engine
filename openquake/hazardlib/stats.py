@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2020 GEM Foundation
+# Copyright (c) 2016-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,7 +19,9 @@
 Utilities to compute mean and quantile curves
 """
 import numpy
+import pandas
 from scipy.stats import norm
+from openquake.baselib.general import agg_probs
 
 
 def norm_cdf(x, a, s):
@@ -46,6 +48,59 @@ def norm_cdf(x, a, s):
         return norm.cdf(x, loc=a, scale=s)
 
 
+def calc_momenta(array, weights):
+    """
+    :param array: an array of shape E, ...
+    :param weights: an array of length E
+    :returns: an array of shape (2, ...) with the first two statistical moments
+    """
+    momenta = numpy.zeros((2,) + array.shape[1:])
+    momenta[0] = numpy.einsum('i,i...', weights, array)
+    momenta[1] = numpy.einsum('i,i...', weights, array**2)
+    return momenta
+
+
+def calc_avg_std(momenta, totweight):
+    """
+    :param momenta: an array of shape (2, ...) obtained via calc_momenta
+    :param totweight: total weight to divide for
+    :returns: an array of shape (2, ...) with average and standard deviation
+
+    >>> arr = numpy.array([[2, 4, 6], [3, 5, 7]])
+    >>> weights = numpy.ones(2)
+    >>> calc_avg_std(calc_momenta(arr, weights), weights.sum())
+    array([[2.5, 4.5, 6.5],
+           [0.5, 0.5, 0.5]])
+    """
+    avgstd = numpy.zeros_like(momenta)
+    avgstd[0] = avg = momenta[0] / totweight
+    avgstd[1] = numpy.sqrt(numpy.maximum(momenta[1] / totweight - avg ** 2, 0))
+    return avgstd
+
+
+def avg_std(array, weights=None):
+    """
+    :param array: an array of shape E, ...
+    :param weights: an array of length E (or None for equal weights)
+    :returns: an array of shape (2, ...) with average and standard deviation
+
+    >>> avg_std(numpy.array([[2, 4, 6], [3, 5, 7]]))
+    array([[2.5, 4.5, 6.5],
+           [0.5, 0.5, 0.5]])
+    """
+    if weights is None:
+        weights = numpy.ones(len(array))
+    return calc_avg_std(calc_momenta(array, weights), weights.sum())
+
+
+def geom_avg_std(array, weights=None):
+    """
+    :returns: geometric mean and geometric stddev (see
+              https://en.wikipedia.org/wiki/Log-normal_distribution)
+    """
+    return numpy.exp(avg_std(numpy.log(array), weights))
+
+
 def mean_curve(values, weights=None):
     """
     Compute the mean by using numpy.average on the first axis.
@@ -65,20 +120,24 @@ def std_curve(values, weights=None):
     return res
 
 
-# NB: for equal weights and sorted values the quantile is computed a
+# NB: for equal weights and sorted values the quantile is computed as
 # numpy.interp(q, [1/N, 2/N, ..., N/N], values)
 def quantile_curve(quantile, curves, weights=None):
     """
-    Compute the weighted quantile aggregate of a set of curves.
+    Compute the weighted quantile aggregate of an array or list of arrays
 
     :param quantile:
         Quantile value to calculate. Should be in the range [0.0, 1.0].
     :param curves:
-        Array of R PoEs (possibly arrays)
+        R arrays
     :param weights:
-        Array-like of weights, 1 for each input curve, or None
+        R weights with sum 1, or None
     :returns:
-        A numpy array representing the quantile aggregate
+        A numpy array representing the quantile of the underlying arrays
+
+    >>> arr = numpy.array([.15, .25, .3, .4, .5, .6, .75, .8, .9])
+    >>> quantile_curve(.8, arr)
+    array(0.76)
     """
     if not isinstance(curves, numpy.ndarray):
         curves = numpy.array(curves)
@@ -229,7 +288,7 @@ def set_rlzs_stats(dstore, prefix, **attrs):
     R = arrayNR.shape[1]
     pairs = list(attrs.items())
     pairs.insert(1, ('rlz', numpy.arange(R)))
-    dstore.set_shape_attrs(prefix + '-rlzs', **dict(pairs))
+    dstore.set_shape_descr(prefix + '-rlzs', **dict(pairs))
     if R > 1:
         stats = dstore['oqparam'].hazard_stats()
         if not stats:
@@ -240,4 +299,47 @@ def set_rlzs_stats(dstore, prefix, **attrs):
         dstore[name] = compute_stats2(arrayNR, statfuncs, weights)
         pairs = list(attrs.items())
         pairs.insert(1, ('stat', statnames))
-        dstore.set_shape_attrs(name, **dict(pairs))
+        dstore.set_shape_descr(name, **dict(pairs))
+
+
+def combine_probs(values_by_grp, cmakers, rlz):
+    """
+    :param values_by_grp: C arrays of shape (D1, D2..., G)
+    :param cmakers: C ContextMakers with G gsims each
+    :param rlz: a realization index
+    :returns: array of shape (D1, D2, ...)
+    """
+    probs = []
+    for values, cmaker in zip(values_by_grp, cmakers):
+        assert values.shape[-1] == len(cmaker.gsims)
+        for g, rlzs in enumerate(cmaker.gsims.values()):
+            if rlz in rlzs:
+                probs.append(values[..., g])
+    return agg_probs(*probs)
+
+
+def average_df(dframes, weights=None):
+    """
+    Compute weighted average of DataFrames with the same index and columns.
+
+    >>> df1 = pandas.DataFrame(dict(value=[1, 1, 1]), [1, 2, 3])
+    >>> df2 = pandas.DataFrame(dict(value=[2, 2, 2]), [1, 2, 3])
+    >>> average_df([df1, df2], [.4, .6])
+       value
+    1    1.6
+    2    1.6
+    3    1.6
+    """
+    d0 = dframes[0]
+    n = len(dframes)
+    if n == 1:
+        return d0
+    elif weights is None:
+        weights = numpy.ones(n)
+    elif len(weights) != n:
+        raise ValueError('There are %d weights for %d dataframes!' %
+                         (len(weights), n))
+    data = numpy.average([df.to_numpy() for df in dframes],
+                         weights=weights, axis=0)  # shape (E, C)
+    return pandas.DataFrame({
+        col: data[:, c] for c, col in enumerate(d0.columns)}, d0.index)

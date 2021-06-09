@@ -17,7 +17,7 @@ The last line contains the location of the datastore and its size.
 The datastore can be read from IPython like this:
 
 ```python
-In [1]: from openquake.baselib.datastore import read
+In [1]: from openquake.commonlib.datastore import read
 In [2]: dstore = read('/home/michele/oqdata/calc_42.hdf5')
 In [3]: dstore
 Out[4]: <DataStore 42, open>
@@ -28,7 +28,7 @@ around a `h5py.File` object. You can read it as you would do
 with a `h5py.File`, but it has some additional features.
 There is not much documentation available yet, but you can
 always read the source code and the [automatically generated
-documentation](https://docs.openquake.org/oq-engine/master/openquake.baselib.html#module-openquake.baselib.datastore).
+documentation](https://docs.openquake.org/oq-engine/master/openquake.baselib.html#module-openquake.commonlib.datastore).
 
 If you are confortable with Python and with [h5py](
 http://docs.h5py.org/en/latest/quick.html#quick) reading the

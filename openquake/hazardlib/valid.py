@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2020 GEM Foundation
+# Copyright (C) 2013-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -233,32 +233,7 @@ class Choices(Choice):
         return tuple(values)
 
 
-export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz')
-
-
-def hazard_id(value):
-    """
-    >>> hazard_id('')
-    ()
-    >>> hazard_id('-1')
-    (-1,)
-    >>> hazard_id('42')
-    (42,)
-    >>> hazard_id('42,3')
-    (42, 3)
-    >>> hazard_id('42,3,4')
-    (42, 3, 4)
-    >>> hazard_id('42:3')
-    Traceback (most recent call last):
-       ...
-    ValueError: Invalid hazard_id '42:3'
-    """
-    if not value:
-        return ()
-    try:
-        return tuple(map(int, value.split(',')))
-    except Exception:
-        raise ValueError('Invalid hazard_id %r' % value)
+export_formats = Choices('', 'xml', 'geojson', 'txt', 'csv', 'npz', 'hdf5')
 
 
 class Regex(object):
@@ -1154,7 +1129,7 @@ class MetaParamSet(type):
 
 
 # used in commonlib.oqvalidation
-class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
+class ParamSet(metaclass=MetaParamSet):
     """
     A set of valid interrelated parameters. Here is an example
     of usage:
@@ -1282,6 +1257,11 @@ class ParamSet(hdf5.LiteralAttrs, metaclass=MetaParamSet):
     def __iter__(self):
         for item in sorted(vars(self).items()):
             yield item
+
+    def __repr__(self):
+        names = sorted(n for n in vars(self) if not n.startswith('_'))
+        nameval = ', '.join('%s=%r' % (n, getattr(self, n)) for n in names)
+        return '<%s %s>' % (self.__class__.__name__, nameval)
 
 
 class RjbEquivalent(object):

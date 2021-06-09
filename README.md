@@ -31,9 +31,9 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 ### Current stable
 
-Current stable version is the **OpenQuake Engine 3.10** 'Ulomov'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.10#openquake-engine.
+Current stable version is the **OpenQuake Engine 3.11** 'Wegener'. The documentation is available at https://github.com/gem/oq-engine/tree/engine-3.11#openquake-engine.
 
-* [What's new](../engine-3.10/doc/whats-new.md)
+* [What's new](../engine-3.11/doc/whats-new.md)
 
 ## Documentation (master tree)
 
@@ -44,8 +44,8 @@ Current stable version is the **OpenQuake Engine 3.10** 'Ulomov'. The documentat
 * [About](doc/about.md)
 * [FAQ](doc/faq.md)
 * [Manuals](https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual)
-* [OQ Commands](doc/oq-commands.md)
-* [Architecture](doc/sphinx/architecture.rst)
+* [OQ Commands](doc/adv-manual/oq-commands.rst)
+* [Architecture](doc/adv-manual/architecture.rst)
 * [Calculation Workflow](doc/calculation-workflow.md)
 * [Hardware Suggestions](doc/hardware-suggestions.md)
 * [Continuous integration and testing](doc/testing.md)

@@ -1,0 +1,49 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+platforms:
+  - name: server
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu1804}-ansible:latest"
+    command: /sbin/init 
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+    groups:
+      - master
+  - name: worker1
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu1804}-ansible:latest"
+    command: /sbin/init 
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+    groups:
+      - worker
+  - name: worker2
+    image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu1804}-ansible:latest"
+    command: /sbin/init 
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+    groups:
+      - worker
+scenario:
+  test_sequence:
+    - cleanup 
+    - destroy
+    - create
+    - converge
+    - verify
+    - cleanup
+    - destroy
+verifier:
+  name: ansible
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      stdout_callback: yaml
+      ansible_verbosity: 1
+  lint:
+    ansible-lint

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -231,6 +231,63 @@ class AbrahamsonEtAl2014(GMPE):
                                                    self.CONSTS['n']))
         return site_resp_term
 
+    def _hw_taper1(self, dists, rup):
+        # Compute taper t1
+        T1 = np.ones_like(dists.rx)
+        T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0  
+        return T1
+
+    def _hw_taper2(self, dists, rup):
+        # Compute taper t2 (eq 12 at page 1039) - a2hw set to 0.2 as
+        # indicated at page 1041
+        T2 = np.zeros_like(dists.rx)
+        a2hw = 0.2
+        if rup.mag > 6.5:
+            T2 += (1. + a2hw * (rup.mag - 6.5))
+        elif rup.mag > 5.5:
+            T2 += (1. + a2hw * (rup.mag - 6.5) - (1. - a2hw) *
+                   (rup.mag - 6.5)**2)
+        else:
+            T2 *= 0.
+        return T2
+
+    def _hw_taper3(self, dists, rup):
+        # Compute taper t3 (eq. 13 at page 1039) - r1 and r2 specified at
+        # page 1040
+        T3 = np.zeros_like(dists.rx)
+        r1 = rup.width * np.cos(np.radians(rup.dip))
+        r2 = 3. * r1
+        #
+        idx = dists.rx < r1
+        T3[idx] = (np.ones_like(dists.rx)[idx] * self.CONSTS['h1'] +
+                   self.CONSTS['h2'] * (dists.rx[idx] / r1) +
+                   self.CONSTS['h3'] * (dists.rx[idx] / r1)**2)
+        #
+        idx = ((dists.rx >= r1) & (dists.rx <= r2))
+        T3[idx] = 1. - (dists.rx[idx] - r1) / (r2 - r1)
+        return T3
+
+    def _hw_taper4(self, dists, rup):
+        # Compute taper t4 (eq. 14 at page 1040)
+        T4 = np.zeros_like(dists.rx)
+        #
+        if rup.ztor <= 10.:
+            T4 += (1. - rup.ztor**2. / 100.)
+        return T4
+
+    def _hw_taper5(self, dists, rup):
+        # Compute T5 (eq 15a at page 1040) - ry1 computed according to
+        # suggestions provided at page 1040
+        T5 = np.zeros_like(dists.rx)
+        ry1 = dists.rx * np.tan(np.radians(20.))
+        #
+        idx = (dists.ry0 - ry1) <= 0.0
+        T5[idx] = 1.
+        #
+        idx = (((dists.ry0 - ry1) > 0.0) & ((dists.ry0 - ry1) < 5.0))
+        T5[idx] = 1. - (dists.ry0[idx] - ry1[idx]) / 5.0
+        return T5
+
     def _get_hanging_wall_term(self, C, dists, rup):
         """
         Compute and return hanging wall model term, see page 1038.
@@ -240,48 +297,16 @@ class AbrahamsonEtAl2014(GMPE):
         else:
             Fhw = np.zeros_like(dists.rx)
             Fhw[dists.rx > 0] = 1.
-            # Compute taper t1
-            T1 = np.ones_like(dists.rx)
-            T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
-            # Compute taper t2 (eq 12 at page 1039) - a2hw set to 0.2 as
-            # indicated at page 1041
-            T2 = np.zeros_like(dists.rx)
-            a2hw = 0.2
-            if rup.mag > 6.5:
-                T2 += (1. + a2hw * (rup.mag - 6.5))
-            elif rup.mag > 5.5:
-                T2 += (1. + a2hw * (rup.mag - 6.5) - (1. - a2hw) *
-                       (rup.mag - 6.5)**2)
-            else:
-                T2 *= 0.
-            # Compute taper t3 (eq. 13 at page 1039) - r1 and r2 specified at
-            # page 1040
-            T3 = np.zeros_like(dists.rx)
-            r1 = rup.width * np.cos(np.radians(rup.dip))
-            r2 = 3. * r1
-            #
-            idx = dists.rx < r1
-            T3[idx] = (np.ones_like(dists.rx)[idx] * self.CONSTS['h1'] +
-                       self.CONSTS['h2'] * (dists.rx[idx] / r1) +
-                       self.CONSTS['h3'] * (dists.rx[idx] / r1)**2)
-            #
-            idx = ((dists.rx >= r1) & (dists.rx <= r2))
-            T3[idx] = 1. - (dists.rx[idx] - r1) / (r2 - r1)
-            # Compute taper t4 (eq. 14 at page 1040)
-            T4 = np.zeros_like(dists.rx)
-            #
-            if rup.ztor <= 10.:
-                T4 += (1. - rup.ztor**2. / 100.)
-            # Compute T5 (eq 15a at page 1040) - ry1 computed according to
-            # suggestions provided at page 1040
-            T5 = np.zeros_like(dists.rx)
-            ry1 = dists.rx * np.tan(np.radians(20.))
-            #
-            idx = (dists.ry0 - ry1) <= 0.0
-            T5[idx] = 1.
-            #
-            idx = (((dists.ry0 - ry1) > 0.0) & ((dists.ry0 - ry1) < 5.0))
-            T5[idx] = 1. - (dists.ry0[idx] - ry1[idx]) / 5.0
+            # Taper 1
+            T1 = self._hw_taper1(dists, rup)
+            # Taper 2
+            T2 = self._hw_taper2(dists, rup)
+            # Taper 3
+            T3 = self._hw_taper3(dists, rup)
+            # Taper 4
+            T4 = self._hw_taper4(dists, rup)
+            # Taper 5
+            T5 = self._hw_taper5(dists, rup)
             # Finally, compute the hanging wall term
             return Fhw*C['a13']*T1*T2*T3*T4*T5
 

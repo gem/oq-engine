@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2020 GEM Foundation
+# Copyright (C) 2015-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,10 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import gzip
+import json
 import logging
 import shapely
 import numpy
-from openquake.baselib import sap
+from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
 from openquake.calculators.extract import Extractor, WebExtractor
@@ -27,7 +28,7 @@ from openquake.calculators.extract import Extractor, WebExtractor
 
 def make_figure_hcurves(extractors, what):
     """
-    $ oq plot 'hcurves?kind=mean&imt=PGA&site_id=0'
+    $ oq plot "hcurves?kind=mean&imt=PGA&site_id=0"
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -55,9 +56,29 @@ def make_figure_hcurves(extractors, what):
     return plt
 
 
+def make_figure_avg_gmf(extractors, what):
+    """
+    $ oq plot "avg_gmf?imt=gmv_0"
+    """
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    [ex] = extractors
+    avg_gmf = ex.get(what)
+    imt = what.split('=')[1]
+    ax = fig.add_subplot(1, 1, 1)
+    ax.grid(True)
+    ax.set_title('Avg GMF for %s' % imt)
+    ax.set_xlabel('Lon')
+    ax.set_ylabel('Lat')
+    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'],
+                      c=avg_gmf[imt], cmap='jet')
+    plt.colorbar(coll)
+    return plt
+
+
 def make_figure_vs30(extractors, what):
     """
-    $ oq plot 'vs30?'
+    $ oq plot "vs30?"
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -74,7 +95,7 @@ def make_figure_vs30(extractors, what):
 
 def make_figure_hmaps(extractors, what):
     """
-    $ oq plot 'hmaps?kind=mean&imt=PGA'
+    $ oq plot "hmaps?kind=mean&imt=PGA"
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -90,7 +111,9 @@ def make_figure_hmaps(extractors, what):
         itime = oq1.investigation_time
         assert oq2.investigation_time == itime
         sitecol = ex1.get('sitecol')
-        assert (ex2.get('sitecol').array == sitecol.array).all()
+        array2 = ex2.get('sitecol').array
+        for name in ('lon', 'lat'):
+            numpy.testing.assert_equal(array2[name], sitecol.array[name])
         hmaps1 = ex1.get(what)
         hmaps2 = ex2.get(what)
         [imt] = hmaps1.imt
@@ -131,7 +154,7 @@ def make_figure_hmaps(extractors, what):
 
 def make_figure_uhs(extractors, what):
     """
-    $ oq plot 'uhs?kind=mean&site_id=0'
+    $ oq plot "uhs?kind=mean&site_id=0"
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -174,7 +197,7 @@ def stacked_bar(ax, x, ys, width):
 
 def make_figure_disagg(extractors, what):
     """
-    $ oq plot 'disagg?kind=Mag&imt=PGA'
+    $ oq plot "disagg?kind=Mag&imt=PGA"
     """
     import matplotlib.pyplot as plt
     from matplotlib import cm
@@ -233,7 +256,7 @@ def make_figure_disagg(extractors, what):
 
 def make_figure_task_info(extractors, what):
     """
-    $ oq plot 'task_info?kind=classical'
+    $ oq plot "task_info?kind=classical"
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
@@ -259,7 +282,7 @@ def make_figure_task_info(extractors, what):
 
 def make_figure_memory(extractors, what):
     """
-    $ oq plot 'memory?'
+    $ oq plot "memory?"
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -302,12 +325,13 @@ class PolygonPlotter():
         except ValueError:  # LINESTRING, not POLYGON
             pass
 
-    def set_lim(self, sitecol=None):
-        if sitecol:
-            self.minxs.append(min(sitecol['lon']))
-            self.maxxs.append(max(sitecol['lon']))
-            self.minys.append(min(sitecol['lat']))
-            self.maxys.append(max(sitecol['lat']))
+    def set_lim(self, xs=(), ys=()):
+        if len(xs):
+            self.minxs.append(min(xs))
+            self.maxxs.append(max(xs))
+        if len(ys):
+            self.minys.append(min(ys))
+            self.maxys.append(max(ys))
         if self.minxs and self.maxxs:
             self.ax.set_xlim(min(self.minxs), max(self.maxxs))
         if self.minys and self.maxys:
@@ -316,9 +340,9 @@ class PolygonPlotter():
 
 def make_figure_sources(extractors, what):
     """
-    $ oq plot sources?limit=100
-    $ oq plot sources?source_id=1&source_id=2
-    $ oq plot sources?code=A&code=N
+    $ oq plot "sources?limit=100"
+    $ oq plot "sources?source_id=1&source_id=2"
+    $ oq plot "sources?code=A&code=N"
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -329,10 +353,10 @@ def make_figure_sources(extractors, what):
     fig, ax = plt.subplots()
     ax.grid(True)
     sitecol = ex.get('sitecol')
-    ax.plot(sitecol['lon'], sitecol['lat'], '+')
     pp = PolygonPlotter(ax)
     n = 0
     tot = 0
+    psources = []
     for rec, srcid, wkt in zip(info, srcs, wkts):
         if not wkt:
             logging.warning('No geometries for source id %s', srcid)
@@ -344,16 +368,56 @@ def make_figure_sources(extractors, what):
         else:
             color = 'yellow'
             alpha = .1
-        pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
+        if wkt.startswith('POINT'):
+            psources.append(shapely.wkt.loads(wkt))
+        else:
+            pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
         tot += 1
-    pp.set_lim(sitecol)
+    lons = [p.x for p in psources]
+    lats = [p.y for p in psources]
+    ss_lons = lons + list(sitecol['lon'])  # sites + sources longitudes
+    ss_lats = lats + list(sitecol['lat'])  # sites + sources latitudes
+    if len(ss_lons) > 1 and cross_idl(*ss_lons):
+        ss_lons = [lon % 360 for lon in ss_lons]
+        lons = [lon % 360 for lon in lons]
+        sitecol['lon'] = sitecol['lon'] % 360
+    ax.plot(sitecol['lon'], sitecol['lat'], '.')
+    ax.plot(lons, lats, 'o')
+    pp.set_lim(ss_lons, ss_lats)
     ax.set_title('%d/%d sources' % (n, tot))
+    return plt
+
+
+def make_figure_gridded_sources(extractors, what):
+    """
+    $ oq plot "gridded_sources?task_no=0"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    import matplotlib.pyplot as plt
+    [ex] = extractors
+    dic = json.loads(ex.get(what).json)  # id -> lonlats
+    fig, ax = plt.subplots()
+    ax.grid(True)
+    sitecol = ex.get('sitecol')
+    tot = 0
+    for lonlats in dic.values():
+        if len(lonlats) == 2:  # not collapsed
+            tot += 1
+        else:  # collapsed
+            tot += len(lonlats) / 2 - 1
+        ax.plot([lonlats[0]], [lonlats[1]], '*')
+        lons = lonlats[2::2]
+        lats = lonlats[3::2]
+        ax.scatter(lons, lats)
+    ax.plot(sitecol['lon'], sitecol['lat'], '.')
+    ax.set_title('Reduced %d->%d sources' % (tot, len(dic)))
+    # TODO: fix plot around the IDL
     return plt
 
 
 def make_figure_rupture_info(extractors, what):
     """
-    $ oq plot rupture_info?min_mag=6
+    $ oq plot "rupture_info?min_mag=6"
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -383,7 +447,7 @@ def make_figure_rupture_info(extractors, what):
 
 def make_figure_effect(extractors, what):
     """
-    $ oq plot 'effect?'
+    $ oq plot "effect?"
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -414,7 +478,7 @@ def make_figure_effect(extractors, what):
 
 def make_figure_rups_by_mag_dist(extractors, what):
     """
-    $ oq plot 'rups_by_mag_dist?'
+    $ oq plot "rups_by_mag_dist?"
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -445,7 +509,7 @@ def make_figure_rups_by_mag_dist(extractors, what):
 
 def make_figure_dist_by_mag(extractors, what):
     """
-    $ oq plot 'dist_by_mag?'
+    $ oq plot "dist_by_mag?"
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -478,7 +542,7 @@ def make_figure_dist_by_mag(extractors, what):
 
 def make_figure_effect_by_mag(extractors, what):
     """
-    $ oq plot 'effect_by_mag?'
+    $ oq plot "effect_by_mag?"
     """
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as plt
@@ -508,20 +572,25 @@ def make_figure_effect_by_mag(extractors, what):
 
 def make_figure_agg_curves(extractors, what):
     """
-    $ oq plot 'agg_curves?kind=mean&loss_type=structural' -1
+    $ oq plot "agg_curves?kind=mean&loss_type=structural" -1
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
     got = {}  # (calc_id, kind) -> curves
     for i, ex in enumerate(extractors):
         aw = ex.get(what + '&absolute=1')
+        if isinstance(aw.json, numpy.ndarray):  # from webui
+            js = bytes(aw.json).decode('utf8')
+        else:
+            js = aw.json
+        vars(aw).update(json.loads(js))
         agg_curve = aw.array.squeeze()
         got[ex.calc_id, aw.kind[0]] = agg_curve
     oq = ex.oqparam
     periods = aw.return_period
     ax = fig.add_subplot(1, 1, 1)
     ax.set_xlabel('risk_inv_time=%dy' % oq.risk_investigation_time)
-    ax.set_ylabel('PoE')
+    ax.set_ylabel('loss')
     for ck, arr in got.items():
         ax.loglog(periods, agg_curve, '-', label='%s_%s' % ck)
         ax.loglog(periods, agg_curve, '.')
@@ -530,31 +599,65 @@ def make_figure_agg_curves(extractors, what):
     return plt
 
 
-def make_figure_tot_curves(extractors, what):
+def make_figure_csq_curves(extractors, what):
     """
-    $ oq plot 'tot_curves?loss_type=structural&kind=rlz-000&absolute=1'
+    $ oq plot "csq_curves?agg_id=0&loss_type=structural&consequence=losses" -1
     """
     import matplotlib.pyplot as plt
     fig = plt.figure()
-    [ex] = extractors
-    tot = ex.get(what)
-    app = ex.get(what.replace('tot_', 'app_'))
+    got = {}  # (calc_id, limit_state) -> curve
+    for i, ex in enumerate(extractors):
+        aw = ex.get(what)
+        P, C = aw.shape
+        if P < 2:
+            raise RuntimeError('Not enough return periods: %d' % P)
+        for c, csq in enumerate(aw.consequences):
+            if csq in what:
+                got[ex.calc_id, csq] = aw[:, c]
+    oq = ex.oqparam
+    periods = aw.return_period
     ax = fig.add_subplot(1, 1, 1)
-    ax.set_xlabel('return periods')
-    ax.set_ylabel('PoE')
-    ax.loglog(tot.return_period, tot[:, 0], '-', label='tot_curves')
-    ax.loglog(app.return_period, app[:, 0], '-', label='app_curves')
+    ax.set_xlabel('risk_inv_time=%dy' % oq.risk_investigation_time)
+    ax.set_ylabel(csq)
+    for ck, arr in got.items():
+        ax.loglog(periods, arr, '-', label=ck[0])
+        ax.loglog(periods, arr, '.')
     ax.grid(True)
     ax.legend()
     return plt
 
 
-@sap.script
-def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
+def make_figure_tot_curves(extractors, what):
+    """
+    $ oq plot "tot_curves?loss_type=structural&kind=rlz-000&absolute=1"
+    """
+    return make_figure_agg_curves(extractors, what)
+
+
+def plot_wkt(wkt_string):
+    """
+    Plot a WKT string describing a polygon
+    """
+    from shapely import wkt
+    import matplotlib.pyplot as plt
+    poly = wkt.loads(wkt_string)
+    coo = numpy.array(poly.exterior.coords)
+    plt.plot(coo[:, 0], coo[:, 1], '-')
+    return plt
+
+
+def main(what,
+         calc_id: int = -1,
+         others: int = [],
+         webapi=False,
          local=False):
     """
     Generic plotter for local and remote calculations.
     """
+    if what.startswith('POLYGON'):
+        plt = plot_wkt(what)
+        plt.show()
+        return
     if what == 'examples':
         help_msg = ['Examples of possible plots:']
         for k, v in globals().items():
@@ -574,23 +677,23 @@ def plot(what='examples', calc_id=-1, other_id=None, webapi=False,
         what += '&poe_id=0'
     if local:
         xs = [WebExtractor(calc_id, 'http://localhost:8800', '')]
-        if other_id:
+        for other_id in others:
             xs.append(WebExtractor(other_id), 'http://localhost:8800', '')
     elif webapi:
         xs = [WebExtractor(calc_id)]
-        if other_id:
+        for other_id in others:
             xs.append(WebExtractor(other_id))
     else:
         xs = [Extractor(calc_id)]
-        if other_id:
+        for other_id in others:
             xs.append(Extractor(other_id))
     make_figure = globals()['make_figure_' + prefix]
     plt = make_figure(xs, what)
     plt.show()
 
 
-plot.arg('what', 'what to extract')
-plot.arg('calc_id', 'computation ID', type=int)
-plot.arg('other_id', 'ID of another computation', type=int)
-plot.flg('webapi', 'if given, pass through the WebAPI')
-plot.flg('local', 'if passed, use the local WebAPI')
+main.what = 'what to extract (try examples)'
+main.calc_id = 'computation ID'
+main.others = dict(help='IDs of other computations', nargs='*')
+main.webapi = 'if given, pass through the WebAPI'
+main.local = 'if passed, use the local WebAPI'

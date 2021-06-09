@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -180,7 +180,6 @@ class SimpleFaultSource(ParametricSeismicSource):
                                     self.temporal_occurrence_model,
                                     rupture_slip_direction)
 
-
     def get_fault_surface_area(self):
         """
         Computes the area covered by the surface of the fault.
@@ -188,9 +187,10 @@ class SimpleFaultSource(ParametricSeismicSource):
         :returns:
             A float defining the area of the surface of the fault [km^2]
         """
-        sfc = SimpleFaultSurface.from_fault_data(self.fault_trace,
-                self.upper_seismogenic_depth, self.lower_seismogenic_depth,
-                self.dip, 1.0)
+        sfc = SimpleFaultSurface.from_fault_data(
+            self.fault_trace,
+            self.upper_seismogenic_depth, self.lower_seismogenic_depth,
+            self.dip, 1.0)
         return sfc.get_area()
 
     def count_ruptures(self):
@@ -339,6 +339,10 @@ class SimpleFaultSource(ParametricSeismicSource):
         if not hasattr(self, '_nr'):
             self.count_ruptures()
         for i, (mag, rate) in enumerate(mag_rates):
+            # This is needed in order to reproduce the logic in the
+            # `rupture_count` method
+            if rate == 0:
+                continue
             src = copy.copy(self)
             src.mfd = mfd.ArbitraryMFD([mag], [rate])
             src.num_ruptures = self._nr[i]

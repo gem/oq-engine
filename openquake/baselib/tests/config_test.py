@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2020 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,8 +30,8 @@ class ConfigPathsTestCase(unittest.TestCase):
         if venv:
             self.assertIn(os.path.join(venv, 'openquake.cfg'), config.paths)
         else:
-            logging.warn('To run the tests, you should use a '
-                         'development installation with a virtualenv')
+            logging.warning('To run the tests, you should use a '
+                            'development installation with a virtualenv')
 
     def test_config_file(self):
         cfgfile = os.environ.get('OQ_CONFIG_FILE')

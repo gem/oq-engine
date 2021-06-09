@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -91,7 +91,7 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
 # collapse the ruptures, then _get_poes will be called less times
 def _get_poes(mean_std, loglevels, truncation_level):
     mean, stddev = mean_std  # shape (N, M) each
-    out = numpy.zeros((len(mean), len(loglevels.array)))  # shape (N, L)
+    out = numpy.zeros((len(mean), loglevels.size))  # shape (N, L)
     lvl = 0
     for m, imt in enumerate(loglevels):
         for iml in loglevels[imt]:
@@ -125,7 +125,7 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
     # C - Number of contexts
     # L - Number of intensity measure levels
     mean, stddev = mean_std  # shape (C, M)
-    C, L = len(mean), len(loglevels.array)
+    C, L = len(mean), loglevels.size
     for ctx in ctxs:
         assert len(ctx.sids) == 1  # 1 site
     M = len(loglevels)
@@ -189,10 +189,10 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
             # Computing the probability of exceedance of the levels of
             # ground-motion loglevels on soil
             logaf = numpy.log(numpy.exp(soillevels) / iml_mid)  # shape L1
-            for l in range(L1):
+            for li in range(L1):
                 poex_af = 1. - norm.cdf(
-                    logaf[l], numpy.log(median_af), std_af)  # shape C
-                out_s[:, m * L1 + l] += poex_af * pocc_rock  # shape C
+                    logaf[li], numpy.log(median_af), std_af)  # shape C
+                out_s[:, m * L1 + li] += poex_af * pocc_rock  # shape C
 
     return out_s
 
@@ -204,6 +204,9 @@ class MetaGSIM(abc.ABCMeta):
     it performs some checks against typos.
     """
     def __new__(meta, name, bases, dic):
+        if len(bases) > 1:
+            raise TypeError('Multiple inheritance is forbidden: %s(%s)' % (
+                name, ', '.join(b.__name__ for b in bases)))
         for k, v in dic.items():
             if isinstance(v, set):
                 dic[k] = frozenset(v)
@@ -212,7 +215,8 @@ class MetaGSIM(abc.ABCMeta):
                     if missing:
                         raise ValueError('Unknown distance %s in %s' %
                                          (missing, name))
-        return super().__new__(meta, name, bases, dic)
+        cls = super().__new__(meta, name, bases, dic)
+        return cls
 
 
 @functools.total_ordering
@@ -618,7 +622,7 @@ class GMPE(GroundShakingIntensityModel):
             arr = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
             shp = list(mean_std[0].shape)  # (N, M)
-            shp[1] = len(loglevels.array)  # L
+            shp[1] = loglevels.size  # L
             arr = numpy.zeros(shp)
             for f, w in zip(self.mixture_model["factors"],
                             self.mixture_model["weights"]):
@@ -754,28 +758,23 @@ class CoeffsTable(object):
     """
     num_instances = 0
 
-    def __init__(self, **kwargs):
-        if 'table' not in kwargs:
-            raise TypeError('CoeffsTable requires "table" kwarg')
+    def __init__(self, table, **kwargs):
         self._coeffs = {}  # cache
-        table = kwargs.pop('table')
-        self.sa_coeffs = {}
-        self.non_sa_coeffs = {}
+        self.logratio = kwargs.pop('logratio', True)
         sa_damping = kwargs.pop('sa_damping', None)
         if kwargs:
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
-        if isinstance(table, str):
+        if isinstance(table, str):  # common case
             self._setup_table_from_str(table, sa_damping)
-        elif isinstance(table, dict):
-            for imt in table:
-                if imt.name == 'SA':
-                    self.sa_coeffs[imt] = table[imt]
-                else:
-                    self.non_sa_coeffs[imt] = table[imt]
-        else:
-            raise TypeError("CoeffsTable cannot be constructed with inputs "
-                            "of the form '%s'" % table.__class__.__name__)
+        else:  # in ngs_east
+            self._coeffs.update(table)
         self.__class__.num_instances += 1
+
+        first = self._coeffs[next(iter(self._coeffs))]  # dictionary
+        if not isinstance(first, dict):
+            first = {'value': first}
+        self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
+                              [(name, float) for name in first])
 
     def _setup_table_from_str(self, table, sa_damping):
         """
@@ -799,13 +798,22 @@ class CoeffsTable(object):
                 if imt_name not in imt_module.registry:
                     raise ValueError('unknown IMT %r' % imt_name)
                 imt = imt_module.registry[imt_name]()
-                self.non_sa_coeffs[imt] = imt_coeffs
             else:
                 if sa_damping is None:
                     raise TypeError('attribute "sa_damping" is required '
                                     'for tables defining SA')
                 imt = imt_module.SA(sa_period, sa_damping)
-                self.sa_coeffs[imt] = imt_coeffs
+            self._coeffs[imt] = imt_coeffs
+
+    @property
+    def sa_coeffs(self):
+        return {imt: self._coeffs[imt] for imt in self._coeffs
+                if imt.name == 'SA'}
+
+    @property
+    def non_sa_coeffs(self):
+        return {imt: self._coeffs[imt] for imt in self._coeffs
+                if imt.name != 'SA'}
 
     def __getitem__(self, imt):
         """
@@ -819,17 +827,9 @@ class CoeffsTable(object):
             If ``imt`` is not available in the table and no interpolation
             can be done.
         """
-        try:
+        try:  # see if already in cache
             return self._coeffs[imt]
-        except KeyError:
-            pass
-        if imt.name != 'SA':
-            self._coeffs[imt] = c = self.non_sa_coeffs[imt]
-            return c
-        try:
-            self._coeffs[imt] = c = self.sa_coeffs[imt]
-            return c
-        except KeyError:
+        except KeyError:  # populate the cache
             pass
 
         max_below = min_above = None
@@ -845,11 +845,15 @@ class CoeffsTable(object):
         if max_below is None or min_above is None:
             raise KeyError(imt)
 
-        # ratio tends to 1 when target period tends to a minimum
-        # known period above and to 0 if target period is close
-        # to maximum period below.
-        ratio = ((math.log(imt.period) - math.log(max_below.period))
-                 / (math.log(min_above.period) - math.log(max_below.period)))
+        if self.logratio:  # regular case
+            # ratio tends to 1 when target period tends to a minimum
+            # known period above and to 0 if target period is close
+            # to maximum period below.
+            ratio = ((math.log(imt.period) - math.log(max_below.period)) /
+                     (math.log(min_above.period) - math.log(max_below.period)))
+        else:  # in the ACME project
+            ratio = ((imt.period - max_below.period) /
+                     (min_above.period - max_below.period))
         max_below = self.sa_coeffs[max_below]
         min_above = self.sa_coeffs[min_above]
         self._coeffs[imt] = c = {

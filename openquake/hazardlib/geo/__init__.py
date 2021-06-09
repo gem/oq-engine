@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,6 +33,7 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface import ComplexFaultSurface
 from openquake.hazardlib.geo.surface import MultiSurface
+from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo import surface

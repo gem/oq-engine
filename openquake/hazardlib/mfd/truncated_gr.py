@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -68,7 +68,6 @@ class TruncatedGRMFD(BaseMFD):
         self.bin_width = bin_width
         self.a_val = a_val
         self.b_val = b_val
-
         self.check_constraints()
 
     def check_constraints(self):
@@ -94,8 +93,10 @@ class TruncatedGRMFD(BaseMFD):
                              'bin width %g at least'
                              % (self.max_mag, self.min_mag, self.bin_width))
 
-        if not 0 < self.b_val:
+        if self.b_val <= 0:
             raise ValueError('b-value %g must be non-negative' % self.b_val)
+        if not np.isfinite(self.a_val):
+            raise ValueError(self.a_val)
 
     def _get_rate(self, mag):
         """

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2020 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,6 +32,7 @@ logic tree file is as in this example::
                 <uncertaintyWeight>1</uncertaintyWeight>
               </logicTreeBranch>
 """
+import inspect
 import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
@@ -42,8 +43,6 @@ class AvgGMPE(GMPE):
     The AvgGMPE returns mean and stddevs from a set of underlying
     GMPEs with the given weights.
     """
-    experimental = True
-
     #: Supported tectonic region type is undefined
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
 
@@ -80,7 +79,12 @@ class AvgGMPE(GMPE):
         for branchid, branchparams in kwargs.items():
             [(gsim_name, params)] = branchparams.items()
             weights.append(params.pop('weight'))
-            gsim = registry[gsim_name](**params)
+            gsim_cls = registry[gsim_name]
+            sig = inspect.signature(gsim_cls.__init__)
+            if list(sig.parameters) == ['self']:  # trivial signature
+                gsim = gsim_cls()
+            else:
+                gsim = gsim_cls(**params)
             rd.update(gsim.REQUIRES_DISTANCES)
             rsp.update(gsim.REQUIRES_SITES_PARAMETERS)
             rrp.update(gsim.REQUIRES_RUPTURE_PARAMETERS)
@@ -100,12 +104,13 @@ class AvgGMPE(GMPE):
         Call the underlying GMPEs and return the weighted mean and stddev
         """
         means = []
-        std2 = []
+        std2 = [[] for _ in stddev_types]
         for g, gsim in enumerate(self.gsims):
-            mean, [stdtot] = gsim.get_mean_and_stddevs(
+            mean, stddevs = gsim.get_mean_and_stddevs(
                 sctx, rctx, dctx, imt, stddev_types)
             means.append(mean)
-            std2.append(stdtot**2)
+            for s, stddev in enumerate(stddevs):
+                std2[s].append(stddev**2)
         mean = self.weights @ means
-        std = numpy.sqrt(self.weights @ std2)
-        return mean, [std]
+        stddevs = [numpy.sqrt(self.weights @ s) for s in std2]
+        return mean, stddevs

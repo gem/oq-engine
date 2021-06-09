@@ -1,16 +1,15 @@
 ---
 name: docker
-'on':
-  push:
-    branches:
-      - multistagedocker
+on:
   schedule:
     - cron: "0 2 * * *"
-
+  push: 
+    branches:
+      - docker_build
 
 jobs:
   docker:
-    name: build and up compose 
+    name: Build image and run calc
     runs-on: ubuntu-latest
 
     steps:
@@ -19,26 +18,10 @@ jobs:
         uses: actions/checkout@v2
       - name: Build image engine with tag nightly
         id: docker_engine
-        run: docker build -t openquake/engine:nightly -f docker/Dockerfile.engine docker
+        run: docker build --build-arg oq_branch=master -t openquake/engine:nightly -f docker/Dockerfile.dev docker
       - name: List Image
         run: |
           docker image ls
-      - name: Build image engine master with tag nightly
-        id: docker_master
-        run: docker build -t openquake/engine-master-zmq:nightly -f docker/zmq/Dockerfile.master docker/zmq
-      - name: Builds image engine worker with tags nightly
-        id: docker_worker
-        run: docker build -t openquake/engine-worker-zmq:nightly -f docker/zmq/Dockerfile.worker docker/zmq
-      - name: List Image
+      - name: Run calcs on single docker
         run: |
-          docker image ls
-      - name: Run docker compose to build up cluster
-        run: |
-          cd docker
-          docker-compose up -d
-          sleep 30
-          docker-compose ps
-          time  docker-compose exec -T master oq engine --run oq-engine/demos/hazard/AreaSourceClassicalPSHA/job.ini
-          curl http://localhost:8800/v1/calc/list
-          docker-compose down
-
+          time docker run openquake/engine:nightly "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"

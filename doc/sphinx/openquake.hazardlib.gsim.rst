@@ -108,6 +108,13 @@ allen_2012_ipe
     :undoc-members:
     :show-inheritance:
 
+ameri_2014
+---------------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.ameri_2014
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ameri_2017
 ---------------------------------------------------
 .. automodule:: openquake.hazardlib.gsim.ameri_2017
@@ -650,6 +657,14 @@ hong_goda_2007
     :undoc-members:
     :show-inheritance:
 
+idini_2017
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.idini_2017
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
 idriss_2014
 -------------------------------------------
 
@@ -694,9 +709,19 @@ kuehn_2020
 ------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.kuehn_2020
+
+lanzano_2016
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_2016
     :members:
     :undoc-members:
     :show-inheritance:
+
+lanzano_2019
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.lanzano_2019
 
 lanzano_luzi_2019
 ----------------------------------------

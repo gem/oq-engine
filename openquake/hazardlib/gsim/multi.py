@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2020 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,6 @@ Module exports :class:`MultiGMPE`, which can create a composite of
 multiple GMPEs for different IMTs when passed a dictionary of ground motion
 models organised by IMT type or by a string describing the association
 """
-import collections
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.imt import from_string
@@ -34,7 +33,7 @@ REQUIRES_DISTANCES
 '''.split()
 
 
-class MultiGMPE(GMPE, collections.abc.Mapping):
+class MultiGMPE(GMPE):
     """
     The MultiGMPE can call ground motions for various IMTs when instantiated
     with a dictionary of ground motion models organised by IMT or a string

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2020 GEM Foundation
+# Copyright (C) 2018-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,8 +18,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from openquake.baselib import sap, performance, general
-from openquake.commonlib import readinput, util
+from openquake.baselib import performance, general
+from openquake.commonlib import readinput, datastore
 
 
 def get_dupl(src_ids):
@@ -30,15 +30,14 @@ def get_dupl(src_ids):
     return dupl
 
 
-@sap.script
-def reduce_sm(calc_id):
+def main(calc_id: int):
     """
     Reduce the source model of the given (pre)calculation by discarding all
     sources that do not contribute to the hazard.
     """
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
-    with util.read(calc_id) as dstore:
+    with datastore.read(calc_id) as dstore:
         oqparam = dstore['oqparam']
         info = dstore['source_info'][()]
     src_ids = info['source_id']
@@ -60,4 +59,4 @@ def reduce_sm(calc_id):
     print(mon)
 
 
-reduce_sm.arg('calc_id', 'calculation ID', type=int)
+main.calc_id = 'calculation ID'

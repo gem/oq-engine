@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,7 +21,7 @@ from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib import const
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.const import TRT, IMC
+from openquake.hazardlib.const import TRT, IMC, StdDev
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import CY14SiteTerm
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
@@ -29,9 +29,8 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 class CY14SiteTermTestCase(unittest.TestCase):
 
     def setUp(self):
-
-        # Set parameters - Setting z1pt0 does not make sense but here we 
-        # want to make sure that the modified gmm provided GM amplified 
+        # Set parameters - Setting z1pt0 does not make sense but here we
+        # want to make sure that the modified gmm provided GM amplified
         # by the site term exactly as the original model.
         sites = Dummy.get_site_collection(4, vs30=400., vs30measured=True,
                                           z1pt0=0.)
@@ -49,9 +48,7 @@ class CY14SiteTermTestCase(unittest.TestCase):
         self.stdt = stdt
         self.sites = sites
 
-
     def test_instantiation(self):
-        """ Tests the instantiation """
         mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
         #
         # Check the assigned IMTs
@@ -67,7 +64,7 @@ class CY14SiteTermTestCase(unittest.TestCase):
         self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT ==
                         expected, msg='The IM component is wrong')
         # Check the standard deviations
-        expected = set(['Intra event', 'Total', 'Inter event'])
+        expected = set(StdDev)
         self.assertTrue(mgmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES == expected,
                         msg='The standard deviations assigned are wrong')
         # Check the required distances
@@ -76,8 +73,6 @@ class CY14SiteTermTestCase(unittest.TestCase):
                         msg='The assigned distance types are wrong')
 
     def test_gm_calculation_soil_reference(self):
-        """ Test mean and std calculation - CY14 on reference rock"""
-
         # Modified gmpe
         mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
 
@@ -108,8 +103,6 @@ class CY14SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected)
 
     def test_gm_calculation_soil_BC(self):
-        """ Test mean and std calculation - CY14 on BC soil"""
-
         # Modified gmpe
         mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
 
@@ -141,8 +134,6 @@ class CY14SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected, decimal=2)
 
     def test_gm_calculation_soil(self):
-        """ Test mean and std calculation - CY14 on BC soil"""
-
         # Modified gmpe
         gmpe = ChiouYoungs2014()
         mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
@@ -173,8 +164,6 @@ class CY14SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected, decimal=1)
 
     def test_gm_calculation_soil_SA(self):
-        """ Test mean and std calculation - CY14 on soil - SA"""
-
         # Modified gmpe
         gmpe = ChiouYoungs2014()
         mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
@@ -206,7 +195,4 @@ class CY14SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected, decimal=1)
 
     def test_raise_error(self):
-        """ raise error when DEFINED_FOR_REFERENCE_VELOCITY is missing """
-
-        arg = 'AbrahamsonEtAl2014'
-        self.assertRaises(ValueError, CY14SiteTerm, arg)
+        self.assertRaises(ValueError, CY14SiteTerm, 'AbrahamsonEtAl2014')

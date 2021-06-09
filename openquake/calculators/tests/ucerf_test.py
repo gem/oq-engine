@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2020 GEM Foundation
+# Copyright (C) 2016-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -53,7 +53,7 @@ class UcerfTestCase(CalculatorTestCase):
         self.run_calc(ucerf.__file__, 'job_ebh.ini')
 
         # check the distribution of the events
-        self.assertEventsByRlz([16, 19])
+        self.assertEventsByRlz([22, 13])
 
     def test_classical(self):
         self.run_calc(ucerf.__file__, 'job_classical_redux.ini',

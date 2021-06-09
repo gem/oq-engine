@@ -16,7 +16,7 @@ compute 5%, 50%, and 95% weighted quantile aggregates.
 Finally, we extract hazard maps and Uniform Hazard Spectra at 10% and 2% probabilities
 of exceedance.
 
-Expected runtime: ~20 minutes
+Expected runtime: ~20 seconds
 Number of sites: 1
 Number of logic tree realizations: 324
 GMPEs: BooreAtkinson2008, ChiouYoungs2008, ToroEtAl2002, Campbell2003

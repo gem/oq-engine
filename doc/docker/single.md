@@ -38,7 +38,7 @@ The container prompt will appear, here you play with the `oq` [shell command](..
 
 ```bash
 [openquake@b318358ee053 ~]$ oq --version
-2.8.0
+3.10.0
 ```
 
 After you have restarted you container (same commands as the headless mode) you can re-attach the container shell using:
@@ -68,9 +68,7 @@ You can print the list of containers and images using `$ docker ps -a` and `$ do
 ### Docker
 
 - [Introduction](../installing/docker.md)
-- [Cluster deployment](cluster.md)
 - [Advanced options](advanced.md)
-- [Build from sources](../../docker.md#build-openquake-docker-images)
 
 ***
 

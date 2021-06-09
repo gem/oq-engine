@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2020 GEM Foundation
+# Copyright (C) 2014-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,13 +42,18 @@ def classical_bcr(riskinputs, param, monitor):
     R = riskinputs[0].hazard_getter.num_rlzs
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
     crmodel = monitor.read('crmodel')
+    mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
-        for out in ri.gen_outputs(crmodel, monitor):
-            for asset, (eal_orig, eal_retro, bcr) in zip(
-                    ri.assets, out['structural']):
-                aval = asset['value-structural']
-                result[asset['ordinal']][out.rlzi] = numpy.array([
-                    eal_orig * aval, eal_retro * aval, bcr])
+        with mon:
+            haz = ri.hazard_getter.get_hazard()
+        for taxo, assets in ri.asset_df.groupby('taxonomy'):
+            for rlz, pcurve in enumerate(haz):
+                out = crmodel.get_output(taxo, assets, pcurve, rlz=rlz)
+                for asset, (eal_orig, eal_retro, bcr) in zip(
+                        assets.to_records(), out['structural']):
+                    aval = asset['value-structural']
+                    result[asset['ordinal']][rlz] = numpy.array([
+                        eal_orig * aval, eal_retro * aval, bcr])
     return {'bcr_data': result}
 
 

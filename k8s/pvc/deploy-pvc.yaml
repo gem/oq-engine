@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pvc-engine
+  namespace: default
+  labels:
+    app: engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: engine
+  template:
+    metadata:
+      labels:
+        app: engine
+    spec:
+      containers:
+      - name: oqengine
+        image: openquake/engine:latest
+        ports:
+        - name: webui
+          containerPort: 8800
+        volumeMounts:
+        - mountPath: /home/openquake/data
+          name: data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: datacalc

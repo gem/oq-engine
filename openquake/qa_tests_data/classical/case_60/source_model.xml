@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Single Source Model"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <pointSource id="1" name="ps1">
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            176.9 50.1
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        50.0
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="5.05"
+                >
+                    <occurRates>
+                        6.9554221e-05 5.7639936e-05 4.7766508e-05 3.9584348e-05 3.280375e-05 2.7184634e-05 2.2528044e-05 1.8669105e-05 1.5471182e-05 1.2821047e-05 1.0624867e-05 8.804881e-06 7.2966496e-06 6.0467706e-06 5.0109895e-06 4.1526324e-06 3.4413076e-06 2.8518291e-06 2.3633252e-06 1.9584996e-06 1.6230186e-06 1.3450037e-06 1.1146114e-06
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="0.0"/>
+                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="45.0"/>
+                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="90.0"/>
+                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="135.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="25.0" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2020 GEM Foundation
+# Copyright (C) 2017-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,12 +19,10 @@
 import os
 import signal
 import psutil
-from openquake.baselib import sap
 from openquake.commonlib import logs
 
 
-@sap.script
-def abort(job_id):
+def main(job_id: int):
     """
     Abort the given job
     """
@@ -53,4 +51,4 @@ def abort(job_id):
               ' setting it as failed' % job.id)
 
 
-abort.arg('job_id', 'job ID', type=int)
+main.job_id = 'job ID'

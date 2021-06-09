@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -457,13 +457,12 @@ class AtkinsonBoore2003SSlabCascadia(AtkinsonBoore2003SSlab):
     """)
 
 
-class AtkinsonBoore2003SSlabCascadiaNSHMP2008(AtkinsonBoore2003SSlabCascadia,
-                                              AtkinsonBoore2003SSlabNSHMP2008):
+class AtkinsonBoore2003SSlabCascadiaNSHMP2008(AtkinsonBoore2003SSlabNSHMP2008):
     """
     Combines :class:`AtkinsonBoore2003SSlabNSHMP2008` for NSHMP site
     amplification with :class:`AtkinsonBoore2003SSlabCascadia` for Cascadia.
     """
-    pass
+    COEFFS_SSLAB = AtkinsonBoore2003SSlabCascadia.COEFFS_SSLAB
 
 
 class AtkinsonBoore2003SSlabJapan(AtkinsonBoore2003SSlab):
@@ -485,8 +484,7 @@ class AtkinsonBoore2003SSlabJapan(AtkinsonBoore2003SSlab):
     """)
 
 
-class AtkinsonBoore2003SSlabJapanNSHMP2008(AtkinsonBoore2003SSlabJapan,
-                                           AtkinsonBoore2003SSlabNSHMP2008):
+class AtkinsonBoore2003SSlabJapanNSHMP2008(AtkinsonBoore2003SSlabNSHMP2008):
     """
     Combines :class:`AtkinsonBoore2003SSlabNSHMP2008` for NSHMP site
     amplification with :class:`AtkinsonBoore2003SSlabJapan` for Japan.
@@ -495,4 +493,4 @@ class AtkinsonBoore2003SSlabJapanNSHMP2008(AtkinsonBoore2003SSlabJapan,
     and 2 of Table 3 to test vector for
     AtkinsonBoore2003SSlabCascadiaNSHMP2008.
     """
-    pass
+    COEFFS_SSLAB = AtkinsonBoore2003SSlabJapan.COEFFS_SSLAB

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2020 GEM Foundation
+# Copyright (C) 2012-2021 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -237,11 +237,10 @@ class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
         pmf = PMF([(0.7, 0), (0.2, 1), (0.1, 2)])
         poes = numpy.array([[0.9, 0.8, 0.7], [0.6, 0.5, 0.4]])
         rup = make_rupture(NonParametricProbabilisticRupture, pmf=pmf)
-        pne = rup.get_probability_no_exceedance(poes)
+        pne = rup.get_probability_no_exceedance(poes, PoissonTOM(20))
         numpy.testing.assert_allclose(
             pne,
-            numpy.array([[0.721, 0.744, 0.769], [0.796, 0.825, 0.856]])
-        )
+            numpy.array([[0.721, 0.744, 0.769], [0.796, 0.825, 0.856]]))
 
     def test_sample_number_of_occurrences(self):
         pmf = PMF([(0.7, 0), (0.2, 1), (0.1, 2)])
