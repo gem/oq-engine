@@ -213,18 +213,19 @@ def calc_hazard_curves(
     return pmap.convert(imtls, len(sitecol.complete))
 
 
-# called in adv-manual/developing.rst
-def calc_hazard_curve(site1, src, gsims, oqparam):
+# called in adv-manual/developing.rst and in SingleSiteOptTestCase
+def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     """
     :param site1: site collection with a single site
     :param src: a seismic source object
     :param gsims: a list of GSIM objects
     :param oqparam: an object with attributes .maximum_distance, .imtls
+    :param monitor: a Monitor instance (optional)
     :returns: a ProbabilityCurve object
     """
     assert len(site1) == 1, site1
     trt = src.tectonic_region_type
-    cmaker = ContextMaker(trt, gsims, vars(oqparam))
+    cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
     srcfilter = SourceFilter(site1, oqparam.maximum_distance)
     pmap, rup_data, calc_times = PmapMaker(cmaker, srcfilter, [src]).make()
