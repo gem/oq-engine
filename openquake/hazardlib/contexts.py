@@ -146,13 +146,14 @@ def get_pmap(ctxs, cmaker, probmap=None):
         pmap = probmap
     for ctx, poes in zip(ctxs, gen_poes(ctxs, cmaker)):
         # pnes and poes of shape (N, L, G)
-        pnes = ctx.get_probability_no_exceedance(poes, tom)
-        for sid, pne in zip(ctx.sids, pnes):
-            probs = pmap.setdefault(sid, cmaker.rup_indep).array
-            if rup_indep:
-                probs *= pne
-            else:  # rup_mutex
-                probs += (1. - pne) * ctx.weight
+        with cmaker.pne_mon:
+            pnes = ctx.get_probability_no_exceedance(poes, tom)
+            for sid, pne in zip(ctx.sids, pnes):
+                probs = pmap.setdefault(sid, cmaker.rup_indep).array
+                if rup_indep:
+                    probs *= pne
+                else:  # rup_mutex
+                    probs += (1. - pne) * ctx.weight
     if probmap is None:  # return the new pmap
         return ~pmap if rup_indep else pmap
 
@@ -270,6 +271,7 @@ class ContextMaker(object):
         # instantiate monitors
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
+        self.pne_mon = monitor('composing pnes', measuremem=False)
 
     def gen_params(self, gsim_idx, ctxs):
         """
@@ -613,7 +615,6 @@ class PmapMaker(object):
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
         self.cmaker.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
         self.fewsites = self.N <= cmaker.max_sites_disagg
-        self.pne_mon = cmaker.mon('composing pnes', measuremem=False)
         # NB: if maxsites is too big or too small the performance of
         # get_poes can easily become 2-3 times worse!
         self.maxsites = 512000 / len(self.gsims) / self.imtls.size
@@ -635,10 +636,9 @@ class PmapMaker(object):
         # compute PoEs and update pmap
         # splitting in blocks makes sure that the maximum poes array
         # generated has size N x L x G x 8 = 4 MB
-        with self.pne_mon:
-            for block in block_splitter(
-                    ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
-                get_pmap(block, self.cmaker, pmap)
+        for block in block_splitter(
+                ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
+            get_pmap(block, self.cmaker, pmap)
 
     def _ruptures(self, src, filtermag=None):
         return src.iter_ruptures(
