@@ -21,7 +21,6 @@ import collections
 import unittest.mock as mock
 
 import numpy
-from copy import deepcopy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import (
