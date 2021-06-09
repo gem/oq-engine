@@ -165,7 +165,6 @@ def gen_poes(ctxs, cmaker):
     """
     nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
     N = nsites.sum()
-    M = len(cmaker.imts)
     poes = numpy.zeros((N, cmaker.loglevels.size, len(cmaker.gsims)))
     calc_mean = [getattr(gsim, 'calc_mean', None) for gsim in cmaker.gsims]
     single_site_opt = any(calc_mean) and (nsites == 1).all()
