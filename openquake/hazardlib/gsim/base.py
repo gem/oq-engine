@@ -685,7 +685,8 @@ class CoeffsTable(object):
     >>> CoeffsTable()
     Traceback (most recent call last):
         ...
-    TypeError: CoeffsTable requires "table" kwarg
+    TypeError: __init__() missing 1 required positional argument: 'table'
+
     >>> CoeffsTable(table='', foo=1)
     Traceback (most recent call last):
         ...
@@ -729,7 +730,7 @@ class CoeffsTable(object):
     >>> ct[imt.PGV()]
     Traceback (most recent call last):
         ...
-    KeyError: PGV
+    AttributeError: 'PGV' object has no attribute 'damping'
     >>> ct[imt.SA(1.0, 4)]
     Traceback (most recent call last):
         ...
