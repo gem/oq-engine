@@ -1002,6 +1002,14 @@ tavakoli_pezeshk_2005
     :undoc-members:
     :show-inheritance:
 
+test_2021
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.test_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 toro_1997
 -----------------------------------------
 
