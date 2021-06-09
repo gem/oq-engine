@@ -33,7 +33,7 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, ArbitraryMFD
 from openquake.hazardlib.source import PointSource, SimpleFaultSource
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.akkar_bommer_2010 import AkkarBommer2010
-from openquake.hazardlib.gsim.toro_2002 import ToroEtAl2002
+from openquake.hazardlib.gsim.test_2021 import Test2021
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014PEER
 from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 
@@ -282,7 +282,7 @@ class SingleSiteOptTestCase(unittest.TestCase):
             imtls=DictArray(imtls),
             maximum_distance=MagDepDistance.new('300'))
         hcurve = calc_hazard_curve(
-            sitecol, asource, [ToroEtAl2002()], oq, mon)
+            sitecol, asource, [Test2021()], oq, mon)
         for child in mon.children:
             print(child)
         got = hcurve.array[:, 0]
