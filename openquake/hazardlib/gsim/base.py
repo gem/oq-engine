@@ -358,7 +358,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, AdaptedWarning)
 
-    @abc.abstractmethod
+    # @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Calculate and return mean value of intensity distribution and it's
@@ -551,26 +551,28 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
-    def get_mean_std(self, ctxs, imts, gen_params, g):
+    def get_mean_std(self, ctxs, imts, gen_params, gsim_idx):
         """
         :returns: an array of shape (2, N, M) with means and stddevs
         """
+        ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(imts)
         arr = numpy.zeros((2, N, M))
-        num_tables = CoeffsTable.num_instances
-        if hasattr(self, 'get_mean_stds'):  # fast lane
-            for scalar, vector, allcoeffs, slc in gen_params(g, ctxs):
-                arr[:, slc, :] = self.__class__.get_mean_stds(
-                    scalar, vector, b'T', *allcoeffs)
+        get_mean = getattr(self.__class__, 'get_mean', None)
+        get_stdt = getattr(self.__class__, 'get_stdt', None)
+        if get_mean:  # fast lane
+            for param, sites, clist, slc, m in gen_params(gsim_idx, ctxs):
+                arr[0, slc, m] = get_mean(param, sites, *clist)
+                arr[1, slc, m] = get_stdt(param, sites, *clist)
         else:  # slow lane
+            num_tables = CoeffsTable.num_instances
             start = 0
             for ctx in ctxs:
                 stop = start + len(ctx.sids)
-                new = ctx.roundup(self.minimum_distance)
                 for m, imt in enumerate(imts):
                     mean, [std] = self.get_mean_and_stddevs(
-                        ctx, ctx, new, imt, [const.StdDev.TOTAL])
+                        ctx, ctx, ctx, imt, [const.StdDev.TOTAL])
                     arr[0, start:stop, m] = mean
                     arr[1, start:stop, m] = std
                     if CoeffsTable.num_instances > num_tables:

@@ -244,16 +244,18 @@ class ContextMaker(object):
             self.REQUIRES_DISTANCES.add('repi')
         self.stype = []
         self.vtype = []
-        self.coeffs = []
+        self.clists = []
         for gsim in gsims:
             self.stype.append(float_struct(gsim.REQUIRES_PARAMETERS,
                                            gsim.REQUIRES_RUPTURE_PARAMETERS))
             self.vtype.append(float_struct(gsim.REQUIRES_SITES_PARAMETERS,
                                            gsim.REQUIRES_DISTANCES))
-            all_coeffs = [table.on(self.imts)
-                          for name, table in inspect.getmembers(gsim.__class__)
-                          if table.__class__.__name__ == "CoeffsTable"]
-            self.coeffs.append(all_coeffs)
+            coeffs = {name: table.on(self.imts)
+                      for name, table in inspect.getmembers(gsim.__class__)
+                      if table.__class__.__name__ == "CoeffsTable"}
+            clists = [[coeffs[name][m] for name in coeffs]
+                      for m in range(len(self.imts))]
+            self.clists.append(clists)
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -269,24 +271,26 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
 
-    def gen_params(self, g, ctxs):
+    def gen_params(self, gsim_idx, ctxs):
         """
-        Yields scalar, vector, allcoeffs, slc for each context
+        Yields param, sites, allcoeffs, slice, m for each context and IMT
         """
-        stype = self.stype[g]
-        vtype = self.vtype[g]
+        stype = self.stype[gsim_idx]
+        vtype = self.vtype[gsim_idx]
+        clists = self.clists[gsim_idx]
         start = 0
         for ctx in ctxs:
-            scalar = numpy.zeros(1, stype)[0]
+            param = numpy.zeros(1, stype)[0]
             n = len(ctx.sids)
             stop = start + n
-            vector = numpy.zeros((n, 1), vtype)
+            sites = numpy.zeros(n, vtype)
             for name in vtype.names:
-                vector[name][:, 0] = getattr(ctx, name)
+                sites[name] = getattr(ctx, name)
             for name in stype.names:
-                scalar[name] = getattr(ctx, name)
-            yield scalar, vector, self.coeffs[g], slice(start, stop)
-            stop = start
+                param[name] = getattr(ctx, name)
+            for m, clist in enumerate(clists):
+                yield param, sites, clist, slice(start, stop), m
+            start = stop
 
     def read_ctxs(self, dstore, slc=None):
         """
