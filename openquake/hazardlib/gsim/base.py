@@ -558,7 +558,7 @@ class GMPE(GroundShakingIntensityModel):
         calc_mean = getattr(self.__class__, 'calc_mean', None)
         calc_stdt = getattr(self.__class__, 'calc_stdt', None)
         if calc_mean:  # fast lane
-            if all(len(ctx) == 1 for ctx in ctxs):
+            if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
                 ctxs = [cmaker.multi(ctxs)]
             for param, sites, clist, slc in cmaker.gen_params(gsim_idx, ctxs):
                 calc_mean(arr[0, slc], param, sites, *clist)
