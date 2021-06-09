@@ -547,18 +547,20 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
-    def get_mean_std(self, ctxs, imts, gen_params, gsim_idx):
+    def get_mean_std(self, ctxs, cmaker, gsim_idx):
         """
         :returns: an array of shape (2, N, M) with means and stddevs
         """
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
-        M = len(imts)
+        M = len(cmaker.imts)
         arr = numpy.zeros((2, N, M))
         calc_mean = getattr(self.__class__, 'calc_mean', None)
         calc_stdt = getattr(self.__class__, 'calc_stdt', None)
         if calc_mean:  # fast lane
-            for param, sites, clist, slc in gen_params(gsim_idx, ctxs):
+            if all(len(ctx) == 1 for ctx in ctxs):
+                ctxs = [cmaker.multi(ctxs)]
+            for param, sites, clist, slc in cmaker.gen_params(gsim_idx, ctxs):
                 calc_mean(arr[0, slc], param, sites, *clist)
                 calc_stdt(arr[1, slc], param, sites, *clist)
         else:  # slow lane
@@ -566,7 +568,7 @@ class GMPE(GroundShakingIntensityModel):
             start = 0
             for ctx in ctxs:
                 stop = start + len(ctx.sids)
-                for m, imt in enumerate(imts):
+                for m, imt in enumerate(cmaker.imts):
                     mean, [std] = self.get_mean_and_stddevs(
                         ctx, ctx, ctx, imt, [const.StdDev.TOTAL])
                     arr[0, start:stop, m] = mean

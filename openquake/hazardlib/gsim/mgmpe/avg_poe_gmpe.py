@@ -112,14 +112,14 @@ class AvgPoeGMPE(GMPE):
             stds.append(std)
         return means, stds
 
-    def get_mean_std(self, ctxs, imts, gen_params, gsim_index):
+    def get_mean_std(self, ctxs, cmaker, gsim_index):
         """
         Call the underlying GMPEs and return an array of shape (2, N, M, G')
         """
         N = sum(len(ctx.sids) for ctx in ctxs)
-        res = numpy.zeros((2, N, len(imts), len(self.gsims)))
+        res = numpy.zeros((2, N, len(cmaker.imts), len(self.gsims)))
         for g, gsim in enumerate(self.gsims):
-            res[:, :, :, g] = gsim.get_mean_std(ctxs, imts, gen_params, g)
+            res[:, :, :, g] = gsim.get_mean_std(ctxs, cmaker, g)
         return res
 
     def get_poes(self, mean_std, loglevels, trunclevel,

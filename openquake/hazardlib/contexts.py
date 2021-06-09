@@ -166,13 +166,9 @@ def gen_poes(ctxs, cmaker):
     nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
     N = nsites.sum()
     poes = numpy.zeros((N, cmaker.loglevels.size, len(cmaker.gsims)))
-    calc_mean = [getattr(gsim, 'calc_mean', None) for gsim in cmaker.gsims]
-    single_site_opt = any(calc_mean) and (nsites == 1).all()
-    ctx = cmaker.multi(ctxs) if single_site_opt else ctxs
     for g, gsim in enumerate(cmaker.gsims):
         with cmaker.gmf_mon:
-            mean_std = gsim.get_mean_std(
-                ctx, cmaker.imts, cmaker.gen_params, g)
+            mean_std = gsim.get_mean_std(ctxs, cmaker, g)
         with cmaker.poe_mon:
             # builds poes of shape (N, L, G)
             poes[:, :, g] = gsim.get_poes(
@@ -274,8 +270,11 @@ class ContextMaker(object):
         clist = self.clist[gsim_idx]
         start = 0
         for ctx in ctxs:
-            param = numpy.zeros(1, stype)[0]
-            n = len(ctx.sids)
+            n = ctx.size()
+            if n > 1:
+                param = numpy.zeros(n, stype)
+            else:
+                param = numpy.zeros(1, stype)[0]
             stop = start + n
             sites = numpy.zeros(n, vtype)
             for name in vtype.names:
@@ -523,8 +522,7 @@ class ContextMaker(object):
             means = []
             for g, gsim in enumerate(self.gsims):
                 try:
-                    mean = gsim.get_mean_std(
-                        [ctx], self.imts, self.gen_params, g)[0, 0]
+                    mean = gsim.get_mean_std([ctx], self, g)[0, 0]
                 except ValueError:  # magnitude outside of supported range
                     continue
                 means.append(mean.max())
@@ -886,7 +884,7 @@ class RuptureContext(BaseContext):
         of magnitudes and it refers to a single site, returns the size of
         the array, otherwise returns 1.
         """
-        if isinstance(self.mag, numpy.ndarray) and len(self.vs30) == 1:
+        if isinstance(self.mag, numpy.ndarray):
             return len(self.mag)
         return 1
 
