@@ -176,7 +176,7 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
 def set_mean_std(ctxs, cmaker):
     for u, ctx in enumerate(ctxs):
         ctx.mean_std = [gsim.get_mean_std([ctx], cmaker, g)
-                        for g, gsim in enumerate(gsims)]
+                        for g, gsim in enumerate(cmaker.gsims)]
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
