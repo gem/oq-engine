@@ -18,7 +18,6 @@
 
 import numpy as np
 from openquake.baselib.performance import jittable
-from openquake.hazardlib.gsim.campbell_2003 import _compute_faulting_style_term
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -66,35 +65,26 @@ class Test2021(GMPE):
     """)
 
     @jittable
-    def get_mean(param, sites, C):
-        """
-        Compute mean value according to equation 3, page 46.
-        """
+    def calc_mean(out, param, sites, coeffs):
         mag, rjb = param['mag'], sites['rjb']
-        mean = (C['c1'] + _compute_term1(C, mag) + _compute_term2(C, mag, rjb))
-
-        # apply decay factor for 3 and 4 seconds (not originally supported
-        # by the equations)
-        if C['period'] == 3.0:
-            mean /= 0.612
-        if C['period'] == 4.0:
-            mean /= 0.559
-        return mean
+        for m, C in enumerate(coeffs):
+            out[:, m] = (C['c1'] + _compute_term1(C, mag) +
+                         _compute_term2(C, mag, rjb))
+            if C['period'] == 3.0:
+                out[:, m] /= 0.612
+            elif C['period'] == 4.0:
+                out[:, m] /= 0.559
 
     @jittable
-    def get_stdt(param, sites, C):
+    def calc_stdt(out, param, sites, coeffs):
         mag, rjb = param['mag'], sites['rjb']
-
-        # aleatory uncertainty
-        sigma_ale_m = np.interp(
-            mag, [5.0, 5.5, 8.0],
-            [C['m50'], C['m55'], C['m80']])
-        sigma_ale_rjb = np.interp(
-            rjb, [5.0, 20.0], [C['r5'], C['r20']])
-        sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
-
-        # epistemic uncertainty
-        sigma_epi = (0.36 + 0.07 * (mag - 6) if C["period"] < 1
-                     else 0.34 + 0.06 * (mag - 6))
-        sigma_total = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)
-        return sigma_total
+        for m, C in enumerate(coeffs):
+            sigma_ale_m = np.interp(
+                mag, [5.0, 5.5, 8.0],
+                [C['m50'], C['m55'], C['m80']])
+            sigma_ale_rjb = np.interp(
+                rjb, [5.0, 20.0], [C['r5'], C['r20']])
+            sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
+            sigma_epi = (0.36 + 0.07 * (mag - 6) if C["period"] < 1
+                         else 0.34 + 0.06 * (mag - 6))
+            out[:, m] = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)

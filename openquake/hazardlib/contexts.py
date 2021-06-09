@@ -245,18 +245,16 @@ class ContextMaker(object):
             self.REQUIRES_DISTANCES.add('repi')
         self.stype = []
         self.vtype = []
-        self.clists = []
+        self.clist = []
         for gsim in gsims:
             self.stype.append(float_struct(gsim.REQUIRES_PARAMETERS,
                                            gsim.REQUIRES_RUPTURE_PARAMETERS))
             self.vtype.append(float_struct(gsim.REQUIRES_SITES_PARAMETERS,
                                            gsim.REQUIRES_DISTANCES))
-            coeffs = {name: table.on(self.imts)
-                      for name, table in inspect.getmembers(gsim.__class__)
-                      if table.__class__.__name__ == "CoeffsTable"}
-            clists = [[coeffs[name][m] for name in coeffs]
-                      for m in range(len(self.imts))]
-            self.clists.append(clists)
+            clist = [table.on(self.imts)
+                     for name, table in inspect.getmembers(gsim.__class__)
+                     if table.__class__.__name__ == "CoeffsTable"]
+            self.clist.append(clist)
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -275,11 +273,11 @@ class ContextMaker(object):
 
     def gen_params(self, gsim_idx, ctxs):
         """
-        Yields param, sites, allcoeffs, slice, m for each context and IMT
+        Yields param, sites, allcoeffs, slice for each context
         """
         stype = self.stype[gsim_idx]
         vtype = self.vtype[gsim_idx]
-        clists = self.clists[gsim_idx]
+        clist = self.clist[gsim_idx]
         start = 0
         for ctx in ctxs:
             param = numpy.zeros(1, stype)[0]
@@ -290,8 +288,7 @@ class ContextMaker(object):
                 sites[name] = getattr(ctx, name)
             for name in stype.names:
                 param[name] = getattr(ctx, name)
-            for m, clist in enumerate(clists):
-                yield param, sites, clist, slice(start, stop), m
+            yield param, sites, clist, slice(start, stop)
             start = stop
 
     def read_ctxs(self, dstore, slc=None):
