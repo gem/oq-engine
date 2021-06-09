@@ -164,19 +164,16 @@ def gen_poes(ctxs, cmaker):
     :yields: poes of shape (N, L, G)
     """
     nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
-    C = len(ctxs)
     N = nsites.sum()
+    M = len(cmaker.imts)
     poes = numpy.zeros((N, cmaker.loglevels.size, len(cmaker.gsims)))
-    if cmaker.single_site_opt.any():
-        ctx = cmaker.multi(ctxs)
+    calc_mean = [getattr(gsim, 'calc_mean', None) for gsim in cmaker.gsims]
+    single_site_opt = any(calc_mean) and (nsites == 1).all()
+    ctx = cmaker.multi(ctxs) if single_site_opt else ctxs
     for g, gsim in enumerate(cmaker.gsims):
         with cmaker.gmf_mon:
-            # builds mean_std of shape (2, N, M)
-            if cmaker.single_site_opt[g] and C > 1 and (nsites == 1).all():
-                mean_std = gsim.get_mean_std1(ctx, cmaker.imts)
-            else:
-                mean_std = gsim.get_mean_std(
-                    ctxs, cmaker.imts, cmaker.gen_params, g)
+            mean_std = gsim.get_mean_std(
+                ctx, cmaker.imts, cmaker.gen_params, g)
         with cmaker.poe_mon:
             # builds poes of shape (N, L, G)
             poes[:, :, g] = gsim.get_poes(
@@ -212,8 +209,6 @@ class ContextMaker(object):
         self.collapse_level = param.get('collapse_level', False)
         self.trt = trt
         self.gsims = gsims
-        self.single_site_opt = numpy.array(
-            [hasattr(gsim, 'get_mean_std1') for gsim in gsims])
         self.maximum_distance = (
             param.get('maximum_distance') or MagDepDistance({}))
         self.investigation_time = param.get('investigation_time')
