@@ -164,19 +164,15 @@ def gen_poes(ctxs, cmaker):
     :yields: poes of shape (N, L, G)
     """
     nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
-    C = len(ctxs)
     N = nsites.sum()
     poes = numpy.zeros((N, cmaker.loglevels.size, len(cmaker.gsims)))
-    if cmaker.single_site_opt.any():
-        ctx = cmaker.multi(ctxs)
+    calc_mean = [getattr(gsim, 'calc_mean', None) for gsim in cmaker.gsims]
+    single_site_opt = any(calc_mean) and (nsites == 1).all()
+    ctx = cmaker.multi(ctxs) if single_site_opt else ctxs
     for g, gsim in enumerate(cmaker.gsims):
         with cmaker.gmf_mon:
-            # builds mean_std of shape (2, N, M)
-            if cmaker.single_site_opt[g] and C > 1 and (nsites == 1).all():
-                mean_std = gsim.get_mean_std1(ctx, cmaker.imts)
-            else:
-                mean_std = gsim.get_mean_std(
-                    ctxs, cmaker.imts, cmaker.gen_params, g)
+            mean_std = gsim.get_mean_std(
+                ctx, cmaker.imts, cmaker.gen_params, g)
         with cmaker.poe_mon:
             # builds poes of shape (N, L, G)
             poes[:, :, g] = gsim.get_poes(
@@ -212,8 +208,6 @@ class ContextMaker(object):
         self.collapse_level = param.get('collapse_level', False)
         self.trt = trt
         self.gsims = gsims
-        self.single_site_opt = numpy.array(
-            [hasattr(gsim, 'get_mean_std1') for gsim in gsims])
         self.maximum_distance = (
             param.get('maximum_distance') or MagDepDistance({}))
         self.investigation_time = param.get('investigation_time')
@@ -245,18 +239,16 @@ class ContextMaker(object):
             self.REQUIRES_DISTANCES.add('repi')
         self.stype = []
         self.vtype = []
-        self.clists = []
+        self.clist = []
         for gsim in gsims:
             self.stype.append(float_struct(gsim.REQUIRES_PARAMETERS,
                                            gsim.REQUIRES_RUPTURE_PARAMETERS))
             self.vtype.append(float_struct(gsim.REQUIRES_SITES_PARAMETERS,
                                            gsim.REQUIRES_DISTANCES))
-            coeffs = {name: table.on(self.imts)
-                      for name, table in inspect.getmembers(gsim.__class__)
-                      if table.__class__.__name__ == "CoeffsTable"}
-            clists = [[coeffs[name][m] for name in coeffs]
-                      for m in range(len(self.imts))]
-            self.clists.append(clists)
+            clist = [table.on(self.imts)
+                     for name, table in inspect.getmembers(gsim.__class__)
+                     if table.__class__.__name__ == "CoeffsTable"]
+            self.clist.append(clist)
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -275,11 +267,11 @@ class ContextMaker(object):
 
     def gen_params(self, gsim_idx, ctxs):
         """
-        Yields param, sites, allcoeffs, slice, m for each context and IMT
+        Yields param, sites, allcoeffs, slice for each context
         """
         stype = self.stype[gsim_idx]
         vtype = self.vtype[gsim_idx]
-        clists = self.clists[gsim_idx]
+        clist = self.clist[gsim_idx]
         start = 0
         for ctx in ctxs:
             param = numpy.zeros(1, stype)[0]
@@ -290,8 +282,7 @@ class ContextMaker(object):
                 sites[name] = getattr(ctx, name)
             for name in stype.names:
                 param[name] = getattr(ctx, name)
-            for m, clist in enumerate(clists):
-                yield param, sites, clist, slice(start, stop), m
+            yield param, sites, clist, slice(start, stop)
             start = stop
 
     def read_ctxs(self, dstore, slc=None):

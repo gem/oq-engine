@@ -69,36 +69,6 @@ class BooreAtkinson2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-    # NB: there is an underscore in front of get_mean_std1 to disable the
-    # single site approximation that would fail the check in MetaGSIM
-    def _get_mean_std1(self, ctx, imts):
-        """
-        :param ctx: a multi-RuptureContext of size U
-        :param imts: a list of M intensity measure types
-        :returns: means and total stddevs as an array of shape (2, U, M)
-        """
-        U = ctx.size()
-        res = np.zeros((2, U, len(imts)))
-        for m, imt in enumerate(imts):
-            C = self.COEFFS[imt]
-            C_SR = self.COEFFS_SOIL_RESPONSE[imt]
-            pga4nl = self._get_pga_on_rock(ctx, C)
-            if isinstance(imt, PGA):
-                mean = (np.log(pga4nl) +
-                        self._get_site_amplification_linear(ctx.vs30, C_SR) +
-                        self._get_site_amplification_non_linear(
-                            ctx.vs30, pga4nl, C_SR))
-            else:
-                mean = (self._compute_magnitude_scaling(ctx, C) +
-                        self._compute_distance_scaling(ctx, C) +
-                        self._get_site_amplification_linear(ctx.vs30, C_SR) +
-                        self._get_site_amplification_non_linear(
-                            ctx.vs30, pga4nl, C_SR))
-            [stddev] = self._get_stddevs(C, [const.StdDev.TOTAL], U)
-            res[0, :, m] = mean
-            res[1, :, m] = stddev
-        return res
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method

@@ -49,10 +49,7 @@ class ToroEtAl2002(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see table 2 page 47.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of
     #: two : horizontal components
@@ -60,9 +57,7 @@ class ToroEtAl2002(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: No site parameters required
     REQUIRES_SITES_PARAMETERS = set()

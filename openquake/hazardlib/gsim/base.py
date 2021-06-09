@@ -216,10 +216,6 @@ class MetaGSIM(abc.ABCMeta):
                         raise ValueError('Unknown distance %s in %s' %
                                          (missing, name))
         cls = super().__new__(meta, name, bases, dic)
-        ancestors = [vars(ancestor) for ancestor in cls.mro()[1:-1]]
-        if any('get_mean_std1' in ancestor for ancestor in ancestors):
-            if 'get_mean_and_stddevs' in dic and 'get_mean_std1' not in dic:
-                raise TypeError('%s.get_mean_std1 is not defined!' % name)
         return cls
 
 
@@ -559,12 +555,12 @@ class GMPE(GroundShakingIntensityModel):
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(imts)
         arr = numpy.zeros((2, N, M))
-        get_mean = getattr(self.__class__, 'get_mean', None)
-        get_stdt = getattr(self.__class__, 'get_stdt', None)
-        if get_mean:  # fast lane
-            for param, sites, clist, slc, m in gen_params(gsim_idx, ctxs):
-                arr[0, slc, m] = get_mean(param, sites, *clist)
-                arr[1, slc, m] = get_stdt(param, sites, *clist)
+        calc_mean = getattr(self.__class__, 'calc_mean', None)
+        calc_stdt = getattr(self.__class__, 'calc_stdt', None)
+        if calc_mean:  # fast lane
+            for param, sites, clist, slc in gen_params(gsim_idx, ctxs):
+                calc_mean(arr[0, slc], param, sites, *clist)
+                calc_stdt(arr[1, slc], param, sites, *clist)
         else:  # slow lane
             num_tables = CoeffsTable.num_instances
             start = 0
