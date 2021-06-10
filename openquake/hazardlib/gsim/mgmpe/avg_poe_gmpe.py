@@ -36,9 +36,11 @@ This syntax is exactly the same as for an `AvgGMPE`; the difference is
 in the semantic, since the `AvgGMPE` performs averages on the log(intensities)
 while `AvgPoeGMPE` performs averages on the PoEs.
 """
+import copy
 import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
+from openquake.hazardlib.contexts import gen_poes
 
 
 class AvgPoeGMPE(GMPE):
@@ -99,35 +101,24 @@ class AvgPoeGMPE(GMPE):
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = def_for_stddevs[0]
         self.weights = numpy.array(weights)
 
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
-        """
-        Call the underlying GMPEs and return means and stddevs
-        """
-        means = []
-        stds = []
-        for gsim in self.gsims:
-            mean, std = gsim.get_mean_and_stddevs(
-                sctx, rctx, dctx, imt, stddev_types)
-            means.append(mean)
-            stds.append(std)
-        return means, stds
+    def calc_mean(out, param, sites):
+        """Do nothing: the work is done in get_poes"""
 
-    def get_mean_std(self, ctxs, cmaker, gsim_index):
-        """
-        Call the underlying GMPEs and return an array of shape (2, N, M, G')
-        """
-        N = sum(len(ctx.sids) for ctx in ctxs)
-        res = numpy.zeros((2, N, len(cmaker.imts), len(self.gsims)))
-        for g, gsim in enumerate(self.gsims):
-            res[:, :, :, g] = gsim.get_mean_std(ctxs, cmaker, g)
-        return res
+    def calc_std(out, param, sites):
+        """Do nothing: the work is done in get_poes"""
 
-    def get_poes(self, mean_std, loglevels, trunclevel,
-                 af=None, ctxs=()):
+    def get_poes(self, mean_std, cmaker, ctxs):
         """
         :returns: an array of shape (N, L)
         """
-        poes = [gsim.get_poes(
-            mean_std[:, :, :, g], loglevels, trunclevel, af, ctxs)
-                for g, gsim in enumerate(self.gsims)]
-        return numpy.average(poes, 0, self.weights)
+        cm = copy.copy(cmaker)
+        cm.gsims = self.gsims
+        N = sum(len(ctx) for ctx in ctxs)
+        L = cmaker.loglevels.size
+        out = numpy.zeros((N, L))
+        start = 0
+        for poes in gen_poes(ctxs, cm):  # shape N, L, G
+            stop = start + len(poes)
+            out[start:stop, :] = poes @ self.weights
+            start = stop
+        return out

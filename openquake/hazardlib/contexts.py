@@ -34,7 +34,7 @@ from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, block_splitter)
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib import imt as imt_module, const
 from openquake.hazardlib.tom import registry
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -158,6 +158,37 @@ def get_pmap(ctxs, cmaker, probmap=None):
         return ~pmap if rup_indep else pmap
 
 
+def get_mean_stdt(orig_ctxs, cmaker):
+    """
+    :returns: an array of shape (2, N, M, G) with mean and total stddev
+    """
+    N = sum(len(ctx.sids) for ctx in orig_ctxs)
+    M = len(cmaker.imts)
+    G = len(cmaker.gsims)
+    arr = numpy.zeros((2, N, M, G))
+    for g, gsim in enumerate(cmaker.gsims):
+        calc_mean = getattr(gsim.__class__, 'calc_mean', None)
+        calc_stdt = getattr(gsim.__class__, 'calc_stdt', None)
+        ctxs = [ctx.roundup(gsim.minimum_distance) for ctx in orig_ctxs]
+        if calc_mean:  # fast lane
+            if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
+                ctxs = [cmaker.multi(ctxs)]
+            for param, sites, clist, slc in cmaker.gen_params(g, ctxs):
+                calc_mean(arr[0, slc, g], param, sites, *clist)
+                calc_stdt(arr[1, slc, g], param, sites, *clist)
+        else:  # slow lane
+            start = 0
+            for ctx in ctxs:
+                stop = start + len(ctx.sids)
+                for m, imt in enumerate(cmaker.imts):
+                    mean, [std] = gsim.get_mean_and_stddevs(
+                        ctx, ctx, ctx, imt, [const.StdDev.TOTAL])
+                    arr[0, start:stop, m, g] = mean
+                    arr[1, start:stop, m, g] = std
+                start = stop
+    return arr
+
+
 def gen_poes(ctxs, cmaker):
     """
     :param ctxs: a list of C context objects
@@ -166,13 +197,12 @@ def gen_poes(ctxs, cmaker):
     nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
     N = nsites.sum()
     poes = numpy.zeros((N, cmaker.loglevels.size, len(cmaker.gsims)))
-    for g, gsim in enumerate(cmaker.gsims):
-        with cmaker.gmf_mon:
-            mean_std = gsim.get_mean_std(ctxs, cmaker, g)
-        with cmaker.poe_mon:
+    with cmaker.gmf_mon:
+        mean_stdt = get_mean_stdt(ctxs, cmaker)
+    with cmaker.poe_mon:
+        for g, gsim in enumerate(cmaker.gsims):
             # builds poes of shape (N, L, G)
-            poes[:, :, g] = gsim.get_poes(
-                mean_std, cmaker.loglevels, cmaker.trunclevel, cmaker.af, ctxs)
+            poes[:, :, g] = gsim.get_poes(mean_stdt[..., g], cmaker, ctxs)
     s = 0
     for ctx, n in zip(ctxs, nsites):
         yield poes[s:s+n]
@@ -519,15 +549,12 @@ class ContextMaker(object):
             ctx.sids = sitecol1.sids
             ctx.mag = mag
             ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
-            means = []
-            for g, gsim in enumerate(self.gsims):
-                try:
-                    mean = gsim.get_mean_std([ctx], self, g)[0, 0]
-                except ValueError:  # magnitude outside of supported range
-                    continue
-                means.append(mean.max())
-            if means:
-                gmv[m, d] = numpy.exp(max(means))
+            try:
+                mean = get_mean_stdt([ctx], self)[0]  # shape NMG
+            except ValueError:  # magnitude outside of supported range
+                continue
+            else:
+                gmv[m, d] = numpy.exp(mean.max())
         return gmv
 
 
