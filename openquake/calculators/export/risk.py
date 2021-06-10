@@ -357,7 +357,7 @@ def export_damages_csv(ekey, dstore):
             for a in range(A):
                 for li, lt in enumerate(csq_dt.names):
                     damages[lt][a] = tuple(data[a, li, D:Dc])
-            fname = dstore.build_fname('avg_risk', '', ekey[1])
+            fname = dstore.build_fname('avg_risk', ros, ekey[1])
         else:  # scenario_damage, classical_damage
             if oq.modal_damage_state:
                 damages = modal_damage_array(orig[:, i], dmg_dt)
