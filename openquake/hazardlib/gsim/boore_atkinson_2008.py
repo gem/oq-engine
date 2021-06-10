@@ -136,9 +136,7 @@ class BooreAtkinson2008(GMPE):
         """
         Compute magnitude-scaling term, equations (5a) and (5b), pag 107.
         """
-        if ctx.size() == 1:  # single rupture
-            return self._compute_ms(ctx, C)
-        return np.array([self._compute_ms(c, C) for c in ctx.ctxs])
+        return self._compute_ms(ctx, C)
 
     def _compute_ms(self, rup, C):
         U, SS, NS, RS = self._get_fault_type_dummy_variables(rup)
