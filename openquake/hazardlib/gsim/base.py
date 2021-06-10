@@ -547,40 +547,7 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
-    def get_mean_std(self, ctxs, cmaker, gsim_idx):
-        """
-        :returns: an array of shape (2, N, M) with means and stddevs
-        """
-        ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
-        N = sum(len(ctx.sids) for ctx in ctxs)
-        M = len(cmaker.imts)
-        arr = numpy.zeros((2, N, M))
-        calc_mean = getattr(self.__class__, 'calc_mean', None)
-        calc_stdt = getattr(self.__class__, 'calc_stdt', None)
-        if calc_mean:  # fast lane
-            if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
-                ctxs = [cmaker.multi(ctxs)]
-            for param, sites, clist, slc in cmaker.gen_params(gsim_idx, ctxs):
-                calc_mean(arr[0, slc], param, sites, *clist)
-                calc_stdt(arr[1, slc], param, sites, *clist)
-        else:  # slow lane
-            num_tables = CoeffsTable.num_instances
-            start = 0
-            for ctx in ctxs:
-                stop = start + len(ctx.sids)
-                for m, imt in enumerate(cmaker.imts):
-                    mean, [std] = self.get_mean_and_stddevs(
-                        ctx, ctx, ctx, imt, [const.StdDev.TOTAL])
-                    arr[0, start:stop, m] = mean
-                    arr[1, start:stop, m] = std
-                    if CoeffsTable.num_instances > num_tables:
-                        raise RuntimeError('Instantiating CoeffsTable inside '
-                                           '%s.get_mean_and_stddevs' %
-                                           self.__class__.__name__)
-                start = stop
-        return arr
-
-    def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctxs=()):
+    def get_poes(self, mean_std, cmaker, ctxs=()):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -589,31 +556,10 @@ class GMPE(GroundShakingIntensityModel):
         :param mean_std:
             An array of shape (2, N, M) with mean and standard deviations
             for the sites and intensity measure types
-        :param loglevels:
-            A DictArray imt -> logs of intensity measure levels
-        :param trunclevel:
-            Can be ``None``, which means that the distribution of intensity
-            is treated as Gaussian distribution with possible values ranging
-            from minus infinity to plus infinity.
-
-            When set to zero, the mean intensity is treated as an exact
-            value (standard deviation is not even computed for that case)
-            and resulting array contains 0 in places where IMT is strictly
-            lower than the mean value of intensity and 1.0 where IMT is equal
-            or greater.
-
-            When truncation level is positive number, the intensity
-            distribution is processed as symmetric truncated Gaussian with
-            range borders being ``mean - truncation_level * stddev`` and
-            ``mean + truncation_level * stddev``. That is, the truncation
-            level expresses how far the range borders are from the mean
-            value and is defined in units of sigmas. The resulting PoEs
-            for that mode are values of complementary cumulative distribution
-            function of that truncated Gaussian applied to IMLs.
-        :param af:
-            None or an instance of AmplFunction
+        :param cmaker:
+            A ContextMaker instance
         :param ctxs:
-            Context object used to compute mean_std
+            Context objects used to compute mean_std
         :returns:
             array of PoEs of shape (N, L)
         :raises ValueError:
@@ -621,6 +567,9 @@ class GMPE(GroundShakingIntensityModel):
             float number, and if ``imts`` dictionary contain wrong or
             unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
+        af = cmaker.af
+        loglevels = cmaker.loglevels
+        trunclevel = cmaker.trunclevel
         if trunclevel is not None and trunclevel < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')

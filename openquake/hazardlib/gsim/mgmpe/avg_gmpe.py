@@ -99,6 +99,7 @@ class AvgGMPE(GMPE):
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = def_for_stddevs[0]
         self.weights = numpy.array(weights)
 
+    # TODO: fix this to work with the numpy-oriented API
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         """
         Call the underlying GMPEs and return the weighted mean and stddev
