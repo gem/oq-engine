@@ -104,7 +104,7 @@ class AvgPoeGMPE(GMPE):
     def calc_mean(out, param, sites):
         """Do nothing: the work is done in get_poes"""
 
-    def calc_std(out, param, sites):
+    def calc_stdt(out, param, sites):
         """Do nothing: the work is done in get_poes"""
 
     def get_poes(self, mean_std, cmaker, ctxs):
