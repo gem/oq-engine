@@ -163,7 +163,7 @@ hard-coded to 5.0 in all CoeffsTable. It would be nice to remove it.
 
 It would also be nice to be able to vectorize by IMT. But that will be difficult
 even, having numpy-oriented IMTs. At minimum one will have to refactor the
-usage of the CoeffsTable.
+usage of the `CoeffsTable` [#]
 
 This is going to be long (months/years). It is also possible that we will
 never reach the ideal. Also, in the normal case with many sites (national
@@ -175,6 +175,10 @@ larger, every year we have more users, every year it is more difficult
 to change anything, every year the models become larger and slower,
 and every year the frustration caused by the initial design decision
 increases.
+
+[#] As of June the 10th the `CoeffsTable` has been refactored and we are
+now able to proceed with the program *even without replacing the
+existing IMT classes*, which is a major compatibility win.
 
 The GMPEs at C speed
 --------------------
