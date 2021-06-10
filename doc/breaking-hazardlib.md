@@ -1,5 +1,5 @@
-The problem
---------------------------
+The problem as of June 2021
+---------------------------
 
 As it is well known, the main road to scientific programming in Python
 is numpy-oriented programming. The recipe is simple: **dot not use
@@ -27,10 +27,11 @@ Experiments that I made last year suggest that if we could vectorize
 on the ruptures we could reach speedups on single-site calculations of
 the order of 30x.
 
-However vectorizing on the ruptures means essentially to double the size
-of hazardlib, adding to every method vectorized by site a companion method
-vectorized by rupture, plus some logic to decide when to use an approach or
-the other depending on the number of sites.
+However vectorizing on the ruptures (with the current state of the
+code) means essentially to double the size of hazardlib, adding to
+every method vectorized by site a companion method vectorized by
+rupture, plus some logic to decide when to use an approach or the
+other depending on the number of sites.
 
 It should be noticed that working incrementamentally is not an option:
 as soon as a single GMPE (of the dozens normally used in a hazard model)
@@ -58,7 +59,9 @@ instance now we have `Context` objects which are closer to numpy
 arrays than `Rupture` objects. However, we are at the very beginning,
 and very far for the ideal goal.
 
-To be clear, the ideal goal would be to **remove completely all class hierarchies, turn all methods into functions taking in input only numpy arrays or simple types**.
+To be clear, the ideal goal would be to **remove completely all class
+hierarchies, turn all methods into functions taking in input only
+numpy arrays or simple types**.
 
 The ideal goal is out of reach (by far), so we will have to compromise
 significantly; moreover, since we have hundreds of users of hazardlib,
@@ -172,3 +175,24 @@ larger, every year we have more users, every year it is more difficult
 to change anything, every year the models become larger and slower,
 and every year the frustration caused by the initial design decision
 increases.
+
+The GMPEs at C speed
+--------------------
+
+As I said, a numpy-oriented API will improve single-site calculations
+by an order of magnitude or so, *even without numba/Cython acceleration*,
+because of the automatic vectorization by ruptures. But once we have the
+new API in place the following workflow will become possible:
+
+1. read the input files
+2. determine the required GMPEs and parameters (distances, site params, etc)
+3. determine the required numpy dtypes and compile the required functions
+   (`calc_mean`, `calc_stdt`, ...) with the right specializations
+4. import the generated extension module and replace the interpreted
+   functions with the compiled functions, while still in pre_execute phase
+5. run the calculation at C speed!
+
+In practice switching to the new API means *rewriting hazardlib in C
+but without leaving the Python world*.
+
+This, in theory, but the devil is in the details;-)
