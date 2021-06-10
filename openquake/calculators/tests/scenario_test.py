@@ -175,5 +175,5 @@ class ScenarioTestCase(CalculatorTestCase):
 
     def test_case_18(self):
         # 1 rupture with KiteSurfaces, number_of_ground_motion_fields=10
-        self.run_calc(case_17.__file__, 'job.ini')
+        self.run_calc(case_18.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['rupgeoms']), 10)
