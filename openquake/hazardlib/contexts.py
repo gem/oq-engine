@@ -174,8 +174,8 @@ def get_mean_stdt(orig_ctxs, cmaker):
             if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
                 ctxs = [cmaker.multi(ctxs)]
             for param, sites, clist, slc in cmaker.gen_params(g, ctxs):
-                calc_mean(arr[0, slc, g], param, sites, *clist)
-                calc_stdt(arr[1, slc, g], param, sites, *clist)
+                calc_mean(arr[0, slc, :, g], param, sites, *clist)
+                calc_stdt(arr[1, slc, :, g], param, sites, *clist)
         else:  # slow lane
             start = 0
             for ctx in ctxs:
