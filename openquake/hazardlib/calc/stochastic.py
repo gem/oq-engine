@@ -128,10 +128,10 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         n = len(points) // 3
         lons = points[0:n]
         lats = points[n:2*n]
-        rec['minlon'] = minlon = lons.min()
-        rec['minlat'] = minlat = lats.min()
-        rec['maxlon'] = maxlon = lons.max()
-        rec['maxlat'] = maxlat = lats.max()
+        rec['minlon'] = minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
+        rec['minlat'] = minlat = numpy.nanmin(lats)
+        rec['maxlon'] = maxlon = numpy.nanmax(lons)
+        rec['maxlat'] = maxlat = numpy.nanmax(lats)
         rec['mag'] = rup.mag
         rec['hypo'] = hypo
         if srcfilter.integration_distance and len(
