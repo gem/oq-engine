@@ -1223,6 +1223,8 @@ class FullLogicTree(object):
         """
         :returns: the TRT associated to trt_smr
         """
+        if len(self.trts) == 1:
+            return self.trts[0]
         return self.trts[trt_smr // len(self.sm_rlzs)]
 
     @property

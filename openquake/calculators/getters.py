@@ -422,8 +422,12 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
             proxies, maxweight, operator.attrgetter('weight'),
             key=operator.itemgetter('trt_smr')):
         trt_smr = block[0]['trt_smr']
+        if len(rlzs_by_gsim) == 1:
+            [rbg] = rlzs_by_gsim.values()
+        else:
+            rbg = rlzs_by_gsim[trt_smr]
         rg = RuptureGetter(block, dstore.filename, trt_smr,
-                           full_lt.trt_by(trt_smr), rlzs_by_gsim[trt_smr])
+                           full_lt.trt_by(trt_smr), rbg)
         rgetters.append(rg)
     return rgetters
 
