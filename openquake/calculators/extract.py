@@ -924,6 +924,21 @@ def build_damage_dt(dstore):
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])
 
 
+def build_csq_dt(dstore):
+    """
+    :param dstore: a datastore instance
+    :returns:
+       a composite dtype loss_type -> (csq1, csq2, ...)
+    """
+    oq = dstore['oqparam']
+    attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
+    limit_states = list(dstore.get_attr('crm', 'limit_states'))
+    csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
+    dt = numpy.dtype([(csq, F32) for csq in csqs])
+    loss_types = oq.loss_dt().names
+    return numpy.dtype([(lt, dt) for lt in loss_types])
+
+
 def build_damage_array(data, damage_dt):
     """
     :param data: an array of shape (A, L, D)
