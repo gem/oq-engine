@@ -714,6 +714,9 @@ def get_full_lt(oqparam):
 
 
 def save_source_info(csm, h5):
+    """
+    Creates source_info, source_wkt, trt_smrs, toms
+    """
     data = {}  # src_id -> row
     wkts = []
     lens = []
@@ -820,8 +823,7 @@ def get_composite_source_model(oqparam, h5=None):
                 csm.full_lt = full_lt
             if h5:
                 # avoid errors with --reuse_hazard
-                h5['trt_smrs'] = csm.get_trt_smrs()
-                hdf5.create(h5, 'source_info', source_info_dt)
+                save_source_info(csm, h5)
             _check_csm(csm, oqparam, h5)
             return csm
 

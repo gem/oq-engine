@@ -884,9 +884,10 @@ class RuptureContext(BaseContext):
         of magnitudes and it refers to a single site, returns the size of
         the array, otherwise returns 1.
         """
-        if isinstance(self.mag, numpy.ndarray):
+        nsites = len(self.rjb)
+        if nsites == 1 and isinstance(self.mag, numpy.ndarray):
             return len(self.mag)
-        return 1
+        return nsites
 
     # used in acme_2019
     def __len__(self):
