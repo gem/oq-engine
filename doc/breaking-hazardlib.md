@@ -199,4 +199,6 @@ new API in place the following workflow will become possible:
 In practice switching to the new API means *rewriting hazardlib in C
 but without leaving the Python world*.
 
-This, in theory, but the devil is in the details;-)
+This, in theory, but the devil is in the details;-) Generally speaking, *the
+performance for global hazard models is not expected to improve*, since we
+are already working at C speed in numpy, due to the vectorization by sites.
