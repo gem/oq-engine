@@ -1147,21 +1147,27 @@ def read_cmakers(dstore, full_lt=None):
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
+    # some ugly magic on the pointsource_distance
+    mags = dstore['source_mags']
+    psd = MagDepDistance.new(str(oq.pointsource_distance))
+    psd.interp({trt: mags[trt][:] for trt in mags})
+    oq.pointsource_distance = psd
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
         trt = trts[trti]
+        # TODO: missing af
         cmaker = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': oq.truncation_level,
              'collapse_level': int(oq.collapse_level),
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
+             'pointsource_distance': oq.pointsource_distance,
+             'max_sites_disagg': oq.max_sites_disagg,
              'imtls': oq.imtls,
+             'reqv': oq.get_reqv(),
+             'shift_hypo': oq.shift_hypo,
              'grp_id': grp_id})
-        # don't forget this
-        cmaker.reqv = oq.get_reqv()
-        if cmaker.reqv is not None:
-            cmaker.REQUIRES_DISTANCES.add('repi')
         cmaker.tom = registry[toms[grp_id]](oq.investigation_time)
         cmaker.trti = trti
         stop = start + len(rlzs_by_gsim)
