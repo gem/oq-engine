@@ -211,12 +211,13 @@ def preclassical(srcs, srcfilter, params, monitor):
     return dic
 
 
-def classical(srcs, rlzs_by_gsim, params, monitor):
+def classical(srcs, cmaker, monitor):
     """
     Read the SourceFilter and call the classical calculator in hazardlib
     """
     srcfilter = monitor.read('srcfilter')
-    return hazclassical(srcs, srcfilter, rlzs_by_gsim, params, monitor)
+    cmaker.mon = monitor
+    return hazclassical(srcs, srcfilter, cmaker)
 
 
 class Hazard:
@@ -472,7 +473,7 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
-        args = self.get_args(grp_ids, self.haz)
+        args = self.get_args(grp_ids, self.haz.cmakers)
         logging.info('Sending %d tasks', len(args))
         smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.src_filter())
@@ -549,6 +550,7 @@ class ClassicalCalculator(base.HazardCalculator):
         imts_ok = len(imts_with_period) == len(oq.imtls)
         if (imts_ok and psd and psd.suggested()) or (
                 imts_ok and oq.minimum_intensity):
+            # NB: side-effect on oq.maximum_distance
             aw = get_effect(mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
             if psd:
                 dic = {trt: [(float(mag), int(dst))
@@ -571,7 +573,7 @@ class ClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def get_args(self, grp_ids, hazard):
+    def get_args(self, grp_ids, cmakers):
         """
         :returns: a list of Starmap arguments
         """
@@ -580,7 +582,7 @@ class ClassicalCalculator(base.HazardCalculator):
         src_groups = self.csm.src_groups
         tot_weight = 0
         for grp_id in grp_ids:
-            gsims = hazard.cmakers[grp_id].gsims
+            gsims = cmakers[grp_id].gsims
             sg = src_groups[grp_id]
             for src in sg:
                 src.ngsims = len(gsims)
@@ -597,12 +599,11 @@ class ClassicalCalculator(base.HazardCalculator):
             int(tot_weight), int(max_weight)))
         self.counts = AccumDict(accum=0)
         for grp_id in grp_ids:
-            rlzs_by_gsim = hazard.cmakers[grp_id].gsims
             sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
                 self.counts[grp_id] += 1
-                allargs.append((sg, rlzs_by_gsim, self.params))
+                allargs.append((sg, cmakers[grp_id]))
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src else
@@ -612,7 +613,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
-                    allargs.append((block, rlzs_by_gsim, self.params))
+                    allargs.append((block, cmakers[grp_id]))
         return allargs
 
     def save_hazard(self, acc, pmap_by_kind):

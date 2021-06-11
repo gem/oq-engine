@@ -20,6 +20,7 @@ import re
 import numpy
 import pandas as pd
 
+from openquake.baselib import hdf5
 from openquake.hazardlib.stats import norm_cdf
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.imt import from_string
@@ -78,6 +79,17 @@ class AmplFunction():
                   'median': float, 'std': float}
         df = pd.DataFrame(out, columns=dtypes).astype(dtypes)
         return AmplFunction(df, soil)  # requires reset_index
+
+    @classmethod
+    def read_df(cls, csvfname):
+        """
+        :param csvfname: CSV file name
+        :returns: a pandas DataFrame
+        """
+        df = hdf5.read_csv(csvfname, {'ampcode': ampcode_dt, None: float},
+                           index='ampcode')
+        df.fname = csvfname
+        return df
 
     def get_mean_std(self, site, imt, iml, mags, dsts):
         """
