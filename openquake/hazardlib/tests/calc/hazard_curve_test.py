@@ -277,10 +277,14 @@ class NewApiTestCase(unittest.TestCase):
         for period in numpy.arange(.1, 1.3, .1):
             imtls['SA(%.2f)' % period] = [.123]
         assert len(imtls) == 13  # 13 periods
-        mon = Monitor()
         oq = unittest.mock.Mock(
             imtls=DictArray(imtls),
             maximum_distance=MagDepDistance.new('300'))
+        # first call to compile the jittable functions
+        hcurve = calc_hazard_curve(
+            sitecol, asource, [ExampleA2021()], oq)
+        # now measure the performance
+        mon = Monitor()
         hcurve = calc_hazard_curve(
             sitecol, asource, [ExampleA2021()], oq, mon)
         for child in mon.children:
