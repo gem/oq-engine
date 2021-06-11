@@ -211,12 +211,13 @@ def preclassical(srcs, srcfilter, params, monitor):
     return dic
 
 
-def classical(srcs, rlzs_by_gsim, params, monitor):
+def classical(srcs, cmaker, monitor):
     """
     Read the SourceFilter and call the classical calculator in hazardlib
     """
     srcfilter = monitor.read('srcfilter')
-    return hazclassical(srcs, srcfilter, rlzs_by_gsim, params, monitor)
+    cmaker.mon = monitor
+    return hazclassical(srcs, srcfilter, cmaker)
 
 
 class Hazard:
@@ -597,12 +598,11 @@ class ClassicalCalculator(base.HazardCalculator):
             int(tot_weight), int(max_weight)))
         self.counts = AccumDict(accum=0)
         for grp_id in grp_ids:
-            rlzs_by_gsim = hazard.cmakers[grp_id].gsims
             sg = src_groups[grp_id]
             if sg.atomic:
                 # do not split atomic groups
                 self.counts[grp_id] += 1
-                allargs.append((sg, rlzs_by_gsim, self.params))
+                allargs.append((sg, hazard.cmakers[grp_id]))
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src else
@@ -612,7 +612,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
-                    allargs.append((block, rlzs_by_gsim, self.params))
+                    allargs.append((block, hazard.cmakers[grp_id]))
         return allargs
 
     def save_hazard(self, acc, pmap_by_kind):

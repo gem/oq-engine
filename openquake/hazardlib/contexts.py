@@ -1154,7 +1154,7 @@ def read_cmakers(dstore, full_lt=None):
             trt, rlzs_by_gsim,
             {'truncation_level': oq.truncation_level,
              'maximum_distance': oq.maximum_distance,
-             'collapse_level': oq.collapse_level,
+             'collapse_level': int(oq.collapse_level),
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
              'imtls': oq.imtls,
