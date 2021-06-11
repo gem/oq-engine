@@ -1148,10 +1148,11 @@ def read_cmakers(dstore, full_lt=None):
     num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
     # some ugly magic on the pointsource_distance
-    mags = dstore['source_mags']
-    psd = MagDepDistance.new(str(oq.pointsource_distance))
-    psd.interp({trt: mags[trt][:] for trt in mags})
-    oq.pointsource_distance = psd
+    if oq.pointsource_distance:
+        mags = dstore['source_mags']
+        psd = MagDepDistance.new(str(oq.pointsource_distance))
+        psd.interp({trt: mags[trt][:] for trt in mags})
+        oq.pointsource_distance = psd
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
         trt = trts[trti]
