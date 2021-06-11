@@ -29,6 +29,7 @@ from openquake.hazardlib.geo.geodetic import point_at
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.calc.hazard_curve import classical
+from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
 from openquake.hazardlib.gsim.campbell_2003 import Campbell2003
@@ -158,7 +159,8 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)
-        crv = classical(group, self.sites, gsim_by_trt, param)['pmap'][0]
+        cmaker = ContextMaker(src.tectonic_region_type, gsim_by_trt, param)
+        crv = classical(group, self.sites, cmaker)['pmap'][0]
         npt.assert_almost_equal(numpy.array([0.35000, 0.32497, 0.10398]),
                                 crv.array[:, 0], decimal=4)
 
