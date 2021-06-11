@@ -846,17 +846,6 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def get_amplification(oqparam):
-    """
-    :returns: a DataFrame (ampcode, level, PGA, SA() ...)
-    """
-    fname = oqparam.inputs['amplification']
-    df = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64},
-                       index='ampcode')
-    df.fname = fname
-    return df
-
-
 def _cons_coeffs(records, limit_states):
     dtlist = [(lt, F32) for lt in records['loss_type']]
     coeffs = numpy.zeros(len(limit_states), dtlist)

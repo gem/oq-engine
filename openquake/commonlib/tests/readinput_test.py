@@ -522,7 +522,8 @@ class SitecolAssetcolTestCase(unittest.TestCase):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.inputs['amplification'] = os.path.join(
             oq.base_path, 'invalid_amplification.csv')
-        df = readinput.get_amplification(oq)
         with self.assertRaises(ValueError) as ctx:
+            df = site_amplification.AmplFunction.read_df(
+                oq.inputs['amplification'])
             site_amplification.Amplifier(oq.imtls, df)
         self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))

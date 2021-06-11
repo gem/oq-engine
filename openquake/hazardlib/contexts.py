@@ -1138,6 +1138,7 @@ def read_cmakers(dstore, full_lt=None):
     :param full_lt: a FullLogicTree instance, if given
     :returns: a list of ContextMaker instance, one per source group
     """
+    from openquake.hazardlib.site_amplification import AmplFunction
     cmakers = []
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt']
@@ -1156,7 +1157,12 @@ def read_cmakers(dstore, full_lt=None):
     for grp_id, rlzs_by_gsim in enumerate(rlzs_by_gsim_list):
         trti = trt_smrs[grp_id][0] // num_eff_rlzs
         trt = trts[trti]
-        # TODO: missing af
+        if ('amplification' in oq.inputs and
+                oq.amplification_method == 'kernel'):
+            df = AmplFunction.read_df(oq.inputs['amplification'])
+            af = AmplFunction.from_dframe(df)
+        else:
+            af = None
         cmaker = ContextMaker(
             trt, rlzs_by_gsim,
             {'truncation_level': oq.truncation_level,
@@ -1168,6 +1174,7 @@ def read_cmakers(dstore, full_lt=None):
              'imtls': oq.imtls,
              'reqv': oq.get_reqv(),
              'shift_hypo': oq.shift_hypo,
+             'af': af,
              'grp_id': grp_id})
         cmaker.tom = registry[toms[grp_id]](oq.investigation_time)
         cmaker.trti = trti
