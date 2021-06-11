@@ -473,7 +473,7 @@ class ClassicalCalculator(base.HazardCalculator):
         srcidx = {
             rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
         self.haz = Hazard(self.datastore, self.full_lt, pgetter, srcidx)
-        args = self.get_args(grp_ids, self.haz)
+        args = self.get_args(grp_ids, self.haz.cmakers)
         logging.info('Sending %d tasks', len(args))
         smap = parallel.Starmap(classical, args, h5=self.datastore.hdf5)
         smap.monitor.save('srcfilter', self.src_filter())
@@ -572,7 +572,7 @@ class ClassicalCalculator(base.HazardCalculator):
             split_sources=oq.split_sources, af=self.af)
         return psd
 
-    def get_args(self, grp_ids, hazard):
+    def get_args(self, grp_ids, cmakers):
         """
         :returns: a list of Starmap arguments
         """
@@ -581,7 +581,7 @@ class ClassicalCalculator(base.HazardCalculator):
         src_groups = self.csm.src_groups
         tot_weight = 0
         for grp_id in grp_ids:
-            gsims = hazard.cmakers[grp_id].gsims
+            gsims = cmakers[grp_id].gsims
             sg = src_groups[grp_id]
             for src in sg:
                 src.ngsims = len(gsims)
@@ -602,7 +602,7 @@ class ClassicalCalculator(base.HazardCalculator):
             if sg.atomic:
                 # do not split atomic groups
                 self.counts[grp_id] += 1
-                allargs.append((sg, hazard.cmakers[grp_id]))
+                allargs.append((sg, cmakers[grp_id]))
             else:  # regroup the sources in blocks
                 blks = (groupby(sg, get_source_id).values()
                         if oq.disagg_by_src else
@@ -612,7 +612,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 for block in blocks:
                     logging.debug('Sending %d source(s) with weight %d',
                                   len(block), sum(src.weight for src in block))
-                    allargs.append((block, hazard.cmakers[grp_id]))
+                    allargs.append((block, cmakers[grp_id]))
         return allargs
 
     def save_hazard(self, acc, pmap_by_kind):

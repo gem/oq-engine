@@ -122,7 +122,7 @@ class MagDepDistance(dict):
         self = cls()
         for trt, items in items_by_trt.items():
             if isinstance(items, list):
-                self[trt] = unique_sorted(items)
+                self[trt] = unique_sorted([tuple(it) for it in items])
                 for mag, dist in self[trt]:
                     if mag < 1 or mag > 10:
                         raise ValueError('Invalid magnitude %s' % mag)
