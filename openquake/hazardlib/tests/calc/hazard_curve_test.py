@@ -265,11 +265,11 @@ asource = nrml.get('''\
 </areaSource>''')
 
 
-class SingleSiteOptTestCase(unittest.TestCase):
+class NewApiTestCase(unittest.TestCase):
     """
-    Test the single site optimization for BooreAtkinson2008
+    Test the 2021 new API for hazarlib.gsim
     """
-    def test(self):
+    def test_single_site(self):
         site = Site(Point(0, 0), vs30=760., z1pt0=48.0, z2pt5=0.607,
                     vs30measured=True)
         sitecol = SiteCollection([site])
@@ -290,3 +290,19 @@ class SingleSiteOptTestCase(unittest.TestCase):
                0.103438, 0.079094, 0.062861, 0.051344, 0.04066, 0.031589,
                0.024935]
         numpy.testing.assert_allclose(got, exp, atol=1E-5)
+
+    def test_two_sites(self):
+        site1 = Site(Point(0, 0), vs30=760., z1pt0=48.0, z2pt5=0.607,
+                     vs30measured=True)
+        site2 = Site(Point(0, 0.5), vs30=760., z1pt0=48.0, z2pt5=0.607,
+                     vs30measured=True)
+        sitecol = SiteCollection([site1, site2])
+        srcfilter = SourceFilter(sitecol, MagDepDistance.new('200'))
+        imtls = {"PGA": [.123]}
+        for period in numpy.arange(.1, .5, .1):
+            imtls['SA(%.2f)' % period] = [.123]
+        assert len(imtls) == 5  # 5 periods
+        gsim_by_trt = {'Stable Continental Crust': ExampleA2021()}
+        hcurves = calc_hazard_curves(
+            [asource], srcfilter, DictArray(imtls), gsim_by_trt)
+        print(hcurves)
