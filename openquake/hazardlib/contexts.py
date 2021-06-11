@@ -301,10 +301,7 @@ class ContextMaker(object):
         start = 0
         for ctx in ctxs:
             n = ctx.size()
-            if n > 1:
-                param = numpy.zeros(n, stype)
-            else:
-                param = numpy.zeros(1, stype)[0]
+            param = numpy.zeros(n, stype)
             stop = start + n
             sites = numpy.zeros(n, vtype)
             for name in vtype.names:
