@@ -550,6 +550,7 @@ class ClassicalCalculator(base.HazardCalculator):
         imts_ok = len(imts_with_period) == len(oq.imtls)
         if (imts_ok and psd and psd.suggested()) or (
                 imts_ok and oq.minimum_intensity):
+            # NB: side-effect on oq.maximum_distance
             aw = get_effect(mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
             if psd:
                 dic = {trt: [(float(mag), int(dst))
