@@ -38,7 +38,7 @@ def _compute_term2(C, mag, rjb):
     return res
 
 
-class Test2021(GMPE):
+class ExampleA2021(GMPE):
     """
     Mimic ToroEtAl2002
     """
