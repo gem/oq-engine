@@ -173,9 +173,10 @@ def get_mean_stdt(orig_ctxs, cmaker):
         if calc_mean:  # fast lane
             if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
                 ctxs = [cmaker.multi(ctxs)]
-            for param, sites, clist, slc in cmaker.gen_params(g, ctxs):
-                calc_mean(arr[0, slc, :, g], param, sites, *clist)
-                calc_stdt(arr[1, slc, :, g], param, sites, *clist)
+            this = cmaker.this[g]
+            for param, sites, slc in cmaker.gen_params(g, ctxs):
+                calc_mean(this, param, sites, arr[0, slc, :, g])
+                calc_stdt(this, param, sites, arr[1, slc, :, g])
         else:  # slow lane
             start = 0
             for ctx in ctxs:
@@ -265,16 +266,20 @@ class ContextMaker(object):
             self.REQUIRES_DISTANCES.add('repi')
         self.stype = []
         self.vtype = []
-        self.clist = []
+        self.this = []
         for gsim in gsims:
-            self.stype.append(float_struct(gsim.REQUIRES_PARAMETERS,
-                                           gsim.REQUIRES_RUPTURE_PARAMETERS))
+            self.stype.append(float_struct(gsim.REQUIRES_RUPTURE_PARAMETERS))
             self.vtype.append(float_struct(gsim.REQUIRES_SITES_PARAMETERS,
                                            gsim.REQUIRES_DISTANCES))
-            clist = [table.on(self.imts)
+            cdict = {name.lower(): table.on(self.imts)
                      for name, table in inspect.getmembers(gsim.__class__)
-                     if table.__class__.__name__ == "CoeffsTable"]
-            self.clist.append(clist)
+                     if table.__class__.__name__ == "CoeffsTable"}
+            for rp in gsim.REQUIRES_PARAMETERS:
+                cdict[rp] = getattr(gsim, rp)
+            nt = collections.namedtuple(
+                gsim.__class__.__name__,
+                list(gsim.REQUIRES_PARAMETERS) + list(cdict))
+            self.this.append(nt(**cdict))
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -293,11 +298,10 @@ class ContextMaker(object):
 
     def gen_params(self, gsim_idx, ctxs):
         """
-        Yields param, sites, allcoeffs, slice for each context
+        Yields param, sites, slice for each context
         """
         stype = self.stype[gsim_idx]
         vtype = self.vtype[gsim_idx]
-        clist = self.clist[gsim_idx]
         start = 0
         for ctx in ctxs:
             n = ctx.size()
@@ -311,7 +315,7 @@ class ContextMaker(object):
                 sites[name] = getattr(ctx, name)
             for name in stype.names:
                 param[name] = getattr(ctx, name)
-            yield param, sites, clist, slice(start, stop)
+            yield param, sites, slice(start, stop)
             start = stop
 
     def read_ctxs(self, dstore, slc=None):
