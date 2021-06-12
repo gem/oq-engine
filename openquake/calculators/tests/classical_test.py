@@ -655,7 +655,12 @@ hazard_uhs-std.csv
 
         # This test shows in detail what happens to the distances in presence
         # of a magnitude-dependent pointsource_distance.
-        self.run_calc(case_48.__file__, 'job.ini', pointsource_distance='?')
+        self.run_calc(
+            case_48.__file__, 'job.ini', pointsource_distance=
+            '{"default": [(5.1, 42), (5.3, 47), (5.5, 52), (5.7, 58), '
+            '(5.9, 65), (6.1, 72), (6.3, 80), (6.5, 89), (6.7, 99), '
+            '(6.9, 110)]}')
+
         psdist = self.calc.oqparam.pointsource_distance
         psd = psdist.ddic['active shallow crust']
         dist_by_mag = {mag: int(psd[mag]) for mag in psd}
