@@ -35,7 +35,7 @@ from openquake.hazardlib.source.point import (
     PointSource, grid_point_sources, msr_name)
 from openquake.hazardlib.source.base import EPS
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.contexts import ContextMaker, get_effect, read_cmakers
+from openquake.hazardlib.contexts import ContextMaker, set_effect, read_cmakers
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -548,17 +548,6 @@ class ClassicalCalculator(base.HazardCalculator):
         imts_with_period = [imt for imt in oq.imtls
                             if imt == 'PGA' or imt.startswith('SA')]
         imts_ok = len(imts_with_period) == len(oq.imtls)
-        if (imts_ok and psd and psd.suggested()) or (
-                imts_ok and oq.minimum_intensity):
-            # NB: side-effect on oq.maximum_distance
-            aw = get_effect(mags_by_trt, self.sitecol.one(), gsims_by_trt, oq)
-            if psd:
-                dic = {trt: [(float(mag), int(dst))
-                             for mag, dst in psd.ddic[trt].items()]
-                       for trt in psd.ddic if trt != 'default'}
-                logging.info('pointsource_distance=\n%s', pprint.pformat(dic))
-            if len(vars(aw)) > 1:  # more than _extra
-                self.datastore['effect_by_mag_dst'] = aw
         hint = 1 if self.N <= oq.max_sites_disagg else numpy.ceil(
             self.N / oq.max_sites_per_tile)
         self.params = dict(

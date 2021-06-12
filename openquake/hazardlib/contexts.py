@@ -240,7 +240,6 @@ class ContextMaker(object):
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.grp_id = param.get('grp_id', 0)
-        self.effect = param.get('effect')
         self.task_no = getattr(monitor, 'task_no', 0)
         for req in self.REQUIRES:
             reqset = set()
@@ -1052,8 +1051,8 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
-# used in calculators/classical.py
-def get_effect(mags, sitecol1, gsims_by_trt, oq):
+# not used right now
+def set_effect(mags, sitecol1, gsims_by_trt, oq):
     """
     :params mags:
        a dictionary trt -> magnitudes
@@ -1068,7 +1067,7 @@ def get_effect(mags, sitecol1, gsims_by_trt, oq):
        an ArrayWrapper trt -> effect_by_mag_dst and a nested dictionary
        trt -> mag -> dist with the effective pointsource_distance
 
-    Updates oq.maximum_distance.magdist
+    Updates oq.maximum_distance.magdist, oq.pointsource_distance.magdist
     """
     assert list(mags) == list(gsims_by_trt), 'Missing TRTs!'
     dist_bins = {trt: oq.maximum_distance.get_dist_bins(trt)
@@ -1148,6 +1147,8 @@ def read_cmakers(dstore, full_lt=None):
     trts = list(full_lt.gsim_lt.values)
     num_eff_rlzs = len(full_lt.sm_rlzs)
     start = 0
+    if 'effect_by_mag_dst' in dstore:
+        dstore['effect_by_mag_dst']
     # some ugly magic on the pointsource_distance
     if oq.pointsource_distance:
         mags = dstore['source_mags']
