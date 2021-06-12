@@ -118,7 +118,7 @@ class MagDepDistance(dict):
         >>> md.interp(dict(default=[5.0, 5.1, 5.2])); md.ddic
         {'default': {'5.00': 50.0, '5.10': 50.0, '5.20': 50.0}}
         """
-        items_by_trt = floatdict(value.replace('?', '-1'))
+        items_by_trt = floatdict(value)
         self = cls()
         for trt, items in items_by_trt.items():
             if isinstance(items, list):
@@ -127,7 +127,7 @@ class MagDepDistance(dict):
                     if mag < 1 or mag > 10:
                         raise ValueError('Invalid magnitude %s' % mag)
             else:  # assume scalar distance
-                assert items == -1 or items >= 0, items
+                assert items >= 0, items
                 self[trt] = [(1., items), (10., items)]
         return self
 
@@ -163,12 +163,6 @@ class MagDepDistance(dict):
         :returns: a dictionary trt -> maxdist
         """
         return {trt: self[trt][-1][1] for trt in self}
-
-    def suggested(self):
-        """
-        :returns: True if there is a ? for any TRT
-        """
-        return any(self[trt][-1][1] == -1 for trt in self)
 
     def get_bounding_box(self, lon, lat, trt=None, mag=None):
         """
