@@ -310,15 +310,15 @@ class SourceFilter(object):
         Returns the sites within the integration distance from the source,
         or None.
         """
-        source_indices = list(self.filter([source]))
-        if source_indices:
-            return self.sitecol.filtered(source_indices[0][1])
+        source_sites = list(self.filter([source]))
+        if source_sites:
+            return source_sites[0][1]
 
     def split(self, sources):
         """
         :yields: pairs (split, sites)
         """
-        for src, _indices in self.filter(sources):
+        for src, _sites in self.filter(sources):
             for s in split_source(src):
                 sites = self.get_close_sites(s)
                 if sites is not None:
@@ -368,7 +368,7 @@ class SourceFilter(object):
     def filter(self, sources):
         """
         :param sources: a sequence of sources
-        :yields: sources with indices
+        :yields: pairs (sources, sites)
         """
         if self.sitecol is None:  # nofilter
             for src in sources:
@@ -377,7 +377,7 @@ class SourceFilter(object):
         for src in sources:
             sids = self.close_sids(src)
             if len(sids):
-                yield src, sids
+                yield src, self.sitecol.filtered(sids)
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:
