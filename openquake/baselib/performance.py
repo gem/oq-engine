@@ -26,10 +26,14 @@ from datetime import datetime
 import psutil
 import numpy
 try:
-    from numba import njit as jittable
+    from numba import njit
+
+    def jittable(func):
+        """Calls numba.njit with a cache"""
+        return njit(func, cache=True)
 except ImportError:
     def jittable(func):
-        "Do nothing decorator, used if numba is missing"
+        """Do nothing decorator, used if numba is missing"""
         return func
 
 from openquake.baselib.general import humansize

@@ -280,10 +280,6 @@ class NewApiTestCase(unittest.TestCase):
         oq = unittest.mock.Mock(
             imtls=DictArray(imtls),
             maximum_distance=MagDepDistance.new('300'))
-        # first call to compile the jittable functions
-        hcurve = calc_hazard_curve(
-            sitecol, asource, [ExampleA2021()], oq)
-        # now measure the performance
         mon = Monitor()
         hcurve = calc_hazard_curve(
             sitecol, asource, [ExampleA2021()], oq, mon)

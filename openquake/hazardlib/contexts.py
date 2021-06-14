@@ -289,10 +289,25 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
+        self.compile()
+
+    def compile(self):
+        """
+        Compile the required jittable functions
+        """
+        M = len(self.imtls)
+        for g, gsim in enumerate(self.gsims):
+            if hasattr(gsim, 'calc_mean'):
+                ctype = self.ctype[g]
+                clist = self.clist[g]
+                ctx = numpy.ones(1, ctype)
+                out = numpy.zeros((1, M))
+                gsim.__class__.calc_mean(out, ctx, *clist)
+                gsim.__class__.calc_stdt(out, ctx, *clist)
 
     def gen_triples(self, gsim_idx, ctxs):
         """
-        Yields ctx, allcoeffs, slice for each context
+        Yield triples ctx, allcoeffs, slice for each context
         """
         ctype = self.ctype[gsim_idx]
         clist = self.clist[gsim_idx]
@@ -300,9 +315,9 @@ class ContextMaker(object):
         for ctx in ctxs:
             n = ctx.size()
             new = numpy.zeros(n, ctype)
-            stop = start + n
             for name in ctype.names:
                 new[name] = getattr(ctx, name)
+            stop = start + n
             yield new, clist, slice(start, stop)
             start = stop
 
