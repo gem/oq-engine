@@ -682,7 +682,9 @@ class PmapMaker(object):
     def _make_src_indep(self):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
-        for src, sites in self.srcfilter.split(self.group):
+        # split the sources only if there is more than 1 site
+        filt = self.srcfilter.filter if self.N == 1 else self.srcfilter.split
+        for src, sites in filt(self.group):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
@@ -699,9 +701,8 @@ class PmapMaker(object):
 
     def _make_src_mutex(self):
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
-        for src, indices in self.srcfilter.filter(self.group):
+        for src, sites in self.srcfilter.filter(self.group):
             t0 = time.time()
-            sites = self.srcfilter.sitecol.filtered(indices)
             self.numctxs = 0
             self.numsites = 0
             rups = self._ruptures(src)
