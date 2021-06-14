@@ -65,8 +65,8 @@ class ExampleA2021(GMPE):
     """)
 
     @jittable
-    def calc_mean(out, param, sites, coeffs):
-        mag, rjb = param['mag'], sites['rjb']
+    def calc_mean(out, ctx, coeffs):
+        mag, rjb = ctx.mag, ctx.rjb
         for m, C in enumerate(coeffs):
             out[:, m] = (C['c1'] + _compute_term1(C, mag) +
                          _compute_term2(C, mag, rjb))
@@ -76,8 +76,8 @@ class ExampleA2021(GMPE):
                 out[:, m] /= 0.559
 
     @jittable
-    def calc_stdt(out, param, sites, coeffs):
-        mag, rjb = param['mag'], sites['rjb']
+    def calc_stdt(out, ctx, coeffs):
+        mag, rjb = ctx.mag, ctx.rjb
         for m, C in enumerate(coeffs):
             sigma_ale_m = np.interp(
                 mag, [5.0, 5.5, 8.0],

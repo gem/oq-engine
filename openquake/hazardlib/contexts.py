@@ -173,9 +173,9 @@ def get_mean_stdt(orig_ctxs, cmaker):
         if calc_mean:  # fast lane
             if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
                 ctxs = [cmaker.multi(ctxs)]
-            for param, sites, clist, slc in cmaker.gen_params(g, ctxs):
-                calc_mean(arr[0, slc, :, g], param, sites, *clist)
-                calc_stdt(arr[1, slc, :, g], param, sites, *clist)
+            for ctx, clist, slc in cmaker.gen_triples(g, ctxs):
+                calc_mean(arr[0, slc, :, g], ctx, *clist)
+                calc_stdt(arr[1, slc, :, g], ctx, *clist)
         else:  # slow lane
             start = 0
             for ctx in ctxs:
@@ -263,13 +263,12 @@ class ContextMaker(object):
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        self.stype = []
-        self.vtype = []
+        self.ctype = []
         self.clist = []
         for gsim in gsims:
-            self.stype.append(float_struct(gsim.REQUIRES_PARAMETERS,
-                                           gsim.REQUIRES_RUPTURE_PARAMETERS))
-            self.vtype.append(float_struct(gsim.REQUIRES_SITES_PARAMETERS,
+            self.ctype.append(float_struct(gsim.REQUIRES_PARAMETERS,
+                                           gsim.REQUIRES_RUPTURE_PARAMETERS,
+                                           gsim.REQUIRES_SITES_PARAMETERS,
                                            gsim.REQUIRES_DISTANCES))
             clist = [table.on(self.imts)
                      for name, table in inspect.getmembers(gsim.__class__)
@@ -291,24 +290,20 @@ class ContextMaker(object):
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
 
-    def gen_params(self, gsim_idx, ctxs):
+    def gen_triples(self, gsim_idx, ctxs):
         """
-        Yields param, sites, allcoeffs, slice for each context
+        Yields ctx, allcoeffs, slice for each context
         """
-        stype = self.stype[gsim_idx]
-        vtype = self.vtype[gsim_idx]
+        ctype = self.ctype[gsim_idx]
         clist = self.clist[gsim_idx]
         start = 0
         for ctx in ctxs:
             n = ctx.size()
-            param = numpy.zeros(n, stype)
+            new = numpy.zeros(n, ctype)
             stop = start + n
-            sites = numpy.zeros(n, vtype)
-            for name in vtype.names:
-                sites[name] = getattr(ctx, name)
-            for name in stype.names:
-                param[name] = getattr(ctx, name)
-            yield param, sites, clist, slice(start, stop)
+            for name in ctype.names:
+                new[name] = getattr(ctx, name)
+            yield new, clist, slice(start, stop)
             start = stop
 
     def read_ctxs(self, dstore, slc=None):
