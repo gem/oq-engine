@@ -289,6 +289,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
+        self.newapi = any(hasattr(gsim, 'calc_mean') for gsim in self.gsims)
         self.compile()
 
     def compile(self):
@@ -682,7 +683,10 @@ class PmapMaker(object):
     def _make_src_indep(self):
         # sources with the same ID
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
-        for src, sites in self.srcfilter.split(self.group):
+        # split the sources only if there is more than 1 site
+        filt = (self.srcfilter.filter if self.N == 1 and self.newapi
+                else self.srcfilter.split)
+        for src, sites in filt(self.group):
             t0 = time.time()
             if self.fewsites:
                 sites = sites.complete
@@ -699,9 +703,8 @@ class PmapMaker(object):
 
     def _make_src_mutex(self):
         pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
-        for src, indices in self.srcfilter.filter(self.group):
+        for src, sites in self.srcfilter.filter(self.group):
             t0 = time.time()
-            sites = self.srcfilter.sitecol.filtered(indices)
             self.numctxs = 0
             self.numsites = 0
             rups = self._ruptures(src)
