@@ -884,7 +884,7 @@ class HazardCalculator(BaseCalculator):
         # check for gsim logic tree reduction
         discard_trts = []
         for trt in self.full_lt.gsim_lt.values:
-            if rel_ruptures.get(trt, 0) == 0:
+            if trt != '*' and rel_ruptures.get(trt, 0) == 0:
                 discard_trts.append(trt)
         if discard_trts:
             msg = ('No sources for some TRTs: you should set\n'
