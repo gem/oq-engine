@@ -1037,9 +1037,13 @@ def view_delta_loss(token, dstore):
     losses1 = df['loss'][mod2 == 1]
     c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
     c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
-    dic = dict(loss=losses_by_period(df['loss'], periods, num_events, efftime),
-               even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
-    return pandas.DataFrame(dic, periods)
+    ok = (c0 != 0) & (c1 != 0)
+    c0 = c0[ok]
+    c1 = c1[ok]
+    losses = losses_by_period(df['loss'], periods, num_events, efftime)[ok]
+    dic = dict(loss=losses, even=c0, odd=c1,
+               delta=numpy.abs(c0 - c1) / (c0 + c1))
+    return pandas.DataFrame(dic, periods[ok])
 
 
 def to_str(arr):
