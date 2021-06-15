@@ -134,7 +134,7 @@ class CanSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
         return flin + fnl + fbd
 
 
-class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
+class CanSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
     """
     Campbell and Bozorgnia, 2014 with CanadaSHM6 modifications to amplification
     factors for vs30 > 1100 and the removal of the basin term (i.e., returns
