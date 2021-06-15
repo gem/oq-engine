@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                                applyToTectonicRegionType="Stable Shallow Crust">
+                <logicTreeBranch branchID="b11">
+                    <uncertaintyModel submodel='01'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.07755</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b12">
+                    <uncertaintyModel submodel='02'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0376</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b13">
+                    <uncertaintyModel submodel='03'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0473</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b14">
+                    <uncertaintyModel submodel='04'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0404</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b15">
+                    <uncertaintyModel submodel='05'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.04505</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b16">
+                    <uncertaintyModel submodel='06'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0233</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b17">
+                    <uncertaintyModel submodel='07'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0225</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b18">
+                    <uncertaintyModel submodel='08'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0362</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b19">
+                    <uncertaintyModel submodel='09'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.04255</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b110">
+                    <uncertaintyModel submodel='10'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0235</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b111">
+                    <uncertaintyModel submodel='11'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0253</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b112">
+                    <uncertaintyModel submodel='12'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0428</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b113">
+                    <uncertaintyModel submodel='13'>CanSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.03595</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b114">
+                    <uncertaintyModel submodel='high'>CanSHM6_StableCrust_AA13</uncertaintyModel>
+                    <uncertaintyWeight>0.15</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b115">
+                    <uncertaintyModel submodel='central'>CanSHM6_StableCrust_AA13</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b116">
+                    <uncertaintyModel submodel='low'>CanSHM6_StableCrust_AA13</uncertaintyModel>
+                    <uncertaintyWeight>0.10</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+    </logicTree>
+</nrml>
+
