@@ -65,3 +65,6 @@
 | case_63 | Test for GMM with soiltype |
 | case_64 | |
 | case_65 | Test for the multi fault source |
+| case_66 | |
+| case_67 | Test for ASC GMMs used in CanSHM6 |
+| case_68 | Test for Subduction INT GMMs used in CanSHM6 |

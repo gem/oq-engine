@@ -6,12 +6,22 @@
 
             <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
                     applyToTectonicRegionType="Active Shallow Crust">
-
                 <logicTreeBranch branchID="b1">
                     <uncertaintyModel>CanSHM6_ActiveCrust_BooreEtAl2014</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
                 </logicTreeBranch>
-
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>CanSHM6_ActiveCrust_CampbellBozorgnia2014</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b3">
+                    <uncertaintyModel>CanSHM6_ActiveCrust_AbrahamsonEtAl2014</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b4">
+                    <uncertaintyModel>CanSHM6_ActiveCrust_ChiouYoungs2014</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
             </logicTreeBranchSet>
 
     </logicTree>
