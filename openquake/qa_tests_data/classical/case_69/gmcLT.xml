@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID='lt1'>
+
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                    applyToTectonicRegionType="Subduction Interface">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>CanSHM6_Interface_AbrahamsonEtAl2015SInter</uncertaintyModel>
+                    <uncertaintyWeight>0.250</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>CanSHM6_Interface_ZhaoEtAl2006SInterCascadia</uncertaintyModel>
+                    <uncertaintyWeight>0.250</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b3">
+                    <uncertaintyModel>CanadaSHM6_Interface_AtkinsonMacias2009</uncertaintyModel>
+                    <uncertaintyWeight>0.250</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b4">
+                    <uncertaintyModel>CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia</uncertaintyModel>
+                    <uncertaintyWeight>0.250</uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+
+    </logicTree>
+</nrml>
