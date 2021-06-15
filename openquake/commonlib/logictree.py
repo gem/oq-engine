@@ -267,6 +267,29 @@ def shorten(path, shortener):
     return ''.join(shortener.get(key, key) for key in path)
 
 
+# useful to print reduced logic trees
+def compress_paths(paths):
+    """
+    >>> compress_paths(['0~A0', '0~A1'])
+    '0~A[01]'
+    """
+    n = len(paths[0])
+    for path in paths[1:]:
+        assert len(path) == n, (len(path), n)
+    sets = [set() for _ in range(n)]
+    for c, s in enumerate(sets):
+        for path in paths:
+            s.add(path[c])
+    path = []
+    for s in sets:
+        chars = ''.join(sorted(s))
+        if len(chars) > 1:
+            path.append('[%s]' % chars)
+        else:
+            path.append(chars)
+    return ''.join(path)
+
+
 class SourceModelLogicTree(object):
     """
     Source model logic tree parser.
