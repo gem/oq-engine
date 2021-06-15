@@ -1,3 +1,6 @@
+  [Claudia Mascandola]
+  * Added the Sgobba et al. (2020) GMPE
+  
   [Michele Simionato]
   * Accepted aggregate_by=id in scenario/event based calculations
   * Accepted aggregate_by=site_id in scenario/event based calculations
