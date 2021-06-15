@@ -447,7 +447,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id and not oq.compare_with_classical:
             with datastore.read(self.oqparam.hazard_calculation_id) as parent:
                 self.full_lt = parent['full_lt']
-            self.calc_stats()  # post-processing
+            self.store_stats()  # post-processing
             return {}
 
         assert oq.max_sites_per_tile > oq.max_sites_disagg, (
@@ -658,9 +658,9 @@ class ClassicalCalculator(base.HazardCalculator):
         if (self.oqparam.hazard_calculation_id is None
                 and '_poes' in self.datastore):
             self.datastore.swmr_on()  # needed
-            self.calc_stats()
+            self.store_stats()
 
-    def calc_stats(self):
+    def store_stats(self):
         oq = self.oqparam
         hstats = oq.hazard_stats()
         # initialize datasets

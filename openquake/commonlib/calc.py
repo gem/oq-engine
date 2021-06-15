@@ -145,20 +145,19 @@ def compute_hazard_maps(curves, imls, poes):
         imls = numpy.log(numpy.array(imls[::-1]))
     for n, curve in enumerate(curves):
         # the hazard curve, having replaced the too small poes with EPSILON
-        log_cutoff = numpy.log([max(poe, EPSILON) for poe in curve[::-1]])
+        log_curve = numpy.log([max(poe, EPSILON) for poe in curve[::-1]])
         for p, log_poe in enumerate(log_poes):
-            if log_poe > log_cutoff[-1]:
+            if log_poe > log_curve[-1]:
                 # special case when the interpolation poe is bigger than the
-                # maximum, i.e the iml must be smaller than the minumum
+                # maximum, i.e the iml must be smaller than the minimum;
                 # extrapolate the iml to zero as per
-                # https://bugs.launchpad.net/oq-engine/+bug/1292093
-                # a consequence is that if all poes are zero any poe > 0
-                # is big and the hmap goes automatically to zero
+                # https://bugs.launchpad.net/oq-engine/+bug/1292093;
+                # then the hmap goes automatically to zero
                 pass
             else:
                 # exp-log interpolation, to reduce numerical errors
                 # see https://bugs.launchpad.net/oq-engine/+bug/1252770
-                hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_cutoff, imls))
+                hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_curve, imls))
     return hmap
 
 
