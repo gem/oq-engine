@@ -66,6 +66,7 @@
 | case_64 | |
 | case_65 | Test for the multi fault source |
 | case_66 | |
-| case_67 | Test for ASC GMMs used in CanSHM6 |
-| case_68 | Test for Subduction SLAB GMMs used in CanSHM6 |
-| case_69 | Test for Subduction INT GMMs used in CanSHM6 |
+| [case_67](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_67) | Test for ASC GMMs used in CanSHM6 |
+| [case_68](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_68) | Test for Subduction SLAB GMMs used in CanSHM6 |
+| [case_69](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_69) | Test for Subduction INT GMMs used in CanSHM6 |
+| [case_70](https://github.com/gem/oq-engine/tree/master/openquake/qa_tests_data/classical/case_70) | Test for Subduction INT GMMs used in CanSHM6 |
