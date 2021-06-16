@@ -662,9 +662,14 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def store_stats(self):
         oq = self.oqparam
+        N = len(self.sitecol.complete)
+        R = len(self.realizations)
+        if oq.individual_curves is None:  # not specified in the job.ini
+            individual_curves = (N == 1) * (R > 1)
+        else:
+            individual_curves = oq.individual_curves
         hstats = oq.hazard_stats()
         # initialize datasets
-        N = len(self.sitecol.complete)
         P = len(oq.poes)
         M = self.M = len(oq.imtls)
         imts = list(oq.imtls)
@@ -673,9 +678,8 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             L = oq.imtls.size
         L1 = self.L1 = L // M
-        R = len(self.realizations)
         S = len(hstats)
-        if R > 1 and oq.individual_curves or not hstats:
+        if R > 1 and individual_curves or not hstats:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
             self.datastore.set_shape_descr(
                 'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
@@ -702,7 +706,7 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = [  # this list is very fast to generate
             (getters.PmapGetter(
                 dstore, self.weights, t.sids, oq.imtls, oq.poes),
-             N, hstats, oq.individual_curves, oq.max_sites_disagg,
+             N, hstats, individual_curves, oq.max_sites_disagg,
              self.amplifier)
             for t in self.sitecol.split_in_tiles(ct)]
         if self.few_sites:

@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import ast
-import json
 import os.path
 import numbers
 import operator
@@ -27,6 +26,7 @@ import collections
 import logging
 import numpy
 import pandas
+from scipy.cluster.vq import kmeans2
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
@@ -35,7 +35,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util
+from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
@@ -1131,3 +1131,27 @@ def view_sum(token, dstore):
             for c, col in enumerate(cols):
                 z[r * L + li][col] = a[c-1] if c > 0 else (r, li)
     return z
+
+
+# strategy converting a matrix RML into a matrix of observations RM
+def hcurves2obs(hcurves):
+    return hcurves[:, :, -1]
+
+
+@view.add('clusterize_hcurves')
+def view_clusterize_hcurves(token, dstore):
+    """
+    Collect together similar hazard curves for the first site in k clusters
+    """
+    if ':' not in token:
+        return 'Try something like oq view clusterize_hcurves:10'
+    k = int(token.split(':')[1])
+    full_lt = dstore['full_lt']
+    hcurves = dstore['hcurves-rlzs'][0]
+    labels = kmeans2(hcurves2obs(hcurves), k, minit='++')[1]
+    dic = dict(path=full_lt.rlzs['branch_path'], uidx=labels)
+    df = pandas.DataFrame(dic).set_index('uidx')
+    tbl = []
+    for uidx, grp in df.groupby(df.index):
+        tbl.append((uidx, logictree.compress_paths(list(grp['path']))))
+    return numpy.array(tbl, dt('uidx paths'))
