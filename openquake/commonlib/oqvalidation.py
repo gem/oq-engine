@@ -979,6 +979,11 @@ class OqParam(valid.ParamSet):
             raise ValueError('Unknown key %s_file in %s' %
                              (unknown.pop(), self.inputs['job_ini']))
 
+        # check return_periods vs poes
+        if self.return_periods and not self.poes:
+            self.poes = 1 - numpy.exp(
+                - self.investigation_time / numpy.array(self.return_periods))
+
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
             if not self.poes_disagg and self.poes:

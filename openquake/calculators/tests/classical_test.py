@@ -800,22 +800,10 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
 
     def test_case_56(self):
-        # test with oversampling and a discardable source model (#2)
-        # there are 6 potential paths 1A 1B 1C 2A 2B 2C
-        # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
-        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
+        # test with a discardable source model (#2)
         self.run_calc(case_56.__file__, 'job.ini', concurrent_tasks='0')
-        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurves.csv', fname)
-
-        self.calc.datastore['_poes'].shape
-        cmakers = contexts.read_cmakers(self.calc.datastore)
-        ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
-        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
-        # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
-        slc0, slc1 = cmakers[0].slc, cmakers[1].slc
-        self.assertEqual(slc0.stop - slc0.start, 3)
-        self.assertEqual(slc1.stop - slc1.start, 2)
+        [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs.csv', fname)
 
     def test_case_57(self):
         # AvgPoeGMPE
