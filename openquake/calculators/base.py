@@ -880,29 +880,29 @@ class HazardCalculator(BaseCalculator):
             logging.warning(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
-        if not rel_ruptures:
-            return
+        if rel_ruptures:
+            self.check_discardable(rel_ruptures)
 
-        # check for gsim logic tree reduction
-        discardable = {trt: True for trt in self.full_lt.trts}
-        trt_smrs = self.datastore['trt_smrs'][:]
+    def check_discardable(self, rel_ruptures):
+        """Check if logic tree reduction is possible"""
         n = len(self.full_lt.sm_rlzs)
-        for grp_id, trt_smrs in enumerate(trt_smrs):
+        keep_trts = set()
+        for grp_id, trt_smrs in enumerate(self.datastore['trt_smrs']):
             trti, smrs = numpy.divmod(trt_smrs, n)
             trt = self.full_lt.trts[trti[0]]
-            if trt != '*' and rel_ruptures.get(grp_id, 0) == 0:
+            if rel_ruptures.get(grp_id):
+                keep_trts.add(trt)
+            elif trt != '*':
                 for smr in smrs:
                     sm_rlz = self.full_lt.sm_rlzs[smr]
-                    logging.warning('grp_id=%s(%s) is discardable[%s]',
-                                    grp_id, trt, sm_rlz.name)
-            else:
-                # not discardable only if such for all groups containing trt
-                discardable[trt] = False
-        discard_trts = [trt for trt in discardable if discardable[trt]]
+                    logging.warning(
+                        'grp_id=%s(%s) is discardable, sm_lt_path=%s [%s]',
+                        grp_id, trt, '_'.join(sm_rlz.lt_path), sm_rlz.name)
+        discard_trts = set(self.full_lt.trts) - keep_trts
         if discard_trts:
             msg = ('No sources for some TRTs: you should set\n'
-                   'discard_trts = %s\nin %s') % (', '.join(discard_trts),
-                                                  oq.inputs['job_ini'])
+                   'discard_trts = %s\nin %s') % (
+                       ', '.join(discard_trts), self.oqparam.inputs['job_ini'])
             logging.warning(msg)
 
     def store_source_info(self, calc_times, nsites=False):
