@@ -884,23 +884,21 @@ class HazardCalculator(BaseCalculator):
             self.check_discardable(rel_ruptures)
 
     def check_discardable(self, rel_ruptures):
-        # check for logic tree reduction
-        discardable = {trt: set() for trt in self.full_lt.trts}
+        """Check if logic tree reduction is possible"""
         n = len(self.full_lt.sm_rlzs)
-        smrset = set(range(n))
+        keep_trts = set()
         for grp_id, trt_smrs in enumerate(self.datastore['trt_smrs']):
             trti, smrs = numpy.divmod(trt_smrs, n)
             trt = self.full_lt.trts[trti[0]]
-            if trt != '*' and rel_ruptures.get(grp_id, 0) == 0:
+            if rel_ruptures.get(grp_id):
+                keep_trts.add(trt)
+            elif trt != '*':
                 for smr in smrs:
                     sm_rlz = self.full_lt.sm_rlzs[smr]
-                    discardable[trt].add(sm_rlz.ordinal)
                     logging.warning(
                         'grp_id=%s(%s) is discardable, sm_lt_path=%s [%s]',
                         grp_id, trt, '_'.join(sm_rlz.lt_path), sm_rlz.name)
-        # look at TRTs not affecting all sm_rlzs
-        discard_trts = [trt for trt in discardable
-                        if discardable[trt] == smrset]
+        discard_trts = set(self.full_lt.trts) - keep_trts
         if discard_trts:
             msg = ('No sources for some TRTs: you should set\n'
                    'discard_trts = %s\nin %s') % (
