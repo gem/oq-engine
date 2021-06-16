@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Made visible the warning on non-contributing TRTs for all calculators
+  * Improved the warning on non-contributing TRTs and made it visible
+    for all calculators
   * Fixed a bug in scenarios from CSV ruptures with wrong TRTs
   * Added a limit of 12 characters to IMT names
   * Forbidded multiple inheritance in GMPE hierarchies
