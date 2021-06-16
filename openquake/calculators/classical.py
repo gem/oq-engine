@@ -303,8 +303,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 eff_sites += rec[1] / rec[0]
         self.by_task[extra['task_no']] = (
             eff_rups, eff_sites, sorted(srcids))
-        self.rel_ruptures[extra.pop('trt')] += eff_rups
-        grp_id = extra['grp_id']
+        grp_id = extra.pop('grp_id')
+        self.rel_ruptures[grp_id] += eff_rups
         self.counts[grp_id] -= 1
         if self.oqparam.disagg_by_src:
             # store the poes for the given source
@@ -364,7 +364,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.by_task = {}  # task_no => src_ids
         self.maxradius = 0
         self.Ns = len(self.csm.source_info)
-        self.rel_ruptures = AccumDict(accum=0)  # trt -> rel_ruptures
+        self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
         if self.oqparam.disagg_by_src:
@@ -402,12 +402,12 @@ class ClassicalCalculator(base.HazardCalculator):
         super().init()
         if self.oqparam.hazard_calculation_id:
             full_lt = self.datastore.parent['full_lt']
-            trt_smrs = self.datastore.parent['trt_smrs'][:]
+            self.trt_smrs = self.datastore.parent['trt_smrs'][:]
         else:
             full_lt = self.csm.full_lt
-            trt_smrs = self.csm.get_trt_smrs()
-        self.grp_ids = numpy.arange(len(trt_smrs))
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
+            self.trt_smrs = self.csm.get_trt_smrs()
+        self.grp_ids = numpy.arange(len(self.trt_smrs))
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(self.trt_smrs)
         rlzs_by_g = []
         for rlzs_by_gsim in rlzs_by_gsim_list:
             for rlzs in rlzs_by_gsim.values():
