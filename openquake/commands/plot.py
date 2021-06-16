@@ -24,6 +24,7 @@ from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
 from openquake.calculators.extract import Extractor, WebExtractor
+from openquake.calculators.views import clusterize
 
 
 def make_figure_hcurves(extractors, what):
@@ -53,6 +54,43 @@ def make_figure_hcurves(extractors, what):
             ax.loglog(imls, arr.flat, '-', label='%s_%s' % ck)
         ax.grid(True)
         ax.legend()
+    return plt
+
+
+def make_figure_uhs_cluster(extractors, what):
+    """
+    $ oq plot "uhs_cluster?k=12"
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.cm as cm
+    kstr = what.split('?')[1]
+    k = int(kstr.split('=')[1])
+    fig, ax = plt.subplots()
+    [ex] = extractors
+    hmaps = ex.get('hmaps?kind=rlzs')
+    rlzs = ex.get('realizations').array
+    labels = []
+    for p, poe in enumerate(ex.oqparam.poes):
+        for imt in ex.oqparam.imtls:
+            labels.append('%s' % imt)
+    xs = numpy.arange(len(labels))
+    ax.set_xticks(xs)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel('IML')
+    obs = [getattr(hmaps, 'rlz-%03d' % rlz)[0].T.flatten()
+           for rlz in range(len(rlzs))]
+    arr, cluster = clusterize(numpy.array(obs), rlzs, k)
+    colors = cm.rainbow(numpy.linspace(0, 1, len(arr)))
+    paths = [p.decode('ascii') for p in arr['branch_paths']]
+    for rlz in range(len(rlzs)):
+        # ush-rlz has shape NMP
+        ys = getattr(hmaps, 'rlz-%03d' % rlz)[0].T.flatten()
+        ax.plot(xs, ys, '-', color=colors[cluster[rlz]])
+    for c, curve in enumerate(arr['centroid']):
+        lbl = '%s:%s' % (c, paths[c])
+        ax.plot(xs, curve, '--', color=colors[c], label=lbl)
+    ax.grid(True)
+    ax.legend()
     return plt
 
 

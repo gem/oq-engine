@@ -1133,25 +1133,32 @@ def view_sum(token, dstore):
     return z
 
 
-# strategy converting a matrix RML into a matrix of observations RM
-def hcurves2obs(hcurves):
-    return hcurves[:, :, -1]
-
-
-@view.add('clusterize_hcurves')
-def view_clusterize_hcurves(token, dstore):
+def clusterize(hmaps, rlzs, k):
     """
-    Collect together similar hazard curves for the first site in k clusters
+    :returns: (centroids table, labels)
+    """
+    R, M = hmaps.shape
+    dt = [('label', U32), ('branch_paths', object), ('centroid', (F32, M))]
+    centroid, labels = kmeans2(hmaps, k, minit='++')
+    dic = dict(path=rlzs['branch_path'], label=labels)
+    df = pandas.DataFrame(dic)
+    tbl = []
+    for label, grp in df.groupby('label'):
+        tbl.append((label, logictree.collect_paths(list(grp['path'])),
+                    centroid[label]))
+    return numpy.array(tbl, dt), labels
+
+
+@view.add('clusterize_hmaps')
+def view_clusterize_hmaps(token, dstore):
+    """
+    Collect together similar UHS for the first site and the first PoE
+    in k clusters
     """
     if ':' not in token:
         return 'Try something like oq view clusterize_hcurves:10'
     k = int(token.split(':')[1])
     full_lt = dstore['full_lt']
-    hcurves = dstore['hcurves-rlzs'][0]
-    labels = kmeans2(hcurves2obs(hcurves), k, minit='++')[1]
-    dic = dict(path=full_lt.rlzs['branch_path'], uidx=labels)
-    df = pandas.DataFrame(dic).set_index('uidx')
-    tbl = []
-    for uidx, grp in df.groupby(df.index):
-        tbl.append((uidx, logictree.compress_paths(list(grp['path']))))
-    return numpy.array(tbl, dt('uidx paths'))
+    hmaps = dstore['hmaps-rlzs'][0]  # shape (R, M, P)
+    arr = clusterize(hmaps.reshape(len(hmaps), -1), full_lt.rlzs, k)[0]
+    return arr

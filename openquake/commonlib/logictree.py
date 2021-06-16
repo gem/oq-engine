@@ -268,10 +268,12 @@ def shorten(path, shortener):
 
 
 # useful to print reduced logic trees
-def compress_paths(paths):
+def collect_paths(paths, b1=ord('['), b2=ord(']')):
     """
-    >>> compress_paths(['0~A0', '0~A1'])
-    '0~A[01]'
+    Collect branch paths belonging to the same cluster
+
+    >>> collect_paths([b'0~A0', b'0~A1'])
+    b'0~A[01]'
     """
     n = len(paths[0])
     for path in paths[1:]:
@@ -280,14 +282,16 @@ def compress_paths(paths):
     for c, s in enumerate(sets):
         for path in paths:
             s.add(path[c])
-    path = []
+    ints = []
     for s in sets:
-        chars = ''.join(sorted(s))
+        chars = sorted(s)
         if len(chars) > 1:
-            path.append('[%s]' % chars)
+            ints.append(b1)
+            ints.extend(chars)
+            ints.append(b2)
         else:
-            path.append(chars)
-    return ''.join(path)
+            ints.extend(chars)
+    return bytes(ints)
 
 
 class SourceModelLogicTree(object):
