@@ -119,7 +119,6 @@ def classical(group, src_filter, cmaker):
     pmap, rup_data, calc_times = PmapMaker(cmaker, src_filter, group).make()
     extra = {}
     extra['task_no'] = getattr(cmaker.mon, 'task_no', 0)
-    extra['trt'] = trt
     extra['source_id'] = src.source_id
     extra['grp_id'] = src.grp_id
     extra['maxradius'] = maxradius
