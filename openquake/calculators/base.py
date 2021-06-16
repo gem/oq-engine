@@ -882,16 +882,21 @@ class HazardCalculator(BaseCalculator):
                 'sampling it', R)
 
         # check for gsim logic tree reduction
-        discard_trts = set()
+        discardable = {trt: True for trt in self.full_lt.trts}
         trt_smrs = self.datastore['trt_smrs'][:]
         n = len(self.full_lt.sm_rlzs)
         for grp_id, trt_smrs in enumerate(trt_smrs):
             trti, smrs = numpy.divmod(trt_smrs, n)
             trt = self.full_lt.trts[trti[0]]
             if trt != '*' and rel_ruptures.get(grp_id, 0) == 0:
-                logging.warning('%s is discardable for smrs=%s',
-                                trt, list(smrs))
-                discard_trts.add(trt)
+                for smr in smrs:
+                    sm_rlz = self.full_lt.sm_rlzs[smr]
+                    logging.warning('grp_id=%s(%s) is discardable\n%s',
+                                    grp_id, trt, sm_rlz.name)
+            else:
+                # not discardable only if such for all groups containing trt
+                discardable[trt] = False
+        discard_trts = [trt for trt in discardable if discardable[trt]]
         if discard_trts:
             msg = ('No sources for some TRTs: you should set\n'
                    'discard_trts = %s\nin %s') % (', '.join(discard_trts),

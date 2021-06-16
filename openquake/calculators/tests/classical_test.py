@@ -800,7 +800,7 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/ampl_curve-bis.csv', fname)
 
     def test_case_56(self):
-        # test with oversampling
+        # test with oversampling and a discardable source model (#2)
         # there are 6 potential paths 1A 1B 1C 2A 2B 2C
         # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
         # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
