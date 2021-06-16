@@ -980,7 +980,7 @@ class OqParam(valid.ParamSet):
                              (unknown.pop(), self.inputs['job_ini']))
 
         # check return_periods vs poes
-        if self.return_periods and not self.poes:
+        if self.return_periods and not self.poes and self.investigation_time:
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
 
