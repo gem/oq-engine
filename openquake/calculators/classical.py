@@ -402,12 +402,12 @@ class ClassicalCalculator(base.HazardCalculator):
         super().init()
         if self.oqparam.hazard_calculation_id:
             full_lt = self.datastore.parent['full_lt']
-            self.trt_smrs = self.datastore.parent['trt_smrs'][:]
+            trt_smrs = self.datastore.parent['trt_smrs'][:]
         else:
             full_lt = self.csm.full_lt
-            self.trt_smrs = self.csm.get_trt_smrs()
-        self.grp_ids = numpy.arange(len(self.trt_smrs))
-        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(self.trt_smrs)
+            trt_smrs = self.csm.get_trt_smrs()
+        self.grp_ids = numpy.arange(len(trt_smrs))
+        rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(trt_smrs)
         rlzs_by_g = []
         for rlzs_by_gsim in rlzs_by_gsim_list:
             for rlzs in rlzs_by_gsim.values():
