@@ -880,6 +880,8 @@ class HazardCalculator(BaseCalculator):
             logging.warning(
                 'The logic tree has %d realizations(!), please consider '
                 'sampling it', R)
+        if not rel_ruptures:
+            return
 
         # check for gsim logic tree reduction
         discardable = {trt: True for trt in self.full_lt.trts}
@@ -891,7 +893,7 @@ class HazardCalculator(BaseCalculator):
             if trt != '*' and rel_ruptures.get(grp_id, 0) == 0:
                 for smr in smrs:
                     sm_rlz = self.full_lt.sm_rlzs[smr]
-                    logging.warning('grp_id=%s(%s) is discardable\n%s',
+                    logging.warning('grp_id=%s(%s) is discardable[%s]',
                                     grp_id, trt, sm_rlz.name)
             else:
                 # not discardable only if such for all groups containing trt
