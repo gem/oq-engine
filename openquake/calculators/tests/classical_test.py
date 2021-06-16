@@ -37,7 +37,8 @@ from openquake.qa_tests_data.classical import (
     case_34, case_35, case_36, case_37, case_38, case_39, case_40, case_41,
     case_42, case_43, case_44, case_45, case_46, case_47, case_48, case_49,
     case_50, case_51, case_52, case_53, case_54, case_55, case_56, case_57,
-    case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65)
+    case_58, case_59, case_60, case_61, case_62, case_63, case_64, case_65,
+    case_71)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -894,3 +895,21 @@ hazard_uhs-std.csv
 
         files = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
+
+    def test_case_71(self):
+        # test with oversampling
+        # there are 6 potential paths 1A 1B 1C 2A 2B 2C
+        # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
+        # rlzs_by_g is 135 2 4, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
+        self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0')
+        [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurves.csv', fname)
+
+        self.calc.datastore['_poes'].shape
+        cmakers = contexts.read_cmakers(self.calc.datastore)
+        ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
+        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
+        # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
+        slc0, slc1 = cmakers[0].slc, cmakers[1].slc
+        self.assertEqual(slc0.stop - slc0.start, 3)
+        self.assertEqual(slc1.stop - slc1.start, 2)
