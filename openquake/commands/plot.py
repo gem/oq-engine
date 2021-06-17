@@ -23,8 +23,7 @@ import numpy
 from openquake.hazardlib.geo.utils import cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, MagDepDistance
-from openquake.calculators.extract import Extractor, WebExtractor
-from openquake.calculators.views import clusterize
+from openquake.calculators.extract import Extractor, WebExtractor, clusterize
 
 
 def make_figure_hcurves(extractors, what):

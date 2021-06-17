@@ -374,3 +374,4 @@ class RuptureImporter(object):
                 raise ValueError(
                     'The %s calculator is restricted to %d %s, got %d' %
                     (oq.calculation_mode, max_[var], var, num_[var]))
+

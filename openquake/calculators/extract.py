@@ -30,6 +30,7 @@ from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
 import pandas
+from scipy.cluster.vq import kmeans2
 
 from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
@@ -38,8 +39,8 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.source import rupture
+from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
-from openquake.commonlib import calc, util, oqvalidation, datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -1525,3 +1526,19 @@ class WebExtractor(Extractor):
         Close the session
         """
         self.sess.close()
+
+
+def clusterize(hmaps, rlzs, k):
+    """
+    :returns: (centroids table, labels)
+    """
+    R, M = hmaps.shape
+    dt = [('label', U32), ('branch_paths', object), ('centroid', (F32, M))]
+    centroid, labels = kmeans2(hmaps, k, minit='++')
+    dic = dict(path=rlzs['branch_path'], label=labels)
+    df = pandas.DataFrame(dic)
+    tbl = []
+    for label, grp in df.groupby('label'):
+        paths = [encode(path) for path in grp['path']]
+        tbl.append((label, logictree.collect_paths(paths), centroid[label]))
+    return numpy.array(tbl, dt), labels
