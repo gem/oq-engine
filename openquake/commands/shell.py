@@ -75,12 +75,32 @@ class OpenQuake(object):
             ex.close()
 
     def read_ruptures(self, calc_id, field):
-        dstore = read(calc_id)
+        dstore = datastore.read(calc_id)
         lst = []
         for name, dset in dstore.items():
             if name.startswith('rup_'):
                 lst.append(dset[field][:])
         return numpy.concatenate(lst)
+
+    def fix_latin1(self, fname):
+        "Try to convert from latin1 to utf8"
+        with open(fname, encoding='latin1') as f:
+            data = f.read()
+        with open(fname, 'w', encoding='utf-8-sig', newline='') as f:
+            f.write(data)
+        print('Converted %s: WARNING: it may still be wrong' % fname)
+
+    def poe2period(self, poe):
+        """
+        Converts probabilities into return periods
+        """
+        return -1/numpy.log(1-poe)
+
+    def period2poe(self, t):
+        """
+        Converts return periods into probabilities
+        """
+        return 1-numpy.exp(-1/t)
 
 
 def main(script=None, args=()):

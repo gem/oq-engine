@@ -301,8 +301,7 @@ def get_phi_ss_at_quantile(phi_model, quantile):
                                     quantile),
                 "b": _at_percentile(phi_model[imt]["mean_b"],
                                     phi_model[imt]["var_b"],
-                                    quantile)
-                }
+                                    quantile)}
     return CoeffsTable(sa_damping=5., table=coeffs)
 
 
@@ -894,11 +893,10 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
         if self.ergodic:
             # IMT list should be taken from the PHI_S2SS_MODEL
             imt_list = list(
-                PHI_S2SS_MODEL[self.phi_s2ss_model].non_sa_coeffs.keys())
-            imt_list += \
-                list(PHI_S2SS_MODEL[self.phi_s2ss_model].sa_coeffs.keys())
+                PHI_S2SS_MODEL[self.phi_s2ss_model].non_sa_coeffs)
+            imt_list += list(PHI_S2SS_MODEL[self.phi_s2ss_model].sa_coeffs)
         else:
-            imt_list = phi_std.keys()
+            imt_list = list(phi_std)
         phi_std = CoeffsTable(sa_damping=5, table=phi_std)
         tau_bar, tau_std = self._get_tau_vector(self.TAU, tau_std, imt_list)
         phi_bar, phi_std = self._get_phi_vector(self.PHI_SS, phi_std, imt_list)

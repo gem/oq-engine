@@ -141,7 +141,7 @@ ratio conditioned on the shaking intensity and ignoring the uncertainty.
 This tradeoff of not propagating the vulnerabilty uncertainty to the loss
 estimates can lead to a significant boost in performance and tractability.
 
-The asset loss table and the agg_loss_table
+The asset loss table
 -------------------------------------------
 
 When performing an event based risk calculation the engine
@@ -176,7 +176,7 @@ calculation. Clearly it is a matter of compromise: by sacrificing precision
 it is possible to reduce enourmously the size of the stored asset loss table
 and to make an impossible calculation possible.
 
-NB: starting from engine 3.11 the asset loss table is stored if the user
+Starting from engine 3.11 the asset loss table is stored if the user
 specifies
 
 ``aggregate_by = id``
@@ -194,19 +194,19 @@ multi-tag). For instance, the tag ``occupancy`` has the three values
 
 ``aggregate_by = occupancy``
 
-the engine will store a pandas DataFrame with field ``agg_id`` with 4
-possible value: 0 for "Residential", 1 for "Industrial", 2 for "Commercial"
-and 3 for the full aggregation.
+the engine will store a pandas DataFrame called ``risk_by_event` with a
+field ``agg_id`` with 4 possible value: 0 for "Residential", 1 for
+"Industrial", 2 for "Commercial" and 3 for the full aggregation.
 
 NB: if the parameter ``aggregate_by`` is not specified, the engine will
-still compute the ``agg_loss_table`` but then the ``agg_id`` field will
+still compute the aggregate loss table but then the ``agg_id`` field will
 have a single value 0 corresponding to the total portfolio losses.
 
 The Probable Maximum Loss (PML) and the loss curves
 ---------------------------------------------------
 
-Given an effective investigation time, a return period and an
-``agg_loss_table``, the engine is able to compute a PML for each
+Given an effective investigation time and a return period,
+the engine is able to compute a PML for each
 aggregation tag. It does so by using the function
 ``openquake.risklib.scientific.losses_by_period`` which takes in input
 an array of cumulative losses associated to the aggregation tag, a
@@ -355,7 +355,7 @@ NAME_1=*Mid-Western* and taxonomy=*Wood*) to ``24`` (meaning aggregate assets
 with NAME_1=*Mid-Western* and taxonomy=*Wood*); moreover ``agg_id=25`` means
 full aggregation.
 
-The ``agg_id`` field enters in the ``agg_loss_table`` and in outputs like
+The ``agg_id`` field enters in ``risk_by_event`` and in outputs like
 the aggregate losses; for instance::
 
    $ oq show agg_losses-rlzs
@@ -375,8 +375,8 @@ is replaced with the string ``*total*``.
 
 By knowing the number of events, the number of aggregation keys and the
 number of loss types, it is possible to give an upper limit to the size
-of the ``agg_loss_table``. In the demo there are 1703 events, 26 aggregation
-keys and 2 loss types, so the ``agg_loss_table`` contains at most
+of ``risk_by_event``. In the demo there are 1703 events, 26 aggregation
+keys and 2 loss types, so ``risk_by_event`` contains at most
 
   1703 * 26 * 2 = 88,556 rows
 
@@ -384,7 +384,7 @@ This is an upper limit, since some combination can produce zero losses
 and are not stored, especially if the ``minimum_asset_loss`` feature is
 used. In the case of the demo actually only 20,877 rows are nonzero::
 
-   $ oq show agg_loss_table
+   $ oq show risk_by_event
           event_id  agg_id  loss_id           loss      variance
    ...
    [20877 rows x 5 columns]

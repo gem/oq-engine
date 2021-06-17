@@ -241,7 +241,7 @@ class Set1TestCase(unittest.TestCase):
             test_data.SET1_CASE1TO9_SITE5, test_data.SET1_CASE1TO9_SITE6,
             test_data.SET1_CASE1TO9_SITE7
         ])
-        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST.value: SadighEtAl1997()}
         truncation_level = 0
         imts = {str(test_data.IMT): test_data.SET1_CASE2_IMLS}
 

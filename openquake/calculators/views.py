@@ -21,6 +21,7 @@ import os.path
 import numbers
 import operator
 import functools
+import itertools
 import collections
 import logging
 import numpy
@@ -33,7 +34,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.commonlib import util
+from openquake.commonlib import util, logictree
 from openquake.risklib.scientific import losses_by_period, return_periods
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import get_rupture_getters
@@ -61,8 +62,8 @@ def form(value):
     '1.000E-04'
     >>> form(1003.4)
     '1_003'
-    >>> form(103.4)
-    '103'
+    >>> form(103.41)
+    '103.4'
     >>> form(9.3)
     '9.30000'
     >>> form(-1.2)
@@ -80,7 +81,7 @@ def form(value):
         elif numpy.isnan(value):
             return 'NaN'
         else:  # in the range 10-1000
-            return str(int(value))
+            return str(round(value, 1))
     elif isinstance(value, bytes):
         return decode(value)
     elif isinstance(value, str):
@@ -404,13 +405,21 @@ def view_portfolio_loss(token, dstore):
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_names)
 
 
-@view.add('portfolio_damage_error')
-def portfolio_damage_error(token, dstore):
+@view.add('portfolio_dmgdist')
+def portfolio_dmgdist(token, dstore):
     """
-    The damages and errors for the full portfolio, extracted from
-    the asset damage table.
+    The portfolio damages extracted from the first realization of damages-rlzs
     """
-    return dstore.read_df('avg_portfolio_damage')
+    oq = dstore['oqparam']
+    dstates = ['no_damage'] + oq.limit_states
+    D = len(dstates)
+    arr = dstore['damages-rlzs'][:, 0, :, :D].sum(axis=0)  # shape (L, D)
+    tbl = numpy.zeros(len(arr), dt(['loss_type', 'total'] + dstates))
+    tbl['loss_type'] = oq.loss_names
+    tbl['total'] = arr.sum(axis=1)
+    for dsi, ds in enumerate(dstates):
+        tbl[ds] = arr[:, dsi]
+    return tbl
 
 
 @view.add('portfolio_damage')
@@ -536,7 +545,7 @@ def view_assets_by_site(token, dstore):
     """
     taxonomies = dstore['assetcol/tagcol/taxonomy'][()]
     assets_by_site = dstore['assetcol'].assets_by_site()
-    data = ['taxonomy num_assets mean stddev min max num_sites'.split()]
+    data = ['taxonomy num_sites mean stddev min max num_assets'.split()]
     num_assets = AccumDict()
     for assets in assets_by_site:
         num_assets += {k: [len(v)] for k, v in group_array(
@@ -1027,9 +1036,13 @@ def view_delta_loss(token, dstore):
     losses1 = df['loss'][mod2 == 1]
     c0 = losses_by_period(losses0, periods, num_events0, efftime / 2)
     c1 = losses_by_period(losses1, periods, num_events1, efftime / 2)
-    dic = dict(loss=losses_by_period(df['loss'], periods, num_events, efftime),
-               even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
-    return pandas.DataFrame(dic, periods)
+    ok = (c0 != 0) & (c1 != 0)
+    c0 = c0[ok]
+    c1 = c1[ok]
+    losses = losses_by_period(df['loss'], periods, num_events, efftime)[ok]
+    dic = dict(loss=losses, even=c0, odd=c1,
+               delta=numpy.abs(c0 - c1) / (c0 + c1))
+    return pandas.DataFrame(dic, periods[ok])
 
 
 def to_str(arr):
@@ -1076,3 +1089,44 @@ def view_rupture(token, dstore):
     for rgetter in get_rupture_getters(dstore, slc=slc):
         dicts.append(rgetter.get_rupdict())
     return str(dicts)
+
+
+@view.add('event_rates')
+def view_event_rates(token, dstore):
+    """
+    Show the number of events per realization multiplied by risk_time/eff_time
+    """
+    oq = dstore['oqparam']
+    R = dstore['full_lt'].get_num_rlzs()
+    if oq.calculation_mode != 'event_based_damage':
+        return numpy.ones(R)
+    time_ratio = (oq.risk_investigation_time or oq.investigation_time) / (
+        oq.ses_per_logic_tree_path * oq.investigation_time)
+    if oq.collect_rlzs:
+        return numpy.array([len(dstore['events']) * time_ratio / R])
+    else:
+        rlzs = dstore['events']['rlz_id']
+        return numpy.bincount(rlzs, minlength=R) * time_ratio
+
+
+def tup2str(tups):
+    return ['_'.join(map(str, t)) for t in tups]
+
+
+@view.add('sum')
+def view_sum(token, dstore):
+    """
+    Show the sum of an array of shape (A, R, L, ...) on the first axis
+    """
+    _, arrayname = token.split(':')  # called as sum:damages-rlzs
+    dset = dstore[arrayname]
+    A, R, L, *D = dset.shape
+    cols = ['RL'] + tup2str(itertools.product(*[range(d) for d in D]))
+    arr = dset[:].sum(axis=0)  # shape R, L, *D
+    z = numpy.zeros(R * L, dt(cols))
+    for r, ar in enumerate(arr):
+        for li, a in enumerate(ar):
+            a = a.flatten()
+            for c, col in enumerate(cols):
+                z[r * L + li][col] = a[c-1] if c > 0 else (r, li)
+    return z

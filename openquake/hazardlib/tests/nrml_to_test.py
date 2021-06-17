@@ -33,7 +33,10 @@ class TestCase(unittest.TestCase):
         gmodel = CD / 'data/sections/sections_mix.xml'
         smodel = CD / 'data/sections/sources.xml'
         convert_to('csv', [smodel], geometry=gmodel, outdir=self.tmpdir)
-        convert_to('gpkg', [smodel], geometry=gmodel, outdir=self.tmpdir)
+        try:
+            convert_to('gpkg', [smodel], geometry=gmodel, outdir=self.tmpdir)
+        except ImportError as exc:  # missing fiona
+            raise unittest.SkipTest(str(exc))
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)

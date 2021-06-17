@@ -70,7 +70,6 @@ class PitilakisEtAl2018(GMPE):
     :param float rock_vs30:
         Reference shearwave velocity used for the rock calculation
     """
-    experimental = True
 
     #: Supported tectonic region type is undefined (applies to any)
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
@@ -257,7 +256,6 @@ class PitilakisEtAl2020(PitilakisEtAl2018):
     of the 17th World Conference on Earthquake Engineering, 17WCEE, Sendai,
     Japan, September 13th to 18th 2020. Paper No. C002895.
     """
-    experimental = True
 
     # Short period amplification factors defined by Pitilakis et al., (2020)
     FS = {
@@ -292,7 +290,6 @@ class Eurocode8Amplification(PitilakisEtAl2018):
     The potential notes highlighted in :class:`PitilakisEtAl2018` apply
     in this case too.
     """
-    experimental = True
 
     #: Supported tectonic region type is undefined (applies to any)
     DEFINED_FOR_TECTONIC_REGION_TYPE = ""
@@ -430,7 +427,6 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
     is otherwise determined then a set of default amplification factors
     are applied. This model implements the Eurocode 8 design spectrum
     """
-    experimental = True
 
     #: Required site parameters are the EC8 site class, everything else will
     #: be set be selected GMPES
@@ -556,9 +552,7 @@ class SandikkayaDinsever2018(GMPE):
 
         if isinstance(phi_0, dict):
             # Input phi_0 model
-            iphi_0 = {}
-            for key in phi_0:
-                iphi_0[from_string(key)] = phi_0[key]
+            iphi_0 = {from_string(key): phi_0[key] for key in phi_0}
             self.phi_0 = CoeffsTable(sa_damping=5, table=iphi_0)
         else:
             # No input phi_0 model

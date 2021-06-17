@@ -118,16 +118,16 @@ class MagDepDistance(dict):
         >>> md.interp(dict(default=[5.0, 5.1, 5.2])); md.ddic
         {'default': {'5.00': 50.0, '5.10': 50.0, '5.20': 50.0}}
         """
-        items_by_trt = floatdict(value.replace('?', '-1'))
+        items_by_trt = floatdict(value)
         self = cls()
         for trt, items in items_by_trt.items():
             if isinstance(items, list):
-                self[trt] = unique_sorted(items)
+                self[trt] = unique_sorted([tuple(it) for it in items])
                 for mag, dist in self[trt]:
                     if mag < 1 or mag > 10:
                         raise ValueError('Invalid magnitude %s' % mag)
             else:  # assume scalar distance
-                assert items == -1 or items >= 0, items
+                assert items >= 0, items
                 self[trt] = [(1., items), (10., items)]
         return self
 
@@ -163,12 +163,6 @@ class MagDepDistance(dict):
         :returns: a dictionary trt -> maxdist
         """
         return {trt: self[trt][-1][1] for trt in self}
-
-    def suggested(self):
-        """
-        :returns: True if there is a ? for any TRT
-        """
-        return any(self[trt][-1][1] == -1 for trt in self)
 
     def get_bounding_box(self, lon, lat, trt=None, mag=None):
         """
@@ -316,15 +310,15 @@ class SourceFilter(object):
         Returns the sites within the integration distance from the source,
         or None.
         """
-        source_indices = list(self.filter([source]))
-        if source_indices:
-            return self.sitecol.filtered(source_indices[0][1])
+        source_sites = list(self.filter([source]))
+        if source_sites:
+            return source_sites[0][1]
 
     def split(self, sources):
         """
         :yields: pairs (split, sites)
         """
-        for src, _indices in self.filter(sources):
+        for src, _sites in self.filter(sources):
             for s in split_source(src):
                 sites = self.get_close_sites(s)
                 if sites is not None:
@@ -374,7 +368,7 @@ class SourceFilter(object):
     def filter(self, sources):
         """
         :param sources: a sequence of sources
-        :yields: sources with indices
+        :yields: pairs (sources, sites)
         """
         if self.sitecol is None:  # nofilter
             for src in sources:
@@ -383,7 +377,7 @@ class SourceFilter(object):
         for src in sources:
             sids = self.close_sids(src)
             if len(sids):
-                yield src, sids
+                yield src, self.sitecol.filtered(sids)
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:

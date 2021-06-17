@@ -584,7 +584,8 @@ class IterResult(object):
             nb = {k: humansize(v) for k, v in reversed(items)}
             msg = nb if len(nb) < 10 else {
                 'tot': humansize(sum(self.nbytes.values()))}
-            logging.info('Received %s in %d seconds', msg, time.time() - t0)
+            logging.info('Received %s in %d seconds from %s',
+                         msg, time.time() - t0, self.name)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
@@ -867,7 +868,7 @@ class Starmap(object):
             res = next(isocket)
             if self.calc_id != res.mon.calc_id:
                 logging.warning('Discarding a result from job %s, since this '
-                                'is job %d', res.mon.calc_id, self.calc_id)
+                                'is job %s', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
                 self.busytime += {res.workerid: res.mon.duration}
                 self.todo -= 1
@@ -961,8 +962,8 @@ def workers_start():
     """
     if OQDIST in 'no processpool':
         return
-    sched = config.distribution.dask_scheduler
     for host, cores, args in ssh_args():
+        sched = config.distribution.dask_scheduler
         if OQDIST == 'dask':
             args += ['-m', 'distributed.cli.dask_worker', sched,
                      '--nprocs', cores, '--nthreads', '1',
@@ -987,8 +988,21 @@ def workers_stop():
     elif OQDIST == 'celery':
         app.control.shutdown()
     elif OQDIST == 'zmq':
-        workerpool.WorkerMaster().kill()
+        workerpool.WorkerMaster().stop()
     return 'stopped'
+
+
+def workers_kill():
+    """
+    Kill all the workers
+    """
+    if OQDIST == 'dask':
+        Client(config.distribution.dask_scheduler).retire_workers()
+    elif OQDIST == 'celery':
+        app.control.shutdown()
+    elif OQDIST == 'zmq':
+        workerpool.WorkerMaster().kill()
+    return 'killed'
 
 
 def workers_status():
@@ -1032,23 +1046,3 @@ def workers_wait(seconds=30):
         else:
             raise TimeoutError(status)
         return status
-
-
-def workers_kill():
-    code = '''import getpass, psutil
-user = getpass.getuser()
-for proc in psutil.process_iter(['name', 'username']):
-    if proc.username() == user:
-        cmdline = proc.cmdline()
-        if ('workerpool' in cmdline or 'celery' in cmdline or
-            'distributed.cli.dask_worker' in cmdline or
-            'distributed.cli.dask_scheduler' in cmdline):
-            print('killing %s' % ' '.join(cmdline))
-            proc.kill()
-'''
-    hosts = []
-    for host, cores, args in ssh_args():
-        c = '"%s"' % code if 'ssh' in args else code
-        out = subprocess.check_output(args + ['-c', c]).decode('utf8')
-        hosts.append('%s: %s' % (host, out))
-    return '\n'.join(hosts)

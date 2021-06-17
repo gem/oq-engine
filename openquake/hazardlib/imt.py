@@ -72,6 +72,8 @@ class IMTMeta(type):
     Metaclass setting __slots__, __new__ and the properties of IMT classes
     """
     def __new__(mcs, name, bases, dct):
+        if len(name) > 12:
+            raise NameError('IMT class name longer than 12 chars: %s' % name)
         dct['__slots__'] = ()
         cls = type.__new__(mcs, name, bases, dct)
         fields = ''
@@ -103,6 +105,7 @@ class IMT(tuple, metaclass=IMTMeta):
     """
     _fields = ()
     _defaults = None
+    period = 0
 
     @property
     def name(self):
@@ -115,8 +118,8 @@ class IMT(tuple, metaclass=IMTMeta):
     def __lt__(self, other):
         if not self._fields:
             return self[0] < other[0]  # ordered by name
-        return (self[0], self[1] or 0, self[2] or 0) < (
-            other[0], other[1] or 0, other[2] or 0)
+        return (self[0], self[1], self[2] or 0) < (
+            other[0], other[1], other[2] or 0)
 
     def __repr__(self):
         if not self._fields:  # return the name
@@ -131,7 +134,6 @@ class PGA(IMT):
     Peak ground acceleration during an earthquake measured in units
     of ``g``, times of gravitational acceleration.
     """
-    period = 0.0
 
 
 class PGV(IMT):

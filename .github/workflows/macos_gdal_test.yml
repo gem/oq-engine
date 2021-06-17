@@ -2,7 +2,7 @@ name: GDAL test action for macOS
 'on':
   push:
     branches:
-      - cleanup
+      - requirements
 jobs:
   Matrix-build:
     runs-on: ${{ matrix.os }}

@@ -19,6 +19,7 @@
 Utilities to compute mean and quantile curves
 """
 import numpy
+import pandas
 from scipy.stats import norm
 from openquake.baselib.general import agg_probs
 
@@ -119,20 +120,24 @@ def std_curve(values, weights=None):
     return res
 
 
-# NB: for equal weights and sorted values the quantile is computed a
+# NB: for equal weights and sorted values the quantile is computed as
 # numpy.interp(q, [1/N, 2/N, ..., N/N], values)
 def quantile_curve(quantile, curves, weights=None):
     """
-    Compute the weighted quantile aggregate of a set of curves.
+    Compute the weighted quantile aggregate of an array or list of arrays
 
     :param quantile:
         Quantile value to calculate. Should be in the range [0.0, 1.0].
     :param curves:
-        Array of R PoEs (possibly arrays)
+        R arrays
     :param weights:
-        Array-like of weights, 1 for each input curve, or None
+        R weights with sum 1, or None
     :returns:
-        A numpy array representing the quantile aggregate
+        A numpy array representing the quantile of the underlying arrays
+
+    >>> arr = numpy.array([.15, .25, .3, .4, .5, .6, .75, .8, .9])
+    >>> quantile_curve(.8, arr)
+    array(0.76)
     """
     if not isinstance(curves, numpy.ndarray):
         curves = numpy.array(curves)
@@ -311,3 +316,30 @@ def combine_probs(values_by_grp, cmakers, rlz):
             if rlz in rlzs:
                 probs.append(values[..., g])
     return agg_probs(*probs)
+
+
+def average_df(dframes, weights=None):
+    """
+    Compute weighted average of DataFrames with the same index and columns.
+
+    >>> df1 = pandas.DataFrame(dict(value=[1, 1, 1]), [1, 2, 3])
+    >>> df2 = pandas.DataFrame(dict(value=[2, 2, 2]), [1, 2, 3])
+    >>> average_df([df1, df2], [.4, .6])
+       value
+    1    1.6
+    2    1.6
+    3    1.6
+    """
+    d0 = dframes[0]
+    n = len(dframes)
+    if n == 1:
+        return d0
+    elif weights is None:
+        weights = numpy.ones(n)
+    elif len(weights) != n:
+        raise ValueError('There are %d weights for %d dataframes!' %
+                         (len(weights), n))
+    data = numpy.average([df.to_numpy() for df in dframes],
+                         weights=weights, axis=0)  # shape (E, C)
+    return pandas.DataFrame({
+        col: data[:, c] for c, col in enumerate(d0.columns)}, d0.index)

@@ -26,7 +26,7 @@ from openquake.baselib import hdf5, writers
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
-    extract, build_damage_dt, build_damage_array, sanitize)
+    extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize)
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -321,32 +321,49 @@ def modal_damage_array(data, damage_dt):
     return arr
 
 
+# used by event_based_damage, scenario_damage, classical_damage
 @export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
+    ebd = oq.calculation_mode == 'event_based_damage'
     dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    data = dstore[ekey[0]]
+    orig = dstore[ekey[0]][:]  # shape (A, R, L, D)
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     md = dstore.metadata
     if oq.investigation_time:
+        rit = oq.risk_investigation_time or oq.investigation_time
         md.update(dict(investigation_time=oq.investigation_time,
-                       risk_investigation_time=oq.risk_investigation_time
-                       or oq.investigation_time))
+                       risk_investigation_time=rit))
+    D = len(oq.limit_states) + 1
+    R = 1 if oq.collect_rlzs else len(rlzs)
     if ekey[0].endswith('stats'):
         rlzs_or_stats = oq.hazard_stats()
     else:
-        rlzs_or_stats = ['rlz-%03d' % r for r in range(len(rlzs))]
+        rlzs_or_stats = ['rlz-%03d' % r for r in range(R)]
     name = ekey[0].split('-')[0]
     if oq.calculation_mode != 'classical_damage':
         name = 'avg_' + name
     for i, ros in enumerate(rlzs_or_stats):
-        if oq.modal_damage_state:
-            damages = modal_damage_array(data[:, i], dmg_dt)
-        else:
-            damages = build_damage_array(data[:, i], dmg_dt)
-        fname = dstore.build_fname(name, ros, ekey[1])
+        if ebd:  # export only the consequences from damages-rlzs, i == 0
+            rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
+            data = orig[:, i] * rate
+            A, L, Dc = data.shape
+            if Dc == D:  # no consequences, export nothing
+                return
+            csq_dt = build_csq_dt(dstore)
+            damages = numpy.zeros(A, csq_dt)
+            for a in range(A):
+                for li, lt in enumerate(csq_dt.names):
+                    damages[lt][a] = tuple(data[a, li, D:Dc])
+            fname = dstore.build_fname('avg_risk', ros, ekey[1])
+        else:  # scenario_damage, classical_damage
+            if oq.modal_damage_state:
+                damages = modal_damage_array(orig[:, i], dmg_dt)
+            else:
+                damages = build_damage_array(orig[:, i], dmg_dt)
+            fname = dstore.build_fname(name, ros, ekey[1])
         writer.save(compose_arrays(assets, damages), fname,
                     comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
@@ -550,8 +567,7 @@ def export_aggcurves_csv(ekey, dstore):
         df[tagname] = tags[df.agg_id]
     df['loss_type'] = lossnames[df.loss_id.to_numpy()]
     del df['loss_id']
-    dest1 = dstore.export_path('%s.%s' % ekey)
-    dest2 = dstore.export_path('dmgcsq.%s' % ekey[1])
+    dest = dstore.export_path('%s.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
     md['risk_investigation_time'] = (oq.risk_investigation_time or
@@ -562,18 +578,7 @@ def export_aggcurves_csv(ekey, dstore):
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
     dmg_states = ['nodamage'] + md['limit_states'].split()
 
-    # aggregate damages/consequences
-    dmgcsq = df[df.return_period == 0].set_index('agg_id')  # length K+1
-    agg_number = dstore['agg_number'][dmgcsq.index.to_numpy()]
-    dmgs = [col for col in df.columns if col.startswith('dmg_')]
-    dmg0 = agg_number * E * oq.time_ratio - dmgcsq[dmgs].to_numpy().sum(axis=1)
-    dmgcsq.insert(0, 'dmg_0', dmg0)
-    dmgcsq.insert(0, 'number', agg_number)
-    del dmgcsq['return_period']
-    writer.save(rename(dmgcsq, dmg_states), dest2, comment=md)
-
     # aggcurves
     del df['agg_id']
-    writer.save(rename(df[df.return_period > 0], dmg_states),
-                dest1, comment=md)
-    return [dest1, dest2]
+    writer.save(rename(df, dmg_states), dest, comment=md)
+    return [dest]

@@ -31,7 +31,6 @@ from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term_linear import \
 class NRCan15SiteTermTestCase(unittest.TestCase):
 
     def test_instantiation(self):
-        """ Tests the instantiation """
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreEtAl2014')
         #
         # Check the assigned IMTs
@@ -47,7 +46,7 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         self.assertEqual(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT,
                          expected)
         # Check the standard deviations
-        expected = set(['Intra event', 'Total', 'Inter event'])
+        expected = set(const.StdDev)
         self.assertEqual(mgmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES, expected)
 
         # Check the required distances
@@ -55,7 +54,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         self.assertEqual(mgmpe.REQUIRES_DISTANCES, expected)
 
     def test_gm_calculation_soilBC(self):
-        """ Test mean and std calculation - AB06 on BC soil"""
         # Modified gmpe
         mgmpe = NRCan15SiteTermLinear(gmpe_name='AtkinsonBoore2006')
         # Set parameters
@@ -78,7 +76,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected)
 
     def test_gm_calculation_hard_rock(self):
-        """ Test mean and std calculation - on hard rock using AB06"""
         # Modified gmpe
         mgmpe = NRCan15SiteTermLinear(gmpe_name='AtkinsonBoore2006')
         # Set parameters
@@ -90,21 +87,19 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         gmpe = AtkinsonBoore2006()
 
         for imt in [PGA(), SA(1.0), SA(5.0)]:
-            #
             # Computes results
             mean, stds = mgmpe.get_mean_and_stddevs(sites, rup, dists, imt,
                                                     stdt)
             # Compute the expected results
-            mean_expected, stds_expected = gmpe.get_mean_and_stddevs(sites,
-                                                    rup, dists, imt, stdt)
+            mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
+                sites,  rup, dists, imt, stdt)
             # Test that for reference soil conditions the modified GMPE gives
             # the same results of the original gmpe
             np.testing.assert_allclose(np.exp(mean), np.exp(mean_expected),
-                                 rtol=1.0e-1)
+                                       rtol=1.0e-1)
             np.testing.assert_allclose(stds, stds_expected)
 
     def test_gm_calculationBA08(self):
-        """ Test mean and std calculation - BA08 - Vs30 constant"""
         # Modified gmpe
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
         # Set parameters
@@ -127,7 +122,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected)
 
     def test_gm_calculationBA08_1site(self):
-        """ Test mean and std calculation - BA08 - Vs30 constant"""
         # Modified gmpe
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
         # Set parameters
@@ -150,7 +144,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds, stds_expected)
 
     def test_gm_calculationBA08_vs30variable(self):
-        """ Test mean and std calculation - BA08 - Vs30 variable"""
         # Modified gmpe
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
         # Set parameters
@@ -173,7 +166,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(stds[:-1], stds_expected[:-1])
 
     def test_raise_error(self):
-        """ Tests that exception is raised """
         with self.assertRaises(AttributeError):
             NRCan15SiteTermLinear(gmpe_name='FukushimaTanaka1990')
 

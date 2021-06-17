@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import operator
 import numpy
 import pandas
@@ -413,7 +414,7 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
     else:  # parallelize the weighting of the ruptures
         proxies = parallel.Starmap.apply(
             weight_ruptures, (rup_array, srcfilter, full_lt.trt_by, scenario),
-            concurrent_tasks=ct
+            concurrent_tasks=ct, progress=logging.debug
         ).reduce(acc=[])
     maxweight = sum(proxy.weight for proxy in proxies) / (ct or 1)
     rgetters = []
@@ -421,8 +422,12 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
             proxies, maxweight, operator.attrgetter('weight'),
             key=operator.itemgetter('trt_smr')):
         trt_smr = block[0]['trt_smr']
+        if len(rlzs_by_gsim) == 1:
+            [rbg] = rlzs_by_gsim.values()
+        else:
+            rbg = rlzs_by_gsim[trt_smr]
         rg = RuptureGetter(block, dstore.filename, trt_smr,
-                           full_lt.trt_by(trt_smr), rlzs_by_gsim[trt_smr])
+                           full_lt.trt_by(trt_smr), rbg)
         rgetters.append(rg)
     return rgetters
 

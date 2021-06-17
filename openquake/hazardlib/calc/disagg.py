@@ -34,8 +34,8 @@ from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib.gsim.base import (
-    ContextMaker, to_distribution_values)
+from openquake.hazardlib.gsim.base import to_distribution_values
+from openquake.hazardlib.contexts import ContextMaker, get_mean_stdt
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -173,9 +173,10 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
     return _build_disagg_matrix(bindata, bin_edges)
 
 
-def set_mean_std(ctxs, imts, gsims):
+def set_mean_std(ctxs, cmaker):
     for u, ctx in enumerate(ctxs):
-        ctx.mean_std = [gsim.get_mean_std([ctx], imts) for gsim in gsims]
+        ms = get_mean_stdt([ctx], cmaker)  # shape (2, N, M, G)
+        ctx.mean_std = ms.transpose(3, 0, 1, 2)
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
@@ -379,9 +380,8 @@ def disaggregation(
         int(numpy.ceil(max_mag / mag_bin_width) + 1))
 
     for trt in cmaker:
-        gsim = gsim_by_trt[trt]
         for magi, ctxs in enumerate(_magbin_groups(rups[trt], mag_bins)):
-            set_mean_std(ctxs, [imt], [gsim])
+            set_mean_std(ctxs, cmaker[trt])
             bdata[trt, magi] = disaggregate(ctxs, tom, [0], {imt: iml2}, eps3)
 
     if sum(len(bd.dists) for bd in bdata.values()) == 0:

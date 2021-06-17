@@ -50,7 +50,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.calc.stochastic import rupture_dt
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
-from openquake.risklib import asset, riskmodels
+from openquake.risklib import asset, riskmodels, scientific
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib.source_reader import get_csm
@@ -622,7 +622,7 @@ def get_ruptures(fname_csv):
         geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
     if not rups:
         return ()
-    dic = dict(geom=numpy.array(geoms, object))
+    dic = dict(geom=numpy.array(geoms, object), trts=aw.trts)
     # NB: PMFs for nonparametric ruptures are missing
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
@@ -714,6 +714,9 @@ def get_full_lt(oqparam):
 
 
 def save_source_info(csm, h5):
+    """
+    Creates source_info, source_wkt, trt_smrs, toms
+    """
     data = {}  # src_id -> row
     wkts = []
     lens = []
@@ -820,8 +823,7 @@ def get_composite_source_model(oqparam, h5=None):
                 csm.full_lt = full_lt
             if h5:
                 # avoid errors with --reuse_hazard
-                h5['trt_smrs'] = csm.get_trt_smrs()
-                hdf5.create(h5, 'source_info', source_info_dt)
+                save_source_info(csm, h5)
             _check_csm(csm, oqparam, h5)
             return csm
 
@@ -844,17 +846,6 @@ def get_imts(oqparam):
     return list(map(imt.from_string, sorted(oqparam.imtls)))
 
 
-def get_amplification(oqparam):
-    """
-    :returns: a DataFrame (ampcode, level, PGA, SA() ...)
-    """
-    fname = oqparam.inputs['amplification']
-    df = hdf5.read_csv(fname, {'ampcode': site.ampcode_dt, None: F64},
-                       index='ampcode')
-    df.fname = fname
-    return df
-
-
 def _cons_coeffs(records, limit_states):
     dtlist = [(lt, F32) for lt in records['loss_type']]
     coeffs = numpy.zeros(len(limit_states), dtlist)
@@ -871,18 +862,25 @@ def get_crmodel(oqparam):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
     risklist = get_risk_functions(oqparam)
+    if not oqparam.limit_states and risklist.limit_states:
+        oqparam.limit_states = risklist.limit_states
+    elif 'damage' in oqparam.calculation_mode and risklist.limit_states:
+        assert oqparam.limit_states == risklist.limit_states
     consdict = {}
     if 'consequence' in oqparam.inputs:
-        # build consdict of the form cname_by_tagname -> tag -> array
+        # build consdict of the form consequence_by_tagname -> tag -> array
         for by, fname in oqparam.inputs['consequence'].items():
             dtypedict = {
-                by: str, 'cname': str, 'loss_type': str, None: float}
+                by: str, 'consequence': str, 'loss_type': str, None: float}
             dic = group_array(
-                hdf5.read_csv(fname, dtypedict).array, 'cname')
-            for cname, group in dic.items():
+                hdf5.read_csv(fname, dtypedict).array, 'consequence')
+            for consequence, group in dic.items():
+                if consequence not in scientific.KNOWN_CONSEQUENCES:
+                    raise InvalidFile('Unknown consequence %s in %s' %
+                                      (consequence, fname))
                 bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
                          for tag, grp in group_array(group, by).items()}
-                consdict['%s_by_%s' % (cname, by)] = bytag
+                consdict['%s_by_%s' % (consequence, by)] = bytag
     crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
     return crm
 
@@ -908,7 +906,8 @@ def get_exposure(oqparam):
     exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
-        by_country='country' in oqparam.aggregate_by)
+        by_country='country' in oqparam.aggregate_by,
+        errors='ignore' if oqparam.ignore_encoding_errors else None)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     if oqparam.cachedir:
         logging.info('Saving %s', fname)

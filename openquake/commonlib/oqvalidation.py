@@ -19,10 +19,12 @@
 
 import os
 import re
+import ast
 import json
 import inspect
 import logging
 import functools
+import collections
 import multiprocessing
 import numpy
 
@@ -206,6 +208,11 @@ distance_bin_width:
 ebrisk_maxsize:
   INTERNAL
 
+ignore_encoding_errors:
+  If set, skip characters with non-UTF8 encoding
+  Example: *ignore_encoding_errors = true*.
+  Default: False
+
 ignore_master_seed:
   If set, estimate analytically the uncertainty on the losses due to the
   uncertainty on the vulnerability functions.
@@ -304,6 +311,11 @@ investigation_time:
   calculations.
   Example: *investigation_time = 50*.
   Default: no default
+
+limit_states:
+   Limit states used in damage calculations.
+   Example: *limit_states = moderate, complete*
+   Default: no default
 
 lrem_steps_per_interval:
   Used in the vulnerability functions.
@@ -732,6 +744,7 @@ class OqParam(valid.ParamSet):
     distance_bin_width = valid.Param(valid.positivefloat)
     float_dmg_dist = valid.Param(valid.boolean, False)
     mag_bin_width = valid.Param(valid.positivefloat)
+    ignore_encoding_errors = valid.Param(valid.boolean, False)
     ignore_master_seed = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
@@ -746,7 +759,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    individual_curves = valid.Param(valid.boolean, False)
+    individual_curves = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
@@ -754,6 +767,7 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
+    limit_states = valid.Param(valid.namelist, [])
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
@@ -964,6 +978,11 @@ class OqParam(valid.ParamSet):
         if unknown:
             raise ValueError('Unknown key %s_file in %s' %
                              (unknown.pop(), self.inputs['job_ini']))
+
+        # check return_periods vs poes
+        if self.return_periods and not self.poes and self.investigation_time:
+            self.poes = 1 - numpy.exp(
+                - self.investigation_time / numpy.array(self.return_periods))
 
         # checks for disaggregation
         if self.calculation_mode == 'disaggregation':
@@ -1668,8 +1687,15 @@ class OqParam(valid.ParamSet):
 
     def __fromh5__(self, array, attrs):
         if isinstance(array, numpy.ndarray):  # old format <= 3.11
-            pars = dict(array)
-            if 'hazard_calculation_id' in pars:  # read hc_id only
-                self.hazard_calculation_id = int(pars['hazard_calculation_id'])
+            dd = collections.defaultdict(dict)
+            for (name_, literal_) in array:
+                name = python3compat.decode(name_)
+                literal = python3compat.decode(literal_)
+                if '.' in name:
+                    k1, k2 = name.split('.', 1)
+                    dd[k1][k2] = ast.literal_eval(literal)
+                else:
+                    dd[name] = ast.literal_eval(literal)
+            vars(self).update(dd)
         else:  # new format >= 3.12
             vars(self).update(json.loads(python3compat.decode(array)))

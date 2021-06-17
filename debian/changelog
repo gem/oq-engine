@@ -1,4 +1,20 @@
   [Michele Simionato]
+  * Improved the warning on non-contributing TRTs and made it visible
+    for all calculators
+  * Fixed a bug in scenarios from CSV ruptures with wrong TRTs
+  * Added a limit of 12 characters to IMT names
+  * Forbidded multiple inheritance in GMPE hierarchies
+  * Added parameter `ignore_encoding_errors` to the job.ini
+  * Extended the damage calculators to generic consequences
+  * Renamed cname -> consequence in the CSV input files
+  * Made sure the CSV writer writes in UTF-8
+
+  [Graeme Weatherill]
+  * Updates Kotha et al. (2020) slope/geology model coefficients
+
+  [Michele Simionato]
+  * Improved `post_risk` to use all the cores in a cluster, since it
+    was using the master only
   * Improved the validation of the investigation_time in event_based_damage
   * Renamed the `losses_by_event` CSV exporter to `risk_by_event` and
     made it work consistently for losses, damages and consequences; also

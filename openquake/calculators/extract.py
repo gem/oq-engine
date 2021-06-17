@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
+from unittest.mock import Mock
 from functools import lru_cache
 import collections
 import logging
@@ -29,6 +30,7 @@ from h5py._hl.dataset import Dataset
 from h5py._hl.group import Group
 import numpy
 import pandas
+from scipy.cluster.vq import kmeans2
 
 from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
@@ -37,8 +39,8 @@ from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib.gsim.base import ContextMaker
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.source import rupture
+from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
-from openquake.commonlib import calc, util, oqvalidation, datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -73,6 +75,7 @@ def get_info(dstore):
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
+                limit_states=oq.limit_states,
                 tagnames=oq.aggregate_by)
 
 
@@ -206,12 +209,17 @@ def extract_realizations(dstore, dummy):
     """
     Extract an array of realizations. Use it as /extract/realizations
     """
+    dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     oq = dstore['oqparam']
+    if oq.collect_rlzs:
+        arr = numpy.zeros(1, dt)
+        arr['weight'] = 1
+        arr['branch_path'] = '"one-effective-rlz"'
+        return arr
     scenario = 'scenario' in oq.calculation_mode
     rlzs = dstore['full_lt'].rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
-    dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     arr = numpy.zeros(len(rlzs), dt)
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
@@ -670,6 +678,27 @@ def extract_tot_curves(dstore, what):
     return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
 
 
+@extract.add('csq_curves')
+def extract_csq_curves(dstore, what):
+    """
+    Aggregate damages curves from the event_based_damage calculator:
+
+    /extract/csq_curves?agg_id=0&loss_type=occupants
+
+    Returns an ArrayWrapper of shape (P, D1) with attribute return_periods
+    """
+    info = get_info(dstore)
+    qdic = parse(what + '&kind=mean', info)
+    [li] = qdic['loss_type']  # loss type index
+    [agg_id] = qdic.get('agg_id', [0])
+    df = dstore.read_df('aggcurves', 'return_period',
+                        dict(agg_id=agg_id, loss_id=li))
+    cols = [col for col in df.columns if col not in 'agg_id loss_id']
+    return ArrayWrapper(df[cols].to_numpy(),
+                        dict(return_period=df.index.to_numpy(),
+                             consequences=cols))
+
+
 @extract.add('agg_curves')
 def extract_agg_curves(dstore, what):
     """
@@ -767,12 +796,14 @@ def extract_agg_damages(dstore, what):
         for the given tags
     """
     loss_type, tags = get_loss_type_tags(what)
-    if 'damages-rlzs' in dstore:  # scenario_damage
-        lti = dstore['oqparam'].lti[loss_type]
-        losses = dstore['damages-rlzs'][:, :, lti]
+    if 'damages-rlzs' in dstore:
+        oq = dstore['oqparam']
+        lti = oq.lti[loss_type]
+        D = len(oq.limit_states) + 1
+        damages = dstore['damages-rlzs'][:, :, lti, :D]
     else:
         raise KeyError('No damages found in %s' % dstore)
-    return _filter_agg(dstore['assetcol'], losses, tags)
+    return _filter_agg(dstore['assetcol'], damages, tags)
 
 
 @extract.add('aggregate')
@@ -894,6 +925,21 @@ def build_damage_dt(dstore):
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])
 
 
+def build_csq_dt(dstore):
+    """
+    :param dstore: a datastore instance
+    :returns:
+       a composite dtype loss_type -> (csq1, csq2, ...)
+    """
+    oq = dstore['oqparam']
+    attrs = json.loads(dstore.get_attr('damages-rlzs', 'json'))
+    limit_states = list(dstore.get_attr('crm', 'limit_states'))
+    csqs = attrs['dmg_state'][len(limit_states) + 1:]  # consequences
+    dt = numpy.dtype([(csq, F32) for csq in csqs])
+    loss_types = oq.loss_dt().names
+    return numpy.dtype([(lt, dt) for lt in loss_types])
+
+
 def build_damage_array(data, damage_dt):
     """
     :param data: an array of shape (A, L, D)
@@ -910,8 +956,11 @@ def build_damage_array(data, damage_dt):
 
 @extract.add('damages-rlzs')
 def extract_damages_npz(dstore, what):
+    oq = dstore['oqparam']
     damage_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
+    if oq.collect_rlzs:
+        rlzs = [Mock(ordinal=0)]
     data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
     for rlz in rlzs:
@@ -1477,3 +1526,23 @@ class WebExtractor(Extractor):
         Close the session
         """
         self.sess.close()
+
+
+def clusterize(hmaps, rlzs, k):
+    """
+    :param hmaps: array of shape (R, M, P)
+    :param rlzs: composite array of shape R
+    :param k: number of clusters to build
+    :returns: (array(K, MP), labels(R))
+    """
+    R, M, P = hmaps.shape
+    hmaps = hmaps.transpose(0, 2, 1).reshape(R, M * P)
+    dt = [('label', U32), ('branch_paths', object), ('centroid', (F32, M*P))]
+    centroid, labels = kmeans2(hmaps, k, minit='++')
+    dic = dict(path=rlzs['branch_path'], label=labels)
+    df = pandas.DataFrame(dic)
+    tbl = []
+    for label, grp in df.groupby('label'):
+        paths = [encode(path) for path in grp['path']]
+        tbl.append((label, logictree.collect_paths(paths), centroid[label]))
+    return numpy.array(tbl, dt), labels

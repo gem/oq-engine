@@ -204,6 +204,9 @@ class MetaGSIM(abc.ABCMeta):
     it performs some checks against typos.
     """
     def __new__(meta, name, bases, dic):
+        if len(bases) > 1:
+            raise TypeError('Multiple inheritance is forbidden: %s(%s)' % (
+                name, ', '.join(b.__name__ for b in bases)))
         for k, v in dic.items():
             if isinstance(v, set):
                 dic[k] = frozenset(v)
@@ -213,10 +216,6 @@ class MetaGSIM(abc.ABCMeta):
                         raise ValueError('Unknown distance %s in %s' %
                                          (missing, name))
         cls = super().__new__(meta, name, bases, dic)
-        ancestors = [vars(ancestor) for ancestor in cls.mro()[1:-1]]
-        if any('get_mean_std1' in ancestor for ancestor in ancestors):
-            if 'get_mean_and_stddevs' in dic and 'get_mean_std1' not in dic:
-                raise TypeError('%s.get_mean_std1 is not defined!' % name)
         return cls
 
 
@@ -259,6 +258,10 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: :class:`standard deviation types <openquake.hazardlib.const.StdDev>`
     #: this GSIM can calculate.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = abc.abstractproperty()
+
+    #: optional dictionary param_name -> param_type for the GSIM
+    #: instantiation parameters; used only for jittable GSIMs
+    REQUIRES_PARAMETERS = {}
 
     #: Set of site parameters names this GSIM needs. The set should include
     #: strings that match names of the attributes of a :class:`site
@@ -351,7 +354,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                    'the user is liable for their application') % cls.__name__
             warnings.warn(msg, AdaptedWarning)
 
-    @abc.abstractmethod
+    # @abc.abstractmethod
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Calculate and return mean value of intensity distribution and it's
@@ -544,31 +547,7 @@ class GMPE(GroundShakingIntensityModel):
             else:
                 setattr(self, key, val)
 
-    def get_mean_std(self, ctxs, imts):
-        """
-        :returns: an array of shape (2, N, M) with means and stddevs
-        """
-        N = sum(len(ctx.sids) for ctx in ctxs)
-        M = len(imts)
-        arr = numpy.zeros((2, N, M))
-        num_tables = CoeffsTable.num_instances
-        start = 0
-        for ctx in ctxs:
-            stop = start + len(ctx.sids)
-            new = ctx.roundup(self.minimum_distance)
-            for m, imt in enumerate(imts):
-                mean, [std] = self.get_mean_and_stddevs(ctx, ctx, new, imt,
-                                                        [const.StdDev.TOTAL])
-                arr[0, start:stop, m] = mean
-                arr[1, start:stop, m] = std
-                if CoeffsTable.num_instances > num_tables:
-                    raise RuntimeError('Instantiating CoeffsTable inside '
-                                       '%s.get_mean_and_stddevs' %
-                                       self.__class__.__name__)
-            start = stop
-        return arr
-
-    def get_poes(self, mean_std, loglevels, trunclevel, af=None, ctxs=()):
+    def get_poes(self, mean_std, cmaker, ctxs=()):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -577,31 +556,10 @@ class GMPE(GroundShakingIntensityModel):
         :param mean_std:
             An array of shape (2, N, M) with mean and standard deviations
             for the sites and intensity measure types
-        :param loglevels:
-            A DictArray imt -> logs of intensity measure levels
-        :param trunclevel:
-            Can be ``None``, which means that the distribution of intensity
-            is treated as Gaussian distribution with possible values ranging
-            from minus infinity to plus infinity.
-
-            When set to zero, the mean intensity is treated as an exact
-            value (standard deviation is not even computed for that case)
-            and resulting array contains 0 in places where IMT is strictly
-            lower than the mean value of intensity and 1.0 where IMT is equal
-            or greater.
-
-            When truncation level is positive number, the intensity
-            distribution is processed as symmetric truncated Gaussian with
-            range borders being ``mean - truncation_level * stddev`` and
-            ``mean + truncation_level * stddev``. That is, the truncation
-            level expresses how far the range borders are from the mean
-            value and is defined in units of sigmas. The resulting PoEs
-            for that mode are values of complementary cumulative distribution
-            function of that truncated Gaussian applied to IMLs.
-        :param af:
-            None or an instance of AmplFunction
+        :param cmaker:
+            A ContextMaker instance
         :param ctxs:
-            Context object used to compute mean_std
+            Context objects used to compute mean_std
         :returns:
             array of PoEs of shape (N, L)
         :raises ValueError:
@@ -609,6 +567,9 @@ class GMPE(GroundShakingIntensityModel):
             float number, and if ``imts`` dictionary contain wrong or
             unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
+        af = cmaker.af
+        loglevels = cmaker.loglevels
+        trunclevel = cmaker.trunclevel
         if trunclevel is not None and trunclevel < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
@@ -673,7 +634,8 @@ class CoeffsTable(object):
     >>> CoeffsTable()
     Traceback (most recent call last):
         ...
-    TypeError: CoeffsTable requires "table" kwarg
+    TypeError: __init__() missing 1 required positional argument: 'table'
+
     >>> CoeffsTable(table='', foo=1)
     Traceback (most recent call last):
         ...
@@ -717,7 +679,7 @@ class CoeffsTable(object):
     >>> ct[imt.PGV()]
     Traceback (most recent call last):
         ...
-    KeyError: PGV
+    AttributeError: 'PGV' object has no attribute 'damping'
     >>> ct[imt.SA(1.0, 4)]
     Traceback (most recent call last):
         ...
@@ -759,28 +721,23 @@ class CoeffsTable(object):
     """
     num_instances = 0
 
-    def __init__(self, **kwargs):
-        if 'table' not in kwargs:
-            raise TypeError('CoeffsTable requires "table" kwarg')
+    def __init__(self, table, **kwargs):
         self._coeffs = {}  # cache
-        table = kwargs.pop('table')
-        self.sa_coeffs = {}
-        self.non_sa_coeffs = {}
+        self.logratio = kwargs.pop('logratio', True)
         sa_damping = kwargs.pop('sa_damping', None)
         if kwargs:
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
-        if isinstance(table, str):
+        if isinstance(table, str):  # common case
             self._setup_table_from_str(table, sa_damping)
-        elif isinstance(table, dict):
-            for imt in table:
-                if imt.name == 'SA':
-                    self.sa_coeffs[imt] = table[imt]
-                else:
-                    self.non_sa_coeffs[imt] = table[imt]
-        else:
-            raise TypeError("CoeffsTable cannot be constructed with inputs "
-                            "of the form '%s'" % table.__class__.__name__)
+        else:  # in ngs_east
+            self._coeffs.update(table)
         self.__class__.num_instances += 1
+
+        first = self._coeffs[next(iter(self._coeffs))]  # dictionary
+        if not isinstance(first, dict):
+            first = {'value': first}
+        self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
+                              [(name, float) for name in first])
 
     def _setup_table_from_str(self, table, sa_damping):
         """
@@ -804,13 +761,35 @@ class CoeffsTable(object):
                 if imt_name not in imt_module.registry:
                     raise ValueError('unknown IMT %r' % imt_name)
                 imt = imt_module.registry[imt_name]()
-                self.non_sa_coeffs[imt] = imt_coeffs
             else:
                 if sa_damping is None:
                     raise TypeError('attribute "sa_damping" is required '
                                     'for tables defining SA')
                 imt = imt_module.SA(sa_period, sa_damping)
-                self.sa_coeffs[imt] = imt_coeffs
+            self._coeffs[imt] = imt_coeffs
+
+    @property
+    def sa_coeffs(self):
+        return {imt: self._coeffs[imt] for imt in self._coeffs
+                if imt.name == 'SA'}
+
+    @property
+    def non_sa_coeffs(self):
+        return {imt: self._coeffs[imt] for imt in self._coeffs
+                if imt.name != 'SA'}
+
+    def on(self, imts):
+        """
+        :param imts: a list of IMTs
+        :returns: a structured array with the coefficients for each IMT
+        """
+        arr = numpy.zeros(len(imts), self.dt)
+        for m, imt in enumerate(imts):
+            arr[m]['imt'] = imt.name
+            arr[m]['period'] = imt.period
+            for n, v in self[imt].items():
+                arr[m][n] = v
+        return arr
 
     def __getitem__(self, imt):
         """
@@ -824,17 +803,9 @@ class CoeffsTable(object):
             If ``imt`` is not available in the table and no interpolation
             can be done.
         """
-        try:
+        try:  # see if already in cache
             return self._coeffs[imt]
-        except KeyError:
-            pass
-        if imt.name != 'SA':
-            self._coeffs[imt] = c = self.non_sa_coeffs[imt]
-            return c
-        try:
-            self._coeffs[imt] = c = self.sa_coeffs[imt]
-            return c
-        except KeyError:
+        except KeyError:  # populate the cache
             pass
 
         max_below = min_above = None
@@ -850,11 +821,15 @@ class CoeffsTable(object):
         if max_below is None or min_above is None:
             raise KeyError(imt)
 
-        # ratio tends to 1 when target period tends to a minimum
-        # known period above and to 0 if target period is close
-        # to maximum period below.
-        ratio = ((math.log(imt.period) - math.log(max_below.period))
-                 / (math.log(min_above.period) - math.log(max_below.period)))
+        if self.logratio:  # regular case
+            # ratio tends to 1 when target period tends to a minimum
+            # known period above and to 0 if target period is close
+            # to maximum period below.
+            ratio = ((math.log(imt.period) - math.log(max_below.period)) /
+                     (math.log(min_above.period) - math.log(max_below.period)))
+        else:  # in the ACME project
+            ratio = ((imt.period - max_below.period) /
+                     (min_above.period - max_below.period))
         max_below = self.sa_coeffs[max_below]
         min_above = self.sa_coeffs[min_above]
         self._coeffs[imt] = c = {

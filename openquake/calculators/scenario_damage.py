@@ -99,26 +99,29 @@ def scenario_damage(riskinputs, param, monitor):
     num_events = param['num_events']  # per realization
     acc = []  # (aid, eid, lid, ds...)
     sec_sims = param['secondary_simulations'].items()
+    mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
-        # here instead F32 floats are ok
+        with mon:
+            df = ri.hazard_getter.get_hazard()
         R = ri.hazard_getter.num_rlzs
-        for out in ri.gen_outputs(crmodel, monitor):
-            for r in range(R):
-                ne = num_events[r]  # total number of events
-                ok = out['haz'].rlz.to_numpy() == r  # events beloging to rlz r
-                if ok.sum() == 0:
-                    continue
-                eids = out['eids'][ok]
+        for r in range(R):
+            ne = num_events[r]  # total number of events
+            ok = df.rlz.to_numpy() == r  # events beloging to rlz r
+            if ok.sum() == 0:
+                continue
+            gmf_df = df[ok]
+            eids = gmf_df.eid.to_numpy()
+            for taxo, asset_df in ri.asset_df.groupby('taxonomy'):
+                assets = asset_df.to_records()
+                out = crmodel.get_output(taxo, asset_df, gmf_df)
                 for lti, loss_type in enumerate(crmodel.loss_types):
-                    for asset, fractions in zip(
-                            out['assets'], out[loss_type][:, ok]):
+                    for asset, fractions in zip(assets, out[loss_type]):
                         aid = asset['ordinal']
                         if float_dmg_dist:
                             damages = fractions * asset['number']
                             if sec_sims:
                                 run_sec_sims(
-                                    damages, out['haz'][ok], sec_sims,
-                                    seed + aid)
+                                    damages, gmf_df, sec_sims, seed + aid)
                         else:
                             damages = bin_ddd(
                                 fractions, asset['number'], seed + aid)
@@ -217,10 +220,7 @@ class ScenarioDamageCalculator(base.RiskCalculator):
 
         # avg_ratio = ratio used when computing the averages
         oq = self.oqparam
-        if oq.investigation_time:  # event_based_damage
-            avg_ratio = numpy.array([oq.time_ratio] * R)
-        else:  # scenario_damage
-            avg_ratio = 1. / self.param['num_events']
+        avg_ratio = 1. / self.param['num_events']
 
         # damage by asset
         d_asset = numpy.zeros((A, R, L, D), F32)
@@ -243,22 +243,11 @@ class ScenarioDamageCalculator(base.RiskCalculator):
         for col in df.columns:
             hdf5.extend(self.datastore['risk_by_event/' + col], df[col])
         self.datastore.set_attrs('risk_by_event', K=A)
-
-        """
-        rlz = self.datastore['events']['rlz_id']
-        weights = self.datastore['weights'][:][rlz]
-        self.datastore['avg_portfolio_damage'] = avg_std(
-            dbe.astype(float), weights)
-        self.datastore.set_shape_descr(
-            'avg_portfolio_damage',
-            kind=['avg', 'std'], loss_type=ltypes, dmg_state=dstates)
-        """
         self.sanity_check()
 
         # consequence distributions
         del result['d_asset']
         del result['d_event']
-        dtlist = [('event_id', U32), ('rlz_id', U16), ('loss', (F32, (L,)))]
         for name, csq in result.items():
             # name is something like avg_losses
             c_asset = numpy.zeros((A, R, L), F32)

@@ -145,20 +145,19 @@ def compute_hazard_maps(curves, imls, poes):
         imls = numpy.log(numpy.array(imls[::-1]))
     for n, curve in enumerate(curves):
         # the hazard curve, having replaced the too small poes with EPSILON
-        log_cutoff = numpy.log([max(poe, EPSILON) for poe in curve[::-1]])
+        log_curve = numpy.log([max(poe, EPSILON) for poe in curve[::-1]])
         for p, log_poe in enumerate(log_poes):
-            if log_poe > log_cutoff[-1]:
+            if log_poe > log_curve[-1]:
                 # special case when the interpolation poe is bigger than the
-                # maximum, i.e the iml must be smaller than the minumum
+                # maximum, i.e the iml must be smaller than the minimum;
                 # extrapolate the iml to zero as per
-                # https://bugs.launchpad.net/oq-engine/+bug/1292093
-                # a consequence is that if all poes are zero any poe > 0
-                # is big and the hmap goes automatically to zero
+                # https://bugs.launchpad.net/oq-engine/+bug/1292093;
+                # then the hmap goes automatically to zero
                 pass
             else:
                 # exp-log interpolation, to reduce numerical errors
                 # see https://bugs.launchpad.net/oq-engine/+bug/1252770
-                hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_cutoff, imls))
+                hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_curve, imls))
     return hmap
 
 
@@ -282,8 +281,9 @@ class RuptureImporter(object):
     def import_rups_events(self, rup_array, get_rupture_getters):
         """
         Import an array of ruptures and store the associated events.
-        :returns: a list of RuptureGetters
+        :returns: (number of imported ruptures, number of imported events)
         """
+        oq = self.oqparam
         logging.info('Reordering the ruptures and storing the events')
         # order the ruptures by seed
         rup_array.sort(order='seed')
@@ -299,7 +299,12 @@ class RuptureImporter(object):
         rgetters = get_rupture_getters(  # fast
             self.datastore, self.oqparam.concurrent_tasks)
         self._save_events(rup_array, rgetters)
-        return rgetters
+        nr, ne = len(rup_array), rup_array['n_occ'].sum()
+        if oq.investigation_time:
+            eff_time = (oq.investigation_time * oq.ses_per_logic_tree_path *
+                        len(self.datastore['weights']))
+            logging.info('There are {:_d} events and {:_d} ruptures in {:_d} '
+                         'years'.format(ne, nr, int(eff_time)))
 
     def _save_events(self, rup_array, rgetters):
         # this is very fast compared to saving the ruptures
@@ -310,8 +315,6 @@ class RuptureImporter(object):
         # including the ones far away that will be discarded later on
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        logging.info('Associating event_id -> rlz_id for {:_d} events '
-                     'and {:_d} ruptures'.format(len(events), len(rup_array)))
         iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
         if len(events) < 1E5:
             it = itertools.starmap(self.get_eid_rlz, iterargs)
@@ -371,3 +374,4 @@ class RuptureImporter(object):
                 raise ValueError(
                     'The %s calculator is restricted to %d %s, got %d' %
                     (oq.calculation_mode, max_[var], var, num_[var]))
+

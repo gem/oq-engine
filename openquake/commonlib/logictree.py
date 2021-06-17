@@ -267,6 +267,33 @@ def shorten(path, shortener):
     return ''.join(shortener.get(key, key) for key in path)
 
 
+# useful to print reduced logic trees
+def collect_paths(paths, b1=ord('['), b2=ord(']')):
+    """
+    Collect branch paths belonging to the same cluster
+
+    >>> collect_paths([b'0~A0', b'0~A1'])
+    b'0~A[01]'
+    """
+    n = len(paths[0])
+    for path in paths[1:]:
+        assert len(path) == n, (len(path), n)
+    sets = [set() for _ in range(n)]
+    for c, s in enumerate(sets):
+        for path in paths:
+            s.add(path[c])
+    ints = []
+    for s in sets:
+        chars = sorted(s)
+        if len(chars) > 1:
+            ints.append(b1)
+            ints.extend(chars)
+            ints.append(b2)
+        else:
+            ints.extend(chars)
+    return bytes(ints)
+
+
 class SourceModelLogicTree(object):
     """
     Source model logic tree parser.
@@ -1223,6 +1250,8 @@ class FullLogicTree(object):
         """
         :returns: the TRT associated to trt_smr
         """
+        if len(self.trts) == 1:
+            return self.trts[0]
         return self.trts[trt_smr // len(self.sm_rlzs)]
 
     @property

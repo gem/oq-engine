@@ -23,10 +23,10 @@ from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import _get_poes_site, _get_poes
 from openquake.baselib.general import gettemp, DictArray
-from openquake.hazardlib.contexts import RuptureContext
+from openquake.hazardlib.contexts import (
+    RuptureContext, ContextMaker, get_mean_stdt)
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
-from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import AmplFunction
@@ -47,7 +47,6 @@ class GetPoesSiteTestCase(unittest.TestCase):
 
         # Set GMMs
         gmmA = BooreAtkinson2008()
-        gmmB = BooreEtAl2014()
 
         # Set parameters
         dsts = [10., 15., 20., 30., 40.]
@@ -62,7 +61,9 @@ class GetPoesSiteTestCase(unittest.TestCase):
         self.rrup = ctx.rrup
 
         # Compute GM on rock
-        self.meastd = gmmA.get_mean_std([ctx], imts)  # shape (2, N=1, M=2)
+        cmaker = ContextMaker(
+            'TRT', [gmmA], dict(imtls={str(im): [0] for im in imts}))
+        self.meastd = get_mean_stdt([ctx], cmaker)[..., 0]  # shp(2, N=1, M=2)
 
     def test01(self):
 

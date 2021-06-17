@@ -140,6 +140,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # weighting the heavy sources
         nrups = parallel.Starmap(
             count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
+            progress=logging.debug
         ).reduce()
         for src in sources:
             src.nsites = 1  # avoid 0 weight
@@ -149,7 +150,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 src.num_ruptures = src.count_ruptures()
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
-        eff_ruptures = AccumDict(accum=0)  # trt => potential ruptures
+        eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         calc_times = AccumDict(accum=numpy.zeros(3, F32))  # nr, ns, dt
         allargs = []
         if self.oqparam.is_ucerf():
@@ -172,7 +173,7 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
-        self.nruptures = 0
+        self.nruptures = 0  # estimated classical ruptures within maxdist
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
@@ -282,11 +283,16 @@ class EventBasedCalculator(base.HazardCalculator):
                     'maximum_distance and the position of the rupture')
         elif oq.inputs['rupture_model'].endswith('.csv'):
             aw = readinput.get_ruptures(oq.inputs['rupture_model'])
-            num_gsims = numpy.array(
-                [len(gsim_lt.values[trt]) for trt in gsim_lt.values], U32)
+            if list(gsim_lt.values) == ['*']:
+                num_gsims = numpy.array([len(gsim_lt.values['*'])], U32)
+            else:
+                num_gsims = numpy.array(
+                    [len(gsim_lt.values.get(trt, [])) for trt in aw.trts], U32)
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ
                 aw['n_occ'] *= ngmfs * num_gsims[aw['trt_smr']]
+        else:
+            raise InvalidFile("Something wrong in %s" % oq.inputs['job_ini'])
         rup_array = aw.array
         hdf5.extend(self.datastore['rupgeoms'], aw.geom)
 
@@ -369,9 +375,9 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         size = self.datastore.getsize('gmf_data')
         logging.info(f'Stored {humansize(size)} of GMFs')
-        if size > 1024**3:
+        if size > 100 * 1024**2:
             logging.warning(
-                'There are more than 1 GB of GMFs, not computing avg_gmf')
+                'There are more than 100 MB of GMFs, not computing avg_gmf')
             return numpy.unique(self.datastore['gmf_data/eid'][:])
 
         rlzs = self.datastore['events']['rlz_id']

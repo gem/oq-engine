@@ -30,13 +30,12 @@ import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
 
-from openquake.baselib.general import CallableDict
-
 F64 = numpy.float64
 F32 = numpy.float32
 U32 = numpy.uint32
 U16 = numpy.uint16
 U8 = numpy.uint8
+KNOWN_CONSEQUENCES = 'losses collapsed injured fatalities homeless'
 
 
 def pairwise(iterable):
@@ -764,7 +763,10 @@ class MultiEventRNG(object):
         self.asset_correlation = asset_correlation
         self.rng = {}
         for eid in eids:
-            ph = numpy.random.Philox(self.master_seed + eid)
+            # NB: int below is necessary for totally mysterious reasons:
+            # a calculation on cluster1 #41904 failed with a floating
+            # point seed, but I cannot reproduce the issue
+            ph = numpy.random.Philox(int(self.master_seed + eid))
             self.rng[eid] = numpy.random.Generator(ph)
 
     def _get_eps(self, eid, corrcache):
@@ -1342,15 +1344,16 @@ class InsuredLosses(object):
         self.policy_dict = policy_dict
         self.outputs = [lt + '_ins' for lt in policy_dict]
 
-    def update(self, out, asset_df):
+    def update(self, lt, out, asset_df):
         """
+        :param lt: a loss type string
         :param out: a dictionary of dataframes keyed by loss_type
         :param asset_df: a DataFrame of assets with index "ordinal"
         """
-        for lt in self.policy_dict:
-            o = out[lt]
+        o = out[lt]
+        if lt in self.policy_dict and len(o):
             policy = self.policy_dict[lt]
-            eids, aids, ilosses = [], [], []
+            eid_aids, ilosses = [], []
             for aid, df in o.groupby('aid'):
                 asset = asset_df.loc[aid]
                 avalue = asset['value-' + lt]
@@ -1358,9 +1361,9 @@ class InsuredLosses(object):
                 ded, lim = policy[policy_idx]
                 ins = insured_losses(
                     df.loss.to_numpy(), ded * avalue, lim * avalue)
-                eids.extend(df.eid)
-                aids.extend([aid] * len(df))
+                eid_aids.extend(df.index)
                 ilosses.extend(ins)
+            eids, aids = zip(*eid_aids)
             out[lt + '_ins'] = pandas.DataFrame(
                 dict(eid=U32(eids), aid=U32(aids), loss=ilosses,
                      variance=numpy.zeros_like(ilosses)))
@@ -1389,19 +1392,27 @@ def make_epsilons(matrix, seed, correlation):
 
 # ####################### Consequences ##################################### #
 
-consequence = CallableDict()
-
-
-@consequence.add('losses')
-def economic_losses(coeffs, asset, dmgdist, loss_type):
+def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     """
+    :param consequence: kind of consequence
     :param coeffs: coefficients per damage state
     :param asset: asset record
     :param dmgdist: an array of probabilies of shape (E, D - 1)
     :param loss_type: loss type string
-    :returns: array of economic losses of length E
+    :returns: array of shape E
     """
-    return dmgdist @ coeffs * asset['value-' + loss_type]
+    if consequence not in KNOWN_CONSEQUENCES:
+        raise NotImplementedError(consequence)
+    elif consequence == 'losses':
+        return dmgdist @ coeffs * asset['value-' + loss_type]
+    elif consequence == 'collapsed':
+        return dmgdist @ coeffs * asset['number']
+    elif consequence == 'injured':
+        return dmgdist @ coeffs * asset['occupants_night']
+    elif consequence == 'fatalities':
+        return dmgdist @ coeffs * asset['occupants_night']
+    elif consequence == 'homeless':
+        return dmgdist @ coeffs * asset['occupants_night']
 
 
 if __name__ == '__main__':
