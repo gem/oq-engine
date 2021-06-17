@@ -87,7 +87,8 @@ def make_figure_uhs_cluster(extractors, what):
         ys = getattr(hmaps, 'rlz-%03d' % rlz)[0].T.flatten()
         ax.plot(xs, ys, '-', color=colors[cluster[rlz]])
     for c, curve in enumerate(arr['centroid']):
-        lbl = '%s:%s' % (c, paths[c])
+        lbl = '%s:%s' % (c + 1, paths[c])
+        print(lbl)
         ax.plot(xs, curve, '--', color=colors[c], label=lbl)
     ax.grid(True)
     ax.legend()
