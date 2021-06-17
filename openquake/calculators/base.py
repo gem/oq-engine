@@ -893,7 +893,7 @@ class HazardCalculator(BaseCalculator):
         for grp_id, trt_smrs in enumerate(self.datastore['trt_smrs']):
             trti, smrs = numpy.divmod(trt_smrs, n)
             trt = self.full_lt.trts[trti[0]]
-            nr = rel_ruptures.get(grp_id)
+            nr = rel_ruptures.get(grp_id, 0)
             nrups.append(nr)
             if nr:
                 keep_trts.add(trt)
