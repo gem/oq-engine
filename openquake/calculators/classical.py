@@ -232,11 +232,13 @@ class Hazard:
         self.imtls = pgetter.imtls
         self.sids = pgetter.sids
         self.srcidx = srcidx
-        self.extreme = []
-        self.smrs = []
+        extreme = []
         n = len(full_lt.sm_rlzs)
         for grp_id, indices in enumerate(dstore['trt_smrs']):
-            self.smrs.append(numpy.divmod(indices, n)[1])
+            trti, smrs = numpy.divmod(indices, n)
+            trt = full_lt.trts[trti[0]]
+            extreme.append((grp_id, trt, 0, smrs))
+        self.extreme = numpy.array(extreme, grp_extreme_dt)
 
     def init(self, pmaps, grp_id):
         """
@@ -257,7 +259,7 @@ class Hazard:
         extreme = max(
             get_extreme_poe(pmap[sid].array, self.imtls)
             for sid in pmap)
-        self.extreme.append((grp_id, cmaker.trt, extreme, self.smrs[grp_id]))
+        self.extreme[grp_id]['extreme_poe'] = extreme
 
     def store_disagg(self, pmaps=None):
         """
@@ -270,8 +272,7 @@ class Hazard:
                 self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
                     self.get_hcurves(pmap, rlzs_by_gsim))
         else:  # called at the end of the loop
-            self.datastore['disagg_by_grp'] = numpy.array(
-                sorted(self.extreme), grp_extreme_dt)
+            self.datastore['disagg_by_grp'] = self.extreme
 
 
 @base.calculators.add('classical', 'preclassical', 'ucerf_classical')
