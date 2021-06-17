@@ -263,16 +263,15 @@ class Hazard:
 
     def store_disagg(self, pmaps=None):
         """
-        Store data inside disagg_by_src/disagg_by_grp
+        Store data inside disagg_by_grp (optionally disagg_by_src)
         """
+        self.datastore['disagg_by_grp'] = self.extreme
         if pmaps:  # called inside a loop
             for key, pmap in pmaps.items():
                 # contains only string keys in case of disaggregation
                 rlzs_by_gsim = self.cmakers[pmap.grp_id].gsims
                 self.datastore['disagg_by_src'][..., self.srcidx[key]] = (
                     self.get_hcurves(pmap, rlzs_by_gsim))
-        else:  # called at the end of the loop
-            self.datastore['disagg_by_grp'] = self.extreme
 
 
 @base.calculators.add('classical', 'preclassical', 'ucerf_classical')

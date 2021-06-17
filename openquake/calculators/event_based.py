@@ -173,7 +173,7 @@ class EventBasedCalculator(base.HazardCalculator):
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
-        self.nruptures = 0
+        self.nruptures = 0  # estimated classical ruptures within maxdist
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
