@@ -896,8 +896,8 @@ class HazardCalculator(BaseCalculator):
                 for smr in smrs:
                     sm_rlz = self.full_lt.sm_rlzs[smr]
                     logging.warning(
-                        'grp_id=%s(%s) is discardable, sm_lt_path=%s [%s]',
-                        grp_id, trt, '_'.join(sm_rlz.lt_path), sm_rlz.name)
+                        'grp_id=%s(%s) is discardable, sm_lt_path=%s',
+                        grp_id, trt, '_'.join(sm_rlz.lt_path))
         discard_trts = set(self.full_lt.trts) - keep_trts
         if discard_trts:
             msg = ('No sources for some TRTs: you should set\n'
