@@ -1530,10 +1530,14 @@ class WebExtractor(Extractor):
 
 def clusterize(hmaps, rlzs, k):
     """
-    :returns: (centroids table, labels)
+    :param hmaps: array of shape (R, M, P)
+    :param rlzs: composite array of shape R
+    :param k: number of clusters to build
+    :returns: (array(K, MP), labels(R))
     """
-    R, M = hmaps.shape
-    dt = [('label', U32), ('branch_paths', object), ('centroid', (F32, M))]
+    R, M, P = hmaps.shape
+    hmaps = hmaps.transpose(0, 2, 1).reshape(R, M * P)
+    dt = [('label', U32), ('branch_paths', object), ('centroid', (F32, M*P))]
     centroid, labels = kmeans2(hmaps, k, minit='++')
     dic = dict(path=rlzs['branch_path'], label=labels)
     df = pandas.DataFrame(dic)

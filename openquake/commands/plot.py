@@ -76,8 +76,7 @@ def make_figure_uhs_cluster(extractors, what):
     ax.set_xticks(xs)
     ax.set_xticklabels(labels)
     ax.set_ylabel('IML')
-    obs = [getattr(hmaps, 'rlz-%03d' % rlz)[0].T.flatten()
-           for rlz in range(len(rlzs))]
+    obs = [getattr(hmaps, 'rlz-%03d' % rlz)[0] for rlz in range(len(rlzs))]
     arr, cluster = clusterize(numpy.array(obs), rlzs, k)
     colors = cm.rainbow(numpy.linspace(0, 1, len(arr)))
     paths = [p.decode('ascii') for p in arr['branch_paths']]
