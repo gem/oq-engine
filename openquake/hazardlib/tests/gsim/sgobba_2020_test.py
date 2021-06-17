@@ -31,7 +31,7 @@ from openquake.hazardlib.contexts import DistancesContext
 # folder Verif Tables
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'data', 'SEA20')
 # folder Residuals
-DATA_FOLDER2 = os.path.join(os.path.dirname('../../'), 'gsim', 'sgobba_2020')
+DATA_FOLDER2 = os.path.join(os.path.dirname(__file__), '..', '..', 'gsim', 'sgobba_2020')
 
 
 class Sgobba2020Test(unittest.TestCase):
@@ -107,10 +107,11 @@ class Sgobba2020Test(unittest.TestCase):
             for i in bedrock:
                 idx = np.where((df['lat_epi'] == LAT) & (df['lon_epi'] == LON) & (df['flag_bedrock'] == i))
                 subset_df = df.loc[idx]
-                try:
-                    idx2 = np.where((df2['Ev_lat'] == LAT) & (df2['Ev_lon'] == LON))[0][0]
+                idx2 = np.where((df2['Ev_lat'] == LAT) & (df2['Ev_lon'] == LON))[0]
+                if len(idx2) > 0:
+                    idx2 = idx2[0]
                     ev_id = df2['id'][idx2]
-                except:
+                else:
                     ev_id = None
                 print('event_id: '+str(ev_id))
                 print('flag_bedrock: '+str(i))
@@ -175,10 +176,11 @@ class Sgobba2020Test(unittest.TestCase):
             for i in bedrock:
                 idx = np.where((df['lat_epi'] == LAT) & (df['lon_epi'] == LON) & (df['flag_bedrock'] == i))
                 subset_df = df.loc[idx]
-                try:
-                    idx2 = np.where((df2['Ev_lat'] == LAT) & (df2['Ev_lon'] == LON))[0][0]
+                idx2 = np.where((df2['Ev_lat'] == LAT) & (df2['Ev_lon'] == LON))[0]
+                if len(idx2) > 0:
+                    idx2 = idx2[0]
                     ev_id = df2['id'][idx2]
-                except:
+                else:
                     ev_id = None
                 print('event_id: '+str(ev_id))
                 print('flag_bedrock: '+str(i))
