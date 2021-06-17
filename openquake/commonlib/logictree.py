@@ -268,7 +268,7 @@ def shorten(path, shortener):
 
 
 # useful to print reduced logic trees
-def collect_paths(paths, b1=ord('['), b2=ord(']')):
+def collect_paths(paths, b1=ord('['), b2=ord(']'), til=ord('~')):
     """
     Collect branch paths belonging to the same cluster
 
@@ -285,13 +285,52 @@ def collect_paths(paths, b1=ord('['), b2=ord(']')):
     ints = []
     for s in sets:
         chars = sorted(s)
-        if len(chars) > 1:
+        if chars != [til]:
             ints.append(b1)
-            ints.extend(chars)
+        ints.extend(chars)
+        if chars != [til]:
             ints.append(b2)
-        else:
-            ints.extend(chars)
     return bytes(ints)
+
+
+def reducible(lt, cluster_paths):
+    """
+    :param lt: a logic tree with B branches
+    :param cluster_paths: list of paths for a realization cluster
+    :returns: a list [filename, (branchSetID, branchIDs), ...]
+    """
+    longener = {short: long for long, short in lt.shortener.items()}
+    bsets = [set() for _ in lt.bsetdict]
+    for path in cluster_paths:
+        for b, chars in enumerate(path.strip('][').split('][')):
+            bsets[b].add(chars)
+    res = [lt.filename]
+    for bs, bset in zip(lt.bsetdict, bsets):
+        # a branch is reducible if there the same combinations for all paths
+        try:
+            [br_ids] = bset
+        except ValueError:
+            continue
+        res.append((bs, [longener[c] for c in br_ids]))
+    return res
+
+
+# this is used in oq reduce_lt
+def reduce_full(full_lt, rlz_clusters):
+    """
+    :param full_lt: a FullLogicTree instance
+    :param rlz_clusters: list of paths for a realization cluster
+    :returns: a dictionary with what can be reduced
+    """
+    smrlz_clusters = []
+    gsrlz_clusters = []
+    for path in rlz_clusters:
+        smr, gsr = decode(path).split('~')
+        smrlz_clusters.append(smr)
+        gsrlz_clusters.append(gsr)
+    f1, *p1 = reducible(full_lt.source_model_lt, smrlz_clusters)
+    f2, *p2 = reducible(full_lt.gsim_lt, gsrlz_clusters)
+    return {f1: dict(p1), f2: dict(p2)}
 
 
 class SourceModelLogicTree(object):
@@ -324,13 +363,14 @@ class SourceModelLogicTree(object):
         return self
 
     def __init__(self, filename, seed=0, num_samples=0,
-                 sampling_method='early_weights'):
+                 sampling_method='early_weights', test_mode=False):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
         # NB: converting the random_seed into an integer is needed on Windows
         self.seed = int(seed)
         self.num_samples = num_samples
         self.sampling_method = sampling_method
+        self.test_mode = test_mode
         self.branches = {}  # branch_id -> branch
         self.bsetdict = {}
         self.previous_branches = []
@@ -441,7 +481,8 @@ class SourceModelLogicTree(object):
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
                 try:
                     for fname in value_node.text.strip().split():
-                        if fname.endswith(('.xml', '.nrml')):  # except UCERF
+                        if (fname.endswith(('.xml', '.nrml'))  # except UCERF
+                                and not self.test_mode):
                             self.collect_source_model_data(
                                 branchnode['branchID'], fname)
                 except Exception as exc:
@@ -853,7 +894,7 @@ class GsimLogicTree(object):
                 ','.join(trts))
         self.values = collections.defaultdict(list)  # {trt: gsims}
         self._ltnode = ltnode or nrml.read(fname).logicTree
-        self.bs_id_by_trt = {}
+        self.bsetdict = {}
         self.shortener = {}
         self.branches = self._build_trts_branches(trts)  # sorted by trt
         if trts != ['*']:
@@ -970,7 +1011,7 @@ class GsimLogicTree(object):
         vars(new).update(vars(self))
         new.branches = []
         for trt, grp in itertools.groupby(self.branches, lambda b: b.trt):
-            bs_id = self.bs_id_by_trt[trt]
+            bs_id = self.bsetdict[trt]
             brs = []
             gsims = []
             weights = []
@@ -1024,6 +1065,7 @@ class GsimLogicTree(object):
         branches = []
         branchsetids = set()
         basedir = os.path.dirname(self.filename)
+        no = 0
         for blnode in self._ltnode:
             [branchset] = _bsnodes(self.filename, blnode)
             if branchset['uncertaintyType'] != 'gmpeModel':
@@ -1039,15 +1081,15 @@ class GsimLogicTree(object):
                 branchsetids.add(bsid)
             trt = branchset.get('applyToTectonicRegionType')
             if trt:  # missing in logictree_test.py
-                self.bs_id_by_trt[trt] = bsid
+                self.bsetdict[trt] = bsid
                 trts.append(trt)
-            self.bs_id_by_trt[trt] = bsid
+            self.bsetdict[trt] = bsid
             # NB: '*' is used in scenario calculations to disable filtering
             effective = (tectonic_region_types == ['*'] or
                          trt in tectonic_region_types)
             weights = []
             branch_ids = []
-            for no, branch in enumerate(branchset):
+            for branch in branchset:
                 weight = ImtWeight(branch, self.filename)
                 weights.append(weight)
                 branch_id = branch['branchID']
@@ -1070,6 +1112,7 @@ class GsimLogicTree(object):
                     branches.append(bt)
                     self.shortener[branch_id] = keyno(
                         branch_id, no, self.filename)
+                    no += 1
             tot = sum(weights)
             assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
             if duplicated(branch_ids):

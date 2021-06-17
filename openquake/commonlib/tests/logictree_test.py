@@ -2290,6 +2290,27 @@ class SerializeSmltTestCase(unittest.TestCase):
             self.assertEqual(repr(ba), repr(bb))
 
 
+class ReduceLtTestCase(unittest.TestCase):
+    def test(self):
+        ssmLT = os.path.join(DATADIR, 'ssmLT.xml')
+        gmmLT = os.path.join(DATADIR, 'gmmLT.xml')
+        smlt = logictree.SourceModelLogicTree(ssmLT, test_mode=True)
+        gslt = logictree.GsimLogicTree(gmmLT)
+        paths = '''\
+[012345]~[012][345][7][9AB][CD]
+[012345]~[012][345][8][9AB][E]
+[012345]~[012][345][8][9AB][CD]
+[012345]~[012][345][7][9AB][E]
+[012345]~[012][345][6][9AB][CD]
+[012345]~[012][345][7][9AB][CD]
+[012345]~[012][345][6][9AB][E]
+[012345]~[01][345][7][9AB][C]
+[012345]~[012][345][6][9AB][CD]'''.split()
+        full_lt = unittest.mock.Mock(source_model_lt=smlt, gsim_lt=gslt)
+        dic = logictree.reduce_full(full_lt, paths)
+        print(dic)
+
+
 class TaxonomyMappingTestCase(unittest.TestCase):
     taxonomies = '? taxo1 taxo2 taxo3 taxo4'.split()
 
