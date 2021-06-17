@@ -53,8 +53,8 @@ BUFFER = 1.5  # enlarge the pointsource_distance sphere to fix the weight
 # collected together in an extra-slow task, as it happens in SHARE
 # with ps_grid_spacing=50
 get_weight = operator.attrgetter('weight')
-grp_extreme_dt = numpy.dtype([('trt_smr', U16), ('grp_trt', hdf5.vstr),
-                             ('extreme_poe', F32)])
+grp_extreme_dt = numpy.dtype([('grp_id', U16), ('grp_trt', hdf5.vstr),
+                              ('extreme_poe', F32), ('smrs', hdf5.vuint16)])
 
 
 def get_source_id(src):  # used in submit_tasks
@@ -232,7 +232,11 @@ class Hazard:
         self.imtls = pgetter.imtls
         self.sids = pgetter.sids
         self.srcidx = srcidx
-        self.data = []
+        self.extreme = []
+        self.smrs = []
+        n = len(full_lt.sm_rlzs)
+        for grp_id, indices in enumerate(dstore['trt_smrs']):
+            self.smrs.append(numpy.divmod(indices, n)[1])
 
     def init(self, pmaps, grp_id):
         """
@@ -253,7 +257,7 @@ class Hazard:
         extreme = max(
             get_extreme_poe(pmap[sid].array, self.imtls)
             for sid in pmap)
-        self.data.append((grp_id, cmaker.trt, extreme))
+        self.extreme.append((grp_id, cmaker.trt, extreme, self.smrs[grp_id]))
 
     def store_disagg(self, pmaps=None):
         """
@@ -267,7 +271,7 @@ class Hazard:
                     self.get_hcurves(pmap, rlzs_by_gsim))
         else:  # called at the end of the loop
             self.datastore['disagg_by_grp'] = numpy.array(
-                sorted(self.data), grp_extreme_dt)
+                sorted(self.extreme), grp_extreme_dt)
 
 
 @base.calculators.add('classical', 'preclassical', 'ucerf_classical')
