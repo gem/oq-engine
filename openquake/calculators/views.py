@@ -26,7 +26,6 @@ import collections
 import logging
 import numpy
 import pandas
-from scipy.cluster.vq import kmeans2
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
@@ -1131,19 +1130,3 @@ def view_sum(token, dstore):
             for c, col in enumerate(cols):
                 z[r * L + li][col] = a[c-1] if c > 0 else (r, li)
     return z
-
-
-def clusterize(hmaps, rlzs, k):
-    """
-    :returns: (centroids table, labels)
-    """
-    R, M = hmaps.shape
-    dt = [('label', U32), ('branch_paths', object), ('centroid', (F32, M))]
-    centroid, labels = kmeans2(hmaps, k, minit='++')
-    dic = dict(path=rlzs['branch_path'], label=labels)
-    df = pandas.DataFrame(dic)
-    tbl = []
-    for label, grp in df.groupby('label'):
-        paths = [encode(path) for path in grp['path']]
-        tbl.append((label, logictree.collect_paths(paths), centroid[label]))
-    return numpy.array(tbl, dt), labels

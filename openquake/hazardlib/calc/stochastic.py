@@ -259,9 +259,9 @@ def sample_ruptures(sources, srcfilter, param, monitor=Monitor()):
             sources, srcfilter, num_ses, param)
 
         # Yield ruptures
+        er = sum(src.num_ruptures for src, _ in srcfilter.filter(sources))
         yield AccumDict(dict(rup_array=get_rup_array(eb_ruptures, srcfilter),
-                             calc_times=calc_times,
-                             eff_ruptures={grp_id: len(eb_ruptures)}))
+                             calc_times=calc_times, eff_ruptures={grp_id: er}))
     else:
         eb_ruptures = []
         eff_ruptures = 0
