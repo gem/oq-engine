@@ -1144,16 +1144,18 @@ def clusterize(hmaps, rlzs, k):
     df = pandas.DataFrame(dic)
     tbl = []
     for label, grp in df.groupby('label'):
-        tbl.append((label, logictree.collect_paths(list(grp['path'])),
+        paths = [encode(path) for path in grp['path']]
+        tbl.append((label, logictree.collect_paths(paths),
                     centroid[label]))
     return numpy.array(tbl, dt), labels
 
 
-@view.add('clusterize_hmaps')
-def view_clusterize_hmaps(token, dstore):
+@view.add('rlz_clusters')
+def view_rlz_clusters(token, dstore):
     """
-    Collect together similar UHS for the first site and the first PoE
-    in k clusters
+    Collect together similar UHS for the first site in k clusters, i.e.
+
+    $ oq show rlz_clusters:10
     """
     if ':' not in token:
         return 'Try something like oq view clusterize_hcurves:10'
