@@ -316,13 +316,6 @@ def reducible(lt, cluster_paths):
     return res
 
 
-def mult(pairs):
-    res = 1
-    for bset, br_ids in pairs:
-        res *= len(br_ids)
-    return res
-
-
 # this is used in oq reduce_lt
 def reduce_full(full_lt, rlz_clusters):
     """
@@ -340,7 +333,7 @@ def reduce_full(full_lt, rlz_clusters):
     f2, *p2 = reducible(full_lt.gsim_lt, gsrlz_clusters)
     before = (full_lt.source_model_lt.get_num_paths() *
               full_lt.gsim_lt.get_num_paths())
-    after = before / mult(p1) / mult(p2)
+    after = before / numpy.prod([len(p[1]) for p in p1 + p2])
     return {f1: dict(p1), f2: dict(p2), 'size_before_after': (before, after)}
 
 
