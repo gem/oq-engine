@@ -105,6 +105,12 @@ class SgobbaEtAl2020(GMPE):
         self.cluster = cluster
         self.site = site
         self.bedrock = bedrock
+        # Get site indexes. They are used for the site correction and the
+        # cluster (path) correction
+        # Load the coordinate of the grid
+        fname = os.path.join(DATA_FOLDER, 'grid.csv')
+        coo = np.fliplr(np.loadtxt(fname, delimiter=";"))
+        self.kdt = cKDTree(coo)
 
         # Load the table with the between event coefficients
         if event_id is not None:
@@ -130,18 +136,9 @@ class SgobbaEtAl2020(GMPE):
         else:
             self.be_std = C['tau_ev']
             self.be = 0.0
-
-        # Get site indexes. They are used for the site correction and the
-        # cluster (path) correction
-        # Load the coordinate of the grid
-
-        fname = os.path.join(DATA_FOLDER, 'grid.csv')
-        coo = np.fliplr(np.loadtxt(fname, delimiter=";"))
-        # Create a spatial index
-        kdt = cKDTree(coo)
-        tmp = [[s.location.longitude, s.location.latitude] for s in sites]
-        dsts, self.idxs = kdt.query(np.array(tmp))
         # Site correction
+        tmp = [[s.location.longitude, s.location.latitude] for s in sites]
+        dsts, self.idxs = self.kdt.query(np.array(tmp))
         sc = 0
         phi_S2Sref = C['phi_S2S_ref']
         Bs_model = np.zeros(sites.vs30.shape)
