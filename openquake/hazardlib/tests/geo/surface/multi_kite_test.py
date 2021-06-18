@@ -28,6 +28,8 @@ from openquake.hazardlib.geo.surface.kite_fault import KiteSurface
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 
+aae = np.testing.assert_almost_equal
+
 
 class MultiSurfaceTestCase(unittest.TestCase):
 
@@ -114,7 +116,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         dip = self.msrf.get_dip()
         expected = 69.57436082462769
         msg = 'Multi fault surface: dip is wrong'
-        self.assertAlmostEqual(dip, expected, msg)
+        aae(dip, expected, err_msg=msg)
 
     # TODO
     def test_get_width(self):
