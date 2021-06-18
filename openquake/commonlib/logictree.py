@@ -27,6 +27,7 @@ with attributes `value`, `weight`, `lt_path` and `ordinal`.
 import io
 import os
 import re
+import json
 import time
 import string
 import logging
@@ -368,7 +369,8 @@ class SourceModelLogicTree(object):
         arr = numpy.array([('bs0', 'b0', 'sourceModel', 'fake.xml', 1)],
                           branch_dt)
         dic = dict(filename='fake.xml', seed=0, num_samples=0,
-                   sampling_method='early_weights')
+                   sampling_method='early_weights',
+                   bsetdict='{"bs0": {"uncertaintyModel": "sourceModel"}}')
         self.__fromh5__(arr, dic)
         return self
 
@@ -734,26 +736,21 @@ class SourceModelLogicTree(object):
         """
         return self.root_branchset.get_bset_values(sm_rlz.lt_path)[1:]
 
-    def _tomldict(self):
-        out = {}
-        for key, dic in self.bsetdict.items():
-            out[key] = toml.dumps({k: v.strip() for k, v in dic.items()
-                                   if k != 'uncertaintyType'}).strip()
-        return out
-
+    # SourceModelLogicTree
     def __toh5__(self):
         tbl = []
         for brid, br in self.branches.items():
             dic = self.bsetdict[br.bs_id].copy()
             utype = dic.pop('uncertaintyType')
             tbl.append((br.bs_id, brid, utype, str(br.value), br.weight))
-        attrs = self._tomldict()
+        attrs = dict(bsetdict=json.dumps(self.bsetdict.copy()))
         attrs['seed'] = self.seed
         attrs['num_samples'] = self.num_samples
         attrs['sampling_method'] = self.sampling_method
         attrs['filename'] = self.filename
         return numpy.array(tbl, branch_dt), attrs
 
+    # SourceModelLogicTree
     def __fromh5__(self, array, attrs):
         # this is rather tricky; to understand it, run the test
         # SerializeSmltTestCase which has a logic tree with 3 branchsets
@@ -781,8 +778,9 @@ class SourceModelLogicTree(object):
             self.bsetdict[bsid] = {'uncertaintyType': utype}
         # bsets [<b11>, <b21 b22>, <b31 b32>]
         self.root_branchset = bsets[0]
+        bsetdict = json.loads(attrs['bsetdict'])
         for i, childset in enumerate(bsets[1:]):
-            dic = toml.loads(attrs[childset.id])
+            dic = bsetdict[childset.id]
             atb = dic.get('applyToBranches')
             for branch in bsets[i].branches:  # parent branches
                 if not atb or branch.branch_id in atb:
@@ -955,6 +953,7 @@ class GsimLogicTree(object):
                                     '%s is out of the period range defined '
                                     'for %s' % (imt, gsim))
 
+    # GsimLogicTree
     def __toh5__(self):
         weights = set()
         for branch in self.branches:
@@ -965,7 +964,7 @@ class GsimLogicTree(object):
         branches = [(b.trt, b.id, repr(b.gsim)) +
                     tuple(b.weight[weight] for weight in sorted(weights))
                     for b in self.branches if b.effective]
-        dic = {}
+        dic = {'bsetdict': json.dumps(self.bsetdict)}
         if hasattr(self, 'filename'):
             # missing in EventBasedRiskTestCase case_1f
             dirname = os.path.dirname(self.filename)
@@ -1474,8 +1473,8 @@ class FullLogicTree(object):
             out.append(dic)
         return out
 
+    # FullLogicTree
     def __toh5__(self):
-        # save full_lt/sm_data in the datastore
         sm_data = []
         for sm in self.sm_rlzs:
             sm_data.append((sm.value, sm.weight, '~'.join(sm.lt_path),
@@ -1487,6 +1486,7 @@ class FullLogicTree(object):
                 dict(seed=self.seed, num_samples=self.num_samples,
                      trts=hdf5.array_of_vstr(self.gsim_lt.values)))
 
+    # FullLogicTree
     def __fromh5__(self, dic, attrs):
         # TODO: this is called more times than needed, maybe we should cache it
         sm_data = dic['sm_data']
