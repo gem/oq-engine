@@ -33,7 +33,7 @@ from openquake.baselib.general import DictArray, AccumDict
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.shakemap.maps import get_array
 from openquake.hazardlib import correlation, stats, calc
-from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib import logictree
 from openquake.risklib.riskmodels import get_risk_files
@@ -705,12 +705,6 @@ class OqParam(valid.ParamSet):
                     'structural_vulnerability_retrofitted',
                     'occupants_vulnerability'}
     hazard_imtls = {}
-    siteparam = dict(
-        vs30measured='reference_vs30_type',
-        vs30='reference_vs30_value',
-        z1pt0='reference_depth_to_1pt0km_per_sec',
-        z2pt5='reference_depth_to_2pt5km_per_sec',
-        backarc='reference_backarc')
     aggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), None)
@@ -1110,8 +1104,8 @@ class OqParam(valid.ParamSet):
                 for param in gsim.REQUIRES_SITES_PARAMETERS:
                     if param in ('lon', 'lat'):  # no check
                         continue
-                    elif param in self.siteparam:  # mandatory params
-                        param_name = self.siteparam[param]
+                    elif param in site.param:  # mandatory params
+                        param_name = site.param[param]
                         param_value = getattr(self, param_name)
                         if (isinstance(param_value, float) and
                                 numpy.isnan(param_value)):
