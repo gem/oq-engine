@@ -274,7 +274,7 @@ def collect_paths(paths, b1=ord('['), b2=ord(']'), til=ord('~')):
     Collect branch paths belonging to the same cluster
 
     >>> collect_paths([b'0~A0', b'0~A1'])
-    b'0~A[01]'
+    b'[0]~[A][01]'
     """
     n = len(paths[0])
     for path in paths[1:]:
