@@ -320,7 +320,8 @@ class SourceModelLogicTree(object):
         arr = numpy.array([('bs0', 'b0', 'sourceModel', 'fake.xml', 1)],
                           branch_dt)
         dic = dict(filename='fake.xml', seed=0, num_samples=0,
-                   sampling_method='early_weights')
+                   sampling_method='early_weights',
+                   bsetdict='{"bs0": {"uncertaintyModel": "sourceModel"}}')
         self.__fromh5__(arr, dic)
         return self
 
