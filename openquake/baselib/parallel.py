@@ -963,8 +963,8 @@ def workers_start():
     if OQDIST in 'no processpool':
         return
     for host, cores, args in ssh_args():
-        sched = config.distribution.dask_scheduler
         if OQDIST == 'dask':
+            sched = config.distribution.dask_scheduler
             args += ['-m', 'distributed.cli.dask_worker', sched,
                      '--nprocs', cores, '--nthreads', '1',
                      '--memory-limit', '1e11']
