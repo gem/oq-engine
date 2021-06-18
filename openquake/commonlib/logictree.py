@@ -469,9 +469,7 @@ class SourceModelLogicTree(object):
         """
         :returns: the number of paths in the logic tree
         """
-        if self.num_samples:
-            return self.num_samples
-        return self.num_paths
+        return self.num_samples if self.num_samples else self.num_paths
 
     def parse_branches(self, branchset_node, branchset):
         """
@@ -743,7 +741,7 @@ class SourceModelLogicTree(object):
             dic = self.bsetdict[br.bs_id].copy()
             utype = dic['uncertaintyType']
             tbl.append((br.bs_id, brid, utype, str(br.value), br.weight))
-        attrs = dict(bsetdict=json.dumps(self.bsetdict.copy()))
+        attrs = dict(bsetdict=json.dumps(self.bsetdict))
         attrs['seed'] = self.seed
         attrs['num_samples'] = self.num_samples
         attrs['sampling_method'] = self.sampling_method
