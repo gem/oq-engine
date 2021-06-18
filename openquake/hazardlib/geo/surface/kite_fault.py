@@ -199,6 +199,7 @@ class KiteSurface(BaseSurface):
             dips = []
             lens = []
             for col_idx in range(self.mesh.lons.shape[1]):
+
                 hdists = distance(self.mesh.lons[:-1, col_idx],
                                   self.mesh.lats[:-1, col_idx],
                                   np.zeros_like(self.mesh.depths[1:, col_idx]),
@@ -211,11 +212,12 @@ class KiteSurface(BaseSurface):
                 ok = np.logical_and(np.isfinite(hdists), np.isfinite(vdists))
                 hdists = hdists[ok]
                 vdists = vdists[ok]
-
-                dips.append(np.mean(np.degrees(np.arctan(vdists/hdists))))
-                lens.append(np.sum((hdists**2 + vdists**2)**0.5))
+                if len(vdists) > 0:
+                    dips.append(np.mean(np.degrees(np.arctan(vdists/hdists))))
+                    lens.append(np.sum((hdists**2 + vdists**2)**0.5))
             lens = np.array(lens)
             self.dip = np.sum(np.array(dips) * lens/np.sum(lens))
+
         return self.dip
 
     def get_strike(self) -> float:
