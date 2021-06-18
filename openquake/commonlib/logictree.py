@@ -369,8 +369,8 @@ class SourceModelLogicTree(object):
         arr = numpy.array([('bs0', 'b0', 'sourceModel', 'fake.xml', 1)],
                           branch_dt)
         dic = dict(filename='fake.xml', seed=0, num_samples=0,
-                   sampling_method='early_weights',
-                   bsetdict='{"bs0": {"uncertaintyModel": "sourceModel"}}')
+                   sampling_method='early_weights', num_paths=1,
+                   bsetdict='{"bs0": {"uncertaintyType": "sourceModel"}}')
         self.__fromh5__(arr, dic)
         return self
 
@@ -741,13 +741,14 @@ class SourceModelLogicTree(object):
         tbl = []
         for brid, br in self.branches.items():
             dic = self.bsetdict[br.bs_id].copy()
-            utype = dic.pop('uncertaintyType')
+            utype = dic['uncertaintyType']
             tbl.append((br.bs_id, brid, utype, str(br.value), br.weight))
         attrs = dict(bsetdict=json.dumps(self.bsetdict.copy()))
         attrs['seed'] = self.seed
         attrs['num_samples'] = self.num_samples
         attrs['sampling_method'] = self.sampling_method
         attrs['filename'] = self.filename
+        attrs['num_paths'] = self.num_paths
         return numpy.array(tbl, branch_dt), attrs
 
     # SourceModelLogicTree
@@ -755,9 +756,10 @@ class SourceModelLogicTree(object):
         # this is rather tricky; to understand it, run the test
         # SerializeSmltTestCase which has a logic tree with 3 branchsets
         # with the form b11[b21[b31, b32], b22[b31, b32]] and 1 x 2 x 2 rlzs
+        vars(self).update(attrs)
         bsets = []
         self.branches = {}
-        self.bsetdict = {}
+        self.bsetdict = json.loads(attrs['bsetdict'])
         self.shortener = {}
         acc = AccumDict(accum=[])  # bsid -> rows
         for rec in array:
@@ -775,20 +777,14 @@ class SourceModelLogicTree(object):
                     br.branch_id, no, attrs['filename'])
                 bset.branches.append(br)
             bsets.append(bset)
-            self.bsetdict[bsid] = {'uncertaintyType': utype}
         # bsets [<b11>, <b21 b22>, <b31 b32>]
         self.root_branchset = bsets[0]
-        bsetdict = json.loads(attrs['bsetdict'])
         for i, childset in enumerate(bsets[1:]):
-            dic = bsetdict[childset.id]
+            dic = self.bsetdict[childset.id]
             atb = dic.get('applyToBranches')
             for branch in bsets[i].branches:  # parent branches
                 if not atb or branch.branch_id in atb:
                     branch.bset = childset
-        self.seed = attrs['seed']
-        self.num_samples = attrs['num_samples']
-        self.sampling_method = attrs['sampling_method']
-        self.filename = attrs['filename']
 
     def __str__(self):
         return '<%s%s>' % (self.__class__.__name__, repr(self.root_branchset))
@@ -967,6 +963,7 @@ class GsimLogicTree(object):
         dic = {'bsetdict': json.dumps(self.bsetdict)}
         if hasattr(self, 'filename'):
             # missing in EventBasedRiskTestCase case_1f
+            dic['filename'] = self.filename
             dirname = os.path.dirname(self.filename)
             for gsims in self.values.values():
                 for gsim in gsims:
@@ -977,7 +974,10 @@ class GsimLogicTree(object):
                                 dic[os.path.basename(v)] = f.read()
         return numpy.array(branches, dt), dic
 
+    # GsimLogicTree
     def __fromh5__(self, array, dic):
+        self.bsetdict = json.loads(dic['bsetdict'])
+        self.filename = dic['filename']
         self.branches = []
         self.shortener = {}
         self.values = collections.defaultdict(list)

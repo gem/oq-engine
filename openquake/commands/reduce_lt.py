@@ -18,20 +18,19 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from pprint import pprint
-from openquake.commonlib import datastore, logictree, readinput
+from openquake.commonlib import datastore, logictree
 from openquake.calculators.extract import clusterize
 
 
 def main(calc_id: int, *, k: int = 5):
     """
-    Reduce the logic tree of the given calculation (classical, single-site,
-    with return_periods or poes)
+    Reduce the logic tree of a given calculation, which must be of kind
+    classical or disaggregation, single-site, with poes.
     """
     with datastore.read(calc_id) as dstore:
-        oq = dstore['oqparam']
+        full_lt = dstore['full_lt']
         hmaps = dstore['hmaps-rlzs'][0]
-    full_lt = readinput.get_full_lt(oq)
-    arr, cluster = clusterize(hmaps, full_lt.rlzs, k)
+    arr, _labels = clusterize(hmaps, full_lt.rlzs, k)
     pprint(logictree.reduce_full(full_lt, arr['branch_paths']))
 
 
