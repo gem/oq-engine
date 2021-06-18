@@ -305,13 +305,20 @@ def reducible(lt, cluster_paths):
         for b, chars in enumerate(path.strip('][').split('][')):
             bsets[b].add(chars)
     res = [lt.filename]
-    for bs, bset in zip(lt.bsetdict, bsets):
+    for bs, bset in zip(sorted(lt.bsetdict), bsets):
         # a branch is reducible if there the same combinations for all paths
         try:
             [br_ids] = bset
         except ValueError:
             continue
         res.append((bs, [longener[c] for c in br_ids]))
+    return res
+
+
+def mult(pairs):
+    res = 1
+    for bset, br_ids in pairs:
+        res *= len(br_ids)
     return res
 
 
@@ -330,7 +337,10 @@ def reduce_full(full_lt, rlz_clusters):
         gsrlz_clusters.append(gsr)
     f1, *p1 = reducible(full_lt.source_model_lt, smrlz_clusters)
     f2, *p2 = reducible(full_lt.gsim_lt, gsrlz_clusters)
-    return {f1: dict(p1), f2: dict(p2)}
+    before = (full_lt.source_model_lt.get_num_paths() *
+              full_lt.gsim_lt.get_num_paths())
+    after = before / mult(p1) / mult(p2)
+    return {f1: dict(p1), f2: dict(p2), 'size_before_after': (before, after)}
 
 
 class SourceModelLogicTree(object):
@@ -452,6 +462,14 @@ class SourceModelLogicTree(object):
                     branch.bset = branchset
         self.previous_branches = branchset.branches
         self.num_paths *= len(branchset.branches)
+
+    def get_num_paths(self):
+        """
+        :returns: the number of paths in the logic tree
+        """
+        if self.num_samples:
+            return self.num_samples
+        return self.num_paths
 
     def parse_branches(self, branchset_node, branchset):
         """

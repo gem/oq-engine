@@ -18,7 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from pprint import pprint
-from openquake.commonlib import datastore, logictree
+from openquake.commonlib import datastore, logictree, readinput
 from openquake.calculators.extract import clusterize
 
 
@@ -28,8 +28,9 @@ def main(calc_id: int, *, k: int = 5):
     with return_periods or poes)
     """
     with datastore.read(calc_id) as dstore:
-        full_lt = dstore['full_lt']
+        oq = dstore['oqparam']
         hmaps = dstore['hmaps-rlzs'][0]
+    full_lt = readinput.get_full_lt(oq)
     arr, cluster = clusterize(hmaps, full_lt.rlzs, k)
     pprint(logictree.reduce_full(full_lt, arr['branch_paths']))
 

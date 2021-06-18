@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import pprint
 import codecs
 import unittest
 import collections
@@ -2297,18 +2298,21 @@ class ReduceLtTestCase(unittest.TestCase):
         smlt = logictree.SourceModelLogicTree(ssmLT, test_mode=True)
         gslt = logictree.GsimLogicTree(gmmLT)
         paths = '''\
-[012345]~[012][345][7][9AB][CD]
-[012345]~[012][345][8][9AB][E]
-[012345]~[012][345][8][9AB][CD]
-[012345]~[012][345][7][9AB][E]
-[012345]~[012][345][6][9AB][CD]
-[012345]~[012][345][7][9AB][CD]
-[012345]~[012][345][6][9AB][E]
-[012345]~[01][345][7][9AB][C]
-[012345]~[012][345][6][9AB][CD]'''.split()
+[012345]~[01][345][678][9AB][C][FGH][IJ]
+[012345]~[2][345][678][9AB][E][FGH][K]
+[012345]~[1][345][678][9AB][E][FGH][IJ]
+[012345]~[01][345][678][9AB][D][FGH][IJ]
+[012345]~[2][345][678][9AB][C][FGH][K]
+[012345]~[2][345][678][9AB][C][FGH][IJ]
+[012345]~[01][345][678][9AB][E][FGH][K]
+[012345]~[012][345][678][9AB][D][FGH][K]
+[012345]~[01][345][678][9AB][C][FGH][K]
+[012345]~[0][345][678][9AB][E][FGH][IJ]
+[012345]~[2][345][678][9AB][E][FGH][IJ]
+[012345]~[2][345][678][9AB][D][FGH][IJ]'''.split()
         full_lt = unittest.mock.Mock(source_model_lt=smlt, gsim_lt=gslt)
         dic = logictree.reduce_full(full_lt, paths)
-        print(dic)
+        pprint.pprint(dic)
 
 
 class TaxonomyMappingTestCase(unittest.TestCase):
