@@ -47,6 +47,9 @@ REGIONS = {'1': [[13.37, 42.13], [13.60, 42.24], [13.48, 42.51], [13.19, 42.36]]
 class SgobbaEtAl2020(GMPE):
     """
     Implements the GMM proposed by Sgobba et al. (2020).
+    Warning:
+    This GMM is not meant for national models where it would be too slow to be practical,
+    it should be used only in scenario calculations!!
 
     :param event_id:
         A string identifying an event amongst the ones comprised in the
@@ -121,6 +124,11 @@ class SgobbaEtAl2020(GMPE):
             df.set_index('id', inplace=True)
             self.df = df
             assert event_id in df.index.values
+        # Site coefficients
+        fname = os.path.join(DATA_FOLDER, "S_model.csv")
+        self.Smodel = np.loadtxt(fname, delimiter=",", skiprows=1)
+        fname = os.path.join(DATA_FOLDER, "beta_dS2S.csv")
+        self.betaS2S = np.loadtxt(fname, delimiter=",", skiprows=1) 
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -164,14 +172,6 @@ class SgobbaEtAl2020(GMPE):
         Get site correction
         """
         correction = np.zeros_like(shape)
-
-        # Cluster coefficients
-        fname = os.path.join(DATA_FOLDER, "S_model.csv")
-        data = np.loadtxt(fname, delimiter=",", skiprows=1)
-
-        fname2 = os.path.join(DATA_FOLDER, "beta_dS2S.csv")
-        data2 = np.loadtxt(fname2, delimiter=",", skiprows=1)
-
         # Compute the coefficients
         correction = np.zeros(shape)
         # stand.dev.
@@ -181,9 +181,9 @@ class SgobbaEtAl2020(GMPE):
         if re.search('SA', imt.__str__()):
             per = imt.period
         for idx in np.unique(self.idxs):
-            tmp = data[int(idx)]
+            tmp = self.Smodel[int(idx)]
             correction[self.idxs == idx] = np.interp(per, self.PERIODS, tmp[0:5])
-            tmp2 = data2[int(idx)]
+            tmp2 = self.betaS2S[int(idx)]
             Bs_model[self.idxs == idx] = np.interp(per, self.PERIODS, tmp2[0:5])
         return correction, Bs_model, phi_S2Sref
 
