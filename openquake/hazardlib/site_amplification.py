@@ -58,7 +58,7 @@ class AmplFunction():
             instance
         """
         # Get IMTs for keys ampcode, from_mag, from_rrup, level, PGA, sigma_PGA
-        imts = [key for key in df.keys() if key.startswith('PGA', 'SA')]
+        imts = [key for key in df.keys() if key.startswith(('PGA', 'SA'))]
 
         # Create the temporary list of lists
         out = []
