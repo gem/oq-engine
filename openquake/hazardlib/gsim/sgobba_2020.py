@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.gsim.sgobba_2020` implements
 """
 
 import os
-import re
 import copy
 import numpy as np
 import pandas as pd
@@ -39,17 +38,18 @@ LEN_1_DEG_LON_AT_43pt5 = 80.87665
 
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'sgobba_2020')
 
-REGIONS = {'1': [[13.37, 42.13], [13.60, 42.24], [13.48, 42.51], [13.19, 42.36]],
-           '4': [[13.26, 42.41], [13.43, 42.49], [13.27, 43.02], [12.96, 42.86]],
-           '5': [[13.03, 42.90], [13.21, 42.99], [13.10, 43.13], [12.90, 43.06]]}
+REGIONS = {
+    '1': [[13.37, 42.13], [13.60, 42.24], [13.48, 42.51], [13.19, 42.36]],
+    '4': [[13.26, 42.41], [13.43, 42.49], [13.27, 43.02], [12.96, 42.86]],
+    '5': [[13.03, 42.90], [13.21, 42.99], [13.10, 43.13], [12.90, 43.06]]}
 
 
 class SgobbaEtAl2020(GMPE):
     """
     Implements the GMM proposed by Sgobba et al. (2020).
     Warning:
-    This GMM is not meant for national models where it would be too slow to be practical,
-    it should be used only in scenario calculations!!
+    This GMM is not meant for national models where it would be too slow,
+    it is meant for scenario calculations.
 
     :param event_id:
         A string identifying an event amongst the ones comprised in the
@@ -71,10 +71,7 @@ class SgobbaEtAl2020(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {
-        PGA,
-        SA
-    }
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -128,7 +125,7 @@ class SgobbaEtAl2020(GMPE):
         fname = os.path.join(DATA_FOLDER, "S_model.csv")
         self.Smodel = np.loadtxt(fname, delimiter=",", skiprows=1)
         fname = os.path.join(DATA_FOLDER, "beta_dS2S.csv")
-        self.betaS2S = np.loadtxt(fname, delimiter=",", skiprows=1) 
+        self.betaS2S = np.loadtxt(fname, delimiter=",", skiprows=1)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -138,7 +135,7 @@ class SgobbaEtAl2020(GMPE):
         C = self.COEFFS[imt]
         # between-event
         if self.event_id is not None:
-            label = "dBe_{:s}".format(imt.__str__())
+            label = "dBe_{:s}".format(str(imt))
             self.be = self.df.loc[self.event_id][label]
             self.be_std = 0.0
         else:
@@ -151,9 +148,11 @@ class SgobbaEtAl2020(GMPE):
         phi_S2Sref = C['phi_S2S_ref']
         Bs_model = np.zeros(sites.vs30.shape)
         if self.site and self.bedrock is False:
-            sc, Bs_model, phi_S2Sref = self._get_site_correction(sites.vs30.shape, imt)
+            sc, Bs_model, phi_S2Sref = self._get_site_correction(
+                sites.vs30.shape, imt)
 
-        cc, tau_L2L, Bp_model, phi_P2P = self._get_cluster_correction(C, sites, rup, imt)
+        cc, tau_L2L, Bp_model, phi_P2P = self._get_cluster_correction(
+            C, sites, rup, imt)
         # Get mean
         mean = (C['a'] + self._get_magnitude_term(C, rup.mag) +
                 self._get_distance_term(C, rup.mag, dists) +
@@ -163,7 +162,8 @@ class SgobbaEtAl2020(GMPE):
         # To natural logarithm and fraction of g
         mean = np.log(10.0**mean/(gravity_acc*100))
         # Get stds
-        stds = np.sqrt(C['sigma_0'] ** 2 + self.be_std ** 2 + tau_L2L ** 2 + Bs_model + phi_S2Sref ** 2 + Bp_model + phi_P2P ** 2)
+        stds = np.sqrt(C['sigma_0'] ** 2 + self.be_std ** 2 + tau_L2L ** 2 +
+                       Bs_model + phi_S2Sref ** 2 + Bp_model + phi_P2P ** 2)
         stds = np.log(10.0 ** np.array(stds))
         return mean, stds
 
@@ -177,14 +177,14 @@ class SgobbaEtAl2020(GMPE):
         # stand.dev.
         Bs_model = np.zeros(shape)
         phi_S2Sref = np.zeros(shape)
-        per = 0
-        if re.search('SA', imt.__str__()):
-            per = imt.period
+        per = imt.period
         for idx in np.unique(self.idxs):
             tmp = self.Smodel[int(idx)]
-            correction[self.idxs == idx] = np.interp(per, self.PERIODS, tmp[0:5])
+            correction[self.idxs == idx] = np.interp(
+                per, self.PERIODS, tmp[0:5])
             tmp2 = self.betaS2S[int(idx)]
-            Bs_model[self.idxs == idx] = np.interp(per, self.PERIODS, tmp2[0:5])
+            Bs_model[self.idxs == idx] = np.interp(
+                per, self.PERIODS, tmp2[0:5])
         return correction, Bs_model, phi_S2Sref
 
     def _get_cluster_correction(self, C, sites, rup, imt):
@@ -216,9 +216,9 @@ class SgobbaEtAl2020(GMPE):
         if cluster is None:
             mesh = Mesh(np.array([rup.ev_lon]), np.array([rup.ev_lat]))
             # midp = rup.surface.get_middle_point()
-            # mesh = Mesh(np.array([midp.longitude]), np.array([midp.latitude]))
+            # mesh = Mesh(np.array([midp.longitude]),np.array([midp.latitude]))
 
-            for key in self.REGIONS:
+            for key in REGIONS:
                 coo = np.array(REGIONS[key])
                 pnts = [Point(lo, la) for lo, la in zip(coo[:, 0], coo[:, 1])]
                 poly = Polygon(pnts)
@@ -243,19 +243,19 @@ class SgobbaEtAl2020(GMPE):
             data2 = np.loadtxt(fname2, delimiter=",", skiprows=1)
             # Compute the coefficients
             correction = np.zeros(shape)
-            per = 0
-            if re.search('SA', imt.__str__()):
-                per = imt.period
+            per = imt.period
             for idx in np.unique(self.idxs):
                 tmp = data[int(idx)]
-                correction[self.idxs == idx] = np.interp(per, self.PERIODS, tmp[0:5])
+                correction[self.idxs == idx] = np.interp(
+                    per, self.PERIODS, tmp[0:5])
             # Adding L2L correction
             label = "dL2L_cluster{:d}".format(cluster)
             correction += C[label]
             # compute st.dev.
             for idx in np.unique(self.idxs):
                 tmp2 = data2[int(idx)]
-                Bp_model[self.idxs == idx] = np.interp(per, self.PERIODS, tmp2[0:5])
+                Bp_model[self.idxs == idx] = np.interp(
+                    per, self.PERIODS, tmp2[0:5])
             return correction, tau_L2L, Bp_model, phi_P2P
 
     def _get_magnitude_term(self, C, mag):
@@ -291,6 +291,4 @@ class SgobbaEtAl2020(GMPE):
     consts = {'Mh': 5.0,
               'Rref': 1.0,
               'PseudoDepth': 6.0}
-    REGIONS = {'1': [[13.37, 42.13], [13.60, 42.24], [13.48, 42.51], [13.19, 42.36]],
-               '4': [[13.26, 42.41], [13.43, 42.49], [13.27, 43.02], [12.96, 42.86]],
-               '5': [[13.03, 42.90], [13.21, 42.99], [13.10, 43.13], [12.90, 43.06]]}
+
