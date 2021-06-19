@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import numpy
 import pandas as pd
 
@@ -58,13 +57,8 @@ class AmplFunction():
             A :class:`openquake.hazardlib.site_amplification.AmplFunction`
             instance
         """
-        # Get IMTs
-        imts = []
-        # example of df.keys():
-        # ampcode  from_mag  from_rrup  level  PGA sigma_PGA
-        for key in df.keys():
-            if re.search('^SA', key) or re.search('^PGA', key):
-                imts.append(key)
+        # Get IMTs for keys ampcode, from_mag, from_rrup, level, PGA, sigma_PGA
+        imts = [key for key in df.keys() if key.startswith('PGA', 'SA')]
 
         # Create the temporary list of lists
         out = []
