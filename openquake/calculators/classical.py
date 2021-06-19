@@ -815,26 +815,25 @@ def build_hazard(pgetter, N, hstats, individual_curves,
     compute_mon = monitor('compute stats', measuremem=False)
     for sid in pgetter.sids:
         with combine_mon:
-            pcurves = pgetter.get_pcurves(sid)
+            pc = pgetter.get_pcurve(sid)  # shape (L, R)
             if amplifier:
-                pcurves = amplifier.amplify(ampcode[sid], pcurves)
-                # NB: the pcurves have soil levels != IMT levels
-        if sum(pc.array.sum() for pc in pcurves) == 0:  # no data
+                pc = amplifier.amplify(ampcode[sid], pc)
+                # NB: the pcurve have soil levels != IMT levels
+        if pc.array.sum() == 0:  # no data
             continue
         with compute_mon:
             if hstats:
-                arr = numpy.array([pc.array for pc in pcurves])
                 for s, (statname, stat) in enumerate(hstats.items()):
-                    pc = getters.build_stat_curve(arr, imtls, stat, weights)
-                    pmap_by_kind['hcurves-stats'][s][sid] = pc
+                    sc = getters.build_stat_curve(pc, imtls, stat, weights)
+                    pmap_by_kind['hcurves-stats'][s][sid] = sc
                     if poes:
-                        hmap = calc.make_hmap(pc, imtls, poes, sid)
+                        hmap = calc.make_hmap(sc, imtls, poes, sid)
                         pmap_by_kind['hmaps-stats'][s].update(hmap)
             if R > 1 and individual_curves or not hstats:
-                for pmap, pc in zip(pmap_by_kind['hcurves-rlzs'], pcurves):
-                    pmap[sid] = pc
+                for r, pmap in enumerate(pmap_by_kind['hcurves-rlzs']):
+                    pmap[sid] = pc.extract(r)
                 if poes:
-                    for r, pc in enumerate(pcurves):
-                        hmap = calc.make_hmap(pc, imtls, poes, sid)
+                    for r in range(R):
+                        hmap = calc.make_hmap(pc.extract(r), imtls, poes, sid)
                         pmap_by_kind['hmaps-rlzs'][r].update(hmap)
     return pmap_by_kind

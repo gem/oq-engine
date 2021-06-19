@@ -92,7 +92,14 @@ class ProbabilityCurve(object):
     def __repr__(self):
         return '<ProbabilityCurve\n%s>' % self.array
 
-    def update2(self, other, rlz_groups):
+    def extract(self, inner_idx):
+        """
+        Extracts the component specified by the index `inner_idx`.
+        """
+        array = self.array[:, inner_idx].reshape(-1, 1)
+        return self.__class__(array)
+
+    def combine(self, other, rlz_groups):
         """
         Update a ProbabilityCurve with shape (L, R) with a pcurve with shape
         (L, G), being G the number of realization groups, which are list
@@ -256,14 +263,14 @@ class ProbabilityMap(dict):
             out[sid] = ProbabilityCurve(array)
         return out
 
-    def update2(self, pmap, rlz_groups):
+    def combine(self, pmap, rlz_groups):
         """
         Update a ProbabilityMap with shape (L, R) with a pmap with shape
         (L, G), being G the number of realization groups, which are list
         of integers in the range 0..R-1.
         """
         for sid in pmap:
-            self[sid].update2(pmap[sid], rlz_groups)
+            self[sid].combine(pmap[sid], rlz_groups)
 
     def __ior__(self, other):
         if not other:

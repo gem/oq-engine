@@ -343,21 +343,15 @@ class Amplifier(object):
                 ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
         return ampl_poes
 
-    def amplify(self, ampl_code, pcurves):
+    def amplify(self, ampl_code, pcurve):
         """
         :param ampl_code: 2-letter code for the amplification function
-        :param pcurves: a list of ProbabilityCurves containing PoEs
-        :returns: amplified ProbabilityCurves
+        :param pcurve: a ProbabilityCurve of shape (L, R)
+        :returns: amplified ProbabilityCurve of shape (A*M, R)
         """
-        out = []
-        for pcurve in pcurves:
-            lst = []
-            for imt in self.imtls:
-                slc = self.imtls(imt)
-                new = self.amplify_one(ampl_code, imt, pcurve.array[slc])
-                lst.append(new)
-            out.append(ProbabilityCurve(numpy.concatenate(lst)))
-        return out
+        new = [self.amplify_one(ampl_code, imt, pcurve.array[self.imtls(imt)])
+               for imt in self.imtls]
+        return ProbabilityCurve(numpy.concatenate(new))
 
     def _interp(self, ampl_code, imt_str, imls, coeff=None):
         # returns ialpha, isigma for the given levels
