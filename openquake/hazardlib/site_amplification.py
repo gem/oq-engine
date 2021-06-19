@@ -346,7 +346,7 @@ class Amplifier(object):
     def amplify(self, ampl_code, pcurve):
         """
         :param ampl_code: 2-letter code for the amplification function
-        :param pcurve: a ProbabilityCurve of shape (L, R)
+        :param pcurve: a ProbabilityCurve of shape (L*M, R)
         :returns: amplified ProbabilityCurve of shape (A*M, R)
         """
         new = [self.amplify_one(ampl_code, imt, pcurve.array[self.imtls(imt)])
