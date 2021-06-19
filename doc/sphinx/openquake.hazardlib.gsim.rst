@@ -930,6 +930,14 @@ sera_amplification_models
     :undoc-members:
     :show-inheritance:
 
+sgobba_2020
+----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sgobba_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    
 shahjouei_pezeshk_2016
 --------------------------------------------
 
