@@ -23,7 +23,7 @@ import unittest
 from io import BytesIO
 
 from openquake.baselib import general
-from openquake.hazardlib import InvalidFile, site_amplification
+from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
 from openquake.risklib import asset
 from openquake.commonlib import readinput, logictree, datastore
 from openquake.qa_tests_data.classical import case_2, case_21
@@ -472,7 +472,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_wrong_trts(self):
         # 'active Shallow Crust' is missing, 'Active Shallow Crust' is there
         oq = readinput.get_oqparam('job.ini', case_16)
-        with self.assertRaises(logictree.InvalidLogicTree) as c:
+        with self.assertRaises(gsim_lt.InvalidLogicTree) as c:
             readinput.get_gsim_lt(oq, ['active Shallow Crust'])
         self.assertIn("is missing the TRT 'active Shallow Crust'",
                       str(c.exception))
