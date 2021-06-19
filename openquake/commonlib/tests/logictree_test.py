@@ -28,7 +28,7 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
 import openquake.hazardlib
-from openquake.hazardlib import geo, lt
+from openquake.hazardlib import geo, lt, gsim_lt
 from openquake.commonlib import logictree, readinput, tests
 from openquake.commonlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
@@ -1851,7 +1851,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTreeBranchingLevel>
         </logicTree>""")
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree,
+            xml, gsim_lt.InvalidLogicTree,
             'only uncertainties of type "gmpeModel" are allowed '
             'in gmpe logic tree')
 
@@ -1883,7 +1883,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree,
+            xml, gsim_lt.InvalidLogicTree,
             'Branching level bl1 has multiple branchsets')
 
     def test_branchset_id_not_unique(self):
@@ -1920,7 +1920,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
             </logicTree>
         """)
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree,
+            xml, gsim_lt.InvalidLogicTree,
             "Duplicated branchSetID bs1")
 
     def test_branch_id_not_unique(self):
@@ -1951,7 +1951,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
 </logicTree>
         """)
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree,
+            xml, gsim_lt.InvalidLogicTree,
             "There where duplicated branchIDs in")
 
     def test_invalid_gsim(self):
@@ -2004,7 +2004,7 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         self.parse_invalid(
-            xml, logictree.InvalidLogicTree,
+            xml, gsim_lt.InvalidLogicTree,
             "Found duplicated applyToTectonicRegionType="
             "['Subduction Interface', 'Subduction Interface']")
 
