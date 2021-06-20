@@ -72,8 +72,7 @@ def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
     for testcase in _parse_csv(
             datafile, debug, gsim.REQUIRES_SITES_PARAMETERS):
         linenum += 1
-        (ctx, stddev_types, expected_results, result_type) \
-            = testcase
+        ctx, stddev_types, expected_results, result_type = testcase
         set_read_only(ctx)
         for imt, expected_result in expected_results.items():
             mean, stddevs = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
@@ -87,22 +86,15 @@ def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
             else:
                 [result] = stddevs
 
-            assert (isinstance(result, numpy.ndarray) or
-                    isinstance(result, numpy.float64) or
-                    isinstance(result, float)), \
-                '%s is %s instead of numpy.ndarray, numpy.float64 or float' % \
-                (result_type, type(result))
-
-            discrep_percentage = numpy.abs(
-                result / expected_result * 100 - 100)
-            discrepancies.extend(discrep_percentage)
-            errors += (discrep_percentage > max_discrep_percentage).sum()
+            discrep_percent = numpy.abs(result / expected_result * 100 - 100)
+            discrepancies.extend(discrep_percent)
+            errors += (discrep_percent > max_discrep_percentage).sum()
 
             if errors and debug:
                 msg = 'file %r line %r imt %r: expected %s %f != %f ' \
                       '(delta %.4f%%)' % (
                           datafile.name, linenum, imt, result_type.lower(),
-                          expected_result[0], result[0], discrep_percentage[0])
+                          expected_result[0], result[0], discrep_percent[0])
                 print(msg, file=sys.stderr)
                 break
 
