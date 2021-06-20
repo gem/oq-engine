@@ -45,12 +45,12 @@ def set_read_only(*ctxs):
                 arr.flags.writeable = False
 
 
-def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
+def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
     """
     Test GSIM against the data file and return test result.
 
-    :param gsim_cls:
-        A subclass of :class:`~openquake.hazardlib.gsim.base.GMPE` to test.
+    :param gsim:
+        An instance of :class:`~openquake.hazardlib.gsim.base.GMPE` to test.
     :param datafile:
         A file object containing test data in csv format.
     :param max_discrep_percentage:
@@ -66,11 +66,6 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         A tuple of two elements: a number of errors and a string representing
         statistics about the test run.
     """
-
-    if isinstance(gsim_cls, GroundShakingIntensityModel):
-        gsim = copy.deepcopy(gsim_cls)
-    else:
-        gsim = gsim_cls()
     errors = 0
     linenum = 1
     discrepancies = []
@@ -78,8 +73,8 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     for testcase in _parse_csv(
             datafile, debug, gsim.REQUIRES_SITES_PARAMETERS):
         linenum += 1
-        (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
-            = testcase
+        (sctx, rctx, dctx, stddev_types, expected_results,
+         result_type) = testcase
         for imt, expected_result in expected_results.items():
             set_read_only(sctx, dctx, rctx)
             mean, stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx,
@@ -285,7 +280,6 @@ def _parse_csv_line(headers, values, req_site_params):
             except ValueError:
                 if value != 'undefined':
                     raise
-
             setattr(rctx, param[len('rup_'):], value)
         elif param == 'component_type':
             pass
