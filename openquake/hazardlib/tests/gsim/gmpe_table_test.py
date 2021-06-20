@@ -52,7 +52,7 @@ class HDFArraysToDictTestCase(unittest.TestCase):
     def setUp(self):
         fd, self.fname = tempfile.mkstemp(suffix='.hdf5')
         os.close(fd)
-        self.hdf5 = h5py.File(self.fname)
+        self.hdf5 = h5py.File(self.fname, 'r')
         self.group = self.hdf5.create_group("TestGroup")
         dset1 = self.group.create_dataset("DSET1", (3, 3), dtype="f")
         dset1[:] = np.zeros([3, 3])
@@ -94,7 +94,7 @@ class AmplificationTableSiteTestCase(unittest.TestCase):
         """
         Open the hdf5 file
         """
-        self.hdf5 = h5py.File(self.TABLE_FILE)
+        self.hdf5 = h5py.File(self.TABLE_FILE, 'r')
         self.amp_table = AmplificationTable(self.hdf5["Amplification"],
                                             self.hdf5["Mw"][:],
                                             self.hdf5["Distances"][:])
@@ -354,7 +354,7 @@ class AmplificationTableBadTestCase(unittest.TestCase):
         """
         Open the hdf5 file
         """
-        self.hdf5 = h5py.File(self.TABLE_FILE)
+        self.hdf5 = h5py.File(self.TABLE_FILE, 'r')
 
     def test_unsupported_parameter(self):
         """
@@ -382,7 +382,7 @@ class GSIMTableGoodTestCase(unittest.TestCase):
         """
         Opens the hdf5 file
         """
-        self.hdf5 = h5py.File(self.TABLE_FILE)
+        self.hdf5 = h5py.File(self.TABLE_FILE, 'r')
 
     def test_correct_instantiation(self):
         """
