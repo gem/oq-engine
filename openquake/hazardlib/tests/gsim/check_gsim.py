@@ -25,14 +25,11 @@ import csv
 import math
 import sys
 import time
-import copy
-
 import numpy
 
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
-from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
-                                          DistancesContext)
+from openquake.hazardlib.contexts import (
+    SitesContext, RuptureContext, DistancesContext)
 from openquake.hazardlib.imt import registry
 from openquake.hazardlib.imt import from_string
 
@@ -73,12 +70,12 @@ def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
     for testcase in _parse_csv(
             datafile, debug, gsim.REQUIRES_SITES_PARAMETERS):
         linenum += 1
-        (sctx, rctx, dctx, stddev_types, expected_results,
+        (sctx, rctx, dctx, stddev_type, expected_results,
          result_type) = testcase
+        set_read_only(sctx, dctx, rctx)
         for imt, expected_result in expected_results.items():
-            set_read_only(sctx, dctx, rctx)
-            mean, stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx,
-                                                      imt, stddev_types)
+            mean, stddevs = gsim.get_mean_and_stddevs(
+                sctx, rctx, dctx, imt, [stddev_type] if stddev_type else [])
             if result_type == 'MEAN':
                 if str(imt) == 'MMI':
                     # For IPEs it is the values, not the logarithms returned
@@ -169,19 +166,17 @@ def _parse_csv(datafile, debug, req_site_params):
     """
     reader = iter(csv.reader(datafile))
     headers = [param_name.lower() for param_name in next(reader)]
-    sctx, rctx, dctx, stddev_types, expected_results, result_type \
-        = _parse_csv_line(headers, next(reader), req_site_params)
+    (sctx, rctx, dctx, stddev_type, expected_results,
+     result_type) = _parse_csv_line(headers, next(reader), req_site_params)
     sattrs = sctx._slots_
-    dattrs = [slot for slot in DistancesContext._slots_
-              if hasattr(dctx, slot)]
+    dattrs = [slot for slot in DistancesContext._slots_ if hasattr(dctx, slot)]
     for line in reader:
-        (sctx2, rctx2, dctx2, stddev_types2, expected_results2, result_type2) \
-            = _parse_csv_line(headers, line, req_site_params)
-        if not debug \
-                and stddev_types2 == stddev_types \
-                and result_type2 == result_type \
-                and all(getattr(rctx2, slot, None) == getattr(rctx, slot, None)
-                        for slot in RuptureContext._slots_):
+        (sctx2, rctx2, dctx2, stddev_type2, expected_results2,
+         result_type2) = _parse_csv_line(headers, line, req_site_params)
+        if (not debug and stddev_type2 == stddev_type and
+            result_type2 == result_type and all(
+                getattr(rctx2, slot, None) == getattr(rctx, slot, None)
+                for slot in RuptureContext._slots_)):
             for slot in sattrs:
                 setattr(sctx, slot, numpy.hstack((getattr(sctx, slot),
                                                   getattr(sctx2, slot))))
@@ -192,11 +187,11 @@ def _parse_csv(datafile, debug, req_site_params):
                 expected_results[imt] = numpy.hstack((expected_results[imt],
                                                       expected_results2[imt]))
         else:
-            yield sctx, rctx, dctx, stddev_types, expected_results, result_type
-            (sctx, rctx, dctx, stddev_types, expected_results,
-             result_type) = (sctx2, rctx2, dctx2, stddev_types2,
+            yield sctx, rctx, dctx, stddev_type, expected_results, result_type
+            (sctx, rctx, dctx, stddev_type, expected_results,
+             result_type) = (sctx2, rctx2, dctx2, stddev_type2,
                              expected_results2, result_type2)
-    yield sctx, rctx, dctx, stddev_types, expected_results, result_type
+    yield sctx, rctx, dctx, stddev_type, expected_results, result_type
 
 
 def _parse_csv_line(headers, values, req_site_params):
@@ -220,10 +215,9 @@ def _parse_csv_line(headers, values, req_site_params):
         dctx
             An instance of
             :class:`openquake.hazardlib.gsim.base.DistancesContext`.
-        stddev_types
-            An empty list, if the ``result_type`` column says "MEAN"
-            for that row, otherwise it is a list with one item --
-            a requested standard deviation type.
+        stddev_type
+            None, if the ``result_type`` column says "MEAN"
+            for that row, otherwise the requested standard deviation type.
         expected_results
             A dictionary mapping IMT-objects to one-element arrays of expected
             result values. Those results represent either standard deviation
@@ -236,21 +230,17 @@ def _parse_csv_line(headers, values, req_site_params):
     sctx = SitesContext(slots=req_site_params)
     dctx = DistancesContext()
     expected_results = {}
-    stddev_types = result_type = damping = None
-
+    stddev_type = result_type = damping = None
     for param, value in zip(headers, values):
-
         if param == 'result_type':
             value = value.upper()
             if value.endswith('_STDDEV'):
                 # the row defines expected stddev results
                 result_type = 'STDDEV'
-                stddev_types = [getattr(const.StdDev,
-                                        value[:-len('_STDDEV')])]
+                stddev_type = getattr(const.StdDev, value[:-len('_STDDEV')])
             else:
                 # the row defines expected exponents of mean values
                 assert value == 'MEAN'
-                stddev_types = []
                 result_type = 'MEAN'
         elif param == 'damping':
             damping = float(value)
@@ -286,13 +276,12 @@ def _parse_csv_line(headers, values, req_site_params):
         else:
             # value is the expected result (of result_type type)
             value = float(value)
-
             if param == 'arias':  # ugly legacy corner case
                 param = 'ia'
             if param == 'avgsa':
                 imt = from_string('AvgSA')
             else:
-                try:    # The title of the column should be IMT(args)
+                try:  # The title of the column should be IMT(args)
                     imt = from_string(param.upper())
                 except KeyError:  # Then it is just a period for SA
                     imt = registry['SA'](float(param), damping)
@@ -300,65 +289,4 @@ def _parse_csv_line(headers, values, req_site_params):
             expected_results[imt] = numpy.array([value])
 
     assert result_type is not None
-    return sctx, rctx, dctx, stddev_types, expected_results, result_type
-
-
-if __name__ == '__main__':
-    import argparse
-
-    def gsim_by_import_path(import_path):
-        if '.' not in import_path:
-            raise argparse.ArgumentTypeError(
-                '%r is not well-formed import path' % import_path)
-        module_name, class_name = import_path.rsplit('.', 1)
-        try:
-            module = __import__(module_name, fromlist=[class_name])
-        except ImportError:
-            raise argparse.ArgumentTypeError(
-                'can not import module %r, make sure '
-                'it is in your $PYTHONPATH' % module_name)
-        if not hasattr(module, class_name):
-            raise argparse.ArgumentTypeError(
-                "module %r doesn't export name %r" % (module_name, class_name))
-        gsim_class = getattr(module, class_name)
-        if not isinstance(gsim_class, type) \
-                or not issubclass(gsim_class, GroundShakingIntensityModel):
-            raise argparse.ArgumentTypeError(
-                "%r is not subclass of "
-                "openquake.hazardlib.gsim.base.GroundShakingIntensityModel"
-                % import_path)
-        return gsim_class
-
-    parser = argparse.ArgumentParser(description=' '.join(__doc__.split()))
-    parser.add_argument('gsim', type=gsim_by_import_path,
-                        help='an import path of the ground shaking '
-                        'intensity model class in a form '
-                        '"package.module.ClassName".')
-    parser.add_argument('datafile', type=argparse.FileType('r'),
-                        help='test data file in a csv format. use "-" for '
-                             'reading from standard input')
-    parser.add_argument('-p', '--max-discrepancy', type=float, metavar='prcnt',
-                        help='the maximum discrepancy allowed for result '
-                        'value to be considered matching, expressed '
-                             'in percentage points. default value is 0.5.',
-                        nargs='?', default=0.5, dest='max_discrep_percentage')
-    dbg_group = parser.add_mutually_exclusive_group()
-    dbg_group.add_argument('-d', '--debug', required=False,
-                           action='store_true',
-                           help='run unvectorized, stop on first error '
-                                'and print information about line containing '
-                                'failing test')
-    dbg_group.add_argument('-q', '--quiet', action='store_true',
-                           help="don't print stats at the end. use exit "
-                           "code to determine if test succeeded.")
-
-    args = parser.parse_args()
-
-    errors, stats, _, _, _, = check_gsim(
-        gsim_cls=args.gsim, datafile=args.datafile,
-        max_discrep_percentage=args.max_discrep_percentage,
-        debug=args.debug)
-    if not args.quiet:
-        print(stats, file=sys.stderr)
-    if errors:
-        exit(127)
+    return sctx, rctx, dctx, stddev_type, expected_results, result_type
