@@ -71,11 +71,11 @@ def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
     for testcase in _parse_csv(
             datafile, debug, gsim.REQUIRES_SITES_PARAMETERS):
         linenum += 1
-        ctx, stddev_types, expected_results, result_type = testcase
+        ctx, stddev_type, expected_results, result_type = testcase
         set_read_only(ctx)
         for imt, expected_result in expected_results.items():
-            mean, stddevs = gsim.get_mean_and_stddevs(ctx, ctx, ctx,
-                                                      imt, stddev_types)
+            mean, stddevs = gsim.get_mean_and_stddevs(
+                ctx, ctx, ctx, imt, [stddev_type] if stddev_type else [])
             if result_type == 'MEAN':
                 if str(imt) == 'MMI':
                     # For IPEs it is the values, not the logarithms returned
@@ -158,19 +158,18 @@ def _parse_csv(datafile, debug, req_site_params):
     """
     reader = iter(csv.reader(datafile))
     headers = [param_name.lower() for param_name in next(reader)]
-    ctx, stddev_types, expected_results, result_type \
-        = _parse_csv_line(headers, next(reader), req_site_params)
+    ctx, stddev_type, expected_results, result_type = _parse_csv_line(
+        headers, next(reader), req_site_params)
     slots = set(vars(ctx))
     attrs = list(req_site_params) + [s for s in DistancesContext._slots_
                                      if s in slots]
     for line in reader:
-        (ctx2, stddev_types2, expected_results2, result_type2) \
-            = _parse_csv_line(headers, line, req_site_params)
+        ctx2, stddev_type2, expected_results2, result_type2 = _parse_csv_line(
+            headers, line, req_site_params)
         rp_equal = [
             numpy.all(getattr(ctx, slot, None) == getattr(ctx2, slot, None))
             for slot in RuptureContext._slots_]
-        all(rp_equal)
-        if not debug and stddev_types2 == stddev_types \
+        if not debug and stddev_type2 == stddev_type \
            and result_type2 == result_type and all(rp_equal):
             for slot in attrs:
                 setattr(ctx, slot, numpy.hstack((getattr(ctx, slot),
@@ -179,11 +178,10 @@ def _parse_csv(datafile, debug, req_site_params):
                 expected_results[imt] = numpy.hstack((expected_results[imt],
                                                       expected_results2[imt]))
         else:
-            yield ctx, stddev_types, expected_results, result_type
-            (ctx, stddev_types, expected_results,
-             result_type) = (ctx2, stddev_types2,
-                             expected_results2, result_type2)
-    yield ctx, stddev_types, expected_results, result_type
+            yield ctx, stddev_type, expected_results, result_type
+            ctx, stddev_type, expected_results, result_type = (
+                ctx2, stddev_type2, expected_results2, result_type2)
+    yield ctx, stddev_type, expected_results, result_type
 
 
 def _parse_csv_line(headers, values, req_site_params):
@@ -199,10 +197,9 @@ def _parse_csv_line(headers, values, req_site_params):
         ctx
             An instance of
             :class:`openquake.hazardlib.gsim.base.RuptureContext`.
-        stddev_types
-            An empty list, if the ``result_type`` column says "MEAN"
-            for that row, otherwise it is a list with one item --
-            a requested standard deviation type.
+        stddev_type
+            None if the ``result_type`` column says "MEAN"
+            for that row, otherwise the requested standard deviation type.
         expected_results
             A dictionary mapping IMT-objects to one-element arrays of expected
             result values. Those results represent either standard deviation
@@ -213,21 +210,18 @@ def _parse_csv_line(headers, values, req_site_params):
     """
     ctx = RuptureContext()
     expected_results = {}
-    stddev_types = result_type = damping = None
+    stddev_type = result_type = damping = None
 
     for param, value in zip(headers, values):
-
         if param == 'result_type':
             value = value.upper()
             if value.endswith('_STDDEV'):
                 # the row defines expected stddev results
                 result_type = 'STDDEV'
-                stddev_types = [getattr(const.StdDev,
-                                        value[:-len('_STDDEV')])]
+                stddev_type = getattr(const.StdDev, value[:-len('_STDDEV')])
             else:
                 # the row defines expected exponents of mean values
                 assert value == 'MEAN'
-                stddev_types = []
                 result_type = 'MEAN'
         elif param == 'damping':
             damping = float(value)
@@ -263,7 +257,6 @@ def _parse_csv_line(headers, values, req_site_params):
         else:
             # value is the expected result (of result_type type)
             value = float(value)
-
             if param == 'arias':  # ugly legacy corner case
                 param = 'ia'
             if param == 'avgsa':
@@ -277,7 +270,7 @@ def _parse_csv_line(headers, values, req_site_params):
             expected_results[imt] = numpy.array([value])
 
     assert result_type is not None
-    return ctx, stddev_types, expected_results, result_type
+    return ctx, stddev_type, expected_results, result_type
 
 
 if __name__ == '__main__':
