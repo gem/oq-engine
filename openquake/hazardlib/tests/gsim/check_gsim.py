@@ -25,14 +25,13 @@ import csv
 import math
 import sys
 import time
-import copy
 
 import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
-                                          DistancesContext)
+                                          DistancesContext, ContextMaker)
 from openquake.hazardlib.imt import registry
 from openquake.hazardlib.imt import from_string
 
@@ -45,12 +44,12 @@ def set_read_only(*ctxs):
                 arr.flags.writeable = False
 
 
-def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
+def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
     """
     Test GSIM against the data file and return test result.
 
-    :param gsim_cls:
-        A subclass of :class:`~openquake.hazardlib.gsim.base.GMPE` to test.
+    :param gsim:
+        An instance of :class:`~openquake.hazardlib.gsim.base.GMPE` to test.
     :param datafile:
         A file object containing test data in csv format.
     :param max_discrep_percentage:
@@ -66,11 +65,7 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
         A tuple of two elements: a number of errors and a string representing
         statistics about the test run.
     """
-
-    if isinstance(gsim_cls, GroundShakingIntensityModel):
-        gsim = copy.deepcopy(gsim_cls)
-    else:
-        gsim = gsim_cls()
+    cmaker = ContextMaker('*', [gsim])
     errors = 0
     linenum = 1
     discrepancies = []
@@ -359,9 +354,8 @@ if __name__ == '__main__':
                            "code to determine if test succeeded.")
 
     args = parser.parse_args()
-
     errors, stats, _, _, _, = check_gsim(
-        gsim_cls=args.gsim, datafile=args.datafile,
+        gsim=args.gsim(), datafile=args.datafile,
         max_discrep_percentage=args.max_discrep_percentage,
         debug=args.debug)
     if not args.quiet:
