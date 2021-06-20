@@ -25,13 +25,12 @@ import csv
 import math
 import sys
 import time
-
 import numpy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
-from openquake.hazardlib.contexts import (SitesContext, RuptureContext,
-                                          DistancesContext, ContextMaker)
+from openquake.hazardlib.contexts import (
+    RuptureContext, DistancesContext, ContextMaker)
 from openquake.hazardlib.imt import registry
 from openquake.hazardlib.imt import from_string
 
