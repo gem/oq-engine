@@ -168,7 +168,7 @@ def get_mean_stds(orig_ctxs, cmaker, stdtypes=[const.StdDev.TOTAL]):
     N = sum(len(ctx.sids) for ctx in orig_ctxs)
     M = len(cmaker.imts)
     G = len(cmaker.gsims)
-    arr = numpy.zeros((2, N, M, G))
+    arr = numpy.zeros((1 + len(stdtypes), N, M, G))
     for g, gsim in enumerate(cmaker.gsims):
         gcls = gsim.__class__
         calc_mean = getattr(gcls, 'calc_mean', None)
@@ -193,8 +193,8 @@ def get_mean_stds(orig_ctxs, cmaker, stdtypes=[const.StdDev.TOTAL]):
                     mean, stds = gsim.get_mean_and_stddevs(
                         ctx, ctx, ctx, imt, stdtypes)
                     arr[0, start:stop, m, g] = mean
-                    for s, std in enumerate(stds, 1):
-                        arr[s, start:stop, m, g] = std
+                    for s, stdtype in enumerate(stdtypes):
+                        arr[1 + s, start:stop, m, g] = stds[s]
                 start = stop
     return arr
 

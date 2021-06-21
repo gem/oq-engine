@@ -79,12 +79,12 @@ def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
         ms = get_mean_stds([ctx], cmaker, [stddev_type] if stddev_type else [])
         for m, imt in enumerate(expected_results):
             expected_result = expected_results[imt]
-            mean, stddev = ms[0, :, m, 0], ms[1, :, m, 0]
+            mean = ms[0, :, m, 0]
             if result_type == 'MEAN':
                 # for IPEs the values, not the logarithms are returned
                 result = mean if str(imt) == 'MMI' else numpy.exp(mean)
             else:
-                result = stddev
+                result = ms[1, :, m, 0]
 
             discrep_percent = numpy.abs(result / expected_result * 100 - 100)
             discrepancies.extend(discrep_percent)
