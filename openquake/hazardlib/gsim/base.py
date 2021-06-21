@@ -679,7 +679,7 @@ class CoeffsTable(object):
     >>> ct[imt.PGV()]
     Traceback (most recent call last):
         ...
-    AttributeError: 'PGV' object has no attribute 'damping'
+    KeyError: PGV
     >>> ct[imt.SA(1.0, 4)]
     Traceback (most recent call last):
         ...
