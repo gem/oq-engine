@@ -261,11 +261,8 @@ def _parse_csv_line(headers, values, req_site_params):
                 param = 'ia'
             if param == 'avgsa':
                 imt = from_string('AvgSA')
-            else:
-                try:    # The title of the column should be IMT(args)
-                    imt = from_string(param.upper())
-                except KeyError:  # Then it is just a period for SA
-                    imt = registry['SA'](float(param), damping)
+            else:  # IMT or period column
+                imt = from_string(param.upper(), damping)
 
             expected_results[imt] = numpy.array([value])
 
