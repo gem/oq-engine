@@ -264,7 +264,8 @@ class GmfGetter(object):
         md = (filters.MagDepDistance(oqparam.maximum_distance)
               if isinstance(oqparam.maximum_distance, dict)
               else oqparam.maximum_distance)
-        param = {'imtls': oqparam.imtls, 'maximum_distance': md}
+        param = {'imtls': oqparam.imtls, 'maximum_distance': md,
+                 'truncation_level': oqparam.truncation_level}
         self.cmaker = ContextMaker(
             rupgetter.trt, rupgetter.rlzs_by_gsim, param)
         self.correl_model = oqparam.correl_model
@@ -285,8 +286,7 @@ class GmfGetter(object):
                 sitecol = self.sitecol.filtered(sids)
                 try:
                     computer = gmf.GmfComputer(
-                        ebr, sitecol, self.cmaker,
-                        self.oqparam.truncation_level, self.correl_model,
+                        ebr, sitecol, self.cmaker, self.correl_model,
                         self.amplifier, self.sec_perils)
                 except FarAwayRupture:
                     continue

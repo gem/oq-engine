@@ -158,12 +158,12 @@ def get_pmap(ctxs, cmaker, probmap=None):
         return ~pmap if rup_indep else pmap
 
 
-def get_mean_stds(orig_ctxs, cmaker, stdtypes=(const.StdDev.TOTAL,)):
+def get_mean_stds(orig_ctxs, cmaker, stdtypes):
     """
     :param orig_ctxs: a list of contexts
     :param cmaker: the ContextMaker instance used to generate the contexts
-    :param stdtypes: tuple of standard deviation types (default (TOTAL,))
-    :returns: an array of shape (2, N, M, G) with mean and total stddev
+    :param stdtypes: tuple of standard deviation types
+    :returns: an array of shape (O, N, M, G) with mean and total stddev
     """
     N = sum(len(ctx.sids) for ctx in orig_ctxs)
     M = len(cmaker.imts)
@@ -201,7 +201,7 @@ def gen_poes(ctxs, cmaker):
     N = nsites.sum()
     poes = numpy.zeros((N, cmaker.loglevels.size, len(cmaker.gsims)))
     with cmaker.gmf_mon:
-        mean_stdt = get_mean_stds(ctxs, cmaker)
+        mean_stdt = get_mean_stds(ctxs, cmaker, (const.StdDev.TOTAL,))
     with cmaker.poe_mon:
         for g, gsim in enumerate(cmaker.gsims):
             # builds poes of shape (N, L, G)
@@ -561,7 +561,8 @@ class ContextMaker(object):
             ctx.mag = mag
             ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             try:
-                mean = get_mean_stds([ctx], self)[0]  # shape NMG
+                mean = get_mean_stds([ctx], self, (const.StdDev.TOTAL,))[0]
+                # shape NMG
             except ValueError:  # magnitude outside of supported range
                 continue
             else:

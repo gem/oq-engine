@@ -99,8 +99,7 @@ class GmfComputer(object):
     # a matrix of size (I, N, E) is returned, where I is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
-    def __init__(self, rupture, sitecol, cmaker,
-                 truncation_level=None, correlation_model=None,
+    def __init__(self, rupture, sitecol, cmaker, correlation_model=None,
                  amplifier=None, sec_perils=()):
         if len(sitecol) == 0:
             raise ValueError('No sites')
@@ -110,7 +109,7 @@ class GmfComputer(object):
             raise ValueError('No GSIMs')
         self.imts = [from_string(imt) for imt in cmaker.imtls]
         self.gsims = sorted(cmaker.gsims)
-        self.truncation_level = truncation_level
+        self.truncation_level = cmaker.trunclevel
         self.correlation_model = correlation_model
         self.amplifier = amplifier
         self.sec_perils = sec_perils
@@ -129,14 +128,14 @@ class GmfComputer(object):
         self.sids = sites.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
-        if truncation_level is None:
+        if self.truncation_level is None:
             self.distribution = scipy.stats.norm()
-        elif truncation_level == 0:
+        elif self.truncation_level == 0:
             self.distribution = None
         else:
-            assert truncation_level > 0, truncation_level
+            assert self.truncation_level > 0, self.truncation_level
             self.distribution = scipy.stats.truncnorm(
-                - truncation_level, truncation_level)
+                - self.truncation_level, self.truncation_level)
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
@@ -228,7 +227,7 @@ class GmfComputer(object):
         """
         ctx = self.ctx.roundup(gsim.minimum_distance)
         num_sids = len(self.sids)
-        if self.distribution is None:
+        if self.truncation_level == 0:
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
@@ -331,9 +330,9 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         sites and second one is for realizations.
     """
     cmaker = ContextMaker(rupture.tectonic_region_type, [gsim],
-                          dict(imtls={str(imt): [1] for imt in imts}))
+                          dict(truncation_level=truncation_level,
+                               imtls={str(imt): [1] for imt in imts}))
     rupture.rup_id = seed
-    gc = GmfComputer(rupture, sites, cmaker, truncation_level,
-                     correlation_model)
+    gc = GmfComputer(rupture, sites, cmaker, correlation_model)
     res, _sig, _eps = gc.compute(gsim, realizations)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}
