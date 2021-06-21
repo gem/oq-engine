@@ -27,7 +27,6 @@ import scipy.stats
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.gsim.multi import MultiGMPE
 from openquake.hazardlib.imt import from_string
 
 U32 = numpy.uint32
@@ -203,17 +202,13 @@ class GmfComputer(object):
         eps = numpy.zeros((len(self.imts), num_events), F32)
         numpy.random.seed(self.seed)
         for imti, imt in enumerate(self.imts):
-            if isinstance(gsim, MultiGMPE):
-                gs = gsim[str(imt)]  # MultiGMPE
-            else:
-                gs = gsim  # regular GMPE
             try:
                 result[imti], sig[imti], eps[imti] = self._compute(
-                     gs, num_events, imt)
+                     gsim, num_events, imt)
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
-                    (gs, imt, self.source_id.decode('utf8'),
+                    (gsim, imt, self.source_id.decode('utf8'),
                      exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
@@ -230,6 +225,7 @@ class GmfComputer(object):
                    epsilons(num_events))
         """
         dctx = self.dctx.roundup(gsim.minimum_distance)
+        num_sids = len(self.sids)
         if self.distribution is None:
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
@@ -242,7 +238,6 @@ class GmfComputer(object):
             return (gmf,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
-        num_sids = len(self.sids)
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
