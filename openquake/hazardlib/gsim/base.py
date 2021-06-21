@@ -820,7 +820,6 @@ class CoeffsTable(object):
                     max_below = unscaled_imt
         if max_below is None or min_above is None:
             raise KeyError(imt)
-
         if self.logratio:  # regular case
             # ratio tends to 1 when target period tends to a minimum
             # known period above and to 0 if target period is close

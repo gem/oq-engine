@@ -35,7 +35,7 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
 
     def test_mean_rock(self):
         self.check('SADIGH97/SADIGH1997_ROCK_MEAN.csv',
-                    max_discrep_percentage=0.4)
+                   max_discrep_percentage=0.4)
 
     def test_total_stddev_rock(self):
         self.check('SADIGH97/SADIGH1997_ROCK_STD_TOTAL.csv',
@@ -43,7 +43,7 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
 
     def test_mean_soil(self):
         self.check('SADIGH97/SADIGH1997_SOIL_MEAN.csv',
-                    max_discrep_percentage=0.5)
+                   max_discrep_percentage=0.5)
 
     def test_total_stddev_soil(self):
         self.check('SADIGH97/SADIGH1997_SOIL_STD_TOTAL.csv',
@@ -56,7 +56,7 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
         rctx = RuptureContext()
         dctx = DistancesContext()
 
-        rctx.rake =  0.0
+        rctx.rake = 0.0
         dctx.rrup = numpy.array([0., 1.])
         sctx.vs30 = numpy.array([800., 800.])
 
