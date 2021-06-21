@@ -19,8 +19,6 @@
 Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
-
-import copy
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib import const
@@ -80,7 +78,7 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        working_std_types = copy.copy(stddev_types)
+        working_std_types = list(stddev_types)
 
         if ('set_between_epsilon' in self.params or
                 'set_total_std_as_tau_plus_delta' in self.params):
