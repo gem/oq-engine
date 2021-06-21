@@ -122,10 +122,10 @@ class GmfComputer(object):
         else:  # in the hazardlib tests
             self.source_id = '?'
         self.seed = rupture.rup_id
-        self.rctx, sites, dctx = cmaker.make_contexts(sitecol, rupture)
-        vars(self.rctx).update(vars(dctx))
+        self.ctx, sites, dctx = cmaker.make_contexts(sitecol, rupture)
+        vars(self.ctx).update(vars(dctx))
         for par in sites.array.dtype.names:
-            setattr(self.rctx, par, sites[par])
+            setattr(self.ctx, par, sites[par])
         self.sids = sites.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
@@ -172,7 +172,7 @@ class GmfComputer(object):
                         sig_eps.append(tup)
                     items = []
                     for sp in self.sec_perils:
-                        o = sp.compute(mag, zip(self.imts, gmfa.T), self.rctx)
+                        o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
                         for outkey, outarr in zip(sp.outputs, o):
                             items.append((outkey, outarr))
                     for i, gmv in enumerate(gmfa):
@@ -215,7 +215,7 @@ class GmfComputer(object):
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
-                self.rctx.ampcode, result, self.imts, self.seed)
+                self.ctx.ampcode, result, self.imts, self.seed)
         return result, sig, eps
 
     def _compute(self, gsim, num_events, imt):
@@ -226,21 +226,20 @@ class GmfComputer(object):
         :returns: (gmf(num_sites, num_events), stddev_inter(num_events),
                    epsilons(num_events))
         """
-        ctx = self.rctx.roundup(gsim.minimum_distance)
+        ctx = self.ctx.roundup(gsim.minimum_distance)
         num_sids = len(self.sids)
         if self.distribution is None:
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
-            mean, _stddevs = gsim.get_mean_and_stddevs(
-                self.rctx, ctx, ctx, imt, stddev_types=[])
+            mean, _stddevs = gsim.get_mean_and_stddevs(ctx, ctx, ctx, imt, [])
             gmf = to_imt_unit_values(mean, imt)
             gmf.shape += (1, )
             gmf = gmf.repeat(num_events, axis=1)
             return (gmf,
                     numpy.zeros(num_events, F32),
                     numpy.zeros(num_events, F32))
-        if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
+        elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
             # of interest.
@@ -262,8 +261,7 @@ class GmfComputer(object):
             epsilons.fill(numpy.nan)
         else:
             mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
-                ctx, ctx, ctx, imt,
-                [StdDev.INTER_EVENT, StdDev.INTRA_EVENT])
+                ctx, ctx, ctx, imt, [StdDev.INTER_EVENT, StdDev.INTRA_EVENT])
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
