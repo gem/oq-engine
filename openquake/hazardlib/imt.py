@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.imt` defines different intensity measure
 types.
 """
+import re
 import ast
 import operator
 import functools
@@ -56,13 +57,15 @@ def imt2tup(string):
     return (name,) + tuple(float(x) for x in ast.literal_eval(rest[:-1] + ','))
 
 
-def from_string(imt):
+def from_string(imt, damping=5.0):
     """
     Convert an IMT string into an hazardlib object.
 
     :param str imt:
         Intensity Measure Type.
     """
+    if re.match(r'[ \d\.]+', imt):
+        return SA(float(imt), damping)
     tup = imt2tup(imt)
     return registry[tup[0]](*tup[1:])
 

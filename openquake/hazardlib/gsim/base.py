@@ -679,7 +679,7 @@ class CoeffsTable(object):
     >>> ct[imt.PGV()]
     Traceback (most recent call last):
         ...
-    AttributeError: 'PGV' object has no attribute 'damping'
+    KeyError: PGV
     >>> ct[imt.SA(1.0, 4)]
     Traceback (most recent call last):
         ...
@@ -810,9 +810,9 @@ class CoeffsTable(object):
 
         max_below = min_above = None
         for unscaled_imt in list(self.sa_coeffs):
-            if unscaled_imt.damping != imt.damping:
-                continue
-            if unscaled_imt.period > imt.period:
+            if unscaled_imt.damping != getattr(imt, 'damping', None):
+                pass
+            elif unscaled_imt.period > imt.period:
                 if min_above is None or unscaled_imt.period < min_above.period:
                     min_above = unscaled_imt
             elif unscaled_imt.period < imt.period:
