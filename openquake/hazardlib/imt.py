@@ -137,6 +137,7 @@ class PGA(IMT):
     Peak ground acceleration during an earthquake measured in units
     of ``g``, times of gravitational acceleration.
     """
+    damping = 5.0
 
 
 class PGV(IMT):
