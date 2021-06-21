@@ -30,8 +30,8 @@ import numpy
 
 class SadighEtAl1997TestCase(BaseGSIMTestCase):
     GSIM_CLASS = SadighEtAl1997
-
     # test data was generated using opensha implementation of GMPE.
+    # NB: the deep_soil methods are untested!
 
     def test_mean_rock(self):
         self.check('SADIGH97/SADIGH1997_ROCK_MEAN.csv',
@@ -62,21 +62,17 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
 
         rctx.mag = 9.0
         mean_rock_9, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL]
-        )
+            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         rctx.mag = 8.5
         mean_rock_8pt5, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL]
-        )
+            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_allclose(mean_rock_9, mean_rock_8pt5)
 
         sctx.vs30 = numpy.array([300., 300.])
         rctx.mag = 9.0
         mean_soil_9, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL]
-        )
+            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         rctx.mag = 8.5
         mean_soil_8pt5, _ = gmpe.get_mean_and_stddevs(
-            sctx, rctx, dctx, PGA(), [StdDev.TOTAL]
-        )
+            sctx, rctx, dctx, PGA(), [StdDev.TOTAL])
         numpy.testing.assert_allclose(mean_soil_9, mean_soil_8pt5)
