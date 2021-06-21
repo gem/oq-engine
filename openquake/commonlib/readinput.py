@@ -869,18 +869,21 @@ def get_crmodel(oqparam):
     consdict = {}
     if 'consequence' in oqparam.inputs:
         # build consdict of the form consequence_by_tagname -> tag -> array
-        for by, fname in oqparam.inputs['consequence'].items():
-            dtypedict = {
-                by: str, 'consequence': str, 'loss_type': str, None: float}
-            dic = group_array(
-                hdf5.read_csv(fname, dtypedict).array, 'consequence')
-            for consequence, group in dic.items():
-                if consequence not in scientific.KNOWN_CONSEQUENCES:
-                    raise InvalidFile('Unknown consequence %s in %s' %
-                                      (consequence, fname))
-                bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
-                         for tag, grp in group_array(group, by).items()}
-                consdict['%s_by_%s' % (consequence, by)] = bytag
+        for by, fnames in oqparam.inputs['consequence'].items():
+            if isinstance(fnames, str):  # single file
+                fnames = [fnames]
+            for fname in fnames:
+                dtypedict = {
+                    by: str, 'consequence': str, 'loss_type': str, None: float}
+                dic = group_array(
+                    hdf5.read_csv(fname, dtypedict).array, 'consequence')
+                for consequence, group in dic.items():
+                    if consequence not in scientific.KNOWN_CONSEQUENCES:
+                        raise InvalidFile('Unknown consequence %s in %s' %
+                                          (consequence, fname))
+                    bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
+                             for tag, grp in group_array(group, by).items()}
+                    consdict['%s_by_%s' % (consequence, by)] = bytag
     crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
     return crm
 
