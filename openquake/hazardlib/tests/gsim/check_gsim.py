@@ -30,15 +30,18 @@ import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.contexts import (
-    RuptureContext, DistancesContext, ContextMaker)
+    RuptureContext, DistancesContext, ContextMaker, get_mean_stds)
 from openquake.hazardlib.imt import from_string
 
 
 def set_read_only(ctx):
+    n = 0
     for slot in vars(ctx):
         arr = getattr(ctx, slot)
         if isinstance(arr, numpy.ndarray):
             arr.flags.writeable = False
+            n = len(arr)
+    ctx.sids = numpy.arange(n)
 
 
 def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
@@ -70,17 +73,18 @@ def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
             datafile, debug, gsim.REQUIRES_SITES_PARAMETERS):
         linenum += 1
         ctx, stddev_type, expected_results, result_type = testcase
+        set_read_only(ctx)
         imtls = {str(imt): [] for imt in expected_results}
         cmaker = ContextMaker('*', [gsim], dict(imtls=imtls))
-        set_read_only(ctx)
-        for imt, expected_result in expected_results.items():
-            mean, stddevs = gsim.get_mean_and_stddevs(
-                ctx, ctx, ctx, imt, [stddev_type] if stddev_type else [])
+        ms = get_mean_stds([ctx], cmaker, [stddev_type] if stddev_type else [])
+        for m, imt in enumerate(expected_results):
+            expected_result = expected_results[imt]
+            mean, stddev = ms[0, :, m, 0], ms[1, :, m, 0]
             if result_type == 'MEAN':
                 # for IPEs the values, not the logarithms are returned
                 result = mean if str(imt) == 'MMI' else numpy.exp(mean)
             else:
-                [result] = stddevs
+                result = stddev
 
             discrep_percent = numpy.abs(result / expected_result * 100 - 100)
             discrepancies.extend(discrep_percent)
