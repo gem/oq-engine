@@ -810,7 +810,7 @@ class CoeffsTable(object):
 
         max_below = min_above = None
         for unscaled_imt in list(self.sa_coeffs):
-            if unscaled_imt.damping != imt.damping:
+            if unscaled_imt.damping != getattr(imt, 'damping', None):
                 pass
             elif unscaled_imt.period > imt.period:
                 if min_above is None or unscaled_imt.period < min_above.period:
