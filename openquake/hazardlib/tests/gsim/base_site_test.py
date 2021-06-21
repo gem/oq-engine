@@ -20,6 +20,7 @@ import numpy
 import unittest
 
 from openquake.baselib.hdf5 import read_csv
+from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import _get_poes_site, _get_poes
 from openquake.baselib.general import gettemp, DictArray
@@ -63,7 +64,8 @@ class GetPoesSiteTestCase(unittest.TestCase):
         # Compute GM on rock
         cmaker = ContextMaker(
             'TRT', [gmmA], dict(imtls={str(im): [0] for im in imts}))
-        self.meastd = get_mean_stds([ctx], cmaker)[..., 0]  # shp(2, N=1, M=2)
+        self.meastd = get_mean_stds([ctx], cmaker, const.StdDev.TOTAL)[
+            ..., 0]  # shp(2, N=1, M=2)
 
     def test01(self):
 

@@ -29,6 +29,7 @@ import numpy
 import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, pprod
+from openquake.hazardlib import const
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
@@ -175,7 +176,8 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
 
 def set_mean_std(ctxs, cmaker):
     for u, ctx in enumerate(ctxs):
-        ms = get_mean_stds([ctx], cmaker)  # shape (2, N, M, G)
+        ms = get_mean_stds([ctx], cmaker, const.StdDev.TOTAL)
+        # shape (2, N, M, G)
         ctx.mean_std = ms.transpose(3, 0, 1, 2)
 
 
