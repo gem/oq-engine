@@ -65,20 +65,16 @@ class ExampleA2021(GMPE):
     """)
 
     @jittable
-    def calc_mean(out, ctx, coeffs):
+    def calc_mean_stds(out, ctx, stdtypes, coeffs):
         mag, rjb = ctx['mag'], ctx['rjb']
         for m, C in enumerate(coeffs):
-            out[:, m] = (C['c1'] + _compute_term1(C, mag) +
-                         _compute_term2(C, mag, rjb))
+            out[0, :, m] = (C['c1'] + _compute_term1(C, mag) +
+                            _compute_term2(C, mag, rjb))
             if C['period'] == 3.0:
-                out[:, m] /= 0.612
+                out[0, :, m] /= 0.612
             elif C['period'] == 4.0:
-                out[:, m] /= 0.559
+                out[0, :, m] /= 0.559
 
-    @jittable
-    def calc_stdt(out, ctx, coeffs):
-        mag, rjb = ctx['mag'], ctx['rjb']
-        for m, C in enumerate(coeffs):
             sigma_ale_m = np.interp(
                 mag, [5.0, 5.5, 8.0],
                 [C['m50'], C['m55'], C['m80']])
@@ -87,4 +83,5 @@ class ExampleA2021(GMPE):
             sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
             sigma_epi = (0.36 + 0.07 * (mag - 6) if C["period"] < 1
                          else 0.34 + 0.06 * (mag - 6))
-            out[:, m] = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)
+            for s in range(len(stdtypes)):
+                out[1 + s, :, m] = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)

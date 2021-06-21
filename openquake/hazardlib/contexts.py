@@ -158,11 +158,11 @@ def get_pmap(ctxs, cmaker, probmap=None):
         return ~pmap if rup_indep else pmap
 
 
-def get_mean_stds(orig_ctxs, cmaker, stdtypes=[const.StdDev.TOTAL]):
+def get_mean_stds(orig_ctxs, cmaker, stdtypes=(const.StdDev.TOTAL,)):
     """
     :param orig_ctxs: a list of contexts
     :param cmaker: the ContextMaker instance used to generate the contexts
-    :param stdtypes: standard deviation types (default [TOTAL])
+    :param stdtypes: tuple of standard deviation types (default (TOTAL,))
     :returns: an array of shape (2, N, M, G) with mean and total stddev
     """
     N = sum(len(ctx.sids) for ctx in orig_ctxs)
@@ -171,20 +171,13 @@ def get_mean_stds(orig_ctxs, cmaker, stdtypes=[const.StdDev.TOTAL]):
     arr = numpy.zeros((1 + len(stdtypes), N, M, G))
     for g, gsim in enumerate(cmaker.gsims):
         gcls = gsim.__class__
-        calc_mean = getattr(gcls, 'calc_mean', None)
+        calc_ms = getattr(gcls, 'calc_mean_stds', None)
         ctxs = [ctx.roundup(gsim.minimum_distance) for ctx in orig_ctxs]
-        if calc_mean:  # fast lane
+        if calc_ms:  # fast lane
             if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
                 ctxs = [cmaker.multi(ctxs)]
             for ctx, clist, slc in cmaker.gen_triples(g, ctxs):
-                calc_mean(arr[0, slc, :, g], ctx, *clist)
-                for s, stdtype in enumerate(stdtypes, 1):
-                    if stdtype == const.StdDev.TOTAL:
-                        gcls.calc_stdt(arr[s, slc, :, g], ctx, *clist)
-                    elif stdtype == const.StdDev.INTER_EVENT:
-                        gcls.calc_stde(arr[s, slc, :, g], ctx, *clist)
-                    elif stdtype == const.StdDev.INTRA_EVENT:
-                        gcls.calc_stda(arr[s, slc, :, g], ctx, *clist)
+                calc_ms(arr[:, slc, :, g], ctx, stdtypes, *clist)
         else:  # slow lane
             start = 0
             for ctx in ctxs:
@@ -299,7 +292,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.newapi = any(hasattr(gsim, 'calc_mean') for gsim in self.gsims)
+        self.newapi = any(hasattr(gs, 'calc_mean_stds') for gs in self.gsims)
         self.compile()
 
     def compile(self):
@@ -307,14 +300,14 @@ class ContextMaker(object):
         Compile the required jittable functions
         """
         M = len(self.imtls)
+        tot = (const.StdDev.TOTAL,)
         for g, gsim in enumerate(self.gsims):
-            if hasattr(gsim, 'calc_mean'):
+            if hasattr(gsim, 'calc_mean_stds'):
                 ctype = self.ctype[g]
                 clist = self.clist[g]
                 ctx = numpy.ones(1, ctype)
-                out = numpy.zeros((1, M))
-                gsim.__class__.calc_mean(out, ctx, *clist)
-                gsim.__class__.calc_stdt(out, ctx, *clist)
+                out = numpy.zeros((2, 1, M))
+                gsim.__class__.calc_mean_stds(out, ctx, tot, *clist)
 
     def gen_triples(self, gsim_idx, ctxs):
         """
