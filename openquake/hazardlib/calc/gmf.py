@@ -122,9 +122,11 @@ class GmfComputer(object):
         else:  # in the hazardlib tests
             self.source_id = '?'
         self.seed = rupture.rup_id
-        self.rctx, self.sctx, dctx = cmaker.make_contexts(sitecol, rupture)
+        self.rctx, sites, dctx = cmaker.make_contexts(sitecol, rupture)
         vars(self.rctx).update(vars(dctx))
-        self.sids = self.sctx.sids
+        for par in sites.array.dtype.names:
+            setattr(self.rctx, par, sites[par])
+        self.sids = sites.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
         if truncation_level is None:
@@ -170,7 +172,7 @@ class GmfComputer(object):
                         sig_eps.append(tup)
                     items = []
                     for sp in self.sec_perils:
-                        o = sp.compute(mag, zip(self.imts, gmfa.T), self.sctx)
+                        o = sp.compute(mag, zip(self.imts, gmfa.T), self.rctx)
                         for outkey, outarr in zip(sp.outputs, o):
                             items.append((outkey, outarr))
                     for i, gmv in enumerate(gmfa):
@@ -213,7 +215,7 @@ class GmfComputer(object):
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
-                self.sctx.ampcode, result, self.imts, self.seed)
+                self.rctx.ampcode, result, self.imts, self.seed)
         return result, sig, eps
 
     def _compute(self, gsim, num_events, imt):
@@ -231,7 +233,7 @@ class GmfComputer(object):
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
             mean, _stddevs = gsim.get_mean_and_stddevs(
-                self.sctx, ctx, ctx, imt, stddev_types=[])
+                self.rctx, ctx, ctx, imt, stddev_types=[])
             gmf = to_imt_unit_values(mean, imt)
             gmf.shape += (1, )
             gmf = gmf.repeat(num_events, axis=1)
@@ -248,7 +250,7 @@ class GmfComputer(object):
                     self.correlation_model, gsim)
 
             mean, [stddev_total] = gsim.get_mean_and_stddevs(
-                self.sctx, ctx, ctx, imt, [StdDev.TOTAL])
+                ctx, ctx, ctx, imt, [StdDev.TOTAL])
             stddev_total = stddev_total.reshape(stddev_total.shape + (1, ))
             mean = mean.reshape(mean.shape + (1, ))
 
@@ -260,7 +262,7 @@ class GmfComputer(object):
             epsilons.fill(numpy.nan)
         else:
             mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
-                self.sctx, ctx, ctx, imt,
+                ctx, ctx, ctx, imt,
                 [StdDev.INTER_EVENT, StdDev.INTRA_EVENT])
             stddev_intra = stddev_intra.reshape(stddev_intra.shape + (1, ))
             stddev_inter = stddev_inter.reshape(stddev_inter.shape + (1, ))
