@@ -92,6 +92,24 @@ class ProbabilityCurve(object):
     def __repr__(self):
         return '<ProbabilityCurve\n%s>' % self.array
 
+    def extract(self, inner_idx):
+        """
+        Extracts the component specified by the index `inner_idx`.
+        """
+        array = self.array[:, inner_idx].reshape(-1, 1)
+        return self.__class__(array)
+
+    def combine(self, other, rlz_groups):
+        """
+        Update a ProbabilityCurve with shape (L, R) with a pcurve with shape
+        (L, G), being G the number of realization groups, which are list
+        of integers in the range 0..R-1.
+        """
+        for g, rlz_group in enumerate(rlz_groups):
+            for r in rlz_group:
+                self.array[:, r] = (
+                    1. - (1. - self.array[:, r]) * (1. - other.array[:, g]))
+
     # used when exporting to HDF5
     def convert(self, imtls, idx=0):
         """
@@ -125,7 +143,7 @@ class ProbabilityMap(dict):
     L the total number of hazard levels and I the number of GSIMs.
     """
     @classmethod
-    def build(cls, shape_y, shape_z, sids, initvalue=0., dtype=F64):
+    def build(cls, shape_y, shape_z, sids=(), initvalue=0., dtype=F64):
         """
         :param shape_y: the total number of intensity measure levels
         :param shape_z: the number of inner levels
@@ -244,6 +262,15 @@ class ProbabilityMap(dict):
             array = curve.array[:, inner_idx].reshape(-1, 1)
             out[sid] = ProbabilityCurve(array)
         return out
+
+    def combine(self, pmap, rlz_groups):
+        """
+        Update a ProbabilityMap with shape (L, R) with a pmap with shape
+        (L, G), being G the number of realization groups, which are list
+        of integers in the range 0..R-1.
+        """
+        for sid in pmap:
+            self[sid].combine(pmap[sid], rlz_groups)
 
     def __ior__(self, other):
         if not other:

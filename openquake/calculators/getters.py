@@ -41,10 +41,11 @@ class NotFound(Exception):
     pass
 
 
-def build_stat_curve(poes, imtls, stat, weights):
+def build_stat_curve(pcurve, imtls, stat, weights):
     """
     Build statistics by taking into account IMT-dependent weights
     """
+    poes = pcurve.array.T  # shape R, L
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
     array = numpy.zeros((L, 1))
@@ -55,9 +56,9 @@ def build_stat_curve(poes, imtls, stat, weights):
             ws = [w[imt] for w in weights]
             if sum(ws) == 0:  # expect no data for this IMT
                 continue
-            array[slc] = stat(poes[:, slc], ws)
+            array[slc, 0] = stat(poes[:, slc], ws)
     else:
-        array = stat(poes, weights)
+        array[:, 0] = stat(poes, weights)
     return probability_map.ProbabilityCurve(array)
 
 
@@ -138,26 +139,23 @@ class PmapGetter(object):
     def get_hazard(self, gsim=None):
         """
         :param gsim: ignored
-        :returns: R probability curves for the given site
+        :returns: a probability curve of shape (L, R) for the given site
         """
-        return self.get_pcurves(self.sids[0])
+        return self.get_pcurve(self.sids[0])
 
-    def get_pcurves(self, sid):  # used in classical
+    def get_pcurve(self, sid):  # used in classical
         """
-        :returns: a list of R probability curves with shape L
+        :returns: a ProbabilityCurve of shape L, R
         """
         pmap = self.init()
-        pcurves = [probability_map.ProbabilityCurve(numpy.zeros((self.L, 1)))
-                   for _ in range(self.num_rlzs)]
+        pc0 = probability_map.ProbabilityCurve(
+            numpy.zeros((self.L, self.num_rlzs)))
         try:
             pc = pmap[sid]
         except KeyError:  # no hazard for sid
-            return pcurves
-        for g, rlzis in enumerate(self.rlzs_by_g):
-            c = probability_map.ProbabilityCurve(pc.array[:, [g]])
-            for rlzi in rlzis:
-                pcurves[rlzi] |= c
-        return pcurves
+            return pc0
+        pc0.combine(pc, self.rlzs_by_g)
+        return pc0
 
     def get_hcurves(self, pmap, rlzs_by_gsim):  # used in in disagg_by_src
         """
@@ -194,7 +192,7 @@ class PmapGetter(object):
         pmap = probability_map.ProbabilityMap.build(L, 1, self.sids)
         for sid in self.sids:
             pmap[sid] = build_stat_curve(
-                numpy.array([pc.array for pc in self.get_pcurves(sid)]),
+                self.get_pcurve(sid),
                 self.imtls, stats.mean_curve, self.weights)
         return pmap
 

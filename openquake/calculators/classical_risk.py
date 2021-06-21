@@ -49,7 +49,8 @@ def classical_risk(riskinputs, param, monitor):
         with mon:
             haz = ri.hazard_getter.get_hazard()
         for taxo, asset_df in ri.asset_df.groupby('taxonomy'):
-            for rlz, pcurve in enumerate(haz):
+            for rlz in range(R):
+                pcurve = haz.extract(rlz)
                 out = crmodel.get_output(taxo, asset_df, pcurve, rlz=rlz)
                 for li, loss_type in enumerate(crmodel.loss_types):
                     # loss_curves has shape (A, C)
