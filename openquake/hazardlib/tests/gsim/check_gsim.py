@@ -31,7 +31,6 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.contexts import (
     RuptureContext, DistancesContext, ContextMaker)
-from openquake.hazardlib.imt import registry
 from openquake.hazardlib.imt import from_string
 
 
@@ -63,7 +62,6 @@ def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
         A tuple of two elements: a number of errors and a string representing
         statistics about the test run.
     """
-    cmaker = ContextMaker('*', [gsim])
     errors = 0
     linenum = 1
     discrepancies = []
@@ -72,16 +70,15 @@ def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
             datafile, debug, gsim.REQUIRES_SITES_PARAMETERS):
         linenum += 1
         ctx, stddev_type, expected_results, result_type = testcase
+        imtls = {str(imt): [] for imt in expected_results}
+        cmaker = ContextMaker('*', [gsim], dict(imtls=imtls))
         set_read_only(ctx)
         for imt, expected_result in expected_results.items():
             mean, stddevs = gsim.get_mean_and_stddevs(
                 ctx, ctx, ctx, imt, [stddev_type] if stddev_type else [])
             if result_type == 'MEAN':
-                if str(imt) == 'MMI':
-                    # For IPEs it is the values, not the logarithms returned
-                    result = mean
-                else:
-                    result = numpy.exp(mean)
+                # for IPEs the values, not the logarithms are returned
+                result = mean if str(imt) == 'MMI' else numpy.exp(mean)
             else:
                 [result] = stddevs
 
