@@ -158,7 +158,7 @@ def get_pmap(ctxs, cmaker, probmap=None):
         return ~pmap if rup_indep else pmap
 
 
-def get_mean_stds(orig_ctxs, cmaker, stdtypes):
+def get_mean_stds(orig_ctxs, cmaker, *stdtypes):
     """
     :param orig_ctxs: a list of contexts
     :param cmaker: the ContextMaker instance used to generate the contexts
@@ -169,6 +169,8 @@ def get_mean_stds(orig_ctxs, cmaker, stdtypes):
     M = len(cmaker.imts)
     G = len(cmaker.gsims)
     arr = numpy.zeros((1 + len(stdtypes), N, M, G))
+    if cmaker.trunclevel == 0:
+        stdtypes = ()
     for g, gsim in enumerate(cmaker.gsims):
         gcls = gsim.__class__
         calc_ms = getattr(gcls, 'calc_mean_stds', None)
@@ -201,7 +203,7 @@ def gen_poes(ctxs, cmaker):
     N = nsites.sum()
     poes = numpy.zeros((N, cmaker.loglevels.size, len(cmaker.gsims)))
     with cmaker.gmf_mon:
-        mean_stdt = get_mean_stds(ctxs, cmaker, (const.StdDev.TOTAL,))
+        mean_stdt = get_mean_stds(ctxs, cmaker, const.StdDev.TOTAL)
     with cmaker.poe_mon:
         for g, gsim in enumerate(cmaker.gsims):
             # builds poes of shape (N, L, G)
@@ -561,7 +563,7 @@ class ContextMaker(object):
             ctx.mag = mag
             ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             try:
-                mean = get_mean_stds([ctx], self, (const.StdDev.TOTAL,))[0]
+                mean = get_mean_stds([ctx], self, const.StdDev.TOTAL)[0]
                 # shape NMG
             except ValueError:  # magnitude outside of supported range
                 continue
