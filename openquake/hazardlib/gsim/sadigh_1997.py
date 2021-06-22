@@ -25,6 +25,99 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
+#: IMT-independent coefficients for deep soil sites (table 4).
+COEFFS_SOIL_IMT_INDEPENDENT = {
+    'c1ss': -2.17,
+    'c1r': -1.92,
+    'c2': 1.0,
+    'c3': 1.7,
+    'c4lowmag': 2.1863,
+    'c5lowmag': 0.32,
+    'c4himag': 0.3825,
+    'c5himag': 0.5882
+}
+
+#: If site vs30 is more than 750 m/s -- treat the soil as rock.
+#: See page 180.
+ROCK_VS30 = 750
+
+#: Magnitude value to separate coefficients table because of near field
+#: saturation effect is 6.5. See page 184.
+NEAR_FIELD_SATURATION_MAG = 6.5
+
+
+def _get_mean_deep_soil(mag, rake, rrup, is_reverse, C):
+    """
+    Calculate and return the mean intensity for deep soil sites.
+
+    Implements an equation from table 4.
+    """
+    if mag <= NEAR_FIELD_SATURATION_MAG:
+        c4 = COEFFS_SOIL_IMT_INDEPENDENT['c4lowmag']
+        c5 = COEFFS_SOIL_IMT_INDEPENDENT['c5lowmag']
+    else:
+        c4 = COEFFS_SOIL_IMT_INDEPENDENT['c4himag']
+        c5 = COEFFS_SOIL_IMT_INDEPENDENT['c5himag']
+    c2 = COEFFS_SOIL_IMT_INDEPENDENT['c2']
+    c3 = COEFFS_SOIL_IMT_INDEPENDENT['c3']
+    if is_reverse:
+        c1 = COEFFS_SOIL_IMT_INDEPENDENT['c1r']
+        c6 = C['c6r']
+    else:
+        c1 = COEFFS_SOIL_IMT_INDEPENDENT['c1ss']
+        c6 = C['c6ss']
+    # clip mag if greater than 8.5. This is to avoid
+    # ValueError: negative number cannot be raised to a fractional power
+    mag = 8.5 if mag > 8.5 else mag
+    return (c1 + c2 * mag + c6 + C['c7'] * ((8.5 - mag) ** 2.5)
+            - c3 * numpy.log(rrup + c4 * numpy.exp(c5 * mag)))
+
+
+def _get_mean_rock(mag, _rake, rrup, is_reverse, C):
+    """
+    Calculate and return the mean intensity for rock sites.
+
+    Implements an equation from table 2.
+    """
+    # clip mag if greater than 8.5. This is to avoid
+    # ValueError: negative number cannot be raised to a fractional power
+    mag = 8.5 if mag > 8.5 else mag
+    mean = (
+        C['c1'] + C['c2'] * mag + C['c3'] * ((8.5 - mag) ** 2.5)
+        + C['c4'] * numpy.log(rrup + numpy.exp(C['c5'] + C['c6'] * mag))
+        + C['c7'] * numpy.log(rrup + 2)
+    )
+    if is_reverse:
+        # footnote in table 2 says that for reverse ruptures
+        # the mean amplitude value should be multiplied by 1.2
+        mean += 0.1823215567939546  # == log(1.2)
+    return mean
+
+
+def _get_stddev_rock(mag, C):
+    """
+    Calculate and return total standard deviation for rock sites.
+
+    Implements formulae from table 3.
+    """
+    if mag > C['maxmag']:
+        return C['maxsigma']
+    else:
+        return C['sigma0'] + C['magfactor'] * mag
+
+
+def _get_stddev_deep_soil(mag, C):
+    """
+    Calculate and return total standard deviation for deep soil sites.
+
+    Implements formulae from the last column of table 4.
+    """
+    # footnote from table 4 says that stderr for magnitudes over 7
+    # is equal to one of magnitude 7.
+    if mag > 7:
+        mag = 7
+    return C['sigma0'] + C['magfactor'] * mag
+
 
 class SadighEtAl1997(GMPE):
     """
@@ -60,23 +153,12 @@ class SadighEtAl1997(GMPE):
     #: Required distance measure is RRup (eq. 1).
     REQUIRES_DISTANCES = {'rrup'}
 
-    #: If site vs30 is more than 750 m/s -- treat the soil as rock.
-    #: See page 180.
-    ROCK_VS30 = 750
-
-    #: Magnitude value to separate coefficients table because of near field
-    #: saturation effect is 6.5. See page 184.
-    NEAR_FIELD_SATURATION_MAG = 6.5
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         # GMPE differentiates strike-slip, reverse and normal ruptures,
         # but combines normal and strike-slip into one category. See page 180.
         is_reverse = (45 <= rup.rake <= 135)
@@ -84,103 +166,33 @@ class SadighEtAl1997(GMPE):
         stddevs = [numpy.zeros_like(sites.vs30) for _ in stddev_types]
         means = numpy.zeros_like(sites.vs30)
 
-        [rocks_i] = (sites.vs30 > self.ROCK_VS30).nonzero()
+        [rocks_i] = (sites.vs30 > ROCK_VS30).nonzero()
         if len(rocks_i):
             rrup = dists.rrup.take(rocks_i)
-            mean_rock = self._get_mean_rock(rup.mag, rup.rake, rrup,
-                                            is_reverse, imt)
+            if rup.mag <= NEAR_FIELD_SATURATION_MAG:
+                C = self.COEFFS_ROCK_LOWMAG[imt]
+            else:
+                C = self.COEFFS_ROCK_HIMAG[imt]
+            mean_rock = _get_mean_rock(rup.mag, rup.rake, rrup,
+                                       is_reverse, C)
             means.put(rocks_i, mean_rock)
             for stddev_arr in stddevs:
-                stddev_rock = self._get_stddev_rock(rup.mag, imt)
+                stddev_rock = _get_stddev_rock(
+                    rup.mag, self.COEFFS_ROCK_STDDERR[imt])
                 stddev_arr.put(rocks_i, stddev_rock)
 
-        [soils_i] = (sites.vs30 <= self.ROCK_VS30).nonzero()
+        [soils_i] = (sites.vs30 <= ROCK_VS30).nonzero()
         if len(soils_i):
             rrup = dists.rrup.take(soils_i)
-            mean_soil = self._get_mean_deep_soil(rup.mag, rup.rake, rrup,
-                                                 is_reverse, imt)
+            mean_soil = _get_mean_deep_soil(
+                rup.mag, rup.rake, rrup, is_reverse, self.COEFFS_SOIL[imt])
             means.put(soils_i, mean_soil)
             for stddev_arr in stddevs:
-                stddev_soil = self._get_stddev_deep_soil(rup.mag, imt)
+                stddev_soil = _get_stddev_deep_soil(
+                    rup.mag, self.COEFFS_SOIL[imt])
                 stddev_arr.put(soils_i, stddev_soil)
 
         return means, stddevs
-
-    def _get_mean_deep_soil(self, mag, rake, rrup, is_reverse, imt):
-        """
-        Calculate and return the mean intensity for deep soil sites.
-
-        Implements an equation from table 4.
-        """
-        if mag <= self.NEAR_FIELD_SATURATION_MAG:
-            c4 = self.COEFFS_SOIL_IMT_INDEPENDENT['c4lowmag']
-            c5 = self.COEFFS_SOIL_IMT_INDEPENDENT['c5lowmag']
-        else:
-            c4 = self.COEFFS_SOIL_IMT_INDEPENDENT['c4himag']
-            c5 = self.COEFFS_SOIL_IMT_INDEPENDENT['c5himag']
-        c2 = self.COEFFS_SOIL_IMT_INDEPENDENT['c2']
-        c3 = self.COEFFS_SOIL_IMT_INDEPENDENT['c3']
-        C = self.COEFFS_SOIL[imt]
-        if is_reverse:
-            c1 = self.COEFFS_SOIL_IMT_INDEPENDENT['c1r']
-            c6 = C['c6r']
-        else:
-            c1 = self.COEFFS_SOIL_IMT_INDEPENDENT['c1ss']
-            c6 = C['c6ss']
-        # clip mag if greater than 8.5. This is to avoid
-        # ValueError: negative number cannot be raised to a fractional power
-        mag = 8.5 if mag > 8.5 else mag
-        return (c1 + c2 * mag + c6 + C['c7'] * ((8.5 - mag) ** 2.5)
-                - c3 * numpy.log(rrup + c4 * numpy.exp(c5 * mag)))
-
-    def _get_mean_rock(self, mag, _rake, rrup, is_reverse, imt):
-        """
-        Calculate and return the mean intensity for rock sites.
-
-        Implements an equation from table 2.
-        """
-        if mag <= self.NEAR_FIELD_SATURATION_MAG:
-            C = self.COEFFS_ROCK_LOWMAG[imt]
-        else:
-            C = self.COEFFS_ROCK_HIMAG[imt]
-        # clip mag if greater than 8.5. This is to avoid
-        # ValueError: negative number cannot be raised to a fractional power
-        mag = 8.5 if mag > 8.5 else mag
-        mean = (
-            C['c1'] + C['c2'] * mag + C['c3'] * ((8.5 - mag) ** 2.5)
-            + C['c4'] * numpy.log(rrup + numpy.exp(C['c5'] + C['c6'] * mag))
-            + C['c7'] * numpy.log(rrup + 2)
-        )
-        if is_reverse:
-            # footnote in table 2 says that for reverse ruptures
-            # the mean amplitude value should be multiplied by 1.2
-            mean += 0.1823215567939546  # == log(1.2)
-        return mean
-
-    def _get_stddev_rock(self, mag, imt):
-        """
-        Calculate and return total standard deviation for rock sites.
-
-        Implements formulae from table 3.
-        """
-        C = self.COEFFS_ROCK_STDDERR[imt]
-        if mag > C['maxmag']:
-            return C['maxsigma']
-        else:
-            return C['sigma0'] + C['magfactor'] * mag
-
-    def _get_stddev_deep_soil(self, mag, imt):
-        """
-        Calculate and return total standard deviation for deep soil sites.
-
-        Implements formulae from the last column of table 4.
-        """
-        # footnote from table 4 says that stderr for magnitudes over 7
-        # is equal to one of magnitude 7.
-        if mag > 7:
-            mag = 7
-        C = self.COEFFS_SOIL[imt]
-        return C['sigma0'] + C['magfactor'] * mag
 
     #: Coefficients tables for rock sites (table 2), for magnitude
     #: values of :attr:`NEAR_FIELD_SATURATION_MAG` and below. Damping
@@ -254,15 +266,3 @@ class SadighEtAl1997(GMPE):
     3.0   -0.2801  -0.4905  -0.139  1.71   -0.16      7
     4.0   -0.6274  -0.8907  -0.160  1.71   -0.16      7
     """)
-
-    #: IMT-independent coefficients for deep soil sites (table 4).
-    COEFFS_SOIL_IMT_INDEPENDENT = {
-        'c1ss': -2.17,
-        'c1r': -1.92,
-        'c2': 1.0,
-        'c3': 1.7,
-        'c4lowmag': 2.1863,
-        'c5lowmag': 0.32,
-        'c4himag': 0.3825,
-        'c5himag': 0.5882
-    }
