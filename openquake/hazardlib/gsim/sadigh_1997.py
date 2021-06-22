@@ -46,7 +46,7 @@ ROCK_VS30 = 750
 NEAR_FIELD_SATURATION_MAG = 6.5
 
 
-def _get_mean_deep_soil(mag, rake, rrup, is_reverse, C):
+def _get_mean_deep_soil(mag, rrup, is_reverse, C):
     """
     Calculate and return the mean intensity for deep soil sites.
 
@@ -73,7 +73,7 @@ def _get_mean_deep_soil(mag, rake, rrup, is_reverse, C):
             - c3 * numpy.log(rrup + c4 * numpy.exp(c5 * mag)))
 
 
-def _get_mean_rock(mag, _rake, rrup, is_reverse, C):
+def _get_mean_rock(mag, rrup, is_reverse, C):
     """
     Calculate and return the mean intensity for rock sites.
 
@@ -81,7 +81,7 @@ def _get_mean_rock(mag, _rake, rrup, is_reverse, C):
     """
     # clip mag if greater than 8.5. This is to avoid
     # ValueError: negative number cannot be raised to a fractional power
-    mag = 8.5 if mag > 8.5 else mag
+    mag = numpy.clip(mag, None, 8.5)
     mean = (
         C['c1'] + C['c2'] * mag + C['c3'] * ((8.5 - mag) ** 2.5)
         + C['c4'] * numpy.log(rrup + numpy.exp(C['c5'] + C['c6'] * mag))
@@ -100,10 +100,9 @@ def _get_stddev_rock(mag, C):
 
     Implements formulae from table 3.
     """
-    if mag > C['maxmag']:
-        return C['maxsigma']
-    else:
-        return C['sigma0'] + C['magfactor'] * mag
+    return numpy.where(mag > C['maxmag'],
+                       C['maxsigma'],
+                       C['sigma0'] + C['magfactor'] * mag)
 
 
 def _get_stddev_deep_soil(mag, C):
@@ -114,9 +113,7 @@ def _get_stddev_deep_soil(mag, C):
     """
     # footnote from table 4 says that stderr for magnitudes over 7
     # is equal to one of magnitude 7.
-    if mag > 7:
-        mag = 7
-    return C['sigma0'] + C['magfactor'] * mag
+    return C['sigma0'] + C['magfactor'] * numpy.clip(mag, None, 7)
 
 
 class SadighEtAl1997(GMPE):
@@ -173,8 +170,7 @@ class SadighEtAl1997(GMPE):
                 C = self.COEFFS_ROCK_LOWMAG[imt]
             else:
                 C = self.COEFFS_ROCK_HIMAG[imt]
-            mean_rock = _get_mean_rock(rup.mag, rup.rake, rrup,
-                                       is_reverse, C)
+            mean_rock = _get_mean_rock(rup.mag, rrup, is_reverse, C)
             means.put(rocks_i, mean_rock)
             for stddev_arr in stddevs:
                 stddev_rock = _get_stddev_rock(
@@ -185,7 +181,7 @@ class SadighEtAl1997(GMPE):
         if len(soils_i):
             rrup = dists.rrup.take(soils_i)
             mean_soil = _get_mean_deep_soil(
-                rup.mag, rup.rake, rrup, is_reverse, self.COEFFS_SOIL[imt])
+                rup.mag, rrup, is_reverse, self.COEFFS_SOIL[imt])
             means.put(soils_i, mean_soil)
             for stddev_arr in stddevs:
                 stddev_soil = _get_stddev_deep_soil(
