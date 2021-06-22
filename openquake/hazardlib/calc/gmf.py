@@ -157,8 +157,7 @@ class GmfComputer(object):
             # NB: the trick for performance is to keep the call to
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
-            array, sig, eps = self.compute(
-                mean_stds[:, :, :, g], num_events, gs)
+            array, sig, eps = self.compute(mean_stds[g], num_events, gs)
             M, N, E = array.shape
             for n in range(N):
                 for e in range(E):
@@ -196,8 +195,9 @@ class GmfComputer(object):
 
     def compute(self, mean_stds, num_events, gsim):
         """
-        :param mean_stds: array of shape ONM
+        :param mean_stds: array of shape O, N, M
         :param num_events: the number of seismic events
+        :param gsim: GSIM used to compute mean_stds
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
             two arrays with shape (num_imts, num_events): sig for stddev_inter
@@ -224,6 +224,7 @@ class GmfComputer(object):
 
     def _compute(self, mean_stds, num_events, imt, gsim):
         """
+        :param mean_stds: array of shape (O, N)
         :param num_events: the number of seismic events
         :param imt: an IMT instance
         :param gsim: a GSIM instance
@@ -231,7 +232,7 @@ class GmfComputer(object):
                    epsilons(num_events))
         """
         num_sids = len(self.sids)
-        num_outs = mean_stds.shape[-1]
+        num_outs = len(mean_stds)
         if num_outs == 1:
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
