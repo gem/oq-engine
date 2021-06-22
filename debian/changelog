@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Changed the `minimum_distance` from a parameter of the GMPE to a
+    parameter in the job.ini
   * Supported consequences split in multiple files
 
   [Claudia Mascandola]

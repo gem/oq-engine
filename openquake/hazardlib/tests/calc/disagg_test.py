@@ -93,7 +93,6 @@ class DisaggregateTestCase(unittest.TestCase):
         self.truncation_level = 1
         self.trt = 'Stable Continental Crust'
         gsim = Campbell2003()
-        gsim.minimum_distance = 10  # test minimum_distance
         self.gsims = {self.trt: gsim}
 
     def test(self):

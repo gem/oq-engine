@@ -1,9 +1,9 @@
-#,,,,,"generated_by='OpenQuake engine 3.12.0-gitb8d454c12d', start_date='2021-03-10T08:19:20', checksum=1301611540, risk_investigation_time=50.0, kind='agg_curves-quantile-0.5'"
+#,,,,,"generated_by='OpenQuake engine 3.12.0-git46607e9a50', start_date='2021-06-22T06:41:40', checksum=931855453, risk_investigation_time=50.0, kind='agg_curves-quantile-0.5'"
 return_period,loss_value,loss_type,id,loss_ratio,annual_frequency_of_exceedence
 10,4.31872E+00,business_interruption,a3,2.15936E-03,1.00000E-01
 10,1.02587E+02,contents,a3,2.05175E-02,1.00000E-01
 10,1.52001E+02,nonstructural,a3,1.01334E-02,1.00000E-01
-10,1.78222E-04,occupants,a3,4.45555E-05,1.00000E-01
+10,1.78222E-04,occupants,a3,4.45556E-05,1.00000E-01
 10,6.44736E+00,business_interruption,a2,3.22368E-03,1.00000E-01
 10,3.53745E+01,contents,a2,7.07491E-03,1.00000E-01
 10,6.08689E+01,nonstructural,a2,4.05793E-03,1.00000E-01
@@ -12,11 +12,10 @@ return_period,loss_value,loss_type,id,loss_ratio,annual_frequency_of_exceedence
 10,1.34017E+02,contents,a5,2.68034E-02,1.00000E-01
 10,2.00568E+02,nonstructural,a5,1.33712E-02,1.00000E-01
 10,4.83448E-04,occupants,a5,1.20862E-04,1.00000E-01
-10,3.27054E+01,business_interruption,a4,1.63527E-02,1.00000E-01
+10,3.04552E+01,business_interruption,a4,1.52276E-02,1.00000E-01
 10,1.66921E+02,contents,a4,3.33841E-02,1.00000E-01
-10,2.79916E+02,nonstructural,a4,1.86611E-02,1.00000E-01
-10,6.90134E-04,occupants,a4,1.72534E-04,1.00000E-01
-10,4.16281E+01,structural,a4,4.16281E-03,1.00000E-01
+10,2.73881E+02,nonstructural,a4,1.82587E-02,1.00000E-01
+10,6.01957E-04,occupants,a4,1.50489E-04,1.00000E-01
 10,8.78911E+00,business_interruption,a1,4.39455E-03,1.00000E-01
 10,4.78062E+01,contents,a1,9.56124E-03,1.00000E-01
 10,7.22458E+01,nonstructural,a1,4.81639E-03,1.00000E-01
@@ -29,8 +28,7 @@ return_period,loss_value,loss_type,id,loss_ratio,annual_frequency_of_exceedence
 10,3.48534E+01,contents,a7,6.97069E-03,1.00000E-01
 10,5.23388E+01,nonstructural,a7,3.48926E-03,1.00000E-01
 10,1.21912E-04,occupants,a7,3.04779E-05,1.00000E-01
-10,4.96767E+01,business_interruption,*total*,3.54834E-03,1.00000E-01
-10,4.70704E+02,contents,*total*,1.34487E-02,1.00000E-01
-10,2.93124E+03,nonstructural,*total*,2.79166E-02,1.00000E-01
-10,1.03573E-03,occupants,*total*,3.69903E-05,1.00000E-01
-10,4.53076E+01,structural,*total*,6.47252E-04,1.00000E-01
+10,1.89835E+02,business_interruption,*total*,1.35597E-02,1.00000E-01
+10,1.53596E+03,contents,*total*,4.38846E-02,1.00000E-01
+10,2.60497E+03,nonstructural,*total*,2.48093E-02,1.00000E-01
+10,3.74336E-03,occupants,*total*,1.33692E-04,1.00000E-01

@@ -265,6 +265,7 @@ class GmfGetter(object):
               if isinstance(oqparam.maximum_distance, dict)
               else oqparam.maximum_distance)
         param = {'imtls': oqparam.imtls, 'maximum_distance': md,
+                 'minimum_distance': oqparam.minimum_distance,
                  'truncation_level': oqparam.truncation_level}
         self.cmaker = ContextMaker(
             rupgetter.trt, rupgetter.rlzs_by_gsim, param)
