@@ -163,15 +163,21 @@ def get_mean_stds(orig_ctxs, cmaker, *stdtypes):
     :param orig_ctxs: a list of contexts
     :param cmaker: the ContextMaker instance used to generate the contexts
     :param stdtypes: tuple of standard deviation types
-    :returns: an array of shape (O, N, M, G) with mean and total stddev
+    :returns: a list of G arrays of shape (O, N, M) with mean and stddevs
     """
     N = sum(len(ctx.sids) for ctx in orig_ctxs)
     M = len(cmaker.imts)
-    G = len(cmaker.gsims)
-    arr = numpy.zeros((1 + len(stdtypes), N, M, G))
     if cmaker.trunclevel == 0:
         stdtypes = ()
+    out = []
     for g, gsim in enumerate(cmaker.gsims):
+        arr = numpy.zeros((1 + len(stdtypes), N, M))
+        if stdtypes == (const.StdDev.EVENT,):
+            if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {
+                    const.StdDev.TOTAL}:
+                stdtypes = const.StdDev.TOTAL,
+            else:
+                stdtypes = const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT
         gcls = gsim.__class__
         calc_ms = getattr(gcls, 'calc_mean_stds', None)
         ctxs = [ctx.roundup(gsim.minimum_distance) for ctx in orig_ctxs]
@@ -179,7 +185,7 @@ def get_mean_stds(orig_ctxs, cmaker, *stdtypes):
             if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
                 ctxs = [cmaker.multi(ctxs)]
             for ctx, clist, slc in cmaker.gen_triples(g, ctxs):
-                calc_ms(arr[:, slc, :, g], ctx, stdtypes, *clist)
+                calc_ms(arr[:, slc], ctx, stdtypes, *clist)
         else:  # slow lane
             start = 0
             for ctx in ctxs:
@@ -187,11 +193,12 @@ def get_mean_stds(orig_ctxs, cmaker, *stdtypes):
                 for m, imt in enumerate(cmaker.imts):
                     mean, stds = gsim.get_mean_and_stddevs(
                         ctx, ctx, ctx, imt, stdtypes)
-                    arr[0, start:stop, m, g] = mean
+                    arr[0, start:stop, m] = mean
                     for s, stdtype in enumerate(stdtypes):
-                        arr[1 + s, start:stop, m, g] = stds[s]
+                        arr[1 + s, start:stop, m] = stds[s]
                 start = stop
-    return arr
+        out.append(arr)
+    return out
 
 
 def gen_poes(ctxs, cmaker):
@@ -207,7 +214,7 @@ def gen_poes(ctxs, cmaker):
     with cmaker.poe_mon:
         for g, gsim in enumerate(cmaker.gsims):
             # builds poes of shape (N, L, G)
-            poes[:, :, g] = gsim.get_poes(mean_stdt[..., g], cmaker, ctxs)
+            poes[:, :, g] = gsim.get_poes(mean_stdt[g], cmaker, ctxs)
     s = 0
     for ctx, n in zip(ctxs, nsites):
         yield poes[s:s+n]
@@ -564,7 +571,7 @@ class ContextMaker(object):
             ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             try:
                 mean = get_mean_stds([ctx], self, const.StdDev.TOTAL)[0]
-                # shape NMG
+                # shape NM
             except ValueError:  # magnitude outside of supported range
                 continue
             else:

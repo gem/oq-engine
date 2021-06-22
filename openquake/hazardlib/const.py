@@ -96,3 +96,6 @@ class StdDev(Enum):
     #: the total ground shaking variability, and is the only one that
     #: is used for calculating a probability of intensity exceedance
     #: (see :func:`openquake.hazardlib.gsim.base.get_poes`).
+    EVENT = 'Event'
+    #: Used in event based calculations, correspond to TOTAL if the gsim
+    #: is defined for TOTAL, otherwise to the pair (INTER_EVENT, INTRA_EVENT)
