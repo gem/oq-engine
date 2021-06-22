@@ -157,7 +157,7 @@ class GmfComputer(object):
             # NB: the trick for performance is to keep the call to
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
-            array, sig, eps = self.compute(gs, mean_stds[g], num_events)
+            array, sig, eps = self.compute(gs, num_events, mean_stds[g])
             M, N, E = array.shape
             for n in range(N):
                 for e in range(E):
