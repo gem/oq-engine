@@ -105,11 +105,10 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.gsim_by_trt,
                                     truncation_level=None)
         crv = curves[0][0]
-        npt.assert_almost_equal([0.30000, 0.2646, 0.0625], crv, decimal=4)
+        npt.assert_almost_equal([0.30000, 0.2785, 0.0891], crv, decimal=4)
 
     def test_hazard_curve_A(self):
-        # Test back-compatibility
-        # Classical case i.e. independent sources in a list instance
+        # independent sources in a list
         curves = calc_hazard_curves([self.src2],
                                     self.sites,
                                     self.imtls,
@@ -117,11 +116,11 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     truncation_level=None,
                                     investigation_time=1)
         crv = list(curves[0][0])
-        npt.assert_almost_equal([0.30000, 0.2646, 0.0625],
+        npt.assert_almost_equal([0.30000, 0.2785, 0.0891],
                                 crv, decimal=4)
 
     def test_hazard_curve_B(self):
-        # Test simple calculation
+        # independent sources in a group
         group = SourceGroup(
             "Active Shallow Crust", [self.src2], 'test', 'indep', 'indep')
         groups = [group]
@@ -131,7 +130,7 @@ class HazardCurvesTestCase01(unittest.TestCase):
                                     self.gsim_by_trt,
                                     truncation_level=None,
                                     investigation_time=1)
-        npt.assert_almost_equal(numpy.array([0.30000, 0.2646, 0.0625]),
+        npt.assert_almost_equal(numpy.array([0.30000, 0.2785, 0.0891]),
                                 curves[0][0], decimal=4)
 
 
@@ -155,7 +154,6 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         group = SourceGroup(
             src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
         param = dict(imtls=self.imtls,
-                     minimum_distance=12,
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)
