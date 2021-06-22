@@ -12,6 +12,7 @@ jobs:
     name: Build image and run calc
     runs-on: ubuntu-latest
 
+
     steps:
   # This Checkout is necessary when using a context in docker/build-push-action
       - name: Checkout
@@ -25,3 +26,10 @@ jobs:
       - name: Run calcs on single docker
         run: |
           time docker run openquake/engine:nightly "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
+      - name: push image engine with tag nightly on docker hub
+        env:
+          DOCKER_USERNAME: ${{ secrets.docker_username }}
+          DOCKER_PASSWORD: ${{ secrets.docker_password }}
+        run: |
+          docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+          docker push openquake/engine:nightly
