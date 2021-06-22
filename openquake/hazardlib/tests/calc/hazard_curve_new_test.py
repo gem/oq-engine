@@ -193,7 +193,7 @@ class HazardCurvesTestCase02(HazardCurvesTestCase01):
                                     truncation_level=None,
                                     investigation_time=1)
         crv = curves[0][0]
-        npt.assert_almost_equal(numpy.array([0.58000, 0.53, 0.1347]),
+        npt.assert_almost_equal(numpy.array([0.58000, 0.5389, 0.1592]),
                                 crv, decimal=4)
 
 
