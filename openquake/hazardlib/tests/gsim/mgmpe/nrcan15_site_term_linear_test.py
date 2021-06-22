@@ -45,9 +45,6 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         expected = IMC.RotD50
         self.assertEqual(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT,
                          expected)
-        # Check the standard deviations
-        expected = set(const.StdDev)
-        self.assertEqual(mgmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES, expected)
 
         # Check the required distances
         expected = set(['rjb'])

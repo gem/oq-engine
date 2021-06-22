@@ -34,7 +34,8 @@ from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, block_splitter)
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import imt as imt_module, const
+from openquake.hazardlib import imt as imt_module
+from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
@@ -163,15 +164,22 @@ def get_mean_stds(orig_ctxs, cmaker, *stdtypes):
     :param orig_ctxs: a list of contexts
     :param cmaker: the ContextMaker instance used to generate the contexts
     :param stdtypes: tuple of standard deviation types
-    :returns: an array of shape (O, N, M, G) with mean and total stddev
+    :returns: a list of G arrays of shape (O, N, M) with mean and stddevs
     """
     N = sum(len(ctx.sids) for ctx in orig_ctxs)
     M = len(cmaker.imts)
-    G = len(cmaker.gsims)
-    arr = numpy.zeros((1 + len(stdtypes), N, M, G))
     if cmaker.trunclevel == 0:
         stdtypes = ()
+    out = []
     for g, gsim in enumerate(cmaker.gsims):
+        if stdtypes == (StdDev.EVENT,):
+            if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
+                stypes = StdDev.TOTAL,
+            else:
+                stypes = StdDev.INTER_EVENT, StdDev.INTRA_EVENT
+        else:
+            stypes = stdtypes
+        arr = numpy.zeros((1 + len(stypes), N, M))
         gcls = gsim.__class__
         calc_ms = getattr(gcls, 'calc_mean_stds', None)
         ctxs = [ctx.roundup(gsim.minimum_distance) for ctx in orig_ctxs]
@@ -179,19 +187,20 @@ def get_mean_stds(orig_ctxs, cmaker, *stdtypes):
             if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
                 ctxs = [cmaker.multi(ctxs)]
             for ctx, clist, slc in cmaker.gen_triples(g, ctxs):
-                calc_ms(arr[:, slc, :, g], ctx, stdtypes, *clist)
+                calc_ms(arr[:, slc], ctx, stypes, *clist)
         else:  # slow lane
             start = 0
             for ctx in ctxs:
                 stop = start + len(ctx.sids)
                 for m, imt in enumerate(cmaker.imts):
                     mean, stds = gsim.get_mean_and_stddevs(
-                        ctx, ctx, ctx, imt, stdtypes)
-                    arr[0, start:stop, m, g] = mean
-                    for s, stdtype in enumerate(stdtypes):
-                        arr[1 + s, start:stop, m, g] = stds[s]
+                        ctx, ctx, ctx, imt, stypes)
+                    arr[0, start:stop, m] = mean
+                    for s, stdtype in enumerate(stypes):
+                        arr[1 + s, start:stop, m] = stds[s]
                 start = stop
-    return arr
+        out.append(arr)
+    return out
 
 
 def gen_poes(ctxs, cmaker):
@@ -203,11 +212,11 @@ def gen_poes(ctxs, cmaker):
     N = nsites.sum()
     poes = numpy.zeros((N, cmaker.loglevels.size, len(cmaker.gsims)))
     with cmaker.gmf_mon:
-        mean_stdt = get_mean_stds(ctxs, cmaker, const.StdDev.TOTAL)
+        mean_stdt = get_mean_stds(ctxs, cmaker, StdDev.TOTAL)
     with cmaker.poe_mon:
         for g, gsim in enumerate(cmaker.gsims):
             # builds poes of shape (N, L, G)
-            poes[:, :, g] = gsim.get_poes(mean_stdt[..., g], cmaker, ctxs)
+            poes[:, :, g] = gsim.get_poes(mean_stdt[g], cmaker, ctxs)
     s = 0
     for ctx, n in zip(ctxs, nsites):
         yield poes[s:s+n]
@@ -302,7 +311,7 @@ class ContextMaker(object):
         Compile the required jittable functions
         """
         M = len(self.imtls)
-        tot = (const.StdDev.TOTAL,)
+        tot = (StdDev.TOTAL,)
         for g, gsim in enumerate(self.gsims):
             if hasattr(gsim, 'calc_mean_stds'):
                 ctype = self.ctype[g]
@@ -563,12 +572,13 @@ class ContextMaker(object):
             ctx.mag = mag
             ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             try:
-                mean = get_mean_stds([ctx], self, const.StdDev.TOTAL)[0]
-                # shape NMG
+                maxmean = max(ms[0].max() for ms in get_mean_stds(
+                    [ctx], self, StdDev.TOTAL))
+                # shape NM
             except ValueError:  # magnitude outside of supported range
                 continue
             else:
-                gmv[m, d] = numpy.exp(mean.max())
+                gmv[m, d] = numpy.exp(maxmean)
         return gmv
 
 
