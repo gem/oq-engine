@@ -171,10 +171,10 @@ def get_mean_stds(orig_ctxs, cmaker, *stdtypes):
     arr = numpy.zeros((1 + len(stdtypes), N, M, G))
     if cmaker.trunclevel == 0:
         stdtypes = ()
+    ctxs = [ctx.roundup(cmaker.minimum_distance) for ctx in orig_ctxs]
     for g, gsim in enumerate(cmaker.gsims):
         gcls = gsim.__class__
         calc_ms = getattr(gcls, 'calc_mean_stds', None)
-        ctxs = [ctx.roundup(gsim.minimum_distance) for ctx in orig_ctxs]
         if calc_ms:  # fast lane
             if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
                 ctxs = [cmaker.multi(ctxs)]
@@ -241,6 +241,7 @@ class ContextMaker(object):
         self.gsims = gsims
         self.maximum_distance = (
             param.get('maximum_distance') or MagDepDistance({}))
+        self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         self.trunclevel = param.get('truncation_level')
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
@@ -1189,6 +1190,7 @@ def read_cmakers(dstore, full_lt=None):
              'num_epsilon_bins': oq.num_epsilon_bins,
              'investigation_time': oq.investigation_time,
              'pointsource_distance': oq.pointsource_distance,
+             'minimum_distance': oq.minimum_distance,
              'max_sites_disagg': oq.max_sites_disagg,
              'imtls': oq.imtls,
              'reqv': oq.get_reqv(),

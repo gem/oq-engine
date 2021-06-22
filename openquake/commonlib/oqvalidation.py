@@ -390,6 +390,11 @@ minimum_asset_loss:
   Example: *minimum_asset_loss = {"structural": 1000}*.
   Default: empty dictionary
 
+minimum_distance:
+   If set, distances below the minimum are rounded up.
+   Example: *minimum_distance = 5*
+   Default: 0
+
 minimum_intensity:
   If set, ground motion values below the *minimum_intensity* are
   considered zeros.
@@ -776,6 +781,7 @@ class OqParam(valid.ParamSet):
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
+    minimum_distance = valid.Param(valid.positivefloat, 0)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)

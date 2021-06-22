@@ -149,6 +149,5 @@ class ValidationTestCase(unittest.TestCase):
         try:
             gsim = valid.gsim('[FakeGsim]\narg=0.1', '/fake/dir')
             self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')
-            self.assertEqual(gsim.minimum_distance, 0)
         finally:
             del registry['FakeGsim']

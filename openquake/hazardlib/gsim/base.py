@@ -317,7 +317,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     REQUIRES_DISTANCES = abc.abstractproperty()
 
     _toml = ''  # set by valid.gsim
-    minimum_distance = 0  # set by valid.gsim
     superseded_by = None
     non_verified = False
     experimental = False

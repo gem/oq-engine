@@ -95,7 +95,6 @@ class HazardCurvesTestCase01(unittest.TestCase):
         self.sites = s_filter
         self.imtls = DictArray({'PGA': [0.01, 0.1, 0.3]})
         gsim = SadighEtAl1997()
-        gsim.minimum_distance = 12  # test minimum_distance
         self.gsim_by_trt = {"Active Shallow Crust": gsim}
 
     def test_hazard_curve_X(self):
@@ -156,6 +155,7 @@ class HazardCurvePerGroupTest(HazardCurvesTestCase01):
         group = SourceGroup(
             src.tectonic_region_type, [src], 'test', 'mutex', 'mutex')
         param = dict(imtls=self.imtls,
+                     minimum_distance=12,
                      src_interdep=group.src_interdep,
                      rup_interdep=group.rup_interdep,
                      grp_probability=group.grp_probability)

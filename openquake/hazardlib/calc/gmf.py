@@ -107,9 +107,9 @@ class GmfComputer(object):
             raise ValueError('No IMTs')
         elif len(cmaker.gsims) == 0:
             raise ValueError('No GSIMs')
+        self.cmaker = cmaker
         self.imts = [from_string(imt) for imt in cmaker.imtls]
         self.gsims = sorted(cmaker.gsims)
-        self.truncation_level = cmaker.trunclevel
         self.correlation_model = correlation_model
         self.amplifier = amplifier
         self.sec_perils = sec_perils
@@ -128,14 +128,14 @@ class GmfComputer(object):
         self.sids = sites.sids
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.sids)
-        if self.truncation_level is None:
+        if cmaker.trunclevel is None:
             self.distribution = scipy.stats.norm()
-        elif self.truncation_level == 0:
+        elif cmaker.trunclevel == 0:
             self.distribution = None
         else:
-            assert self.truncation_level > 0, self.truncation_level
+            assert cmaker.trunclevel > 0, cmaker.trunclevel
             self.distribution = scipy.stats.truncnorm(
-                - self.truncation_level, self.truncation_level)
+                - cmaker.trunclevel, cmaker.trunclevel)
 
     def compute_all(self, min_iml, rlzs_by_gsim, sig_eps=None):
         """
@@ -225,9 +225,9 @@ class GmfComputer(object):
         :returns: (gmf(num_sites, num_events), stddev_inter(num_events),
                    epsilons(num_events))
         """
-        ctx = self.ctx.roundup(gsim.minimum_distance)
+        ctx = self.ctx.roundup(self.cmaker.minimum_distance)
         num_sids = len(self.sids)
-        if self.truncation_level == 0:
+        if self.cmaker.trunclevel == 0:
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
