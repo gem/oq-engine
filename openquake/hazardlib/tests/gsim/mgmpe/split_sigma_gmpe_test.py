@@ -51,10 +51,6 @@ class SplitSigmaGMPETest(unittest.TestCase):
         within_absolute = 0.3
         gmm = SplitSigmaGMPE(gmpe_name='Campbell2003',
                              within_absolute=within_absolute)
-        # Check the standard deviations
-        expected = set(const.StdDev)
-        self.assertTrue(gmm.DEFINED_FOR_STANDARD_DEVIATION_TYPES == expected,
-                        msg='The standard deviations assigned are wrong')
 
     def test_within_absolute(self):
         within_absolute = 0.3

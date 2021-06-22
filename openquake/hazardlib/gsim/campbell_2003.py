@@ -50,10 +50,7 @@ class Campbell2003(GMPE):
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see table 6, page 1022 (PGA is assumed
     #: to be equal to SA at 0.01 s)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of
     #: two horizontal components
@@ -62,9 +59,7 @@ class Campbell2003(GMPE):
 
     #: Supported standard deviation type is only total, see equation 35, page
     #: 1021
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: No site parameters are needed
     REQUIRES_SITES_PARAMETERS = set()
@@ -84,7 +79,7 @@ class Campbell2003(GMPE):
         for spec of input and result values.
         """
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
+                   for stddev_type in stddev_types), stddev_types
 
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.rrup)
