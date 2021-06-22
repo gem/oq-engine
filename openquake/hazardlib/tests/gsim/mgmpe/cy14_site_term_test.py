@@ -63,10 +63,6 @@ class CY14SiteTermTestCase(unittest.TestCase):
         expected = IMC.RotD50
         self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT ==
                         expected, msg='The IM component is wrong')
-        # Check the standard deviations
-        expected = set(StdDev)
-        self.assertTrue(mgmpe.DEFINED_FOR_STANDARD_DEVIATION_TYPES == expected,
-                        msg='The standard deviations assigned are wrong')
         # Check the required distances
         expected = set(['rrup', 'rjb', 'rx'])
         self.assertTrue(mgmpe.REQUIRES_DISTANCES == expected,
