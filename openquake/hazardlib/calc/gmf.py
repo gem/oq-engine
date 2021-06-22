@@ -96,7 +96,7 @@ class GmfComputer(object):
     # The GmfComputer is called from the OpenQuake Engine. In that case
     # the rupture is an higher level containing a
     # :class:`openquake.hazardlib.source.rupture.Rupture` instance as an
-    # attribute. Then the `.compute(gsim, num_events)` method is called and
+    # attribute. Then the `.compute(gsim, num_events, ms)` method is called and
     # a matrix of size (I, N, E) is returned, where I is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
@@ -157,7 +157,7 @@ class GmfComputer(object):
             # NB: the trick for performance is to keep the call to
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
-            array, sig, eps = self.compute(mean_stds[g], num_events, gs)
+            array, sig, eps = self.compute(gs, mean_stds[g], num_events)
             M, N, E = array.shape
             for n in range(N):
                 for e in range(E):
@@ -193,11 +193,11 @@ class GmfComputer(object):
                 n += len(eids)
         return data, time.time() - t0
 
-    def compute(self, mean_stds, num_events, gsim):
+    def compute(self, gsim, num_events, mean_stds):
         """
-        :param mean_stds: array of shape O, N, M
-        :param num_events: the number of seismic events
         :param gsim: GSIM used to compute mean_stds
+        :param num_events: the number of seismic events
+        :param mean_stds: array of shape O, N, M
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
             two arrays with shape (num_imts, num_events): sig for stddev_inter
@@ -338,5 +338,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                                imtls={str(imt): [1] for imt in imts}))
     rupture.rup_id = seed
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
-    res, _sig, _eps = gc.compute(gsim, realizations)
+    [mean_stds] = get_mean_stds([gc.ctx], cmaker, StdDev.EVENT)
+    res, _sig, _eps = gc.compute(gsim, realizations, mean_stds)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}
