@@ -1,6 +1,9 @@
+  [Michele Simionato]
+  * Supported consequences split in multiple files
+
   [Claudia Mascandola]
   * Added the Sgobba et al. (2020) GMPE
-  
+
   [Michele Simionato]
   * Improved the warning on non-contributing TRTs and made it visible
     for all calculators
