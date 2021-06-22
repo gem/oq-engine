@@ -30,8 +30,12 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 class LanzanoEtAl2020_ref(GMPE):
     """
     Implements the GMM proposed by Lanzano et al (2020).
+    "Methodology to identify the reference rock sites in regions of
+    medium-to-high seismicity: an application in Central Italy" by
+    Lanzano G, Felicetta C, Pacor F, Spallarossa D, and Traversa P.
+
     The site term for Reference Rock Sites is zero,
-    whereas for other sites (siteclass == 'O') the site term is provided.
+    whereas for other sites, the site term is provided.
     """
 
     #: Supported tectonic region type is 'active shallow crust'
@@ -308,8 +312,8 @@ class LanzanoEtAl2020_Cluster(LanzanoEtAl2020_ref):
 
     def _get_site_type_dummy_variables(self, sites):
         """
-        Get site type dummy variables,
-        The recording sites are classified into 9 different clusters
+        Get site type dummy variables.
+        The recording sites are classified into 9 different clusters.
         """
         cl2 = np.zeros(len(sites.siteclass))
         cl3 = np.zeros(len(sites.siteclass))
