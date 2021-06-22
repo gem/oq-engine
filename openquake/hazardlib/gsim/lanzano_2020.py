@@ -29,7 +29,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
 class LanzanoEtAl2020_ref(GMPE):
     """
-    Implements the GMM proposed by Lanzano et al (2020).
+    Implements the GMM proposed in Lanzano et al (2020):
     "Methodology to identify the reference rock sites in regions of
     medium-to-high seismicity: an application in Central Italy" by
     Lanzano G, Felicetta C, Pacor F, Spallarossa D, and Traversa P.
