@@ -149,7 +149,7 @@ class GmfComputer(object):
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         mean_stds = get_mean_stds([self.ctx], self.cmaker, StdDev.EVENT)
-        # shape (O, N, M, G)
+        # G arrays of shape (O, N, M)
         for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
             num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
             if num_events == 0:  # it may happen

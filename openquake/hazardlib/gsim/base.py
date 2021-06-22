@@ -90,15 +90,14 @@ def gsim_imt_dt(sorted_gsims, sorted_imts):
 # will become shorter in the N dimension (number of affected sites), or to
 # collapse the ruptures, then _get_poes will be called less times
 def _get_poes(mean_std, loglevels, truncation_level):
-    mean, stddev = mean_std  # shape (N, M) each
-    out = numpy.zeros((len(mean), loglevels.size))  # shape (N, L)
+    out = numpy.zeros((mean_std.shape[1], loglevels.size))  # shape (N, L)
     lvl = 0
     for m, imt in enumerate(loglevels):
         for iml in loglevels[imt]:
             if truncation_level == 0:  # just compare imls to mean
-                out[:, lvl] = iml <= mean[:, m]
+                out[:, lvl] = iml <= mean_std[0, :, m]
             else:
-                out[:, lvl] = (iml - mean[:, m]) / stddev[:, m]
+                out[:, lvl] = (iml - mean_std[0, :, m]) / mean_std[1, :, m]
             lvl += 1
     return _truncnorm_sf(truncation_level, out)
 
