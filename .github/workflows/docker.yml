@@ -2,16 +2,15 @@
 name: docker
 on:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 23 * * *"
   push: 
     branches:
       - docker_build
 
 jobs:
   docker:
-    name: Build image and run calc
+    name: Build image and push after successfull calculation
     runs-on: ubuntu-latest
-
 
     steps:
   # This Checkout is necessary when using a context in docker/build-push-action
