@@ -8,14 +8,11 @@ on:
         default: nightly
         required: true
       git-ref:
-        description: Git Ref (Optional)    
+        description: Git Ref 
         default: master
         required: true
   schedule:
     - cron: "0 23 * * *"
-  push: 
-    branches:
-      - docker_build
 
 jobs:
   docker:
