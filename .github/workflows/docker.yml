@@ -1,6 +1,12 @@
 ---
 name: docker
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Image Tag 
+        default: nightly
+        required: true
   schedule:
     - cron: "0 23 * * *"
   push: 
@@ -29,6 +35,7 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.docker_username }}
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
+          DOCKER_TAG: ${{ github.event.inputs.version }}
         run: |
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-          docker push openquake/engine:nightly
+          docker push openquake/engine:$DOCKER_TAG
