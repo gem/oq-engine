@@ -40,7 +40,6 @@ import copy
 import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.contexts import gen_poes
 
 
 class AvgPoeGMPE(GMPE):
@@ -114,7 +113,7 @@ class AvgPoeGMPE(GMPE):
         L = cmaker.loglevels.size
         out = numpy.zeros((N, L))
         start = 0
-        for poes in gen_poes(ctxs, cm):  # shape N, L, G
+        for poes in cm.gen_poes(ctxs):  # shape N, L, G
             stop = start + len(poes)
             out[start:stop, :] = poes @ self.weights
             start = stop

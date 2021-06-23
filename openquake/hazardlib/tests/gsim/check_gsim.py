@@ -30,7 +30,7 @@ import numpy
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GroundShakingIntensityModel
 from openquake.hazardlib.contexts import (
-    RuptureContext, DistancesContext, ContextMaker, get_mean_stds)
+    RuptureContext, DistancesContext, ContextMaker)
 from openquake.hazardlib.imt import from_string
 
 
@@ -77,7 +77,7 @@ def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
         imtls = {str(imt): [] for imt in expected_results}
         cmaker = ContextMaker('*', [gsim], dict(imtls=imtls))
         stds = (stddev_type,) if stddev_type else ()
-        [ms] = get_mean_stds([ctx], cmaker, *stds)
+        [ms] = cmaker.get_mean_stds([ctx], *stds)
         for m, imt in enumerate(expected_results):
             expected_result = expected_results[imt]
             mean = ms[0, :, m]
