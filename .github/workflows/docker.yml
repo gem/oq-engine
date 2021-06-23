@@ -10,7 +10,7 @@ on:
       git-ref:
         description: Git Ref (Optional)    
         default: master
-        required: false
+        required: true
   schedule:
     - cron: "0 23 * * *"
   push: 
@@ -32,7 +32,7 @@ jobs:
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
-      - name: Build image engine with tag ${{ github.event.inputs.git-ref }}
+      - name: Build image engine with tag ${{ github.event.inputs.version }}
         env:
           DOCKER_USERNAME: ${{ secrets.docker_username }}
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
