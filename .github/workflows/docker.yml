@@ -7,6 +7,9 @@ on:
         description: Image Tag 
         default: nightly
         required: true
+      git-ref:
+        description: Git Ref (Optional)    
+        required: false  
   schedule:
     - cron: "0 23 * * *"
   push: 
@@ -20,8 +23,14 @@ jobs:
 
     steps:
   # This Checkout is necessary when using a context in docker/build-push-action
-      - name: Checkout
+      - name: Clone Repository (Latest)
         uses: actions/checkout@v2
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
       - name: Build image engine with tag nightly
         id: docker_engine
         run: docker build --build-arg oq_branch=master -t openquake/engine:nightly -f docker/Dockerfile.dev docker
