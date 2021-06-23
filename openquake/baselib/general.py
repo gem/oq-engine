@@ -1434,6 +1434,18 @@ def agg_probs(*probs):
         acc *= 1. - prob
     return 1. - acc
 
+
+def floatrecord(**kw):
+    """
+    A numpy record of floats.
+
+    >>> floatrecord(a=1, b='2')
+    (1., 2.)
+    """
+    values = tuple(kw.values())
+    return numpy.array([values], [(k, float) for k in kw])[0]
+
+
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
