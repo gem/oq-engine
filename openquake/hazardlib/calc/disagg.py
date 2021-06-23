@@ -36,7 +36,7 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import ContextMaker, get_mean_stds
+from openquake.hazardlib.contexts import ContextMaker
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -176,7 +176,7 @@ def disaggregate(ctxs, tom, g_by_z, iml2dict, eps3, sid=0, bin_edges=()):
 
 def set_mean_std(ctxs, cmaker):
     for u, ctx in enumerate(ctxs):
-        ctx.mean_std = get_mean_stds([ctx], cmaker, const.StdDev.TOTAL)
+        ctx.mean_std = cmaker.get_mean_stds([ctx], const.StdDev.TOTAL)
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):

@@ -24,8 +24,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import _get_poes_site, _get_poes
 from openquake.baselib.general import gettemp, DictArray
-from openquake.hazardlib.contexts import (
-    RuptureContext, ContextMaker, get_mean_stds)
+from openquake.hazardlib.contexts import RuptureContext, ContextMaker
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 
@@ -64,7 +63,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
         # Compute GM on rock
         cmaker = ContextMaker(
             'TRT', [gmmA], dict(imtls={str(im): [0] for im in imts}))
-        [self.meastd] = get_mean_stds([ctx], cmaker, const.StdDev.TOTAL)
+        [self.meastd] = cmaker.get_mean_stds([ctx], const.StdDev.TOTAL)
         # shp(2, N=1, M=2)
 
     def test01(self):

@@ -27,7 +27,6 @@ import scipy.stats
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.base import ContextMaker
-from openquake.hazardlib.contexts import get_mean_stds
 from openquake.hazardlib.imt import from_string
 
 U32 = numpy.uint32
@@ -148,7 +147,7 @@ class GmfComputer(object):
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
-        mean_stds = get_mean_stds([self.ctx], self.cmaker, StdDev.EVENT)
+        mean_stds = self.cmaker.get_mean_stds([self.ctx], StdDev.EVENT)
         # G arrays of shape (O, N, M)
         for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
             num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
@@ -338,6 +337,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                                imtls={str(imt): [1] for imt in imts}))
     rupture.rup_id = seed
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
-    [mean_stds] = get_mean_stds([gc.ctx], cmaker, StdDev.EVENT)
+    [mean_stds] = cmaker.get_mean_stds([gc.ctx], StdDev.EVENT)
     res, _sig, _eps = gc.compute(gsim, realizations, mean_stds)
     return {imt: res[imti] for imti, imt in enumerate(gc.imts)}
