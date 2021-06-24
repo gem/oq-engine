@@ -715,7 +715,7 @@ class CoeffsTable(object):
     ...           imt.SA(1.0): {"a": 3.0, "b": 4.0},
     ...           imt.PGA(): {"a": 0.1, "b": 1.0},
     ...           imt.PGV(): {"a": 0.5, "b": 10.0}}
-    >>> ct = CoeffsTable(sa_damping=5, table=coeffs)
+    >>> ct = CoeffsTable.fromdict(coeffs)
     """
 
     @classmethod
