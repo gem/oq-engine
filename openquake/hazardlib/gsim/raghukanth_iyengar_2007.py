@@ -142,13 +142,14 @@ class RaghukanthIyengar2007(GMPE):
         ``σ{ln(ε_site)} = sqrt(σ{ln(ε_br)}**2 + σ{ln(δ_site)}**2)``
 
         """
-
-        # obtain coefficients for required intensity measure type
-        coeffs = self.COEFFS_BEDROCK[imt].copy()
-
         # obtain site-class specific coefficients
         a_1, a_2, sigma_site = self._get_site_coeffs(sites, imt)
-        coeffs.update({'a1': a_1, 'a2': a_2, 'sigma_site': sigma_site})
+        coeffs = {'a1': a_1, 'a2': a_2, 'sigma_site': sigma_site}
+
+        # obtain coefficients for required intensity measure type
+        c = self.COEFFS_BEDROCK[imt]
+        for n in c.dtype.names:
+            coeffs[n] = c[n]
 
         # compute bedrock motion, equation (8)
         ln_mean = (self._compute_magnitude_terms(rup, coeffs) +
