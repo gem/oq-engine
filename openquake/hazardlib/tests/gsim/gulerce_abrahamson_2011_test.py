@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.hazardlib.gsim.gulerce_abrahamson_2011 import \
-                        GulerceAbrahamson2011, GulerceAbrahamson2011Vert
+                                                GulerceAbrahamson2011
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
@@ -27,29 +27,16 @@ class GulreceAbrahamson2011TestCase(BaseGSIMTestCase):
     Mean value data obtained by digitizing Figures 7 to 10 using
     https://apps.automeris.io/wpd/ .
 
-    PGA1100 for Figures 7 and 8 are assumed.
+    PGA1100 for Figures 7 and 8 are estimated using AS08.
+    PGA1100 for Figures 9 and 10 is fixed at 0.1g as stated in the captions.
     """
     GSIM_CLASS = GulerceAbrahamson2011
 
     def test_mean_Fig_7_8(self):
         self.check('GA11/GA11_Fig_7_8_MEAN.csv',
-                   max_discrep_percentage=4.)
+                   max_discrep_percentage=4.,
+                   gmpe_name='AbrahamsonSilva2008')
     def test_mean_Fig_9_10(self):
         self.check('GA11/GA11_Fig_9_10_MEAN.csv',
-                   max_discrep_percentage=0.5)
-
-class GulreceAbrahamson2011VertTestCase(BaseGSIMTestCase):
-    """
-    Tests the GMPE applied to horizontal models. Data derived from respective
-    horizontal model tests.
-    """
-    GSIM_CLASS = GulerceAbrahamson2011Vert
-
-    def test_mean_GA11_AS08(self):
-        self.check('GA11/GA11_AS08_MEAN.csv',
-                   max_discrep_percentage=0.1,
+                   max_discrep_percentage=0.5,
                    gmpe_name='AbrahamsonSilva2008')
-    def test_mean_GA11_BA08(self):
-        self.check('GA11/GA11_BA08_MEDIAN_SS.csv',
-                   max_discrep_percentage=0.6,
-                   gmpe_name='BooreAtkinson2008')

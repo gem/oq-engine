@@ -18,7 +18,6 @@
 
 """
 Module exports :class:`GulerceAbrahamson2011`
-               :class:`GulerceAbrahamson2011Vert`
 """
 
 import copy
@@ -32,8 +31,8 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 class GulerceAbrahamson2011(GMPE):
     """
     Implements the GMPE by Gulerce & Abrahamson (2011) for the
-    vertical-to-horizontal spectral acceleration (V/H) ratio derived using 
-    ground motions from the PEER NGA-West1 Project.
+    vertical-to-horizontal (V/H) ratio model derived using ground motions from
+    the PEER NGA-West1 Project.
 
     Developing of the vertical spectra is applicable only to nonlinear
     horizontal ground-motion models. 
@@ -74,11 +73,10 @@ class GulerceAbrahamson2011(GMPE):
         const.StdDev.INTRA_EVENT
     }
 
-    #: Required site parameters are Vs30 and pga1100 only. Unlike in AS08,
-    #: the nonlinear site response and Z1.0 scaling is not available for the
-    #: vertical component; see section for "Functional Form of the Model",
-    #: Equation 3.
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'pga1100'}
+    #: Required site parameter is Vs30 only. Unlike in AS08, the nonlinear
+    #: site response and Z1.0 scaling is not available for the vertical
+    #: component; see section for "Functional Form of the Model", Equation 3.
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, rake; see section for
     #: "Functional Form of the Model", Equation 6.
@@ -92,6 +90,23 @@ class GulerceAbrahamson2011(GMPE):
     #: using https://apps.automeris.io/wpd/ . Only SA is covered.
     non_verified = True
 
+    def __init__(self, gmpe_name, **kwargs):
+        super().__init__(gmpe_name=gmpe_name, **kwargs)
+        self.gmpe = registry[gmpe_name]()
+        self.set_parameters()
+
+        # Check if this GMPE has the necessary requirements
+        if (self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT ==
+                const.IMC.VERTICAL):
+            msg = 'Horizontal component is not defined for {:s}'
+            raise AttributeError(msg.format(str(self.gmpe)))
+        if (PGA not in self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES):
+            msg = 'PGA intensity measure type is not defined for {:s}'
+            raise AttributeError(msg.format(str(self.gmpe)))
+        self.REQUIRES_SITES_PARAMETERS |= self.gmpe.REQUIRES_SITES_PARAMETERS
+        self.REQUIRES_RUPTURE_PARAMETERS |= self.gmpe.REQUIRES_RUPTURE_PARAMETERS
+        self.REQUIRES_DISTANCES |= self.gmpe.REQUIRES_DISTANCES
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -102,9 +117,13 @@ class GulerceAbrahamson2011(GMPE):
         # intensity measure types
         C = self.COEFFS[imt]
 
+        sites_rock = copy.copy(sites)
+        sites_rock.vs30 = np.full_like(sites_rock.vs30, 1100, dtype=np.double)
+        pga1100 = np.exp(self.gmpe.get_mean_and_stddevs(
+            sites_rock, rup, dists, PGA(), stddev_types)[0])
         mean = (self._compute_base_term(C, rup, dists) +
                 self._compute_faulting_style_term(C, rup) +
-                self._compute_site_response_term(C, imt, sites, sites.pga1100))
+                self._compute_site_response_term(C, imt, sites, pga1100))
 
         stddevs = self._get_stddevs(C, rup, stddev_types)
 
@@ -279,55 +298,3 @@ class GulerceAbrahamson2011(GMPE):
         'n': 1.18,
         'c': 1.88,
     }
-
-class GulerceAbrahamson2011Vert(GulerceAbrahamson2011):
-    """
-    Implements the GMPE by Gulerce & Abrahamson (2011) for the
-    vertical-to-horizontal spectral acceleration (V/H) ratio derived using 
-    ground motions from the PEER NGA-West1 Project.
-
-    Application to horizontal GMPEs to develop vertical spectra
-    """
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
-    
-    def __init__(self, gmpe_name, **kwargs):
-        super().__init__(gmpe_name=gmpe_name, **kwargs)
-        self.gmpe = registry[gmpe_name]()
-        self.set_parameters()
-
-        # Check if this GMPE has the necessary requirements
-        if (self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT ==
-                const.IMC.VERTICAL):
-            msg = 'Horizontal component is not defined for {:s}'
-            raise AttributeError(msg.format(str(self.gmpe)))
-        if (PGA not in self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES):
-            msg = 'PGA intensity measure type is not defined for {:s}'
-            raise AttributeError(msg.format(str(self.gmpe)))
-        self.REQUIRES_SITES_PARAMETERS |= self.gmpe.REQUIRES_SITES_PARAMETERS
-        self.REQUIRES_RUPTURE_PARAMETERS |= self.gmpe.REQUIRES_RUPTURE_PARAMETERS
-        self.REQUIRES_DISTANCES |= self.gmpe.REQUIRES_DISTANCES
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extract dictionaries of coefficients specific to required
-        # intensity measure types
-        C = self.COEFFS[imt]
-
-        sites_rock = copy.copy(sites)
-        sites_rock.vs30 = np.full_like(sites_rock.vs30, 1100, dtype=np.double)
-        pga1100 = np.exp(self.gmpe.get_mean_and_stddevs(
-            sites_rock, rup, dists, PGA(), stddev_types)[0])
-        mean = (self._compute_base_term(C, rup, dists) +
-                self._compute_faulting_style_term(C, rup) +
-                self._compute_site_response_term(C, imt, sites, pga1100))
-
-        # Apply V/H ratio to horizontal Uniform Hazard Spectrum
-        mean += self.gmpe.get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)[0]
-
-        stddevs = self._get_stddevs(C, rup, stddev_types)
-
-        return mean, stddevs
