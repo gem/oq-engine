@@ -101,10 +101,11 @@ class NathEtAl2012Lower(GMPE):
         """
 
         # obtain coefficients for required intensity measure type (IMT)
-        coeffs = self.COEFFS_BEDROCK[imt].copy()
-
-        # obtain IMT-independent coefficients
-        coeffs.update(self.CONSTS)
+        # and add IMT-independent coefficients
+        c = self.COEFFS_BEDROCK[imt]
+        coeffs = self.CONSTS.copy()
+        for n in c.dtype.names:
+            coeffs[n] = c[n]
 
         # compute bedrock motion, equation (11)
         ln_mean = self._compute_mean(rup, dists, coeffs)
