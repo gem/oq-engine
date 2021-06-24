@@ -64,7 +64,7 @@ def from_string(imt, damping=5.0):
     :param str imt:
         Intensity Measure Type.
     """
-    if re.match(r'[ \d\.]+', imt):
+    if re.match(r'[ \+\d\.]+', imt):
         return SA(float(imt), damping)
     tup = imt2tup(imt)
     return registry[tup[0]](*tup[1:])
