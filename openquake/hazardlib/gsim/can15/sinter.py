@@ -25,7 +25,7 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     #: Required site parameters
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
 
     #: GMPE not tested against independent implementation so raise
     #: not verified warning
@@ -36,6 +36,9 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
 
     #: Supported standard deviations
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+
+    gsims = [AtkinsonMacias2009(), AbrahamsonEtAl2015SInter(),
+             GhofraniAtkinson2014()]  # underlying GSIMs
 
     def _get_delta(self, dists):
         """
@@ -61,24 +64,23 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+        g = self.gsims
+
         # Zhao et al. 2006 - Vs30 + Rrup
         mean_zh06, stds1 = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                         stddev_types)
         #
         # Atkinson and Macias (2009) - Rrup
-        gmpe = AtkinsonMacias2009()
-        mean_am09, stds2 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
+        mean_am09, stds2 = g[0].get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
         #
         # Abrahamson et al. (2015) - Rrup + vs30 + backarc
-        gmpe = AbrahamsonEtAl2015SInter()
-        mean_ab15, stds3 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
+        mean_ab15, stds3 = g[1].get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
         #
         # Ghofrani and Atkinson (2014) - Rrup + vs30
-        gmpe = GhofraniAtkinson2014()
-        mean_ga14, stds4 = gmpe.get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
+        mean_ga14, stds4 = g[2].get_mean_and_stddevs(
+            sites, rup, dists, imt,  stddev_types)
         # Computing adjusted mean and stds
         cff = self.SITE_COEFFS[imt]
         mean_adj = (np.log(np.exp(mean_zh06)*cff['mf'])*0.1 +
