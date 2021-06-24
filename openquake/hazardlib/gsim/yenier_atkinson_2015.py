@@ -72,9 +72,10 @@ class YenierAtkinson2015BSSA(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     def __init__(self, focal_depth=None, region='CENA', **kwargs):
-        super().__init__(focal_depth=focal_depth, region=region, **kwargs) 
+        super().__init__(focal_depth=focal_depth, region=region, **kwargs)
         self.focal_depth = focal_depth
         self.region = region
+        self.gmpe = BooreEtAl2014()
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
         # Compute focal depth if not set at the initialization level
@@ -114,7 +115,7 @@ class YenierAtkinson2015BSSA(GMPE):
         # Regional term for path duration
         c_p = self._get_c_p(imt, dctx.rrup, rctx.mag)
         # Compute mean using equation 26
-        mean = f_m + f_delta_sigma + f_z + f_gamma + c_e + c_p 
+        mean = f_m + f_delta_sigma + f_z + f_gamma + c_e + c_p
         return mean
 
     def _get_f_m(self, C, imt, m):
@@ -172,10 +173,34 @@ class YenierAtkinson2015BSSA(GMPE):
         z = reff**b1
         ratio_a = reff / transition_dst
         z[reff > transition_dst] = (transition_dst**b1 *
-                                     (ratio_a[reff > transition_dst])**b2)
+                                    (ratio_a[reff > transition_dst])**b2)
         # Compute geometrical spreading function
         ratio_b = reff / (1.+pseudo_depth**2)**0.5
         return np.log(z) + (C['b3'] + C['b4']*m)*np.log(ratio_b)
+
+    def get_fs_SeyhanStewart2014(self, imt, pga_rock, vs30):
+        """
+        Implements eq. 11 and 12 at page 1992 in Yenier and Atkinson (2015)
+
+        :param pga_rock:
+            Median peak ground horizontal acceleration for reference
+        :param vs30:
+        """
+        # coefficients of BooreEtAl2014
+        C = self.gmpe.COEFFS[imt]
+        # Linear term
+        flin = vs30 / gmm.CONSTS['Vref']
+        flin[vs30 > C['Vc']] = C['Vc'] / gmm.CONSTS['Vref']
+        fl = C['c'] * np.log(flin)
+        # Non-linear term
+        v_s = np.copy(vs30)
+        v_s[vs30 > 760.] = 760.
+        # parameter (equation 8 of BSSA 2014)
+        f_2 = C['f4'] * (np.exp(C['f5'] * (v_s - 360.)) -
+                         np.exp(C['f5'] * 400.))
+        fnl = gmm.CONSTS['f1'] + f_2 * np.log((pga_rock + gmm.CONSTS['f3']) /
+                                              gmm.CONSTS['f3'])
+        return fl + fnl
 
     def _get_f_gamma(self, C, imt, rrup):
         """
@@ -353,29 +378,3 @@ class YenierAtkinson2015BSSA(GMPE):
    PGA -0.004667    -0.009808
    PGV -0.002792    -0.006313
 """)
-
-
-def get_fs_SeyhanStewart2014(imt, pga_rock, vs30):
-    """
-    Implements eq. 11 and 12 at page 1992 in Yenier and Atkinson (2015)
-
-    :param pga_rock:
-        Median peak ground horizontal acceleration for reference
-    :param vs30:
-    """
-    # Get coefficients
-    gmm = BooreEtAl2014()
-    C = gmm.COEFFS[imt]
-    # Linear term
-    flin = vs30 / gmm.CONSTS['Vref']
-    flin[vs30 > C['Vc']] = C['Vc'] / gmm.CONSTS['Vref']
-    fl = C['c'] * np.log(flin)
-    # Non-linear term
-    v_s = np.copy(vs30)
-    v_s[vs30 > 760.] = 760.
-    # parameter (equation 8 of BSSA 2014)
-    f_2 = C['f4'] * (np.exp(C['f5'] * (v_s - 360.)) -
-                     np.exp(C['f5'] * 400.))
-    fnl = gmm.CONSTS['f1'] + f_2 * np.log((pga_rock + gmm.CONSTS['f3']) /
-                                          gmm.CONSTS['f3'])
-    return fl + fnl
