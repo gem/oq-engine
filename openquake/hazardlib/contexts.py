@@ -132,97 +132,6 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def get_pmap(ctxs, cmaker, probmap=None):
-    """
-    :param ctxs: a list of contexts
-    :param cmaker: the ContextMaker used to create the contexts
-    :param probmap: if not None, update it
-    :returns: a new ProbabilityMap if probmap is None
-    """
-    tom = cmaker.tom
-    rup_indep = cmaker.rup_indep
-    if probmap is None:  # create new pmap
-        pmap = ProbabilityMap(cmaker.imtls.size, len(cmaker.gsims))
-    else:  # update passed probmap
-        pmap = probmap
-    for ctx, poes in zip(ctxs, gen_poes(ctxs, cmaker)):
-        # pnes and poes of shape (N, L, G)
-        with cmaker.pne_mon:
-            pnes = ctx.get_probability_no_exceedance(poes, tom)
-            for sid, pne in zip(ctx.sids, pnes):
-                probs = pmap.setdefault(sid, cmaker.rup_indep).array
-                if rup_indep:
-                    probs *= pne
-                else:  # rup_mutex
-                    probs += (1. - pne) * ctx.weight
-    if probmap is None:  # return the new pmap
-        return ~pmap if rup_indep else pmap
-
-
-def get_mean_stds(orig_ctxs, cmaker, *stdtypes):
-    """
-    :param orig_ctxs: a list of contexts
-    :param cmaker: the ContextMaker instance used to generate the contexts
-    :param stdtypes: tuple of standard deviation types
-    :returns: a list of G arrays of shape (O, N, M) with mean and stddevs
-    """
-    N = sum(len(ctx.sids) for ctx in orig_ctxs)
-    M = len(cmaker.imts)
-    if cmaker.trunclevel == 0:
-        stdtypes = ()
-    ctxs = [ctx.roundup(cmaker.minimum_distance) for ctx in orig_ctxs]
-    out = []
-    for g, gsim in enumerate(cmaker.gsims):
-        if stdtypes == (StdDev.EVENT,):
-            if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
-                stypes = StdDev.TOTAL,
-            else:
-                stypes = StdDev.INTER_EVENT, StdDev.INTRA_EVENT
-        else:
-            stypes = stdtypes
-        arr = numpy.zeros((1 + len(stypes), N, M))
-        gcls = gsim.__class__
-        calc_ms = getattr(gcls, 'calc_mean_stds', None)
-        if calc_ms:  # fast lane
-            if all(len(ctx) == 1 for ctx in ctxs):  # single-site-optimization
-                ctxs = [cmaker.multi(ctxs)]
-            for ctx, clist, slc in cmaker.gen_triples(g, ctxs):
-                calc_ms(arr[:, slc], ctx, stypes, *clist)
-        else:  # slow lane
-            start = 0
-            for ctx in ctxs:
-                stop = start + len(ctx.sids)
-                for m, imt in enumerate(cmaker.imts):
-                    mean, stds = gsim.get_mean_and_stddevs(
-                        ctx, ctx, ctx, imt, stypes)
-                    arr[0, start:stop, m] = mean
-                    for s, stdtype in enumerate(stypes):
-                        arr[1 + s, start:stop, m] = stds[s]
-                start = stop
-        out.append(arr)
-    return out
-
-
-def gen_poes(ctxs, cmaker):
-    """
-    :param ctxs: a list of C context objects
-    :yields: poes of shape (N, L, G)
-    """
-    nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
-    N = nsites.sum()
-    poes = numpy.zeros((N, cmaker.loglevels.size, len(cmaker.gsims)))
-    with cmaker.gmf_mon:
-        mean_stdt = get_mean_stds(ctxs, cmaker, StdDev.TOTAL)
-    with cmaker.poe_mon:
-        for g, gsim in enumerate(cmaker.gsims):
-            # builds poes of shape (N, L, G)
-            poes[:, :, g] = gsim.get_poes(mean_stdt[g], cmaker, ctxs)
-    s = 0
-    for ctx, n in zip(ctxs, nsites):
-        yield poes[s:s+n]
-        s += n
-
-
 def float_struct(*allnames):
     """
     :returns: a composite dtype of float64 fields
@@ -573,14 +482,101 @@ class ContextMaker(object):
             ctx.mag = mag
             ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             try:
-                maxmean = max(ms[0].max() for ms in get_mean_stds(
-                    [ctx], self, StdDev.TOTAL))
+                maxmean = max(ms[0].max() for ms in self.get_mean_stds(
+                    [ctx], StdDev.TOTAL))
                 # shape NM
             except ValueError:  # magnitude outside of supported range
                 continue
             else:
                 gmv[m, d] = numpy.exp(maxmean)
         return gmv
+
+    def get_pmap(self, ctxs, probmap=None):
+        """
+        :param ctxs: a list of contexts
+        :param probmap: if not None, update it
+        :returns: a new ProbabilityMap if probmap is None
+        """
+        tom = self.tom
+        rup_indep = self.rup_indep
+        if probmap is None:  # create new pmap
+            pmap = ProbabilityMap(self.imtls.size, len(self.gsims))
+        else:  # update passed probmap
+            pmap = probmap
+        for ctx, poes in zip(ctxs, self.gen_poes(ctxs)):
+            # pnes and poes of shape (N, L, G)
+            with self.pne_mon:
+                pnes = ctx.get_probability_no_exceedance(poes, tom)
+                for sid, pne in zip(ctx.sids, pnes):
+                    probs = pmap.setdefault(sid, self.rup_indep).array
+                    if rup_indep:
+                        probs *= pne
+                    else:  # rup_mutex
+                        probs += (1. - pne) * ctx.weight
+        if probmap is None:  # return the new pmap
+            return ~pmap if rup_indep else pmap
+
+    def get_mean_stds(self, orig_ctxs, *stdtypes):
+        """
+        :param orig_ctxs: a list of contexts
+        :param stdtypes: tuple of standard deviation types
+        :returns: a list of G arrays of shape (O, N, M) with mean and stddevs
+        """
+        N = sum(len(ctx.sids) for ctx in orig_ctxs)
+        M = len(self.imts)
+        if self.trunclevel == 0:
+            stdtypes = ()
+        ctxs = [ctx.roundup(self.minimum_distance) for ctx in orig_ctxs]
+        out = []
+        for g, gsim in enumerate(self.gsims):
+            if stdtypes == (StdDev.EVENT,):
+                if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
+                    stypes = StdDev.TOTAL,
+                else:
+                    stypes = StdDev.INTER_EVENT, StdDev.INTRA_EVENT
+            else:
+                stypes = stdtypes
+            arr = numpy.zeros((1 + len(stypes), N, M))
+            gcls = gsim.__class__
+            calc_ms = getattr(gcls, 'calc_mean_stds', None)
+            if calc_ms:  # fast lane
+                if all(len(ctx) == 1 for ctx in ctxs):
+                    # single-site-optimization
+                    ctxs = [self.multi(ctxs)]
+                for ctx, clist, slc in self.gen_triples(g, ctxs):
+                    calc_ms(arr[:, slc], ctx, stypes, *clist)
+            else:  # slow lane
+                start = 0
+                for ctx in ctxs:
+                    stop = start + len(ctx.sids)
+                    for m, imt in enumerate(self.imts):
+                        mean, stds = gsim.get_mean_and_stddevs(
+                            ctx, ctx, ctx, imt, stypes)
+                        arr[0, start:stop, m] = mean
+                        for s, stdtype in enumerate(stypes):
+                            arr[1 + s, start:stop, m] = stds[s]
+                    start = stop
+            out.append(arr)
+        return out
+
+    def gen_poes(self, ctxs):
+        """
+        :param ctxs: a list of C context objects
+        :yields: poes of shape (N, L, G)
+        """
+        nsites = numpy.array([len(ctx.sids) for ctx in ctxs])
+        N = nsites.sum()
+        poes = numpy.zeros((N, self.loglevels.size, len(self.gsims)))
+        with self.gmf_mon:
+            mean_stdt = self.get_mean_stds(ctxs, StdDev.TOTAL)
+        with self.poe_mon:
+            for g, gsim in enumerate(self.gsims):
+                # builds poes of shape (N, L, G)
+                poes[:, :, g] = gsim.get_poes(mean_stdt[g], self, ctxs)
+        s = 0
+        for ctx, n in zip(ctxs, nsites):
+            yield poes[s:s+n]
+            s += n
 
 
 # see contexts_tests.py for examples of collapse
@@ -679,7 +675,7 @@ class PmapMaker(object):
         # generated has size N x L x G x 8 = 4 MB
         for block in block_splitter(
                 ctxs, self.maxsites, lambda ctx: len(ctx.sids)):
-            get_pmap(block, self.cmaker, pmap)
+            self.cmaker.get_pmap(block, pmap)
 
     def _ruptures(self, src, filtermag=None):
         return src.iter_ruptures(

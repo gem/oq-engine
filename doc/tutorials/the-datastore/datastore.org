@@ -190,7 +190,7 @@ spectrum, aftershocks, ...) should write a *script/notebook*
 using the high level API:
 
 - read_cmakers(dstore)
-- get_pmap(ctxs, cmaker) or gen_poes(ctxs, cmaker)
+- cmaker.get_pmap(ctxs) or cmaker.gen_poes(ctxs)
 - combine_probs(poes_by_grp, cmakers, rlz_id)
 
 #+include: ex5.py src python
