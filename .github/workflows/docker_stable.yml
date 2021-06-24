@@ -45,7 +45,7 @@ jobs:
       - name: Run calcs on single docker
         run: |
           time docker run openquake/engine:latest "oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true""
-      - name: push image engine with tag nightly on docker hub
+      - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
         env:
           DOCKER_USERNAME: ${{ secrets.docker_username }}
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
