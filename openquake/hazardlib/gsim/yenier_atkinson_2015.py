@@ -91,7 +91,7 @@ class YenierAtkinson2015BSSA(GMPE):
         pga_rock = self._get_mean_on_rock(sctx, rctx, dctx, tmp, stddev_types)
         pga_rock = np.exp(pga_rock)
         # Site-effect model
-        f_s = get_fs_SeyhanStewart2014(imt, pga_rock, sctx.vs30)
+        f_s = self.get_fs_SeyhanStewart2014(imt, pga_rock, sctx.vs30)
         # Compute the mean on soil
         mean = self._get_mean_on_rock(sctx, rctx, dctx, imt, stddev_types)
         mean += f_s
@@ -187,7 +187,8 @@ class YenierAtkinson2015BSSA(GMPE):
         :param vs30:
         """
         # coefficients of BooreEtAl2014
-        C = self.gmpe.COEFFS[imt]
+        gmm = self.gmpe
+        C = gmm.COEFFS[imt]
         # Linear term
         flin = vs30 / gmm.CONSTS['Vref']
         flin[vs30 > C['Vc']] = C['Vc'] / gmm.CONSTS['Vref']
