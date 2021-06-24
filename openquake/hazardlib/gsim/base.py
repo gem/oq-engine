@@ -29,7 +29,7 @@ import numpy
 from scipy.special import ndtr
 from scipy.stats import norm
 
-from openquake.baselib.general import DeprecationWarning
+from openquake.baselib.general import DeprecationWarning, TypedTuple
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
@@ -719,10 +719,18 @@ class CoeffsTable(object):
     """
 
     @classmethod
-    def fromdict(cls, dic, logratio=True):
+    def fromdict(cls, ddic, logratio=True):
+        """
+        :param ddic: a dictionary of dictionaries
+        :param logratio: flag (default True)
+        """
+        firstdic = ddic[next(iter(ddic))]
         self = object.__new__(cls)
-        self._coeffs = dic
+        self.tt = TypedTuple(list(firstdic), float)
+        self._coeffs = {imt: self.tt(**dic) for imt, dic in ddic.items()}
         self.logratio = logratio
+        self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
+                              [(name, float) for name in self.tt.dtype.names])
         return self
 
     def __init__(self, table, **kwargs):
@@ -731,39 +739,25 @@ class CoeffsTable(object):
         sa_damping = kwargs.pop('sa_damping', None)
         if kwargs:
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
-        self._setup_table_from_str(table, sa_damping)
-        first = self._coeffs[next(iter(self._coeffs))]  # dictionary
+        self.tt = self._setup_table_from_str(table, sa_damping)
         self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
-                              [(name, float) for name in first])
+                              [(name, float) for name in self.tt.dtype.names])
 
     def _setup_table_from_str(self, table, sa_damping):
         """
         Builds the input tables from a string definition
         """
-        table = table.strip().splitlines()
-        header = table.pop(0).split()
+        lines = table.strip().splitlines()
+        header = lines.pop(0).split()
         if not header[0].upper() == "IMT":
             raise ValueError('first column in a table must be IMT')
-        coeff_names = header[1:]
-        for row in table:
-            row = row.split()
-            imt_name = row[0].upper()
-            if imt_name == 'SA':
-                raise ValueError('specify period as float value '
-                                 'to declare SA IMT')
-            imt_coeffs = dict(zip(coeff_names, map(float, row[1:])))
-            try:
-                sa_period = float(imt_name)
-            except Exception:
-                if imt_name not in imt_module.registry:
-                    raise ValueError('unknown IMT %r' % imt_name)
-                imt = imt_module.registry[imt_name]()
-            else:
-                if sa_damping is None:
-                    raise TypeError('attribute "sa_damping" is required '
-                                    'for tables defining SA')
-                imt = imt_module.SA(sa_period, sa_damping)
-            self._coeffs[imt] = imt_coeffs
+        tt = TypedTuple(header[1:], float)
+        for line in lines:
+            row = line.split()
+            imt_name_or_period = row[0].upper()
+            imt = imt_module.from_string(imt_name_or_period, sa_damping)
+            self._coeffs[imt] = tt(*row[1:])
+        return tt
 
     @property
     def sa_coeffs(self):
@@ -784,8 +778,9 @@ class CoeffsTable(object):
         for m, imt in enumerate(imts):
             arr[m]['imt'] = imt.name
             arr[m]['period'] = imt.period
-            for n, v in self[imt].items():
-                arr[m][n] = v
+            rec = self[imt]
+            for n in self.dt.names[2:]:
+                arr[m][n] = rec[n]
         return arr
 
     def __getitem__(self, imt):
@@ -826,9 +821,9 @@ class CoeffsTable(object):
         else:  # in the ACME project
             ratio = ((imt.period - max_below.period) /
                      (min_above.period - max_below.period))
-        max_below = self.sa_coeffs[max_below]
-        min_above = self.sa_coeffs[min_above]
-        self._coeffs[imt] = c = {
-            co: (min_above[co] - max_below[co]) * ratio + max_below[co]
-            for co in max_below}
+        below = self.sa_coeffs[max_below]
+        above = self.sa_coeffs[min_above]
+        lst = [(above[n] - below[n]) * ratio + below[n]
+               for n in self.tt.dtype.names]
+        self._coeffs[imt] = c = self.tt(*lst)
         return c

@@ -126,13 +126,14 @@ class Kanno2006Shallow(GMPE):
         (p. 880).
 
         """
-
-        # obtain coefficients for required intensity measure type (IMT)
-        coeffs = self.COEFFS_BASE[imt].copy()
-        coeffs.update(self.COEFFS_SITE[imt])
-
-        # obtain IMT-independent coefficients
-        coeffs.update(self.CONSTS)
+        # merge coefficients
+        coeffs = self.CONSTS.copy()
+        cb = self.COEFFS_BASE[imt]
+        cs = self.COEFFS_SITE[imt]
+        for n in cb.dtype.names:
+            coeffs[n] = cb[n]
+        for n in cs.dtype.names:
+            coeffs[n] = cs[n]
 
         # compute bedrock motion, equation (5)
         log_mean = self._compute_mag_dist_terms(rup, dists, coeffs)

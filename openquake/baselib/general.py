@@ -1435,16 +1435,23 @@ def agg_probs(*probs):
     return 1. - acc
 
 
-def floatrecord(**kw):
+class TypedTuple(object):
     """
-    A numpy record of floats.
+    Builder for numpy records of homogeneous type.
 
-    >>> floatrecord(a=1, b='2')
-    (1., 2.)
+    >>> TypedTuple('abc', float)(0, c=2, b='1')
+    (0., 1., 2.)
     """
-    values = tuple(kw.values())
-    return numpy.array([values], [(k, float) for k in kw])[0]
+    def __init__(self, names, dtype):
+        self.dtype = numpy.dtype([(n, dtype) for n in names])
 
+    def __call__(self, *args, **kw):
+        tt = numpy.zeros(1, self.dtype)[0]
+        for name, arg in zip(self.dtype.names, args):
+            tt[name] = arg
+        for name, value in kw.items():
+            tt[name] = value
+        return tt
 
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
