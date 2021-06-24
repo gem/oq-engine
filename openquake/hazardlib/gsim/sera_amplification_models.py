@@ -27,7 +27,7 @@ import numpy as np
 import copy
 from scipy.constants import g
 # from scipy.interpolate import interp1d
-from openquake.hazardlib.gsim.base import (GMPE, CoeffsTable, registry)
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, registry
 from openquake.hazardlib.imt import PGA, SA, from_string
 from openquake.hazardlib import const
 
@@ -553,7 +553,7 @@ class SandikkayaDinsever2018(GMPE):
         if isinstance(phi_0, dict):
             # Input phi_0 model
             iphi_0 = {from_string(key): phi_0[key] for key in phi_0}
-            self.phi_0 = CoeffsTable(sa_damping=5, table=iphi_0)
+            self.phi_0 = CoeffsTable.fromdict(iphi_0)
         else:
             # No input phi_0 model
             self.phi_0 = None

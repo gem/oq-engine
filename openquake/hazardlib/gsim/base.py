@@ -715,9 +715,15 @@ class CoeffsTable(object):
     ...           imt.SA(1.0): {"a": 3.0, "b": 4.0},
     ...           imt.PGA(): {"a": 0.1, "b": 1.0},
     ...           imt.PGV(): {"a": 0.5, "b": 10.0}}
-    >>> ct = CoeffsTable(sa_damping=5, table=coeffs)
+    >>> ct = CoeffsTable.fromdict(coeffs)
     """
-    num_instances = 0
+
+    @classmethod
+    def fromdict(cls, dic, logratio=True):
+        self = object.__new__(cls)
+        self._coeffs = dic
+        self.logratio = logratio
+        return self
 
     def __init__(self, table, **kwargs):
         self._coeffs = {}  # cache
@@ -725,15 +731,8 @@ class CoeffsTable(object):
         sa_damping = kwargs.pop('sa_damping', None)
         if kwargs:
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
-        if isinstance(table, str):  # common case
-            self._setup_table_from_str(table, sa_damping)
-        else:  # in ngs_east
-            self._coeffs.update(table)
-        self.__class__.num_instances += 1
-
+        self._setup_table_from_str(table, sa_damping)
         first = self._coeffs[next(iter(self._coeffs))]  # dictionary
-        if not isinstance(first, dict):
-            first = {'value': first}
         self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
                               [(name, float) for name in first])
 

@@ -244,7 +244,7 @@ class TromansEtAl2019(GMPE):
             for key in vskappa:
                 in_vskappa[from_string(key)] = {"vskappa":
                                                 np.log(vskappa[key])}
-            self.vskappa = CoeffsTable(sa_damping=5, table=in_vskappa)
+            self.vskappa = CoeffsTable.fromdict(in_vskappa)
         else:
             self.vskappa = None
         self.branch = branch
