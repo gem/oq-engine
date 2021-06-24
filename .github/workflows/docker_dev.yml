@@ -30,7 +30,6 @@ jobs:
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Build image engine with tag nightly during scheduled task
-        uses: actions/checkout@v2
         if: github.event.inputs.version == ''
         env:
           DOCKER_USERNAME: ${{ secrets.docker_username }}
@@ -46,7 +45,6 @@ jobs:
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
           docker push openquake/engine:nightly
       - name: Build image engine with tag ${{ github.event.inputs.version }} during manual run
-        uses: actions/checkout@v2
         if: github.event.inputs.version != ''
         env:
           DOCKER_USERNAME: ${{ secrets.docker_username }}
