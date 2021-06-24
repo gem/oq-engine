@@ -302,7 +302,7 @@ def get_phi_ss_at_quantile(phi_model, quantile):
                 "b": _at_percentile(phi_model[imt]["mean_b"],
                                     phi_model[imt]["var_b"],
                                     quantile)}
-    return CoeffsTable(sa_damping=5., table=coeffs)
+    return CoeffsTable.fromdict(coeffs)
 
 
 def get_phi_s2ss_at_quantile(phi_model, quantile):
@@ -320,7 +320,7 @@ def get_phi_s2ss_at_quantile(phi_model, quantile):
             coeffs[imt] = {"phi_s2ss": _at_percentile(phi_model[imt]["mean"],
                                                       phi_model[imt]["var"],
                                                       quantile)}
-    return CoeffsTable(sa_damping=5., table=coeffs)
+    return CoeffsTable.fromdict(coeffs)
 
 
 # Gather the models to setup the phi_ss values for the given quantile
@@ -897,7 +897,7 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
             imt_list += list(PHI_S2SS_MODEL[self.phi_s2ss_model].sa_coeffs)
         else:
             imt_list = list(phi_std)
-        phi_std = CoeffsTable(sa_damping=5, table=phi_std)
+        phi_std = CoeffsTable.fromdict(phi_std)
         tau_bar, tau_std = self._get_tau_vector(self.TAU, tau_std, imt_list)
         phi_bar, phi_std = self._get_phi_vector(self.PHI_SS, phi_std, imt_list)
         sigma = {}
@@ -914,12 +914,12 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
                 # The keys swap from tau to sigma
                 new_key = key.replace("tau", "sigma")
                 if sigma_quantile is not None:
-                    sigma[imt][new_key] =\
-                        _at_percentile(sigma_bar, sigma_std, sigma_quantile)
+                    sigma[imt][new_key] = _at_percentile(
+                        sigma_bar, sigma_std, sigma_quantile)
                 else:
                     sigma[imt][new_key] = sigma_bar
                 self.tau_keys[i] = new_key
-        self.SIGMA = CoeffsTable(sa_damping=5, table=sigma)
+        self.SIGMA = CoeffsTable.fromdict(sigma)
 
     def _get_tau_vector(self, tau_mean, tau_std, imt_list):
         """

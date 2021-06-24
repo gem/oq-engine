@@ -214,4 +214,4 @@ class ModifiableGMPE(GMPE):
         coeff_dict = {}
         for key in input_dict:
             coeff_dict[from_string(key)] = {name: input_dict[key]}
-        return {name: CoeffsTable(sa_damping=5, table=coeff_dict)}
+        return {name: CoeffsTable.fromdict(coeff_dict)}

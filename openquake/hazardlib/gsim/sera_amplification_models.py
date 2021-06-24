@@ -17,17 +17,15 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Implements SERA site amplification models class: `PitilakisEtAl2018`,
-                                                 `PitilakisEtAl2020`,
-                                                 `Eurocode8Amplification`,
-                                                 `Eurocode8AmplificationDefault`,
-                                                 `SandikkayaDinsever2018`
+Implements SERA site amplification models
+class:`PitilakisEtAl2018`, `PitilakisEtAl2020`, `Eurocode8Amplification`,
+      `Eurocode8AmplificationDefault`,`SandikkayaDinsever2018`
 """
 import numpy as np
 import copy
 from scipy.constants import g
 # from scipy.interpolate import interp1d
-from openquake.hazardlib.gsim.base import (GMPE, CoeffsTable, registry)
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, registry
 from openquake.hazardlib.imt import PGA, SA, from_string
 from openquake.hazardlib import const
 
@@ -552,8 +550,8 @@ class SandikkayaDinsever2018(GMPE):
 
         if isinstance(phi_0, dict):
             # Input phi_0 model
-            iphi_0 = {from_string(key): phi_0[key] for key in phi_0}
-            self.phi_0 = CoeffsTable(sa_damping=5, table=iphi_0)
+            iphi_0 = {from_string(key): {'value': phi_0[key]} for key in phi_0}
+            self.phi_0 = CoeffsTable.fromdict(iphi_0)
         else:
             # No input phi_0 model
             self.phi_0 = None
@@ -616,7 +614,7 @@ class SandikkayaDinsever2018(GMPE):
         sigma_s = C["sigma_s"] * C["c0"] * (C["c1"] * np.log(ysig) +
                                             C["c2"] * np.log(vsig))
         if self.phi_0:
-            phi0 = self.phi_0[imt] + np.zeros(vs30.shape)
+            phi0 = self.phi_0[imt]['value'] + np.zeros(vs30.shape)
         else:
             # In the case that no input phi0 is defined take 'approximate'
             # phi0 as 85 % of phi
