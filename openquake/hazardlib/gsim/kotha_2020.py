@@ -186,7 +186,7 @@ class KothaEtAl2020(GMPE):
             self.dl2l = {}
             for key in dl2l:
                 self.dl2l[from_string(key)] = {"dl2l": dl2l[key]}
-            self.dl2l = CoeffsTable(sa_damping=5, table=self.dl2l)
+            self.dl2l = CoeffsTable.fromdict(self.dl2l)
         else:
             self.dl2l = None
         if c3:
@@ -197,7 +197,7 @@ class KothaEtAl2020(GMPE):
             self.c3 = {}
             for key in c3:
                 self.c3[from_string(key)] = {"c3": c3[key]}
-            self.c3 = CoeffsTable(sa_damping=5, table=self.c3)
+            self.c3 = CoeffsTable.fromdict(self.c3)
         else:
             self.c3 = None
 
