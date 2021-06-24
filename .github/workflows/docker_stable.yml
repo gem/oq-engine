@@ -35,7 +35,6 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.docker_username }}
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
-          DOCKER_TAG: ${{ github.event.inputs.version }}
           REPO_REF: ${{ github.event.inputs.git-ref }}
         id: docker_engine
         run: docker build --build-arg oq_branch=$REPO_REF  ${{ steps.extract_tags.outputs.tags }} -f docker/Dockerfile.engine docker
