@@ -28,7 +28,7 @@ from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
-        YenierAtkinson2015BSSA, get_fs_SeyhanStewart2014
+        YenierAtkinson2015BSSA
 from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
                                                get_tau_at_quantile,
                                                get_phi_ss,
@@ -112,12 +112,13 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
     def _get_mean_on_soil(self, sctx, rctx, dctx, imt, stddev_types):
         # Get PGA on rock
         tmp = PGA()
-        pga_rock = super()._get_mean_on_rock(sctx, rctx, dctx, tmp, stddev_types)
+        pga_rock = super()._get_mean_on_rock(
+            sctx, rctx, dctx, tmp, stddev_types)
         pga_rock = np.exp(pga_rock)
         # Site-effect model: always evaluated for 760 (see HID 2.6.2)
         vs30_760 = np.zeros_like(sctx.vs30)
         vs30_760[:] = 760
-        f_s = get_fs_SeyhanStewart2014(imt, pga_rock, vs30_760)
+        f_s = self.get_fs_SeyhanStewart2014(imt, pga_rock, vs30_760)
         # Compute the mean on soil
         mean = super()._get_mean_on_rock(sctx, rctx, dctx, imt, stddev_types)
         mean += f_s
@@ -151,8 +152,6 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
         exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
         exp2 = np.exp(C['phi3'] * (1130 - 360))
         mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2)
-#        stddevs = self.get_stddevs(sites, rup, C, stddev_types,
-#                                    ln_y_ref, exp1, exp2)
         stddevs = np.zeros_like(mean)
         return mean, stddevs
 
@@ -316,9 +315,9 @@ class AlAtikSigmaModel(GMPE):
                                        TAU_SETUP[self.tau_model]["STD"],
                                        self.tau_quantile)
         # setup phi
-        PHI_SETUP['global_linear'] = PHI_SS_GLOBAL_LINEAR
+        PHI_SETUP['global_linear'] = self.PHI_SS_GLOBAL_LINEAR
         self.PHI_SS = get_phi_ss_at_quantile_ACME(PHI_SETUP[self.phi_model],
-                                             self.phi_ss_quantile)
+                                                  self.phi_ss_quantile)
         # if required setup phis2ss
         if self.ergodic:
             if self.phi_s2ss_model == 'cena':
@@ -326,7 +325,7 @@ class AlAtikSigmaModel(GMPE):
                     PHI_S2SS_MODEL[self.phi_s2ss_model],
                     self.phi_s2ss_quantile)
             elif self.phi_s2ss_model == 'brb':
-                self.PHI_S2SS = PHI_S2SS_BRB
+                self.PHI_S2SS = self.PHI_S2SS_BRB
             else:
                 opts = "'cena', 'brb', or 'None'"
                 raise ValueError('phi_s2ss_model can be {}'.format(opts))
@@ -336,9 +335,7 @@ class AlAtikSigmaModel(GMPE):
         Corner period given as:
         10^(-1.884 - log10(D_sigma)/3 + 0.5*Mw)
         where D_sigma = 80 bars (8 MPa)
-        
-        from 2.6.5:
-        cornerp is to be constrained to not go below 1.0
+        from 2.6.5: cornerp is to be constrained to not go below 1.0
         """
         D_sigma = 80
         cornerp = 10**(-1.884 - np.log10(D_sigma)/3 + 0.5*mag)
@@ -409,12 +406,12 @@ class AlAtikSigmaModel(GMPE):
 
         extrap_mean = []
         t_log10 = np.log10([im for im in set_imt])
-        for d in np.arange(0,len(dists.rjb)):
+        for d in np.arange(0, len(dists.rjb)):
             dist = DistancesContext()
             if hasattr(dists, 'rjb'):
                 dist.rjb = np.array([dists.rjb[d]])
             if hasattr(dists, 'rrup'):
-                dist.rrup= np.array([dists.rrup[d]])
+                dist.rrup = np.array([dists.rrup[d]])
             means_log10 = []
             for im in set_imt:
                 mean_ln, _ = self.gmpe.get_mean_and_stddevs(
@@ -428,20 +425,18 @@ class AlAtikSigmaModel(GMPE):
 
         return extrap_mean
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types, 
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types,
                              extr=True):
 
         nsites = len(sites)
         stddevs = self.get_stddevs(rup.mag, imt, stds_types, nsites)
-        
         cornerp = self.get_corner_period(rup.mag)
-        # capping period only compares 
+        # capping period only compares
         # - highest period with a coefficient
         # - corner period
-        # - 2.0 if it's bindi 
+        # - 2.0 if it's bindi
         sp = self.get_capping_period(cornerp, self.gmpe, imt)
         hp = sp[-1]
-
 
         # 1 - if imt.period < cornerp, no changes needed
         if extr and imt.period <= cornerp and imt.period <= hp:
@@ -457,11 +452,11 @@ class AlAtikSigmaModel(GMPE):
         # if the corner period is longer than highest and imt is above
         # highets but below corner
         elif extr and cornerp > hp and hp <= imt.period < cornerp:
-            mean = self.extrapolate_in_PSA(sites, rup, dists,
-                                hp, sp, stds_types, imt.period)
+            mean = self.extrapolate_in_PSA(
+                sites, rup, dists, hp, sp, stds_types, imt.period)
         elif extr and cornerp > hp and imt.period > cornerp:
-            mean = self.extrapolate_in_PSA(sites, rup, dists,
-                                hp, sp, stds_types, cornerp)
+            mean = self.extrapolate_in_PSA(
+                sites, rup, dists, hp, sp, stds_types, cornerp)
             disp = self.get_disp_from_acc(mean, cornerp)
             mean = self.get_acc_from_disp(disp, imt.period)
 
@@ -511,10 +506,9 @@ class AlAtikSigmaModel(GMPE):
         Returns the within-event standard deviation (phi)
         """
         phi = get_phi_ss(imt, mag, self.PHI_SS)
-        
         # check if phi adjustment (2.6.6) is needed
         # -> if phi < 0.4 in middle branch and T is below 0.5 s
-        # -> preserve separation between high and low phi values 
+        # -> preserve separation between high and low phi values
         if imt.period < 0.5 and self.phi_ss_quantile == 0.5:
             phi = max(phi, 0.4)
 
@@ -533,45 +527,44 @@ class AlAtikSigmaModel(GMPE):
 
         return phi
 
-# PHI_SS2S coefficients, table 2.2 HID
-PHI_S2SS_BRB = CoeffsTable(logratio=False, sa_damping=5., table="""\
-    imt   phi_s2ss  
-    PGA     0.0000 
-    0.001   0.0000
-    0.999   0.0000
-    1.000   0.0011
-    1.200   0.0040
-    1.500   0.0075
-    2.000   0.0111
-    10.00   0.0111
+    # PHI_SS2S coefficients, table 2.2 HID
+    PHI_S2SS_BRB = CoeffsTable(logratio=False, sa_damping=5., table="""\
+        imt   phi_s2ss
+        PGA     0.0000
+        0.001   0.0000
+        0.999   0.0000
+        1.000   0.0011
+        1.200   0.0040
+        1.500   0.0075
+        2.000   0.0111
+        10.00   0.0111
+        """)
+
+    # Phi_ss coefficients for the global model
+    PHI_SS_GLOBAL_LINEAR = CoeffsTable(logratio=False, sa_damping=5., table="""\
+    imt     mean_a   var_a  mean_b  var_bs
+    pgv     0.5034  0.0609  0.3585  0.0316
+    pga     0.5477  0.0731  0.3505  0.0412
+    0.010   0.5477  0.0731  0.3505  0.0412
+    0.020   0.5464  0.0727  0.3505  0.0416
+    0.030   0.5450  0.0723  0.3505  0.0419
+    0.040   0.5436  0.0720  0.3505  0.0422
+    0.050   0.5424  0.0716  0.3505  0.0425
+    0.075   0.5392  0.0707  0.3505  0.0432
+    0.100   0.5361  0.0699  0.3505  0.0439
+    0.150   0.5299  0.0682  0.3543  0.0453
+    0.200   0.5240  0.0666  0.3659  0.0465
+    0.250   0.5183  0.0651  0.3765  0.0476
+    0.300   0.5127  0.0637  0.3876  0.0486
+    0.400   0.5022  0.0611  0.4066  0.0503
+    0.500   0.4923  0.0586  0.4170  0.0515
+    0.750   0.4704  0.0535  0.4277  0.0526
+    1.000   0.4519  0.0495  0.4257  0.0508
+    1.500   0.4231  0.0439  0.4142  0.0433
+    2.000   0.4026  0.0405  0.4026  0.0396
+    3.000   0.3775  0.0371  0.3775  0.0366
+    4.000   0.3648  0.0358  0.3648  0.0358
+    5.000   0.3583  0.0353  0.3583  0.0356
+    7.500   0.3529  0.0350  0.3529  0.0355
+    10.00   0.3519  0.0350  0.3519  0.0355
     """)
-
-# Phi_ss coefficients for the global model
-PHI_SS_GLOBAL_LINEAR = CoeffsTable(logratio=False, sa_damping=5., table="""\
-imt     mean_a   var_a  mean_b  var_bs
-pgv     0.5034  0.0609  0.3585  0.0316
-pga     0.5477  0.0731  0.3505  0.0412
-0.010   0.5477  0.0731  0.3505  0.0412
-0.020   0.5464  0.0727  0.3505  0.0416
-0.030   0.5450  0.0723  0.3505  0.0419
-0.040   0.5436  0.0720  0.3505  0.0422
-0.050   0.5424  0.0716  0.3505  0.0425
-0.075   0.5392  0.0707  0.3505  0.0432
-0.100   0.5361  0.0699  0.3505  0.0439
-0.150   0.5299  0.0682  0.3543  0.0453
-0.200   0.5240  0.0666  0.3659  0.0465
-0.250   0.5183  0.0651  0.3765  0.0476
-0.300   0.5127  0.0637  0.3876  0.0486
-0.400   0.5022  0.0611  0.4066  0.0503
-0.500   0.4923  0.0586  0.4170  0.0515
-0.750   0.4704  0.0535  0.4277  0.0526
-1.000   0.4519  0.0495  0.4257  0.0508
-1.500   0.4231  0.0439  0.4142  0.0433
-2.000   0.4026  0.0405  0.4026  0.0396
-3.000   0.3775  0.0371  0.3775  0.0366
-4.000   0.3648  0.0358  0.3648  0.0358
-5.000   0.3583  0.0353  0.3583  0.0356
-7.500   0.3529  0.0350  0.3529  0.0355
-10.00   0.3519  0.0350  0.3519  0.0355
-""")
-
