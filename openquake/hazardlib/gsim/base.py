@@ -625,7 +625,7 @@ class CoeffsTable(object):
     ...                      pgx  2''')
     Traceback (most recent call last):
         ...
-    ValueError: unknown IMT 'PGX'
+    KeyError: 'PGX'
 
     Note that :class:`CoeffsTable` only accepts keyword argumets:
 
@@ -647,11 +647,6 @@ class CoeffsTable(object):
     Traceback (most recent call last):
         ...
     ValueError: specify period as float value to declare SA IMT
-    >>> CoeffsTable(table='''imt  x
-    ...                      0.1  20''')
-    Traceback (most recent call last):
-        ...
-    TypeError: attribute "sa_damping" is required for tables defining SA
 
     So proper table defining SA looks like this:
 
@@ -668,12 +663,12 @@ class CoeffsTable(object):
     of coefficients):
 
     >>> from openquake.hazardlib import imt
-    >>> ct[imt.PGA()] == dict(a=1, b=2.4, c=-5, d=0.01)
-    True
-    >>> ct[imt.PGD()] == dict(a=7.6, b=12, c=0, d=44.1)
-    True
-    >>> ct[imt.SA(damping=5, period=0.1)] == dict(a=10, b=20, c=30, d=40)
-    True
+    >>> ct[imt.PGA()]
+    (1., 2.4, -5., 0.01)
+    >>> ct[imt.PGD()]
+    (7.6, 12., 0., 44.1)
+    >>> ct[imt.SA(damping=5, period=0.1)]
+    (10., 20., 30., 40.)
     >>> ct[imt.PGV()]
     Traceback (most recent call last):
         ...
@@ -755,6 +750,9 @@ class CoeffsTable(object):
         for line in lines:
             row = line.split()
             imt_name_or_period = row[0].upper()
+            if imt_name_or_period == 'SA':  # protect against stupid mistakes
+                raise ValueError('specify period as float value '
+                                 'to declare SA IMT')
             imt = imt_module.from_string(imt_name_or_period, sa_damping)
             self._coeffs[imt] = tt(*row[1:])
         return tt
