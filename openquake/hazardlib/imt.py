@@ -102,7 +102,7 @@ def SA(period, damping=5.0):
     single-degree-of-freedom harmonic oscillator. Units are ``g``, times
     of gravitational acceleration.
     """
-    return IMT('SA', period, damping)
+    return IMT('SA', float(period), damping)
 
 
 def AvgSA():

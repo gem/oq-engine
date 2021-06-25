@@ -72,7 +72,7 @@ class Bradley2013bChchCBD(Bradley2013LHC):
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
-        if isinstance(imt, PGA):
+        if imt.name == 'PGA':
             imt_per = 0.0
         else:
             imt_per = imt.period
@@ -482,7 +482,7 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
-        if isinstance(imt, PGA):
+        if imt.name == 'PGA':
             imt_per = 0.0
         else:
             imt_per = imt.period
