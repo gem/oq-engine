@@ -50,6 +50,8 @@ def imt2tup(string):
     elif len(name) > 12:
         raise NameError('IMT class name longer than 12 chars: %s' % name)
     elif not rest:
+        if name == 'SA':
+            raise ValueError('Missing period in SA')
         # no parenthesis, PGA is considered the same as PGA()
         return (s,)
     return (name, float(rest[0][:-1]))
