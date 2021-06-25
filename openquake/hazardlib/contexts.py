@@ -194,9 +194,6 @@ class ContextMaker(object):
                                            gsim.REQUIRES_RUPTURE_PARAMETERS,
                                            gsim.REQUIRES_SITES_PARAMETERS,
                                            gsim.REQUIRES_DISTANCES))
-            for name, table in inspect.getmembers(gsim):
-                if table.__class__.__name__ == "CoeffsTable":
-                    assert name.startswith('COEFFS'), (gsim, name)
             clist = [table.on(self.imts)
                      for name, table in inspect.getmembers(gsim.__class__)
                      if table.__class__.__name__ == "CoeffsTable"]
