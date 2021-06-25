@@ -196,12 +196,13 @@ class ContextMaker(object):
                                             gsim.REQUIRES_RUPTURE_PARAMETERS,
                                             gsim.REQUIRES_SITES_PARAMETERS,
                                             gsim.REQUIRES_DISTANCES)
+            kw = {k: getattr(gsim, k).on(self.imts) for k in gsim.dType.names}
             if numba:
                 self.fake[gsim] = arr = gsim.dType.zeros(len(self.imts))
-                for name in gsim.dType.names:
-                    arr[name] = getattr(gsim, name).on(self.imts)
+                for k in gsim.dType.names:
+                    arr[k] = kw[k]
             else:
-                self.fake[gsim] = gsim
+                self.fake[gsim] = hdf5.ArrayWrapper((), kw)
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
