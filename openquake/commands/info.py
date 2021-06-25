@@ -17,6 +17,8 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
+import string
+import inspect
 import unittest.mock as mock
 import logging
 import operator
@@ -86,6 +88,14 @@ choices = ['calculators', 'gsims', 'imts', 'views', 'exports',
            'extracts', 'parameters', 'sources', 'mfds', 'venv']
 
 
+def is_upper(func):
+    """
+    True if the name of the function starts with an uppercase character
+    """
+    char = func.__name__[0]
+    return char in string.ascii_uppercase
+
+
 def main(what, report=False):
     """
     Give information about the passed keyword or filename
@@ -99,8 +109,9 @@ def main(what, report=False):
         for gs in gsim.get_available_gsims():
             print(gs)
     elif what == 'imts':
-        for im in gen_subclasses(imt.IMT):
-            print(im.__name__)
+        for im in vars(imt).values():
+            if inspect.isfunction(im) and is_upper(im):
+                print(im.__name__)
     elif what == 'views':
         for name in sorted(view):
             print(name)
