@@ -228,7 +228,8 @@ class ContextMaker(object):
                 clist = self.clist[g]
                 ctx = numpy.ones(1, ctype)
                 out = numpy.zeros((2, 1, M))
-                gsim.__class__.calc_mean_stds(out, ctx, tot, *clist)
+                for m, imt in enumerate(self.imts):
+                    gsim.__class__.calc_mean_stds(ctx, imt, tot, out[:, :, m])
 
     def gen_triples(self, gsim_idx, ctxs):
         """
@@ -516,17 +517,17 @@ class ContextMaker(object):
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
-    def get_mean_stds(self, orig_ctxs, *stdtypes):
+    def get_mean_stds(self, ctxs, *stdtypes):
         """
-        :param orig_ctxs: a list of contexts
+        :param ctxs: a list of contexts
         :param stdtypes: tuple of standard deviation types
         :returns: a list of G arrays of shape (O, N, M) with mean and stddevs
         """
-        N = sum(len(ctx.sids) for ctx in orig_ctxs)
+        ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
+        N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(self.imts)
         if self.trunclevel == 0:
             stdtypes = ()
-        ctxs = [ctx.roundup(self.minimum_distance) for ctx in orig_ctxs]
         out = []
         for g, gsim in enumerate(self.gsims):
             if stdtypes == (StdDev.EVENT,):
@@ -544,7 +545,8 @@ class ContextMaker(object):
                     # single-site-optimization
                     ctxs = [self.multi(ctxs)]
                 for ctx, clist, slc in self.gen_triples(g, ctxs):
-                    calc_ms(arr[:, slc], ctx, stypes, *clist)
+                    for m, imt in enumerate(self.imts):
+                        calc_ms(ctx, imt, stypes, arr[:, slc, m])
             else:  # slow lane
                 start = 0
                 for ctx in ctxs:
