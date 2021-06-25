@@ -44,11 +44,13 @@ def imt2tup(string):
     ('SA', 1.0)
     """
     s = string.strip()
-    if not s.endswith(')'):
+    name, *rest = s.split('(')
+    if name not in globals():
+        raise KeyError(name)
+    elif not rest:
         # no parenthesis, PGA is considered the same as PGA()
         return (s,)
-    name, rest = s.split('(', 1)
-    return (name,) + tuple(float(x) for x in ast.literal_eval(rest[:-1] + ','))
+    return (name, ast.literal_eval('(' + rest[0]))
 
 
 def from_string(imt, _damping=5.0):
@@ -65,7 +67,10 @@ def from_string(imt, _damping=5.0):
 
 def repr(self):
     if self.period:
-        return '%s(%s)' % (self.name, self.period)
+        if self.damping == 5.0:
+            return '%s(%s)' % (self.name, self.period)
+        else:
+            return '%s(%s, %s)' % (self.name, self.period, self.damping)
     return self.name
 
 
