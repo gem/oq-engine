@@ -938,7 +938,6 @@ class RiskCalculator(HazardCalculator):
         if not set(self.oqparam.risk_imtls) & imtset:
             rsk = ', '.join(self.oqparam.risk_imtls)
             haz = ', '.join(imtset)
-            import pdb; pdb.set_trace()
             raise ValueError('The IMTs in the risk models (%s) are disjoint '
                              "from the IMTs in the hazard (%s)" % (rsk, haz))
         if not hasattr(self.crmodel, 'tmap'):
