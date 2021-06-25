@@ -20,7 +20,6 @@ import os
 import abc
 import copy
 import time
-import inspect
 import logging
 import warnings
 import itertools
@@ -40,6 +39,7 @@ from openquake.hazardlib.tom import registry
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
+
 
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
@@ -183,21 +183,21 @@ class ContextMaker(object):
             self.imtls = DictArray(param['hazard_imtls'])
         else:
             self.imtls = {}
-        self.imts = [imt_module.from_string(imt) for imt in self.imtls]
+        self.imts = tuple(imt_module.from_string(imt) for imt in self.imtls)
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        self.ctype = []
-        self.clist = []
+        self.ctype = {}
+        self.fake = {}
         for gsim in gsims:
-            self.ctype.append(float_struct(gsim.REQUIRES_PARAMETERS,
-                                           gsim.REQUIRES_RUPTURE_PARAMETERS,
-                                           gsim.REQUIRES_SITES_PARAMETERS,
-                                           gsim.REQUIRES_DISTANCES))
-            clist = [table.on(self.imts)
-                     for name, table in inspect.getmembers(gsim.__class__)
-                     if table.__class__.__name__ == "CoeffsTable"]
-            self.clist.append(clist)
+            self.ctype[gsim] = float_struct(gsim.REQUIRES_PARAMETERS,
+                                            gsim.REQUIRES_RUPTURE_PARAMETERS,
+                                            gsim.REQUIRES_SITES_PARAMETERS,
+                                            gsim.REQUIRES_DISTANCES)
+            self.fake[gsim] = arr = gsim.dType.zeros(len(self.imts))
+            for name in gsim.dType.names:
+                arr[name] = getattr(gsim, name).on(self.imts)
+                              
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -224,19 +224,18 @@ class ContextMaker(object):
         tot = (StdDev.TOTAL,)
         for g, gsim in enumerate(self.gsims):
             if hasattr(gsim, 'calc_mean_stds'):
-                ctype = self.ctype[g]
-                clist = self.clist[g]
+                ctype = self.ctype[gsim]
+                fake = self.fake[gsim]
                 ctx = numpy.ones(1, ctype)
                 out = numpy.zeros((2, 1, M))
-                for m, imt in enumerate(self.imts):
-                    gsim.__class__.calc_mean_stds(ctx, imt, tot, out[:, :, m])
+                gsim.__class__.calc_mean_stds(fake, ctx, self.imts, tot, out)
 
-    def gen_triples(self, gsim_idx, ctxs):
+    def gen_triples(self, gsim, ctxs):
         """
-        Yield triples ctx, allcoeffs, slice for each context
+        Yield triples ctx, fake, slice for each context
         """
-        ctype = self.ctype[gsim_idx]
-        clist = self.clist[gsim_idx]
+        ctype = self.ctype[gsim]
+        fake = self.fake[gsim]
         start = 0
         for ctx in ctxs:
             n = ctx.size()
@@ -244,7 +243,7 @@ class ContextMaker(object):
             for name in ctype.names:
                 new[name] = getattr(ctx, name)
             stop = start + n
-            yield new, clist, slice(start, stop)
+            yield new, fake, slice(start, stop)
             start = stop
 
     def read_ctxs(self, dstore, slc=None):
@@ -544,9 +543,8 @@ class ContextMaker(object):
                 if all(len(ctx) == 1 for ctx in ctxs):
                     # single-site-optimization
                     ctxs = [self.multi(ctxs)]
-                for ctx, clist, slc in self.gen_triples(g, ctxs):
-                    for m, imt in enumerate(self.imts):
-                        calc_ms(ctx, imt, stypes, arr[:, slc, m])
+                for ctx, fake, slc in self.gen_triples(gsim, ctxs):
+                    calc_ms(fake, ctx, self.imts, stypes, arr[:, slc])
             else:  # slow lane
                 start = 0
                 for ctx in ctxs:

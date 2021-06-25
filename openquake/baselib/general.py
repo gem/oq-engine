@@ -1453,6 +1453,7 @@ class DType(object):
         else:
             assert len(dtypes) == len(names), (len(dtypes), len(names))
         self.dtype = numpy.dtype([(n, d) for n, d in zip(names, dtypes)])
+        self.names = names
 
     def zeros(self, shape):
         return numpy.zeros(shape, self.dtype)
