@@ -106,10 +106,10 @@ class DrouetAlpes2015Rjb(GMPE):
 
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.rjb)
-        if isinstance(imt, SA) or isinstance(imt, PGA):
+        if imt.name in 'SA PGA':
             # Convert from m/s**2 to g
             mean = mean - np.log(g)
-        elif isinstance(imt, PGV):  # Convert from m/s to cm/s
+        elif imt.name == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
                                     dists.rjb.shape[0])
@@ -204,10 +204,10 @@ class DrouetAlpes2015Rrup(DrouetAlpes2015Rjb):
 
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.rrup)
-        if isinstance(imt, SA) or isinstance(imt, PGA):
+        if imt.name in 'SA PGA':
             # Convert from m/s**2 to g
             mean = mean - np.log(g)
-        elif isinstance(imt, PGV):  # Convert from m/s to cm/s
+        elif imt.name == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
                                     dists.rrup.shape[0])
@@ -264,10 +264,10 @@ class DrouetAlpes2015Repi(DrouetAlpes2015Rjb):
 
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.repi)
-        if isinstance(imt, (SA, PGA)):
+        if imt.name in 'SA PGA':
             # Convert from m/s**2 to g
             mean = mean - np.log(g)
-        elif isinstance(imt, PGV):  # Convert from m/s to cm/s
+        elif imt.name == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
                                     dists.repi.shape[0])
@@ -324,9 +324,9 @@ class DrouetAlpes2015Rhyp(DrouetAlpes2015Rjb):
 
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.rhyp)
-        if isinstance(imt, (SA, PGA)):  # Convert from m/s**2 to g
+        if imt.name in 'SA PGA':  # Convert from m/s**2 to g
             mean = mean - np.log(g)
-        elif isinstance(imt, PGV):  # Convert from m/s to cm/s
+        elif imt.name == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
         stddevs = self._get_stddevs(C, stddev_types, rup.mag,
                                     dists.rhyp.shape[0])
