@@ -302,11 +302,11 @@ class CoeffsTable(object):
         """
         firstdic = ddic[next(iter(ddic))]
         self = object.__new__(cls)
-        self.tt = DType(list(firstdic), float)
-        self._coeffs = {imt: self.tt(**dic) for imt, dic in ddic.items()}
+        self.dt = DType(list(firstdic), float)
+        self._coeffs = {imt: self.dt(**dic) for imt, dic in ddic.items()}
         self.logratio = logratio
         self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
-                              [(name, float) for name in self.tt.dtype.names])
+                              [(name, float) for name in self.dt.dtype.names])
         return self
 
     def __init__(self, table, **kwargs):
@@ -315,7 +315,7 @@ class CoeffsTable(object):
         sa_damping = kwargs.pop('sa_damping', None)
         if kwargs:
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
-        self.tt = self._setup_table_from_str(table, sa_damping)
+        self.dt = self._setup_table_from_str(table, sa_damping)
 
     def _setup_table_from_str(self, table, sa_damping):
         """
@@ -346,12 +346,12 @@ class CoeffsTable(object):
         return {imt: self._coeffs[imt] for imt in self._coeffs
                 if imt.name != 'SA'}
 
-    def on(self, imts):
+    def to_array(self, imts):
         """
-        :param imts: a list of IMTs
+        :param imts: a tuple of IMT tuples
         :returns: a structured array with the coefficients for each IMT
         """
-        arr = numpy.zeros(len(imts), self.tt.dtype)
+        arr = numpy.zeros(len(imts), self.dt.dtype)
         for m, imt in enumerate(imts):
             arr[m] = self[imt]
         return arr
@@ -397,13 +397,12 @@ class CoeffsTable(object):
         below = self.sa_coeffs[max_below]
         above = self.sa_coeffs[min_above]
         lst = [(above[n] - below[n]) * ratio + below[n]
-               for n in self.tt.dtype.names]
-        self._coeffs[imt] = c = self.tt(*lst)
+               for n in self.dt.dtype.names]
+        self._coeffs[imt] = c = self.dt(*lst)
         return c
 
     def __repr__(self):
-        return '<%s %s>' % (self.__class__.__name__,
-                            ' '.join(self.tt.dtype.names))
+        return '<%s %s>' % (self.__class__.__name__, ' '.join(self.dt.names))
 
 
 class MetaGSIM(abc.ABCMeta):
@@ -533,22 +532,24 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
 
     @classmethod
     def __init_subclass__(cls):
+        stddevtypes = cls.DEFINED_FOR_STANDARD_DEVIATION_TYPES
+        if isinstance(stddevtypes, abc.abstractproperty):  # in GMPE
+            return
+        elif const.StdDev.TOTAL not in stddevtypes:
+            raise ValueError(
+                '%s.DEFINED_FOR_STANDARD_DEVIATION_TYPES is '
+                'not defined for const.StdDev.TOTAL' % cls.__name__)
         params = cls.REQUIRES_PARAMETERS.copy()
         params.update(cls.__base__.REQUIRES_PARAMETERS)
         for attr, ctable in vars(cls).items():
             if isinstance(ctable, CoeffsTable):
-                params[attr] = ctable.tt.dtype
+                params[attr] = ctable.dt.dtype
         names = sorted(params)
-        types = [params[p] for p in names]
-        cls.dType = DType(names, types)
-
-        stddevtypes = cls.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-        if not isinstance(stddevtypes, abc.abstractproperty):  # concrete class
-            if const.StdDev.TOTAL not in stddevtypes:
-                raise ValueError('%s.DEFINED_FOR_STANDARD_DEVIATION_TYPES is '
-                                 'not defined for const.StdDev.TOTAL' %
-                                 cls.__name__)
-            registry[cls.__name__] = cls
+        cls.dType = DType(names, [params[p] for p in names])
+        cls.rType = DType(sorted(cls.REQUIRES_RUPTURE_PARAMETERS) +
+                          sorted(cls.REQUIRES_SITES_PARAMETERS) +
+                          sorted(cls.REQUIRES_DISTANCES), float)
+        registry[cls.__name__] = cls
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs

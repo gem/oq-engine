@@ -134,16 +134,6 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def float_struct(*allnames):
-    """
-    :returns: a composite dtype of float64 fields
-    """
-    ns = []
-    for names in allnames:
-        ns.extend(names)
-    return numpy.dtype([(n, numpy.float64) for n in ns])
-
-
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
@@ -189,13 +179,10 @@ class ContextMaker(object):
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        self.ctype = {}
         self.fake = {}
         for gsim in gsims:
-            self.ctype[gsim] = float_struct(gsim.REQUIRES_RUPTURE_PARAMETERS,
-                                            gsim.REQUIRES_SITES_PARAMETERS,
-                                            gsim.REQUIRES_DISTANCES)
-            kw = {k: getattr(gsim, k).on(self.imts) for k in gsim.dType.names}
+            kw = {k: getattr(gsim, k).to_array(self.imts)
+                  for k in gsim.dType.names}
             if numba:
                 self.fake[gsim] = arr = gsim.dType.zeros(len(self.imts))
                 for k in gsim.dType.names:
@@ -228,9 +215,8 @@ class ContextMaker(object):
         tot = (StdDev.TOTAL,)
         for g, gsim in enumerate(self.gsims):
             if hasattr(gsim, 'calc_mean_stds'):
-                ctype = self.ctype[gsim]
                 fake = self.fake[gsim]
-                ctx = numpy.ones(1, ctype)
+                ctx = numpy.ones(1, gsim.rType.dtype)
                 out = numpy.zeros((2, 1, M))
                 gsim.__class__.calc_mean_stds(fake, ctx, self.imts, tot, out)
 
@@ -238,13 +224,12 @@ class ContextMaker(object):
         """
         Yield triples ctx, fake, slice for each context
         """
-        ctype = self.ctype[gsim]
         fake = self.fake[gsim]
         start = 0
         for ctx in ctxs:
             n = ctx.size()
-            new = numpy.zeros(n, ctype)
-            for name in ctype.names:
+            new = gsim.rType.zeros(n)
+            for name in gsim.rType.names:
                 new[name] = getattr(ctx, name)
             stop = start + n
             yield new, fake, slice(start, stop)
