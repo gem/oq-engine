@@ -52,7 +52,7 @@ def imt2tup(string):
     elif not rest:
         # no parenthesis, PGA is considered the same as PGA()
         return (s,)
-    return (name, ast.literal_eval('(' + rest[0]))
+    return (name, float(rest[0][:-1]))
 
 
 def from_string(imt, _damping=5.0):
