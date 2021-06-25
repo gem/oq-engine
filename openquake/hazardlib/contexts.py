@@ -192,8 +192,7 @@ class ContextMaker(object):
         self.ctype = {}
         self.fake = {}
         for gsim in gsims:
-            self.ctype[gsim] = float_struct(gsim.REQUIRES_PARAMETERS,
-                                            gsim.REQUIRES_RUPTURE_PARAMETERS,
+            self.ctype[gsim] = float_struct(gsim.REQUIRES_RUPTURE_PARAMETERS,
                                             gsim.REQUIRES_SITES_PARAMETERS,
                                             gsim.REQUIRES_DISTANCES)
             kw = {k: getattr(gsim, k).on(self.imts) for k in gsim.dType.names}
