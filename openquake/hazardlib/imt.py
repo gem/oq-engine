@@ -47,6 +47,8 @@ def imt2tup(string):
     name, *rest = s.split('(')
     if name not in globals():
         raise KeyError(name)
+    elif len(name) > 12:
+        raise NameError('IMT class name longer than 12 chars: %s' % name)
     elif not rest:
         # no parenthesis, PGA is considered the same as PGA()
         return (s,)
