@@ -28,7 +28,10 @@ import collections
 import numpy
 import pandas
 from scipy.interpolate import interp1d
-
+try:
+    import numba
+except ImportError:
+    numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, block_splitter)
@@ -39,7 +42,6 @@ from openquake.hazardlib.tom import registry
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
-
 
 KNOWN_DISTANCES = frozenset(
     'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
@@ -194,10 +196,12 @@ class ContextMaker(object):
                                             gsim.REQUIRES_RUPTURE_PARAMETERS,
                                             gsim.REQUIRES_SITES_PARAMETERS,
                                             gsim.REQUIRES_DISTANCES)
-            self.fake[gsim] = arr = gsim.dType.zeros(len(self.imts))
-            for name in gsim.dType.names:
-                arr[name] = getattr(gsim, name).on(self.imts)
-                              
+            if numba:
+                self.fake[gsim] = arr = gsim.dType.zeros(len(self.imts))
+                for name in gsim.dType.names:
+                    arr[name] = getattr(gsim, name).on(self.imts)
+            else:
+                self.fake[gsim] = gsim
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
