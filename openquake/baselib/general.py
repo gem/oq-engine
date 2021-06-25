@@ -1435,15 +1435,27 @@ def agg_probs(*probs):
     return 1. - acc
 
 
-class TypedTuple(object):
+class DType(object):
     """
-    Builder for numpy records of homogeneous type.
+    Builder for numpy records or arrays.
 
-    >>> TypedTuple('abc', float)(0, c=2, b='1')
+    >>> DType('a b c', float)(0, c=2, b='1')
     (0., 1., 2.)
+
+    >>> DType('a b c', [float, int, 'S12']).zeros(1)
+    array([(0., 0, b'')], dtype=[('a', '<f8'), ('b', '<i8'), ('c', 'S12')])
     """
-    def __init__(self, names, dtype):
-        self.dtype = numpy.dtype([(n, dtype) for n in names])
+    def __init__(self, names, dtypes):
+        if isinstance(names, str):
+            names = names.split()
+        if not isinstance(dtypes, list):
+            dtypes = [dtypes for _ in names]
+        else:
+            assert len(dtypes) == len(names), (len(dtypes), len(names))
+        self.dtype = numpy.dtype([(n, d) for n, d in zip(names, dtypes)])
+
+    def zeros(self, shape):
+        return numpy.zeros(shape, self.dtype)
 
     def __call__(self, *args, **kw):
         tt = numpy.zeros(1, self.dtype)[0]

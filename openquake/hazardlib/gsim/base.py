@@ -29,7 +29,7 @@ import numpy
 from scipy.special import ndtr
 from scipy.stats import norm
 
-from openquake.baselib.general import DeprecationWarning, TypedTuple
+from openquake.baselib.general import DeprecationWarning, DType
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
@@ -721,7 +721,7 @@ class CoeffsTable(object):
         """
         firstdic = ddic[next(iter(ddic))]
         self = object.__new__(cls)
-        self.tt = TypedTuple(list(firstdic), float)
+        self.tt = DType(list(firstdic), float)
         self._coeffs = {imt: self.tt(**dic) for imt, dic in ddic.items()}
         self.logratio = logratio
         self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
@@ -746,7 +746,7 @@ class CoeffsTable(object):
         header = lines.pop(0).split()
         if not header[0].upper() == "IMT":
             raise ValueError('first column in a table must be IMT')
-        tt = TypedTuple(header[1:], float)
+        tt = DType(header[1:], float)
         for line in lines:
             row = line.split()
             imt_name_or_period = row[0].upper()
