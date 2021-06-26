@@ -26,6 +26,52 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import RSD595, RSD575
 
 
+def get_magnitude_term(C, mag):
+    """
+    Returns linear magnitude scaling term
+    """
+    return C["c0"] + C["m1"] * mag
+
+
+def get_distance_term(C, rrup, mag):
+    """
+    Returns distance scaling term
+    """
+    return (C["r1"] + C["r2"] * mag) *\
+        np.log(np.sqrt(rrup ** 2. + C["h1"] ** 2.))
+
+
+def get_ztor_term(C, ztor):
+    """
+    Returns depth to top of rupture scaling
+    """
+    return C["z1"] * ztor
+
+
+def get_site_amplification(C, vs30):
+    """
+    Returns linear site amplification term
+    """
+    return C["v1"] * np.log(vs30)
+
+
+def get_stddevs(C, nsites, stddev_types):
+    """
+    Returns the standard deviations
+    """
+    stddevs = []
+    zeros_array = np.zeros(nsites)
+    for stddev in stddev_types:
+        if stddev == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(C["tau"] ** 2. + C["phi"] ** 2.) +
+                           zeros_array)
+        elif stddev == const.StdDev.INTER_EVENT:
+            stddevs.append(C["tau"] + zeros_array)
+        elif stddev == const.StdDev.INTRA_EVENT:
+            stddevs.append(C["phi"] + zeros_array)
+    return stddevs
+
+
 class BommerEtAl2009RSD(GMPE):
     """
     Implements the GMPE of Bommer et al. (2009) for significant duration with
@@ -36,21 +82,15 @@ class BommerEtAl2009RSD(GMPE):
 
     #: Supported intensity measure types are 5 - 95 % Arias and 5 - 75 % Arias
     #: significant duration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        RSD595,
-        RSD575
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {RSD595, RSD575}
 
     #: Supported intensity measure component is the geometric mean horizontal
     #: component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total, see table 7, page 35
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Requires vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -68,55 +108,13 @@ class BommerEtAl2009RSD(GMPE):
         for spec of input and result values.
         """
         C = self.COEFFS[imt]
-        mean = (self.get_magnitude_term(C, rup.mag) +
-                self.get_distance_term(C, dists.rrup, rup.mag) +
-                self.get_ztor_term(C, rup.ztor) +
-                self.get_site_amplification(C, sites.vs30))
+        mean = (get_magnitude_term(C, rup.mag) +
+                get_distance_term(C, dists.rrup, rup.mag) +
+                get_ztor_term(C, rup.ztor) +
+                get_site_amplification(C, sites.vs30))
 
-        stddevs = self.get_stddevs(C, dists.rrup.shape, stddev_types)
+        stddevs = get_stddevs(C, dists.rrup.shape, stddev_types)
         return mean, stddevs
-
-    def get_magnitude_term(self, C, mag):
-        """
-        Returns linear magnitude scaling term
-        """
-        return C["c0"] + C["m1"] * mag
-
-    def get_distance_term(self, C, rrup, mag):
-        """
-        Returns distance scaling term
-        """
-        return (C["r1"] + C["r2"] * mag) *\
-            np.log(np.sqrt(rrup ** 2. + C["h1"] ** 2.))
-
-    def get_ztor_term(self, C, ztor):
-        """
-        Returns depth to top of rupture scaling
-        """
-        return C["z1"] * ztor
-
-    def get_site_amplification(self, C, vs30):
-        """
-        Returns linear site amplification term
-        """
-        return C["v1"] * np.log(vs30)
-
-    def get_stddevs(self, C, nsites, stddev_types):
-        """
-        Returns the standard deviations
-        """
-        stddevs = []
-        zeros_array = np.zeros(nsites)
-        for stddev in stddev_types:
-            assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C["tau"] ** 2. + C["phi"] ** 2.) +
-                               zeros_array)
-            elif stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(C["tau"] + zeros_array)
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(C["phi"] + zeros_array)
-        return stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt          c0       m1      r1       r2      h1       v1       z1     tau     phi
