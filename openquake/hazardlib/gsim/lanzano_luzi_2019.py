@@ -28,6 +28,71 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return standard deviations components.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(C['sigma'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['phi'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+    return stddevs
+
+
+def _compute_distance(rval2, C):
+    """
+    Compute the distance function, equation (9):
+    """
+    h1 = 2
+    rval = np.sqrt(rval2 ** 2 + (h1) ** 2)
+    return C['c1'] * np.log10(rval)
+
+
+def _compute_magnitude(rup, C):
+    """
+    Compute the magnitude function, equation (9):
+    """
+    return C['a'] + (C['b'] * (rup.mag))
+
+
+def _get_site_amplification(sites, C):
+    """
+    Compute the site amplification function given by FS = eiSi, for
+    i = 1,2,3 where Si are the coefficients determined through regression
+    analysis, and ei are dummy variables (0 or 1) used to denote the
+    different EC8 site classes.
+    """
+    ssb, ssc = _get_site_type_dummy_variables(sites)
+
+    return (C['sB'] * ssb) + (C['sC'] * ssc)
+
+
+def _get_site_type_dummy_variables(sites):
+    """
+    Get site type dummy variables, which classified the sites into
+    different site classes based on the shear wave velocity in the
+    upper 30 m (Vs30) according to the EC8 (CEN 2003):
+    class A: Vs30 > 800 m/s
+    class B: Vs30 = 360 - 800 m/s
+    class C: Vs30 = 180 - 360 m/s
+    class D: Vs30 < 180 m/s
+    """
+    ssb = np.zeros(len(sites.vs30))
+    ssc = np.zeros(len(sites.vs30))
+    # Class C; Vs30 < 360 m/s.
+    idx = (sites.vs30 < 360.0)
+    ssc[idx] = 1.0
+    # Class B; 360 m/s <= Vs30 <= 800 m/s.
+    idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800.0)
+    ssb[idx] = 1.0
+
+    return ssb, ssc
+
+
 class LanzanoLuzi2019shallow(GMPE):
     """
     Implements GMPE developed by Giovanni Lanzano and Lucia Luzi (2019) and
@@ -35,13 +100,13 @@ class LanzanoLuzi2019shallow(GMPE):
     Bulletin of Earthquake Engineering.
 
     GMPE derives from earthquakes in the volcanic areas in Italy in the
-    magnitude range 3<ML<5 for hypocentral distances <200 km, and for rock (EC8-A),
-    stiff soil (EC8-B) and soft soil (EC8-C and EC8-D).
+    magnitude range 3<ML<5 for hypocentral distances <200 km, and for
+    rock (EC8-A), stiff soil (EC8-B) and soft soil (EC8-C and EC8-D).
 
     The GMPE distinguishes between shallow volcano-tectonic events related to
     flank movements (focal depths <5km) and deeper events occurring due to
-    regional tectonics (focal depths >5km), considering two different attenuations 
-    with distances.
+    regional tectonics (focal depths >5km), considering two different
+    attenuations with distances.
 
     Test tables are generated from a spreadsheet provided by the authors, and
     modified according to OQ format (e.g. conversion from cm/s2 to m/s2).
@@ -50,11 +115,7 @@ class LanzanoLuzi2019shallow(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
 
     #: Supported intensity measure types are PGA and SA
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -62,11 +123,8 @@ class LanzanoLuzi2019shallow(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, page 1904
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -87,11 +145,11 @@ class LanzanoLuzi2019shallow(GMPE):
         # intensity measure type
         C = self.COEFFS[imt]
 
-        imean = (self._compute_magnitude(rup, C) +
-                 self._compute_distance(dists.rhypo, C) +
-                 self._get_site_amplification(sites, C))
+        imean = (_compute_magnitude(rup, C) +
+                 _compute_distance(dists.rhypo, C) +
+                 _get_site_amplification(sites, C))
 
-        istddevs = self._get_stddevs(C,
+        istddevs = _get_stddevs(C,
                                      stddev_types,
                                      num_sites=sites.vs30.size)
 
@@ -107,66 +165,6 @@ class LanzanoLuzi2019shallow(GMPE):
         # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
         return mean, stddevs
 
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations components.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['phi'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_distance(self, rval2, C):
-        """
-        Compute the distance function, equation (9):
-        """
-        h1 = 2
-        rval = np.sqrt(rval2 ** 2 + (h1) ** 2)
-        return C['c1'] * np.log10(rval)
-
-    def _compute_magnitude(self, rup, C):
-        """
-        Compute the magnitude function, equation (9):
-        """
-        return C['a'] + (C['b'] * (rup.mag))
-
-    def _get_site_amplification(self, sites, C):
-        """
-        Compute the site amplification function given by FS = eiSi, for
-        i = 1,2,3 where Si are the coefficients determined through regression
-        analysis, and ei are dummy variables (0 or 1) used to denote the
-        different EC8 site classes.
-        """
-        ssb, ssc = self._get_site_type_dummy_variables(sites)
-
-        return (C['sB'] * ssb) + (C['sC'] * ssc)
-
-    def _get_site_type_dummy_variables(self, sites):
-        """
-        Get site type dummy variables, which classified the sites into
-        different site classes based on the shear wave velocity in the
-        upper 30 m (Vs30) according to the EC8 (CEN 2003):
-        class A: Vs30 > 800 m/s
-        class B: Vs30 = 360 - 800 m/s
-        class C: Vs30 = 180 - 360 m/s
-        class D: Vs30 < 180 m/s
-        """
-        ssb = np.zeros(len(sites.vs30))
-        ssc = np.zeros(len(sites.vs30))
-        # Class C; Vs30 < 360 m/s.
-        idx = (sites.vs30 < 360.0)
-        ssc[idx] = 1.0
-        # Class B; 360 m/s <= Vs30 <= 800 m/s.
-        idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800.0)
-        ssb[idx] = 1.0
-
-        return ssb, ssc
         
           # Sigma values in log10
     COEFFS = CoeffsTable(sa_damping=5, table="""
@@ -204,18 +202,15 @@ class LanzanoLuzi2019shallow(GMPE):
 	4.500	-3.3949	1.0490	-1.475	-1.6088	-0.0011	0.0908	0.3587	0.2287	0.1952	0.1835	0.2679	0.3522
 	5.000	-3.4022	1.0258	-1.4711	-1.6097	-0.0011	0.0856	0.3386	0.2273	0.1954	0.1835	0.2681	0.3515
     """)
-        
+
+
 class LanzanoLuzi2019deep(GMPE):
- 
-     #: Supported tectonic region type is 'volcanic'
+
+    #: Supported tectonic region type is 'volcanic'
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
 
     #: Supported intensity measure types are PGA and SA
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -223,11 +218,8 @@ class LanzanoLuzi2019deep(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, page 1904
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -256,7 +248,7 @@ class LanzanoLuzi2019deep(GMPE):
                                      stddev_types,
                                      num_sites=sites.vs30.size)
 
-		# Convert units to g,
+	# Convert units to g,
         # but only for PGA and SA (not PGV):
         if imt.name in "SA PGA":
             mean = np.log((10.0 ** (imean - 2.0)) / g)
