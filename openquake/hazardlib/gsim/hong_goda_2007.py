@@ -23,6 +23,104 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+CONSTS = {"Vref": 760.0, "v1": 180.0, "v2": 300.0}
+
+
+def _compute_pga_rock(C_PGA, mag, rjb):
+    """
+    Returns the PGA (g) on rock, as defined in equation 15
+    """
+    return np.exp(_compute_linear_magnitude_term(C_PGA, mag) +
+                  _compute_simple_distance_term(C_PGA, rjb))
+
+
+def _compute_linear_magnitude_term(C, mag):
+    """
+    Computes the linear part of the magnitude term
+    """
+    return C["b1"] + C["b2"] * (mag - 7.0)
+
+
+def _compute_nonlinear_magnitude_term(C, mag):
+    """
+    Computes the non-linear magnitude term
+    """
+    return _compute_linear_magnitude_term(C, mag) + C["b3"] * (
+        (mag - 7.0) ** 2.)
+
+
+def _compute_simple_distance_term(C, rjb):
+    """
+    The distance term for the PGA case ignores magnitude (equation 15)
+    """
+    return C["b4"] * np.log(np.sqrt(rjb ** 2. + C["h"] ** 2.))
+
+
+def _compute_magnitude_distance_term(C, rjb, mag):
+    """
+    Returns the magntude dependent distance term
+    """
+    rval = np.sqrt(rjb ** 2. + C["h"] ** 2.)
+    return (C["b4"] + C["b5"] * (mag - 4.5)) * np.log(rval)
+
+
+def _get_site_amplification(C_AMP, vs30, pga_rock):
+    """
+    Gets the site amplification term based on equations 7 and 8 of
+    Atkinson & Boore (2006)
+    """
+    # Get nonlinear term
+    bnl = _get_bnl(C_AMP, vs30)
+    #
+    f_nl_coeff = np.log(60.0 / 100.0) * np.ones_like(vs30)
+    idx = pga_rock > 60.0
+    f_nl_coeff[idx] = np.log(pga_rock[idx] / 100.0)
+    return np.log(np.exp(
+        C_AMP["blin"] * np.log(vs30 / CONSTS["Vref"]) + bnl * f_nl_coeff))
+
+
+def _get_bnl(C_AMP, vs30):
+    """
+    Gets the nonlinear term, given by equation 8 of Atkinson & Boore 2006
+    """
+    # Default case 8d
+    bnl = np.zeros_like(vs30)
+    if np.all(vs30 >= CONSTS["Vref"]):
+        return bnl
+    # Case 8a
+    bnl[vs30 < CONSTS["v1"]] = C_AMP["b1sa"]
+    # Cade 8b
+    idx = np.logical_and(vs30 > CONSTS["v1"],
+                         vs30 <= CONSTS["v2"])
+
+    if np.any(idx):
+        bnl[idx] = (C_AMP["b1sa"] - C_AMP["b2sa"]) *\
+            (np.log(vs30[idx] / CONSTS["v2"]) /
+             np.log(CONSTS["v1"] / CONSTS["v2"])) + C_AMP["b2sa"]
+    # Case 8c
+    idx = np.logical_and(vs30 > CONSTS["v2"],
+                         vs30 < CONSTS["Vref"])
+    if np.any(idx):
+        bnl[idx] = C_AMP["b2sa"] *\
+            np.log(vs30[idx] / CONSTS["Vref"]) /\
+            np.log(CONSTS["v2"] / CONSTS["Vref"])
+    return bnl
+
+
+def _get_stddevs(C, stddev_types, stddev_shape):
+    """
+    Returns the standard deviations given in Table 2
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(C["sigtot"] + np.zeros(stddev_shape))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['sig2'] + np.zeros(stddev_shape))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['sig1'] + np.zeros(stddev_shape))
+    return stddevs
+
 
 class HongGoda2007(GMPE):
     """
@@ -41,22 +139,15 @@ class HongGoda2007(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: The supported intensity measure types are PGA, PGV, and SA
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: The supported intensity measure component is RotD100
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD100
 
     #: The supported standard deviations are total, inter and intra event, see
     #: table 4.a, pages 22-23
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: The required site parameter is vs30, see equation 1, page 20.
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -78,111 +169,20 @@ class HongGoda2007(GMPE):
 
         Implements equation 14 of Hong & Goda (2007)
         """
-
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
         C_AMP = self.AMP_COEFFS[imt]
 
         # Gets the PGA on rock - need to convert from g to cm/s/s
-        pga_rock = self._compute_pga_rock(C_PGA, rup.mag, dists.rjb) * 980.665
+        pga_rock = _compute_pga_rock(C_PGA, rup.mag, dists.rjb) * 980.665
         # Get the mean ground motion value
-        mean = (self._compute_nonlinear_magnitude_term(C, rup.mag) +
-                self._compute_magnitude_distance_term(C, dists.rjb, rup.mag) +
-                self._get_site_amplification(C_AMP, sites.vs30, pga_rock))
+        mean = (_compute_nonlinear_magnitude_term(C, rup.mag) +
+                _compute_magnitude_distance_term(C, dists.rjb, rup.mag) +
+                _get_site_amplification(C_AMP, sites.vs30, pga_rock))
 
         # Get standard deviations
-        stddevs = self._get_stddevs(C, stddev_types, dists.rjb.shape)
+        stddevs = _get_stddevs(C, stddev_types, dists.rjb.shape)
         return mean, stddevs
-
-    def _compute_pga_rock(self, C_PGA, mag, rjb):
-        """
-        Returns the PGA (g) on rock, as defined in equation 15
-        """
-        return np.exp(self._compute_linear_magnitude_term(C_PGA, mag) +
-                      self._compute_simple_distance_term(C_PGA, rjb))
-
-    def _compute_linear_magnitude_term(self, C, mag):
-        """
-        Computes the linear part of the magnitude term
-        """
-        return C["b1"] + C["b2"] * (mag - 7.0)
-
-    def _compute_nonlinear_magnitude_term(self, C, mag):
-        """
-        Computes the non-linear magnitude term
-        """
-        return self._compute_linear_magnitude_term(C, mag) +\
-            C["b3"] * ((mag - 7.0) ** 2.)
-
-    def _compute_simple_distance_term(self, C, rjb):
-        """
-        The distance term for the PGA case ignores magnitude (equation 15)
-        """
-        return C["b4"] * np.log(np.sqrt(rjb ** 2. + C["h"] ** 2.))
-
-    def _compute_magnitude_distance_term(self, C, rjb, mag):
-        """
-        Returns the magntude dependent distance term
-        """
-        rval = np.sqrt(rjb ** 2. + C["h"] ** 2.)
-        return (C["b4"] + C["b5"] * (mag - 4.5)) * np.log(rval)
-
-    def _get_site_amplification(self, C_AMP, vs30, pga_rock):
-        """
-        Gets the site amplification term based on equations 7 and 8 of
-        Atkinson & Boore (2006)
-        """
-        # Get nonlinear term
-        bnl = self._get_bnl(C_AMP, vs30)
-        #
-        f_nl_coeff = np.log(60.0 / 100.0) * np.ones_like(vs30)
-        idx = pga_rock > 60.0
-        f_nl_coeff[idx] = np.log(pga_rock[idx] / 100.0)
-        return np.log(np.exp(
-            C_AMP["blin"] * np.log(vs30 / self.CONSTS["Vref"]) +
-            bnl * f_nl_coeff))
-
-    def _get_bnl(self, C_AMP, vs30):
-        """
-        Gets the nonlinear term, given by equation 8 of Atkinson & Boore 2006
-        """
-        # Default case 8d
-        bnl = np.zeros_like(vs30)
-        if np.all(vs30 >= self.CONSTS["Vref"]):
-            return bnl
-        # Case 8a
-        bnl[vs30 < self.CONSTS["v1"]] = C_AMP["b1sa"]
-        # Cade 8b
-        idx = np.logical_and(vs30 > self.CONSTS["v1"],
-                             vs30 <= self.CONSTS["v2"])
-
-        if np.any(idx):
-            bnl[idx] = (C_AMP["b1sa"] - C_AMP["b2sa"]) *\
-                (np.log(vs30[idx] / self.CONSTS["v2"]) /
-                 np.log(self.CONSTS["v1"] / self.CONSTS["v2"])) + C_AMP["b2sa"]
-        # Case 8c
-        idx = np.logical_and(vs30 > self.CONSTS["v2"],
-                             vs30 < self.CONSTS["Vref"])
-        if np.any(idx):
-            bnl[idx] = C_AMP["b2sa"] *\
-                np.log(vs30[idx] / self.CONSTS["Vref"]) /\
-                np.log(self.CONSTS["v2"] / self.CONSTS["Vref"])
-        return bnl
-
-    def _get_stddevs(self, C, stddev_types, stddev_shape):
-        """
-        Returns the standard deviations given in Table 2
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C["sigtot"] + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sig2'] + np.zeros(stddev_shape))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['sig1'] + np.zeros(stddev_shape))
-        return stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt        b1       b2       b3       b4       b5     h    sig1    sig2  sigtot
@@ -244,7 +244,3 @@ class HongGoda2007(GMPE):
     4.00000   -0.74500   -0.31000    0.00000
     5.00000   -0.75200   -0.30000    0.00000
     """)
-
-    CONSTS = {"Vref": 760.0,
-              "v1": 180.0,
-              "v2": 300.0}
