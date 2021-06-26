@@ -71,7 +71,7 @@ def _basin_term(region, C, vs30, z1pt0):
         z1pt0 < 0, 0, C['phi5' + region] * (1 - np.exp(-d_z1 / phi6)))
 
 
-def _distance_attenuation(s, region, aftershock, C, mag, rrup, ztor):
+def _distance_attenuation(s, region, aftershocks, C, mag, rrup, ztor):
     """
     Distance scaling and attenuation term [8, 9, 10].
     """
@@ -82,7 +82,7 @@ def _distance_attenuation(s, region, aftershock, C, mag, rrup, ztor):
     f8 = s['c4'] * np.log(rrup + cns)
     f9 = (s['c4_a'] - s['c4']) * np.log(np.sqrt(rrup ** 2
                                                 + s['c_rb'] ** 2))
-    f10 = (C['c_g1' + region] + aftershock * C['dc_g1as']
+    f10 = (C['c_g1' + region] + aftershocks * C['dc_g1as']
            + C['c_g2'] / (math.cosh(max(mag - C['c_g3'], 0)))) * rrup
 
     return f8 + f9 + f10
@@ -157,8 +157,9 @@ class PhungEtAl2020Asc(GMPE):
         """
         # extract dictionaries of coefficients specific to IM type
         C = self.COEFFS[imt]
+        s = self.CONSTANTS
 
-        lnmed, ztor = self._fsof_ztor(C, rup.mag, rup.rake, rup.ztor)
+        lnmed, ztor = _fsof_ztor(C, rup.mag, rup.rake, rup.ztor)
         # main shock [1]
         lnmed += C['c1']
         # dip term [5]
@@ -173,28 +174,27 @@ class PhungEtAl2020Asc(GMPE):
         lnmed += C['c8'] \
             * np.maximum(1 - np.maximum(dists.rrup - 40, 0) / 30, 0) \
             * min(max(rup.mag - 5.5, 0) / 0.8, 1) \
-            * math.exp(self.CONSTANTS['c8_a'] * (rup.mag - C['c8_b']) ** 2) \
+            * math.exp(s['c8_a'] * (rup.mag - C['c8_b']) ** 2) \
             * self.d_dpp
         # fmag [6, 7]
-        lnmed += self.CONSTANTS['c2'] * (rup.mag - 6)
-        lnmed += (self.CONSTANTS['c2'] - C['c3']) / C['c_n'] \
+        lnmed += s['c2'] * (rup.mag - 6)
+        lnmed += (s['c2'] - C['c3']) / C['c_n'] \
             * math.log(1 + math.exp(C['c_n'] * (C['c_m'] - rup.mag)))
-        lnmed += self._distance_attenuation(
-            self.CONSTANTS, self.region, self.aftershocks,
-            C, rup.mag, dists.rrup, ztor)
+        lnmed += _distance_attenuation(
+            s, self.region, self.aftershocks, C, rup.mag, dists.rrup, ztor)
 
         sa1130 = np.exp(lnmed)
         # site response [14, 15]
-        lnmed += C['phi1' + self.region] \
-            * np.minimum(np.log(sites.vs30 / 1130), 0)
-        lnmed += C['phi2'] \
-            * (np.exp(C['phi3'] * (np.minimum(sites.vs30, 1130) - 360))
-               - math.exp(C['phi3'] * (1130 - 360))) \
-            * np.log((sa1130 + C['phi4']) / C['phi4'])
+        lnmed += C['phi1' + self.region] * np.minimum(
+            np.log(sites.vs30 / 1130), 0)
+        lnmed += C['phi2'] * (np.exp(C['phi3'] * (
+            np.minimum(sites.vs30, 1130) - 360)) - math.exp(
+                C['phi3'] * (1130 - 360))) * np.log(
+                    (sa1130 + C['phi4']) / C['phi4'])
         # basin term [16]
-        lnmed += self._basin_term(self.region, C, sites.vs30, sites.z1pt0)
+        lnmed += _basin_term(self.region, C, sites.vs30, sites.z1pt0)
 
-        stddevs = self.get_stddevs(C, stddev_types)
+        stddevs = get_stddevs(C, stddev_types)
 
         return lnmed, stddevs
 
@@ -229,6 +229,110 @@ class PhungEtAl2020Asc(GMPE):
 
     CONSTANTS = {'c2': 1.06, 'c4': -2.1, 'c4_a': -0.5, 'c8_a': -0.2695,
                  'c_rb': 50}
+
+
+def _get_stddevs(region, C, stddev_types):
+    """
+    Return standard deviations.
+    """
+    phi_tot = math.sqrt(C['phiss4' + region] ** 2
+                        + C['phis2s4' + region] ** 2)
+    stddevs = []
+    for stddev in stddev_types:
+        if stddev == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(C["tau4" + region] ** 2
+                                   + phi_tot ** 2))
+        elif stddev == const.StdDev.INTER_EVENT:
+            stddevs.append(C["tau4" + region])
+        elif stddev == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi_tot)
+
+    return stddevs
+
+
+def _fmag(region, C, mag, pga=False):
+    """
+    Magnitude term.
+    """
+    a4 = C['a4']
+    if region == 'jptw':
+        a4 += C['a4_del']
+
+    if mag <= C['mref']:
+        return a4 * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
+    return C['a5'] * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
+
+
+def _fp(trt, region, s, C, mag, rrup, pga=False):
+    """
+    Path term for subduction interface.
+    """
+    a7, a14 = (C['a7'], C['a14']) if (
+        trt == const.TRT.SUBDUCTION_INTRASLAB) else (0, 0)
+    a1 = C['a1']
+    if region == 'jptw':
+        a1 += C['a1_del']
+    r = 'tw' if pga else region
+    return a1 + a7 + (C['a2'] + a14 + s['a3'] * (mag - 7.8)) \
+        * np.log(rrup + s['c4'] * math.exp(s['a9'] * (mag - 6))) \
+        + C['a6' + r] * rrup
+
+
+def _fsite(s, region, C, vs30, pga_1000):
+    """
+    Non-linear component.
+    """
+    result = C['a12' + region] * np.log(vs30 / C['vlin'])
+    idx = vs30 < C['vlin']
+
+    result[idx] += \
+        - C['b'] * np.log(pga_1000[idx] + s['c']) \
+        + C['b'] * np.log(pga_1000[idx] + s['c']
+                          * (vs30[idx] / C['vlin']) ** s['n'])
+    result[~idx] += C['b'] * s['n'] * np.log(vs30[~idx] / C['vlin'])
+
+    return result
+
+
+def _fz1pt0(region, C, vs30, z1pt0):
+    """
+    Basin depth term.
+    """
+    result = np.zeros_like(z1pt0)
+    idx = np.where(z1pt0 >= 0)
+
+    if region == 'tw':
+        ez_1 = np.exp(-3.96 / 2 * np.log((vs30 ** 2 + 352.7 ** 2)
+                                         / (1750 ** 2 + 352.7 ** 2)))
+    elif region == 'jptw':
+        ez_1 = np.exp(-5.23 / 2 * np.log((vs30 ** 2 + 412.39 ** 2)
+                                         / (1360 ** 2 + 412.39 ** 2)))
+
+    result[idx] = C['a8' + region] * np.minimum(np.log(z1pt0[idx] / ez_1), 1)
+    return result
+
+
+def _fztor(trt, C, ztor):
+    """
+    Ztor factor for subduction interface.
+    """
+    if trt == const.TRT.SUBDUCTION_INTRASLAB:
+        return C['a11'] * (min(ztor, 80) - 40)
+    return C['a10'] * (min(ztor, 40) - 20)
+
+
+def pga_rock(trt, region, s, C_PGA, mag, rrup, ztor, vs30):
+    """
+    PGA at Vs30 (as Taiwan region, C_PGA)
+    """
+    f_mag = _fmag(region, C_PGA, mag, pga=True)
+    f_ztor = _fztor(trt, C_PGA, ztor)
+    f_p = _fp(trt, region, s, C_PGA, mag, rrup, pga=True)
+    # site function
+    f_site = C_PGA['a12tw'] * np.log(vs30 / C_PGA['vlin']) \
+        + C_PGA['b'] * s['n'] * np.log(vs30 / C_PGA['vlin'])
+
+    return np.exp(f_mag + f_p + f_ztor + f_site)
 
 
 class PhungEtAl2020SInter(GMPE):
@@ -269,131 +373,30 @@ class PhungEtAl2020SInter(GMPE):
         for spec of input and result values.
         """
         # extract dictionaries of coefficients specific to IM type
+        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
+        s = self.CONSTANTS
 
-        f_mag = self._fmag(C, rup.mag)
-        f_ztor = self._fztor(C, rup.ztor)
+        f_mag = _fmag(self.region, C, rup.mag)
+        f_ztor = _fztor(trt, C, rup.ztor)
         # path term
-        f_p = self._fp(self.CONSTANTS, C, rup.mag, dists.rrup)
+        f_p = _fp(trt, self.region, s, C, rup.mag, dists.rrup)
         # PGA at rock with Vs30 = 1000 m/s
-        pga_1000 = self.pga_rock(
-            self.CONSTANTS, C_PGA, rup.mag, dists.rrup, rup.ztor, 1000)
+        pga_1000 = pga_rock(
+            trt, self.region, self.CONSTANTS, C_PGA, rup.mag,
+            dists.rrup, rup.ztor, 1000)
         # site effect
         vs30 = np.minimum(sites.vs30, 1000)
         # non-linear component
-        f_site = self._fsite(C, vs30, pga_1000)
+        f_site = _fsite(s, self.region, C, vs30, pga_1000)
         # basin depth term
-        f_z1pt0 = self._fz1pt0(C, vs30, sites.z1pt0)
+        f_z1pt0 = _fz1pt0(self.region, C, vs30, sites.z1pt0)
 
         # median total and stddev
         sa = f_mag + f_p + f_ztor + f_site + f_z1pt0
-        stddev = self.get_stddevs(C, stddev_types)
+        stddev = _get_stddevs(self.region, C, stddev_types)
         return sa, stddev
-
-    def get_stddevs(self, C, stddev_types):
-        """
-        Return standard deviations.
-        """
-        phi_tot = math.sqrt(C['phiss4' + self.region] ** 2
-                            + C['phis2s4' + self.region] ** 2)
-
-        stddevs = []
-        for stddev in stddev_types:
-            assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C["tau4" + self.region] ** 2
-                                       + phi_tot ** 2))
-            elif stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(C["tau4" + self.region])
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi_tot)
-
-        return stddevs
-
-    def _fmag(self, C, mag, pga=False):
-        """
-        Magnitude term.
-        """
-        a4 = C['a4']
-        if self.region == 'jptw':
-            a4 += C['a4_del']
-
-        if mag <= C['mref']:
-            return a4 * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
-        return C['a5'] * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
-
-    def _fp(self, s, C, mag, rrup, pga=False):
-        """
-        Path term for subduction interface.
-        """
-        a7, a14 = (C['a7'], C['a14']) if (
-            self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
-            const.TRT.SUBDUCTION_INTRASLAB) else (0, 0)
-        a1 = C['a1']
-        if self.region == 'jptw':
-            a1 += C['a1_del']
-        r = 'tw' if pga else self.region
-        return a1 + a7 + (C['a2'] + a14 + s['a3'] * (mag - 7.8)) \
-            * np.log(rrup + s['c4'] * math.exp(s['a9'] * (mag - 6))) \
-            + C['a6' + r] * rrup
-
-    def _fsite(self, C, vs30, pga_1000):
-        """
-        Non-linear component.
-        """
-        s = self.CONSTANTS
-        result = C['a12' + self.region] * np.log(vs30 / C['vlin'])
-        idx = vs30 < C['vlin']
-
-        result[idx] += \
-            - C['b'] * np.log(pga_1000[idx] + s['c']) \
-            + C['b'] * np.log(pga_1000[idx] + s['c']
-                              * (vs30[idx] / C['vlin']) ** s['n'])
-        result[~idx] += C['b'] * s['n'] * np.log(vs30[~idx] / C['vlin'])
-
-        return result
-
-    def _fz1pt0(self, C, vs30, z1pt0):
-        """
-        Basin depth term.
-        """
-        result = np.zeros_like(z1pt0)
-        idx = np.where(z1pt0 >= 0)
-
-        if self.region == 'tw':
-            ez_1 = np.exp(-3.96 / 2 * np.log((vs30 ** 2 + 352.7 ** 2)
-                                             / (1750 ** 2 + 352.7 ** 2)))
-        elif self.region == 'jptw':
-            ez_1 = np.exp(-5.23 / 2 * np.log((vs30 ** 2 + 412.39 ** 2)
-                                             / (1360 ** 2 + 412.39 ** 2)))
-
-        result[idx] = C['a8' + self.region] \
-            * np.minimum(np.log(z1pt0[idx] / ez_1), 1)
-        return result
-
-    def _fztor(self, C, ztor):
-        """
-        Ztor factor for subduction interface.
-        """
-        if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
-                const.TRT.SUBDUCTION_INTRASLAB):
-            return C['a11'] * (min(ztor, 80) - 40)
-        return C['a10'] * (min(ztor, 40) - 20)
-
-    def pga_rock(self, s, C_PGA, mag, rrup, ztor, vs30):
-        """
-        PGA at Vs30 (as Taiwan region, C_PGA)
-        """
-        s = self.CONSTANTS
-        f_mag = self._fmag(C_PGA, mag, pga=True)
-        f_ztor = self._fztor(C_PGA, ztor)
-        f_p = self._fp(s, C_PGA, mag, rrup, pga=True)
-        # site function
-        f_site = C_PGA['a12tw'] * np.log(vs30 / C_PGA['vlin']) \
-            + C_PGA['b'] * s['n'] * np.log(vs30 / C_PGA['vlin'])
-
-        return np.exp(f_mag + f_p + f_ztor + f_site)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt   a1      a1_del       a2          a4           a4_del      a5          a6jptw       a6tw         a7           a8jptw  a8tw    a10         a11          a12jptw a12tw   a13        a14          b     mref vlin   tau4jptw    phiss4jptw  phis2s4jptw tau4tw      phiss4tw phis2s4tw
