@@ -68,7 +68,7 @@ class ExampleA2021(GMPE):
     def calc_mean_stds(fake, ctx, imts, stdtypes, out):
         mag, rjb = ctx.mag, ctx.rjb
         for m, imt in enumerate(imts):
-            C = this.COEFFS[m]
+            C = fake.COEFFS[m]
             out[0, :, m] = C['c1'] + _compute_term1(C, mag) + \
                 _compute_term2(C, mag, rjb)
             if imt.period == 3.0:
