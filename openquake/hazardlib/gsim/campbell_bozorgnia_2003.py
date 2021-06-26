@@ -26,6 +26,115 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _get_mean(C, mag, rake, dip, rrup, rjb):
+    """
+    Return mean value (eq. 1, page 319).
+    """
+    f1 = _compute_magnitude_scaling(C, mag)
+    f2 = _compute_distance_scaling(C, mag, rrup)
+    f3 = _compute_faulting_mechanism(C, rake, dip)
+    f4 = _compute_far_source_soil_effect(C)
+    f5 = _compute_hanging_wall_effect(C, rjb, rrup, dip, mag)
+
+    mean = (
+        C['c1'] + f1 + C['c4'] * np.log(np.sqrt(f2)) + f3 + f4 + f5)
+
+    return mean
+
+
+def _get_stddevs(C, mag, stddev_types, num_sites):
+    """
+    Return standard deviation as defined in eq.11 page 319.
+    """
+    std = C['c16'] + np.zeros(num_sites)
+
+    if mag < 7.4:
+        std -= 0.07 * mag
+    else:
+        std -= 0.518
+
+    # only the 'total' standard deviation is supported, therefore the
+    # std is always the same for all types
+    stddevs = [std for _ in stddev_types]
+
+    return stddevs
+
+
+def _compute_magnitude_scaling(C, mag):
+    """
+    Compute and return magnitude scaling term (eq.2, page 319)
+    """
+    return C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2
+
+def _compute_distance_scaling(C, mag, rrup):
+    """
+    Compute distance scaling term (eq.3, page 319).
+
+    The distance scaling assumes the near-source effect of local site
+    conditions due to 50% very firm soil and soft rock and 50% firm rock.
+    """
+    g = C['c5'] + C['c6'] * 0.5 + C['c7'] * 0.5
+
+    return (
+        rrup ** 2 +
+        (np.exp(C['c8'] * mag + C['c9'] * (8.5 - mag) ** 2) * g) ** 2)
+
+
+def _compute_faulting_mechanism(C, rake, dip):
+    """
+    Compute faulting mechanism term (see eq. 5, page 319).
+
+    Reverse faulting is defined as occurring on steep faults (dip > 45)
+    and rake in (22.5, 157.5).
+
+    Thrust faulting is defined as occurring on shallow dipping faults
+    (dip <=45) and rake in (22.5, 157.5)
+    """
+    # flag for reverse faulting
+    frv = float((dip > 45) and (22.5 <= rake <= 157.5))
+    # flag for thrust faulting
+    fth = float((dip <= 45) and (22.5 <= rake <= 157.5))
+
+    return C['c10'] * frv + C['c11'] * fth
+
+
+def _compute_far_source_soil_effect(C):
+    """
+    Compute far-source effect of local site conditions (see eq. 6,
+    page 319) assuming 'firm rock' conditions.
+    """
+    return C['c14']
+
+
+def _compute_hanging_wall_effect(C, rjb, rrup, dip, mag):
+    """
+    Compute hanging-wall effect (see eq. 7, 8, 9 and 10 page 319).
+    Considers correct version of equation 8 as given in the erratum and not
+    in the original paper.
+    """
+    # eq. 8 (to be noticed that the USGS-NSHMP implementation defines
+    # the hanging-wall term for all rjb distances, while in the original
+    # manuscript, hw is computed only for rjb < 5). Again the 'firm rock'
+    # is considered
+    hw = np.zeros_like(rjb)
+    if dip <= 70.:
+        hw = (5. - rjb) / 5.
+
+    # eq. 9
+    f_m = 1 if mag > 6.5 else mag - 5.5
+
+    # eq. 10
+    f_rrup = C['c15'] + np.zeros_like(rrup)
+    idx = rrup < 8
+    f_rrup[idx] *= rrup[idx] / 8
+
+    # eq. 7 (to be noticed that the f3 factor is not included
+    # while this is defined in the original manuscript)
+    f_hw = hw * f_m * f_rrup
+
+    return f_hw
+
+
 class CampbellBozorgnia2003NSHMP2007(GMPE):
     """
     Implements GMPE developed by Kenneth W. Campbell and Yousef Bozorgnia and
@@ -49,10 +158,7 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are PGA and SA (see Abstract)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components (see paragraph 'Strong-Motion Database', page 316)
@@ -60,9 +166,7 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
 
     #: Supported standard deviation type is Total (see equations 11, 12 pp. 319
     #: 320)
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: No sites parameters are required. Mean value is computed for
     #: 'firm rock'.
@@ -83,121 +187,12 @@ class CampbellBozorgnia2003NSHMP2007(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
-        mean = self._get_mean(
-            C, rup.mag, rup.rake, rup.dip, dists.rrup, dists.rjb
-        )
-        stddevs = self._get_stddevs(C, rup.mag, stddev_types, dists.rrup.size)
+        mean = _get_mean(
+            C, rup.mag, rup.rake, rup.dip, dists.rrup, dists.rjb)
+        stddevs = _get_stddevs(C, rup.mag, stddev_types, dists.rrup.size)
 
         return mean, stddevs
-
-    def _get_mean(self, C, mag, rake, dip, rrup, rjb):
-        """
-        Return mean value (eq. 1, page 319).
-        """
-        f1 = self._compute_magnitude_scaling(C, mag)
-        f2 = self._compute_distance_scaling(C, mag, rrup)
-        f3 = self._compute_faulting_mechanism(C, rake, dip)
-        f4 = self._compute_far_source_soil_effect(C)
-        f5 = self._compute_hanging_wall_effect(C, rjb, rrup, dip, mag)
-
-        mean = (
-            C['c1'] + f1 + C['c4'] * np.log(np.sqrt(f2)) + f3 + f4 + f5
-        )
-
-        return mean
-
-    def _get_stddevs(self, C, mag, stddev_types, num_sites):
-        """
-        Return standard deviation as defined in eq.11 page 319.
-        """
-        std = C['c16'] + np.zeros(num_sites)
-
-        if mag < 7.4:
-            std -= 0.07 * mag
-        else:
-            std -= 0.518
-
-        # only the 'total' standard deviation is supported, therefore the
-        # std is always the same for all types
-        stddevs = [std for _ in stddev_types]
-
-        return stddevs
-
-    def _compute_magnitude_scaling(self, C, mag):
-        """
-        Compute and return magnitude scaling term (eq.2, page 319)
-        """
-        return C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2
-
-    def _compute_distance_scaling(self, C, mag, rrup):
-        """
-        Compute distance scaling term (eq.3, page 319).
-
-        The distance scaling assumes the near-source effect of local site
-        conditions due to 50% very firm soil and soft rock and 50% firm rock.
-        """
-        g = C['c5'] + C['c6'] * 0.5 + C['c7'] * 0.5
-
-        return (
-            rrup ** 2 +
-            (np.exp(C['c8'] * mag + C['c9'] * (8.5 - mag) ** 2) * g) ** 2
-        )
-
-    def _compute_faulting_mechanism(self, C, rake, dip):
-        """
-        Compute faulting mechanism term (see eq. 5, page 319).
-
-        Reverse faulting is defined as occurring on steep faults (dip > 45)
-        and rake in (22.5, 157.5).
-
-        Thrust faulting is defined as occurring on shallow dipping faults
-        (dip <=45) and rake in (22.5, 157.5)
-        """
-        # flag for reverse faulting
-        frv = float((dip > 45) and (22.5 <= rake <= 157.5))
-        # flag for thrust faulting
-        fth = float((dip <= 45) and (22.5 <= rake <= 157.5))
-
-        return C['c10'] * frv + C['c11'] * fth
-
-    def _compute_far_source_soil_effect(self, C):
-        """
-        Compute far-source effect of local site conditions (see eq. 6,
-        page 319) assuming 'firm rock' conditions.
-        """
-        return C['c14']
-
-    def _compute_hanging_wall_effect(self, C, rjb, rrup, dip, mag):
-        """
-        Compute hanging-wall effect (see eq. 7, 8, 9 and 10 page 319).
-        Considers correct version of equation 8 as given in the erratum and not
-        in the original paper.
-        """
-        # eq. 8 (to be noticed that the USGS-NSHMP implementation defines
-        # the hanging-wall term for all rjb distances, while in the original
-        # manuscript, hw is computed only for rjb < 5). Again the 'firm rock'
-        # is considered
-        hw = np.zeros_like(rjb)
-        if dip <= 70.:
-            hw = (5. - rjb) / 5.
-
-        # eq. 9
-        f_m = 1 if mag > 6.5 else mag - 5.5
-
-#        # eq. 10
-        f_rrup = C['c15'] + np.zeros_like(rrup)
-        idx = rrup < 8
-        f_rrup[idx] *= rrup[idx] / 8
-
-        # eq. 7 (to be noticed that the f3 factor is not included
-        # while this is defined in the original manuscript)
-        f_hw = hw * f_m * f_rrup
-
-        return f_hw
 
     #: Coefficient table (table 4, page 321. Coefficients for horizontal
     #: component and for corrected PGA)
