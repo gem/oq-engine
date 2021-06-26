@@ -40,7 +40,8 @@ def count_methods(cls):
     """
     Return the number of directly defined methods inside the class
     """
-    return sum(1 for val in vars(cls).values() if inspect.isfunction(val))
+    return sum(1 for key, val in vars(cls).items()
+               if inspect.isfunction(val) and key != '__init__')
 
 
 def get_portable_gsims():
