@@ -98,6 +98,9 @@ def main(what, report=False):
     elif what == 'gsims':
         for gs in gsim.get_available_gsims():
             print(gs)
+    elif what == 'portable_gsims':
+        for gs in gsim.get_portable_gsims():
+            print(gs)
     elif what == 'imts':
         for im in gen_subclasses(imt.IMT):
             print(im.__name__)
