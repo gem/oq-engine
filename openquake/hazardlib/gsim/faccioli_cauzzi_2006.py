@@ -73,9 +73,9 @@ class FaccioliCauzzi2006(GMPE):
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper - coeff in the same order as in Table 4/page 703
     #: for Maw only (read last paragraph on page 701 -
-    #: expains what Maw should be used)
+    #: explains what Maw should be used)
 
-    COEFFS = CoeffsTable(table="""\
+    COEFFS = CoeffsTable(sa_damping=5., table="""\
     IMT           c1        c2         c3       h    sigma
     MMI       1.0157    1.2566    -0.6547       2   0.5344
         """)
