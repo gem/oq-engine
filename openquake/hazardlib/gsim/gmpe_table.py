@@ -454,11 +454,8 @@ class GMPETable(GMPE):
         """
         stddevs = []
         for stddev_type in stddev_types:
-            if stddev_type not in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES:
-                raise ValueError("%s not supported" % stddev_type)
             sigma = self._return_tables(mag, imt, stddev_type)
-            interpolator_std = interp1d(dists, sigma,
-                                        bounds_error=False)
+            interpolator_std = interp1d(dists, sigma, bounds_error=False)
             stddev = interpolator_std(getattr(dctx, self.distance_type))
             stddev[getattr(dctx, self.distance_type) < dists[0]] = sigma[0]
             stddev[getattr(dctx, self.distance_type) > dists[-1]] = sigma[-1]

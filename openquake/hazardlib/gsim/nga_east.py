@@ -531,11 +531,10 @@ class NGAEastGMPE(GMPETable):
         in the site amplification model
     """
     PATH = os.path.join(os.path.dirname(__file__), "nga_east_tables")
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,
-                                                const.StdDev.INTER_EVENT,
-                                                const.StdDev.INTRA_EVENT))
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
     # Requires Vs30 only - common to all models
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     def __init__(self, **kwargs):
         """
@@ -607,7 +606,7 @@ class NGAEastGMPE(GMPETable):
         pga_r = self.get_hard_rock_mean(rctx, dctx, rock_imt, stddev_types)
 
         # Get the desired spectral acceleration on rock
-        if not str(imt) == "PGA":
+        if imt.name != "PGA":
             # Calculate the ground motion at required spectral period for
             # the reference rock
             mean = self.get_hard_rock_mean(rctx, dctx, imt, stddev_types)
@@ -845,7 +844,7 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
         Keys for the tau values corresponding to the selected standard
         deviation model
     """
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     def __init__(self, **kwargs):
         """
