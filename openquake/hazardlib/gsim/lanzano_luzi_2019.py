@@ -43,22 +43,19 @@ def _get_stddevs(C, stddev_types, num_sites):
     return stddevs
 
 
-def _compute_distance(rval2, C):
+def _compute_distance(rval2, C, kind):
     """
-    Compute the distance function, equation (9):
+    Compute the distance function
     """
-    h1 = 2
-    rval = np.sqrt(rval2 ** 2 + h1 ** 2)
-    return C['c1'] * np.log10(rval)
-
-
-def _compute_distance2(rval2, C):
-    """
-    Compute the distance function, equation (5).
-    """
-    h2 = 5
-    rval = np.sqrt(rval2 ** 2 + h2 ** 2)
-    return C['c2'] * np.log10(rval) + C['c3'] * rval
+    if kind == 'shallow':  # equation (9)
+        h1 = 2
+        rval = np.sqrt(rval2 ** 2 + h1 ** 2)
+        return C['c1'] * np.log10(rval)
+    elif kind == 'deep':  # equation (5)
+        h2 = 5
+        rval = np.sqrt(rval2 ** 2 + h2 ** 2)
+        return C['c2'] * np.log10(rval) + C['c3'] * rval
+    raise ValueError(kind)
 
 
 def _compute_magnitude(rup, C):
@@ -120,6 +117,8 @@ class LanzanoLuzi2019shallow(GMPE):
     Test tables are generated from a spreadsheet provided by the authors, and
     modified according to OQ format (e.g. conversion from cm/s2 to m/s2).
     """
+    kind = 'shallow'
+
     #: Supported tectonic region type is 'volcanic'
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
 
@@ -155,7 +154,7 @@ class LanzanoLuzi2019shallow(GMPE):
         C = self.COEFFS[imt]
 
         imean = (_compute_magnitude(rup, C) +
-                 _compute_distance(dists.rhypo, C) +
+                 _compute_distance(dists.rhypo, C, self.kind) +
                  _get_site_amplification(sites, C))
 
         istddevs = _get_stddevs(C, stddev_types, sites.vs30.size)
@@ -208,58 +207,5 @@ class LanzanoLuzi2019shallow(GMPE):
     """)
 
 
-class LanzanoLuzi2019deep(GMPE):
-
-    #: Supported tectonic region type is 'volcanic'
-    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
-
-    #: Supported intensity measure types are PGA and SA
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
-
-    #: Supported intensity measure component is the geometric mean of two
-    #: horizontal components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
-
-    #: Supported standard deviation types are inter-event, intra-event
-    #: and total, page 1904
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
-
-    #: Required site parameter is Vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30'}
-
-    #: Required rupture parameter is magnitude.
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    #: Required distance measure is Rhypo.
-    REQUIRES_DISTANCES = {'rhypo'}
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extracting dictionary of coefficients specific to required
-        # intensity measure type
-        C = self.COEFFS[imt]
-
-        imean = (_compute_magnitude(rup, C) +
-                 _compute_distance2(dists.rhypo, C) +
-                 _get_site_amplification(sites, C))
-
-        istddevs = _get_stddevs(C, stddev_types, sites.vs30.size)
-
-        # Convert units to g,
-        # but only for PGA and SA (not PGV):
-        if imt.name in "SA PGA":
-            mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:  # PGV
-            mean = np.log(10.0 ** imean)
-        # Return stddevs in terms of natural log scaling
-        stddevs = np.log(10.0 ** np.array(istddevs))
-        # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
-        return mean, stddevs
-
-    # Sigma values in log10
-    COEFFS = LanzanoLuzi2019shallow.COEFFS
+class LanzanoLuzi2019deep(LanzanoLuzi2019shallow):
+    kind = 'deep'
