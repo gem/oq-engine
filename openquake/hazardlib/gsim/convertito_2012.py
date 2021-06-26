@@ -29,6 +29,42 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 
 
+def _compute_magnitude_scaling(C, mag):
+    """
+    Returns the magnitude scaling term
+    """
+    return C["a"] + (C["b"] * mag)
+
+
+def _compute_distance_scaling(C, rhypo):
+    """
+    Returns the distance scaling term accounting for geometric and
+    anelastic attenuation
+    """
+    return C["c"] * np.log10(np.sqrt((rhypo ** 2.) + (C["h"] ** 2.))) +\
+        (C["d"] * rhypo)
+
+
+def _compute_site_scaling(C, vs30):
+    """
+    Returns the site scaling term as a simple coefficient
+    """
+    site_term = np.zeros(len(vs30), dtype=float)
+    # For soil sites add on the site coefficient
+    site_term[vs30 < 760.0] = C["e"]
+    return site_term
+
+
+def _compute_stddevs(C, num_sites, stddev_types):
+    """
+    Return total standard deviation.
+    """
+    stddevs = []
+    for _ in stddev_types:
+        stddevs.append(np.zeros(num_sites) + np.log(10.0 ** C["sigma"]))
+    return stddevs
+
+
 class ConvertitoEtAl2012Geysers(GMPE):
     """
     Implements the PGA GMPE for Induced Seismicity in the Geysers Geothermal
@@ -42,18 +78,14 @@ class ConvertitoEtAl2012Geysers(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.GEOTHERMAL
 
     #: Supported intensity measure types are peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA}
 
     #: Supported intensity measure component is the larger of two components
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
-        const.IMC.GREATER_OF_TWO_HORIZONTAL
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = (
+        const.IMC.GREATER_OF_TWO_HORIZONTAL)
 
     #: Supported standard deviation types is total.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters. The GMPE was developed for two site conditions
     #: "with" and "without" site effect. No information is given regarding
@@ -78,51 +110,16 @@ class ConvertitoEtAl2012Geysers(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
 
-        mean = (self._compute_magnitude_scaling(C, rup.mag) +
-                self._compute_distance_scaling(C, dists.rhypo) +
-                self._compute_site_scaling(C, sites.vs30))
+        mean = (_compute_magnitude_scaling(C, rup.mag) +
+                _compute_distance_scaling(C, dists.rhypo) +
+                _compute_site_scaling(C, sites.vs30))
         # Original GMPE returns log acceleration in m/s/s
         # Converts to natural logarithm of g
         mean = np.log((10.0 ** mean) / g)
-        stddevs = self._compute_stddevs(C, dists.rhypo.shape, stddev_types)
+        stddevs = _compute_stddevs(C, dists.rhypo.shape, stddev_types)
         return mean, stddevs
-
-    def _compute_magnitude_scaling(self, C, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        return C["a"] + (C["b"] * mag)
-
-    def _compute_distance_scaling(self, C, rhypo):
-        """
-        Returns the distance scaling term accounting for geometric and
-        anelastic attenuation
-        """
-        return C["c"] * np.log10(np.sqrt((rhypo ** 2.) + (C["h"] ** 2.))) +\
-            (C["d"] * rhypo)
-
-    def _compute_site_scaling(self, C, vs30):
-        """
-        Returns the site scaling term as a simple coefficient
-        """
-        site_term = np.zeros(len(vs30), dtype=float)
-        # For soil sites add on the site coefficient
-        site_term[vs30 < 760.0] = C["e"]
-        return site_term
-
-    def _compute_stddevs(self, C, num_sites, stddev_types):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        for _ in stddev_types:
-            stddevs.append(np.zeros(num_sites) + np.log(10.0 ** C["sigma"]))
-        return stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT        a      b       c      d    h      e  sigma
