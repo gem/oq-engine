@@ -43,7 +43,7 @@ ADMITTED_FLOAT_PARAMETERS = ['DEFINED_FOR_REFERENCE_VELOCITY']
 ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                            'REQUIRES_DISTANCES',
-                           'REQUIRES_PARAMETERS',
+                           'REQUIRES_ATTRIBUTES',
                            'REQUIRES_SITES_PARAMETERS',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
@@ -469,7 +469,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
 
     #: optional dictionary param_name -> param_type for the GSIM
     #: instantiation parameters; used only for jittable GSIMs
-    REQUIRES_PARAMETERS = {}
+    REQUIRES_ATTRIBUTES = {}
 
     #: Set of site parameters names this GSIM needs. The set should include
     #: strings that match names of the attributes of a :class:`site
@@ -539,8 +539,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             raise ValueError(
                 '%s.DEFINED_FOR_STANDARD_DEVIATION_TYPES is '
                 'not defined for const.StdDev.TOTAL' % cls.__name__)
-        params = cls.REQUIRES_PARAMETERS.copy()
-        params.update(cls.__base__.REQUIRES_PARAMETERS)
+        params = cls.REQUIRES_ATTRIBUTES.copy()
+        params.update(cls.__base__.REQUIRES_ATTRIBUTES)
         for attr, ctable in vars(cls).items():
             if isinstance(ctable, CoeffsTable):
                 params[attr] = ctable.dt.dtype
