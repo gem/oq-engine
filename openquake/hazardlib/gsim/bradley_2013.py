@@ -397,11 +397,7 @@ def convert_to_LHC(imt):
     No standard deviation modification required.
     """
     # get period t
-    if isinstance(imt, SA):
-        t = imt.period
-    else:
-        t = 0.01
-
+    t = imt.period or 0.01
     T1 = 0.08
     T2 = 0.56
     T3 = 4.40

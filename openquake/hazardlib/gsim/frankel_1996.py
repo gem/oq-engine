@@ -355,12 +355,12 @@ class FrankelEtAl1996MblgAB1987NSHMP2008(GMPE):
     # dictionary relating supported imts and associated tables
     IMTS_TABLES = {
         PGA(): PGA_TBL,
-        SA(period=0.1, damping=5): SA01_TBL,
-        SA(period=0.2, damping=5): SA02_TBL,
-        SA(period=0.3, damping=5): SA03_TBL,
-        SA(period=0.5, damping=5): SA05_TBL,
-        SA(period=1.0, damping=5): SA1_TBL,
-        SA(period=2.0, damping=5): SA2_TBL
+        SA(0.1): SA01_TBL,
+        SA(0.2): SA02_TBL,
+        SA(0.3): SA03_TBL,
+        SA(0.5): SA05_TBL,
+        SA(1.0): SA1_TBL,
+        SA(2.0): SA2_TBL
     }
 
     # period dependent standard deviations (in base 10)

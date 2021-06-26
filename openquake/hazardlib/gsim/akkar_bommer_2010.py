@@ -306,9 +306,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
 
     Model implmented by laurentiu.danciu@gmail.com
     """
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Vs30 value representing typical rock conditions in Switzerland.
     #: confirmed by the Swiss GMPE group
@@ -323,8 +321,8 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
 
         sites.vs30 = 600 * np.ones(len(sites.vs30))
 
-        mean, stddevs = super(AkkarBommer2010SWISS01, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
+        mean, stddevs = super().get_mean_and_stddevs(
+            sites, rup, dists, imt, stddev_types)
 
         tau_ss = 'tau'
         log_phi_ss = np.log(10)
@@ -343,9 +341,7 @@ class AkkarBommer2010SWISS04(AkkarBommer2010SWISS01):
     This class extends :class:`AkkarBommer2010` following same strategy
     as for :class:`AkkarBommer2010SWISS01`
     """
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
 
@@ -356,8 +352,6 @@ class AkkarBommer2010SWISS08(AkkarBommer2010SWISS01):
     as for :class:`AkkarBommer2010SWISS01` to be used for the
     Swiss Hazard Model [2014].
     """
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08
