@@ -59,6 +59,12 @@ class SplitSigmaGMPE(GMPE):
         self.between_absolute = between_absolute
         self.within_absolute = within_absolute
 
+        # Set the supported stds; essential!
+        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+            const.StdDev.TOTAL,
+            const.StdDev.INTER_EVENT,
+            const.StdDev.INTRA_EVENT}
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
         See :meth:`superclass method
