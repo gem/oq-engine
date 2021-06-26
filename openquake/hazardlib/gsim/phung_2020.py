@@ -43,11 +43,8 @@ class PhungEtAl2020Asc(GMPE):
 
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     # rx for hanging wall
     REQUIRES_DISTANCES = {'rjb', 'rrup', 'rx'}
@@ -98,7 +95,9 @@ class PhungEtAl2020Asc(GMPE):
         lnmed += self.CONSTANTS['c2'] * (rup.mag - 6)
         lnmed += (self.CONSTANTS['c2'] - C['c3']) / C['c_n'] \
             * math.log(1 + math.exp(C['c_n'] * (C['c_m'] - rup.mag)))
-        lnmed += self._distance_attenuation(C, rup.mag, dists.rrup, ztor)
+        lnmed += self._distance_attenuation(
+            self.CONSTANTS, self.region, self.aftershocks,
+            C, rup.mag, dists.rrup, ztor)
 
         sa1130 = np.exp(lnmed)
         # site response [14, 15]
@@ -109,7 +108,7 @@ class PhungEtAl2020Asc(GMPE):
                - math.exp(C['phi3'] * (1130 - 360))) \
             * np.log((sa1130 + C['phi4']) / C['phi4'])
         # basin term [16]
-        lnmed += self._basin_term(C, sites.vs30, sites.z1pt0)
+        lnmed += self._basin_term(self.region, C, sites.vs30, sites.z1pt0)
 
         stddevs = self.get_stddevs(C, stddev_types)
 
@@ -133,42 +132,41 @@ class PhungEtAl2020Asc(GMPE):
 
         return stddevs
 
-    def _basin_term(self, C, vs30, z1pt0):
+    def _basin_term(self, region, C, vs30, z1pt0):
         """
         Basin term [16].
         """
-        if self.region == 'glb':
+        if region == 'glb':
             return 0
 
-        if self.region == 'tw':
+        if region == 'tw':
             ez_1 = np.exp(-3.73 / 2 * np.log((vs30 ** 2 + 290.53 ** 2)
                                              / (1750 ** 2 + 290.53 ** 2)))
             phi6 = 300
-        elif self.region in ['ca', 'jp']:
+        elif region in ['ca', 'jp']:
             ez_1 = np.exp(-5.23 / 2 * np.log((vs30 ** 2 + 412.39 ** 2)
                                              / (1360 ** 2 + 412.39 ** 2)))
-            if self.region == 'ca':
+            if region == 'ca':
                 phi6 = 300
             else:
                 phi6 = 800
 
         d_z1 = z1pt0 - ez_1
-        return np.where(z1pt0 < 0, 0,
-                        C['phi5' + self.region] * (1 - np.exp(-d_z1 / phi6)))
+        return np.where(
+            z1pt0 < 0, 0, C['phi5' + region] * (1 - np.exp(-d_z1 / phi6)))
 
-    def _distance_attenuation(self, C, mag, rrup, ztor):
+    def _distance_attenuation(self, s, region, aftershock, C, mag, rrup, ztor):
         """
         Distance scaling and attenuation term [8, 9, 10].
         """
         del_c5 = C['dp'] * max(ztor / 50 - 20 / 50, 0) \
             * (ztor > 20) * (mag < 7.0)
         cns = (C['c5'] + del_c5) * math.cosh(C['c6'] * max(mag - C['c_hm'], 0))
-        s = self.CONSTANTS
 
         f8 = s['c4'] * np.log(rrup + cns)
         f9 = (s['c4_a'] - s['c4']) * np.log(np.sqrt(rrup ** 2
                                                     + s['c_rb'] ** 2))
-        f10 = (C['c_g1' + self.region] + self.aftershocks * C['dc_g1as']
+        f10 = (C['c_g1' + region] + aftershock * C['dc_g1as']
                + C['c_g2'] / (math.cosh(max(mag - C['c_g3'], 0)))) * rrup
 
         return f8 + f9 + f10
@@ -238,17 +236,14 @@ class PhungEtAl2020SInter(GMPE):
 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     DEFINED_FOR_REFERENCE_VELOCITY = 1000
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     # rjb and rx not required for subduction
     REQUIRES_DISTANCES = {'rrup'}
@@ -278,7 +273,7 @@ class PhungEtAl2020SInter(GMPE):
         f_mag = self._fmag(C, rup.mag)
         f_ztor = self._fztor(C, rup.ztor)
         # path term
-        f_p = self._fp(C, rup.mag, dists.rrup)
+        f_p = self._fp(self.CONSTANTS, C, rup.mag, dists.rrup)
         # PGA at rock with Vs30 = 1000 m/s
         pga_1000 = self.pga_rock(C_PGA, rup.mag, dists.rrup, rup.ztor, 1000)
         # site effect
@@ -325,19 +320,18 @@ class PhungEtAl2020SInter(GMPE):
             return a4 * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
         return C['a5'] * (mag - C['mref']) + C['a13'] * (10 - mag) ** 2
 
-    def _fp(self, C, mag, rrup, pga=False):
+    def _fp(self, s, C, mag, rrup, pga=False):
         """
         Path term for subduction interface.
         """
-        s = self.CONSTANTS
+        a7, a14 = (C['a7'], C['a14']) if (
+            self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+            const.TRT.SUBDUCTION_INTRASLAB) else (0, 0)
         a1 = C['a1']
         if self.region == 'jptw':
             a1 += C['a1_del']
-        if pga:
-            r = 'tw'
-        else:
-            r = self.region
-        return a1 + (C['a2'] + s['a3'] * (mag - 7.8)) \
+        r = 'tw' if pga else self.region
+        return a1 + a7 + (C['a2'] + a14 + s['a3'] * (mag - 7.8)) \
             * np.log(rrup + s['c4'] * math.exp(s['a9'] * (mag - 6))) \
             + C['a6' + r] * rrup
 
@@ -379,6 +373,9 @@ class PhungEtAl2020SInter(GMPE):
         """
         Ztor factor for subduction interface.
         """
+        if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                const.TRT.SUBDUCTION_INTRASLAB):
+            return C['a11'] * (min(ztor, 80) - 40)
         return C['a10'] * (min(ztor, 40) - 20)
 
     def pga_rock(self, C_PGA, mag, rrup, ztor, vs30):
@@ -388,7 +385,7 @@ class PhungEtAl2020SInter(GMPE):
         s = self.CONSTANTS
         f_mag = self._fmag(C_PGA, mag, pga=True)
         f_ztor = self._fztor(C_PGA, ztor)
-        f_p = self._fp(C_PGA, mag, rrup, pga=True)
+        f_p = self._fp(self.CONSTANTS, C_PGA, mag, rrup, pga=True)
         # site function
         f_site = C_PGA['a12tw'] * np.log(vs30 / C_PGA['vlin']) \
             + C_PGA['b'] * s['n'] * np.log(vs30 / C_PGA['vlin'])
@@ -427,27 +424,4 @@ class PhungEtAl2020SSlab(PhungEtAl2020SInter):
     """
     Implements Phung et al. (2020) for Subduction Intraslab.
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
-    def _fp(self, C, mag, rrup, pga=False):
-        """
-        Path term for subduction intraslab.
-        """
-        s = self.CONSTANTS
-        a1 = C['a1']
-        if self.region == 'jptw':
-            a1 += C['a1_del']
-        if pga:
-            r = 'tw'
-        else:
-            r = self.region
-        return a1 + C['a7'] + (C['a2'] + C['a14'] + s['a3'] * (mag - 7.8)) \
-            * np.log(rrup + s['c4'] * math.exp(s['a9'] * (mag - 6))) \
-            + C['a6' + r] * rrup
-
-    def _fztor(self, C, ztor):
-        """
-        Ztor factor for subduction intraslab.
-        """
-        return C['a11'] * (min(ztor, 80) - 40)
