@@ -42,7 +42,8 @@ class SplitSigmaGMPE(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
@@ -57,13 +58,6 @@ class SplitSigmaGMPE(GMPE):
         # Set options for obtaining within and between stds
         self.between_absolute = between_absolute
         self.within_absolute = within_absolute
-
-        # Set the supported stds
-        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-            const.StdDev.TOTAL,
-            const.StdDev.INTER_EVENT,
-            const.StdDev.INTRA_EVENT
-        ])
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stds_types):
         """
