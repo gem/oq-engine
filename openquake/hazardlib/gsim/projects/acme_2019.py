@@ -418,7 +418,7 @@ class AlAtikSigmaModel(GMPE):
                                    sites, rup, dist, SA(im), stds_types)
                 mean = np.exp(mean_ln[0])
                 means_log10.append(np.log10(mean))
-                
+
             mb = np.polyfit(t_log10, means_log10, 1)
             mean_imt_log10 = mb[0] * np.log10(imt) + mb[1]
             extrap_mean.append(np.log(10**mean_imt_log10))
@@ -486,7 +486,6 @@ class AlAtikSigmaModel(GMPE):
         sigma = np.sqrt(tau ** 2. + phi ** 2.)
         stddevs = []
         for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(sigma + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:

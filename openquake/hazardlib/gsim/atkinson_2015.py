@@ -29,6 +29,50 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _get_magnitude_term(C, mag):
+    """
+    Returns the magnitude scaling term
+    """
+    return C["c0"] + (C["c1"] * mag) + (C["c2"] * (mag ** 2.0))
+
+
+def _get_distance_term(C, rhypo, mag):
+    """
+    Returns the distance scaling term
+    """
+    h_eff = _get_effective_distance(mag)
+    r_val = np.sqrt(rhypo ** 2.0 + h_eff ** 2.0)
+    return C["c3"] * np.log10(r_val)
+
+
+def _get_effective_distance(mag):
+    """
+    Returns the effective distance term in equation 3. This may be
+    overwritten in sub-classes
+    """
+    h_eff = 10.0 ** (-1.72 + 0.43 * mag)
+    if h_eff > 1.0:
+        return h_eff
+    else:
+        return 1.0
+
+
+def _get_stddevs(C, num_sites, stddev_types):
+    """
+    Return standard deviations, converting from log10 to log
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(
+                np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(np.log(10.0 ** C["tau"]) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(np.log(10.0 ** C["phi"]) + np.zeros(num_sites))
+    return stddevs
+
+
 class Atkinson2015(GMPE):
     """
     Implements the Induced Seismicity GMPE of Atkinson (2015)
@@ -41,21 +85,14 @@ class Atkinson2015(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.INDUCED
 
     #: Supported intensity measure types are peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the larger of two components
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
 
     #: Supported standard deviation types is total.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT 
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: No required site parameters, the GMPE is derived for B/C site
     #: amplification factors
@@ -79,56 +116,15 @@ class Atkinson2015(GMPE):
         """
         C = self.COEFFS[imt]
 
-        imean = (self._get_magnitude_term(C, rup.mag) +
-                 self._get_distance_term(C, dists.rhypo, rup.mag))
+        imean = (_get_magnitude_term(C, rup.mag) +
+                 _get_distance_term(C, dists.rhypo, rup.mag))
         # Convert mean from cm/s and cm/s/s
         if imt.name in "SA PGA":
             mean = np.log((10.0 ** (imean - 2.0)) / g)
         else:
             mean = np.log(10.0 ** imean)
-        stddevs = self._get_stddevs(C, len(dists.rhypo), stddev_types)
+        stddevs = _get_stddevs(C, len(dists.rhypo), stddev_types)
         return mean, stddevs
-
-    def _get_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        return C["c0"] + (C["c1"] * mag) + (C["c2"] * (mag ** 2.0))
-
-    def _get_distance_term(self, C, rhypo, mag):
-        """
-        Returns the distance scaling term
-        """
-        h_eff = self._get_effective_distance(mag)
-        r_val = np.sqrt(rhypo ** 2.0 + h_eff ** 2.0)
-        return C["c3"] * np.log10(r_val)
-
-    def _get_effective_distance(self, mag):
-        """
-        Returns the effective distance term in equation 3. This may be
-        overwritten in sub-classes
-        """
-        h_eff = 10.0 ** (-1.72 + 0.43 * mag)
-        if h_eff > 1.0:
-            return h_eff
-        else:
-            return 1.0
-
-    def _get_stddevs(self, C, num_sites, stddev_types):
-        """
-        Return standard deviations, converting from log10 to log
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(
-                    np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(np.log(10.0 ** C["tau"]) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(np.log(10.0 ** C["phi"]) + np.zeros(num_sites))
-        return stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT         c0      c1         c2      c3    phi    tau    sigma
