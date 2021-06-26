@@ -66,7 +66,7 @@ class ExampleA2021(GMPE):
 
     @jittable
     def calc_mean_stds(this, ctx, imts, stdtypes, out):
-        mag, rjb = ctx['mag'], ctx['rjb']
+        mag, rjb = ctx.mag, ctx.rjb
         for m, imt in enumerate(imts):
             C = this.COEFFS[m]
             out[0, :, m] = C['c1'] + _compute_term1(C, mag) + \

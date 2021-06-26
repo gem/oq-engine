@@ -216,7 +216,10 @@ class ContextMaker(object):
         for g, gsim in enumerate(self.gsims):
             if hasattr(gsim, 'calc_mean_stds'):
                 fake = self.fake[gsim]
-                ctx = numpy.ones(1, gsim.rType.dtype)
+                if numba:
+                    ctx = numpy.ones(1, gsim.rType.dtype)
+                else:
+                    ctx = hdf5.ArrayWrapper((), gsim.rType.dictarray(1))
                 out = numpy.zeros((2, 1, M))
                 gsim.__class__.calc_mean_stds(fake, ctx, self.imts, tot, out)
 
@@ -228,9 +231,12 @@ class ContextMaker(object):
         start = 0
         for ctx in ctxs:
             n = ctx.size()
-            new = gsim.rType.zeros(n)
-            for name in gsim.rType.names:
-                new[name] = getattr(ctx, name)
+            if numba:
+                new = gsim.rType.zeros(n)
+                for name in gsim.rType.names:
+                    new[name] = getattr(ctx, name)
+            else:
+                new = ctx
             stop = start + n
             yield new, fake, slice(start, stop)
             start = stop

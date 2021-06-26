@@ -1458,6 +1458,9 @@ class DType(object):
     def zeros(self, shape):
         return numpy.zeros(shape, self.dtype)
 
+    def dictarray(self, shape):
+        return {n: numpy.ones(shape, self.dtype[n]) for n in self.names}
+
     def __call__(self, *args, **kw):
         tt = numpy.zeros(1, self.dtype)[0]
         for name, arg in zip(self.dtype.names, args):
