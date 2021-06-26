@@ -26,11 +26,47 @@ import copy
 import numpy as np
 
 from scipy import interpolate
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 METRES_PER_KM = 1000.0
+
+
+def _get_phi_al_regional(C, mag, vs30measured, rrup):
+    """
+    Returns intra-event (Phi) standard deviation (equation 24, page 1046)
+    """
+    phi_al = np.ones((len(vs30measured)))
+    s1 = np.ones_like(phi_al) * C['s1e']
+    s2 = np.ones_like(phi_al) * C['s2e']
+    s1[vs30measured] = C['s1m']
+    s2[vs30measured] = C['s2m']
+    if mag < 4:
+        phi_al *= s1
+    elif mag <= 6:
+        phi_al *= s1 + (s2 - s1) / 2. * (mag - 4.)
+    else:
+        phi_al *= s2
+    return phi_al
+
+
+def _get_phi_al_regional_JPN(C, mag, vs30measured, rrup):
+    """
+    Returns intra-event (Tau) standard deviation (equation 26, page 1046)
+    """
+    phi_al = np.ones((len(vs30measured)))
+
+    idx = rrup < 30
+    phi_al[idx] *= C['s5']
+
+    idx = ((rrup <= 80) & (rrup >= 30.))
+    phi_al[idx] *= C['s5'] + (C['s6'] - C['s5']) / 50. * (rrup[idx] - 30.)
+
+    idx = rrup > 80
+    phi_al[idx] *= C['s6']
+
+    return phi_al
 
 
 class AbrahamsonEtAl2014(GMPE):
@@ -47,11 +83,7 @@ class AbrahamsonEtAl2014(GMPE):
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground velocity and peak ground acceleration, see tables 4
     #: pages 1036
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: average horizontal :attr:`~openquake.hazardlib.const.IMC.RotD50`,
@@ -61,11 +93,8 @@ class AbrahamsonEtAl2014(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see paragraph "Equations for standard deviations", page
     #: 1046.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30 and Z1.0, see table 2, page 1031
     #: Unit of measure for Z1.0 is [m]
@@ -79,8 +108,12 @@ class AbrahamsonEtAl2014(GMPE):
     #: page 1031).
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx', 'ry0'}
 
-    #: Reference rock conditions as defined at page 
+    #: Reference rock conditions as defined at page
     DEFINED_FOR_REFERENCE_VELOCITY = 1180
+
+    def __init__(self, region=None):
+        assert region in (None, 'CHN', 'JPN', 'TWN'), region
+        self.region = region
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -325,6 +358,9 @@ class AbrahamsonEtAl2014(GMPE):
         This computes the reference depth to the 1.0 km/s interface using
         equation 18 at page 1042 of Abrahamson et al. (2014)
         """
+        if self.region == 'JPN':
+            return 1./1000. * np.exp(-5.23/2.*np.log((vs30**2+412.**2.) /
+                                                     (1360.**2+412**2.)))
         return (1. / 1000.) * np.exp((-7.67 / 4.)*np.log((vs30**4 + 610.**4) /
                                                          (1360.**4 + 610.**4)))
 
@@ -355,9 +391,22 @@ class AbrahamsonEtAl2014(GMPE):
     def _get_regional_term(self, C, imt, vs30, rrup):
         """
         In accordance with Abrahamson et al. (2014) we assume California
-        as the default region hence here the regional term is assumed = 0.
+        as the default region.
         """
-        return 0.
+        if self.region == 'TWN':
+            vs30star = self._get_vs30star(vs30, imt)
+            return C['a31'] * np.log(vs30star/C['vlin']) + C['a25'] * rrup
+        elif self.region == 'CHN':
+            return C['a28'] * rrup
+        elif self.region == 'JPN':  # See page 1043
+            f3 = interpolate.interp1d(
+                [150, 250, 350, 450, 600, 850, 1150, 2000],
+                [C['a36'], C['a37'], C['a38'], C['a39'], C['a40'], C['a41'],
+                 C['a42'], C['a42']],
+                kind='linear')
+            return f3(vs30) + C['a29'] * rrup
+        else:  # California
+            return 0.
 
     def _get_stddevs(self, C, imt, rup, sites, stddev_types, sa1180, dists):
         """
@@ -384,7 +433,10 @@ class AbrahamsonEtAl2014(GMPE):
         """
         Returns Phi as described at pages 1046 and 1047
         """
-        phi_al = self._get_phi_al_regional(C, mag, vs30measured, rrup)
+        phi_al = _get_phi_al_regional_JPN(
+            C, mag, vs30measured, rrup
+        ) if self.region == 'JPN' else _get_phi_al_regional(
+            C, mag, vs30measured, rrup)
         derAmp = self._get_derivative(C, sa1180, vs30)
         phi_amp = 0.4
         idx = phi_al < phi_amp
@@ -412,23 +464,6 @@ class AbrahamsonEtAl2014(GMPE):
         derAmp[idx] = (b * sa1180[idx] * (-1./(sa1180[idx]+c) +
                        1./(sa1180[idx] + c*(vs30[idx]/C['vlin'])**n)))
         return derAmp
-
-    def _get_phi_al_regional(self, C, mag, vs30measured, rrup):
-        """
-        Returns intra-event (Phi) standard deviation (equation 24, page 1046)
-        """
-        phi_al = np.ones((len(vs30measured)))
-        s1 = np.ones_like(phi_al) * C['s1e']
-        s2 = np.ones_like(phi_al) * C['s2e']
-        s1[vs30measured] = C['s1m']
-        s2[vs30measured] = C['s2m']
-        if mag < 4:
-            phi_al *= s1
-        elif mag <= 6:
-            phi_al *= s1 + (s2 - s1) / 2. * (mag - 4.)
-        else:
-            phi_al *= s2
-        return phi_al
 
     def _get_inter_event_std(self, C, mag, sa1180, vs30):
         """
@@ -481,85 +516,10 @@ pgv     6.75    330     -2.02   2400    4.5     5.975   -0.919  0.275   -0.1    
         # h1, h2, h3 specified at page 1040 (top)
         'h1': +0.25,
         'h2': +1.50,
-        'h3': -0.75,
+        'h3': -0.75
     }
 
 
-class AbrahamsonEtAl2014RegTWN(AbrahamsonEtAl2014):
-    """
-    Implements GMPE developed by Abrahamson, Silva and Kamai in 2014 as
-    part of the PEER West 2 Project. The GMPE is described in a paper
-    published in 2014 on Earthquake Spectra, Volume 30, Number 3.
-
-    Regional corrections for Taiwan
-    """
-
-    def _get_regional_term(self, C, imt, vs30, rrup):
-        """
-        In accordance with Abrahamson et al. (2014) we assume as the default
-        region California
-        """
-        vs30star = self._get_vs30star(vs30, imt)
-        return C['a31'] * np.log(vs30star/C['vlin']) + C['a25'] * rrup
-
-
-class AbrahamsonEtAl2014RegCHN(AbrahamsonEtAl2014):
-    """
-    Implements GMPE developed by Abrahamson, Silva and Kamai in 2014 as
-    part of the PEER West 2 Project. The GMPE is described in a paper
-    published in 2014 on Earthquake Spectra, Volume 30, Number 3.
-
-    Regional corrections for China
-    """
-
-    def _get_regional_term(self, C, imt, vs30, rrup):
-        """
-        In accordance with Abrahamson et al. (2014) we assume as the default
-        region California
-        """
-        return C['a28'] * rrup
-
-
-class AbrahamsonEtAl2014RegJPN(AbrahamsonEtAl2014):
-    """
-    Implements GMPE developed by Abrahamson, Silva and Kamai in 2014 as
-    part of the PEER West 2 Project. The GMPE is described in a paper
-    published in 2014 on Earthquake Spectra, Volume 30, Number 3.
-
-    Regional corrections for Japan
-    """
-
-    def _get_z1pt0ref(self, vs30):
-        """
-        This provides the default depth to the 1.0 km/s interface for Japan
-        """
-        return 1./1000. * np.exp(-5.23/2.*np.log((vs30**2+412.**2.) /
-                                                 (1360.**2+412**2.)))
-
-    def _get_regional_term(self, C, imt, vs30, rrup):
-        """
-        Compute regional term for Japan. See page 1043
-        """
-        f3 = interpolate.interp1d(
-            [150, 250, 350, 450, 600, 850, 1150, 2000],
-            [C['a36'], C['a37'], C['a38'], C['a39'], C['a40'], C['a41'],
-             C['a42'], C['a42']],
-            kind='linear')
-        return f3(vs30) + C['a29'] * rrup
-
-    def _get_phi_al_regional(self, C, mag, vs30measured, rrup):
-        """
-        Returns intra-event (Tau) standard deviation (equation 26, page 1046)
-        """
-        phi_al = np.ones((len(vs30measured)))
-
-        idx = rrup < 30
-        phi_al[idx] *= C['s5']
-
-        idx = ((rrup <= 80) & (rrup >= 30.))
-        phi_al[idx] *= C['s5'] + (C['s6'] - C['s5']) / 50. * (rrup[idx] - 30.)
-
-        idx = rrup > 80
-        phi_al[idx] *= C['s6']
-
-        return phi_al
+for region in 'CHN JPN TWN'.split():
+    gsim_aliases['AbrahamsonEtAl2014' + region] = \
+        f'[AbrahamsonEtAl2014Reg{region}]\region="{region}"'
