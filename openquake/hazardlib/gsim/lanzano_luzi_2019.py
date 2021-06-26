@@ -149,24 +149,19 @@ class LanzanoLuzi2019shallow(GMPE):
                  _compute_distance(dists.rhypo, C) +
                  _get_site_amplification(sites, C))
 
-        istddevs = _get_stddevs(C,
-                                     stddev_types,
-                                     num_sites=sites.vs30.size)
+        istddevs = _get_stddevs(C, stddev_types, sites.vs30.size)
 
-		# Convert units to g,
-        # but only for PGA and SA (not PGV):
+        # Convert units to g, but only for PGA and SA (not PGV)
         if imt.name in "SA PGA":
             mean = np.log((10.0 ** (imean - 2.0)) / g)
-        else:
-            # PGV:
+        else:  # PGV:
             mean = np.log(10.0 ** imean)
         # Return stddevs in terms of natural log scaling
         stddevs = np.log(10.0 ** np.array(istddevs))
         # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
         return mean, stddevs
 
-        
-          # Sigma values in log10
+    # Sigma values in log10
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT		a		b		c1		c2		c3		sB		sC		tau	 	phiS2S	sigma0	phi		sigma
 	pga		-0.4185	0.8146	-2.0926	-1.5694	-0.0062	0.088	0.3382	0.1892	0.2624	0.2215	0.3434	0.3921
@@ -202,6 +197,70 @@ class LanzanoLuzi2019shallow(GMPE):
 	4.500	-3.3949	1.0490	-1.475	-1.6088	-0.0011	0.0908	0.3587	0.2287	0.1952	0.1835	0.2679	0.3522
 	5.000	-3.4022	1.0258	-1.4711	-1.6097	-0.0011	0.0856	0.3386	0.2273	0.1954	0.1835	0.2681	0.3515
     """)
+
+
+def _get_stddevs2(C, stddev_types, num_sites):
+    """
+    Return standard deviations components.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(C['sigma'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['phi'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+    return stddevs
+
+
+def _compute_distance2(rval2, C):
+    """
+    Compute the distance function, equation (5).
+    """
+    h2 = 5
+    rval = np.sqrt(rval2 ** 2 + (h2) ** 2)
+    return C['c2'] * np.log10(rval) + C['c3'] * rval
+
+
+def _compute_magnitude2(rup, C):
+    """
+    Compute the magnitude function, equation (9):
+    """
+    return C['a'] + (C['b'] * (rup.mag))
+
+
+def _get_site_amplification2(sites, C):
+    """
+    Compute the site amplification function given by FS = eiSi, for
+    i = 1,2,3 where Si are the coefficients determined through regression
+    analysis, and ei are dummy variables (0 or 1) used to denote the
+    different EC8 site classes.
+    """
+    ssb, ssc = _get_site_type_dummy_variables2(sites)
+    return (C['sB'] * ssb) + (C['sC'] * ssc)
+
+
+def _get_site_type_dummy_variables2(sites):
+    """
+    Get site type dummy variables, which classified the sites into
+    different site classes based on the shear wave velocity in the
+    upper 30 m (Vs30) according to the EC8 (CEN 2003):
+    class A: Vs30 > 800 m/s
+    class B: Vs30 = 360 - 800 m/s
+    class C: Vs30 = 180 - 360 m/s
+    class D: Vs30 < 180 m/s
+    """
+    ssb = np.zeros(len(sites.vs30))
+    ssc = np.zeros(len(sites.vs30))
+    # Class C; Vs30 < 360 m/s.
+    idx = (sites.vs30 < 360.0)
+    ssc[idx] = 1.0
+    # Class B; 360 m/s <= Vs30 <= 800 m/s.
+    idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800.0)
+    ssb[idx] = 1.0
+
+    return ssb, ssc
 
 
 class LanzanoLuzi2019deep(GMPE):
@@ -240,13 +299,11 @@ class LanzanoLuzi2019deep(GMPE):
         # intensity measure type
         C = self.COEFFS[imt]
 
-        imean = (self._compute_magnitude(rup, C) +
-                 self._compute_distance(dists.rhypo, C) +
-                 self._get_site_amplification(sites, C))
+        imean = (_compute_magnitude2(rup, C) +
+                 _compute_distance2(dists.rhypo, C) +
+                 _get_site_amplification2(sites, C))
 
-        istddevs = self._get_stddevs(C,
-                                     stddev_types,
-                                     num_sites=sites.vs30.size)
+        istddevs = _get_stddevs2(C, stddev_types, sites.vs30.size)
 
 	# Convert units to g,
         # but only for PGA and SA (not PGV):
@@ -260,68 +317,7 @@ class LanzanoLuzi2019deep(GMPE):
         # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
         return mean, stddevs
 
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations components.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['phi'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-        
-    def _compute_distance(self, rval2, C):
-        """
-        Compute the distance function, equation (5).
-        """
-        h2 = 5
-        rval = np.sqrt(rval2 ** 2 + (h2) ** 2)
-        return C['c2'] * np.log10(rval) + C['c3'] * rval
-
-    def _compute_magnitude(self, rup, C):
-        """
-        Compute the magnitude function, equation (9):
-        """
-        return C['a'] + (C['b'] * (rup.mag))
-
-    def _get_site_amplification(self, sites, C):
-        """
-        Compute the site amplification function given by FS = eiSi, for
-        i = 1,2,3 where Si are the coefficients determined through regression
-        analysis, and ei are dummy variables (0 or 1) used to denote the
-        different EC8 site classes.
-        """
-        ssb, ssc = self._get_site_type_dummy_variables(sites)
-
-        return (C['sB'] * ssb) + (C['sC'] * ssc)
-
-    def _get_site_type_dummy_variables(self, sites):
-        """
-        Get site type dummy variables, which classified the sites into
-        different site classes based on the shear wave velocity in the
-        upper 30 m (Vs30) according to the EC8 (CEN 2003):
-        class A: Vs30 > 800 m/s
-        class B: Vs30 = 360 - 800 m/s
-        class C: Vs30 = 180 - 360 m/s
-        class D: Vs30 < 180 m/s
-        """
-        ssb = np.zeros(len(sites.vs30))
-        ssc = np.zeros(len(sites.vs30))
-        # Class C; Vs30 < 360 m/s.
-        idx = (sites.vs30 < 360.0)
-        ssc[idx] = 1.0
-        # Class B; 360 m/s <= Vs30 <= 800 m/s.
-        idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800.0)
-        ssb[idx] = 1.0
-
-        return ssb, ssc
-        
-          # Sigma values in log10
+    # Sigma values in log10
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT		a		b		c1		c2		c3		sB		sC		tau	 	phiS2S	sigma0	phi		sigma
 	pga		-0.4185	0.8146	-2.0926	-1.5694	-0.0062	0.088	0.3382	0.1892	0.2624	0.2215	0.3434	0.3921
