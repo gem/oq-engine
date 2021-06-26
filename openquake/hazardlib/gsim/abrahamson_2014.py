@@ -267,7 +267,7 @@ class AbrahamsonEtAl2014(GMPE):
     def _hw_taper1(self, dists, rup):
         # Compute taper t1
         T1 = np.ones_like(dists.rx)
-        T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0  
+        T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
         return T1
 
     def _hw_taper2(self, dists, rup):
