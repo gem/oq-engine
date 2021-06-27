@@ -32,7 +32,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-def get_stddevs(self, C, n_sites, idx, stddev_types):
+def get_stddevs(C, n_sites, idx, stddev_types):
     """
     Retuns the standard deviation
     """
@@ -49,7 +49,7 @@ def get_stddevs(self, C, n_sites, idx, stddev_types):
     return stddevs
 
 
-def get_stddevs_ss(self, C, n_sites, idx, stddev_types):
+def get_stddevs_ss(C, n_sites, idx, stddev_types):
     """
     Returns the intra-event standard deviation calibrated for the
     specific site class
@@ -61,7 +61,6 @@ def get_stddevs_ss(self, C, n_sites, idx, stddev_types):
         phi[idx[i]] += C["sc{:g}_sigma_S".format(i)]
 
     for stddev_type in stddev_types:
-        assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
         if stddev_type == const.StdDev.TOTAL:
             stddevs.append(np.sqrt(phi ** 2. + tau ** 2.))
         elif stddev_type == const.StdDev.INTRA_EVENT:
@@ -131,7 +130,10 @@ class ZhaoEtAl2016Asc(GMPE):
         sa_soil = self.add_site_amplification(C, C_SITE, sites,
                                               sa_rock, idx, rup)
 
-        stddevs = self.get_stddevs(C, sites.vs30.shape, idx, stddev_types)
+        if self.__class__.__name__.endswith('SiteSigma'):
+            stddevs = get_stddevs_ss(C, sites.vs30.shape, idx, stddev_types)
+        else:
+            stddevs = get_stddevs(C, sites.vs30.shape, idx, stddev_types)
         return sa_soil, stddevs
 
     def get_magnitude_scaling_term(self, C, rup):
@@ -298,8 +300,6 @@ class ZhaoEtAl2016Asc(GMPE):
             site_class[idx[i]] = i
         return site_class, idx
 
-    get_stddevs = get_stddevs
-
     # Coefficients taken from Excel spreadsheet provided by the author
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt        c1     c2      ccr      cum      dcr              FN_CR    FRV_UM              FN_UM  FUM                 bcr       gcr       gUM      gcrN               gcrL       ecr                 eum      ecrV              gamma_S  lnSC1AM         S2        S3        S4  sigma    tau  sigma_T  sc1_sigma_S  sc1_tau_S  sc1_sigma_ST   sc2_sigma_S  sc2_tau_S  sc2_sigma_ST  sc3_sigma_S  sc3_tau_S  sc3_sigma_ST  sc4_sigma_S  sc4_tau_S  sc4_sigma_ST
@@ -408,7 +408,6 @@ class ZhaoEtAl2016AscSiteSigma(ZhaoEtAl2016Asc):
     events for the case when within-event variability is dependent on site
     class
     """
-    get_stddevs = get_stddevs_ss
 
 
 class ZhaoEtAl2016UpperMantle(ZhaoEtAl2016Asc):
@@ -506,7 +505,6 @@ class ZhaoEtAl2016UpperMantleSiteSigma(ZhaoEtAl2016UpperMantle):
     Adaption of the Zhao et al (2016a) GMPE for upper mantle events for the
     case when within-event variability is dependent on site class
     """
-    get_stddevs = get_stddevs_ss
 
 
 class ZhaoEtAl2016SInter(ZhaoEtAl2016Asc):
@@ -713,8 +711,6 @@ class ZhaoEtAl2016SInterSiteSigma(ZhaoEtAl2016SInter):
     case of site-dependent within-event variability
     """
 
-    get_stddevs = get_stddevs_ss
-
 
 class ZhaoEtAl2016SSlab(ZhaoEtAl2016Asc):
     """
@@ -884,4 +880,3 @@ class ZhaoEtAl2016SSlabSiteSigma(ZhaoEtAl2016SSlab):
     Subclass of the Zhao et al. (2016c) subduction in-slab GMPE for the
     case of site-dependent within-event variability
     """
-    get_stddevs = get_stddevs_ss
