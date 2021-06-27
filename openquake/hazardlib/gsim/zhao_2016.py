@@ -330,6 +330,101 @@ def _get_ln_a_n_max(trt, C, n_sites, idx, rup):
     return ln_a_n_max
 
 
+def add_site_amplification(trt, C, C_SITE, sites, sa_rock, idx, rup):
+    """
+    Applies the site amplification scaling defined in equations from 10
+    to 15
+    """
+    n_sites = sites.vs30.shape
+    # Convert from reference rock to hard rock
+    hard_rock_sa = sa_rock - C["lnSC1AM"]
+    # Gets the elastic site amplification ratio
+    ln_a_n_max = _get_ln_a_n_max(trt, C, n_sites, idx, rup)
+
+    # Retrieves coefficients needed to determine smr
+    sreff, sreffc, f_sr = _get_smr_coeffs(C, C_SITE, idx, n_sites,
+                                          hard_rock_sa)
+    snc = np.zeros(n_sites)
+    alpha = CONSTANTS["alpha"]
+    beta = CONSTANTS["beta"]
+    smr = np.zeros(n_sites)
+    sa_soil = hard_rock_sa + ln_a_n_max
+    # Get lnSF
+    ln_sf = _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup)
+    lnamax_idx = np.exp(ln_a_n_max) < 1.25
+    not_lnamax_idx = np.logical_not(lnamax_idx)
+    for i in range(1, 5):
+        idx_i = idx[i]
+        if not np.any(idx_i):
+            # No sites of the given site class
+            continue
+        idx2 = np.logical_and(lnamax_idx, idx_i)
+        if np.any(idx2):
+            # Use the approximate method for SRC and SNC
+            c_a = C_SITE["LnAmax1D{:g}".format(i)] /\
+                (np.log(beta) - np.log(sreffc[idx2] ** alpha + beta))
+            c_b = -c_a * np.log(sreffc[idx2] ** alpha + beta)
+
+            snc[idx2] = np.exp((c_a * (alpha - 1.) *
+                               np.log(beta) * np.log(10.0 * beta) -
+                               np.log(10.0) * (c_b + ln_sf[idx2])) /
+                               (c_a * (alpha * np.log(10.0 * beta) -
+                                np.log(beta))))
+        # For the cases when ln_a_n_max >= 1.25
+        idx2 = np.logical_and(not_lnamax_idx, idx_i)
+        if np.any(idx2):
+            snc[idx2] = (np.exp((ln_a_n_max[idx2] *
+                         np.log(sreffc[idx2] ** alpha + beta) -
+                         ln_sf[idx2] * np.log(beta)) /
+                         C_SITE["LnAmax1D{:g}".format(i)]) - beta) **\
+                         (1.0 / alpha)
+
+        smr[idx_i] = sreff[idx_i] * (snc[idx_i] / sreffc[idx_i]) *\
+            f_sr[idx_i]
+        # For the cases when site class = i and SMR != 0
+        idx2 = np.logical_and(idx_i, np.fabs(smr) > 0.0)
+        if np.any(idx2):
+            sa_soil[idx2] += (-C_SITE["LnAmax1D{:g}".format(i)] *
+                              (np.log(smr[idx2] ** alpha + beta) -
+                              np.log(beta)) /
+                              (np.log(sreffc[idx2] ** alpha + beta) -
+                               np.log(beta)))
+    return sa_soil
+
+
+def _get_smr_coeffs(C, C_SITE, idx, n_sites, sa_rock):
+    """
+    Returns the SReff and SReffC terms needed for equation 14 and 15
+    """
+    # Get SR
+    sreff = np.zeros(n_sites)
+    sreffc = np.zeros(n_sites)
+    f_sr = np.zeros(n_sites)
+    for i in range(1, 5):
+        sreff[idx[i]] += (np.exp(sa_rock[idx[i]]) * IMF[i])
+        sreffc[idx[i]] += (C_SITE["Src1D{:g}".format(i)] * IMF[i])
+        # Get f_SR
+        f_sr[idx[i]] += C_SITE["fsr{:g}".format(i)]
+    return sreff, sreffc, f_sr
+
+
+def _get_site_classification(vs30):
+    """
+    Define the site class categories based on Vs30. Returns a
+    vector of site class values and a dictionary containing logical
+    vectors for each of the site classes
+    """
+    site_class = np.ones(vs30.shape, dtype=int)
+    idx = {}
+    idx[1] = vs30 > 600.
+    idx[2] = np.logical_and(vs30 > 300., vs30 <= 600.)
+    idx[3] = np.logical_and(vs30 > 200., vs30 <= 300.)
+    idx[4] = vs30 <= 200.
+    for i in [2, 3, 4]:
+        site_class[idx[i]] = i
+    return site_class, idx
+
+
 def get_stddevs(C, phi, stddev_types):
     """
     Retuns the standard deviation
@@ -398,14 +493,14 @@ class ZhaoEtAl2016Asc(GMPE):
         C = self.COEFFS[imt]
         C_SITE = self.SITE_COEFFS[imt]
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        s_c, idx = self._get_site_classification(sites.vs30)
+        s_c, idx = _get_site_classification(sites.vs30)
         sa_rock = (get_magnitude_scaling_term(trt, C, rup) +
                    get_sof_term(trt, C, rup) +
                    get_depth_term(trt, C, rup) +
                    get_distance_term(trt, C, dists, rup))
 
-        sa_soil = self.add_site_amplification(C, C_SITE, sites,
-                                              sa_rock, idx, rup)
+        sa_soil = add_site_amplification(trt, C, C_SITE, sites,
+                                         sa_rock, idx, rup)
 
         if self.__class__.__name__.endswith('SiteSigma'):
             phi = np.zeros_like(sites.vs30)
@@ -415,99 +510,6 @@ class ZhaoEtAl2016Asc(GMPE):
             phi = C["sigma"] + np.zeros_like(sites.vs30)
         stddevs = get_stddevs(C, phi, stddev_types)
         return sa_soil, stddevs
-
-    def add_site_amplification(self, C, C_SITE, sites, sa_rock, idx, rup):
-        """
-        Applies the site amplification scaling defined in equations from 10
-        to 15
-        """
-        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-        n_sites = sites.vs30.shape
-        # Convert from reference rock to hard rock
-        hard_rock_sa = sa_rock - C["lnSC1AM"]
-        # Gets the elastic site amplification ratio
-        ln_a_n_max = _get_ln_a_n_max(trt, C, n_sites, idx, rup)
-
-        # Retrieves coefficients needed to determine smr
-        sreff, sreffc, f_sr = self._get_smr_coeffs(C, C_SITE, idx, n_sites,
-                                                   hard_rock_sa)
-        snc = np.zeros(n_sites)
-        alpha = CONSTANTS["alpha"]
-        beta = CONSTANTS["beta"]
-        smr = np.zeros(n_sites)
-        sa_soil = hard_rock_sa + ln_a_n_max
-        # Get lnSF
-        ln_sf = _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup)
-        lnamax_idx = np.exp(ln_a_n_max) < 1.25
-        not_lnamax_idx = np.logical_not(lnamax_idx)
-        for i in range(1, 5):
-            idx_i = idx[i]
-            if not np.any(idx_i):
-                # No sites of the given site class
-                continue
-            idx2 = np.logical_and(lnamax_idx, idx_i)
-            if np.any(idx2):
-                # Use the approximate method for SRC and SNC
-                c_a = C_SITE["LnAmax1D{:g}".format(i)] /\
-                    (np.log(beta) - np.log(sreffc[idx2] ** alpha + beta))
-                c_b = -c_a * np.log(sreffc[idx2] ** alpha + beta)
-
-                snc[idx2] = np.exp((c_a * (alpha - 1.) *
-                                   np.log(beta) * np.log(10.0 * beta) -
-                                   np.log(10.0) * (c_b + ln_sf[idx2])) /
-                                   (c_a * (alpha * np.log(10.0 * beta) -
-                                    np.log(beta))))
-            # For the cases when ln_a_n_max >= 1.25
-            idx2 = np.logical_and(not_lnamax_idx, idx_i)
-            if np.any(idx2):
-                snc[idx2] = (np.exp((ln_a_n_max[idx2] *
-                             np.log(sreffc[idx2] ** alpha + beta) -
-                             ln_sf[idx2] * np.log(beta)) /
-                             C_SITE["LnAmax1D{:g}".format(i)]) - beta) **\
-                             (1.0 / alpha)
-
-            smr[idx_i] = sreff[idx_i] * (snc[idx_i] / sreffc[idx_i]) *\
-                f_sr[idx_i]
-            # For the cases when site class = i and SMR != 0
-            idx2 = np.logical_and(idx_i, np.fabs(smr) > 0.0)
-            if np.any(idx2):
-                sa_soil[idx2] += (-C_SITE["LnAmax1D{:g}".format(i)] *
-                                  (np.log(smr[idx2] ** alpha + beta) -
-                                  np.log(beta)) /
-                                  (np.log(sreffc[idx2] ** alpha + beta) -
-                                   np.log(beta)))
-        return sa_soil
-
-    def _get_smr_coeffs(self, C, C_SITE, idx, n_sites, sa_rock):
-        """
-        Returns the SReff and SReffC terms needed for equation 14 and 15
-        """
-        # Get SR
-        sreff = np.zeros(n_sites)
-        sreffc = np.zeros(n_sites)
-        f_sr = np.zeros(n_sites)
-        for i in range(1, 5):
-            sreff[idx[i]] += (np.exp(sa_rock[idx[i]]) * IMF[i])
-            sreffc[idx[i]] += (C_SITE["Src1D{:g}".format(i)] * IMF[i])
-            # Get f_SR
-            f_sr[idx[i]] += C_SITE["fsr{:g}".format(i)]
-        return sreff, sreffc, f_sr
-
-    def _get_site_classification(self, vs30):
-        """
-        Define the site class categories based on Vs30. Returns a
-        vector of site class values and a dictionary containing logical
-        vectors for each of the site classes
-        """
-        site_class = np.ones(vs30.shape, dtype=int)
-        idx = {}
-        idx[1] = vs30 > 600.
-        idx[2] = np.logical_and(vs30 > 300., vs30 <= 600.)
-        idx[3] = np.logical_and(vs30 > 200., vs30 <= 300.)
-        idx[4] = vs30 <= 200.
-        for i in [2, 3, 4]:
-            site_class[idx[i]] = i
-        return site_class, idx
 
     # Coefficients taken from Excel spreadsheet provided by the author
     COEFFS = CoeffsTable(sa_damping=5, table="""\
