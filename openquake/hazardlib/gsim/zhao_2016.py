@@ -27,9 +27,74 @@ Module exports :class:`ZhaoEtAl2016Asc`,
 """
 import numpy as np
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
+CONSTANTS = {"m_c": 7.1,
+             "xcro": 2.0,
+             "xinto": 10.0,  # Used in subduction Interface class
+             "alpha": 2.0,
+             "beta": 0.6,
+             "Imin": 1.0,
+             "Imax": 12.0,
+             "m_sc": 6.3}  # Used in Subduction Slab class
+
+# Impedence ratio factors for each site class
+IMF = {1: (1. + 0.8 * 2.73) / 3.5,  # IMF 0.91
+       2: 3.07 / 3.0,
+       3: (1. + 0.9 * 1.76) / 2.5,
+       4: (1. + 0.6 * 2.02) / 3.0}
+
+get_magnitude_scaling_term = CallableDict()
+
+
+@get_magnitude_scaling_term.add(
+    const.TRT.ACTIVE_SHALLOW_CRUST, const.TRT.UPPER_MANTLE)
+def get_magnitude_scaling_term_asc(trt, C, rup):
+    """
+    Returns the magnitude scaling term in equations 1 and 2
+    """
+    if rup.mag <= CONSTANTS["m_c"]:
+        return C["ccr"] * rup.mag
+    else:
+        return (C["ccr"] * CONSTANTS["m_c"]) +\
+            (C["dcr"] * (rup.mag - CONSTANTS["m_c"]))
+
+
+@get_magnitude_scaling_term.add(const.TRT.SUBDUCTION_INTERFACE)
+def get_magnitude_scaling_term_SInter(trt, C, rup):
+    """
+    Returns magnitude scaling term, which is dependent on top of rupture
+    depth - as described in equations 1 and 2
+    """
+    if rup.ztor > 25.0:
+        # Deep interface events
+        c_int = C["cint"]
+    else:
+        c_int = C["cintS"]
+
+    if rup.mag <= CONSTANTS["m_c"]:
+        return c_int * rup.mag
+    else:
+        return (c_int * CONSTANTS["m_c"]) +\
+            (C["dint"] * (rup.mag - CONSTANTS["m_c"]))
+
+
+@get_magnitude_scaling_term.add(const.TRT.SUBDUCTION_INTRASLAB)
+def get_magnitude_scaling_term_sslab(trt, C, rup):
+    """
+    Returns the magnitude scaling defined in equation 1
+    """
+    m_c = CONSTANTS["m_c"]
+    if rup.mag <= m_c:
+        return C["cSL"] * rup.mag +\
+            C["cSL2"] * ((rup.mag - CONSTANTS["m_sc"]) ** 2.)
+    else:
+        return C["cSL"] * m_c +\
+           C["cSL2"] * ((m_c - CONSTANTS["m_sc"]) ** 2.) +\
+           C["dSL"] * (rup.mag - m_c)
 
 
 def get_stddevs(C, phi, stddev_types):
@@ -99,8 +164,9 @@ class ZhaoEtAl2016Asc(GMPE):
         # intensity measure type.
         C = self.COEFFS[imt]
         C_SITE = self.SITE_COEFFS[imt]
+        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         s_c, idx = self._get_site_classification(sites.vs30)
-        sa_rock = (self.get_magnitude_scaling_term(C, rup) +
+        sa_rock = (get_magnitude_scaling_term(trt, C, rup) +
                    self.get_sof_term(C, rup) +
                    self.get_depth_term(C, rup) +
                    self.get_distance_term(C, dists, rup))
@@ -116,16 +182,6 @@ class ZhaoEtAl2016Asc(GMPE):
             phi = C["sigma"] + np.zeros_like(sites.vs30)
         stddevs = get_stddevs(C, phi, stddev_types)
         return sa_soil, stddevs
-
-    def get_magnitude_scaling_term(self, C, rup):
-        """
-        Returns the magnitude scaling term in equations 1 and 2
-        """
-        if rup.mag <= self.CONSTANTS["m_c"]:
-            return C["ccr"] * rup.mag
-        else:
-            return (C["ccr"] * self.CONSTANTS["m_c"]) +\
-                (C["dcr"] * (rup.mag - self.CONSTANTS["m_c"]))
 
     def get_sof_term(self, C, rup):
         """
@@ -153,17 +209,17 @@ class ZhaoEtAl2016Asc(GMPE):
         gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
 
         # Geometric attenuation scaling described in equation 6
-        g_n = C["gcrN"] * np.log(self.CONSTANTS["xcro"] + 30. + gn_exp) *\
+        g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
             np.ones_like(x_ij)
         idx = x_ij <= 30.0
         if np.any(idx):
-            g_n[idx] = C["gcrN"] * np.log(self.CONSTANTS["xcro"] +
+            g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
                                           x_ij[idx] + gn_exp)
 
         # equation 5
-        c_m = min(rup.mag, self.CONSTANTS["m_c"])
+        c_m = min(rup.mag, CONSTANTS["m_c"])
         # equation 4
-        r_ij = self.CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
+        r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
         return C["gcr"] * np.log(r_ij) + C["gcrL"] * np.log(x_ij + 200.0) +\
             g_n + C["ecr"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
 
@@ -182,8 +238,8 @@ class ZhaoEtAl2016Asc(GMPE):
         sreff, sreffc, f_sr = self._get_smr_coeffs(C, C_SITE, idx, n_sites,
                                                    hard_rock_sa)
         snc = np.zeros(n_sites)
-        alpha = self.CONSTANTS["alpha"]
-        beta = self.CONSTANTS["beta"]
+        alpha = CONSTANTS["alpha"]
+        beta = CONSTANTS["beta"]
         smr = np.zeros(n_sites)
         sa_soil = hard_rock_sa + ln_a_n_max
         # Get lnSF
@@ -237,8 +293,8 @@ class ZhaoEtAl2016Asc(GMPE):
         sreffc = np.zeros(n_sites)
         f_sr = np.zeros(n_sites)
         for i in range(1, 5):
-            sreff[idx[i]] += (np.exp(sa_rock[idx[i]]) * self.IMF[i])
-            sreffc[idx[i]] += (C_SITE["Src1D{:g}".format(i)] * self.IMF[i])
+            sreff[idx[i]] += (np.exp(sa_rock[idx[i]]) * IMF[i])
+            sreffc[idx[i]] += (C_SITE["Src1D{:g}".format(i)] * IMF[i])
             # Get f_SR
             f_sr[idx[i]] += C_SITE["fsr{:g}".format(i)]
         return sreff, sreffc, f_sr
@@ -367,21 +423,6 @@ class ZhaoEtAl2016Asc(GMPE):
     5.000   0.583950    1.000000    1.606820    0.547360  14.817000  10.670300  30.000000  14.381810  0.000000  0.000000  0.000000  0.000000
     """)
 
-    CONSTANTS = {"m_c": 7.1,
-                 "xcro": 2.0,
-                 "xinto": 10.0,  # Used in subduction Interface class
-                 "alpha": 2.0,
-                 "beta": 0.6,
-                 "Imin": 1.0,
-                 "Imax": 12.0,
-                 "m_sc": 6.3}  # Used in Subduction Slab class
-
-    # Impedence ratio factors for each site class
-    IMF = {1: (1. + 0.8 * 2.73) / 3.5,  # IMF 0.91
-           2: 3.07 / 3.0,
-           3: (1. + 0.9 * 1.76) / 2.5,
-           4: (1. + 0.6 * 2.02) / 3.0}
-
 
 class ZhaoEtAl2016AscSiteSigma(ZhaoEtAl2016Asc):
     """
@@ -425,14 +466,14 @@ class ZhaoEtAl2016UpperMantle(ZhaoEtAl2016Asc):
         """
         x_ij = dists.rrup
         gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
-        g_n = C["gcrN"] * np.log(self.CONSTANTS["xcro"] + 30. + gn_exp) *\
+        g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
             np.ones_like(x_ij)
         idx = x_ij <= 30.0
         if np.any(idx):
-            g_n[idx] = C["gcrN"] * np.log(self.CONSTANTS["xcro"] +
+            g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
                                           x_ij[idx] + gn_exp)
-        c_m = min(rup.mag, self.CONSTANTS["m_c"])
-        r_ij = self.CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
+        c_m = min(rup.mag, CONSTANTS["m_c"])
+        r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
         return C["gUM"] * np.log(r_ij) +\
             C["gcrL"] * np.log(x_ij + 200.0) +\
             g_n + C["eum"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
@@ -507,23 +548,6 @@ class ZhaoEtAl2016SInter(ZhaoEtAl2016Asc):
     #: Required rupture parameters are magnitude and top-of-rupture depth
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
-    def get_magnitude_scaling_term(self, C, rup):
-        """
-        Returns magnitude scaling term, which is dependent on top of rupture
-        depth - as described in equations 1 and 2
-        """
-        if rup.ztor > 25.0:
-            # Deep interface events
-            c_int = C["cint"]
-        else:
-            c_int = C["cintS"]
-
-        if rup.mag <= self.CONSTANTS["m_c"]:
-            return c_int * rup.mag
-        else:
-            return (c_int * self.CONSTANTS["m_c"]) +\
-                (C["dint"] * (rup.mag - self.CONSTANTS["m_c"]))
-
     def get_sof_term(self, C, rup):
         """
         No style of faulting dependence here
@@ -544,8 +568,8 @@ class ZhaoEtAl2016SInter(ZhaoEtAl2016Asc):
         """
         x_ij = dists.rrup
         # Get r_ij - distance for geometric spreading (equations 4 & 5)
-        c_m = min(rup.mag, self.CONSTANTS["m_c"])
-        r_ij = self.CONSTANTS["xinto"] + x_ij +\
+        c_m = min(rup.mag, CONSTANTS["m_c"])
+        r_ij = CONSTANTS["xinto"] + x_ij +\
             np.exp(C["alpha"] + C["beta"] * c_m)
         # Get factors common to both shallow and deep
         dist_term = C["gint"] * np.log(r_ij) + C["eintV"] * dists.rvolc +\
@@ -713,19 +737,6 @@ class ZhaoEtAl2016SSlab(ZhaoEtAl2016Asc):
     #: Required rupture parameters are magnitude and top of rupture depth.
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
-    def get_magnitude_scaling_term(self, C, rup):
-        """
-        Returns the magnitude scaling defined in equation 1
-        """
-        m_c = self.CONSTANTS["m_c"]
-        if rup.mag <= m_c:
-            return C["cSL"] * rup.mag +\
-                C["cSL2"] * ((rup.mag - self.CONSTANTS["m_sc"]) ** 2.)
-        else:
-            return C["cSL"] * m_c +\
-               C["cSL2"] * ((m_c - self.CONSTANTS["m_sc"]) ** 2.) +\
-               C["dSL"] * (rup.mag - m_c)
-
     def get_sof_term(self, C, rup):
         """
         No style of faulting dependence here
@@ -762,7 +773,7 @@ class ZhaoEtAl2016SSlab(ZhaoEtAl2016Asc):
         # r_volc[np.logical_and(r_volc > 0.0, r_volc <= 12.0)] = 12.0
         # r_volc[r_volc >= 80.0] = 80.0
         # Get r_ij - distance for geometric spreading (equations 3 and 4)
-        c_m = min(rup.mag, self.CONSTANTS["m_c"])
+        c_m = min(rup.mag, CONSTANTS["m_c"])
         r_ij = x_ij + np.exp(C["alpha"] + C["beta"] * c_m)
         return C["gSL"] * np.log(r_ij) + \
             C["gLL"] * np.log(x_ij + 200.) +\
