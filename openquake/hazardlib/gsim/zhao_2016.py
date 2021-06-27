@@ -311,6 +311,25 @@ def _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup):
     return ln_sf
 
 
+def _get_ln_a_n_max(trt, C, n_sites, idx, rup):
+    """
+    Defines the rock site amplification defined in equations 7a and 7b
+
+    For events deeper than 25 km the rock-site factor is slightly different
+    for site classes SCII, SCIII, SCIV
+    """
+    ln_a_n_max = C["lnSC1AM"] * np.ones(n_sites)
+    for i in [2, 3, 4]:
+        if np.any(idx[i]):
+            # For deep events site classes 5, 6 and 7 are used
+            if trt == const.TRT.SUBDUCTION_INTERFACE and rup.ztor > 25.0:
+                loc = i + 3
+            else:
+                loc = i
+            ln_a_n_max[idx[i]] += C["S{:g}".format(loc)]
+    return ln_a_n_max
+
+
 def get_stddevs(C, phi, stddev_types):
     """
     Retuns the standard deviation
@@ -407,7 +426,7 @@ class ZhaoEtAl2016Asc(GMPE):
         # Convert from reference rock to hard rock
         hard_rock_sa = sa_rock - C["lnSC1AM"]
         # Gets the elastic site amplification ratio
-        ln_a_n_max = self._get_ln_a_n_max(C, n_sites, idx, rup)
+        ln_a_n_max = _get_ln_a_n_max(trt, C, n_sites, idx, rup)
 
         # Retrieves coefficients needed to determine smr
         sreff, sreffc, f_sr = self._get_smr_coeffs(C, C_SITE, idx, n_sites,
@@ -473,16 +492,6 @@ class ZhaoEtAl2016Asc(GMPE):
             # Get f_SR
             f_sr[idx[i]] += C_SITE["fsr{:g}".format(i)]
         return sreff, sreffc, f_sr
-
-    def _get_ln_a_n_max(self, C, n_sites, idx, rup):
-        """
-        Defines the rock site amplification defined in equations 10a and 10b
-        """
-        ln_a_n_max = C["lnSC1AM"] * np.ones(n_sites)
-        for i in [2, 3, 4]:
-            if np.any(idx[i]):
-                ln_a_n_max[idx[i]] += C["S{:g}".format(i)]
-        return ln_a_n_max
 
     def _get_site_classification(self, vs30):
         """
@@ -671,24 +680,6 @@ class ZhaoEtAl2016SInter(ZhaoEtAl2016Asc):
 
     #: Required rupture parameters are magnitude and top-of-rupture depth
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
-
-    def _get_ln_a_n_max(self, C, n_sites, idx, rup):
-        """
-        Defines the rock site amplification defined in equations 7a and 7b
-
-        For events deeper than 25 km the rock-site factor is slightly different
-        for site classes SCII, SCIII, SCIV
-        """
-        ln_a_n_max = C["lnSC1AM"] * np.ones(n_sites)
-        for i in [2, 3, 4]:
-            if np.any(idx[i]):
-                # For deep events site classes 5, 6 and 7 are used
-                if rup.ztor > 25.0:
-                    loc = i + 3
-                else:
-                    loc = i
-                ln_a_n_max[idx[i]] += C["S{:g}".format(loc)]
-        return ln_a_n_max
 
     # Coefficients table taken from spreadsheet supplied by the author
     COEFFS = CoeffsTable(sa_damping=5, table="""\
