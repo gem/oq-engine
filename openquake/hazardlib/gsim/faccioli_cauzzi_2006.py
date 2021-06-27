@@ -62,45 +62,20 @@ class FaccioliCauzzi2006(GMPE):
         # extract dictionaries of coefficients specific to required
         # intensity measure type
         C = self.COEFFS[imt]
-
-        mean = self._compute_mean(C, rup, dists)
-
-        stddevs = self._get_stddevs(
-            C, stddev_types, num_sites=dists.repi.shape)
-
-        return mean, stddevs
-
-    def _compute_mean(self, C, rup, dists):
-        """
-        Compute mean value defined by equation 1/page 414
-        no amplification factor is applied to the equation
-        hence the S-factor = 0
-        """
-
-        d = np.sqrt(dists.repi**2+C['h']**2)
-
+        d = np.sqrt(dists.repi**2 + C['h']**2)
         term01 = C['c3'] * (np.log(d))
         mean = C['c1'] + C['c2'] * rup.mag + term01
-
-        return mean
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
         stddevs = []
-
         for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            stddevs.append((C['sigma']) + np.zeros(num_sites))
-        return stddevs
+            stddevs.append((C['sigma']) + np.zeros(len(d)))
+        return mean, stddevs
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper - coeff in the same order as in Table 4/page 703
     #: for Maw only (read last paragraph on page 701 -
-    #: expains what Maw should be used)
+    #: explains what Maw should be used)
 
-    COEFFS = CoeffsTable(table="""\
+    COEFFS = CoeffsTable(sa_damping=5., table="""\
     IMT           c1        c2         c3       h    sigma
     MMI       1.0157    1.2566    -0.6547       2   0.5344
         """)

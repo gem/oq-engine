@@ -22,7 +22,7 @@ models organised by IMT type or by a string describing the association
 """
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import imt as imt_module
 
 uppernames = '''
 DEFINED_FOR_INTENSITY_MEASURE_TYPES
@@ -73,8 +73,8 @@ class MultiGMPE(GMPE):
         for imt, gsim_dic in self.kwargs.items():
             [(gsim_name, kw)] = gsim_dic.items()
             self.kwargs[imt] = gsim = registry[gsim_name](**kw)
-            imt_class = from_string(imt).__class__
-            if imt_class not in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+            imt_factory = getattr(imt_module, imt_module.from_string(imt).name)
+            if imt_factory not in gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
                 raise ValueError("IMT %s not supported by %s" % (imt, gsim))
             for name in uppernames:
                 getattr(self, name).update(getattr(gsim, name))

@@ -64,7 +64,10 @@ class EasternCan15Mid(PezeshkEtAl2011):
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
     #: Standard deviation types supported
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL}
+
+    gsims = [Atkinson2008prime(), SilvaEtAl2002SingleCornerSaturation(),
+             AtkinsonBoore2006Modified2011()]
 
     def apply_correction_to_BC(self, mean, imt, dists):
         """
@@ -103,6 +106,8 @@ class EasternCan15Mid(PezeshkEtAl2011):
         See documentation for method `GroundShakingIntensityModel` in
         :class:~`openquake.hazardlib.gsim.base.GSIM`
         """
+        g = self.gsims
+
         # distances
         distsl = copy.copy(dists)
         distsl.rjb, distsl.rrup = \
@@ -114,8 +119,7 @@ class EasternCan15Mid(PezeshkEtAl2011):
         mean1 = self.apply_correction_to_BC(mean1, imt, distsl)
         #
         # Atkinson 2008 - Rjb
-        gmpe = Atkinson2008prime()
-        mean2, stds2 = gmpe.get_mean_and_stddevs(sites, rup, distsl, imt,
+        mean2, stds2 = g[0].get_mean_and_stddevs(sites, rup, distsl, imt,
                                                  stddev_types)
         #
         # Silva et al. 2002 - Rjb
@@ -125,8 +129,7 @@ class EasternCan15Mid(PezeshkEtAl2011):
         mean4 = self.apply_correction_to_BC(mean4, imt, distsl)
         #
         # Silva et al. 2002 - Rjb
-        gmpe = SilvaEtAl2002DoubleCornerSaturation()
-        mean5, stds5 = gmpe.get_mean_and_stddevs(sites, rup, distsl, imt,
+        mean5, stds5 = g[1].get_mean_and_stddevs(sites, rup, distsl, imt,
                                                  stddev_types)
         mean5 = self.apply_correction_to_BC(mean5, imt, distsl)
         #
@@ -135,8 +138,7 @@ class EasternCan15Mid(PezeshkEtAl2011):
             utils.get_equivalent_distances_east(rup.mag, dists.repi, ab06=True)
         #
         # Atkinson and Boore 2006 - Rrup
-        gmpe = AtkinsonBoore2006Modified2011()
-        mean3, stds3 = gmpe.get_mean_and_stddevs(sites, rup, distsl, imt,
+        mean3, stds3 = g[2].get_mean_and_stddevs(sites, rup, distsl, imt,
                                                  stddev_types)
         # Computing adjusted mean and stds
         mean_adj = mean1*0.2 + mean2*0.2 + mean3*0.2 + mean4*0.2 + mean5*0.2

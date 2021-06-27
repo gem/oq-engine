@@ -16,7 +16,7 @@ FROM python:3.8 AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
 RUN apt-get update &&  \
-    apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh dnsutils telnet netbase net-tools lsof tcpdump sudo strace && \
+    apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh dnsutils telnet netbase net-tools lsof tcpdump sudo strace time && \
     useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
 ARG oq_branch
 ENV LANG en_US.UTF-8

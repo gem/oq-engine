@@ -29,25 +29,33 @@ jobs:
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
-      - name: Build image engine with tag ${{ github.event.inputs.version }}
+      - name: Build image engine with tag nightly during scheduled task
+        if: github.event.inputs.version == ''
         env:
           DOCKER_USERNAME: ${{ secrets.docker_username }}
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
           DOCKER_TAG: ${{ github.event.inputs.version }}
           REPO_REF: ${{ github.event.inputs.git-ref }}
-        id: docker_engine
-        run: docker build --build-arg oq_branch=$REPO_REF -t openquake/engine:$DOCKER_TAG -f docker/Dockerfile.dev docker
-      - name: List Image
+        id: docker_engine_scheduled
         run: |
+          docker build --build-arg oq_branch=master -t openquake/engine:nightly -f docker/Dockerfile.dev docker
           docker image ls
-      - name: Run calcs on single docker
-        run: |
-          time docker run openquake/engine:${{ github.event.inputs.version }} "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
-      - name: push image engine with tag nightly on docker hub
+          time docker run openquake/engine:nightly "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
+          echo " push image engine with tag nightly on docker hub "
+          docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+          docker push openquake/engine:nightly
+      - name: Build image engine with tag ${{ github.event.inputs.version }} during manual run
+        if: github.event.inputs.version != ''
         env:
           DOCKER_USERNAME: ${{ secrets.docker_username }}
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
           DOCKER_TAG: ${{ github.event.inputs.version }}
+          REPO_REF: ${{ github.event.inputs.git-ref }}
+        id: docker_engine_manual
         run: |
+          docker build --build-arg oq_branch=$REPO_REF -t openquake/engine:$DOCKER_TAG -f docker/Dockerfile.dev docker
+          docker image ls
+          time docker run openquake/engine:$DOCKER_TAG "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
+          echo " push image engine with tag nightly on docker hub "
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
           docker push openquake/engine:$DOCKER_TAG

@@ -27,6 +27,90 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return standard deviations as defined in table 1.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(C['tau'] ** 2 + C['phi_S2S'] ** 2 +
+                                   C['phi_0'] ** 2) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2) +
+                           np.zeros(num_sites))
+    return stddevs
+
+
+def _compute_distance(rup, dists, C):
+    """
+    Compute the third term of the equation 1:
+    FD(Mw,R) = [c1(Mw-Mref) + c2] * log10(R) + c3(R) (eq 4)
+    Mref, h, Mh are in matrix C
+    """
+    R = np.sqrt(dists**2 + C['h']**2)
+    return ((C['c1'] * (rup.mag - C['Mref']) + C['c2']) * np.log10(R) +
+            C['c3']*R)
+
+
+def _compute_magnitude(rup, C):
+    """
+    Compute the second term of the equation 1:
+    b1 * (Mw-Mh) for M<=Mh
+    b2 * (Mw-Mh) otherwise
+    """
+    dmag = rup.mag - C["Mh"]
+    if rup.mag <= C["Mh"]:
+        mag_term = C['a'] + C['b1'] * dmag
+    else:
+        mag_term = C['a'] + C['b2'] * dmag
+    return mag_term
+
+
+def _site_amplification(sites, C):
+    """
+    Compute the fourth term of the equation 1 :
+    The functional form Fs in Eq. (1) represents the site amplification and
+    it is given by FS = klog10(V0/800) , where V0 = Vs30 when Vs30 <= 1500
+    and V0=1500 otherwise
+    """
+    v0 = np.ones_like(sites.vs30) * 1500.
+    v0[sites.vs30 < 1500] = sites.vs30
+    return C['k'] * np.log10(v0/800)
+
+
+def _get_mechanism(rup, C):
+    """
+    Compute the part of the second term of the equation 1 (FM(SoF)):
+    Get fault type dummy variables
+    """
+    SS, TF, NF = _get_fault_type_dummy_variables(rup)
+    return C['f1'] * SS + C['f2'] * TF
+
+
+def _get_fault_type_dummy_variables(rup):
+    """
+    Fault type (Strike-slip, Normal, Thrust/reverse) is
+    derived from rake angle.
+    Rakes angles within 30 of horizontal are strike-slip,
+    angles from 30 to 150 are reverse, and angles from
+    -30 to -150 are normal.
+    """
+    SS, TF, NF = 0, 0, 0
+    if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+        # strike-slip
+        SS = 1
+    elif rup.rake > 30.0 and rup.rake < 150.0:
+        # reverse
+        TF = 1
+    else:
+        # normal
+        NF = 1
+    return SS, TF, NF
+
+
 class LanzanoEtAl2019_RJB_OMO(GMPE):
     """
     Implements GMPE developed by G.Lanzano, L.Luzi, F.Pacor, L.Luzi,
@@ -47,11 +131,7 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: measure :attr:`~openquake.hazardlib.const.IMC.RotD50`
@@ -59,11 +139,8 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, page 1904
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is only Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -84,15 +161,16 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
         # intensity measure type.
 
         C = self.COEFFS[imt]
+        if self.REQUIRES_DISTANCES == {'rjb'}:
+            d = dists.rjb
+        else:
+            d = dists.rrup
+        imean = (_compute_magnitude(rup, C) +
+                 _compute_distance(rup, d, C) +
+                 _site_amplification(sites, C) +
+                 _get_mechanism(rup, C))
 
-        imean = (self._compute_magnitude(rup, C) +
-                 self._compute_distance(rup, dists, C) +
-                 self._site_amplification(sites, C) +
-                 self._get_mechanism(rup, C))
-
-        istddevs = self._get_stddevs(C,
-                                     stddev_types,
-                                     num_sites=len(sites.vs30))
+        istddevs = _get_stddevs(C, stddev_types, num_sites=len(sites.vs30))
 
         # Convert units to g, but only for PGA and SA (not PGV):
         if imt.name in "SA PGA":
@@ -106,85 +184,6 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
         # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
 
         return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 1.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(C['tau'] ** 2 + C['phi_S2S'] ** 2 +
-                                       C['phi_0'] ** 2) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(np.sqrt(C['phi_S2S'] ** 2 + C['phi_0'] ** 2) +
-                               np.zeros(num_sites))
-        return stddevs
-
-    def _compute_distance(self, rup, dists, C):
-        """
-        Compute the third term of the equation 1:
-        FD(Mw,R) = [c1(Mw-Mref) + c2] * log10(R) + c3(R) (eq 4)
-        Mref, h, Mh are in matrix C
-        """
-        R = np.sqrt(dists.rjb**2 + C['h']**2)
-        return ((C['c1'] * (rup.mag - C['Mref']) + C['c2']) * np.log10(R) +
-                C['c3']*R)
-
-    def _compute_magnitude(self, rup, C):
-        """
-        Compute the second term of the equation 1:
-        b1 * (Mw-Mh) for M<=Mh
-        b2 * (Mw-Mh) otherwise
-        """
-        dmag = rup.mag - C["Mh"]
-        if rup.mag <= C["Mh"]:
-            mag_term = C['a'] + C['b1'] * dmag
-        else:
-            mag_term = C['a'] + C['b2'] * dmag
-        return mag_term
-
-    def _site_amplification(self, sites, C):
-        """
-        Compute the fourth term of the equation 1 :
-        The functional form Fs in Eq. (1) represents the site amplification and
-        it is given by FS = klog10(V0/800) , where V0 = Vs30 when Vs30 <= 1500
-        and V0=1500 otherwise
-        """
-        v0 = np.ones_like(sites.vs30) * 1500.
-        v0[sites.vs30 < 1500] = sites.vs30
-        return C['k'] * np.log10(v0/800)
-
-    def _get_mechanism(self, rup, C):
-        """
-        Compute the part of the second term of the equation 1 (FM(SoF)):
-        Get fault type dummy variables
-        """
-        SS, TF, NF = self._get_fault_type_dummy_variables(rup)
-        return C['f1'] * SS + C['f2'] * TF
-
-    def _get_fault_type_dummy_variables(self, rup):
-        """
-        Fault type (Strike-slip, Normal, Thrust/reverse) is
-        derived from rake angle.
-        Rakes angles within 30 of horizontal are strike-slip,
-        angles from 30 to 150 are reverse, and angles from
-        -30 to -150 are normal.
-        """
-        SS, TF, NF = 0, 0, 0
-        if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
-            # strike-slip
-            SS = 1
-        elif rup.rake > 30.0 and rup.rake < 150.0:
-            # reverse
-            TF = 1
-        else:
-            # normal
-            NF = 1
-        return SS, TF, NF
 
     #: Coefficients from SA PGA and PGV from esupp Table S2
 
@@ -251,11 +250,7 @@ class LanzanoEtAl2019_RUP_OMO(LanzanoEtAl2019_RJB_OMO):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: measure :attr:`~openquake.hazardlib.const.IMC.RotD50`
@@ -263,11 +258,8 @@ class LanzanoEtAl2019_RUP_OMO(LanzanoEtAl2019_RJB_OMO):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, page 1904
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is only Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -277,16 +269,6 @@ class LanzanoEtAl2019_RUP_OMO(LanzanoEtAl2019_RJB_OMO):
 
     #: Required distance measure is Rrup (eq. 1).
     REQUIRES_DISTANCES = {'rrup'}
-
-    def _compute_distance(self, rup, dists, C):
-        """
-        Compute the third term of the equation 1:
-        FD(Mw,R) = [c1(Mw-Mref) + c2] * log10(R) + c3(R) (eq 4)
-        Mref, h, Mh are in matrix C
-        """
-        R = np.sqrt(dists.rrup**2 + C['h']**2)
-        return ((C['c1'] * (rup.mag - C['Mref']) + C['c2']) * np.log10(R) +
-                C['c3']*R)
 
     #: Coefficients from SA PGA and PGV from esupp Table S2
     COEFFS = CoeffsTable(sa_damping=5, table="""
