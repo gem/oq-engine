@@ -289,6 +289,28 @@ def get_distance_term_sslab(trt, C, dists, rup):
         C["eSLV"] * dists.rvolc + C["gamma"]
 
 
+def _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup):
+    """
+    Returns the log SF term required for equation 9
+
+    For events deeper than 25 km the rock-site factor is slightly different
+    for site classes SCII, SCIII, SCIV
+    """
+    ln_sf = np.zeros(n_sites)
+    for i in range(1, 5):
+        ln_sf_i = (C["lnSC1AM"] - C_SITE["LnAmax1D{:g}".format(i)])
+        if i > 1:
+            if trt == const.TRT.SUBDUCTION_INTERFACE and rup.ztor > 25.0:
+                # For deep events site classes 5, 6, and 7 are used
+                loc = i + 3
+            else:
+                # For shallow events the conventional approach applies
+                loc = i
+            ln_sf_i += C["S{:g}".format(loc)]
+        ln_sf[idx[i]] += ln_sf_i
+    return ln_sf
+
+
 def get_stddevs(C, phi, stddev_types):
     """
     Retuns the standard deviation
@@ -380,6 +402,7 @@ class ZhaoEtAl2016Asc(GMPE):
         Applies the site amplification scaling defined in equations from 10
         to 15
         """
+        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         n_sites = sites.vs30.shape
         # Convert from reference rock to hard rock
         hard_rock_sa = sa_rock - C["lnSC1AM"]
@@ -395,7 +418,7 @@ class ZhaoEtAl2016Asc(GMPE):
         smr = np.zeros(n_sites)
         sa_soil = hard_rock_sa + ln_a_n_max
         # Get lnSF
-        ln_sf = self._get_ln_sf(C, C_SITE, idx, n_sites, rup)
+        ln_sf = _get_ln_sf(trt, C, C_SITE, idx, n_sites, rup)
         lnamax_idx = np.exp(ln_a_n_max) < 1.25
         not_lnamax_idx = np.logical_not(lnamax_idx)
         for i in range(1, 5):
@@ -460,18 +483,6 @@ class ZhaoEtAl2016Asc(GMPE):
             if np.any(idx[i]):
                 ln_a_n_max[idx[i]] += C["S{:g}".format(i)]
         return ln_a_n_max
-
-    def _get_ln_sf(self, C, C_SITE, idx, n_sites, rup):
-        """
-        Returns the log SF term required for equation 12
-        """
-        ln_sf = np.zeros(n_sites)
-        for i in range(1, 5):
-            ln_sf_i = (C["lnSC1AM"] - C_SITE["LnAmax1D{:g}".format(i)])
-            if i > 1:
-                ln_sf_i += C["S{:g}".format(i)]
-            ln_sf[idx[i]] += ln_sf_i
-        return ln_sf
 
     def _get_site_classification(self, vs30):
         """
@@ -678,27 +689,6 @@ class ZhaoEtAl2016SInter(ZhaoEtAl2016Asc):
                     loc = i
                 ln_a_n_max[idx[i]] += C["S{:g}".format(loc)]
         return ln_a_n_max
-
-    def _get_ln_sf(self, C, C_SITE, idx, n_sites, rup):
-        """
-        Returns the log SF term required for equation 9
-
-        For events deeper than 25 km the rock-site factor is slightly different
-        for site classes SCII, SCIII, SCIV
-        """
-        ln_sf = np.zeros(n_sites)
-        for i in range(1, 5):
-            ln_sf_i = (C["lnSC1AM"] - C_SITE["LnAmax1D{:g}".format(i)])
-            if i > 1:
-                if rup.ztor > 25.0:
-                    # For deep events site classes 5, 6, and 7 are used
-                    loc = i + 3
-                else:
-                    # For shallow events the conventional approach applies
-                    loc = i
-                ln_sf_i += C["S{:g}".format(loc)]
-            ln_sf[idx[i]] += ln_sf_i
-        return ln_sf
 
     # Coefficients table taken from spreadsheet supplied by the author
     COEFFS = CoeffsTable(sa_damping=5, table="""\
