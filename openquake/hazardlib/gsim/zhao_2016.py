@@ -97,6 +97,198 @@ def get_magnitude_scaling_term_sslab(trt, C, rup):
            C["dSL"] * (rup.mag - m_c)
 
 
+get_sof_term = CallableDict()
+
+
+@get_sof_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
+def get_sof_term_asc(trt, C, rup):
+    """
+    Shallow crustal faults have a style-of-faulting dependence as
+    normal faulting is found to produce higher ground motion (equation 1)
+    """
+    if rup.rake <= -45.0 and rup.rake >= -135.0:
+        # Normal faulting
+        return C["FN_CR"]
+    else:
+        # No adjustment for strike-slip or reverse faulting
+        return 0.0
+    pass
+
+
+@get_sof_term.add(const.TRT.UPPER_MANTLE)
+def get_sof_term_um(trt, C, rup):
+    """
+    In the case of the upper mantle events separate coefficients
+    are considered for normal, reverse and strike-slip
+    """
+    if rup.rake <= -45.0 and rup.rake >= -135.0:
+        # Normal faulting
+        return C["FN_UM"]
+    elif rup.rake > 45.0 and rup.rake < 135.0:
+        # Reverse faulting
+        return C["FRV_UM"]
+    else:
+        # No adjustment for strike-slip faulting
+        return 0.0
+
+
+@get_sof_term.add(const.TRT.SUBDUCTION_INTERFACE)
+def get_sof_term_SInter(trt, C, rup):
+    """
+    No style of faulting dependence here
+    """
+    return 0.0
+
+
+@get_sof_term.add(const.TRT.SUBDUCTION_INTRASLAB)
+def get_sof_term_sslab(trt, C, rup):
+    """
+    No style of faulting dependence here
+    """
+    return 0.0
+
+
+get_depth_term = CallableDict()
+
+
+@get_depth_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
+def get_depth_term_asc(trt, C, rup):
+    """
+    Returns the top-of-rupture depth scaling (equation 1)
+    """
+    return C["bcr"] * rup.ztor
+
+
+@get_depth_term.add(const.TRT.UPPER_MANTLE)
+def get_depth_term_um(trt, C, rup):
+    """
+    No top of rupture depth is considered for upper mantle events
+    """
+    return 0.0
+
+
+@get_depth_term.add(const.TRT.SUBDUCTION_INTERFACE)
+def get_depth_term_SInter(trt, C, rup):
+    """
+    Returns depth term (dependent on top of rupture depth) as given
+    in equations 1 and 2
+    """
+    return (C["bint"] * rup.ztor)
+
+
+@get_depth_term.add(const.TRT.SUBDUCTION_INTRASLAB)
+def get_depth_term_sslab(trt, C, rup):
+    """
+    Returns depth term (dependent on top of rupture depth) as given
+    in equations 1
+
+    Note that there is a ztor cap of 100 km that is introduced in the
+    Fortran code but not mentioned in the original paper!
+    """
+    if rup.ztor > 100.0:
+        return C["bSLH"] * 100.0
+    else:
+        return C["bSLH"] * rup.ztor
+
+
+get_distance_term = CallableDict()
+
+
+@get_distance_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
+def get_distance_term_asc(trt, C, dists, rup):
+    """
+    Returns the distance scaling term defined in equation 3
+    """
+    x_ij = dists.rrup
+    gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
+
+    # Geometric attenuation scaling described in equation 6
+    g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
+        np.ones_like(x_ij)
+    idx = x_ij <= 30.0
+    if np.any(idx):
+        g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
+                                      x_ij[idx] + gn_exp)
+
+    # equation 5
+    c_m = min(rup.mag, CONSTANTS["m_c"])
+    # equation 4
+    r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
+    return C["gcr"] * np.log(r_ij) + C["gcrL"] * np.log(x_ij + 200.0) +\
+        g_n + C["ecr"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
+
+
+@get_distance_term.add(const.TRT.UPPER_MANTLE)
+def get_distance_term_um(trt, C, dists, rup):
+    """
+    Returns the distance attenuation term
+    """
+    x_ij = dists.rrup
+    gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
+    g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
+        np.ones_like(x_ij)
+    idx = x_ij <= 30.0
+    if np.any(idx):
+        g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
+                                      x_ij[idx] + gn_exp)
+    c_m = min(rup.mag, CONSTANTS["m_c"])
+    r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
+    return C["gUM"] * np.log(r_ij) +\
+        C["gcrL"] * np.log(x_ij + 200.0) +\
+        g_n + C["eum"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
+
+
+@get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
+def get_distance_term_SInter(trt, C, dists, rup):
+    """
+    Returns distance scaling term, dependent on top of rupture depth,
+    as described in equation 6
+    """
+    x_ij = dists.rrup
+    # Get r_ij - distance for geometric spreading (equations 4 & 5)
+    c_m = min(rup.mag, CONSTANTS["m_c"])
+    r_ij = CONSTANTS["xinto"] + x_ij +\
+        np.exp(C["alpha"] + C["beta"] * c_m)
+    # Get factors common to both shallow and deep
+    dist_term = C["gint"] * np.log(r_ij) + C["eintV"] * dists.rvolc +\
+        C["gammaint"]
+
+    if rup.ztor < 25.:
+        # Shallow events have geometric and anelastic attenuation term
+        dist_term += (C["gintLS"] * np.log(x_ij + 200.0)
+                      + C["eintS"] * x_ij) + C["gamma_ints"]
+    else:
+        # Deep events do not have an anelastic attenuation term
+        dist_term += (C["gintLD"] * np.log(x_ij + 200.0))
+    return dist_term
+
+
+@get_distance_term.add(const.TRT.SUBDUCTION_INTRASLAB)
+def get_distance_term_sslab(trt, C, dists, rup):
+    """
+    Returns the distance scaling term in equation 2a
+
+    Note that the paper describes a lower and upper cap on Rvolc that
+    is not found in the Fortran code, and is thus neglected here.
+    """
+    x_ij = dists.rrup
+    # Get anelastic scaling term in quation 5
+    if rup.ztor >= 50.:
+        qslh = C["eSLH"] * (0.02 * rup.ztor - 1.0)
+    else:
+        qslh = 0.0
+    # r_volc = np.copy(dists.rvolc)
+    # r_volc[np.logical_and(r_volc > 0.0, r_volc <= 12.0)] = 12.0
+    # r_volc[r_volc >= 80.0] = 80.0
+    # Get r_ij - distance for geometric spreading (equations 3 and 4)
+    c_m = min(rup.mag, CONSTANTS["m_c"])
+    r_ij = x_ij + np.exp(C["alpha"] + C["beta"] * c_m)
+    return C["gSL"] * np.log(r_ij) + \
+        C["gLL"] * np.log(x_ij + 200.) +\
+        C["eSL"] * x_ij + qslh * x_ij +\
+        C["eSLV"] * dists.rvolc + C["gamma"]
+
+
 def get_stddevs(C, phi, stddev_types):
     """
     Retuns the standard deviation
@@ -167,9 +359,9 @@ class ZhaoEtAl2016Asc(GMPE):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         s_c, idx = self._get_site_classification(sites.vs30)
         sa_rock = (get_magnitude_scaling_term(trt, C, rup) +
-                   self.get_sof_term(C, rup) +
-                   self.get_depth_term(C, rup) +
-                   self.get_distance_term(C, dists, rup))
+                   get_sof_term(trt, C, rup) +
+                   get_depth_term(trt, C, rup) +
+                   get_distance_term(trt, C, dists, rup))
 
         sa_soil = self.add_site_amplification(C, C_SITE, sites,
                                               sa_rock, idx, rup)
@@ -182,46 +374,6 @@ class ZhaoEtAl2016Asc(GMPE):
             phi = C["sigma"] + np.zeros_like(sites.vs30)
         stddevs = get_stddevs(C, phi, stddev_types)
         return sa_soil, stddevs
-
-    def get_sof_term(self, C, rup):
-        """
-        Shallow crustal faults have a style-of-faulting dependence as
-        normal faulting is found to produce higher ground motion (equation 1)
-        """
-        if rup.rake <= -45.0 and rup.rake >= -135.0:
-            # Normal faulting
-            return C["FN_CR"]
-        else:
-            # No adjustment for strike-slip or reverse faulting
-            return 0.0
-
-    def get_depth_term(self, C, rup):
-        """
-        Returns the top-of-rupture depth scaling (equation 1)
-        """
-        return C["bcr"] * rup.ztor
-
-    def get_distance_term(self, C, dists, rup):
-        """
-        Returns the distance scaling term defined in equation 3
-        """
-        x_ij = dists.rrup
-        gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
-
-        # Geometric attenuation scaling described in equation 6
-        g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
-            np.ones_like(x_ij)
-        idx = x_ij <= 30.0
-        if np.any(idx):
-            g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
-                                          x_ij[idx] + gn_exp)
-
-        # equation 5
-        c_m = min(rup.mag, CONSTANTS["m_c"])
-        # equation 4
-        r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
-        return C["gcr"] * np.log(r_ij) + C["gcrL"] * np.log(x_ij + 200.0) +\
-            g_n + C["ecr"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
 
     def add_site_amplification(self, C, C_SITE, sites, sa_rock, idx, rup):
         """
@@ -439,45 +591,6 @@ class ZhaoEtAl2016UpperMantle(ZhaoEtAl2016Asc):
     #: Supported tectonic region type is upper mantle
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.UPPER_MANTLE
 
-    def get_sof_term(self, C, rup):
-        """
-        In the case of the upper mantle events separate coefficients
-        are considered for normal, reverse and strike-slip
-        """
-        if rup.rake <= -45.0 and rup.rake >= -135.0:
-            # Normal faulting
-            return C["FN_UM"]
-        elif rup.rake > 45.0 and rup.rake < 135.0:
-            # Reverse faulting
-            return C["FRV_UM"]
-        else:
-            # No adjustment for strike-slip faulting
-            return 0.0
-
-    def get_depth_term(self, C, rup):
-        """
-        No top of rupture depth is considered for upper mantle events
-        """
-        return 0.0
-
-    def get_distance_term(self, C, dists, rup):
-        """
-        Returns the distance attenuation term
-        """
-        x_ij = dists.rrup
-        gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
-        g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
-            np.ones_like(x_ij)
-        idx = x_ij <= 30.0
-        if np.any(idx):
-            g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
-                                          x_ij[idx] + gn_exp)
-        c_m = min(rup.mag, CONSTANTS["m_c"])
-        r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
-        return C["gUM"] * np.log(r_ij) +\
-            C["gcrL"] * np.log(x_ij + 200.0) +\
-            g_n + C["eum"] * x_ij + C["ecrV"] * dists.rvolc + C["gamma_S"]
-
     # For Upper Mantle
     SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt    LnAmax1D1   LnAmax1D2   LnAmax1D3   LnAmax1D4     Src1D1     Src1D2     Src1D3     Src1D4      fsr1      fsr2      fsr3      fsr4
@@ -547,42 +660,6 @@ class ZhaoEtAl2016SInter(ZhaoEtAl2016Asc):
 
     #: Required rupture parameters are magnitude and top-of-rupture depth
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
-
-    def get_sof_term(self, C, rup):
-        """
-        No style of faulting dependence here
-        """
-        return 0.0
-
-    def get_depth_term(self, C, rup):
-        """
-        Returns depth term (dependent on top of rupture depth) as given
-        in equations 1 and 2
-        """
-        return (C["bint"] * rup.ztor)
-
-    def get_distance_term(self, C, dists, rup):
-        """
-        Returns distance scaling term, dependent on top of rupture depth,
-        as described in equation 6
-        """
-        x_ij = dists.rrup
-        # Get r_ij - distance for geometric spreading (equations 4 & 5)
-        c_m = min(rup.mag, CONSTANTS["m_c"])
-        r_ij = CONSTANTS["xinto"] + x_ij +\
-            np.exp(C["alpha"] + C["beta"] * c_m)
-        # Get factors common to both shallow and deep
-        dist_term = C["gint"] * np.log(r_ij) + C["eintV"] * dists.rvolc +\
-            C["gammaint"]
-
-        if rup.ztor < 25.:
-            # Shallow events have geometric and anelastic attenuation term
-            dist_term += (C["gintLS"] * np.log(x_ij + 200.0)
-                          + C["eintS"] * x_ij) + C["gamma_ints"]
-        else:
-            # Deep events do not have an anelastic attenuation term
-            dist_term += (C["gintLD"] * np.log(x_ij + 200.0))
-        return dist_term
 
     def _get_ln_a_n_max(self, C, n_sites, idx, rup):
         """
@@ -736,49 +813,6 @@ class ZhaoEtAl2016SSlab(ZhaoEtAl2016Asc):
 
     #: Required rupture parameters are magnitude and top of rupture depth.
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
-
-    def get_sof_term(self, C, rup):
-        """
-        No style of faulting dependence here
-        """
-        return 0.0
-
-    def get_depth_term(self, C, rup):
-        """
-        Returns depth term (dependent on top of rupture depth) as given
-        in equations 1
-
-        Note that there is a ztor cap of 100 km that is introduced in the
-        Fortran code but not mentioned in the original paper!
-        """
-        if rup.ztor > 100.0:
-            return C["bSLH"] * 100.0
-        else:
-            return C["bSLH"] * rup.ztor
-
-    def get_distance_term(self, C, dists, rup):
-        """
-        Returns the distance scaling term in equation 2a
-
-        Note that the paper describes a lower and upper cap on Rvolc that
-        is not found in the Fortran code, and is thus neglected here.
-        """
-        x_ij = dists.rrup
-        # Get anelastic scaling term in quation 5
-        if rup.ztor >= 50.:
-            qslh = C["eSLH"] * (0.02 * rup.ztor - 1.0)
-        else:
-            qslh = 0.0
-        # r_volc = np.copy(dists.rvolc)
-        # r_volc[np.logical_and(r_volc > 0.0, r_volc <= 12.0)] = 12.0
-        # r_volc[r_volc >= 80.0] = 80.0
-        # Get r_ij - distance for geometric spreading (equations 3 and 4)
-        c_m = min(rup.mag, CONSTANTS["m_c"])
-        r_ij = x_ij + np.exp(C["alpha"] + C["beta"] * c_m)
-        return C["gSL"] * np.log(r_ij) + \
-            C["gLL"] * np.log(x_ij + 200.) +\
-            C["eSL"] * x_ij + qslh * x_ij +\
-            C["eSLV"] * dists.rvolc + C["gamma"]
 
     # Coefficients table taken from spreadsheet supplied by the author
     COEFFS = CoeffsTable(sa_damping=5, table="""\
