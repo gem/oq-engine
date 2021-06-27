@@ -32,34 +32,12 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-def get_stddevs(C, n_sites, idx, stddev_types):
+def get_stddevs(C, phi, stddev_types):
     """
     Retuns the standard deviation
     """
     stddevs = []
-    phi = C["sigma"] + np.zeros(n_sites)
-    tau = C["tau"] + np.zeros(n_sites)
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            stddevs.append(np.sqrt(phi ** 2. + tau ** 2.))
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            stddevs.append(phi)
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            stddevs.append(tau)
-    return stddevs
-
-
-def get_stddevs_ss(C, n_sites, idx, stddev_types):
-    """
-    Returns the intra-event standard deviation calibrated for the
-    specific site class
-    """
-    stddevs = []
-    tau = C["tau"] + np.zeros(n_sites)
-    phi = np.zeros(n_sites)
-    for i in range(1, 5):
-        phi[idx[i]] += C["sc{:g}_sigma_S".format(i)]
-
+    tau = C["tau"] + np.zeros_like(phi)
     for stddev_type in stddev_types:
         if stddev_type == const.StdDev.TOTAL:
             stddevs.append(np.sqrt(phi ** 2. + tau ** 2.))
@@ -131,9 +109,12 @@ class ZhaoEtAl2016Asc(GMPE):
                                               sa_rock, idx, rup)
 
         if self.__class__.__name__.endswith('SiteSigma'):
-            stddevs = get_stddevs_ss(C, sites.vs30.shape, idx, stddev_types)
+            phi = np.zeros_like(sites.vs30)
+            for i in range(1, 5):
+                phi[idx[i]] += C["sc{:g}_sigma_S".format(i)]
         else:
-            stddevs = get_stddevs(C, sites.vs30.shape, idx, stddev_types)
+            phi = C["sigma"] + np.zeros_like(sites.vs30)
+        stddevs = get_stddevs(C, phi, stddev_types)
         return sa_soil, stddevs
 
     def get_magnitude_scaling_term(self, C, rup):
