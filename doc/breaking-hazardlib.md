@@ -207,20 +207,24 @@ The plan
 
 Here is the long term plan:
 
-**Phase 0:** remove multiple inheritance, replace IMT classes with a single namedtuple class,
-at the cost of a minor breakage of user code. Already done (at the end of June 2021).
+**Phase 0:** remove multiple inheritance, replace IMT classes with a
+single namedtuple class, at the cost of a minor breakage of user
+code. Already done (at the end of June 2021).
 
-**Phase 1:** replace all methods of the GMPEs with helper functions, except for the method
-*get_mean_and_stddevs*. This can be done without breaking user code. In progress.
+**Phase 1:** replace all methods of the GMPEs with helper functions,
+except for the method *get_mean_and_stddevs*. This can be done mostly
+without breaking user code since such methods were essentially
+private already. In progress.
 
-**Phase 2:** replace all helper functions with numpy-friendly functions. This is hard,
-but can be done without breaking user code.
+**Phase 2:** replace all helper functions with numpy-friendly
+functions. This is hard, but can be done without breaking user code.
 
-**Phase 3:** replace the methods *get_mean_and_stddevs* with a new API. This will
-break user code, it has to considered carefully. It is in this phase that the single
-site speedup will appear.
+**Phase 3:** replace the methods *get_mean_and_stddevs* with a new
+API. This will break user code, it has to considered carefully. It is
+in this phase that the single site speedup will appear.
 
-**Phase 4:** investigate the usage of numba of other compilation techniques.
-They will always be *optional*, i.e. the engine will work even if numba is not
-installed. It could be that phase 4 will never be implemented, if the performance
-tests show that there is no benefit (as it seems to be the case at the present).
+**Phase 4:** investigate the usage of numba or other compilation
+techniques.  They will always be *optional*, i.e. the engine will work
+even if numba is not installed. It could be that phase 4 will never be
+implemented, if the performance tests show that there is no benefit
+(as it seems to be the case at the present).
