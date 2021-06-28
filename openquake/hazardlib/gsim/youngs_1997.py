@@ -29,6 +29,22 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
+#: constants for mean value calculation, see table 2, page 67.
+CONSTS = {'A1_rock': 0.2418,
+          'A2_rock': 1.414,
+          'A3_rock': 10,
+          'A4_rock': 1.7818,
+          'A5_rock': 0.554,
+          'A6_rock': 0.00607,
+          'A7_rock': 0.3846,
+          'A1_soil': -0.6687,
+          'A2_soil': 1.438,
+          'A3_soil': 10,
+          'A4_soil': 1.097,
+          'A5_soil': 0.617,
+          'A6_soil': 0.00648,
+          'A7_soil': 0.3643}
+
 
 class YoungsEtAl1997SInter(GMPE):
     """
@@ -77,6 +93,8 @@ class YoungsEtAl1997SInter(GMPE):
     #: Vs30 value representing typical rock conditions in California.
     ROCK_VS30 = 760
 
+    delta = 0  # changed in subclasses
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -96,10 +114,10 @@ class YoungsEtAl1997SInter(GMPE):
 
         if idx_rock.any():
             C = self.COEFFS_ROCK[imt]
-            self._compute_mean(C, self.CONSTS['A1_rock'],
-                               self.CONSTS['A2_rock'], self.CONSTS['A3_rock'],
-                               self.CONSTS['A4_rock'], self.CONSTS['A5_rock'],
-                               self.CONSTS['A6_rock'], rup.mag, rup.hypo_depth,
+            self._compute_mean(C, CONSTS['A1_rock'],
+                               CONSTS['A2_rock'], CONSTS['A3_rock'],
+                               CONSTS['A4_rock'], CONSTS['A5_rock'],
+                               CONSTS['A6_rock'], rup.mag, rup.hypo_depth,
                                dists.rrup, mean, idx_rock)
             self._compute_std(C, rup.mag, stddevs, idx_rock)
 
@@ -108,14 +126,27 @@ class YoungsEtAl1997SInter(GMPE):
 
         if idx_soil.any():
             C = self.COEFFS_SOIL[imt]
-            self._compute_mean(C, self.CONSTS['A1_soil'],
-                               self.CONSTS['A2_soil'], self.CONSTS['A3_soil'],
-                               self.CONSTS['A4_soil'], self.CONSTS['A5_soil'],
-                               self.CONSTS['A6_soil'], rup.mag, rup.hypo_depth,
+            self._compute_mean(C, CONSTS['A1_soil'],
+                               CONSTS['A2_soil'], CONSTS['A3_soil'],
+                               CONSTS['A4_soil'], CONSTS['A5_soil'],
+                               CONSTS['A6_soil'], rup.mag, rup.hypo_depth,
                                dists.rrup, mean, idx_soil)
             self._compute_std(C, rup.mag, stddevs, idx_soil)
 
-        return mean, stddevs
+        if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
+                const.TRT.SUBDUCTION_INTRASLAB):  # sslab correction
+
+            idx_rock = sites.vs30 >= self.ROCK_VS30
+            idx_soil = sites.vs30 < self.ROCK_VS30
+
+            if imt.period == 4.0:
+                mean[idx_rock] += 0.3846 / 0.399
+            else:
+                mean[idx_rock] += 0.3846
+
+            mean[idx_soil] += 0.3643
+
+        return mean + self.delta, stddevs
 
     def _compute_mean(self, C, A1, A2, A3, A4, A5, A6, mag, hypo_depth,
                       rrup, mean, idx):
@@ -175,22 +206,6 @@ class YoungsEtAl1997SInter(GMPE):
     4.000    -4.511    -0.0089    -2.033    1.65    -0.1
         """)
 
-    #: constants for mean value calculation, see table 2, page 67.
-    CONSTS = {'A1_rock': 0.2418,
-              'A2_rock': 1.414,
-              'A3_rock': 10,
-              'A4_rock': 1.7818,
-              'A5_rock': 0.554,
-              'A6_rock': 0.00607,
-              'A7_rock': 0.3846,
-              'A1_soil': -0.6687,
-              'A2_soil': 1.438,
-              'A3_soil': 10,
-              'A4_soil': 1.097,
-              'A5_soil': 0.617,
-              'A6_soil': 0.00648,
-              'A7_soil': 0.3643}
-
 
 class YoungsEtAl1997SInterNSHMP2008(YoungsEtAl1997SInter):
     """
@@ -218,31 +233,8 @@ class YoungsEtAl1997SSlab(YoungsEtAl1997SInter):
     average ratio between median values at 4 and 3 seconds as predicted by
     SHARE subduction GMPEs).
     """
-    delta = 0
-
     #: Supported tectonic region type is subduction intraslab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
-        idx_rock = sites.vs30 >= self.ROCK_VS30
-        idx_soil = sites.vs30 < self.ROCK_VS30
-
-        if imt == SA(period=4.0, damping=5.0):
-            mean[idx_rock] += 0.3846 / 0.399
-        else:
-            mean[idx_rock] += 0.3846
-
-        mean[idx_soil] += 0.3643
-
-        return mean + self.delta, stddevs
 
 
 class YoungsEtAl1997GSCSSlabBest(YoungsEtAl1997SSlab):
