@@ -32,7 +32,6 @@ import shapely.geometry
 from openquake.hazardlib.gsim.bradley_2013 import (
     Bradley2013LHC, convert_to_LHC)
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA
 
 
 class Bradley2013bChchCBD(Bradley2013LHC):
@@ -72,10 +71,7 @@ class Bradley2013bChchCBD(Bradley2013LHC):
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
-        if isinstance(imt, PGA):
-            imt_per = 0.0
-        else:
-            imt_per = imt.period
+        imt_per = imt.period
         # Fix site parameters for consistent dS2S application.
         sites.vs30 = np.array([250])
         sites.z1pt0 = np.array([330])
@@ -407,13 +403,12 @@ class Bradley2013AdditionalSigma(Bradley2013LHC):
         NL = b * y_ref / (y_ref + c)
         sigma = (
             # first line of eq. 20
-                (C['sig1']
-                 + 0.5 * (C['sig2'] - C['sig1']) * mag_test
-                 + C['sig4'] * AS)
-                # second line
-                * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
-                          + (1 + NL) ** 2)
-        )
+            (C['sig1']
+             + 0.5 * (C['sig2'] - C['sig1']) * mag_test
+             + C['sig4'] * AS)
+            # second line
+            * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
+                      + (1 + NL) ** 2))
 
         # Add 'additional sigma' specified in the Canterbury Seismic
         # Hazard Model to total sigma
@@ -482,10 +477,7 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
-        if isinstance(imt, PGA):
-            imt_per = 0.0
-        else:
-            imt_per = imt.period
+        imt_per = imt.period
         # Check if any part of source is located within CSHM region
         in_cshm = self._check_in_cshm_polygon(rup)
         # Check if site is located in the CBD polygon

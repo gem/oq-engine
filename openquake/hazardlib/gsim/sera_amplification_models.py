@@ -471,6 +471,51 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
 REGION_SET = ["USNZ", "JP", "TW", "CH", "WA", "TRGR", "WMT", "NWE"]
 
 
+def get_site_amplification(C, psarock, sites, ck):
+    """
+    Returns the site amplification model define in equation (9)
+    """
+    vs30_s = np.copy(sites.vs30)
+    vs30_s[vs30_s > 1000.] = 1000.
+    fn_lin = (C["b1"] + ck) * np.log(vs30_s / 760.)
+    fn_z = C["b2"] * np.log(sites.z1pt0)
+    fn_nl = C["b3"] * np.log((psarock + 0.1 * g) / (0.1 * g)) *\
+        np.exp(-np.exp(2.0 * np.log(sites.vs30) - 11.))
+    return fn_lin + fn_z + fn_nl
+
+
+def get_stddevs(phi_0, C, istddevs, psa_rock, vs30, imt, stddev_types):
+    """
+    Returns the standard deviation adjusted for the site-response model
+    """
+    tau, phi = istddevs
+    ysig = np.copy(psa_rock)
+    ysig[ysig > 0.35] = 0.35
+    ysig[ysig < 0.005] = 0.005
+    vsig = np.copy(vs30)
+    vsig[vsig > 600.0] = 600.0
+    vsig[vsig < 150.] = 150.
+    sigma_s = C["sigma_s"] * C["c0"] * (C["c1"] * np.log(ysig) +
+                                        C["c2"] * np.log(vsig))
+    if phi_0:
+        phi0 = phi_0[imt]['value'] + np.zeros(vs30.shape)
+    else:
+        # In the case that no input phi0 is defined take 'approximate'
+        # phi0 as 85 % of phi
+        phi0 = 0.85 * phi
+    phi = np.sqrt(phi0 ** 2. + sigma_s ** 2.)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
+                           np.zeros(vs30.shape))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi)
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau + np.zeros(vs30.shape))
+    return stddevs
+
+
 class SandikkayaDinsever2018(GMPE):
     """
     Implements the nonlinear site amplification model of Sandikkaya &
@@ -505,14 +550,14 @@ class SandikkayaDinsever2018(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Active Shallow Crust"
 
     #: Supported intensity measure types are not set
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set((PGA, SA))
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is horizontal
     #: :attr:`~openquake.hazardlib.const.IMC.HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
 
     #: Supported standard deviation type
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameters will be set be selected GMPES
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
@@ -582,55 +627,11 @@ class SandikkayaDinsever2018(GMPE):
             ck = self.COEFFS_REG[imt][self.region]
         else:
             ck = 0.0
-        ampl = self.get_site_amplification(C, psarock, sctx, ck)
+        ampl = get_site_amplification(C, psarock, sctx, ck)
         mean += ampl
-        stddevs = self.get_stddevs(C, stddevs, psarock, sctx.vs30, imt,
-                                   stddev_types)
+        stddevs = get_stddevs(self.phi_0, C, stddevs, psarock, sctx.vs30, imt,
+                              stddev_types)
         return mean, stddevs
-
-    def get_site_amplification(self, C, psarock, sites, ck):
-        """
-        Returns the site amplification model define in equation (9)
-        """
-        vs30_s = np.copy(sites.vs30)
-        vs30_s[vs30_s > 1000.] = 1000.
-        fn_lin = (C["b1"] + ck) * np.log(vs30_s / 760.)
-        fn_z = C["b2"] * np.log(sites.z1pt0)
-        fn_nl = C["b3"] * np.log((psarock + 0.1 * g) / (0.1 * g)) *\
-            np.exp(-np.exp(2.0 * np.log(sites.vs30) - 11.))
-        return fn_lin + fn_z + fn_nl
-
-    def get_stddevs(self, C, istddevs, psa_rock, vs30, imt, stddev_types):
-        """
-        Returns the standard deviation adjusted for the site-response model
-        """
-        tau, phi = istddevs
-        ysig = np.copy(psa_rock)
-        ysig[ysig > 0.35] = 0.35
-        ysig[ysig < 0.005] = 0.005
-        vsig = np.copy(vs30)
-        vsig[vsig > 600.0] = 600.0
-        vsig[vsig < 150.] = 150.
-        sigma_s = C["sigma_s"] * C["c0"] * (C["c1"] * np.log(ysig) +
-                                            C["c2"] * np.log(vsig))
-        if self.phi_0:
-            phi0 = self.phi_0[imt]['value'] + np.zeros(vs30.shape)
-        else:
-            # In the case that no input phi0 is defined take 'approximate'
-            # phi0 as 85 % of phi
-            phi0 = 0.85 * phi
-        phi = np.sqrt(phi0 ** 2. + sigma_s ** 2.)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.) +
-                               np.zeros(vs30.shape))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(vs30.shape))
-        return stddevs
 
     COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     imt          b1        b3       b2  sigma_s       c0       c2        c1

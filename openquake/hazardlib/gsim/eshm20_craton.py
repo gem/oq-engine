@@ -95,10 +95,7 @@ class ESHM20Craton(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
 
     #: The GMPE is defined only for PGA and SA
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -106,11 +103,8 @@ class ESHM20Craton(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Median calibrated for Vs30 3000 m/s Vs30, no site term required Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}

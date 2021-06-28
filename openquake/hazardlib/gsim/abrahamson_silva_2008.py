@@ -25,6 +25,416 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+#: equation constants (that are IMT independent)
+#: coefficients in table 4, page 84
+CONSTS = {
+    'c1': 6.75,
+    'c4': 4.5,
+    'a3': 0.265,
+    'a4': -0.231,
+    'a5': -0.398,
+    'n': 1.18,
+    'c': 1.88,
+    'c2': 50,
+    'sigma_amp': 0.3}
+
+
+def _compute_base_term(C, rup, dists):
+    """
+    Compute and return base model term, that is the first term in equation
+    1, page 74. The calculation of this term is explained in paragraph
+    'Base Model', page 75.
+    """
+    c1 = CONSTS['c1']
+    R = np.sqrt(dists.rrup ** 2 + CONSTS['c4'] ** 2)
+
+    base_term = (C['a1'] +
+                 C['a8'] * ((8.5 - rup.mag) ** 2) +
+                 (C['a2'] + CONSTS['a3'] * (rup.mag - c1)) *
+                 np.log(R))
+
+    if rup.mag <= c1:
+        return base_term + CONSTS['a4'] * (rup.mag - c1)
+    else:
+        return base_term + CONSTS['a5'] * (rup.mag - c1)
+
+
+def _compute_faulting_style_term(C, rup):
+    """
+    Compute and return faulting style term, that is the sum of the second
+    and third terms in equation 1, page 74.
+    """
+    # ranges of rake values for each faulting mechanism are specified in
+    # table 2, page 75
+    return (C['a12'] * float(rup.rake > 30 and rup.rake < 150) +
+            C['a13'] * float(rup.rake > -120 and rup.rake < -60))
+
+
+def _compute_site_response_term(C, imt, sites, pga1100):
+    """
+    Compute and return site response model term, that is the fifth term
+    in equation 1, page 74.
+    """
+    site_resp_term = np.zeros_like(sites.vs30)
+
+    vs30_star, _ = _compute_vs30_star_factor(imt, sites.vs30)
+    vlin, c, n = C['VLIN'], CONSTS['c'], CONSTS['n']
+    a10, b = C['a10'], C['b']
+
+    idx = sites.vs30 < vlin
+    arg = vs30_star[idx] / vlin
+    site_resp_term[idx] = (a10 * np.log(arg) -
+                           b * np.log(pga1100[idx] + c) +
+                           b * np.log(pga1100[idx] + c * (arg ** n)))
+
+    idx = sites.vs30 >= vlin
+    site_resp_term[idx] = (a10 + b * n) * np.log(vs30_star[idx] / vlin)
+
+    return site_resp_term
+
+
+def _compute_hanging_wall_term(C, dists, rup):
+    """
+    Compute and return hanging wall model term, that is the sixth term in
+    equation 1, page 74. The calculation of this term is explained in
+    paragraph 'Hanging-Wall Model', page 77.
+    """
+    if rup.dip == 90.0:
+        return np.zeros_like(dists.rx)
+    else:
+        idx = dists.rx > 0
+        Fhw = np.zeros_like(dists.rx)
+        Fhw[idx] = 1
+
+        # equation 8, page 77
+        T1 = np.zeros_like(dists.rx)
+        idx1 = (dists.rjb < 30.0) & (idx)
+        T1[idx1] = 1.0 - dists.rjb[idx1] / 30.0
+
+        # equation 9, page 77
+        T2 = np.ones_like(dists.rx)
+        idx2 = ((dists.rx <= rup.width * np.cos(np.radians(rup.dip))) &
+                (idx))
+        T2[idx2] = (0.5 + dists.rx[idx2] /
+                    (2 * rup.width * np.cos(np.radians(rup.dip))))
+
+        # equation 10, page 78
+        T3 = np.ones_like(dists.rx)
+        idx3 = (dists.rx < rup.ztor) & (idx)
+        T3[idx3] = dists.rx[idx3] / rup.ztor
+
+        # equation 11, page 78
+        if rup.mag <= 6.0:
+            T4 = 0.0
+        elif rup.mag > 6 and rup.mag < 7:
+            T4 = rup.mag - 6
+        else:
+            T4 = 1.0
+
+        # equation 5, in AS08_NGA_errata.pdf
+        if rup.dip >= 30:
+            T5 = 1.0 - (rup.dip - 30.0) / 60.0
+        else:
+            T5 = 1.0
+
+        return Fhw * C['a14'] * T1 * T2 * T3 * T4 * T5
+
+
+def _compute_top_of_rupture_depth_term(C, rup):
+    """
+    Compute and return top of rupture depth term, that is the seventh term
+    in equation 1, page 74. The calculation of this term is explained in
+    paragraph 'Depth-to-Top of Rupture Model', page 78.
+    """
+    if rup.ztor >= 10.0:
+        return C['a16']
+    else:
+        return C['a16'] * rup.ztor / 10.0
+
+
+def _compute_large_distance_term(C, dists, rup):
+    """
+    Compute and return large distance model term, that is the 8-th term
+    in equation 1, page 74. The calculation of this term is explained in
+    paragraph 'Large Distance Model', page 78.
+    """
+    # equation 15, page 79
+    if rup.mag < 5.5:
+        T6 = 1.0
+    elif rup.mag >= 5.5 and rup.mag <= 6.5:
+        T6 = 0.5 * (6.5 - rup.mag) + 0.5
+    else:
+        T6 = 0.5
+
+    # equation 14, page 79
+    large_distance_term = np.zeros_like(dists.rrup)
+    idx = dists.rrup >= 100.0
+    large_distance_term[idx] = C['a18'] * (dists.rrup[idx] - 100.0) * T6
+
+    return large_distance_term
+
+
+def _compute_soil_depth_term(C, imt, z1pt0, vs30):
+    """
+    Compute and return soil depth model term, that is the 9-th term in
+    equation 1, page 74. The calculation of this term is explained in
+    paragraph 'Soil Depth Model', page 79.
+    """
+    a21 = _compute_a21_factor(C, imt, z1pt0, vs30)
+    a22 = _compute_a22_factor(imt)
+    median_z1pt0 = _compute_median_z1pt0(vs30)
+
+    soil_depth_term = a21 * np.log((z1pt0 + CONSTS['c2']) /
+                                   (median_z1pt0 + CONSTS['c2']))
+
+    idx = z1pt0 >= 200
+    soil_depth_term[idx] += a22 * np.log(z1pt0[idx] / 200)
+
+    return soil_depth_term
+
+
+def _compute_imt1100(C_PGA, sites, rup, dists):
+    """
+    Compute and return mean imt value for rock conditions
+    (vs30 = 1100 m/s)
+    """
+    imt = PGA()
+    vs30_1100 = np.zeros_like(sites.vs30) + 1100
+    vs30_star, _ = _compute_vs30_star_factor(imt, vs30_1100)
+    mean = (_compute_base_term(C_PGA, rup, dists) +
+            _compute_faulting_style_term(C_PGA, rup) +
+            _compute_hanging_wall_term(C_PGA, dists, rup) +
+            _compute_top_of_rupture_depth_term(C_PGA, rup) +
+            _compute_large_distance_term(C_PGA, dists, rup) +
+            _compute_soil_depth_term(C_PGA, imt, sites.z1pt0, vs30_1100) +
+            # this is the site response term in case of vs30=1100
+            ((C_PGA['a10'] + C_PGA['b'] * CONSTS['n']) *
+             np.log(vs30_star / C_PGA['VLIN'])))
+
+    return mean
+
+
+def _get_stddevs(C, C_PGA, pga1100, rup, sites, stddev_types):
+    """
+    Return standard deviations as described in paragraph 'Equations for
+    standard deviation', page 81.
+    """
+    std_intra = _compute_intra_event_std(C, C_PGA, pga1100, rup.mag,
+                                         sites.vs30, sites.vs30measured)
+    std_inter = _compute_inter_event_std(C, C_PGA, pga1100, rup.mag,
+                                         sites.vs30)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(std_intra ** 2 + std_inter ** 2))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(std_intra)
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(std_inter)
+    return stddevs
+
+
+def _compute_intra_event_std(C, C_PGA, pga1100, mag, vs30, vs30measured):
+    """
+    Compute intra event standard deviation (equation 24) as described
+    in the errata and not in the original paper.
+    """
+    sigma_b = _compute_sigma_b(C, mag, vs30measured)
+    sigma_b_pga = _compute_sigma_b(C_PGA, mag, vs30measured)
+    delta_amp = _compute_partial_derivative_site_amp(C, pga1100, vs30)
+
+    std_intra = np.sqrt(sigma_b ** 2 + CONSTS['sigma_amp'] ** 2 +
+                        (delta_amp ** 2) * (sigma_b_pga ** 2) +
+                        2 * delta_amp * sigma_b * sigma_b_pga * C['rho'])
+
+    return std_intra
+
+
+def _compute_inter_event_std(C, C_PGA, pga1100, mag, vs30):
+    """
+    Compute inter event standard deviation, equation 25, page 82.
+    """
+    tau_0 = _compute_std_0(C['s3'], C['s4'], mag)
+    tau_b_pga = _compute_std_0(C_PGA['s3'], C_PGA['s4'], mag)
+    delta_amp = _compute_partial_derivative_site_amp(C, pga1100, vs30)
+
+    std_inter = np.sqrt(tau_0 ** 2 + (delta_amp ** 2) * (tau_b_pga ** 2) +
+                        2 * delta_amp * tau_0 * tau_b_pga * C['rho'])
+
+    return std_inter
+
+
+def _compute_sigma_b(C, mag, vs30measured):
+    """
+    Equation 23, page 81.
+    """
+    sigma_0 = _compute_sigma_0(C, mag, vs30measured)
+    sigma_amp = CONSTS['sigma_amp']
+
+    return np.sqrt(sigma_0 ** 2 - sigma_amp ** 2)
+
+
+def _compute_sigma_0(C, mag, vs30measured):
+    """
+    Equation 27, page 82.
+    """
+    s1 = np.zeros_like(vs30measured, dtype=float)
+    s2 = np.zeros_like(vs30measured, dtype=float)
+
+    idx = vs30measured == 1
+    s1[idx] = C['s1mea']
+    s2[idx] = C['s2mea']
+
+    idx = vs30measured == 0
+    s1[idx] = C['s1est']
+    s2[idx] = C['s2est']
+
+    return _compute_std_0(s1, s2, mag)
+
+
+def _compute_std_0(c1, c2, mag):
+    """
+    Common part of equations 27 and 28, pag 82.
+    """
+    if mag < 5:
+        return c1
+    elif mag >= 5 and mag <= 7:
+        return c1 + (c2 - c1) * (mag - 5) / 2
+    else:
+        return c2
+
+
+def _compute_partial_derivative_site_amp(C, pga1100, vs30):
+    """
+    Partial derivative of site amplification term with respect to
+    PGA on rock (equation 26), as described in the errata and not
+    in the original paper.
+    """
+    delta_amp = np.zeros_like(vs30)
+    vlin = C['VLIN']
+    c = CONSTS['c']
+    b = C['b']
+    n = CONSTS['n']
+
+    idx = vs30 < vlin
+    delta_amp[idx] = (- b * pga1100[idx] / (pga1100[idx] + c) +
+                      b * pga1100[idx] / (pga1100[idx] + c *
+                      ((vs30[idx] / vlin) ** n)))
+
+    return delta_amp
+
+
+def _compute_a21_factor(C, imt, z1pt0, vs30):
+    """
+    Compute and return a21 factor, equation 18, page 80.
+    """
+    e2 = _compute_e2_factor(imt, vs30)
+    a21 = e2.copy()
+
+    vs30_star, v1 = _compute_vs30_star_factor(imt, vs30)
+    median_z1pt0 = _compute_median_z1pt0(vs30)
+
+    numerator = ((C['a10'] + C['b'] * CONSTS['n']) *
+                 np.log(vs30_star / np.min([v1, 1000])))
+    denominator = np.log((z1pt0 + CONSTS['c2']) /
+                         (median_z1pt0 + CONSTS['c2']))
+
+    idx = numerator + e2 * denominator < 0
+    a21[idx] = - numerator[idx] / denominator[idx]
+
+    idx = vs30 >= 1000
+    a21[idx] = 0.0
+
+    return a21
+
+
+def _compute_vs30_star_factor(imt, vs30):
+    """
+    Compute and return vs30 star factor, equation 5, page 77.
+    """
+    v1 = _compute_v1_factor(imt)
+    vs30_star = vs30.copy()
+    vs30_star[vs30_star >= v1] = v1
+
+    return vs30_star, v1
+
+
+def _compute_v1_factor(imt):
+    """
+    Compute and return v1 factor, equation 6, page 77.
+    """
+    if imt.name == "SA":
+        t = imt.period
+        if t <= 0.50:
+            v1 = 1500.0
+        elif t > 0.50 and t <= 1.0:
+            v1 = np.exp(8.0 - 0.795 * np.log(t / 0.21))
+        elif t > 1.0 and t < 2.0:
+            v1 = np.exp(6.76 - 0.297 * np.log(t))
+        else:
+            v1 = 700.0
+    elif imt.name == "PGA":
+        v1 = 1500.0
+    else:
+        # this is for PGV
+        v1 = 862.0
+
+    return v1
+
+
+def _compute_e2_factor(imt, vs30):
+    """
+    Compute and return e2 factor, equation 19, page 80.
+    """
+    e2 = np.zeros_like(vs30)
+
+    if imt.name == "PGV":
+        period = 1
+    elif imt.name == "PGA":
+        period = 0
+    else:
+        period = imt.period
+
+    if period < 0.35:
+        return e2
+    else:
+        idx = vs30 <= 1000
+        if period >= 0.35 and period <= 2.0:
+            e2[idx] = (-0.25 * np.log(vs30[idx] / 1000) *
+                       np.log(period / 0.35))
+        elif period > 2.0:
+            e2[idx] = (-0.25 * np.log(vs30[idx] / 1000) *
+                       np.log(2.0 / 0.35))
+        return e2
+
+
+def _compute_median_z1pt0(vs30):
+    """
+    Compute and return median z1pt0 (in m), equation 17, pqge 79.
+    """
+    z1pt0_median = np.zeros_like(vs30) + 6.745
+
+    idx = np.where((vs30 >= 180.0) & (vs30 <= 500.0))
+    z1pt0_median[idx] = 6.745 - 1.35 * np.log(vs30[idx] / 180.0)
+
+    idx = vs30 > 500.0
+    z1pt0_median[idx] = 5.394 - 4.48 * np.log(vs30[idx] / 500.0)
+
+    return np.exp(z1pt0_median)
+
+
+def _compute_a22_factor(imt):
+    """
+    Compute and return the a22 factor, equation 20, page 80.
+    """
+    if imt.name == 'PGV':
+        return 0.0
+    period = imt.period
+    if period < 2.0:
+        return 0.0
+    else:
+        return 0.0625 * (period - 2.0)
+
 
 class AbrahamsonSilva2008(GMPE):
     """
@@ -92,399 +502,19 @@ class AbrahamsonSilva2008(GMPE):
 
         # compute median pga on rock (vs30=1100), needed for site response
         # term calculation
-        pga1100 = np.exp(self._compute_imt1100(PGA(), sites, rup, dists))
+        pga1100 = np.exp(_compute_imt1100(C_PGA, sites, rup, dists))
 
-        mean = (self._compute_base_term(C, rup, dists) +
-                self._compute_faulting_style_term(C, rup) +
-                self._compute_site_response_term(C, imt, sites, pga1100) +
-                self._compute_hanging_wall_term(C, dists, rup) +
-                self._compute_top_of_rupture_depth_term(C, rup) +
-                self._compute_large_distance_term(C, dists, rup) +
-                self._compute_soil_depth_term(C, imt, sites.z1pt0, sites.vs30))
+        mean = (_compute_base_term(C, rup, dists) +
+                _compute_faulting_style_term(C, rup) +
+                _compute_site_response_term(C, imt, sites, pga1100) +
+                _compute_hanging_wall_term(C, dists, rup) +
+                _compute_top_of_rupture_depth_term(C, rup) +
+                _compute_large_distance_term(C, dists, rup) +
+                _compute_soil_depth_term(C, imt, sites.z1pt0, sites.vs30))
 
-        stddevs = self._get_stddevs(C, C_PGA, pga1100, rup, sites,
-                                    stddev_types)
+        stddevs = _get_stddevs(C, C_PGA, pga1100, rup, sites, stddev_types)
 
         return mean, stddevs
-
-    def _compute_base_term(self, C, rup, dists):
-        """
-        Compute and return base model term, that is the first term in equation
-        1, page 74. The calculation of this term is explained in paragraph
-        'Base Model', page 75.
-        """
-        c1 = self.CONSTS['c1']
-        R = np.sqrt(dists.rrup ** 2 + self.CONSTS['c4'] ** 2)
-
-        base_term = (C['a1'] +
-                     C['a8'] * ((8.5 - rup.mag) ** 2) +
-                     (C['a2'] + self.CONSTS['a3'] * (rup.mag - c1)) *
-                     np.log(R))
-
-        if rup.mag <= c1:
-            return base_term + self.CONSTS['a4'] * (rup.mag - c1)
-        else:
-            return base_term + self.CONSTS['a5'] * (rup.mag - c1)
-
-    def _compute_faulting_style_term(self, C, rup):
-        """
-        Compute and return faulting style term, that is the sum of the second
-        and third terms in equation 1, page 74.
-        """
-        # ranges of rake values for each faulting mechanism are specified in
-        # table 2, page 75
-        return (C['a12'] * float(rup.rake > 30 and rup.rake < 150) +
-                C['a13'] * float(rup.rake > -120 and rup.rake < -60))
-
-    def _compute_site_response_term(self, C, imt, sites, pga1100):
-        """
-        Compute and return site response model term, that is the fifth term
-        in equation 1, page 74.
-        """
-        site_resp_term = np.zeros_like(sites.vs30)
-
-        vs30_star, _ = self._compute_vs30_star_factor(imt, sites.vs30)
-        vlin, c, n = C['VLIN'], self.CONSTS['c'], self.CONSTS['n']
-        a10, b = C['a10'], C['b']
-
-        idx = sites.vs30 < vlin
-        arg = vs30_star[idx] / vlin
-        site_resp_term[idx] = (a10 * np.log(arg) -
-                               b * np.log(pga1100[idx] + c) +
-                               b * np.log(pga1100[idx] + c * (arg ** n)))
-
-        idx = sites.vs30 >= vlin
-        site_resp_term[idx] = (a10 + b * n) * np.log(vs30_star[idx] / vlin)
-
-        return site_resp_term
-
-    def _compute_hanging_wall_term(self, C, dists, rup):
-        """
-        Compute and return hanging wall model term, that is the sixth term in
-        equation 1, page 74. The calculation of this term is explained in
-        paragraph 'Hanging-Wall Model', page 77.
-        """
-        if rup.dip == 90.0:
-            return np.zeros_like(dists.rx)
-        else:
-            idx = dists.rx > 0
-            Fhw = np.zeros_like(dists.rx)
-            Fhw[idx] = 1
-
-            # equation 8, page 77
-            T1 = np.zeros_like(dists.rx)
-            idx1 = (dists.rjb < 30.0) & (idx)
-            T1[idx1] = 1.0 - dists.rjb[idx1] / 30.0
-
-            # equation 9, page 77
-            T2 = np.ones_like(dists.rx)
-            idx2 = ((dists.rx <= rup.width * np.cos(np.radians(rup.dip))) &
-                    (idx))
-            T2[idx2] = (0.5 + dists.rx[idx2] /
-                        (2 * rup.width * np.cos(np.radians(rup.dip))))
-
-            # equation 10, page 78
-            T3 = np.ones_like(dists.rx)
-            idx3 = (dists.rx < rup.ztor) & (idx)
-            T3[idx3] = dists.rx[idx3] / rup.ztor
-
-            # equation 11, page 78
-            if rup.mag <= 6.0:
-                T4 = 0.0
-            elif rup.mag > 6 and rup.mag < 7:
-                T4 = rup.mag - 6
-            else:
-                T4 = 1.0
-
-            # equation 5, in AS08_NGA_errata.pdf
-            if rup.dip >= 30:
-                T5 = 1.0 - (rup.dip - 30.0) / 60.0
-            else:
-                T5 = 1.0
-
-            return Fhw * C['a14'] * T1 * T2 * T3 * T4 * T5
-
-    def _compute_top_of_rupture_depth_term(self, C, rup):
-        """
-        Compute and return top of rupture depth term, that is the seventh term
-        in equation 1, page 74. The calculation of this term is explained in
-        paragraph 'Depth-to-Top of Rupture Model', page 78.
-        """
-        if rup.ztor >= 10.0:
-            return C['a16']
-        else:
-            return C['a16'] * rup.ztor / 10.0
-
-    def _compute_large_distance_term(self, C, dists, rup):
-        """
-        Compute and return large distance model term, that is the 8-th term
-        in equation 1, page 74. The calculation of this term is explained in
-        paragraph 'Large Distance Model', page 78.
-        """
-        # equation 15, page 79
-        if rup.mag < 5.5:
-            T6 = 1.0
-        elif rup.mag >= 5.5 and rup.mag <= 6.5:
-            T6 = 0.5 * (6.5 - rup.mag) + 0.5
-        else:
-            T6 = 0.5
-
-        # equation 14, page 79
-        large_distance_term = np.zeros_like(dists.rrup)
-        idx = dists.rrup >= 100.0
-        large_distance_term[idx] = C['a18'] * (dists.rrup[idx] - 100.0) * T6
-
-        return large_distance_term
-
-    def _compute_soil_depth_term(self, C, imt, z1pt0, vs30):
-        """
-        Compute and return soil depth model term, that is the 9-th term in
-        equation 1, page 74. The calculation of this term is explained in
-        paragraph 'Soil Depth Model', page 79.
-        """
-        a21 = self._compute_a21_factor(C, imt, z1pt0, vs30)
-        a22 = self._compute_a22_factor(imt)
-        median_z1pt0 = self._compute_median_z1pt0(vs30)
-
-        soil_depth_term = a21 * np.log((z1pt0 + self.CONSTS['c2']) /
-                                       (median_z1pt0 + self.CONSTS['c2']))
-
-        idx = z1pt0 >= 200
-        soil_depth_term[idx] += a22 * np.log(z1pt0[idx] / 200)
-
-        return soil_depth_term
-
-    def _compute_imt1100(self, imt, sites, rup, dists):
-        """
-        Compute and return mean imt value for rock conditions
-        (vs30 = 1100 m/s)
-        """
-        vs30_1100 = np.zeros_like(sites.vs30) + 1100
-        vs30_star, _ = self._compute_vs30_star_factor(imt, vs30_1100)
-        C = self.COEFFS[imt]
-        mean = (self._compute_base_term(C, rup, dists) +
-                self._compute_faulting_style_term(C, rup) +
-                self._compute_hanging_wall_term(C, dists, rup) +
-                self._compute_top_of_rupture_depth_term(C, rup) +
-                self._compute_large_distance_term(C, dists, rup) +
-                self._compute_soil_depth_term(C, imt, sites.z1pt0, vs30_1100) +
-                # this is the site response term in case of vs30=1100
-                ((C['a10'] + C['b'] * self.CONSTS['n']) *
-                np.log(vs30_star / C['VLIN'])))
-
-        return mean
-
-    def _get_stddevs(self, C, C_PGA, pga1100, rup, sites, stddev_types):
-        """
-        Return standard deviations as described in paragraph 'Equations for
-        standard deviation', page 81.
-        """
-        std_intra = self._compute_intra_event_std(C, C_PGA, pga1100, rup.mag,
-                                                  sites.vs30,
-                                                  sites.vs30measured)
-        std_inter = self._compute_inter_event_std(C, C_PGA, pga1100, rup.mag,
-                                                  sites.vs30)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(std_intra ** 2 + std_inter ** 2))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(std_intra)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(std_inter)
-        return stddevs
-
-    def _compute_intra_event_std(self, C, C_PGA, pga1100, mag, vs30,
-                                 vs30measured):
-        """
-        Compute intra event standard deviation (equation 24) as described
-        in the errata and not in the original paper.
-        """
-        sigma_b = self._compute_sigma_b(C, mag, vs30measured)
-        sigma_b_pga = self._compute_sigma_b(C_PGA, mag, vs30measured)
-        delta_amp = self._compute_partial_derivative_site_amp(C, pga1100, vs30)
-
-        std_intra = np.sqrt(sigma_b ** 2 + self.CONSTS['sigma_amp'] ** 2 +
-                            (delta_amp ** 2) * (sigma_b_pga ** 2) +
-                            2 * delta_amp * sigma_b * sigma_b_pga * C['rho'])
-
-        return std_intra
-
-    def _compute_inter_event_std(self, C, C_PGA, pga1100, mag, vs30):
-        """
-        Compute inter event standard deviation, equation 25, page 82.
-        """
-        tau_0 = self._compute_std_0(C['s3'], C['s4'], mag)
-        tau_b_pga = self._compute_std_0(C_PGA['s3'], C_PGA['s4'], mag)
-        delta_amp = self._compute_partial_derivative_site_amp(C, pga1100, vs30)
-
-        std_inter = np.sqrt(tau_0 ** 2 + (delta_amp ** 2) * (tau_b_pga ** 2) +
-                            2 * delta_amp * tau_0 * tau_b_pga * C['rho'])
-
-        return std_inter
-
-    def _compute_sigma_b(self, C, mag, vs30measured):
-        """
-        Equation 23, page 81.
-        """
-        sigma_0 = self._compute_sigma_0(C, mag, vs30measured)
-        sigma_amp = self.CONSTS['sigma_amp']
-
-        return np.sqrt(sigma_0 ** 2 - sigma_amp ** 2)
-
-    def _compute_sigma_0(self, C, mag, vs30measured):
-        """
-        Equation 27, page 82.
-        """
-        s1 = np.zeros_like(vs30measured, dtype=float)
-        s2 = np.zeros_like(vs30measured, dtype=float)
-
-        idx = vs30measured == 1
-        s1[idx] = C['s1mea']
-        s2[idx] = C['s2mea']
-
-        idx = vs30measured == 0
-        s1[idx] = C['s1est']
-        s2[idx] = C['s2est']
-
-        return self._compute_std_0(s1, s2, mag)
-
-    def _compute_std_0(self, c1, c2, mag):
-        """
-        Common part of equations 27 and 28, pag 82.
-        """
-        if mag < 5:
-            return c1
-        elif mag >= 5 and mag <= 7:
-            return c1 + (c2 - c1) * (mag - 5) / 2
-        else:
-            return c2
-
-    def _compute_partial_derivative_site_amp(self, C, pga1100, vs30):
-        """
-        Partial derivative of site amplification term with respect to
-        PGA on rock (equation 26), as described in the errata and not
-        in the original paper.
-        """
-        delta_amp = np.zeros_like(vs30)
-        vlin = C['VLIN']
-        c = self.CONSTS['c']
-        b = C['b']
-        n = self.CONSTS['n']
-
-        idx = vs30 < vlin
-        delta_amp[idx] = (- b * pga1100[idx] / (pga1100[idx] + c) +
-                          b * pga1100[idx] / (pga1100[idx] + c *
-                          ((vs30[idx] / vlin) ** n)))
-
-        return delta_amp
-
-    def _compute_a21_factor(self, C, imt, z1pt0, vs30):
-        """
-        Compute and return a21 factor, equation 18, page 80.
-        """
-        e2 = self._compute_e2_factor(imt, vs30)
-        a21 = e2.copy()
-
-        vs30_star, v1 = self._compute_vs30_star_factor(imt, vs30)
-        median_z1pt0 = self._compute_median_z1pt0(vs30)
-
-        numerator = ((C['a10'] + C['b'] * self.CONSTS['n']) *
-                     np.log(vs30_star / np.min([v1, 1000])))
-        denominator = np.log((z1pt0 + self.CONSTS['c2']) /
-                             (median_z1pt0 + self.CONSTS['c2']))
-
-        idx = numerator + e2 * denominator < 0
-        a21[idx] = - numerator[idx] / denominator[idx]
-
-        idx = vs30 >= 1000
-        a21[idx] = 0.0
-
-        return a21
-
-    def _compute_vs30_star_factor(self, imt, vs30):
-        """
-        Compute and return vs30 star factor, equation 5, page 77.
-        """
-        v1 = self._compute_v1_factor(imt)
-        vs30_star = vs30.copy()
-        vs30_star[vs30_star >= v1] = v1
-
-        return vs30_star, v1
-
-    def _compute_v1_factor(self, imt):
-        """
-        Compute and return v1 factor, equation 6, page 77.
-        """
-        if imt.name == "SA":
-            t = imt.period
-            if t <= 0.50:
-                v1 = 1500.0
-            elif t > 0.50 and t <= 1.0:
-                v1 = np.exp(8.0 - 0.795 * np.log(t / 0.21))
-            elif t > 1.0 and t < 2.0:
-                v1 = np.exp(6.76 - 0.297 * np.log(t))
-            else:
-                v1 = 700.0
-        elif imt.name == "PGA":
-            v1 = 1500.0
-        else:
-            # this is for PGV
-            v1 = 862.0
-
-        return v1
-
-    def _compute_e2_factor(self, imt, vs30):
-        """
-        Compute and return e2 factor, equation 19, page 80.
-        """
-        e2 = np.zeros_like(vs30)
-
-        if imt.name == "PGV":
-            period = 1
-        elif imt.name == "PGA":
-            period = 0
-        else:
-            period = imt.period
-
-        if period < 0.35:
-            return e2
-        else:
-            idx = vs30 <= 1000
-            if period >= 0.35 and period <= 2.0:
-                e2[idx] = (-0.25 * np.log(vs30[idx] / 1000) *
-                           np.log(period / 0.35))
-            elif period > 2.0:
-                e2[idx] = (-0.25 * np.log(vs30[idx] / 1000) *
-                           np.log(2.0 / 0.35))
-            return e2
-
-    def _compute_median_z1pt0(self, vs30):
-        """
-        Compute and return median z1pt0 (in m), equation 17, pqge 79.
-        """
-        z1pt0_median = np.zeros_like(vs30) + 6.745
-
-        idx = np.where((vs30 >= 180.0) & (vs30 <= 500.0))
-        z1pt0_median[idx] = 6.745 - 1.35 * np.log(vs30[idx] / 180.0)
-
-        idx = vs30 > 500.0
-        z1pt0_median[idx] = 5.394 - 4.48 * np.log(vs30[idx] / 500.0)
-
-        return np.exp(z1pt0_median)
-
-    def _compute_a22_factor(self, imt):
-        """
-        Compute and return the a22 factor, equation 20, page 80.
-        """
-        if imt.name == 'PGV':
-            return 0.0
-        period = imt.period
-        if period < 2.0:
-            return 0.0
-        else:
-            return 0.0625 * (period - 2.0)
 
     #: Coefficient tables obtained by joining table 5a page 84, and table 5b
     #: page 85.
@@ -515,17 +545,3 @@ class AbrahamsonSilva2008(GMPE):
     10.00   400.0   0.000  -1.993   -0.7960  -0.2683  -0.6630  0.0800  -0.0600  0.0000   0.0000  -0.2500   0.0000  0.640  0.640  0.612  0.612  0.350  0.350  0.200
     pgv     400.0  -1.955   5.7578  -0.9046  -0.1200   1.5390  0.0800  -0.0600  0.7000  -0.3900   0.6300   0.0000  0.590  0.470  0.576  0.453  0.420  0.300  0.740
     """)
-
-    #: equation constants (that are IMT independent)
-    CONSTS = {
-        # coefficients in table 4, page 84
-        'c1': 6.75,
-        'c4': 4.5,
-        'a3': 0.265,
-        'a4': -0.231,
-        'a5': -0.398,
-        'n': 1.18,
-        'c': 1.88,
-        'c2': 50,
-        'sigma_amp': 0.3
-    }

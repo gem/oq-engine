@@ -142,7 +142,7 @@ class HazusDeformation(SecondaryPeril):
     """
     def __init__(self, return_unit='m', deformation_component='PGDMax'):
         self.return_unit = return_unit
-        self.deformation_component = imt.from_string(deformation_component)
+        self.deformation_component = getattr(imt, deformation_component)
         self.outputs = [deformation_component]
 
     def prepare(self, sites):
