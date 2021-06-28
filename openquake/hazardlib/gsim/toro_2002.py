@@ -27,30 +27,6 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-def _compute_term1(C, mag):
-    """
-    Compute magnitude dependent terms (2nd and 3rd) in equation 3
-    page 46.
-    """
-    mag_diff = mag - 6
-
-    return C['c2'] * mag_diff + C['c3'] * mag_diff ** 2
-
-
-def _compute_term2(C, mag, rjb):
-    """
-    Compute distance dependent terms (4th, 5th and 6th) in equation 3
-    page 46. The factor 'RM' is computed according to the 2002 model
-    (equation 4-3).
-    """
-    RM = np.sqrt(rjb ** 2 + (C['c7'] ** 2) *
-                 np.exp(-1.25 + 0.227 * mag) ** 2)
-
-    return (-C['c4'] * np.log(RM) -
-            (C['c5'] - C['c4']) *
-            np.maximum(np.log(RM / 100), 0) - C['c6'] * RM)
-
-
 def _compute_mean(C, mag, rjb):
     """
     Compute mean value according to equation 3, page 46.
@@ -84,6 +60,30 @@ def _compute_stddevs(C, mag, rjb, imt, stddev_types):
         stddevs.append(sigma_total)
 
     return stddevs
+
+
+def _compute_term1(C, mag):
+    """
+    Compute magnitude dependent terms (2nd and 3rd) in equation 3
+    page 46.
+    """
+    mag_diff = mag - 6
+
+    return C['c2'] * mag_diff + C['c3'] * mag_diff ** 2
+
+
+def _compute_term2(C, mag, rjb):
+    """
+    Compute distance dependent terms (4th, 5th and 6th) in equation 3
+    page 46. The factor 'RM' is computed according to the 2002 model
+    (equation 4-3).
+    """
+    RM = np.sqrt(rjb ** 2 + (C['c7'] ** 2) *
+                 np.exp(-1.25 + 0.227 * mag) ** 2)
+
+    return (-C['c4'] * np.log(RM) -
+            (C['c5'] - C['c4']) *
+            np.maximum(np.log(RM / 100), 0) - C['c6'] * RM)
 
 
 class ToroEtAl2002(GMPE):
@@ -127,6 +127,9 @@ class ToroEtAl2002(GMPE):
     #: Required distance measure is rjb, see equation 4, page 46.
     REQUIRES_DISTANCES = {'rjb'}
 
+    #: no fault style adjustement in the base class
+    CONSTS_FS = {}
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -144,6 +147,15 @@ class ToroEtAl2002(GMPE):
             mean /= 0.612
         if imt.period == 4.0:
             mean /= 0.559
+
+        if self.CONSTS_FS:  # fault style and rock adjustement in SHARE
+            C_ADJ = self.COEFFS_FS_ROCK[imt]
+            mean = np.log(np.exp(mean) * _compute_faulting_style_term(
+                C_ADJ['Frss'],
+                self.CONSTS_FS['pR'],
+                self.CONSTS_FS['Fnss'],
+                self.CONSTS_FS['pN'],
+                rup.rake) * C_ADJ['AFrock'])
 
         return mean, stddevs
 
@@ -171,30 +183,6 @@ class ToroEtAl2002SHARE(ToroEtAl2002):
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 800.
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extract faulting style and rock adjustment coefficients for the
-        # given imt
-        C_ADJ = self.COEFFS_FS_ROCK[imt]
-
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
-        # apply faulting style and rock adjustment factor for mean and std
-        mean = np.log(np.exp(mean) *
-                      _compute_faulting_style_term(C_ADJ['Frss'],
-                                                   self.CONSTS_FS['pR'],
-                                                   self.CONSTS_FS['Fnss'],
-                                                   self.CONSTS_FS['pN'],
-                                                   rup.rake) * C_ADJ['AFrock'])
-        stddevs = np.array(stddevs)
-
-        return mean, stddevs
 
     #: Coefficients for faulting style and rock adjustment
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
