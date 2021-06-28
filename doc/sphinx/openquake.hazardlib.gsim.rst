@@ -305,6 +305,14 @@ bozorgnia_campbell_2016
     :undoc-members:
     :show-inheritance:
 
+bozorgnia_campbell_2016_vh
+-----------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.bozorgnia_campbell_2016_vh
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 bradley_2013
 --------------------------------------------
 
