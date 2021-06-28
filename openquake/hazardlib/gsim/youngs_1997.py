@@ -266,6 +266,7 @@ class YoungsEtAl1997GSCSSlabBest(YoungsEtAl1997SSlab):
     Includes adjustement for firm ground. The model is associated to the 'Best'
     case, that is mean value unaffected.
     """
+    delta = 0
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -279,7 +280,7 @@ class YoungsEtAl1997GSCSSlabBest(YoungsEtAl1997SSlab):
         # this is the firm ground adjustment
         mean += np.log(1.162)
 
-        return mean, stddevs
+        return mean + self.delta, stddevs
 
 
 class YoungsEtAl1997GSCSSlabUpperLimit(YoungsEtAl1997GSCSSlabBest):
@@ -289,19 +290,7 @@ class YoungsEtAl1997GSCSSlabUpperLimit(YoungsEtAl1997GSCSSlabBest):
     Includes adjustement for firm ground. The model is associated to the 'Upper
     Limit' case, that is mean value plus 0.7 natural logarithm.
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
-        mean += 0.7
-
-        return mean, stddevs
+    delta = 0.7
 
 
 class YoungsEtAl1997GSCSSlabLowerLimit(YoungsEtAl1997GSCSSlabBest):
@@ -311,16 +300,4 @@ class YoungsEtAl1997GSCSSlabLowerLimit(YoungsEtAl1997GSCSSlabBest):
     Includes adjustement for firm ground. The model is associated to the 'Lower
     Limit' case, that is mean value minus 0.7 natural logarithm.
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
-        mean -= 0.7
-
-        return mean, stddevs
+    delta = - 0.7
