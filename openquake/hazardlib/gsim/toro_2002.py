@@ -27,6 +27,65 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _compute_mean(C, mag, rjb):
+    """
+    Compute mean value according to equation 3, page 46.
+    """
+    mean = (C['c1'] +
+            _compute_term1(C, mag) +
+            _compute_term2(C, mag, rjb))
+    return mean
+
+
+def _compute_stddevs(C, mag, rjb, imt, stddev_types):
+    """
+    Compute total standard deviation, equations 5 and 6, page 48.
+    """
+    # aleatory uncertainty
+    sigma_ale_m = np.interp(mag, [5.0, 5.5, 8.0],
+                            [C['m50'], C['m55'], C['m80']])
+    sigma_ale_rjb = np.interp(rjb, [5.0, 20.0], [C['r5'], C['r20']])
+    sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
+
+    # epistemic uncertainty
+    if imt.period < 1:
+        sigma_epi = 0.36 + 0.07 * (mag - 6)
+    else:
+        sigma_epi = 0.34 + 0.06 * (mag - 6)
+
+    sigma_total = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)
+
+    stddevs = []
+    for _ in stddev_types:
+        stddevs.append(sigma_total)
+
+    return stddevs
+
+
+def _compute_term1(C, mag):
+    """
+    Compute magnitude dependent terms (2nd and 3rd) in equation 3
+    page 46.
+    """
+    mag_diff = mag - 6
+
+    return C['c2'] * mag_diff + C['c3'] * mag_diff ** 2
+
+
+def _compute_term2(C, mag, rjb):
+    """
+    Compute distance dependent terms (4th, 5th and 6th) in equation 3
+    page 46. The factor 'RM' is computed according to the 2002 model
+    (equation 4-3).
+    """
+    RM = np.sqrt(rjb ** 2 + (C['c7'] ** 2) *
+                 np.exp(-1.25 + 0.227 * mag) ** 2)
+
+    return (-C['c4'] * np.log(RM) -
+            (C['c5'] - C['c4']) *
+            np.maximum(np.log(RM / 100), 0) - C['c6'] * RM)
+
+
 class ToroEtAl2002(GMPE):
     """
     Implements GMPE developed by G. R. Toro, N. A. Abrahamson, J. F. Schneider
@@ -78,9 +137,9 @@ class ToroEtAl2002(GMPE):
         for spec of input and result values.
         """
         C = self.COEFFS[imt]
-        mean = self._compute_mean(C, rup.mag, dists.rjb)
-        stddevs = self._compute_stddevs(C, rup.mag, dists.rjb, imt,
-                                        stddev_types)
+        mean = _compute_mean(C, rup.mag, dists.rjb)
+        stddevs = _compute_stddevs(C, rup.mag, dists.rjb, imt,
+                                   stddev_types)
 
         # apply decay factor for 3 and 4 seconds (not originally supported
         # by the equations)
@@ -99,61 +158,6 @@ class ToroEtAl2002(GMPE):
                 rup.rake) * C_ADJ['AFrock'])
 
         return mean, stddevs
-
-    def _compute_term1(self, C, mag):
-        """
-        Compute magnitude dependent terms (2nd and 3rd) in equation 3
-        page 46.
-        """
-        mag_diff = mag - 6
-
-        return C['c2'] * mag_diff + C['c3'] * mag_diff ** 2
-
-    def _compute_term2(self, C, mag, rjb):
-        """
-        Compute distance dependent terms (4th, 5th and 6th) in equation 3
-        page 46. The factor 'RM' is computed according to the 2002 model
-        (equation 4-3).
-        """
-        RM = np.sqrt(rjb ** 2 + (C['c7'] ** 2) *
-                     np.exp(-1.25 + 0.227 * mag) ** 2)
-
-        return (-C['c4'] * np.log(RM) -
-                (C['c5'] - C['c4']) *
-                np.maximum(np.log(RM / 100), 0) - C['c6'] * RM)
-
-    def _compute_mean(self, C, mag, rjb):
-        """
-        Compute mean value according to equation 3, page 46.
-        """
-        mean = (C['c1'] +
-                self._compute_term1(C, mag) +
-                self._compute_term2(C, mag, rjb))
-        return mean
-
-    def _compute_stddevs(self, C, mag, rjb, imt, stddev_types):
-        """
-        Compute total standard deviation, equations 5 and 6, page 48.
-        """
-        # aleatory uncertainty
-        sigma_ale_m = np.interp(mag, [5.0, 5.5, 8.0],
-                                [C['m50'], C['m55'], C['m80']])
-        sigma_ale_rjb = np.interp(rjb, [5.0, 20.0], [C['r5'], C['r20']])
-        sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
-
-        # epistemic uncertainty
-        if imt.period < 1:
-            sigma_epi = 0.36 + 0.07 * (mag - 6)
-        else:
-            sigma_epi = 0.34 + 0.06 * (mag - 6)
-
-        sigma_total = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)
-
-        stddevs = []
-        for _ in stddev_types:
-            stddevs.append(sigma_total)
-
-        return stddevs
 
     #: Coefficient tables obtained by joining tables 2, 3, and 4, pages 47,
     #: 50, 51.
