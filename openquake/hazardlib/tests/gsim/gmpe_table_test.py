@@ -52,7 +52,7 @@ class HDFArraysToDictTestCase(unittest.TestCase):
     def setUp(self):
         fd, self.fname = tempfile.mkstemp(suffix='.hdf5')
         os.close(fd)
-        self.hdf5 = h5py.File(self.fname, 'r')
+        self.hdf5 = h5py.File(self.fname, 'w')
         self.group = self.hdf5.create_group("TestGroup")
         dset1 = self.group.create_dataset("DSET1", (3, 3), dtype="f")
         dset1[:] = np.zeros([3, 3])
