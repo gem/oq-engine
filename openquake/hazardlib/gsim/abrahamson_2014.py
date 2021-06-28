@@ -477,9 +477,10 @@ class AbrahamsonEtAl2014(GMPE):
     #: Reference rock conditions as defined at page
     DEFINED_FOR_REFERENCE_VELOCITY = 1180
 
-    def __init__(self, region=None):
-        assert region in (None, 'CHN', 'JPN', 'TWN'), region
-        self.region = region
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.region = kwargs.get('region')
+        assert self.region in (None, 'CHN', 'JPN', 'TWN'), region
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
