@@ -89,7 +89,7 @@ class ToroEtAl2002(GMPE):
         if imt.period == 4.0:
             mean /= 0.559
 
-        if self.CONSTS_FS:  # fault style adjustement in SHARE
+        if self.CONSTS_FS:  # fault style and rock adjustement in SHARE
             C_ADJ = self.COEFFS_FS_ROCK[imt]
             mean = np.log(np.exp(mean) * _compute_faulting_style_term(
                 C_ADJ['Frss'],
