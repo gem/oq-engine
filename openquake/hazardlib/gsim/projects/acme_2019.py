@@ -109,21 +109,6 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
         stddevs = np.zeros_like(mean)
         return mean, stddevs
 
-    def _get_mean_on_soil(self, sctx, rctx, dctx, imt, stddev_types):
-        # Get PGA on rock
-        tmp = PGA()
-        pga_rock = super()._get_mean_on_rock(
-            sctx, rctx, dctx, tmp, stddev_types)
-        pga_rock = np.exp(pga_rock)
-        # Site-effect model: always evaluated for 760 (see HID 2.6.2)
-        vs30_760 = np.zeros_like(sctx.vs30)
-        vs30_760[:] = 760
-        f_s = self.get_fs_SeyhanStewart2014(imt, pga_rock, vs30_760)
-        # Compute the mean on soil
-        mean = super()._get_mean_on_rock(sctx, rctx, dctx, imt, stddev_types)
-        mean += f_s
-        return mean
-
 
 class ChiouYoungs2014ACME2019(ChiouYoungs2014):
     """

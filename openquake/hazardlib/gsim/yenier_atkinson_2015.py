@@ -94,7 +94,7 @@ class YenierAtkinson2015BSSA(GMPE):
         pga_rock = np.exp(pga_rock)
         if self.adapted:  # in acme_2019
             # Site-effect model: always evaluated for 760 (see HID 2.6.2)
-            vs30 = np.one_like(sctx.vs30) * 760.
+            vs30 = np.ones_like(sctx.vs30) * 760.
         else:
             vs30 = sctx.vs30
         f_s = self.get_fs_SeyhanStewart2014(imt, pga_rock, vs30)
