@@ -24,7 +24,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.gsim.projects.acme_base import (
     get_phi_ss_at_quantile_ACME)
-from openquake.hazardlib.imt import SA, PGA
+from openquake.hazardlib.imt import SA
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
@@ -38,44 +38,6 @@ from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
                                                TAU_EXECUTION)
 warnings.filterwarnings("ignore", category=np.RankWarning)
 PATH = os.path.join(os.path.dirname(__file__), "..", "nga_east_tables")
-
-
-def get_sof_adjustment(rake, imt):
-    """
-    Computes adjustment factor for style-of-faulting following the scheme
-    proposed by Bommer et al. (2003).
-
-    :param rake:
-        Rake value
-    :param imt:
-        The intensity measure type
-    :return:
-        The adjustment factor
-    """
-    if imt.name == 'PGA' or (imt.name == 'SA' and imt.period <= 0.4):
-        f_r_ss = 1.2
-    elif imt.name == 'SA' and imt.period > 0.4 and imt.period < 3.0:
-        f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(imt.period/0.4)
-    elif imt.name == 'SA' and imt.period >= 3.0:
-        f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(3.0/0.4)
-    else:
-        raise ValueError('Unsupported IMT')
-    # Set coefficients
-    f_n_ss = 0.95
-    p_r = 0.68
-    p_n = 0.02
-    # Normal - F_N:EQ
-    if -135 < rake <= -45:
-        famp = f_r_ss**(-p_r) * f_n_ss**(1-p_n)
-    # Reverse - F_R:EQ
-    elif 45 < rake <= 135:
-        famp = f_r_ss**(1-p_r) * f_n_ss**(-p_n)
-    # Strike-Slip - F_SS:EQ
-    elif (-30 < rake <= 30) or (150 < rake <= 180) or (-180 < rake <= -150):
-        famp = f_r_ss**(-p_r) * f_n_ss**(-p_n)
-    else:
-        raise ValueError('Unrecognised rake value')
-    return famp
 
 
 class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
@@ -97,17 +59,6 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
         # rupture by adding rake
         _previous = list(super().REQUIRES_RUPTURE_PARAMETERS)
         self.REQUIRES_RUPTURE_PARAMETERS = frozenset(_previous + ['rake'])
-
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
-
-        # Compute mean and std
-        mean = self._get_mean_on_soil(sctx, rctx, dctx, imt, stddev_types)
-
-        # Get SoF correction
-        famp = get_sof_adjustment(rctx.rake, imt)
-        mean += np.log(famp)
-        stddevs = np.zeros_like(mean)
-        return mean, stddevs
 
 
 class ChiouYoungs2014ACME2019(ChiouYoungs2014):
