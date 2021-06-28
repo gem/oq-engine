@@ -68,15 +68,15 @@ class ToroEtAl2002(GMPE):
     #: Required distance measure is rjb, see equation 4, page 46.
     REQUIRES_DISTANCES = {'rjb'}
 
+    #: no fault style adjustement in the base class
+    CONSTS_FS = {}
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
         mean = self._compute_mean(C, rup.mag, dists.rjb)
         stddevs = self._compute_stddevs(C, rup.mag, dists.rjb, imt,
@@ -88,6 +88,15 @@ class ToroEtAl2002(GMPE):
             mean /= 0.612
         if imt.period == 4.0:
             mean /= 0.559
+
+        if self.CONSTS_FS:  # fault style adjustement in SHARE
+            C_ADJ = self.COEFFS_FS_ROCK[imt]
+            mean = np.log(np.exp(mean) * _compute_faulting_style_term(
+                C_ADJ['Frss'],
+                self.CONSTS_FS['pR'],
+                self.CONSTS_FS['Fnss'],
+                self.CONSTS_FS['pN'],
+                rup.rake) * C_ADJ['AFrock'])
 
         return mean, stddevs
 
@@ -170,30 +179,6 @@ class ToroEtAl2002SHARE(ToroEtAl2002):
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 800.
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # extract faulting style and rock adjustment coefficients for the
-        # given imt
-        C_ADJ = self.COEFFS_FS_ROCK[imt]
-
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, rup, dists, imt, stddev_types)
-
-        # apply faulting style and rock adjustment factor for mean and std
-        mean = np.log(np.exp(mean) *
-                      _compute_faulting_style_term(C_ADJ['Frss'],
-                                                   self.CONSTS_FS['pR'],
-                                                   self.CONSTS_FS['Fnss'],
-                                                   self.CONSTS_FS['pN'],
-                                                   rup.rake) * C_ADJ['AFrock'])
-        stddevs = np.array(stddevs)
-
-        return mean, stddevs
 
     #: Coefficients for faulting style and rock adjustment
     COEFFS_FS_ROCK = CoeffsTable(sa_damping=5, table="""\
