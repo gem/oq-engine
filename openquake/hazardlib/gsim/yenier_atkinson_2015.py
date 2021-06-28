@@ -71,6 +71,8 @@ class YenierAtkinson2015BSSA(GMPE):
     #: Required distance measures is Rrup
     REQUIRES_DISTANCES = {'rrup'}
 
+    adapted = False
+
     def __init__(self, focal_depth=None, region='CENA', **kwargs):
         super().__init__(focal_depth=focal_depth, region=region, **kwargs)
         self.focal_depth = focal_depth
@@ -90,10 +92,15 @@ class YenierAtkinson2015BSSA(GMPE):
         tmp = PGA()
         pga_rock = self._get_mean_on_rock(sctx, rctx, dctx, tmp, stddev_types)
         pga_rock = np.exp(pga_rock)
-        # Site-effect model
-        f_s = self.get_fs_SeyhanStewart2014(imt, pga_rock, sctx.vs30)
+        if self.adapted:  # in acme_2019
+            # Site-effect model: always evaluated for 760 (see HID 2.6.2)
+            vs30 = np.one_like(sctx.vs30) * 760.
+        else:
+            vs30 = sctx.vs30
+        f_s = self.get_fs_SeyhanStewart2014(imt, pga_rock, vs30)
         # Compute the mean on soil
         mean = self._get_mean_on_rock(sctx, rctx, dctx, imt, stddev_types)
+        # Compute the mean on soil
         mean += f_s
         return mean
 
