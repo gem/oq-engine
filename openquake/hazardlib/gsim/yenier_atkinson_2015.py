@@ -26,6 +26,44 @@ from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 
 
+def get_sof_adjustment(rake, imt):
+    """
+    Computes adjustment factor for style-of-faulting following the scheme
+    proposed by Bommer et al. (2003).
+
+    :param rake:
+        Rake value
+    :param imt:
+        The intensity measure type
+    :return:
+        The adjustment factor
+    """
+    if imt.name == 'PGA' or (imt.name == 'SA' and imt.period <= 0.4):
+        f_r_ss = 1.2
+    elif imt.name == 'SA' and imt.period > 0.4 and imt.period < 3.0:
+        f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(imt.period/0.4)
+    elif imt.name == 'SA' and imt.period >= 3.0:
+        f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(3.0/0.4)
+    else:
+        raise ValueError('Unsupported IMT')
+    # Set coefficients
+    f_n_ss = 0.95
+    p_r = 0.68
+    p_n = 0.02
+    # Normal - F_N:EQ
+    if -135 < rake <= -45:
+        famp = f_r_ss**(-p_r) * f_n_ss**(1-p_n)
+    # Reverse - F_R:EQ
+    elif 45 < rake <= 135:
+        famp = f_r_ss**(1-p_r) * f_n_ss**(-p_n)
+    # Strike-Slip - F_SS:EQ
+    elif (-30 < rake <= 30) or (150 < rake <= 180) or (-180 < rake <= -150):
+        famp = f_r_ss**(-p_r) * f_n_ss**(-p_n)
+    else:
+        raise ValueError('Unrecognised rake value')
+    return famp
+
+
 class YenierAtkinson2015BSSA(GMPE):
     """
     Implements the GMM of Yenier and Atkinson (2015) as described in the
@@ -71,6 +109,8 @@ class YenierAtkinson2015BSSA(GMPE):
     #: Required distance measures is Rrup
     REQUIRES_DISTANCES = {'rrup'}
 
+    adapted = False
+
     def __init__(self, focal_depth=None, region='CENA', **kwargs):
         super().__init__(focal_depth=focal_depth, region=region, **kwargs)
         self.focal_depth = focal_depth
@@ -81,7 +121,12 @@ class YenierAtkinson2015BSSA(GMPE):
         # Compute focal depth if not set at the initialization level
         if self.focal_depth is None:
             self.focal_depth = rctx.hypo_depth
+
+        # Compute mean and std
         mean = self._get_mean_on_soil(sctx, rctx, dctx, imt, stddev_types)
+        if self.adapted:  # acme_2019 considers the SoF correction
+            famp = get_sof_adjustment(rctx.rake, imt)
+            mean += np.log(famp)
         stddevs = np.zeros_like(sctx.vs30)
         return mean, stddevs
 
@@ -90,10 +135,15 @@ class YenierAtkinson2015BSSA(GMPE):
         tmp = PGA()
         pga_rock = self._get_mean_on_rock(sctx, rctx, dctx, tmp, stddev_types)
         pga_rock = np.exp(pga_rock)
-        # Site-effect model
-        f_s = self.get_fs_SeyhanStewart2014(imt, pga_rock, sctx.vs30)
+        if self.adapted:  # in acme_2019
+            # Site-effect model: always evaluated for 760 (see HID 2.6.2)
+            vs30 = np.ones_like(sctx.vs30) * 760.
+        else:
+            vs30 = sctx.vs30
+        f_s = self.get_fs_SeyhanStewart2014(imt, pga_rock, vs30)
         # Compute the mean on soil
         mean = self._get_mean_on_rock(sctx, rctx, dctx, imt, stddev_types)
+        # Compute the mean on soil
         mean += f_s
         return mean
 
