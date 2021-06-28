@@ -20,7 +20,6 @@ import os
 import abc
 import copy
 import time
-import inspect
 import logging
 import warnings
 import itertools
@@ -29,7 +28,10 @@ import collections
 import numpy
 import pandas
 from scipy.interpolate import interp1d
-
+try:
+    import numba
+except ImportError:
+    numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, block_splitter)
@@ -132,16 +134,6 @@ def get_num_distances(gsims):
     return len(dists)
 
 
-def float_struct(*allnames):
-    """
-    :returns: a composite dtype of float64 fields
-    """
-    ns = []
-    for names in allnames:
-        ns.extend(names)
-    return numpy.dtype([(n, numpy.float64) for n in ns])
-
-
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
@@ -183,21 +175,20 @@ class ContextMaker(object):
             self.imtls = DictArray(param['hazard_imtls'])
         else:
             self.imtls = {}
-        self.imts = [imt_module.from_string(imt) for imt in self.imtls]
+        self.imts = tuple(imt_module.from_string(imt) for imt in self.imtls)
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        self.ctype = []
-        self.clist = []
+        self.fake = {}
         for gsim in gsims:
-            self.ctype.append(float_struct(gsim.REQUIRES_PARAMETERS,
-                                           gsim.REQUIRES_RUPTURE_PARAMETERS,
-                                           gsim.REQUIRES_SITES_PARAMETERS,
-                                           gsim.REQUIRES_DISTANCES))
-            clist = [table.on(self.imts)
-                     for name, table in inspect.getmembers(gsim.__class__)
-                     if table.__class__.__name__ == "CoeffsTable"]
-            self.clist.append(clist)
+            kw = {k: getattr(gsim, k).to_array(self.imts)
+                  for k in gsim.dType.names}
+            if numba:
+                self.fake[gsim] = arr = gsim.dType.zeros(len(self.imts))
+                for k in gsim.dType.names:
+                    arr[k] = kw[k]
+            else:
+                self.fake[gsim] = hdf5.ArrayWrapper((), kw)
         self.mon = monitor
         self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
@@ -224,26 +215,30 @@ class ContextMaker(object):
         tot = (StdDev.TOTAL,)
         for g, gsim in enumerate(self.gsims):
             if hasattr(gsim, 'calc_mean_stds'):
-                ctype = self.ctype[g]
-                clist = self.clist[g]
-                ctx = numpy.ones(1, ctype)
+                fake = self.fake[gsim]
+                if numba:
+                    ctx = numpy.ones(1, gsim.rType.dtype)
+                else:
+                    ctx = hdf5.ArrayWrapper((), gsim.rType.dictarray(1))
                 out = numpy.zeros((2, 1, M))
-                gsim.__class__.calc_mean_stds(out, ctx, tot, *clist)
+                gsim.__class__.calc_mean_stds(fake, ctx, self.imts, tot, out)
 
-    def gen_triples(self, gsim_idx, ctxs):
+    def gen_triples(self, gsim, ctxs):
         """
-        Yield triples ctx, allcoeffs, slice for each context
+        Yield triples ctx, fake, slice for each context
         """
-        ctype = self.ctype[gsim_idx]
-        clist = self.clist[gsim_idx]
+        fake = self.fake[gsim]
         start = 0
         for ctx in ctxs:
             n = ctx.size()
-            new = numpy.zeros(n, ctype)
-            for name in ctype.names:
-                new[name] = getattr(ctx, name)
+            if numba:
+                new = gsim.rType.zeros(n)
+                for name in gsim.rType.names:
+                    new[name] = getattr(ctx, name)
+            else:
+                new = ctx
             stop = start + n
-            yield new, clist, slice(start, stop)
+            yield new, fake, slice(start, stop)
             start = stop
 
     def read_ctxs(self, dstore, slc=None):
@@ -516,17 +511,17 @@ class ContextMaker(object):
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
-    def get_mean_stds(self, orig_ctxs, *stdtypes):
+    def get_mean_stds(self, ctxs, *stdtypes):
         """
-        :param orig_ctxs: a list of contexts
+        :param ctxs: a list of contexts
         :param stdtypes: tuple of standard deviation types
         :returns: a list of G arrays of shape (O, N, M) with mean and stddevs
         """
-        N = sum(len(ctx.sids) for ctx in orig_ctxs)
+        ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
+        N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(self.imts)
         if self.trunclevel == 0:
             stdtypes = ()
-        ctxs = [ctx.roundup(self.minimum_distance) for ctx in orig_ctxs]
         out = []
         for g, gsim in enumerate(self.gsims):
             if stdtypes == (StdDev.EVENT,):
@@ -543,8 +538,8 @@ class ContextMaker(object):
                 if all(len(ctx) == 1 for ctx in ctxs):
                     # single-site-optimization
                     ctxs = [self.multi(ctxs)]
-                for ctx, clist, slc in self.gen_triples(g, ctxs):
-                    calc_ms(arr[:, slc], ctx, stypes, *clist)
+                for ctx, fake, slc in self.gen_triples(gsim, ctxs):
+                    calc_ms(fake, ctx, self.imts, stypes, arr[:, slc])
             else:  # slow lane
                 start = 0
                 for ctx in ctxs:

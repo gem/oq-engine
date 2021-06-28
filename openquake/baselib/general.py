@@ -1453,9 +1453,13 @@ class DType(object):
         else:
             assert len(dtypes) == len(names), (len(dtypes), len(names))
         self.dtype = numpy.dtype([(n, d) for n, d in zip(names, dtypes)])
+        self.names = names
 
     def zeros(self, shape):
         return numpy.zeros(shape, self.dtype)
+
+    def dictarray(self, shape):
+        return {n: numpy.ones(shape, self.dtype[n]) for n in self.names}
 
     def __call__(self, *args, **kw):
         tt = numpy.zeros(1, self.dtype)[0]
