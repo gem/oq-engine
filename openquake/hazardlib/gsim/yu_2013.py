@@ -31,6 +31,10 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _compute_std(C, stddev_types, num_sites):
+    return [np.ones(num_sites)*C['sigma']]
+
+
 def gc(coeff, mag):
     """
     Returns the set of coefficients to be used for the calculation of GM
@@ -230,13 +234,10 @@ class YuEtAl2013Ms(GMPE):
             raise ValueError('Unsupported IMT')
         #
         # Get the standard deviation
-        stddevs = self._compute_std(coeff, stddev_types, len(dists.repi))
+        stddevs = _compute_std(coeff, stddev_types, len(dists.repi))
         #
         # Return results
         return np.log(mean), stddevs
-
-    def _compute_std(self, C, stddev_types, num_sites):
-        return [np.ones(num_sites)*C['sigma']]
 
     #: Coefficient table
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -340,7 +341,7 @@ class YuEtAl2013Mw(YuEtAl2013Ms):
             raise ValueError('Unsupported IMT')
         #
         # Get the standard deviation
-        stddevs = self._compute_std(coeff, stddev_types, len(dists.repi))
+        stddevs = _compute_std(coeff, stddev_types, len(dists.repi))
         #
         # Return results
         return np.log(mean), stddevs
