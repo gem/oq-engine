@@ -46,6 +46,28 @@ CONSTS = {'A1_rock': 0.2418,
           'A7_soil': 0.3643}
 
 
+def _compute_mean(C, A1, A2, A3, A4, A5, A6, mag, hypo_depth,
+                  rrup, mean, idx):
+    """
+    Compute mean for subduction interface events, as explained in table 2,
+    page 67.
+    """
+    mean[idx] = (A1 + A2 * mag + C['C1'] + C['C2'] * (A3 - mag) ** 3 +
+                 C['C3'] * np.log(rrup[idx] + A4 * np.exp(A5 * mag)) +
+                 A6 * hypo_depth)
+
+
+def _compute_std(C, mag, stddevs, idx):
+    """
+    Compute total standard deviation, as explained in table 2, page 67.
+    """
+    if mag > 8.0:
+        mag = 8.0
+
+    for stddev in stddevs:
+        stddev[idx] += C['C4'] + C['C5'] * mag
+
+
 class YoungsEtAl1997SInter(GMPE):
     """
     Implements GMPE developed by R.R Youngs, S-J, Chiou, W.J. Silva, J.R.
@@ -114,24 +136,24 @@ class YoungsEtAl1997SInter(GMPE):
 
         if idx_rock.any():
             C = self.COEFFS_ROCK[imt]
-            self._compute_mean(C, CONSTS['A1_rock'],
-                               CONSTS['A2_rock'], CONSTS['A3_rock'],
-                               CONSTS['A4_rock'], CONSTS['A5_rock'],
-                               CONSTS['A6_rock'], rup.mag, rup.hypo_depth,
-                               dists.rrup, mean, idx_rock)
-            self._compute_std(C, rup.mag, stddevs, idx_rock)
+            _compute_mean(C, CONSTS['A1_rock'],
+                          CONSTS['A2_rock'], CONSTS['A3_rock'],
+                          CONSTS['A4_rock'], CONSTS['A5_rock'],
+                          CONSTS['A6_rock'], rup.mag, rup.hypo_depth,
+                          dists.rrup, mean, idx_rock)
+            _compute_std(C, rup.mag, stddevs, idx_rock)
 
             if imt == SA(period=4.0, damping=5.0):
                 mean = mean / 0.399
 
         if idx_soil.any():
             C = self.COEFFS_SOIL[imt]
-            self._compute_mean(C, CONSTS['A1_soil'],
-                               CONSTS['A2_soil'], CONSTS['A3_soil'],
-                               CONSTS['A4_soil'], CONSTS['A5_soil'],
-                               CONSTS['A6_soil'], rup.mag, rup.hypo_depth,
-                               dists.rrup, mean, idx_soil)
-            self._compute_std(C, rup.mag, stddevs, idx_soil)
+            _compute_mean(C, CONSTS['A1_soil'],
+                          CONSTS['A2_soil'], CONSTS['A3_soil'],
+                          CONSTS['A4_soil'], CONSTS['A5_soil'],
+                          CONSTS['A6_soil'], rup.mag, rup.hypo_depth,
+                          dists.rrup, mean, idx_soil)
+            _compute_std(C, rup.mag, stddevs, idx_soil)
 
         if (self.DEFINED_FOR_TECTONIC_REGION_TYPE ==
                 const.TRT.SUBDUCTION_INTRASLAB):  # sslab correction
@@ -147,26 +169,6 @@ class YoungsEtAl1997SInter(GMPE):
             mean[idx_soil] += 0.3643
 
         return mean + self.delta, stddevs
-
-    def _compute_mean(self, C, A1, A2, A3, A4, A5, A6, mag, hypo_depth,
-                      rrup, mean, idx):
-        """
-        Compute mean for subduction interface events, as explained in table 2,
-        page 67.
-        """
-        mean[idx] = (A1 + A2 * mag + C['C1'] + C['C2'] * (A3 - mag) ** 3 +
-                     C['C3'] * np.log(rrup[idx] + A4 * np.exp(A5 * mag)) +
-                     A6 * hypo_depth)
-
-    def _compute_std(self, C, mag, stddevs, idx):
-        """
-        Compute total standard deviation, as explained in table 2, page 67.
-        """
-        if mag > 8.0:
-            mag = 8.0
-
-        for stddev in stddevs:
-            stddev[idx] += C['C4'] + C['C5'] * mag
 
     #: Coefficient table containing soil coefficients,
     #: taken from table 2, p. 67
