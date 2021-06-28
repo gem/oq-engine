@@ -3,21 +3,21 @@ The problem as of June 2021
 
 As it is well known, the main road to scientific programming in Python
 is numpy-oriented programming. The recipe is simple: **dot not use
-python classes, use numpy arrays everywhere**.
+user-defined objects, use numpy arrays everywhere**.
 
-Unfortunaly hazardlib was designed over 10 years ago as a
-class-oriented library, full of complex hierarchies with plenty of
-methods. While this is not a big issue for objects that do not enter
-in inner loops (like sources; using classes for sources is not a big
-deal), it is a major problem for objects like intensity measure types,
-ruptures and GMPEs.
+Unfortunaly hazardlib was designed over 10 years ago without following
+this philosophy and it is actually a class-oriented library, full of
+complex hierarchies with plenty of overridden methods. While this is not a big
+issue for objects that do not enter in inner loops (like sources;
+using classes for sources is not a big deal), it is a major problem
+for objects like intensity measure types, ruptures and GMPEs.
 
 That original design choice *makes it impossible to speedup hazardlib*,
 since every performance-oriented tool (numba, cython, etc) requires a
 numpy-oriented codebase to start from.
 
 Until now we managed to live with this original sin, since the main use
-case for the engine is to build national hazard maps, i.e. for each IMT,
+for the engine is to build national hazard maps. In this cae for each IMT,
 rupture and GSIM there are normally thousands of affected sites: looping
 on the ruptures, IMTs and GSIMs in Python is not an issue since the meat
 of the calculation is on the sites. However, for site-specific calculations
@@ -43,16 +43,16 @@ the other hand, there is only one person maintaining it.
 
 It is clearly impossible to refactor hazardlib manually, but we could
 investigate ways to automatize at least some kinds of refactoring.
-Vectorizing by rupture is very hard, must be done on a case-by-case hand
-and certainly cannot be automatized.
+Vectorizing by rupture is certainly hard and must be done on a case-by-case
+basis.
 
 Towards a numpy-oriented hazardlib
 ----------------------------------
 
 Rather than reimplementing thousands of methods it would be much better
 to make hazardlib more numpy-oriented. If hazardlib was fully numpy-oriented,
-looping on the ruptures could be done at C-speed by using numba and there
-would be no need to manually vectorize by rupture.
+looping on the ruptures could be done at C-speed by and there
+would be no need to duplicate methods.
 
 The move towards numpy actually started many years ago, and for
 instance now we have `Context` objects which are closer to numpy
@@ -60,7 +60,7 @@ arrays than `Rupture` objects. However, we are at the very beginning,
 and very far for the ideal goal.
 
 To be clear, the ideal goal would be to **remove completely all class
-hierarchies, turn all methods into functions taking in input only
+hierarchies and turn all methods into functions taking in input only
 numpy arrays or simple types**.
 
 The ideal goal is out of reach (by far), so we will have to compromise
@@ -101,9 +101,8 @@ will enable further refactorings.
 
 Another step in the direction of numpy-oriented programming would be to
 replace all methods of the GMPEs which are overridden with generic
-functions. This will be long and it will likely break user code; we will have
-to see if it is feasible or not. There plenty of methods to consider,
-including the following:
+functions. This will be long but it is likely feasible.
+There plenty of methods to consider, including the following:
 
 ```
 _a0
@@ -157,9 +156,9 @@ We will need to thing of a multi-step strategy, going from the current
 class-oriented IMTs to numpy-oriented IMTs without breaking anything
 until the very last step.
 
-It is important to notice that there is unwanted complication in the IMTs,
-since we support everywhere the `sa_damping` field which is actually
-hard-coded to 5.0 in all CoeffsTable. It would be nice to remove it.
+It is important to notice that there is an unwanted complication in the IMTs:
+there is a lot of work to  support the `sa_damping` field which actually is
+actually hard-coded to 5.0 in all CoeffsTable. It would be nice to remove it.
 
 It would also be nice to be able to vectorize by IMT. But that will be difficult
 even, having numpy-oriented IMTs. At minimum one will have to refactor the
@@ -202,3 +201,30 @@ but without leaving the Python world*.
 This, in theory, but the devil is in the details;-) Generally speaking, *the
 performance for global hazard models is not expected to improve*, since we
 are already working at C speed in numpy, due to the vectorization by sites.
+
+The plan
+---------------------
+
+Here is the long term plan:
+
+**Phase 0:** remove multiple inheritance, replace IMT classes with a
+single namedtuple class, at the cost of a minor breakage of user
+code. Already done (at the end of June 2021).
+
+**Phase 1:** replace all methods of the GMPEs with helper functions,
+except for the method *get_mean_and_stddevs*. This can be done mostly
+without breaking user code since such methods were essentially
+private already. In progress.
+
+**Phase 2:** replace all helper functions with numpy-friendly
+functions. This is hard, but can be done without breaking user code.
+
+**Phase 3:** replace the methods *get_mean_and_stddevs* with a new
+API. This will break user code, it has to considered carefully. It is
+in this phase that the single site speedup will appear.
+
+**Phase 4:** investigate the usage of numba or other compilation
+techniques.  They will always be *optional*, i.e. the engine will work
+even if numba is not installed. It could be that phase 4 will never be
+implemented, if the performance tests show that there is no benefit
+(as it seems to be the case at the present).

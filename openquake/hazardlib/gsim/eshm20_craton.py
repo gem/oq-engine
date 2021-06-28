@@ -23,11 +23,10 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib import const
-from openquake.hazardlib.gsim.nga_east import (get_tau_at_quantile,
-                                               get_phi_ss_at_quantile,
-                                               TAU_EXECUTION, TAU_SETUP,
-                                               PHI_SETUP, get_phi_ss,
-                                               NGAEastGMPE)
+from openquake.hazardlib.gsim.nga_east import (
+    get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
+    PHI_SETUP, get_phi_ss, NGAEastGMPE, _get_f760, get_nonlinear_stddev,
+    _get_fv, get_fnl)
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 
 
@@ -95,10 +94,7 @@ class ESHM20Craton(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
 
     #: The GMPE is defined only for PGA and SA
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -106,11 +102,8 @@ class ESHM20Craton(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Median calibrated for Vs30 3000 m/s Vs30, no site term required Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -229,13 +222,13 @@ class ESHM20Craton(GMPE):
         else:
             period = imt.period
         # Get f760
-        f760 = NGAEastGMPE._get_f760(C_F760, sites.vs30,
-                                     NGAEastGMPE.CONSTANTS)
+        f760 = _get_f760(C_F760, sites.vs30,
+                         NGAEastGMPE.CONSTANTS)
         # Get the linear amplification factor
-        f_lin = NGAEastGMPE._get_fv(C_LIN, sites, f760,
-                                    NGAEastGMPE.CONSTANTS)
+        f_lin = _get_fv(C_LIN, sites, f760,
+                        NGAEastGMPE.CONSTANTS)
         # Get the nonlinear amplification from Hashash et al., (2017)
-        f_nl, f_rk = NGAEastGMPE.get_fnl(C_NL, pga_r, sites.vs30, period)
+        f_nl, f_rk = get_fnl(C_NL, pga_r, sites.vs30, period)
         # Mean amplification
         ampl = f_lin + f_nl
 
@@ -245,16 +238,16 @@ class ESHM20Craton(GMPE):
             # In the case of the linear model sigma_f760 and sigma_fv are
             # assumed independent and the resulting sigma_flin is the root
             # sum of squares (SRSS)
-            f760_stddev = NGAEastGMPE._get_f760(C_F760, sites.vs30,
-                                                NGAEastGMPE.CONSTANTS,
-                                                is_stddev=True)
+            f760_stddev = _get_f760(C_F760, sites.vs30,
+                                    NGAEastGMPE.CONSTANTS,
+                                    is_stddev=True)
             f_lin_stddev = np.sqrt(
                 f760_stddev ** 2. +
                 NGAEastGMPE.get_linear_stddev(
                     C_LIN, sites.vs30, NGAEastGMPE.CONSTANTS) ** 2)
             # Likewise, the epistemic uncertainty on the linear and nonlinear
             # model are assumed independent and the SRSS is taken
-            f_nl_stddev = NGAEastGMPE.get_nonlinear_stddev(
+            f_nl_stddev = get_nonlinear_stddev(
                 C_NL, sites.vs30) * f_rk
             site_epistemic = np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
             ampl += (self.site_epsilon * site_epistemic)

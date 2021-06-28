@@ -49,8 +49,8 @@ class SplitSigmaGMPETest(unittest.TestCase):
 
     def test_instantiation(self):
         within_absolute = 0.3
-        gmm = SplitSigmaGMPE(gmpe_name='Campbell2003',
-                             within_absolute=within_absolute)
+        SplitSigmaGMPE(gmpe_name='Campbell2003',
+                       within_absolute=within_absolute)
 
     def test_within_absolute(self):
         within_absolute = 0.3

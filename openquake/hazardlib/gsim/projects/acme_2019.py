@@ -24,7 +24,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.gsim.projects.acme_base import (
     get_phi_ss_at_quantile_ACME)
-from openquake.hazardlib.imt import SA, PGA
+from openquake.hazardlib.imt import SA
 from openquake.hazardlib.contexts import DistancesContext
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.yenier_atkinson_2015 import \
@@ -38,44 +38,6 @@ from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
                                                TAU_EXECUTION)
 warnings.filterwarnings("ignore", category=np.RankWarning)
 PATH = os.path.join(os.path.dirname(__file__), "..", "nga_east_tables")
-
-
-def get_sof_adjustment(rake, imt):
-    """
-    Computes adjustment factor for style-of-faulting following the scheme
-    proposed by Bommer et al. (2003).
-
-    :param rake:
-        Rake value
-    :param imt:
-        The intensity measure type
-    :return:
-        The adjustment factor
-    """
-    if imt.name == 'PGA' or (imt.name == 'SA' and imt.period <= 0.4):
-        f_r_ss = 1.2
-    elif imt.name == 'SA' and imt.period > 0.4 and imt.period < 3.0:
-        f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(imt.period/0.4)
-    elif imt.name == 'SA' and imt.period >= 3.0:
-        f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(3.0/0.4)
-    else:
-        raise ValueError('Unsupported IMT')
-    # Set coefficients
-    f_n_ss = 0.95
-    p_r = 0.68
-    p_n = 0.02
-    # Normal - F_N:EQ
-    if -135 < rake <= -45:
-        famp = f_r_ss**(-p_r) * f_n_ss**(1-p_n)
-    # Reverse - F_R:EQ
-    elif 45 < rake <= 135:
-        famp = f_r_ss**(1-p_r) * f_n_ss**(-p_n)
-    # Strike-Slip - F_SS:EQ
-    elif (-30 < rake <= 30) or (150 < rake <= 180) or (-180 < rake <= -150):
-        famp = f_r_ss**(-p_r) * f_n_ss**(-p_n)
-    else:
-        raise ValueError('Unrecognised rake value')
-    return famp
 
 
 class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
@@ -97,32 +59,6 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
         # rupture by adding rake
         _previous = list(super().REQUIRES_RUPTURE_PARAMETERS)
         self.REQUIRES_RUPTURE_PARAMETERS = frozenset(_previous + ['rake'])
-
-    def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
-
-        # Compute mean and std
-        mean = self._get_mean_on_soil(sctx, rctx, dctx, imt, stddev_types)
-
-        # Get SoF correction
-        famp = get_sof_adjustment(rctx.rake, imt)
-        mean += np.log(famp)
-        stddevs = np.zeros_like(mean)
-        return mean, stddevs
-
-    def _get_mean_on_soil(self, sctx, rctx, dctx, imt, stddev_types):
-        # Get PGA on rock
-        tmp = PGA()
-        pga_rock = super()._get_mean_on_rock(
-            sctx, rctx, dctx, tmp, stddev_types)
-        pga_rock = np.exp(pga_rock)
-        # Site-effect model: always evaluated for 760 (see HID 2.6.2)
-        vs30_760 = np.zeros_like(sctx.vs30)
-        vs30_760[:] = 760
-        f_s = self.get_fs_SeyhanStewart2014(imt, pga_rock, vs30_760)
-        # Compute the mean on soil
-        mean = super()._get_mean_on_rock(sctx, rctx, dctx, imt, stddev_types)
-        mean += f_s
-        return mean
 
 
 class ChiouYoungs2014ACME2019(ChiouYoungs2014):
@@ -418,7 +354,7 @@ class AlAtikSigmaModel(GMPE):
                                    sites, rup, dist, SA(im), stds_types)
                 mean = np.exp(mean_ln[0])
                 means_log10.append(np.log10(mean))
-                
+
             mb = np.polyfit(t_log10, means_log10, 1)
             mean_imt_log10 = mb[0] * np.log10(imt) + mb[1]
             extrap_mean.append(np.log(10**mean_imt_log10))
@@ -486,7 +422,6 @@ class AlAtikSigmaModel(GMPE):
         sigma = np.sqrt(tau ** 2. + phi ** 2.)
         stddevs = []
         for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(sigma + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
