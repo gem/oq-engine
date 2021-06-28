@@ -234,4 +234,4 @@ class TavakoliPezeshk2005MwNSHMP2008(TavakoliPezeshk2005MblgAB1987NSHMP2008):
     Extend :class:`TavakoliPezeshk2005MblgAB1987NSHMP2008` but assumes
     magnitude to be in Mw scale, and therefore no conversion is applied
     """
-    kind = 'Mw2008'
+    kind = '2008'
