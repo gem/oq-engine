@@ -29,6 +29,185 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
+CONSTANTS = {"n": 1.18,
+             "c": 1.88,
+             "C4": 10.0,
+             "a3": 0.10,
+             "a5": 0.0,
+             "a9": 0.4,
+             "a10": 1.73,
+             "C1slab": 7.2,
+             "phiamp": 0.3}
+
+
+def _compute_pga_rock(slab, C_PGA, rup, dists):
+    """
+    Returns the PGA on rock (vs30 = 1000 m / s)
+    """
+    lpga1000 = (compute_base_term(slab, C_PGA) +
+                compute_magnitude_term(slab, C_PGA, rup.mag) +
+                compute_depth_term(slab, C_PGA, rup) +
+                compute_distance_term(slab, C_PGA, dists.rrup, rup.mag))
+    # Get linear site term for the case where vs30 = 1000.0
+    flin = _get_linear_site_term(
+        C_PGA, 1000.0 * np.ones_like(dists.rrup))
+    return lpga1000 + flin
+
+
+def compute_base_term(slab, C):
+    """
+    Returns the base coefficient of the GMPE, which for interface events
+    is just the coefficient a1 (adjusted regionally)
+    """
+    if slab:
+        return C["a1"] + C["a4"] * (CONSTANTS["C1slab"] - C["C1inter"]) + \
+            CONSTANTS["a10"]
+    return C["a1"]
+
+
+def compute_magnitude_term(slab, C, mag):
+    """
+    Returns the magnitude scaling term
+    """
+    if slab:
+        # Returns the magnitude scaling term, this time using the constant
+        # "C1slab" as the hinge magnitude
+        f_mag = C["a13"] * ((10.0 - mag) ** 2.)
+        if mag <= CONSTANTS["C1slab"]:
+            return C["a4"] * (mag - CONSTANTS["C1slab"]) + f_mag
+        else:
+            # parameter "a5" is zero, so linear term disappears
+            return f_mag
+    f_mag = C["a13"] * ((10.0 - mag) ** 2.)
+    if mag <= C["C1inter"]:
+        return C["a4"] * (mag - C["C1inter"]) + f_mag
+    else:
+        # C["a5"] is zero so linear term disappears
+        return f_mag
+
+
+def compute_distance_term(slab, C, rrup, mag):
+    """
+    Returns the distance attenuation
+    """
+    scale = _get_magnitude_scale(slab, C, mag)
+    fdist = scale * np.log(rrup + CONSTANTS["C4"] *
+                           np.exp(CONSTANTS["a9"] * (mag - 6.0)))
+    return fdist + C["a6"] * rrup
+
+
+def _get_magnitude_scale(slab, C, mag):
+    """
+    Returns the magnitude scaling term that modifies the distance
+    attenuation
+    """
+    if slab:
+        return C["a2"] + C["a14"] + CONSTANTS["a3"] * (mag - 7.8)
+    return C["a2"] + CONSTANTS["a3"] * (mag - 7.8)
+
+
+def compute_depth_term(slab, C, rup):
+    """
+    No top of rupture depth term for interface events
+    """
+    if slab:  # Equation on P11
+        if rup.ztor <= 100.0:
+            return C["a11"] * (rup.ztor - 60.0)
+        else:
+            return C["a11"] * (100.0 - 60.0)
+
+    return 0.0
+
+
+def compute_site_term(C, vs30, pga1000):
+    """
+    Returns the site amplification
+    """
+    vsstar = np.copy(vs30)
+    vsstar[vs30 >= 1000.0] = 1000.0
+    f_site = np.zeros_like(vs30)
+    # Consider the cases of only linear amplification
+    idx = vs30 >= C["vlin"]
+    if np.any(idx):
+        f_site[idx] = _get_linear_site_term(C, vsstar[idx])
+    # Consider now only the nonlinear amplification cases
+    idx = np.logical_not(idx)
+    if np.any(idx):
+        # Linear term
+        flin = C["a12"] * np.log(vsstar[idx] / C["vlin"])
+        # Nonlinear term
+        fnl = (-C["b"] * np.log(pga1000[idx] + CONSTANTS["c"])) +\
+            (C["b"] * np.log(pga1000[idx] + CONSTANTS["c"] *
+             ((vsstar[idx] / C["vlin"]) ** CONSTANTS["n"])))
+        f_site[idx] = flin + fnl
+    return f_site
+
+
+def _get_linear_site_term(C, vsstar):
+    """
+    As the linear site scaling is used for both the pga1000 case and the
+    general case the relevant common part is returned here
+    """
+    return (C["a12"] + C["b"] * CONSTANTS["n"]) *\
+        np.log(vsstar / C["vlin"])
+
+
+def get_stddevs(C, C_PGA, pga1000, vs30, stddev_types):
+    """
+    Returns the standard deviations
+    """
+    dln = _get_dln_amp(C, pga1000, vs30)
+    tau = get_inter_event_stddev(C, C_PGA, dln)
+    phi = get_within_event_stddev(C, C_PGA, dln)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(tau ** 2. + phi ** 2.))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau)
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi)
+    return stddevs
+
+
+def _get_dln_amp(C, pga1000, vs30):
+    """
+    Returns the partial deriviative of the amplification term with respect
+    to pga1000
+    """
+    dln = np.zeros(vs30.shape)
+    idx = vs30 < C["vlin"]
+    if np.any(idx):
+        dln[idx] = C["b"] * pga1000[idx] * (
+            (-1. / (pga1000[idx] + CONSTANTS["c"])) +
+            (1. / (pga1000[idx] + CONSTANTS["c"] *
+                   ((vs30[idx] / C["vlin"]) ** CONSTANTS["n"]))))
+    return dln
+
+
+def get_within_event_stddev(C, C_PGA, dln):
+    """
+    Returns the within-event aleatory uncertainty, phi
+    """
+    phi_amp2 = CONSTANTS["phiamp"] ** 2.
+    phi_b = np.sqrt(C["phi0"] ** 2. - phi_amp2)
+    phi_b_pga = np.sqrt((C_PGA["phi0"] ** 2.) - phi_amp2)
+
+    phi = (C["phi0"] ** 2.) +\
+          ((dln ** 2.) * (phi_b ** 2.)) +\
+          (2.0 * dln * phi_b * phi_b_pga * C["rho_w"])
+    return np.sqrt(phi)
+
+
+def get_inter_event_stddev(C, C_PGA, dln):
+    """
+    Returns the between event aleatory uncertainty, tau
+    """
+    tau = (C["tau0"] ** 2.) +\
+          ((dln ** 2.) * (C["tau0"] ** 2.)) +\
+          (2.0 * dln * C["tau0"] * C_PGA["tau0"] * C["rho_b"])
+    return np.sqrt(tau)
+
 
 class AbrahamsonEtAl2018SInter(GMPE):
     """
@@ -94,163 +273,25 @@ class AbrahamsonEtAl2018SInter(GMPE):
         # intensity measure type and for PGA
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
+        slab = self.CASCADIA_ADJUSTMENT == "adj_slab"
         # compute median pga on rock (vs30=1000), needed for site response
         # term calculation
-        pga1000 = np.exp(self._compute_pga_rock(C_PGA, rup, dists) +
+        pga1000 = np.exp(_compute_pga_rock(slab, C_PGA, rup, dists) +
                          C_PGA[self.CASCADIA_ADJUSTMENT])
         # Get full model
-        mean = (self.compute_base_term(C) +
-                self.compute_magnitude_term(C, rup.mag) +
-                self.compute_depth_term(C, rup) +
-                self.compute_distance_term(C, dists.rrup, rup.mag) +
-                self.compute_site_term(C, sites.vs30, pga1000))
+        mean = (compute_base_term(slab, C) +
+                compute_magnitude_term(slab, C, rup.mag) +
+                compute_depth_term(slab, C, rup) +
+                compute_distance_term(slab, C, dists.rrup, rup.mag) +
+                compute_site_term(C, sites.vs30, pga1000))
 
-        stddevs = self.get_stddevs(C, C_PGA, pga1000, sites.vs30, stddev_types)
+        stddevs = get_stddevs(C, C_PGA, pga1000, sites.vs30, stddev_types)
         if self.EPISTEMIC_ADJUSTMENT:
             adjustment = C[self.CASCADIA_ADJUSTMENT] +\
                 C[self.EPISTEMIC_ADJUSTMENT]
             return mean + adjustment, stddevs
         else:
             return mean + C[self.CASCADIA_ADJUSTMENT], stddevs
-
-    def _compute_pga_rock(self, C_PGA, rup, dists):
-        """
-        Returns the PGA on rock (vs30 = 1000 m / s)
-        """
-        lpga1000 = (self.compute_base_term(C_PGA) +
-                    self.compute_magnitude_term(C_PGA, rup.mag) +
-                    self.compute_depth_term(C_PGA, rup) +
-                    self.compute_distance_term(C_PGA, dists.rrup, rup.mag))
-        # Get linear site term for the case where vs30 = 1000.0
-        flin = self._get_linear_site_term(
-            C_PGA, 1000.0 * np.ones_like(dists.rrup))
-        return lpga1000 + flin
-
-    def compute_base_term(self, C):
-        """
-        Returns the base coefficient of the GMPE, which for interface events
-        is just the coefficient a1 (adjusted regionally)
-        """
-        return C["a1"]
-
-    def compute_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling term
-        """
-        f_mag = C["a13"] * ((10.0 - mag) ** 2.)
-        if mag <= C["C1inter"]:
-            return C["a4"] * (mag - C["C1inter"]) + f_mag
-        else:
-            # C["a5"] is zero so linear term disappears
-            return f_mag
-
-    def compute_distance_term(self, C, rrup, mag):
-        """
-        Returns the distance attenuation
-        """
-        scale = self._get_magnitude_scale(C, mag)
-        fdist = scale * np.log(rrup + self.CONSTANTS["C4"] *
-                               np.exp(self.CONSTANTS["a9"] * (mag - 6.0)))
-        return fdist + C["a6"] * rrup
-
-    def _get_magnitude_scale(self, C, mag):
-        """
-        Returns the magnitude scaling term that modifies the distance
-        attenuation
-        """
-        return C["a2"] + self.CONSTANTS["a3"] * (mag - 7.8)
-
-    def compute_depth_term(self, C, rup):
-        """
-        No top of rupture depth term for interface events
-        """
-        return 0.0
-
-    def compute_site_term(self, C, vs30, pga1000):
-        """
-        Returns the site amplification
-        """
-        vsstar = np.copy(vs30)
-        vsstar[vs30 >= 1000.0] = 1000.0
-        f_site = np.zeros_like(vs30)
-        # Consider the cases of only linear amplification
-        idx = vs30 >= C["vlin"]
-        if np.any(idx):
-            f_site[idx] = self._get_linear_site_term(C, vsstar[idx])
-        # Consider now only the nonlinear amplification cases
-        idx = np.logical_not(idx)
-        if np.any(idx):
-            # Linear term
-            flin = C["a12"] * np.log(vsstar[idx] / C["vlin"])
-            # Nonlinear term
-            fnl = (-C["b"] * np.log(pga1000[idx] + self.CONSTANTS["c"])) +\
-                (C["b"] * np.log(pga1000[idx] + self.CONSTANTS["c"] *
-                 ((vsstar[idx] / C["vlin"]) ** self.CONSTANTS["n"])))
-            f_site[idx] = flin + fnl
-        return f_site
-
-    def _get_linear_site_term(self, C, vsstar):
-        """
-        As the linear site scaling is used for both the pga1000 case and the
-        general case the relevant common part is returned here
-        """
-        return (C["a12"] + C["b"] * self.CONSTANTS["n"]) *\
-            np.log(vsstar / C["vlin"])
-
-    def get_stddevs(self, C, C_PGA, pga1000, vs30, stddev_types):
-        """
-        Returns the standard deviations
-        """
-        dln = self._get_dln_amp(C, pga1000, vs30)
-        tau = self.get_inter_event_stddev(C, C_PGA, dln)
-        phi = self.get_within_event_stddev(C, C_PGA, dln)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(tau ** 2. + phi ** 2.))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-
-        return stddevs
-
-    def _get_dln_amp(self, C, pga1000, vs30):
-        """
-        Returns the partial deriviative of the amplification term with respect
-        to pga1000
-        """
-        dln = np.zeros(vs30.shape)
-        idx = vs30 < C["vlin"]
-        if np.any(idx):
-            dln[idx] = C["b"] * pga1000[idx] * (
-                (-1. / (pga1000[idx] + self.CONSTANTS["c"])) +
-                (1. / (pga1000[idx] + self.CONSTANTS["c"] *
-                       ((vs30[idx] / C["vlin"]) ** self.CONSTANTS["n"]))))
-        return dln
-
-    def get_within_event_stddev(self, C, C_PGA, dln):
-        """
-        Returns the within-event aleatory uncertainty, phi
-        """
-        phi_amp2 = self.CONSTANTS["phiamp"] ** 2.
-        phi_b = np.sqrt(C["phi0"] ** 2. - phi_amp2)
-        phi_b_pga = np.sqrt((C_PGA["phi0"] ** 2.) - phi_amp2)
-
-        phi = (C["phi0"] ** 2.) +\
-              ((dln ** 2.) * (phi_b ** 2.)) +\
-              (2.0 * dln * phi_b * phi_b_pga * C["rho_w"])
-        return np.sqrt(phi)
-
-    def get_inter_event_stddev(self, C, C_PGA, dln):
-        """
-        Returns the between event aleatory uncertainty, tau
-        """
-        tau = (C["tau0"] ** 2.) +\
-              ((dln ** 2.) * (C["tau0"] ** 2.)) +\
-              (2.0 * dln * C["tau0"] * C_PGA["tau0"] * C["rho_b"])
-        return np.sqrt(tau)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt    C1inter     vlin        b       a1      a2     a4        a6     a11     a12      a13     a14            adj_int           adj_slab   phi0   tau0   rho_w   rho_b  SINTER_LOW  SINTER_HIGH  SSLAB_LOW  SSLAB_HIGH
@@ -281,16 +322,6 @@ class AbrahamsonEtAl2018SInter(GMPE):
     10.00     7.80    400.0    0.000 -2.71182  -0.450   0.93  -0.00327  0.0000  -0.350  -0.0980  -0.250   0.31434000000000   0.23962833333333   0.61  0.450  0.2000  0.2000        -0.3          0.3      -0.30        0.30
     """)
 
-    CONSTANTS = {"n": 1.18,
-                 "c": 1.88,
-                 "C4": 10.0,
-                 "a3": 0.10,
-                 "a5": 0.0,
-                 "a9": 0.4,
-                 "a10": 1.73,
-                 "C1slab": 7.2,
-                 "phiamp": 0.3}
-
 
 class AbrahamsonEtAl2018SInterHigh(AbrahamsonEtAl2018SInter):
     """
@@ -313,7 +344,6 @@ class AbrahamsonEtAl2018SSlab(AbrahamsonEtAl2018SInter):
     Abrahamson et al. (2018) updated "BC Hydro" subduction GMPE for application
     to subduction in-slab earthquakes.
     """
-
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
@@ -323,42 +353,6 @@ class AbrahamsonEtAl2018SSlab(AbrahamsonEtAl2018SInter):
 
     #: Cascadia adjustment factor
     CASCADIA_ADJUSTMENT = "adj_slab"
-
-    def compute_base_term(self, C):
-        """
-        The base term has an additional factor applied for the case of in-slab
-        eventtd
-        """
-        return C["a1"] + C["a4"] * (self.CONSTANTS["C1slab"] - C["C1inter"]) +\
-            self.CONSTANTS["a10"]
-
-    def _get_magnitude_scale(self, C, mag):
-        """
-        Returns the magnitude scaling term that modifies the distance
-        attenuation
-        """
-        return C["a2"] + C["a14"] + self.CONSTANTS["a3"] * (mag - 7.8)
-
-    def compute_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling term, this time using the constant
-        "C1slab" as the hinge magnitude
-        """
-        f_mag = C["a13"] * ((10.0 - mag) ** 2.)
-        if mag <= self.CONSTANTS["C1slab"]:
-            return C["a4"] * (mag - self.CONSTANTS["C1slab"]) + f_mag
-        else:
-            # parameter "a5" is zero, so linear term disappears
-            return f_mag
-
-    def compute_depth_term(self, C, rup):
-        """
-        Equation on P11
-        """
-        if rup.ztor <= 100.0:
-            return C["a11"] * (rup.ztor - 60.0)
-        else:
-            return C["a11"] * (100.0 - 60.0)
 
 
 class AbrahamsonEtAl2018SSlabHigh(AbrahamsonEtAl2018SSlab):
