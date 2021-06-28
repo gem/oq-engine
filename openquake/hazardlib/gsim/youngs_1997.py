@@ -83,8 +83,10 @@ class YoungsEtAl1997SInter(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
+        if self.__class__.__name__.endswith('NSHMP2008'):
+            # NSHMP2008 adjustement of the hypo_depth
+            rup = copy.copy(rup)
+            rup.hypo_depth = 20.
 
         mean = np.zeros_like(sites.vs30)
         stddevs = [np.zeros_like(sites.vs30) for _ in stddev_types]
@@ -200,23 +202,6 @@ class YoungsEtAl1997SInterNSHMP2008(YoungsEtAl1997SInter):
     ``hazSUBXnga.f`` Fortran code available at:
     http://earthquake.usgs.gov/hazards/products/conterminous/2008/software/
     """
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-
-        Call superclass method by passing new rupture context object with
-        hypocentral depth set to 20 km
-        """
-        # create new context to avoid changing the original one
-        new_rup = copy.copy(rup)
-        new_rup.hypo_depth = 20.
-
-        mean, stddevs = super().get_mean_and_stddevs(
-            sites, new_rup, dists, imt, stddev_types)
-
-        return mean, stddevs
 
 
 class YoungsEtAl1997SSlab(YoungsEtAl1997SInter):
