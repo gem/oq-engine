@@ -80,9 +80,6 @@ def _get_phi_al_regional_JPN(C, mag, vs30measured, rrup):
     return phi_al
 
 
-from openquake.baselib.general import CallableDict
-
-
 def _get_basic_term(C, rup, dists):
     """
     Compute and return basic form, see page 1030.
