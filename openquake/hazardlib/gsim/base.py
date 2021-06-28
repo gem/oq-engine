@@ -305,8 +305,6 @@ class CoeffsTable(object):
         self.dt = DType(list(firstdic), float)
         self._coeffs = {imt: self.dt(**dic) for imt, dic in ddic.items()}
         self.logratio = logratio
-        self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
-                              [(name, float) for name in self.dt.dtype.names])
         return self
 
     def __init__(self, table, **kwargs):
@@ -325,7 +323,7 @@ class CoeffsTable(object):
         header = lines.pop(0).split()
         if not header[0].upper() == "IMT":
             raise ValueError('first column in a table must be IMT')
-        tt = DType(header[1:], float)
+        dt = DType(header[1:], float)
         for line in lines:
             row = line.split()
             imt_name_or_period = row[0].upper()
@@ -333,8 +331,8 @@ class CoeffsTable(object):
                 raise ValueError('specify period as float value '
                                  'to declare SA IMT')
             imt = imt_module.from_string(imt_name_or_period, sa_damping)
-            self._coeffs[imt] = tt(*row[1:])
-        return tt
+            self._coeffs[imt] = dt(*row[1:])
+        return dt
 
     @property
     def sa_coeffs(self):
