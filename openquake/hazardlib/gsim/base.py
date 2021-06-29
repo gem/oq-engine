@@ -29,7 +29,7 @@ import numpy
 from scipy.special import ndtr
 from scipy.stats import norm
 
-from openquake.baselib.general import DeprecationWarning, DType
+from openquake.baselib.general import DeprecationWarning, RecordBuilder
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
@@ -301,8 +301,8 @@ class CoeffsTable(object):
         """
         firstdic = ddic[next(iter(ddic))]
         self = object.__new__(cls)
-        self.dt = DType(list(firstdic), float)
-        self._coeffs = {imt: self.dt(**dic) for imt, dic in ddic.items()}
+        self.rb = RecordBuilder(**firstdic)
+        self._coeffs = {imt: self.rb(**dic) for imt, dic in ddic.items()}
         self.logratio = logratio
         return self
 
@@ -312,7 +312,7 @@ class CoeffsTable(object):
         sa_damping = kwargs.pop('sa_damping', None)
         if kwargs:
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
-        self.dt = self._setup_table_from_str(table, sa_damping)
+        self.rb = self._setup_table_from_str(table, sa_damping)
 
     def _setup_table_from_str(self, table, sa_damping):
         """
@@ -322,7 +322,7 @@ class CoeffsTable(object):
         header = lines.pop(0).split()
         if not header[0].upper() == "IMT":
             raise ValueError('first column in a table must be IMT')
-        dt = DType(header[1:], float)
+        dt = RecordBuilder(**{name: 0. for name in header[1:]})
         for line in lines:
             row = line.split()
             imt_name_or_period = row[0].upper()
@@ -348,7 +348,7 @@ class CoeffsTable(object):
         :param imts: a tuple of IMT tuples
         :returns: a structured array with the coefficients for each IMT
         """
-        arr = numpy.zeros(len(imts), self.dt.dtype)
+        arr = numpy.zeros(len(imts), self.rb.dtype)
         for m, imt in enumerate(imts):
             arr[m] = self[imt]
         return arr
@@ -393,13 +393,12 @@ class CoeffsTable(object):
                      (min_above.period - max_below.period))
         below = self.sa_coeffs[max_below]
         above = self.sa_coeffs[min_above]
-        lst = [(above[n] - below[n]) * ratio + below[n]
-               for n in self.dt.dtype.names]
-        self._coeffs[imt] = c = self.dt(*lst)
+        lst = [(above[n] - below[n]) * ratio + below[n] for n in self.rb.names]
+        self._coeffs[imt] = c = self.rb(*lst)
         return c
 
     def __repr__(self):
-        return '<%s %s>' % (self.__class__.__name__, ' '.join(self.dt.names))
+        return '<%s %s>' % (self.__class__.__name__, ' '.join(self.rb.names))
 
 
 class MetaGSIM(abc.ABCMeta):
@@ -464,9 +463,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: this GSIM can calculate.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = abc.abstractproperty()
 
-    #: optional dictionary param_name -> param_type for the GSIM
-    #: instantiation parameters; used only for jittable GSIMs
-    REQUIRES_ATTRIBUTES = {}
+    #: Set of required GSIM attributes
+    REQUIRES_ATTRIBUTES = set()
 
     #: Set of site parameters names this GSIM needs. The set should include
     #: strings that match names of the attributes of a :class:`site
@@ -536,18 +534,10 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             raise ValueError(
                 '%s.DEFINED_FOR_STANDARD_DEVIATION_TYPES is '
                 'not defined for const.StdDev.TOTAL' % cls.__name__)
-        params = cls.REQUIRES_ATTRIBUTES.copy()
-        params.update(cls.__base__.REQUIRES_ATTRIBUTES)
         for attr, ctable in vars(cls).items():
             if isinstance(ctable, CoeffsTable):
                 if not attr.startswith('COEFFS'):
                     raise NameError('%s does not start with COEFFS' % attr)
-                params[attr] = ctable.dt.dtype
-        names = sorted(params)
-        cls.dType = DType(names, [params[p] for p in names])
-        cls.rType = DType(sorted(cls.REQUIRES_RUPTURE_PARAMETERS) +
-                          sorted(cls.REQUIRES_SITES_PARAMETERS) +
-                          sorted(cls.REQUIRES_DISTANCES), float)
         registry[cls.__name__] = cls
 
     def __init__(self, **kwargs):

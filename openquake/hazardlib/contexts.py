@@ -34,7 +34,7 @@ except ImportError:
     numba = None
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, block_splitter)
+    AccumDict, DictArray, groupby, block_splitter, RecordBuilder)
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
@@ -134,6 +134,26 @@ def get_num_distances(gsims):
     return len(dists)
 
 
+def fake_gsim(gsim, imts):
+    """
+    :returns: a fake object emulating a GSIM data structure
+    """
+    dic = {attr: getattr(gsim, attr) for attr in gsim.REQUIRES_ATTRIBUTES}
+    for attr in dir(gsim):
+        if attr.startswith('COEFFS'):
+            dic[attr] = getattr(gsim, attr).to_array(imts)
+    if numba:
+        typedic = {a: numba.typeof(dic[a]) for a in dic}
+        cls = type('GSIM', (), dict(__init__=lambda self: None))
+        jcls = numba.experimental.jitclass(typedic)(cls)
+        obj = jcls()
+        for a in dic:
+            setattr(obj, a, dic[a])
+        return obj
+    else:
+        return hdf5.ArrayWrapper((), dic)
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts for distances, sites, rupture.
@@ -178,16 +198,11 @@ class ContextMaker(object):
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
-        self.fake = {}
         for gsim in gsims:
-            kw = {k: getattr(gsim, k).to_array(self.imts)
-                  for k in gsim.dType.names}
-            if numba:
-                self.fake[gsim] = arr = gsim.dType.zeros(len(self.imts))
-                for k in gsim.dType.names:
-                    arr[k] = kw[k]
-            else:
-                self.fake[gsim] = hdf5.ArrayWrapper((), kw)
+            reqs = (sorted(gsim.REQUIRES_RUPTURE_PARAMETERS) +
+                    sorted(gsim.REQUIRES_SITES_PARAMETERS) +
+                    sorted(gsim.REQUIRES_DISTANCES))
+            gsim.ctx_builder = RecordBuilder(**{req: 0. for req in reqs})
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -215,13 +230,14 @@ class ContextMaker(object):
         """
         M = len(self.imtls)
         tot = (StdDev.TOTAL,)
+        self.fake = {}
         for g, gsim in enumerate(self.gsims):
             if hasattr(gsim, 'calc_mean_stds'):
-                fake = self.fake[gsim]
+                self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
                 if numba:
-                    ctx = numpy.ones(1, gsim.rType.dtype)
+                    ctx = numpy.ones(1, gsim.ctx_builder.dtype)
                 else:
-                    ctx = hdf5.ArrayWrapper((), gsim.rType.dictarray(1))
+                    ctx = hdf5.ArrayWrapper((), gsim.ctx_builder.dictarray(1))
                 out = numpy.zeros((2, 1, M))
                 gsim.__class__.calc_mean_stds(fake, ctx, self.imts, tot, out)
 
@@ -234,8 +250,8 @@ class ContextMaker(object):
         for ctx in ctxs:
             n = ctx.size()
             if numba:
-                new = gsim.rType.zeros(n)
-                for name in gsim.rType.names:
+                new = gsim.ctx_builder.zeros(n)
+                for name in gsim.ctx_builder.names:
                     new[name] = getattr(ctx, name)
             else:
                 new = ctx
