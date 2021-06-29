@@ -23,17 +23,16 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 # Test data provided by Jia-Cian Gao (TEM) on June 9, 2021
 
 BASE_PATH = os.path.dirname(__file__)
-BASE_PATH_DATA = os.path.join(BASE_PATH, '..', 'data', 'tem20')
+DATA_PATH = os.path.join(BASE_PATH, '..', 'data', 'tem20')
 
 
-class LinEtAl2011HanginwallCase(BaseGSIMTestCase):
+class LinEtAl2011HanginWallCase(BaseGSIMTestCase):
     GSIM_CLASS = Lin2011hanging
 
     def test_mean(self):
-        self.check(os.path.join(BASE_PATH_DATA, 'Lin2011_MEAN_hanging.csv'),
+        self.check(os.path.join(DATA_PATH, 'Lin2011_MEAN_hanging.csv'),
                    max_discrep_percentage=0.1)
 
     def test_total_std(self):
-        self.check(os.path.join(BASE_PATH_DATA,
-                                'Lin2011_TOTAL_STDDEV_hanging.csv'),
+        self.check(os.path.join(DATA_PATH, 'Lin2011_TOTAL_STDDEV_hanging.csv'),
                    max_discrep_percentage=0.1)

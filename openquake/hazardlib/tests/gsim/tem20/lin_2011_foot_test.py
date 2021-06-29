@@ -16,19 +16,23 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 from openquake.hazardlib.gsim.tem20.lin_2011_foot import Lin2011foot
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
-# test data received from TEM colleagues
+# Test data provided by Jia-Cian Gao (TEM) on June 9, 2021
+
+BASE_PATH = os.path.dirname(__file__)
+DATA_PATH = os.path.join(BASE_PATH, '..', 'data', 'tem20')
 
 
-class LinLee2008SInterTestCase(BaseGSIMTestCase):
+class LinEtAl2011FootWallCase(BaseGSIMTestCase):
     GSIM_CLASS = Lin2011foot
 
     def test_mean(self):
-        self.check('LL08/LL08SInter_MEAN.csv',
-                    max_discrep_percentage=0.1)
+        self.check(os.path.join(DATA_PATH, 'Lin2011_MEAN_foot.csv'),
+                   max_discrep_percentage=0.1)
 
     def test_total_std(self):
-        self.check('LL08/LL08SInter_STD_TOTAL.csv',
-                    max_discrep_percentage=0.1)
+        self.check(os.path.join(DATA_PATH, 'Lin2011_TOTAL_STDDEV_hanging.csv'),
+                   max_discrep_percentage=0.1)

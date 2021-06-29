@@ -27,12 +27,31 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _compute_mean(self, C, mag, rhypo, hypo_depth, mean, idx):
+    """
+    Compute mean value according to equations 10 and 11 page 226.
+    """
+    mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rhypo[idx] +
+                 C['C4'] * np.exp(C['C5'] * mag)))
+    return mean
+
+
+def _compute_std(self, C, stddevs, idx):
+    """
+    Compute total standard deviation, see tables 3 and 4, pages 227 and
+    228.
+    """
+    for stddev in stddevs:
+        stddev[idx] += C['sigma']
+    return stddev
+
+
 class Lin2011hanging(GMPE):
     """
     Implements GMPE developed by Po-Shen Lin and others and published as
     "Response spectral attenuation relations for shallow crustal earthquakes
-    in Taiwan"
-    (Engineering Geology, Volume 121, Issues 3–4, 10 August 2011, Pages 150-164).
+    in Taiwan", Engineering Geology, Vol. 121, Issues 3–4, 10 August 2011,
+    Pages 150-164.
     """
 
     #: Supported tectonic region type is active shallow crust.
@@ -40,31 +59,26 @@ class Lin2011hanging(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see tables 3 and 4, pages 227 and 228.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is geometric mean
-    #: of two horizontal components, see equation 10 page 226.
+    #: of two horiszontal components, see equation 10 page 226.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total, see equation 10 page 226.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and focal depth, see
     #: equation 10 page 226.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
     #: Required distance measure is hypocentral distance, see equation 10
     #: page 226.
-    REQUIRES_DISTANCES = set(('rhypo', ))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     #: Vs30 threshold value between rock sites (B, C) and soil sites (C, D).
     ROCK_VS30 = 360
@@ -86,9 +100,9 @@ class Lin2011hanging(GMPE):
 
         if idx_rock.any():
             C = self.COEFFS_ROCK[imt]
-            self._compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
-                               idx_rock)
-            self._compute_std(C, stddevs, idx_rock)
+            mean = _compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
+                                 idx_rock)
+            stddevs = _compute_std(C, stddevs, idx_rock)
 
         if idx_soil.any():
             C = self.COEFFS_SOIL[imt]
@@ -97,21 +111,6 @@ class Lin2011hanging(GMPE):
             self._compute_std(C, stddevs, idx_soil)
 
         return mean, stddevs
-
-    def _compute_mean(self, C, mag, rhypo, hypo_depth, mean, idx):
-        """
-        Compute mean value according to equations 10 and 11 page 226.
-        """
-        mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rhypo[idx] +
-                     C['C4'] * np.exp(C['C5'] * mag)))
-
-    def _compute_std(self, C, stddevs, idx):
-        """
-        Compute total standard deviation, see tables 3 and 4, pages 227 and
-        228.
-        """
-        for stddev in stddevs:
-            stddev[idx] += C['sigma']
 
     #: Coefficient table for rock sites, see table 3 page 153.
     COEFFS_ROCK = CoeffsTable(sa_damping=5, table="""\
@@ -140,7 +139,7 @@ class Lin2011hanging(GMPE):
     pga     -3.2480    0.943    -1.47100    0.10000    0.64800   0.6280
     0.01    -3.0080    0.905    -1.45100    0.11000    0.63800   0.6230
     0.06    -1.9940    0.809    -1.50000    0.25100    0.51800   0.6860
-    0.09    -1.4080    0.765    -1.55100    0.28000    0.51000   0.7090 
+    0.09    -1.4080    0.765    -1.55100    0.28000    0.51000   0.7090
     0.10    -1.5080    0.785    -1.55100    0.28000    0.50000   0.7130
     0.20    -3.2260    0.870    -1.21100    0.04500    0.70800   0.6870
     0.30    -4.0500    0.999    -1.20500    0.03000    0.78800   0.6570
