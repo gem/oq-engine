@@ -224,7 +224,7 @@ def _get_stddevs_asc(trt, stddev_types, rrup):
 
 @_get_stddevs.add(const.TRT.SUBDUCTION_INTERFACE,
                   const.TRT.SUBDUCTION_INTRASLAB)
-def _get_stddevs_sinter(trt, stddev_types, pgv):
+def _get_stddevs_sub(trt, stddev_types, pgv):
     """
     Return standard deviations as defined in equation 3.5.5-1 page 151
     """
