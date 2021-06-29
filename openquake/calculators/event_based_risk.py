@@ -409,6 +409,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # save agg_losses
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         if oq.calculation_mode == 'scenario_risk':  # compute agg_losses
+            alt = alt.set_index('event_id')
             alt['rlz_id'] = self.rlzs[alt.index.to_numpy()]
             agglosses = numpy.zeros((K + 1, self.R, self.L), F32)
             for (agg_id, rlz_id, loss_id), df in alt.groupby(
