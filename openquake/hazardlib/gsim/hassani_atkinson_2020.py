@@ -29,6 +29,204 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA, PGV
 
+CONSTANTS = {"mlf0": 5.5, "mlf1": 7, "f1": 0, "f3": 98.1,
+             "b1": -1.3, "b2": -0.5, "v0": 100, "v1": 250, "v2": 1000,
+             "zx0": 150, "zx1": 800, "zx2": 4200,
+             "cfp0": -0.011, "cfp1": 0.421, "cfp2": -0.604, "cfp3": 0.086,
+             "x0": 0.5, "x1": 1, "x2": 2.5, "vref": 760, "vmin": 360}
+
+
+def _clf(suffix, C, mag):
+    """
+    Low frequency calibration factor.
+    """
+    clf0 = C['clf0' + suffix]
+    clf1 = C['clf1' + suffix]
+    mlf0 = CONSTANTS["mlf0"]
+
+    if mag > mlf0:
+        return clf0 + clf1 * (min(mag, CONSTANTS["mlf1"]) - mlf0)
+    return clf0
+
+
+def _dsigma(creg, hypo_depth):
+    """
+    Hypocentre depth factor.
+    """
+    out = creg['cd0']
+    dp0 = creg['dp0']
+    if hypo_depth > dp0:
+        out += creg['cd1'] * (min(hypo_depth, creg['dp1']) - dp0)
+    return 10 ** out
+
+
+def _fds_ha18(C, mag, dsigma):
+    """
+    Dsigma factor.
+    """
+    eds1 = np.polyval([C['g14'], C['g13'], C['g12'], C['g11'], C['g10']],
+                      mag)
+    eds2 = np.polyval([C['g24'], C['g23'], C['g22'], C['g21'], C['g20']],
+                      mag)
+    eds0 = -2 * eds1 - 4 * eds2
+
+    return eds0 + eds1 * math.log10(dsigma) \
+        + eds2 * math.log10(dsigma) ** 2
+
+
+def _ffpeak(C, imt, fpeak):
+    """
+    Fpeak factor.
+    """
+    if not imt.name == "SA" or max(fpeak) <= 0:
+        # pgv, pga or unknown fpeak
+        return 0
+
+    s = CONSTANTS
+    x = fpeak / 10 ** C['f']
+
+    ffpeak = np.where(fpeak <= 0, 0, s['cfp0'])
+
+    idx = np.where((s['x0'] < x) & (x <= s['x1']))
+    ffpeak[idx] = s['cfp0'] + s['cfp1'] * np.log10(x[idx] / s['x0'])
+
+    idx = np.where((s['x1'] < x) & (x <= s['x2']))
+    ffpeak[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
+        + s['cfp2'] * np.log10(x[idx] / s['x1'])
+
+    idx = np.where(s['x2'] < x)
+    ffpeak[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
+        + s['cfp2'] * math.log10(s['x2'] / s['x1']) \
+        + s['cfp3'] * np.log10(x[idx] / s['x2'])
+
+    return ffpeak
+
+
+def _fgamma(suffix, backarc, forearc_ne, forearc_sw, C, rrup):
+    """
+    Gamma factor.
+    """
+    # proportion sum for normalised values with rrup factor
+    p_sum = rrup / (backarc + forearc_ne + forearc_sw)
+
+    return C['barc' + suffix] * backarc * p_sum \
+        + C['farc_ne' + suffix] * forearc_ne * p_sum \
+        + C['farc_sw' + suffix] * forearc_sw * p_sum
+
+
+def _fkp_ha18(kappa, C, mag, dsigma):
+    """
+    Kappa factor for B/C site condition of Japan.
+    """
+    l10kp = math.log10(kappa)
+
+    p = np.zeros(4)
+    ek0 = np.zeros(4)
+    for i in range(4):
+        for j in range(4):
+            p[j] = np.polyval([C[f'd{i}{j}2'], C[f'd{i}{j}1'],
+                               C[f'd{i}{j}0']], math.log10(dsigma))
+        ek0[i] = np.polyval(p[::-1], math.log10(mag))
+    return 3 * ek0[0] - 9 * ek0[1] + 27 * ek0[2] - 81 * ek0[3] \
+        + ek0[0] * l10kp + ek0[1] * l10kp ** 2 \
+        + ek0[2] * l10kp ** 3 + ek0[3] * l10kp ** 4
+
+
+def _fm_ha18(C, mag):
+    """
+    Magnitude factor.
+    """
+    if mag <= C['mh']:
+        return C['e0'] + C['e1'] * (mag - C['mh']) \
+               + C['e2'] * (mag - C['mh']) ** 2
+    return C['e0'] + C['e3'] * (mag - C['mh'])
+
+
+def _fsnonlin_ss14(C, vs30, pga_rock):
+    """
+    Non-linear factor.
+    """
+    s = CONSTANTS
+
+    f2 = C['f4'] * (np.exp(C['f5']
+                           * (np.minimum(vs30, s['vref']) - s['vmin']))
+                    - math.exp(C['f5'] * (s['vref'] - s['vmin'])))
+
+    return s['f1'] + f2 * np.log((pga_rock + s['f3']) / s['f3'])
+
+
+def _fvs30(C, vs30):
+    """
+    Vs30 factor.
+    """
+    s = CONSTANTS
+    fvs30 = np.where(vs30 <= s['v0'],
+                     C['cv1'] * math.log10(s['v0'] / s['vref'])
+                     + (C['cv2'] - C['cv1'])
+                     * math.log10(s['v1'] / s['vref']),
+                     C['cv2'] * math.log10(s['v2'] / s['vref']))
+    fvs30 = np.where((s['v0'] < vs30) & (vs30 <= s['v1']),
+                     C['cv1'] * np.log10(vs30 / s['vref'])
+                     + (C['cv2'] - C['cv1'])
+                     * math.log10(s['v1'] / s['vref']), fvs30)
+    return np.where((s['v1'] < vs30) & (vs30 <= s['v2']),
+                    C['cv2'] * np.log10(vs30 / s['vref']), fvs30)
+
+
+def _fz2pt5(C, z2pt5):
+    """
+    Z2pt5 factor.
+    """
+    s = CONSTANTS
+    fz2pt5 = np.where(z2pt5 >= 0, C['cz0'], 0)
+
+    idx = np.where((s['zx0'] < z2pt5) & (z2pt5 <= s['zx1']))
+    fz2pt5[idx] = C['cz0'] + C['cz1'] * np.log10(z2pt5[idx] / s['zx0'])
+
+    idx = np.where((s['zx1'] < z2pt5) & (z2pt5 <= s['zx2']))
+    fz2pt5[idx] = C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0']) \
+        + C['cz2'] * np.log10(z2pt5[idx] / s['zx1'])
+
+    idx = np.where(s['zx2'] < z2pt5)
+    fz2pt5[idx] = C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0']) \
+        + C['cz2'] * math.log10(s['zx2'] / s['zx1'])
+
+    return fz2pt5
+
+
+def _fz_ha18(rt, C, mag, rrup):
+    """
+    Z factor.
+    """
+    s = CONSTANTS
+    h = 10 ** (-0.405 + 0.235 * mag)
+    ref = np.sqrt(rrup ** 2 + h ** 2)
+    rref = math.sqrt(1 ** 2 + h ** 2)
+
+    return np.where(ref <= rt, s['b1'] * np.log10(ref)
+                    + (C['b3'] + C['b4'] * mag) * np.log10(ref / rref),
+                    s['b1'] * math.log10(rt)
+                    + s['b2'] * np.log10(ref / rt)
+                    + (C['b3'] + C['b4'] * mag) * np.log10(ref / rref))
+
+
+def get_stddevs(suffix, C, stddev_types):
+    """
+    Between event standard deviations as tau.
+    Intra event from site to site stddev and within site stddev.
+    Total given in COEFFS to 3dp.
+    """
+    stddevs = []
+    for stddev in stddev_types:
+        if stddev == const.StdDev.TOTAL:
+            stddevs.append(C['s' + suffix])
+        elif stddev == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'])
+        elif stddev == const.StdDev.INTRA_EVENT:
+            stddevs.append(math.sqrt(C['ps2s'] ** 2 + C['pss' + suffix] ** 2))
+
+    return stddevs
+
 
 class HassaniAtkinson2020SInter(GMPE):
     """
@@ -39,26 +237,21 @@ class HassaniAtkinson2020SInter(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground acceleration and peak ground velocity
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGV,
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV, PGA, SA}
 
     #: Supported intensity measure component is the geometric mean component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     REQUIRES_DISTANCES = {'rrup'}
 
     REQUIRES_RUPTURE_PARAMETERS = {'hypo_depth', 'mag'}
 
     REQUIRES_SITES_PARAMETERS = {'fpeak', 'vs30', 'z2pt5'}
+
+    REQUIRES_ATTRIBUTES = {'kappa', 'backarc', 'forearc_ne', 'forearc_sw'}
 
     def __init__(self, kappa=0.04, backarc=0, forearc_ne=1, forearc_sw=0,
                  **kwargs):
@@ -85,26 +278,28 @@ class HassaniAtkinson2020SInter(GMPE):
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
 
-        dsigma = self._dsigma(rup.hypo_depth)
-        fm = self._fm_ha18(C, rup.mag)
-        fm_pga = self._fm_ha18(C_PGA, rup.mag)
-        fz = self._fz_ha18(C, rup.mag, dists.rrup)
-        fz_pga = self._fz_ha18(C_PGA, rup.mag, dists.rrup)
-        fdsigma = self._fds_ha18(C, rup.mag, dsigma)
-        fdsigma_pga = self._fds_ha18(C_PGA, rup.mag, dsigma)
-        fkappa = self._fkp_ha18(C, rup.mag, dsigma)
-        fkappa_pga = self._fkp_ha18(C_PGA, rup.mag, dsigma)
-        fgamma = self._fgamma(C, dists.rrup)
-        fgamma_pga = self._fgamma(C_PGA, dists.rrup)
-        clf = self._clf(C, rup.mag)
-        clf_pga = self._clf(C_PGA, rup.mag)
+        dsigma = _dsigma(self.CONST_REGION, rup.hypo_depth)
+        fm = _fm_ha18(C, rup.mag)
+        fm_pga = _fm_ha18(C_PGA, rup.mag)
+        fz = _fz_ha18(self.CONST_REGION['rt'], C, rup.mag, dists.rrup)
+        fz_pga = _fz_ha18(self.CONST_REGION['rt'], C_PGA, rup.mag, dists.rrup)
+        fdsigma = _fds_ha18(C, rup.mag, dsigma)
+        fdsigma_pga = _fds_ha18(C_PGA, rup.mag, dsigma)
+        fkappa = _fkp_ha18(self.kappa, C, rup.mag, dsigma)
+        fkappa_pga = _fkp_ha18(self.kappa, C_PGA, rup.mag, dsigma)
+        fgamma = _fgamma(self.SUFFIX, self.backarc, self.forearc_ne,
+                         self.forearc_sw, C, dists.rrup)
+        fgamma_pga = _fgamma(self.SUFFIX, self.backarc, self.forearc_ne,
+                             self.forearc_sw, C_PGA, dists.rrup)
+        clf = _clf(self.SUFFIX, C, rup.mag)
+        clf_pga = _clf(self.SUFFIX, C_PGA, rup.mag)
         pga_rock = 10 ** (fm_pga + fz_pga + fdsigma_pga +
                           fkappa_pga + fgamma_pga + self.CONST_REGION['cc'] +
                           clf_pga + C_PGA['chf'] + C_PGA['amp_cr'])
-        fsnonlin = self._fsnonlin_ss14(C, sites.vs30, pga_rock)
-        fvs30 = self._fvs30(C, sites.vs30)
-        fz2pt5 = self._fz2pt5(C, sites.z2pt5)
-        ffpeak = self._ffpeak(C, imt, sites.fpeak)
+        fsnonlin = _fsnonlin_ss14(C, sites.vs30, pga_rock)
+        fvs30 = _fvs30(C, sites.vs30)
+        fz2pt5 = _fz2pt5(C, sites.z2pt5)
+        ffpeak = _ffpeak(C, imt, sites.fpeak)
 
         mean = 10 ** (fm + fdsigma + fz + fkappa + fgamma
                       + self.CONST_REGION['cc'] + clf + C['chf']
@@ -115,194 +310,9 @@ class HassaniAtkinson2020SInter(GMPE):
             mean = mean / 981
         mean = np.log(mean)
 
-        stddevs = self.get_stddevs(C, stddev_types)
+        stddevs = get_stddevs(self.SUFFIX, C, stddev_types)
 
         return mean, stddevs
-
-    def get_stddevs(self, C, stddev_types):
-        """
-        Between event standard deviations as tau.
-        Intra event from site to site stddev and within site stddev.
-        Total given in COEFFS to 3dp.
-        """
-        stddevs = []
-        for stddev in stddev_types:
-            assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev == const.StdDev.TOTAL:
-                stddevs.append(C['s' + self.SUFFIX])
-            elif stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'])
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(math.sqrt(C['ps2s'] ** 2
-                                         + C['pss' + self.SUFFIX] ** 2))
-
-        return stddevs
-
-    def _clf(self, C, mag):
-        """
-        Low frequency calibration factor.
-        """
-        clf0 = C['clf0' + self.SUFFIX]
-        clf1 = C['clf1' + self.SUFFIX]
-        mlf0 = self.CONSTANTS["mlf0"]
-
-        if mag > mlf0:
-            return clf0 + clf1 * (min(mag, self.CONSTANTS["mlf1"]) - mlf0)
-        return clf0
-
-    def _dsigma(self, hypo_depth):
-        """
-        Hypocentre depth factor.
-        """
-        out = self.CONST_REGION['cd0']
-        dp0 = self.CONST_REGION['dp0']
-        if hypo_depth > dp0:
-            out += self.CONST_REGION['cd1'] \
-                   * (min(hypo_depth, self.CONST_REGION['dp1']) - dp0)
-
-        return 10 ** out
-
-    def _fds_ha18(self, C, mag, dsigma):
-        """
-        Dsigma factor.
-        """
-        eds1 = np.polyval([C['g14'], C['g13'], C['g12'], C['g11'], C['g10']],
-                          mag)
-        eds2 = np.polyval([C['g24'], C['g23'], C['g22'], C['g21'], C['g20']],
-                          mag)
-        eds0 = -2 * eds1 - 4 * eds2
-
-        return eds0 + eds1 * math.log10(dsigma) \
-            + eds2 * math.log10(dsigma) ** 2
-
-    def _ffpeak(self, C, imt, fpeak):
-        """
-        Fpeak factor.
-        """
-        if not imt.name == "SA" or max(fpeak) <= 0:
-            # pgv, pga or unknown fpeak
-            return 0
-
-        s = self.CONSTANTS
-        x = fpeak / 10 ** C['f']
-
-        ffpeak = np.where(fpeak <= 0, 0, s['cfp0'])
-
-        idx = np.where((s['x0'] < x) & (x <= s['x1']))
-        ffpeak[idx] = s['cfp0'] + s['cfp1'] * np.log10(x[idx] / s['x0'])
-
-        idx = np.where((s['x1'] < x) & (x <= s['x2']))
-        ffpeak[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
-            + s['cfp2'] * np.log10(x[idx] / s['x1'])
-
-        idx = np.where(s['x2'] < x)
-        ffpeak[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
-            + s['cfp2'] * math.log10(s['x2'] / s['x1']) \
-            + s['cfp3'] * np.log10(x[idx] / s['x2'])
-
-        return ffpeak
-
-    def _fgamma(self, C, rrup):
-        """
-        Gamma factor.
-        """
-        # proportion sum for normalised values with rrup factor
-        p_sum = rrup / (self.backarc + self.forearc_ne + self.forearc_sw)
-
-        return C['barc' + self.SUFFIX] * self.backarc * p_sum \
-            + C['farc_ne' + self.SUFFIX] * self.forearc_ne * p_sum \
-            + C['farc_sw' + self.SUFFIX] * self.forearc_sw * p_sum
-
-    def _fkp_ha18(self, C, mag, dsigma):
-        """
-        Kappa factor for B/C site condition of Japan.
-        """
-        l10kp = math.log10(self.kappa)
-
-        p = np.zeros(4)
-        ek0 = np.zeros(4)
-        for i in range(4):
-            for j in range(4):
-                p[j] = np.polyval([C[f'd{i}{j}2'], C[f'd{i}{j}1'],
-                                   C[f'd{i}{j}0']], math.log10(dsigma))
-            ek0[i] = np.polyval(p[::-1], math.log10(mag))
-        return 3 * ek0[0] - 9 * ek0[1] + 27 * ek0[2] - 81 * ek0[3] \
-            + ek0[0] * l10kp + ek0[1] * l10kp ** 2 \
-            + ek0[2] * l10kp ** 3 + ek0[3] * l10kp ** 4
-
-    def _fm_ha18(self, C, mag):
-        """
-        Magnitude factor.
-        """
-        if mag <= C['mh']:
-            return C['e0'] + C['e1'] * (mag - C['mh']) \
-                   + C['e2'] * (mag - C['mh']) ** 2
-        return C['e0'] + C['e3'] * (mag - C['mh'])
-
-    def _fsnonlin_ss14(self, C, vs30, pga_rock):
-        """
-        Non-linear factor.
-        """
-        s = self.CONSTANTS
-
-        f2 = C['f4'] * (np.exp(C['f5']
-                               * (np.minimum(vs30, s['vref']) - s['vmin']))
-                        - math.exp(C['f5'] * (s['vref'] - s['vmin'])))
-
-        return s['f1'] + f2 * np.log((pga_rock + s['f3']) / s['f3'])
-
-    def _fvs30(self, C, vs30):
-        """
-        Vs30 factor.
-        """
-        s = self.CONSTANTS
-        fvs30 = np.where(vs30 <= s['v0'],
-                         C['cv1'] * math.log10(s['v0'] / s['vref'])
-                         + (C['cv2'] - C['cv1'])
-                         * math.log10(s['v1'] / s['vref']),
-                         C['cv2'] * math.log10(s['v2'] / s['vref']))
-        fvs30 = np.where((s['v0'] < vs30) & (vs30 <= s['v1']),
-                         C['cv1'] * np.log10(vs30 / s['vref'])
-                         + (C['cv2'] - C['cv1'])
-                         * math.log10(s['v1'] / s['vref']), fvs30)
-        return np.where((s['v1'] < vs30) & (vs30 <= s['v2']),
-                        C['cv2'] * np.log10(vs30 / s['vref']), fvs30)
-
-    def _fz2pt5(self, C, z2pt5):
-        """
-        Z2pt5 factor.
-        """
-        s = self.CONSTANTS
-        fz2pt5 = np.where(z2pt5 >= 0, C['cz0'], 0)
-
-        idx = np.where((s['zx0'] < z2pt5) & (z2pt5 <= s['zx1']))
-        fz2pt5[idx] = C['cz0'] + C['cz1'] * np.log10(z2pt5[idx] / s['zx0'])
-
-        idx = np.where((s['zx1'] < z2pt5) & (z2pt5 <= s['zx2']))
-        fz2pt5[idx] = C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0']) \
-            + C['cz2'] * np.log10(z2pt5[idx] / s['zx1'])
-
-        idx = np.where(s['zx2'] < z2pt5)
-        fz2pt5[idx] = C['cz0'] + C['cz1'] * math.log10(s['zx1'] / s['zx0']) \
-            + C['cz2'] * math.log10(s['zx2'] / s['zx1'])
-
-        return fz2pt5
-
-    def _fz_ha18(self, C, mag, rrup):
-        """
-        Z factor.
-        """
-        s = self.CONSTANTS
-        h = 10 ** (-0.405 + 0.235 * mag)
-        ref = np.sqrt(rrup ** 2 + h ** 2)
-        rref = math.sqrt(1 ** 2 + h ** 2)
-        rt = self.CONST_REGION['rt']
-
-        return np.where(ref <= rt, s['b1'] * np.log10(ref)
-                        + (C['b3'] + C['b4'] * mag) * np.log10(ref / rref),
-                        s['b1'] * math.log10(rt)
-                        + s['b2'] * np.log10(ref / rt)
-                        + (C['b3'] + C['b4'] * mag) * np.log10(ref / rref))
 
     # periods given by 1 / 10 ** COEFFS['f']
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -345,12 +355,6 @@ class HassaniAtkinson2020SInter(GMPE):
     # constant table suffix
     SUFFIX = "_if"
 
-    CONSTANTS = {"mlf0": 5.5, "mlf1": 7, "f1": 0, "f3": 98.1,
-                 "b1": -1.3, "b2": -0.5, "v0": 100, "v1": 250, "v2": 1000,
-                 "zx0": 150, "zx1": 800, "zx2": 4200,
-                 "cfp0": -0.011, "cfp1": 0.421, "cfp2": -0.604, "cfp3": 0.086,
-                 "x0": 0.5, "x1": 1, "x2": 2.5, "vref": 760, "vmin": 360}
-
     CONST_REGION = {"cc": 0.85, "rt": 150,
                     "cd0": 1.606, "cd1": 0.0097, "dp0": 25, "dp1": 55}
 
@@ -359,7 +363,6 @@ class HassaniAtkinson2020SSlab(HassaniAtkinson2020SInter):
     """
     Hassani Atkinson (2020) for Subduction IntraSlab.
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     # constant table suffix
@@ -373,7 +376,6 @@ class HassaniAtkinson2020Asc(HassaniAtkinson2020SInter):
     """
     Hassani Atkinson (2020) for Crustal.
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     # constant table suffix
