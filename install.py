@@ -295,12 +295,12 @@ def install(inst, version):
     if inst is server and os.path.exists('/usr/lib/systemd/system'):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
-            service_path = '/etc/systemd/system/' + service_name
+            service_path = '/etc/systemd/system/multi-user.target.wants/' + service_name
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)
                     f.write(srv)
-            subprocess.check_call(['systemctl', 'enable', service_name])
+            subprocess.check_call(['systemctl', 'enable', '--now', service_name])
             subprocess.check_call(['systemctl', 'start', service_name])
 
     # download and unzip the demos
