@@ -157,7 +157,6 @@ class ContextMaker(object):
         self.num_epsilon_bins = param.get('num_epsilon_bins', 1)
         self.grp_id = param.get('grp_id', 0)
         self.effect = param.get('effect')
-        self.task_no = getattr(monitor, 'task_no', 0)
         for req in self.REQUIRES:
             reqset = set()
             for gsim in gsims:
@@ -189,8 +188,6 @@ class ContextMaker(object):
                     arr[k] = kw[k]
             else:
                 self.fake[gsim] = hdf5.ArrayWrapper((), kw)
-        self.mon = monitor
-        self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         self.shift_hypo = param.get('shift_hypo')
         with warnings.catch_warnings():
@@ -200,12 +197,17 @@ class ContextMaker(object):
                 if imt != 'MMI':
                     self.loglevels[imt] = numpy.log(imls)
 
-        # instantiate monitors
+        self.init_monitoring(monitor)
+        self.newapi = any(hasattr(gs, 'calc_mean_stds') for gs in self.gsims)
+        self.compile()
+
+    def init_monitoring(self, monitor):
+        # instantiate child monitors
+        self.ctx_mon = monitor('make_contexts', measuremem=False)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.newapi = any(hasattr(gs, 'calc_mean_stds') for gs in self.gsims)
-        self.compile()
+        self.task_no = getattr(monitor, 'task_no', 0)
 
     def compile(self):
         """
