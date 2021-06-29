@@ -295,7 +295,7 @@ def install(inst, version):
     if inst is server and os.path.exists('/usr/lib/systemd/system'):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
-            service_path = '/usr/lib/systemd/system/' + service_name
+            service_path = '/etc/systemd/system/' + service_name
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)
