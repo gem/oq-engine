@@ -25,7 +25,6 @@ import abc
 import math
 import warnings
 import functools
-import collections
 import numpy
 from scipy.special import ndtr
 from scipy.stats import norm
@@ -541,6 +540,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         params.update(cls.__base__.REQUIRES_ATTRIBUTES)
         for attr, ctable in vars(cls).items():
             if isinstance(ctable, CoeffsTable):
+                if not attr.startswith('COEFFS'):
+                    raise NameError('%s does not start with COEFFS' % attr)
                 params[attr] = ctable.dt.dtype
         names = sorted(params)
         cls.dType = DType(names, [params[p] for p in names])

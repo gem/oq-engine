@@ -75,12 +75,12 @@ class Atkinson2008prime(BooreAtkinson2011):
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
 
-        A08 = self.A08_COEFFS[imt]
+        A08 = self.COEFFS_A08[imt]
         f_ena = 10.0 ** (A08["c"] + A08["d"] * dists.rjb)
 
         return np.log(np.exp(mean)*f_ena), stddevs
 
-    A08_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_A08 = CoeffsTable(sa_damping=5, table="""\
     IMT         c         d
     pgv     0.450   0.00211
     pga     0.419   0.00039

@@ -73,7 +73,7 @@ class EasternCan15Mid(PezeshkEtAl2011):
         """
         """
         if imt.period:
-            cff = self.SITE_COEFFS[imt]
+            cff = self.COEFFS_SITE[imt]
             tmp = cff['mf']
         elif imt in [PGA()]:
             tmp = -0.3+0.15*np.log10(dists.repi)
@@ -152,7 +152,7 @@ class EasternCan15Mid(PezeshkEtAl2011):
         #
         return mean_adj, stds_adj
 
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     IMT        mf
     0.05    -0.10
     0.10     0.03

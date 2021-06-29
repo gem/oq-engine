@@ -149,9 +149,9 @@ class YenierAtkinson2015BSSA(GMPE):
 
     def _get_mean_on_rock(self, sctx, rctx, dctx, imt, stddev_types):
         # Get coefficients
-        C2 = self.TAB2[imt]
-        C3 = self.TAB3[imt]
-        C4 = self.TAB4[imt]
+        C2 = self.COEFFS_TAB2[imt]
+        C3 = self.COEFFS_TAB3[imt]
+        C4 = self.COEFFS_TAB4[imt]
         # Magnitude effect
         f_m = self._get_f_m(C2, imt, rctx.mag)
         # Stress adjustment
@@ -319,7 +319,7 @@ class YenierAtkinson2015BSSA(GMPE):
             msg = fmt.format(region)
             raise ValueError(msg)
 
-    TAB2 = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_TAB2 = CoeffsTable(sa_damping=5, table="""\
    imt    Mh        e0      e1       e2      e3      b3        b4
   0.01  5.85  2.227000  0.6874 -0.13630  0.7643 -0.6209  0.060570
  0.013  5.90  2.281000  0.6855 -0.12900  0.7617 -0.6259  0.061290
@@ -356,7 +356,7 @@ class YenierAtkinson2015BSSA(GMPE):
    PGV  5.90  5.960000  1.0300 -0.16510  1.0790 -0.5785  0.057370
 """)
 
-    TAB3 = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_TAB3 = CoeffsTable(sa_damping=5, table="""\
    imt      s0      s1       s2        s3        s4        s5       s6       s7        s8        s9
   0.01 -2.0480  1.8810 -0.49010  0.056680 -0.002433 -1.437000  1.24200 -0.28920  0.030880 -0.001252
  0.013 -1.9220  1.8020 -0.47130  0.054710 -0.002357 -1.348000  1.19500 -0.27990  0.030060 -0.001225
@@ -393,7 +393,7 @@ class YenierAtkinson2015BSSA(GMPE):
    PGV -2.2460  1.9510 -0.51810  0.061390 -0.002725 -1.758000  1.37900 -0.32560  0.035000 -0.001425
 """)
 
-    TAB4 = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_TAB4 = CoeffsTable(sa_damping=5, table="""\
    imt     gCENA  gCalifornia
   0.01 -0.004661    -0.009823
  0.013 -0.004693    -0.009833
