@@ -214,7 +214,7 @@ def install(inst, version):
         try:
             pwd.getpwnam('openquake')
         except KeyError:
-            subprocess.check_call(['useradd', 'openquake'])
+            subprocess.check_call(['useradd', '-m', '-U', 'openquake'])
             print('Created user openquake')
 
     # create the database
