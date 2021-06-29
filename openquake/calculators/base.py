@@ -800,7 +800,8 @@ class HazardCalculator(BaseCalculator):
                              len(self.crmodel.taxonomies), len(taxonomies))
                 self.crmodel = self.crmodel.reduce(taxonomies)
                 self.crmodel.tmap = tmap
-            self.crmodel.reduce_cons_model(self.assetcol.tagcol)
+            if 'taxonomy_mapping' not in self.oqparam.inputs:
+                self.crmodel.reduce_cons_model(self.assetcol.tagcol)
 
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs:

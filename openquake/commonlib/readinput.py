@@ -884,18 +884,23 @@ def get_crmodel(oqparam):
         for by, fnames in oqparam.inputs['consequence'].items():
             if isinstance(fnames, str):  # single file
                 fnames = [fnames]
-            for fname in fnames:
-                dtypedict = {
-                    by: str, 'consequence': str, 'loss_type': str, None: float}
-                dic = group_array(
-                    hdf5.read_csv(fname, dtypedict).array, 'consequence')
-                for consequence, group in dic.items():
-                    if consequence not in scientific.KNOWN_CONSEQUENCES:
-                        raise InvalidFile('Unknown consequence %s in %s' %
-                                          (consequence, fname))
-                    bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
-                             for tag, grp in group_array(group, by).items()}
-                    consdict['%s_by_%s' % (consequence, by)] = bytag
+            dtypedict = {
+                by: str, 'consequence': str, 'loss_type': str, None: float}
+
+            # i.e. collapsed.csv, fatalities.csv, ...
+            array = numpy.concatenate([
+                hdf5.read_csv(fname, dtypedict).array for fname in fnames])
+
+            dic = group_array(array, 'consequence')
+            for consequence, group in dic.items():
+                if consequence not in scientific.KNOWN_CONSEQUENCES:
+                    raise InvalidFile('Unknown consequence %s in %s' %
+                                      (consequence, fnames))
+                bytag = {tag: _cons_coeffs(grp, risklist.limit_states)
+                         for tag, grp in group_array(group, by).items()}
+                consdict['%s_by_%s' % (consequence, by)] = bytag
+    # for instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
+    # is [(0.05,), (0.2 ,), (0.6 ,), (1.  ,)] for damage state and structural
     crm = riskmodels.CompositeRiskModel(oqparam, risklist, consdict)
     return crm
 
@@ -1009,7 +1014,7 @@ def taxonomy_mapping(oqparam, taxonomies):
         lst = [[(taxo, 1)] for taxo in taxonomies]
         return {lt: lst for lt in oqparam.loss_names}
     dic = oqparam.inputs['taxonomy_mapping']
-    if isinstance(dic, str):  # filename
+    if isinstance(dic, str):  # same file for all loss_types
         dic = {lt: dic for lt in oqparam.loss_names}
     return {lt: _taxonomy_mapping(dic[lt], taxonomies)
             for lt in oqparam.loss_names}

@@ -18,6 +18,7 @@
 import re
 import ast
 import copy
+import logging
 import operator
 import functools
 import collections
@@ -480,14 +481,16 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param loss_type: loss type as a string
         :returns: a dict consequence_name -> array of length E
         """
-        csq = {}  # consequence -> values per event
+        csq = AccumDict(accum=0)  # consequence -> values per event
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, tagname = byname.split('_by_')
-                cs = coeffs[asset[tagname]][loss_type]
-                csq[consequence] = scientific.consequence(
-                    consequence, cs, asset, fractions[:, 1:], loss_type)
+                for tag, weight in self.tmap[loss_type][asset[tagname]]:
+                    cs = coeffs[tag][loss_type]
+                    csq[consequence] += scientific.consequence(
+                        consequence, cs, asset, fractions[:, 1:], loss_type
+                    ) * weight
         return csq
 
     def init(self):
@@ -589,6 +592,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                  [(dc, dt) for dc in self.get_dmg_csq()])
         return numpy.dtype(descr)
 
+    # called only in absence of a taxonomy mapping
     def reduce_cons_model(self, tagcol):
         """
         Convert the dictionaries tag -> coeffs in the consequence model
@@ -600,6 +604,9 @@ class CompositeRiskModel(collections.abc.Mapping):
             tagidx = tagcol.get_tagidx(tagname)
             newdic = {tagidx[tag]: cf for tag, cf in dic.items()
                       if tag in tagidx}  # tag in the exposure
+            if not newdic:
+                logging.warning('%s: no assets with known tags',
+                                consequence_by_tagname)
             self.consdict[consequence_by_tagname] = newdic
 
     @cached_property
