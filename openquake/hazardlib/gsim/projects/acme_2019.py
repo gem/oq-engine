@@ -49,7 +49,6 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
 
     It also fixes vs30 to 760 m/s
     """
-
     adapted = True
 
     def __init__(self):
@@ -68,7 +67,6 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
     - Centered Ztor = 0
     - Centered Dpp = 0
     """
-
     adapted = True
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
