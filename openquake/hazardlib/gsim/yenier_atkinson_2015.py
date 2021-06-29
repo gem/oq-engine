@@ -71,9 +71,9 @@ def _get_c_e(region, imt):
     """
     if region == 'CENA':
         # See equation 23 page 2003 of Yenier and Atkinson
-        if str(imt) == 'PGA':
+        if imt.name == 'PGA':
             return -0.25
-        elif str(imt) == 'PGV':
+        elif imt.name == 'PGV':
             return -0.21
         elif imt.period <= 10.:
             return -0.25 + np.max([0, 0.39*np.log(imt.period/2)])
@@ -93,9 +93,9 @@ def _get_c_p(region, imt, rrup, m):
     """
     if region == 'CENA':
         # See equations 24 and 25 page 2003 of Yenier and Atkinson
-        if str(imt) == 'PGA':
+        if imt.name == 'PGA':
             delta_b3 = 0.030
-        elif str(imt) == 'PGV':
+        elif imt.name == 'PGV':
             delta_b3 = 0.052
         elif imt.period <= 10.:
             tmp = 0.095*np.log(imt.period/0.065)
