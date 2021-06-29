@@ -640,9 +640,9 @@ class NGAEastGMPE(GMPETable):
         (Hashash et al., 2019) amplification terms
         """
         # Get the coefficients for the IMT
-        C_LIN = self.LINEAR_COEFFS[imt]
-        C_F760 = self.F760[imt]
-        C_NL = self.NONLINEAR_COEFFS[imt]
+        C_LIN = self.COEFFS_LINEAR[imt]
+        C_F760 = self.COEFFS_F760[imt]
+        C_NL = self.COEFFS_NONLINEAR[imt]
         if str(imt).startswith("PGA"):
             period = 0.01
         elif str(imt).startswith("PGV"):
@@ -725,7 +725,7 @@ class NGAEastGMPE(GMPETable):
 
     # Coefficients for the linear model, taken from the electronic supplement
     # to Stewart et al., (2017)
-    LINEAR_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_LINEAR = CoeffsTable(sa_damping=5, table="""\
     imt           c      v1       v2      vf  sigma_vc  sigma_L  sigma_U
     pgv      -0.449   331.0    760.0   314.0     0.251    0.306    0.334
     pga      -0.290   319.0    760.0   345.0     0.300    0.345    0.480
@@ -754,7 +754,7 @@ class NGAEastGMPE(GMPETable):
 
     # Coefficients for the nonlinear model, taken from Table 2.1 of
     # Hashash et al., (2017)
-    NONLINEAR_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_NONLINEAR = CoeffsTable(sa_damping=5, table="""\
     imt          f3         f4         f5     Vc   sigma_c
     pgv     0.06089   -0.08344   -0.00667   2257.0   0.120
     pga     0.07520   -0.43755   -0.00131   2990.0   0.120
@@ -785,7 +785,7 @@ class NGAEastGMPE(GMPETable):
     # to those needed in order to reproduce Figure 5 of Petersen et al. (2019)
     # The original f760i was 0.674 +/- 0.366, and the values below are taken
     # from the US NSHMP software
-    F760 = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_F760 = CoeffsTable(sa_damping=5, table="""\
     imt       f760i     f760g   f760is   f760gs
     pgv      0.3753     0.297    0.313    0.117
     pga      0.1850     0.121    0.434    0.248

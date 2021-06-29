@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Forced a name convention on the coefficient tables (must start with COEFFS)
   * Replaced IMT classes with factory functions
   * Changed the `minimum_distance` from a parameter of the GMPE to a
     parameter in the job.ini

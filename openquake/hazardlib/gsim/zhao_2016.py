@@ -491,7 +491,7 @@ class ZhaoEtAl2016Asc(GMPE):
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
-        C_SITE = self.SITE_COEFFS[imt]
+        C_SITE = self.COEFFS_SITE[imt]
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         s_c, idx = _get_site_classification(sites.vs30)
         sa_rock = (get_magnitude_scaling_term(trt, C, rup) +
@@ -555,7 +555,7 @@ class ZhaoEtAl2016Asc(GMPE):
     """)
 
     # Coefficients specific to the site amplification
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     imt    LnAmax1D1   LnAmax1D2   LnAmax1D3   LnAmax1D4     Src1D1     Src1D2     Src1D3     Src1D4      fsr1      fsr2      fsr3      fsr4
     pga     0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440  1.000000  1.000000  1.000000  1.000000
     0.005   0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440  1.000000  1.000000  1.000000  1.000000
@@ -614,7 +614,7 @@ class ZhaoEtAl2016UpperMantle(ZhaoEtAl2016Asc):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.UPPER_MANTLE
 
     # For Upper Mantle
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     imt    LnAmax1D1   LnAmax1D2   LnAmax1D3   LnAmax1D4     Src1D1     Src1D2     Src1D3     Src1D4      fsr1      fsr2      fsr3      fsr4
     pga     0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440  1.000000  1.000000  1.000000  1.000000
     0.005   0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440  1.000000  1.000000  1.000000  1.000000
@@ -727,7 +727,7 @@ class ZhaoEtAl2016SInter(ZhaoEtAl2016Asc):
     """)
 
     # Coefficients specific to the site amplification
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     imt    LnAmax1D1   LnAmax1D2   LnAmax1D3   LnAmax1D4     Src1D1     Src1D2     Src1D3     Src1D4     fsr1    fsr2    fsr3    fsr4
     pga     0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440   1.0000  1.0000  1.1650  1.0000
     0.005   0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440   1.0000  1.0000  1.1650  1.0000
@@ -841,7 +841,7 @@ pga    -5.30118903954448  1.151  1.44758  0.37625  0.42646  0.01825668401347  -1
     """)
 
     # Coefficients specific to the site amplification
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     imt    LnAmax1D1   LnAmax1D2   LnAmax1D3   LnAmax1D4     Src1D1     Src1D2     Src1D3     Src1D4     fsr1    fsr2    fsr3    fsr4
     pga     0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440   1.0000  1.0000  1.0000  1.0000
     0.005   0.650220    0.709730    0.644340    0.404280   8.429000   1.913680   1.117140   0.836440   1.0000  1.0000  1.0000  1.0000

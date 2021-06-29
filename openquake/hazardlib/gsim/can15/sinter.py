@@ -82,13 +82,13 @@ class SInterCan15Mid(ZhaoEtAl2006SInter):
         mean_ga14, stds4 = g[2].get_mean_and_stddevs(
             sites, rup, dists, imt,  stddev_types)
         # Computing adjusted mean and stds
-        cff = self.SITE_COEFFS[imt]
+        cff = self.COEFFS_SITE[imt]
         mean_adj = (np.log(np.exp(mean_zh06)*cff['mf'])*0.1 +
                     mean_am09*0.5 + mean_ab15*0.2 +
                     np.log(np.exp(mean_ga14)*cff['mf'])*0.2)
         return mean_adj
 
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     IMT        mf
     pgv     1.000
     pga     0.500

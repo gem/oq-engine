@@ -217,13 +217,13 @@ class  PezeshkEtAl2011NEHRPBC(PezeshkEtAl2011):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        C_AMP = self.SITE_COEFFS[imt]
+        C_AMP = self.COEFFS_SITE[imt]
         # Get method from superclass
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, stddev_types)
         return mean + C_AMP["F"]*np.log(10.), stddevs
 
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""
     IMT         F
     pga         -0.10
     0.010       -0.10

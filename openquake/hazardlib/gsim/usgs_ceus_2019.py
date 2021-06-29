@@ -198,9 +198,9 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
             imean = np.copy(pga_r)
 
         # Get the coefficients for the IMT
-        C_LIN = self.LINEAR_COEFFS[imt]
-        C_F760 = self.F760[imt]
-        C_NL = self.NONLINEAR_COEFFS[imt]
+        C_LIN = self.COEFFS_LINEAR[imt]
+        C_F760 = self.COEFFS_F760[imt]
+        C_NL = self.COEFFS_NONLINEAR[imt]
 
         site_amp = self.get_site_amplification(imt, np.exp(pga_r), sctx)
 

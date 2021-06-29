@@ -212,9 +212,9 @@ class ESHM20Craton(GMPE):
         (Hashash et al., 2019) amplification terms
         """
         # Get the coefficients for the IMT
-        C_LIN = NGAEastGMPE.LINEAR_COEFFS[imt]
-        C_F760 = NGAEastGMPE.F760[imt]
-        C_NL = NGAEastGMPE.NONLINEAR_COEFFS[imt]
+        C_LIN = NGAEastGMPE.COEFFS_LINEAR[imt]
+        C_F760 = NGAEastGMPE.COEFFS_F760[imt]
+        C_NL = NGAEastGMPE.COEFFS_NONLINEAR[imt]
         if str(imt).startswith("PGA"):
             period = 0.01
         elif str(imt).startswith("PGV"):

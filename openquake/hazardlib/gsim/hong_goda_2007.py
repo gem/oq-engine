@@ -171,7 +171,7 @@ class HongGoda2007(GMPE):
         """
         C = self.COEFFS[imt]
         C_PGA = self.COEFFS[PGA()]
-        C_AMP = self.AMP_COEFFS[imt]
+        C_AMP = self.COEFFS_AMP[imt]
 
         # Gets the PGA on rock - need to convert from g to cm/s/s
         pga_rock = _compute_pga_rock(C_PGA, rup.mag, dists.rjb) * 980.665
@@ -217,7 +217,7 @@ class HongGoda2007(GMPE):
     3.00   -0.955    1.027   -0.265   -0.677   -0.029   2.3   0.420   0.594   0.728
     """)
 
-    AMP_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_AMP = CoeffsTable(sa_damping=5, table="""\
     imt           blin       b1sa       b2sa
     pgv       -0.60000   -0.49500   -0.06000
     pga       -0.36100   -0.64100   -0.14400

@@ -52,7 +52,7 @@ class McVerry2006Chch(McVerry2006AscSC):
         C = self.COEFFS_PRIMED[imt]
         C_PGA = self.COEFFS_PRIMED[PGA()]
         C_PGA_unprimed = self.COEFFS_UNPRIMED[PGA()]
-        SC = self.STRESS_COEFFS[imt]
+        SC = self.COEFFS_STRESS[imt]
 
         # Get S term to determine if consider site term is applied
         S = self._get_site_class(sites)
@@ -178,7 +178,7 @@ class McVerry2006Chch(McVerry2006AscSC):
         return in_cshm
 
     #: Coefficient table (Atkinson and Boore, 2006, table 7, page 2201)
-    STRESS_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_STRESS = CoeffsTable(sa_damping=5, table="""\
     IMT    delta  M1    Mh
     pga    0.15   0.50  5.50
     0.025  0.15   0.00  5.00
