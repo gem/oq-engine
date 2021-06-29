@@ -292,10 +292,10 @@ def install(inst, version):
             print(f'Please activate the venv with source {inst.VENV}/bin/activate')
 
     # create systemd services
-    if inst is server and os.path.exists('/lib/systemd/system'):
+    if inst is server and os.path.exists('/usr/lib/systemd/system'):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
-            service_path = '/lib/systemd/system/' + service_name
+            service_path = '/usr/lib/systemd/system/' + service_name
             if not os.path.exists(service_path):
                 with open(service_path, 'w') as f:
                     srv = SERVICE.format(service=service, OQDATA=inst.OQDATA)
@@ -330,7 +330,7 @@ def remove(inst):
     if inst is server:
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
-            service_path = '/lib/systemd/system/' + service_name
+            service_path = '/usr/lib/systemd/system/' + service_name
             if os.path.exists(service_path):
                 subprocess.check_call(['systemctl', 'stop', service_name])
                 print('stopped ' + service_name)
