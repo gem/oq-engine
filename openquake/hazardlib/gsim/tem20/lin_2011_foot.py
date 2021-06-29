@@ -27,12 +27,29 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _compute_mean(C, mag, rrup, mean, idx):
+    """
+    Compute mean value according to equations 10 and 11 page 226.
+    """
+    mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rrup[idx] +
+                 C['C4'] * np.exp(C['C5'] * mag)))
+
+
+def _compute_std(C, stddevs, idx):
+    """
+    Compute total standard deviation, see tables 3 and 4, pages 227 and
+    228.
+    """
+    for stddev in stddevs:
+        stddev[idx] += C['sigma']
+
+
 class Lin2011foot(GMPE):
     """
     Implements GMPE developed by Po-Shen Lin and others and published as
     "Response spectral attenuation relations for shallow crustal earthquakes
-    in Taiwan"
-    (Engineering Geology, Volume 121, Issues 3–4, 10 August 2011, Pages 150-164).
+    in Taiwan", Engineering Geology, Volume 121, Issues 3–4, 10 August 2011,
+    Pages 150-164.
     """
 
     #: Supported tectonic region type is active shallow crust.
@@ -40,31 +57,26 @@ class Lin2011foot(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see tables 3 and 4, pages 227 and 228.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components, see equation 10 page 226.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total, see equation 10 page 226.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).
-    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude, and focal depth, see
     #: equation 10 page 226.
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'hypo_depth'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is hypocentral distance, see equation 10
     #: page 226.
-    REQUIRES_DISTANCES = set(('rhypo', ))
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Vs30 threshold value between rock sites (B, C) and soil sites (C, D).
     ROCK_VS30 = 360
@@ -86,38 +98,21 @@ class Lin2011foot(GMPE):
 
         if idx_rock.any():
             C = self.COEFFS_ROCK[imt]
-            self._compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
-                               idx_rock)
-            self._compute_std(C, stddevs, idx_rock)
+            _compute_mean(C, rup.mag, dists.rrup, mean, idx_rock)
+            _compute_std(C, stddevs, idx_rock)
 
         if idx_soil.any():
             C = self.COEFFS_SOIL[imt]
-            self._compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
-                               idx_soil)
-            self._compute_std(C, stddevs, idx_soil)
+            _compute_mean(C, rup.mag, dists.rrup, mean, idx_soil)
+            _compute_std(C, stddevs, idx_soil)
 
         return mean, stddevs
-
-    def _compute_mean(self, C, mag, rhypo, hypo_depth, mean, idx):
-        """
-        Compute mean value according to equations 10 and 11 page 226.
-        """
-        mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rhypo[idx] +
-                     C['C4'] * np.exp(C['C5'] * mag)))
-
-    def _compute_std(self, C, stddevs, idx):
-        """
-        Compute total standard deviation, see tables 3 and 4, pages 227 and
-        228.
-        """
-        for stddev in stddevs:
-            stddev[idx] += C['sigma']
 
     #: Coefficient table for rock sites, see table 3 page 153.
     COEFFS_ROCK = CoeffsTable(sa_damping=5, table="""\
     IMT      C1       C2        C3         C4         C5         sigma
     pga     -3.2320    1.047    -1.66200    0.19200    0.63000   0.6520
-    0.01    -3.1930    1.017    -1.61200    0.21000    0.59000   0.6480 
+    0.01    -3.1930    1.017    -1.61200    0.21000    0.59000   0.6480
     0.06    -2.6430    0.937    -1.60200    0.23000    0.55000   0.7090
     0.09    -2.0930    0.907    -1.64200    0.23000    0.55000   0.7550
     0.10    -1.9930    0.907    -1.65200    0.19000    0.59000   0.7560
@@ -134,7 +129,7 @@ class Lin2011foot(GMPE):
     5.00   -13.9850    1.957    -1.14500    0.00130    1.20200   0.7260
     """)
 
-     #: Coefficient table for soil sites, see table 4 page 153.
+    #: Coefficient table for soil sites, see table 4 page 153.
     COEFFS_SOIL = CoeffsTable(sa_damping=5, table="""\
     IMT      C1        C2         C3        C4         C5         sigma
     pga     -3.2180    0.935    -1.46400    0.12500    0.65000   0.6300

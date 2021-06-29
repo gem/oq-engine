@@ -34,5 +34,5 @@ class LinEtAl2011FootWallCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.1)
 
     def test_total_std(self):
-        self.check(os.path.join(DATA_PATH, 'Lin2011_TOTAL_STDDEV_hanging.csv'),
+        self.check(os.path.join(DATA_PATH, 'Lin2011_TOTAL_STDDEV_foot.csv'),
                    max_discrep_percentage=0.1)
