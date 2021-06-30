@@ -27,9 +27,9 @@ Module Exports :class: `CauzziEtAl2014RhypoGermany`,
 """
 import numpy as np
 from scipy.constants import g
-from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014
-from openquake.hazardlib.gsim.derras_2014 import DerrasEtAl2014
+from openquake.hazardlib.gsim.derras_2014 import (
+    DerrasEtAl2014, get_pn, _get_sof_dummy_variable, get_stddevs)
 
 
 def rhypo_to_rrup(rhypo, mag):
@@ -40,19 +40,6 @@ def rhypo_to_rrup(rhypo, mag):
     rrup = rhypo - (0.7108 + 2.496E-6 * (mag ** 7.982))
     rrup[rrup < 3.0] = 3.0
     return rrup
-
-
-def rhypo_to_rjb(rhypo, mag):
-    """
-    Converts hypocentral distance to an equivalent Joyner-Boore distance
-    dependent on the magnitude
-    """
-    epsilon = rhypo - (4.853 + 1.347E-6 * (mag ** 8.163))
-    rjb = np.zeros_like(rhypo)
-    idx = epsilon >= 3.
-    rjb[idx] = np.sqrt((epsilon[idx] ** 2.) - 9.0)
-    rjb[rjb < 0.0] = 0.0
-    return rjb
 
 
 # Cauzzi et al. 2014 - Converted from Rhypo
@@ -102,6 +89,8 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
     Re-calibration of the Derras et al. (2014) GMPE taking hypocentral
     distance as an input and converting to Rjb
     """
+    region = "germany"
+
     #: The required distance parameter is hypocentral distance
     REQUIRES_DISTANCES = {'rjb', 'rhypo'}
     REQUIRES_RUPTURE_PARAMETERS = {"rake", "mag", "hypo_depth", "width"}
@@ -127,7 +116,7 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
             mean = np.log((10.0 ** mean) / g)
 
         # Get the standard deviations
-        stddevs = self.get_stddevs(C, mean.shape, stddev_types)
+        stddevs = get_stddevs(C, mean.shape, stddev_types)
         return mean + self.adjustment_factor, stddevs
 
     def get_mean(self, C, rup, sites, dists):
@@ -137,12 +126,14 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
         """
         # W2 needs to be a 1 by 5 matrix (not a vector
         w_2 = np.array([
-            [C["W_21"], C["W_22"], C["W_23"], C["W_24"], C["W_25"]]
-            ])
+            [C["W_21"], C["W_22"], C["W_23"], C["W_24"], C["W_25"]]])
+
         # Gets the style of faulting dummy variable
-        sof = self._get_sof_dummy_variable(rup.rake)
+        sof = _get_sof_dummy_variable(rup.rake)
+
         # Get the normalised coefficients
-        p_n = self.get_pn(rup, sites, dists, sof)
+        p_n = get_pn(self.region, rup, sites, dists, sof)
+
         mean = np.zeros_like(dists.rhypo)
         # Need to loop over sites - maybe this can be improved in future?
         # ndenumerate is used to allow for application to 2-D arrays
@@ -154,38 +145,3 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
             mean[idx] = (0.5 * (mean_i + C["B_2"] + 1.0) *
                          (C["tmax"] - C["tmin"])) + C["tmin"]
         return mean
-
-    def get_pn(self, rup, sites, dists, sof):
-        """
-        Normalise the input parameters within their upper and lower
-        defined range
-        """
-        # List must be in following order
-        p_n = []
-        # Rjb
-        # Note that Rjb must be clipped at 0.1 km
-        if rup.width > 1.0E-3:
-            rjb = np.copy(dists.rjb)
-        else:
-            rjb = rhypo_to_rjb(dists.rhypo, rup.mag)
-        rjb[rjb < 0.1] = 0.1
-        p_n.append(self._get_normalised_term(np.log10(rjb),
-                                             self.CONSTANTS["logMaxR"],
-                                             self.CONSTANTS["logMinR"]))
-        # Magnitude
-        p_n.append(self._get_normalised_term(rup.mag,
-                                             self.CONSTANTS["maxMw"],
-                                             self.CONSTANTS["minMw"]))
-        # Vs30
-        p_n.append(self._get_normalised_term(np.log10(sites.vs30),
-                                             self.CONSTANTS["logMaxVs30"],
-                                             self.CONSTANTS["logMinVs30"]))
-        # Depth
-        p_n.append(self._get_normalised_term(rup.hypo_depth,
-                                             self.CONSTANTS["maxD"],
-                                             self.CONSTANTS["minD"]))
-        # Style of Faulting
-        p_n.append(self._get_normalised_term(sof,
-                                             self.CONSTANTS["maxFM"],
-                                             self.CONSTANTS["minFM"]))
-        return p_n
