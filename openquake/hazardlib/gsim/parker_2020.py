@@ -223,14 +223,10 @@ def _non_linear_term(C, imt, vs30, fp, fm, c0, fd=0):
     if hasattr(imt, "period") and imt.period >= 3:
         fnl = 0
     else:
-        fnl = C["f4"] * \
-            (np.exp(C["f5"] * (np.minimum(vs30, CONSTANTS["vref_fnl"])
-                               - CONSTANTS["Vb"]))
-             - math.exp(C["f5"]
-                        * (CONSTANTS["vref_fnl"]
-                           - CONSTANTS["Vb"])))
-        fnl *= np.log((pgar
-                       + CONSTANTS["f3"]) / CONSTANTS["f3"])
+        fnl = C["f4"] * (np.exp(C["f5"] * (
+            np.minimum(vs30, CONSTANTS["vref_fnl"]) - CONSTANTS["Vb"]))
+             - math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"])))
+        fnl *= np.log((pgar + CONSTANTS["f3"]) / CONSTANTS["f3"])
 
     return fnl
 
