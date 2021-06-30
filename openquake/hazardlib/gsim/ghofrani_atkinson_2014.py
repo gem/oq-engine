@@ -143,6 +143,7 @@ def _get_stddevs(C, num_sites, stddev_types):
     return stddevs
 
 
+# TODO: convert to one-parameter GMPE ("kind")
 class GhofraniAtkinson2014(GMPE):
     """
     Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014)
