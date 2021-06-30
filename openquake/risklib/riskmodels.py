@@ -787,7 +787,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 # ARGHH! doing the average on the eid field produces floats!
                 dic[lt].eid = numpy.uint32(dic[lt].eid)
             else:
-                dic[lt] = out[0]
+                dic[lt] = outs[0]
         return dic
 
     def get_rmodels_weights(self, loss_type, taxidx):
