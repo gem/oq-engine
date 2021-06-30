@@ -40,13 +40,13 @@
 
     - name: Download installation scripts only on master node
       get_url:
-        url: https://raw.githubusercontent.com/gem/oq-engine/master/install.py
+        url: https://raw.githubusercontent.com/gem/oq-engine/opensuse/install.py
         dest: /tmp/install.py
         mode: '0644'
       when: "'master' in group_names" 
 
     - name: Run install script from github repo  only on master node
-      shell: python3.8 /tmp/install.py server --version=master
+      shell: python3.8 /tmp/install.py devel_server
       changed_when: false
       register: oq_install
       when: "'master' in group_names" 
