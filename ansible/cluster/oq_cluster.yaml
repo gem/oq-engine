@@ -46,7 +46,7 @@
       when: "'master' in group_names" 
 
     - name: Run install script from github repo  only on master node
-      shell: python3.8 /tmp/install.py devel_server
+      shell: apt-get -y install git && cd /opt/openquake && git clone -b opensuse --depth=1 https://github.com/gem/oq-engine.git && python3.8 oq-engine/install.py devel_server
       changed_when: false
       register: oq_install
       when: "'master' in group_names" 
