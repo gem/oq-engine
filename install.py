@@ -193,7 +193,7 @@ def before_checks(inst, remove, usage):
         sys.exit('Error: you cannot perform a server installation unless '
                  'you are root. If you do not have root permissions, you '
                  'can install the engine in user mode.\n\n' + usage)
-    elif ((inst is not server and user == 'root') or (inst is not server and user == 'root')):
+    elif ((inst is not server and user == 'root') or (inst is not devel_server and user == 'root')):
         sys.exit('Error: you cannot perform a user or devel installation'
                  ' as root.')
 
