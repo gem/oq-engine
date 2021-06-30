@@ -32,6 +32,44 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
 LOG10 = np.log(10)
 
+#: "coefficient e_1 = 0.5 was selected for all periods in the present
+#: study." (p. 881)
+CONSTS = {'e': 0.5}
+
+
+def _compute_mag_dist_terms(rup, dists, coeffs):
+    """
+    Compute equation (5) and implcitly equation (6):
+
+    ``log(pre) = c + a*M + b*X - log(X + d*10^(e*M)) + epsilon``
+    """
+
+    log_pre = coeffs['c'] + coeffs['a']*rup.mag + coeffs['b']*dists.rrup \
+        - np.log10(dists.rrup + coeffs['d']*10**(coeffs['e']*rup.mag))
+
+    return log_pre
+
+
+def _compute_site_amplification(sites, coeffs):
+    """
+    Compute equation (8):
+
+    ``G = p*log(VS30) + q``
+    """
+
+    return coeffs['p']*np.log10(sites.vs30) + coeffs['q']
+
+
+def _get_stddevs(coeffs, num_sites, stddev_types):
+    """
+    Only total error is reported so this is a simple lookup.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        stddevs.append(np.zeros(num_sites) + coeffs['epsilon'])
+
+    return stddevs
+
 
 class Kanno2006Shallow(GMPE):
     # pylint: disable=too-few-public-methods
@@ -127,7 +165,7 @@ class Kanno2006Shallow(GMPE):
 
         """
         # merge coefficients
-        coeffs = self.CONSTS.copy()
+        coeffs = CONSTS.copy()
         cb = self.COEFFS_BASE[imt]
         cs = self.COEFFS_SITE[imt]
         for n in cb.dtype.names:
@@ -136,13 +174,13 @@ class Kanno2006Shallow(GMPE):
             coeffs[n] = cs[n]
 
         # compute bedrock motion, equation (5)
-        log_mean = self._compute_mag_dist_terms(rup, dists, coeffs)
+        log_mean = _compute_mag_dist_terms(rup, dists, coeffs)
 
         # make site corrections, equation (9)
-        log_mean += self._compute_site_amplification(sites, coeffs)
+        log_mean += _compute_site_amplification(sites, coeffs)
 
         # retrieve standard deviations
-        log_stddevs = self._get_stddevs(coeffs, sites.vs30.size, stddev_types)
+        log_stddevs = _get_stddevs(coeffs, sites.vs30.size, stddev_types)
 
         # convert from common to natural logarithm
         ln_mean = log_mean*LOG10
@@ -153,40 +191,6 @@ class Kanno2006Shallow(GMPE):
             ln_mean -= np.log(100*g)
 
         return ln_mean, ln_stddevs
-
-    @classmethod
-    def _compute_mag_dist_terms(cls, rup, dists, coeffs):
-        """
-        Compute equation (5) and implcitly equation (6):
-
-        ``log(pre) = c + a*M + b*X - log(X + d*10^(e*M)) + epsilon``
-        """
-
-        log_pre = coeffs['c'] + coeffs['a']*rup.mag + coeffs['b']*dists.rrup \
-            - np.log10(dists.rrup + coeffs['d']*10**(coeffs['e']*rup.mag))
-
-        return log_pre
-
-    @classmethod
-    def _compute_site_amplification(cls, sites, coeffs):
-        """
-        Compute equation (8):
-
-        ``G = p*log(VS30) + q``
-        """
-
-        return coeffs['p']*np.log10(sites.vs30) + coeffs['q']
-
-    def _get_stddevs(self, coeffs, num_sites, stddev_types):
-        """
-        Only total error is reported so this is a simple lookup.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            stddevs.append(np.zeros(num_sites) + coeffs['epsilon'])
-
-        return stddevs
 
     #: Coefficients obtained from author via personal communcation with
     #: slightly more precision than Table 3, p. 884.
@@ -277,12 +281,6 @@ class Kanno2006Shallow(GMPE):
         5 -0.5861  1.4560
       pgv -0.7057  1.7650
     """)
-
-    #: "coefficient e_1 = 0.5 was selected for all periods in the present
-    #: study." (p. 881)
-    CONSTS = {
-        'e': 0.5,
-    }
 
 
 class Kanno2006Deep(Kanno2006Shallow):

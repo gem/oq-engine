@@ -28,12 +28,122 @@ import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
-
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _get_distance_term(C, rrup, backarc):
+    """
+    Returns the distance scaling term, which varies depending on whether
+    the site is in the forearc or the backarc
+    """
+    # Geometric attenuation function
+    distance_scale = -np.log10(np.sqrt(rrup ** 2 + 3600.0))
+    # Anelastic attenuation in the backarc
+    distance_scale[backarc] += (C["c2"] * rrup[backarc])
+    # Anelastic Attenuation in the forearc
+    idx = np.logical_not(backarc)
+    distance_scale[idx] += (C["c1"] * rrup[idx])
+    return distance_scale
+
+
+def _get_magnitude_term(C, mag):
+    """
+    Returns the linear magnitude scaling term
+    """
+    return C["a"] + C["b"] * mag
+
+
+_get_scaling_term = CallableDict()
+
+
+@_get_scaling_term.add("base")
+def _get_scaling_term_1(kind, C, rrup):
+    """
+    Returns a scaling term, which is over-ridden in subclasses
+    """
+    return 0.0
+
+
+@_get_scaling_term.add("cascadia")
+def _get_scaling_term_2(kind, C, rrup):
+    """
+    Applies the log of the Cascadia multiplicative factor (as defined in
+    Table 2)
+    """
+    return C["af"]
+
+
+@_get_scaling_term.add("upper")
+def _get_scaling_term_3(kind, C, rrup):
+    """
+    Applies the positive correction factor given on Page 567
+    """
+    a_f = 0.15 + 0.0007 * rrup
+    a_f[a_f > 0.35] = 0.35
+    return a_f
+
+
+@_get_scaling_term.add("lower")
+def _get_scaling_term_4(kind, C, rrup):
+    """
+    Applies the negative correction factor given on Page 567
+    """
+    a_f = 0.15 + 0.0007 * rrup
+    a_f[a_f > 0.35] = 0.35
+    return -a_f
+
+
+@_get_scaling_term.add("cascadia_upper")
+def _get_scaling_term_5(kind, C, rrup):
+    """
+    Applies the Cascadia correction factor from Table 2 and the positive
+    correction factor given on Page 567
+    """
+    a_f = 0.15 + 0.0007 * rrup
+    a_f[a_f > 0.35] = 0.35
+    return C["af"] + a_f
+
+
+@_get_scaling_term.add("cascadia_lower")
+def _get_scaling_term_6(kind, C, rrup):
+    """
+    Applies the Cascadia correction factor from Table 2 and the negative
+    correction factor given on Page 567
+    """
+    a_f = 0.15 + 0.0007 * rrup
+    a_f[a_f > 0.35] = 0.35
+    return C["af"] - a_f
+
+
+def _get_site_term(C, vs30):
+    """
+    Returns the linear site scaling term
+    """
+    return C["c3"] * np.log10(vs30 / 760.0)
+
+
+def _get_stddevs(C, num_sites, stddev_types):
+    """
+    Returns the total, inter-event or intra-event standard deviation
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            sig_tot = np.sqrt(C["tau"] ** 2. + C["sigma"] ** 2.)
+            stddevs.append(np.log(10.0 ** sig_tot) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(
+                np.log(10.0 ** C["tau"]) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(
+                np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
+    return stddevs
+
+
+# TODO: convert to one-parameter GMPE ("kind")
 class GhofraniAtkinson2014(GMPE):
     """
     Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014)
@@ -42,26 +152,21 @@ class GhofraniAtkinson2014(GMPE):
     for Interface Earthquakes of M7 to M9 based on Empirical Data from Japan.
     Bulletin of Earthquake Engineering, 12, 549 - 571
     """
+    kind = "base"
+
     #: The GMPE is derived for subduction interface earthquakes in Japan
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     #: Supported intensity measure types are peak ground acceleration,
     #: peak ground velocity and spectral acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is assumed to be geometric mean
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation types is total.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-        const.StdDev.TOTAL,
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT, const.StdDev.TOTAL}
 
     #: The GMPE provides a Vs30-dependent site scaling term and a forearc/
     #: backarc attenuation term
@@ -81,68 +186,18 @@ class GhofraniAtkinson2014(GMPE):
         """
         C = self.COEFFS[imt]
 
-        imean = (self._get_magnitude_term(C, rup.mag) +
-                 self._get_distance_term(C, dists.rrup, sites.backarc) +
-                 self._get_site_term(C, sites.vs30) +
-                 self._get_scaling_term(C, dists.rrup))
+        imean = (_get_magnitude_term(C, rup.mag) +
+                 _get_distance_term(C, dists.rrup, sites.backarc) +
+                 _get_site_term(C, sites.vs30) +
+                 _get_scaling_term(self.kind, C, dists.rrup))
         # Convert mean from cm/s and cm/s/s and from common logarithm to
         # natural logarithm
         if imt.name in "SA PGA":
             mean = np.log((10.0 ** (imean - 2.0)) / g)
         else:
             mean = np.log((10.0 ** (imean)))
-        stddevs = self._get_stddevs(C, len(dists.rrup), stddev_types)
+        stddevs = _get_stddevs(C, len(dists.rrup), stddev_types)
         return mean, stddevs
-
-    def _get_magnitude_term(self, C, mag):
-        """
-        Returns the linear magnitude scaling term
-        """
-        return C["a"] + C["b"] * mag
-
-    def _get_distance_term(self, C, rrup, backarc):
-        """
-        Returns the distance scaling term, which varies depending on whether
-        the site is in the forearc or the backarc
-        """
-        # Geometric attenuation function
-        distance_scale = -np.log10(np.sqrt(rrup ** 2 + 3600.0))
-        # Anelastic attenuation in the backarc
-        distance_scale[backarc] += (C["c2"] * rrup[backarc])
-        # Anelastic Attenuation in the forearc
-        idx = np.logical_not(backarc)
-        distance_scale[idx] += (C["c1"] * rrup[idx])
-        return distance_scale
-
-    def _get_scaling_term(self, C, rrup):
-        """
-        Returns a scaling term, which is over-ridden in subclasses
-        """
-        return 0.0
-
-    def _get_site_term(self, C, vs30):
-        """
-        Returns the linear site scaling term
-        """
-        return C["c3"] * np.log10(vs30 / 760.0)
-
-    def _get_stddevs(self, C, num_sites, stddev_types):
-        """
-        Returns the total, inter-event or intra-event standard deviation
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sig_tot = np.sqrt(C["tau"] ** 2. + C["sigma"] ** 2.)
-                stddevs.append(np.log(10.0 ** sig_tot) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(
-                    np.log(10.0 ** C["tau"]) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(
-                    np.log(10.0 ** C["sigma"]) + np.zeros(num_sites))
-        return stddevs
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
     IMT        c0         a        b         c1         c2       c3   sig_init       af   sigma     tau   sig_tot
@@ -179,13 +234,7 @@ class GhofraniAtkinson2014Cascadia(GhofraniAtkinson2014):
     Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014)
     adapted for application to Cascadia
     """
-
-    def _get_scaling_term(self, C, rrup):
-        """
-        Applies the log of the Cascadia multiplicative factor (as defined in
-        Table 2)
-        """
-        return C["af"]
+    kind = "cascadia"
 
 
 class GhofraniAtkinson2014Upper(GhofraniAtkinson2014):
@@ -193,13 +242,7 @@ class GhofraniAtkinson2014Upper(GhofraniAtkinson2014):
     Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014)
     with the "upper" epistemic uncertainty model
     """
-    def _get_scaling_term(self, C, rrup):
-        """
-        Applies the positive correction factor given on Page 567
-        """
-        a_f = 0.15 + 0.0007 * rrup
-        a_f[a_f > 0.35] = 0.35
-        return a_f
+    kind = "upper"
 
 
 class GhofraniAtkinson2014Lower(GhofraniAtkinson2014):
@@ -207,13 +250,7 @@ class GhofraniAtkinson2014Lower(GhofraniAtkinson2014):
     Implements the Subduction Interface GMPE of Ghofrani & Atkinson (2014)
     with the "lower" epistemic uncertainty model
     """
-    def _get_scaling_term(self, C, rrup):
-        """
-        Applies the negative correction factor given on Page 567
-        """
-        a_f = 0.15 + 0.0007 * rrup
-        a_f[a_f > 0.35] = 0.35
-        return -a_f
+    kind = "lower"
 
 
 class GhofraniAtkinson2014CascadiaUpper(GhofraniAtkinson2014):
@@ -222,14 +259,7 @@ class GhofraniAtkinson2014CascadiaUpper(GhofraniAtkinson2014):
     with the "upper" epistemic uncertainty model and the Cascadia correction
     term.
     """
-    def _get_scaling_term(self, C, rrup):
-        """
-        Applies the Cascadia correction factor from Table 2 and the positive
-        correction factor given on Page 567
-        """
-        a_f = 0.15 + 0.0007 * rrup
-        a_f[a_f > 0.35] = 0.35
-        return C["af"] + a_f
+    kind = "cascadia_upper"
 
 
 class GhofraniAtkinson2014CascadiaLower(GhofraniAtkinson2014):
@@ -238,11 +268,4 @@ class GhofraniAtkinson2014CascadiaLower(GhofraniAtkinson2014):
     with the "lower" epistemic uncertainty model and the Cascadia correction
     term.
     """
-    def _get_scaling_term(self, C, rrup):
-        """
-        Applies the Cascadia correction factor from Table 2 and the negative
-        correction factor given on Page 567
-        """
-        a_f = 0.15 + 0.0007 * rrup
-        a_f[a_f > 0.35] = 0.35
-        return C["af"] - a_f
+    kind = "cascadia_lower"
