@@ -299,8 +299,8 @@ def install(inst, version):
     else:
         oqreal = '%s/bin/oq' % inst.VENV
 
-    if ((inst is server or and not os.path.exists(inst.OQ)) or
-       (inst is devel_server or and not os.path.exists(inst.OQ))):
+    if ((inst is server and not os.path.exists(inst.OQ)) or
+       (inst is devel_server and not os.path.exists(inst.OQ))):
         os.symlink(oqreal, inst.OQ)
     if inst is user:
         if sys.platform == 'win32':
