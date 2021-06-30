@@ -64,6 +64,203 @@ def get_sof_adjustment(rake, imt):
     return famp
 
 
+def _get_c_e(region, imt):
+    """
+    Implements the Ce calibration term.
+        - For 'CENA' See eq. 23 at page 2003
+    """
+    if region == 'CENA':
+        # See equation 23 page 2003 of Yenier and Atkinson
+        if imt.name == 'PGA':
+            return -0.25
+        elif imt.name == 'PGV':
+            return -0.21
+        elif imt.period <= 10.:
+            return -0.25 + np.max([0, 0.39*np.log(imt.period/2)])
+        else:
+            fmt = 'This IMT is not supported by the Ce calibration term'
+            msg = fmt.format(region)
+            raise ValueError(msg)
+    else:
+        fmt = '{:s} region does not have Ce calibration term'
+        msg = fmt.format(region)
+        raise ValueError(msg)
+
+
+def _get_c_p(region, imt, rrup, m):
+    """
+    Implements the Cp calibration term
+    """
+    if region == 'CENA':
+        # See equations 24 and 25 page 2003 of Yenier and Atkinson
+        if imt.name == 'PGA':
+            delta_b3 = 0.030
+        elif imt.name == 'PGV':
+            delta_b3 = 0.052
+        elif imt.period <= 10.:
+            tmp = 0.095*np.log(imt.period/0.065)
+            delta_b3 = np.min([0.095, 0.030+np.max([0, tmp])])
+        else:
+            msg = 'This region is not supported by the Ce calibration term'
+            raise ValueError(msg)
+        # Compute the calibration term
+        pseudo_depth = 10**(-0.405+0.235*m)
+        reff = (rrup**2+pseudo_depth**2)**0.5
+        cp = np.zeros_like(rrup)
+        # cp[rrup <= 150] = delta_b3 * np.log(rrup[rrup <= 150]/150.)
+        cp[reff <= 150] = delta_b3 * np.log(reff[reff <= 150]/150.)
+        return cp
+    else:
+        fmt = '{:s} region does not have Cp calibration term'
+        msg = fmt.format(region)
+        raise ValueError(msg)
+
+
+def _get_edelta(C, m, stress_drop):
+    if stress_drop <= 100:
+        edelta = (C['s0'] + C['s1']*m + C['s2']*m**2 + C['s3']*m**3 +
+                  C['s4']*m**4)
+    else:
+        edelta = (C['s5'] + C['s6']*m + C['s7']*m**2 + C['s8']*m**3 +
+                  C['s9']*m**4)
+    return edelta
+
+
+def _get_f_gamma(region, C, imt, rrup):
+    """
+    Implements
+    """
+    if region == 'CENA':
+        return rrup * C['gCENA']
+    elif region == 'CA':
+        return rrup * C['gCalifornia']
+    else:
+        fmt = '{:s} is a key not supported for region definition'
+        msg = fmt.format(region)
+        raise ValueError(msg)
+
+
+def _get_f_m(C, imt, m):
+    """
+    Implements eq. 3 at page 1991
+    """
+    mh = C['Mh']
+    if m <= mh:
+        return C['e0'] + C['e1']*(m-mh) + C['e2']*(m-mh)**2
+    else:
+        return C['e0'] + C['e3']*(m-mh)
+
+
+def _get_f_z(C, imt, rrup, m):
+    """
+    Implements eq. 7 and eq. 8 at page 1991
+    """
+    # Pseudo depth - see eq. 6 at page 1991
+    pseudo_depth = 10**(-0.405+0.235*m)
+    # Effective distance - see eq. 5 at page 1991
+    reff = (rrup**2+pseudo_depth**2)**0.5
+    # The transition_distance is 50 km as defined just below eq. 8
+    transition_dst = 50.
+    # Geometrical spreading rates
+    b1 = -1.3
+    b2 = -0.5
+    # Geometrical attenuation
+    z = reff**b1
+    ratio_a = reff / transition_dst
+    z[reff > transition_dst] = (transition_dst**b1 *
+                                (ratio_a[reff > transition_dst])**b2)
+    # Compute geometrical spreading function
+    ratio_b = reff / (1.+pseudo_depth**2)**0.5
+    return np.log(z) + (C['b3'] + C['b4']*m)*np.log(ratio_b)
+
+
+def _get_mean_on_rock(region, focal_depth, C2, C3, C4, sctx, rctx, dctx,
+                      imt, stddev_types):
+    # Get coefficients
+    # Magnitude effect
+    f_m = _get_f_m(C2, imt, rctx.mag)
+    # Stress adjustment
+    f_delta_sigma = _get_stress_drop_adjstment(
+        region, focal_depth, C3, imt, rctx.mag)
+    # Geometrical spreading
+    f_z = _get_f_z(C2, imt, dctx.rrup, rctx.mag)
+    # Anelastic attenuation function
+    f_gamma = _get_f_gamma(region, C4, imt, dctx.rrup)
+    # Regional term for stress drop
+    c_e = _get_c_e(region, imt)
+    # Regional term for path duration
+    c_p = _get_c_p(region, imt, dctx.rrup, rctx.mag)
+    # Compute mean using equation 26
+    mean = f_m + f_delta_sigma + f_z + f_gamma + c_e + c_p
+    return mean
+
+
+def _get_mean_on_soil(adapted, region, focal_depth, gmm, C2, C3, C4,
+                      sctx, rctx, dctx, imt, stddev_types):
+    # Get PGA on rock
+    tmp = PGA()
+    pga_rock = _get_mean_on_rock(
+        region, focal_depth, C2, C3, C4, sctx, rctx, dctx, tmp, stddev_types)
+    pga_rock = np.exp(pga_rock)
+    if adapted:  # in acme_2019
+        # Site-effect model: always evaluated for 760 (see HID 2.6.2)
+        vs30 = np.ones_like(sctx.vs30) * 760.
+    else:
+        vs30 = sctx.vs30
+    # Compute the mean on soil
+    mean = _get_mean_on_rock(
+        region, focal_depth, C2, C3, C4, sctx, rctx, dctx, imt, stddev_types)
+    mean += get_fs_SeyhanStewart2014(gmm, imt, pga_rock, vs30)
+    if adapted:
+        # acme_2019 considers the SoF correction
+        famp = get_sof_adjustment(rctx.rake, imt)
+        mean += np.log(famp)
+    return mean
+
+
+def _get_stress_drop_adjstment(region, focal_depth, C, imt, m):
+    """
+    Implements eq. 4 at page 1991 and eq. 17 at page 1994. For CENA we
+    use eq. 21 at page 2001
+    """
+    if region == 'CENA':
+        d = focal_depth
+        t1 = min([0, 0.290*(d - 10.)])
+        t2 = min([0, 0.229*(m - 5.)])
+        delta_sigma = np.exp(5.704 + t1 + t2)
+        edelta = _get_edelta(C, m, delta_sigma)
+        return edelta * np.log(delta_sigma/100.)
+    else:
+        fmt = '{:s} is a region not supported for stress drop adjustment'
+        msg = fmt.format(region)
+        raise ValueError(msg)
+
+
+def get_fs_SeyhanStewart2014(gmm, imt, pga_rock, vs30):
+    """
+    Implements eq. 11 and 12 at page 1992 in Yenier and Atkinson (2015)
+
+    :param pga_rock:
+        Median peak ground horizontal acceleration for reference
+    :param vs30:
+    """
+    # coefficients of BooreEtAl2014
+    C = gmm.COEFFS[imt]
+    # Linear term
+    flin = vs30 / gmm.CONSTS['Vref']
+    flin[vs30 > C['Vc']] = C['Vc'] / gmm.CONSTS['Vref']
+    fl = C['c'] * np.log(flin)
+    # Non-linear term
+    v_s = np.copy(vs30)
+    v_s[vs30 > 760.] = 760.
+    # parameter (equation 8 of BSSA 2014)
+    f_2 = C['f4'] * (np.exp(C['f5'] * (v_s - 360.)) -
+                     np.exp(C['f5'] * 400.))
+    fnl = gmm.CONSTS['f1'] + f_2 * np.log((pga_rock + gmm.CONSTS['f3']) /
+                                          gmm.CONSTS['f3'])
+    return fl + fnl
+
+
 class YenierAtkinson2015BSSA(GMPE):
     """
     Implements the GMM of Yenier and Atkinson (2015) as described in the
@@ -109,6 +306,8 @@ class YenierAtkinson2015BSSA(GMPE):
     #: Required distance measures is Rrup
     REQUIRES_DISTANCES = {'rrup'}
 
+    REQUIRES_ATTRIBUTES = {'adapted', 'region', 'focal_depth'}
+
     adapted = False
 
     def __init__(self, focal_depth=None, region='CENA', **kwargs):
@@ -118,206 +317,21 @@ class YenierAtkinson2015BSSA(GMPE):
         self.gmpe = BooreEtAl2014()
 
     def get_mean_and_stddevs(self, sctx, rctx, dctx, imt, stddev_types):
+        # Get coefficients
+        C2 = self.COEFFS_TAB2[imt]
+        C3 = self.COEFFS_TAB3[imt]
+        C4 = self.COEFFS_TAB4[imt]
+
         # Compute focal depth if not set at the initialization level
         if self.focal_depth is None:
             self.focal_depth = rctx.hypo_depth
 
         # Compute mean and std
-        mean = self._get_mean_on_soil(sctx, rctx, dctx, imt, stddev_types)
-        if self.adapted:  # acme_2019 considers the SoF correction
-            famp = get_sof_adjustment(rctx.rake, imt)
-            mean += np.log(famp)
+        mean = _get_mean_on_soil(
+            self.adapted, self.region, self.focal_depth, self.gmpe, C2, C3, C4,
+            sctx, rctx, dctx, imt, stddev_types)
         stddevs = np.zeros_like(sctx.vs30)
         return mean, stddevs
-
-    def _get_mean_on_soil(self, sctx, rctx, dctx, imt, stddev_types):
-        # Get PGA on rock
-        tmp = PGA()
-        pga_rock = self._get_mean_on_rock(sctx, rctx, dctx, tmp, stddev_types)
-        pga_rock = np.exp(pga_rock)
-        if self.adapted:  # in acme_2019
-            # Site-effect model: always evaluated for 760 (see HID 2.6.2)
-            vs30 = np.ones_like(sctx.vs30) * 760.
-        else:
-            vs30 = sctx.vs30
-        f_s = self.get_fs_SeyhanStewart2014(imt, pga_rock, vs30)
-        # Compute the mean on soil
-        mean = self._get_mean_on_rock(sctx, rctx, dctx, imt, stddev_types)
-        # Compute the mean on soil
-        mean += f_s
-        return mean
-
-    def _get_mean_on_rock(self, sctx, rctx, dctx, imt, stddev_types):
-        # Get coefficients
-        C2 = self.COEFFS_TAB2[imt]
-        C3 = self.COEFFS_TAB3[imt]
-        C4 = self.COEFFS_TAB4[imt]
-        # Magnitude effect
-        f_m = self._get_f_m(C2, imt, rctx.mag)
-        # Stress adjustment
-        f_delta_sigma = self._get_stress_drop_adjstment(C3, imt, rctx.mag)
-        # Geometrical spreading
-        f_z = self._get_f_z(C2, imt, dctx.rrup, rctx.mag)
-        # Anelastic attenuation function
-        f_gamma = self._get_f_gamma(C4, imt, dctx.rrup)
-        # Regional term for stress drop
-        c_e = self._get_c_e(imt)
-        # Regional term for path duration
-        c_p = self._get_c_p(imt, dctx.rrup, rctx.mag)
-        # Compute mean using equation 26
-        mean = f_m + f_delta_sigma + f_z + f_gamma + c_e + c_p
-        return mean
-
-    def _get_f_m(self, C, imt, m):
-        """
-        Implements eq. 3 at page 1991
-        """
-        mh = C['Mh']
-        if m <= mh:
-            return C['e0'] + C['e1']*(m-mh) + C['e2']*(m-mh)**2
-        else:
-            return C['e0'] + C['e3']*(m-mh)
-
-    def _get_edelta(self, C, m, stress_drop):
-        if stress_drop <= 100:
-            edelta = (C['s0'] + C['s1']*m + C['s2']*m**2 + C['s3']*m**3 +
-                      C['s4']*m**4)
-        else:
-            edelta = (C['s5'] + C['s6']*m + C['s7']*m**2 + C['s8']*m**3 +
-                      C['s9']*m**4)
-        return edelta
-
-    def _get_stress_drop_adjstment(self, C, imt, m):
-        """
-        Implements eq. 4 at page 1991 and eq. 17 at page 1994. For CENA we
-        use eq. 21 at page 2001
-        """
-        region = self.region
-
-        if region == 'CENA':
-            d = self.focal_depth
-            t1 = min([0, 0.290*(d - 10.)])
-            t2 = min([0, 0.229*(m - 5.)])
-            delta_sigma = np.exp(5.704 + t1 + t2)
-            edelta = self._get_edelta(C, m, delta_sigma)
-            return edelta * np.log(delta_sigma/100.)
-        else:
-            fmt = '{:s} is a region not supported for stress drop adjustment'
-            msg = fmt.format(region)
-            raise ValueError(msg)
-
-    def _get_f_z(self, C, imt, rrup, m):
-        """
-        Implements eq. 7 and eq. 8 at page 1991
-        """
-        # Pseudo depth - see eq. 6 at page 1991
-        pseudo_depth = 10**(-0.405+0.235*m)
-        # Effective distance - see eq. 5 at page 1991
-        reff = (rrup**2+pseudo_depth**2)**0.5
-        # The transition_distance is 50 km as defined just below eq. 8
-        transition_dst = 50.
-        # Geometrical spreading rates
-        b1 = -1.3
-        b2 = -0.5
-        # Geometrical attenuation
-        z = reff**b1
-        ratio_a = reff / transition_dst
-        z[reff > transition_dst] = (transition_dst**b1 *
-                                    (ratio_a[reff > transition_dst])**b2)
-        # Compute geometrical spreading function
-        ratio_b = reff / (1.+pseudo_depth**2)**0.5
-        return np.log(z) + (C['b3'] + C['b4']*m)*np.log(ratio_b)
-
-    def get_fs_SeyhanStewart2014(self, imt, pga_rock, vs30):
-        """
-        Implements eq. 11 and 12 at page 1992 in Yenier and Atkinson (2015)
-
-        :param pga_rock:
-            Median peak ground horizontal acceleration for reference
-        :param vs30:
-        """
-        # coefficients of BooreEtAl2014
-        gmm = self.gmpe
-        C = gmm.COEFFS[imt]
-        # Linear term
-        flin = vs30 / gmm.CONSTS['Vref']
-        flin[vs30 > C['Vc']] = C['Vc'] / gmm.CONSTS['Vref']
-        fl = C['c'] * np.log(flin)
-        # Non-linear term
-        v_s = np.copy(vs30)
-        v_s[vs30 > 760.] = 760.
-        # parameter (equation 8 of BSSA 2014)
-        f_2 = C['f4'] * (np.exp(C['f5'] * (v_s - 360.)) -
-                         np.exp(C['f5'] * 400.))
-        fnl = gmm.CONSTS['f1'] + f_2 * np.log((pga_rock + gmm.CONSTS['f3']) /
-                                              gmm.CONSTS['f3'])
-        return fl + fnl
-
-    def _get_f_gamma(self, C, imt, rrup):
-        """
-        Implements
-        """
-        region = self.region
-        if region == 'CENA':
-            return rrup * C['gCENA']
-        elif region == 'CA':
-            return rrup * C['gCalifornia']
-        else:
-            fmt = '{:s} is a key not supported for region definition'
-            msg = fmt.format(region)
-            raise ValueError(msg)
-
-    def _get_c_e(self, imt):
-        """
-        Implements the Ce calibration term.
-            - For 'CENA' See eq. 23 at page 2003
-        """
-        region = self.region
-        if region == 'CENA':
-            # See equation 23 page 2003 of Yenier and Atkinson
-            if str(imt) == 'PGA':
-                return -0.25
-            elif str(imt) == 'PGV':
-                return -0.21
-            elif imt.period <= 10.:
-                return -0.25 + np.max([0, 0.39*np.log(imt.period/2)])
-            else:
-                fmt = 'This IMT is not supported by the Ce calibration term'
-                msg = fmt.format(region)
-                raise ValueError(msg)
-        else:
-            fmt = '{:s} region does not have Ce calibration term'
-            msg = fmt.format(region)
-            raise ValueError(msg)
-
-    def _get_c_p(self, imt, rrup, m):
-        """
-        Implements the Cp calibration term
-        """
-        region = self.region
-        if region == 'CENA':
-            # See equations 24 and 25 page 2003 of Yenier and Atkinson
-            if str(imt) == 'PGA':
-                delta_b3 = 0.030
-            elif str(imt) == 'PGV':
-                delta_b3 = 0.052
-            elif imt.period <= 10.:
-                tmp = 0.095*np.log(imt.period/0.065)
-                delta_b3 = np.min([0.095, 0.030+np.max([0, tmp])])
-            else:
-                msg = 'This region is not supported by the Ce calibration term'
-                raise ValueError(msg)
-            # Compute the calibration term
-            pseudo_depth = 10**(-0.405+0.235*m)
-            reff = (rrup**2+pseudo_depth**2)**0.5
-            cp = np.zeros_like(rrup)
-            # cp[rrup <= 150] = delta_b3 * np.log(rrup[rrup <= 150]/150.)
-            cp[reff <= 150] = delta_b3 * np.log(reff[reff <= 150]/150.)
-            return cp
-        else:
-            fmt = '{:s} region does not have Cp calibration term'
-            msg = fmt.format(region)
-            raise ValueError(msg)
 
     COEFFS_TAB2 = CoeffsTable(sa_damping=5, table="""\
    imt    Mh        e0      e1       e2      e3      b3        b4

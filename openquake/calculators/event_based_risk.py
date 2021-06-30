@@ -387,11 +387,17 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
 
         # sanity check on the risk_by_event
-        alt = self.datastore.read_df('risk_by_event', 'event_id')
+        alt = self.datastore.read_df('risk_by_event')
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
         upper_limit = self.E * self.L * (K + 1)
         size = len(alt)
         assert size <= upper_limit, (size, upper_limit)
+        # sanity check on uniqueness by (agg_id, loss_id, event_id)
+        arr = alt[['agg_id', 'loss_id', 'event_id']].to_numpy()
+        uni = numpy.unique(arr, axis=0)
+        if len(uni) < len(arr):
+            raise RuntimeError('risk_by_event contains %d duplicates!' %
+                               (len(arr) - len(uni)))
         if oq.avg_losses:
             for r in range(self.R):
                 self.avg_losses[:, r] *= self.avg_ratio[r]
@@ -403,6 +409,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # save agg_losses
         units = self.datastore['cost_calculator'].get_units(oq.loss_names)
         if oq.calculation_mode == 'scenario_risk':  # compute agg_losses
+            alt = alt.set_index('event_id')
             alt['rlz_id'] = self.rlzs[alt.index.to_numpy()]
             agglosses = numpy.zeros((K + 1, self.R, self.L), F32)
             for (agg_id, rlz_id, loss_id), df in alt.groupby(

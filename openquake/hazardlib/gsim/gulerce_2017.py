@@ -27,9 +27,343 @@ Module exports :class:`GulerceEtAl2017`
 
 import numpy as np
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.imt import SA
+
+#: equation constants (that are IMT independent)
+CONSTS = {
+    # m1, m2 specified at section "Moderate-to-Large Magnitude Scaling"
+    'm1': 6.75,
+    'm2': 5.50,
+    # h1, h2, h3 specified at section "Hanging Wall Effects"
+    'h1': +0.25,
+    'h2': +1.50,
+    'h3': -0.75}
+
+
+def _get_basic_term(C, rup, dists):
+    """
+    Compute and return basic form, see Equation 11 to 13.
+    """
+    # Fictitious depth calculation, Equation 13. Unlike ASK14, the break in
+    # the c4m function is shifted to M6.0.
+    # The equation for c4m for M4.0-6.0 is different from GKAS16 EQS paper,
+    # but used the supplementary material instead after code verification.
+    if rup.mag > 6.:
+        c4m = C['c4']
+    elif rup.mag > 4.:
+        c4m = C['c4'] - ((C['c4'] - 1.) * (6. - rup.mag) / (6. - 4.))
+    else:
+        c4m = 1.
+    # Equation 12
+    R = np.sqrt(dists.rrup**2. + c4m**2.)
+    # basic form, Equation 11
+    base_term = C['a1'] * np.ones_like(dists.rrup) + C['a17'] * dists.rrup
+
+    if rup.mag >= CONSTS['m1']:
+        base_term += (C['a5'] * (rup.mag - CONSTS['m1']) +
+                      C['a8'] * (8.5 - rup.mag)**2. +
+                      (C['a2'] + C['a3'] * (rup.mag - CONSTS['m1'])) *
+                      np.log(R))
+    elif rup.mag >= CONSTS['m2']:
+        base_term += (C['a4'] * (rup.mag - CONSTS['m1']) +
+                      C['a8'] * (8.5 - rup.mag)**2. +
+                      (C['a2'] + C['a3'] * (rup.mag - CONSTS['m1'])) *
+                      np.log(R))
+    else:
+        base_term += (C['a4'] * (CONSTS['m2'] - CONSTS['m1']) +
+                      C['a8'] * (8.5 - CONSTS['m2'])**2. +
+                      C['a6'] * (rup.mag - CONSTS['m2']) +
+                      (C['a2'] + C['a3'] * (
+                          CONSTS['m2'] - CONSTS['m1'])) * np.log(R))
+    return base_term
+
+
+def _get_faulting_style_term(C, rup):
+    """
+    Compute and return faulting style term, that is the sum of the second
+    and third terms in Equation 1.
+    """
+    # this implements Equations 3 and 4;
+    # f7 is the term for reverse fault mechanisms;
+    # f8 is the term for normal fault mechanisms.
+    if rup.mag > 5.:
+        f7 = C['a11']
+        f8 = C['a12']
+    elif rup.mag >= 4.:
+        f7 = C['a11'] * (rup.mag - 4.)
+        f8 = C['a12'] * (rup.mag - 4.)
+    else:
+        f7 = 0.0
+        f8 = 0.0
+    # ranges of rake values for each faulting mechanism are same with ASK14
+    return (f7 * float(rup.rake > 30 and rup.rake < 150) +
+            f8 * float(rup.rake > -150 and rup.rake < -30))
+
+
+def _get_hanging_wall_term(C, dists, rup):
+    """
+    Compute and return hanging wall model term, see section on
+    "Hanging Wall Effects".
+    """
+    if rup.dip == 90.0:
+        return np.zeros_like(dists.rx)
+    else:
+        Fhw = np.zeros_like(dists.rx)
+        Fhw[dists.rx > 0] = 1.
+        # Compute dip taper t1, Equation 6
+        T1 = np.ones_like(dists.rx)
+        T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
+        # Compute magnitude taper t2, Equation 7, with a2hw set to 0.2.
+        T2 = np.zeros_like(dists.rx)
+        a2hw = 0.2
+        if rup.mag >= 6.5:
+            T2 += (1. + a2hw * (rup.mag - 6.5))
+        elif rup.mag > 5.5:
+            T2 += (1. + a2hw * (rup.mag - 6.5) - (1. - a2hw) *
+                   (rup.mag - 6.5)**2)
+        else:
+            T2 *= 0.
+        # Compute distance taper t3, Equation 8
+        T3 = np.zeros_like(dists.rx)
+        r1 = rup.width * np.cos(np.radians(rup.dip))
+        # The r2 term is different here from ASK14 where r2 = 3*r1.
+        r2 = 4. * r1
+        #
+        idx = dists.rx < r1
+        T3[idx] = (np.ones_like(dists.rx)[idx] * CONSTS['h1'] +
+                   CONSTS['h2'] * (dists.rx[idx] / r1) +
+                   CONSTS['h3'] * (dists.rx[idx] / r1)**2)
+        #
+        idx = ((dists.rx >= r1) & (dists.rx <= r2))
+        T3[idx] = 1. - (dists.rx[idx] - r1) / (r2 - r1)
+        # Compute depth taper t4, Equation 9
+        T4 = np.zeros_like(dists.rx)
+        #
+        if rup.ztor <= 10.:
+            T4 += (1. - rup.ztor**2. / 100.)
+        # Compute off-edge distance taper T5, Equation 10
+        # ry1 computed same as in ASK14
+        T5 = np.zeros_like(dists.rx)
+        ry1 = dists.rx * np.tan(np.radians(20.))
+        #
+        idx = (dists.ry0 - ry1) <= 0.0
+        T5[idx] = 1.
+        #
+        idx = (((dists.ry0 - ry1) > 0.0) & ((dists.ry0 - ry1) < 5.0))
+        T5[idx] = 1. - (dists.ry0[idx] - ry1[idx]) / 5.0
+        # Finally, compute the hanging wall term, Equation 5
+        return Fhw*C['a13']*T1*T2*T3*T4*T5
+
+
+def _get_inter_event_std(region, C, mag):
+    """
+    Returns inter-event standard deviation, Tau, Equation 20
+    """
+    tau = _get_tau_regional(region, C, mag)
+    return tau
+
+
+def _get_intra_event_std(region, C, mag):
+    """
+    Returns intra-event std dev, Phi, Equation 19.
+    """
+    # Intra-event standard deviation model is simplified since the effect
+    # of nonlinearity of the rock motion is not incorporated
+    # (Equations 27-30 in ASK14 are not used).
+    phi = _get_phi_regional(region, C, mag)
+    return phi
+
+
+_get_phi_regional = CallableDict()
+
+
+@_get_phi_regional.add("CAL", "CHN", "ITA", "TWN", "MID")
+def _get_phi_regional_1(region, C, mag):
+    """
+    Returns regional (default) intra-event standard deviation
+    """
+    if mag < 4:
+        phi_reg = C['s1']
+    elif mag <= 6:
+        phi_reg = C['s1'] + (C['s2_noJP'] - C['s1']) / 2. * (mag - 4.)
+    else:
+        phi_reg = C['s2_noJP']
+    return phi_reg
+
+
+@_get_phi_regional.add("JPN")
+def _get_phi_regional_2(region, C, mag):
+    """
+    Returns regional intra-event standard deviation (Phi) for Japan
+    """
+    if mag < 4:
+        phi_reg = C['s1']
+    elif mag <= 6:
+        phi_reg = C['s1'] + (C['s2_all'] - C['s1']) / 2. * (mag - 4.)
+    else:
+        phi_reg = C['s2_all']
+    return phi_reg
+
+
+_get_regional_term = CallableDict()
+
+
+@_get_regional_term.add("CAL")
+def _get_regional_term_CAL(region, C, imt, vs30, rrup):
+    """
+    As with ASK14, we assume California as the default region,
+    hence here the regional term is assumed = 0.
+    """
+    return 0.
+
+
+@_get_regional_term.add("TWN")
+def _get_regional_term_TWN(region, C, imt, vs30, rrup):
+    """
+    Compute regional term for Taiwan, see section "Regionalization and
+    Aftershocks"
+    """
+    vs30star = _get_vs30star(vs30, imt)
+    return C['a31'] * np.log(vs30star/C['vlin']) + C['a25'] * rrup
+
+
+@_get_regional_term.add("ITA")
+def _get_regional_term_ITA(region, C, imt, vs30, rrup):
+    """
+    Compute regional term for Italy, see section "Regionalization and
+    Aftershocks"
+    """
+    # removed regional linear vs30 scaling term since a32=0
+    return C['a26'] * rrup
+
+
+@_get_regional_term.add("MID")
+def _get_regional_term_MID(region, C, imt, vs30, rrup):
+    """
+    Compute regional term for Middle East, see section "Regionalization and
+    Aftershocks"
+    """
+    return C['a27'] * rrup
+
+
+@_get_regional_term.add("CHN")
+def _get_regional_term_CHN(region, C, imt, vs30, rrup):
+    """
+    Compute regional term for China, see section "Regionalization and
+    Aftershocks"
+    """
+    return C['a28'] * rrup
+
+
+@_get_regional_term.add("JPN")
+def _get_regional_term_JPN(region, C, imt, vs30, rrup):
+    """
+    Compute regional term for Japan, see section "Regionalization and
+    Aftershocks"
+    """
+    vs30star = _get_vs30star(vs30, imt)
+    return C['a35'] * np.log(vs30star/C['vlin']) + C['a29'] * rrup
+
+
+def _get_site_response_term(C, imt, vs30):
+    """
+    Compute and return site response model term; see section
+    "Site Amplification Effects".
+    """
+    # vs30 star, Equation 15
+    vs30_star = _get_vs30star(vs30, imt)
+    # compute the site term
+    site_resp_term = np.zeros_like(vs30)
+
+    # Unlike ASK14, the site term here is independent of nonlinear response
+    # parameters b, c, and n.
+    vs30_rat = vs30_star / C['vlin']
+    site_resp_term = C['a10'] * np.log(vs30_rat)
+    return site_resp_term
+
+
+def _get_stddevs(region, C, imt, rup, sites, stddev_types, dists):
+    """
+    Return standard deviations as described in section "Equations for
+    Standard Deviation".
+    """
+    std_intra = _get_intra_event_std(region, C, rup.mag)
+    std_inter = _get_inter_event_std(region, C, rup.mag)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.sqrt(std_intra ** 2 +
+                                   std_inter ** 2))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(std_intra)
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(std_inter)
+    return stddevs
+
+
+_get_tau_regional = CallableDict()
+
+
+@_get_tau_regional.add("CAL", "CHN", "ITA", "TWN", "MID")
+def _get_tau_regional_CAL(region, C, mag):
+    """
+    Returns regional (default) inter-event standard deviation
+    """
+    if mag < 5:
+        tau_reg = C['s3']
+    elif mag <= 7:
+        tau_reg = C['s3'] + (C['s4_noJP'] - C['s3']) / 2. * (mag - 5.)
+    else:
+        tau_reg = C['s4_noJP']
+    return tau_reg
+
+
+@_get_tau_regional.add("JPN")
+def _get_tau_regional_JPN(region, C, mag):
+    """
+    Returns regional inter-event standard deviation (Tau) for Japan
+    """
+    if mag < 5:
+        tau_reg = C['s3']
+    elif mag <= 7:
+        tau_reg = C['s3'] + (C['s4_all'] - C['s3']) / 2. * (mag - 5.)
+    else:
+        tau_reg = C['s4_all']
+    return tau_reg
+
+
+def _get_top_of_rupture_depth_term(C, imt, rup):
+    """
+    Compute and return top-of-rupture depth term, see section
+    "Deph Scaling Effects".
+    """
+    if rup.ztor >= 20.0:
+        return C['a15']
+    else:
+        return C['a15'] * rup.ztor / 20.0
+
+
+def _get_vs30star(vs30, imt):
+    """
+    This computes and returns the tapered Vs30, in Equations 15 and 16.
+    """
+    # compute the limiting v1 value, see Equation 16.
+    t = imt.period
+    if t <= 0.50:
+        v1 = 1500.0
+    elif t < 3.0:
+        # changed to -0.351 for additional significant figures
+        v1 = np.exp(-0.351 * np.log(t / 0.5) + np.log(1500.))
+    else:
+        v1 = 800.0
+
+    # set the vs30 star value, see Equation 15.
+    vs30_star = np.ones_like(vs30) * vs30
+    vs30_star[vs30 >= v1] = v1
+    return vs30_star
 
 
 class GulerceEtAl2017(GMPE):
@@ -48,8 +382,8 @@ class GulerceEtAl2017(GMPE):
     Gulerce, Z., Kamai, R., Abrahamson, N., & Silva, W. (2017). Ground Motion
     Prediction Equations for the Vertical Ground Motion Component Based on the
     NGA-W2 Database. *Earthquake Spectra*, *33*(2), 499-528.
-
     """
+    region = "CAL"
 
     #: Supported tectonic region type is active shallow crust, as part of the
     #: NGA-West2 Database; re-defined here for clarity.
@@ -66,11 +400,8 @@ class GulerceEtAl2017(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Equations for Standard Deviation".
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is Vs30 only. Unlike in ASK14, the nonlinear
     #: site response and Z1.0 scaling is not incorporated; see the section
@@ -95,240 +426,16 @@ class GulerceEtAl2017(GMPE):
         C = self.COEFFS[imt]
 
         # get the mean value
-        mean = (self._get_basic_term(C, rup, dists) +
-                self._get_faulting_style_term(C, rup) +
-                self._get_site_response_term(C, imt, sites.vs30) +
-                self._get_hanging_wall_term(C, dists, rup) +
-                self._get_top_of_rupture_depth_term(C, imt, rup)
-                )
-        mean += self._get_regional_term(C, imt, sites.vs30, dists.rrup)
+        mean = (_get_basic_term(C, rup, dists) +
+                _get_faulting_style_term(C, rup) +
+                _get_site_response_term(C, imt, sites.vs30) +
+                _get_hanging_wall_term(C, dists, rup) +
+                _get_top_of_rupture_depth_term(C, imt, rup))
+        mean += _get_regional_term(self.region, C, imt, sites.vs30, dists.rrup)
         # get standard deviations
-        stddevs = self._get_stddevs(C, imt, rup, sites, stddev_types, dists)
+        stddevs = _get_stddevs(
+            self.region, C, imt, rup, sites, stddev_types, dists)
         return mean, stddevs
-
-    def _get_basic_term(self, C, rup, dists):
-        """
-        Compute and return basic form, see Equation 11 to 13.
-        """
-        # Fictitious depth calculation, Equation 13. Unlike ASK14, the break in
-        # the c4m function is shifted to M6.0.
-        # The equation for c4m for M4.0-6.0 is different from GKAS16 EQS paper,
-        # but used the supplementary material instead after code verification.
-        if rup.mag > 6.:
-            c4m = C['c4']
-        elif rup.mag > 4.:
-            c4m = C['c4'] - ((C['c4'] - 1.) * (6. - rup.mag) / (6. - 4.))
-        else:
-            c4m = 1.
-        # Equation 12
-        R = np.sqrt(dists.rrup**2. + c4m**2.)
-        # basic form, Equation 11
-        base_term = C['a1'] * np.ones_like(dists.rrup) + C['a17'] * dists.rrup
-
-        if rup.mag >= self.CONSTS['m1']:
-            base_term += (C['a5'] * (rup.mag - self.CONSTS['m1']) +
-                          C['a8'] * (8.5 - rup.mag)**2. +
-                          (C['a2'] + C['a3'] * (rup.mag - self.CONSTS['m1'])) *
-                          np.log(R))
-        elif rup.mag >= self.CONSTS['m2']:
-            base_term += (C['a4'] * (rup.mag - self.CONSTS['m1']) +
-                          C['a8'] * (8.5 - rup.mag)**2. +
-                          (C['a2'] + C['a3'] * (rup.mag - self.CONSTS['m1'])) *
-                          np.log(R))
-        else:
-            base_term += (C['a4'] * (self.CONSTS['m2'] - self.CONSTS['m1']) +
-                          C['a8'] * (8.5 - self.CONSTS['m2'])**2. +
-                          C['a6'] * (rup.mag - self.CONSTS['m2']) +
-                          (C['a2'] + C['a3'] * (self.CONSTS['m2'] -
-                          self.CONSTS['m1'])) * np.log(R))
-        return base_term
-
-    def _get_faulting_style_term(self, C, rup):
-        """
-        Compute and return faulting style term, that is the sum of the second
-        and third terms in Equation 1.
-        """
-        # this implements Equations 3 and 4;
-        # f7 is the term for reverse fault mechanisms;
-        # f8 is the term for normal fault mechanisms.
-        if rup.mag > 5.:
-            f7 = C['a11']
-            f8 = C['a12']
-        elif rup.mag >= 4.:
-            f7 = C['a11'] * (rup.mag - 4.)
-            f8 = C['a12'] * (rup.mag - 4.)
-        else:
-            f7 = 0.0
-            f8 = 0.0
-        # ranges of rake values for each faulting mechanism are same with ASK14
-        return (f7 * float(rup.rake > 30 and rup.rake < 150) +
-                f8 * float(rup.rake > -150 and rup.rake < -30))
-
-    def _get_vs30star(self, vs30, imt):
-        """
-        This computes and returns the tapered Vs30, in Equations 15 and 16.
-        """
-        # compute the limiting v1 value, see Equation 16.
-        t = imt.period
-        if t <= 0.50:
-            v1 = 1500.0
-        elif t < 3.0:
-            # changed to -0.351 for additional significant figures
-            v1 = np.exp(-0.351 * np.log(t / 0.5) + np.log(1500.))
-        else:
-            v1 = 800.0
-
-        # set the vs30 star value, see Equation 15.
-        vs30_star = np.ones_like(vs30) * vs30
-        vs30_star[vs30 >= v1] = v1
-        return vs30_star
-
-    def _get_site_response_term(self, C, imt, vs30):
-        """
-        Compute and return site response model term; see section
-        "Site Amplification Effects".
-        """
-        # vs30 star, Equation 15
-        vs30_star = self._get_vs30star(vs30, imt)
-        # compute the site term
-        site_resp_term = np.zeros_like(vs30)
-
-        # Unlike ASK14, the site term here is independent of nonlinear response
-        # parameters b, c, and n.
-        vs30_rat = vs30_star / C['vlin']
-        site_resp_term = C['a10'] * np.log(vs30_rat)
-        return site_resp_term
-
-    def _get_hanging_wall_term(self, C, dists, rup):
-        """
-        Compute and return hanging wall model term, see section on
-        "Hanging Wall Effects".
-        """
-        if rup.dip == 90.0:
-            return np.zeros_like(dists.rx)
-        else:
-            Fhw = np.zeros_like(dists.rx)
-            Fhw[dists.rx > 0] = 1.
-            # Compute dip taper t1, Equation 6
-            T1 = np.ones_like(dists.rx)
-            T1 *= 60./45. if rup.dip <= 30. else (90.-rup.dip)/45.0
-            # Compute magnitude taper t2, Equation 7, with a2hw set to 0.2.
-            T2 = np.zeros_like(dists.rx)
-            a2hw = 0.2
-            if rup.mag >= 6.5:
-                T2 += (1. + a2hw * (rup.mag - 6.5))
-            elif rup.mag > 5.5:
-                T2 += (1. + a2hw * (rup.mag - 6.5) - (1. - a2hw) *
-                       (rup.mag - 6.5)**2)
-            else:
-                T2 *= 0.
-            # Compute distance taper t3, Equation 8
-            T3 = np.zeros_like(dists.rx)
-            r1 = rup.width * np.cos(np.radians(rup.dip))
-            # The r2 term is different here from ASK14 where r2 = 3*r1.
-            r2 = 4. * r1
-            #
-            idx = dists.rx < r1
-            T3[idx] = (np.ones_like(dists.rx)[idx] * self.CONSTS['h1'] +
-                       self.CONSTS['h2'] * (dists.rx[idx] / r1) +
-                       self.CONSTS['h3'] * (dists.rx[idx] / r1)**2)
-            #
-            idx = ((dists.rx >= r1) & (dists.rx <= r2))
-            T3[idx] = 1. - (dists.rx[idx] - r1) / (r2 - r1)
-            # Compute depth taper t4, Equation 9
-            T4 = np.zeros_like(dists.rx)
-            #
-            if rup.ztor <= 10.:
-                T4 += (1. - rup.ztor**2. / 100.)
-            # Compute off-edge distance taper T5, Equation 10
-            # ry1 computed same as in ASK14
-            T5 = np.zeros_like(dists.rx)
-            ry1 = dists.rx * np.tan(np.radians(20.))
-            #
-            idx = (dists.ry0 - ry1) <= 0.0
-            T5[idx] = 1.
-            #
-            idx = (((dists.ry0 - ry1) > 0.0) & ((dists.ry0 - ry1) < 5.0))
-            T5[idx] = 1. - (dists.ry0[idx] - ry1[idx]) / 5.0
-            # Finally, compute the hanging wall term, Equation 5
-            return Fhw*C['a13']*T1*T2*T3*T4*T5
-
-    def _get_top_of_rupture_depth_term(self, C, imt, rup):
-        """
-        Compute and return top-of-rupture depth term, see section
-        "Deph Scaling Effects".
-        """
-        if rup.ztor >= 20.0:
-            return C['a15']
-        else:
-            return C['a15'] * rup.ztor / 20.0
-
-    def _get_regional_term(self, C, imt, vs30, rrup):
-        """
-        As with ASK14, we assume California as the default region,
-        hence here the regional term is assumed = 0.
-        """
-        return 0.
-
-    def _get_stddevs(self, C, imt, rup, sites, stddev_types, dists):
-        """
-        Return standard deviations as described in section "Equations for
-        Standard Deviation".
-        """
-        std_intra = self._get_intra_event_std(C, rup.mag)
-        std_inter = self._get_inter_event_std(C, rup.mag)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt(std_intra ** 2 +
-                                       std_inter ** 2))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(std_intra)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(std_inter)
-        return stddevs
-
-    def _get_intra_event_std(self, C, mag):
-        """
-        Returns intra-event std dev, Phi, Equation 19.
-        """
-        # Intra-event standard deviation model is simplified since the effect
-        # of nonlinearity of the rock motion is not incorporated
-        # (Equations 27-30 in ASK14 are not used).
-        phi = self._get_phi_regional(C, mag)
-        return phi
-
-    def _get_phi_regional(self, C, mag):
-        """
-        Returns regional (default) intra-event standard deviation
-        """
-        if mag < 4:
-            phi_reg = C['s1']
-        elif mag <= 6:
-            phi_reg = C['s1'] + (C['s2_noJP'] - C['s1']) / 2. * (mag - 4.)
-        else:
-            phi_reg = C['s2_noJP']
-        return phi_reg
-
-    def _get_inter_event_std(self, C, mag):
-        """
-        Returns inter-event standard deviation, Tau, Equation 20
-        """
-        tau = self._get_tau_regional(C, mag)
-        return tau
-
-    def _get_tau_regional(self, C, mag):
-        """
-        Returns regional (default) inter-event standard deviation
-        """
-        if mag < 5:
-            tau_reg = C['s3']
-        elif mag <= 7:
-            tau_reg = C['s3'] + (C['s4_noJP'] - C['s3']) / 2. * (mag - 5.)
-        else:
-            tau_reg = C['s4_noJP']
-        return tau_reg
 
     #: Coefficients obtained from Tables 1a, 1b, 2, and 3 in
     #: Gulerce et al. (2017). This coefficient table is also provided in a free
@@ -359,17 +466,6 @@ IMT      vlin    c       c4      a1         a2        a3       a4       a5      
 10       330     1.8     8.6     -4.0143    -0.6      0.1      1.95     1.15      2.95     0       -0.209     0.27      -0.12    0        0.8       -0.3      -0.001     0          0          0         0.0004    -0.0018    0.064     0.192     0.38      0.7       0.5337    0.19      0.72       0.184
     """)
 
-    #: equation constants (that are IMT independent)
-    CONSTS = {
-        # m1, m2 specified at section "Moderate-to-Large Magnitude Scaling"
-        'm1': 6.75,
-        'm2': 5.50,
-        # h1, h2, h3 specified at section "Hanging Wall Effects"
-        'h1': +0.25,
-        'h2': +1.50,
-        'h3': -0.75,
-    }
-
 
 class GulerceEtAl2017RegTWN(GulerceEtAl2017):
     """
@@ -378,14 +474,7 @@ class GulerceEtAl2017RegTWN(GulerceEtAl2017):
 
     Regional corrections for Taiwan
     """
-
-    def _get_regional_term(self, C, imt, vs30, rrup):
-        """
-        Compute regional term for Taiwan, see section "Regionalization and
-        Aftershocks"
-        """
-        vs30star = self._get_vs30star(vs30, imt)
-        return C['a31'] * np.log(vs30star/C['vlin']) + C['a25'] * rrup
+    region = "TWN"
 
 
 class GulerceEtAl2017RegITA(GulerceEtAl2017):
@@ -395,14 +484,7 @@ class GulerceEtAl2017RegITA(GulerceEtAl2017):
 
     Regional corrections for Italy
     """
-
-    def _get_regional_term(self, C, imt, vs30, rrup):
-        """
-        Compute regional term for Italy, see section "Regionalization and
-        Aftershocks"
-        """
-        # removed regional linear vs30 scaling term since a32=0
-        return C['a26'] * rrup
+    region = "ITA"
 
 
 class GulerceEtAl2017RegMID(GulerceEtAl2017):
@@ -412,13 +494,7 @@ class GulerceEtAl2017RegMID(GulerceEtAl2017):
 
     Regional corrections for Middle East
     """
-
-    def _get_regional_term(self, C, imt, vs30, rrup):
-        """
-        Compute regional term for Middle East, see section "Regionalization and
-        Aftershocks"
-        """
-        return C['a27'] * rrup
+    region = "MID"
 
 
 class GulerceEtAl2017RegCHN(GulerceEtAl2017):
@@ -428,13 +504,7 @@ class GulerceEtAl2017RegCHN(GulerceEtAl2017):
 
     Regional corrections for China
     """
-
-    def _get_regional_term(self, C, imt, vs30, rrup):
-        """
-        Compute regional term for China, see section "Regionalization and
-        Aftershocks"
-        """
-        return C['a28'] * rrup
+    region = "CHN"
 
 
 class GulerceEtAl2017RegJPN(GulerceEtAl2017):
@@ -444,35 +514,4 @@ class GulerceEtAl2017RegJPN(GulerceEtAl2017):
 
     Regional corrections for Japan
     """
-
-    def _get_regional_term(self, C, imt, vs30, rrup):
-        """
-        Compute regional term for Japan, see section "Regionalization and
-        Aftershocks"
-        """
-        vs30star = self._get_vs30star(vs30, imt)
-        return C['a35'] * np.log(vs30star/C['vlin']) + C['a29'] * rrup
-
-    def _get_phi_regional(self, C, mag):
-        """
-        Returns regional intra-event standard deviation (Phi) for Japan
-        """
-        if mag < 4:
-            phi_reg = C['s1']
-        elif mag <= 6:
-            phi_reg = C['s1'] + (C['s2_all'] - C['s1']) / 2. * (mag - 4.)
-        else:
-            phi_reg = C['s2_all']
-        return phi_reg
-
-    def _get_tau_regional(self, C, mag):
-        """
-        Returns regional inter-event standard deviation (Tau) for Japan
-        """
-        if mag < 5:
-            tau_reg = C['s3']
-        elif mag <= 7:
-            tau_reg = C['s3'] + (C['s4_all'] - C['s3']) / 2. * (mag - 5.)
-        else:
-            tau_reg = C['s4_all']
-        return tau_reg
+    region = "JPN"

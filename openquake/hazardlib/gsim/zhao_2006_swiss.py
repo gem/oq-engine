@@ -29,9 +29,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.zhao_2006 import ZhaoEtAl2006Asc
 from openquake.hazardlib.gsim.zhao_2006_swiss_coeffs import (
-    COEFFS_FS_ROCK_SWISS05,
-    COEFFS_FS_ROCK_SWISS03,
-    COEFFS_FS_ROCK_SWISS08)
+    COEFFS_FS_ROCK_SWISS05, COEFFS_FS_ROCK_SWISS03, COEFFS_FS_ROCK_SWISS08)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
 
 
@@ -45,7 +43,7 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
     #. kappa value
        K-adjustments corresponding to model 01 - as prepared by Ben Edwards
        K-value for PGA were not provided but infered from SA[0.01s]
-       the model applies to a fixed value of vs30=700m/s to match the 
+       the model applies to a fixed value of vs30=700m/s to match the
        reference vs30=1100m/s
 
     #. small-magnitude correction
@@ -62,12 +60,9 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
 
     # Supported standard deviation type is only total, but reported as a
     # combination of mean and magnitude/distance single station sigma
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([const.StdDev.TOTAL])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Vs30 value representing typical rock conditions in Switzerland.
     #: confirmed by the Swiss GMPE group
@@ -79,7 +74,6 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-
         sites.vs30 = 700 * np.ones(len(sites.vs30))
 
         mean, stddevs = super().get_mean_and_stddevs(
@@ -94,6 +88,7 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
             log_phi_ss)
 
         return mean, stddevs
+
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS05
     #: Original Coefficient table
     COEFFS_ASC = CoeffsTable(sa_damping=5, table="""\
