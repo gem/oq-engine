@@ -22,9 +22,132 @@ Module exports :class:`AkkarEtAlRjb2014`
                :class:`AkkarEtAlRhypo2014`.
 """
 import numpy as np
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+
+def _compute_faulting_style_term(C, rake):
+    """
+    Compute and return fifth and sixth terms in equations (2a)
+    and (2b), pages 20.
+    """
+    Fn = float(rake > -135.0 and rake < -45.0)
+    Fr = float(rake > 45.0 and rake < 135.0)
+
+    return C['a8'] * Fn + C['a9'] * Fr
+
+
+def _compute_linear_magnitude_term(C, c1, mag):
+    """
+    Compute and return second term in equations (2a)
+    and (2b), page 20.
+    """
+    if mag <= c1:
+        # this is the second term in eq. (2a), p. 20
+        return C['a2'] * (mag - c1)
+    else:
+        # this is the second term in eq. (2b), p. 20
+        return C['a7'] * (mag - c1)
+
+
+_compute_logarithmic_distance_term = CallableDict()
+
+
+@_compute_logarithmic_distance_term.add("rjb")
+def _compute_logarithmic_distance_term_1(kind, C, c1, mag, dists):
+    """
+    Compute and return fourth term in equations (2a)
+    and (2b), page 20.
+    """
+    return ((C['a4'] + C['a5'] * (mag - c1)) *
+            np.log(np.sqrt(dists.rjb ** 2 + C['a6'] ** 2)))
+
+
+@_compute_logarithmic_distance_term.add("repi")
+def _compute_logarithmic_distance_term_2(kind, C, c1, mag, dists):
+    """
+    Compute and return fourth term in equations (2a)
+    and (2b), page 20.
+    """
+    return ((C['a4'] + C['a5'] * (mag - c1)) *
+            np.log(np.sqrt(dists.repi ** 2 + C['a6'] ** 2)))
+
+
+@_compute_logarithmic_distance_term.add("rhypo")
+def _compute_logarithmic_distance_term_3(kind, C, c1, mag, dists):
+    """
+    Compute and return fourth term in equations (2a)
+    and (2b), page 20.
+    """
+    return ((C['a4'] + C['a5'] * (mag - c1)) *
+            np.log(np.sqrt(dists.rhypo ** 2 + C['a6'] ** 2)))
+
+
+def _compute_mean(kind, C, c1, mag, dists, rake):
+    """
+    Compute and return mean value without site conditions,
+    that is equations (1a) and (1b), p.2981-2982.
+    """
+    mean = (C['a1'] +
+            _compute_linear_magnitude_term(C, c1, mag) +
+            _compute_quadratic_magnitude_term(C, mag) +
+            _compute_logarithmic_distance_term(kind, C, c1, mag, dists) +
+            _compute_faulting_style_term(C, rake))
+    return mean
+
+
+def _compute_non_linear_term(C, pga_only, sites):
+    """
+    Compute non-linear term, equation (3a) to (3c), page 20.
+    """
+    Vref = 750.0
+    Vcon = 1000.0
+    lnS = np.zeros_like(sites.vs30)
+
+    # equation (3a)
+    idx = sites.vs30 < Vref
+    lnS[idx] = (
+        C['b1'] * np.log(sites.vs30[idx] / Vref) +
+        C['b2'] * np.log(
+            (pga_only[idx] + C['c'] * (sites.vs30[idx] / Vref) ** C['n']) /
+            ((pga_only[idx] + C['c']) * (sites.vs30[idx] / Vref) ** C['n'])
+        ))
+
+    # equation (3b)
+    idx = (sites.vs30 >= Vref) & (sites.vs30 <= Vcon)
+    lnS[idx] = C['b1'] * np.log(sites.vs30[idx]/Vref)
+
+    # equation (3c)
+    idx = sites.vs30 > Vcon
+    lnS[idx] = C['b1'] * np.log(Vcon/Vref)
+
+    return lnS
+
+
+def _compute_quadratic_magnitude_term(C, mag):
+    """
+    Compute and return third term in equations (2a)
+    and (2b), page  20.
+    """
+    return C['a3'] * (8.5 - mag) ** 2
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return standard deviations as defined in table 4a, p. 22.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            sigma_t = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
+            stddevs.append(sigma_t + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['sigma'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+    return stddevs
 
 
 class AkkarEtAlRjb2014(GMPE):
@@ -44,11 +167,7 @@ class AkkarEtAlRjb2014(GMPE):
 
     #: The supported intensity measure types are PGA, PGV, and SA, see table
     #: 4.a, pages 22-23
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: The supported intensity measure component is 'average horizontal', see
     #: section 'A New Generation of European Ground-Motion Models', page 8
@@ -56,11 +175,8 @@ class AkkarEtAlRjb2014(GMPE):
 
     #: The supported standard deviations are total, inter and intra event, see
     #: table 4.a, pages 22-23
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: The required site parameter is vs30, see equation 1, page 20.
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -75,6 +191,7 @@ class AkkarEtAlRjb2014(GMPE):
 
     def __init__(self, adjustment_factor=1.0, **kwargs):
         super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+        [self.kind] = self.REQUIRES_DISTANCES
         self.adjustment_factor = np.log(adjustment_factor)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -89,115 +206,16 @@ class AkkarEtAlRjb2014(GMPE):
         # amplification
         C_pga = self.COEFFS[PGA()]
         median_pga = np.exp(
-            self._compute_mean(C_pga, rup.mag, dists, rup.rake)
-        )
+            _compute_mean(self.kind, C_pga, self.c1, rup.mag, dists, rup.rake))
 
         # compute full mean value by adding nonlinear site amplification terms
         C = self.COEFFS[imt]
-        mean = (self._compute_mean(C, rup.mag, dists, rup.rake) +
-                self._compute_non_linear_term(C, median_pga, sites))
+        mean = (_compute_mean(self.kind, C, self.c1, rup.mag, dists, rup.rake)
+                + _compute_non_linear_term(C, median_pga, sites))
 
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=sites.vs30.size)
+        stddevs = _get_stddevs(C, stddev_types, num_sites=sites.vs30.size)
 
         return mean + self.adjustment_factor, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 4a, p. 22.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigma_t = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
-                stddevs.append(sigma_t + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_linear_magnitude_term(self, C, mag):
-        """
-        Compute and return second term in equations (2a)
-        and (2b), page 20.
-        """
-        if mag <= self.c1:
-            # this is the second term in eq. (2a), p. 20
-            return C['a2'] * (mag - self.c1)
-        else:
-            # this is the second term in eq. (2b), p. 20
-            return C['a7'] * (mag - self.c1)
-
-    def _compute_quadratic_magnitude_term(self, C, mag):
-        """
-        Compute and return third term in equations (2a)
-        and (2b), page  20.
-        """
-        return C['a3'] * (8.5 - mag) ** 2
-
-    def _compute_logarithmic_distance_term(self, C, mag, dists):
-        """
-        Compute and return fourth term in equations (2a)
-        and (2b), page 20.
-        """
-        return (
-            (C['a4'] + C['a5'] * (mag - self.c1)) *
-            np.log(np.sqrt(dists.rjb ** 2 + C['a6'] ** 2))
-        )
-
-    def _compute_faulting_style_term(self, C, rake):
-        """
-        Compute and return fifth and sixth terms in equations (2a)
-        and (2b), pages 20.
-        """
-        Fn = float(rake > -135.0 and rake < -45.0)
-        Fr = float(rake > 45.0 and rake < 135.0)
-
-        return C['a8'] * Fn + C['a9'] * Fr
-
-    def _compute_non_linear_term(self, C, pga_only, sites):
-        """
-        Compute non-linear term, equation (3a) to (3c), page 20.
-        """
-        Vref = 750.0
-        Vcon = 1000.0
-        lnS = np.zeros_like(sites.vs30)
-
-        # equation (3a)
-        idx = sites.vs30 < Vref
-        lnS[idx] = (
-            C['b1'] * np.log(sites.vs30[idx] / Vref) +
-            C['b2'] * np.log(
-                (pga_only[idx] + C['c'] * (sites.vs30[idx] / Vref) ** C['n']) /
-                ((pga_only[idx] + C['c']) * (sites.vs30[idx] / Vref) ** C['n'])
-            )
-        )
-
-        # equation (3b)
-        idx = (sites.vs30 >= Vref) & (sites.vs30 <= Vcon)
-        lnS[idx] = C['b1'] * np.log(sites.vs30[idx]/Vref)
-
-        # equation (3c)
-        idx = sites.vs30 > Vcon
-        lnS[idx] = C['b1'] * np.log(Vcon/Vref)
-
-        return lnS
-
-    def _compute_mean(self, C, mag, dists, rake):
-        """
-        Compute and return mean value without site conditions,
-        that is equations (1a) and (1b), p.2981-2982.
-        """
-        mean = (
-            C['a1'] +
-            self._compute_linear_magnitude_term(C, mag) +
-            self._compute_quadratic_magnitude_term(C, mag) +
-            self._compute_logarithmic_distance_term(C, mag, dists) +
-            self._compute_faulting_style_term(C, rake)
-        )
-
-        return mean
 
     #: c1 is the reference magnitude, fixed to 6.75Mw (which happens to be the
     #: same value used in Boore and Atkinson, 2008)
@@ -289,17 +307,7 @@ class AkkarEtAlRepi2014(AkkarEtAlRjb2014):
     The class implements the equations for epicentral distance and based on
     manuscript provided by the original authors.
     """
-    REQUIRES_DISTANCES = set(('repi', ))
-
-    def _compute_logarithmic_distance_term(self, C, mag, dists):
-        """
-        Compute and return fourth term in equations (2a)
-        and (2b), page 20.
-        """
-        return (
-            (C['a4'] + C['a5'] * (mag - self.c1)) *
-            np.log(np.sqrt(dists.repi ** 2 + C['a6'] ** 2))
-        )
+    REQUIRES_DISTANCES = {'repi'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
       IMT         a1       a2         a3         a4       a5    a6        a7        a8        a9     c1   Vcon  Vref     c     n         b1         b2    sigma      tau
@@ -380,17 +388,7 @@ class AkkarEtAlRhyp2014(AkkarEtAlRjb2014):
     The class implements the equations for hypocentral distance and based on
     manuscript provided by the original authors.
     """
-    REQUIRES_DISTANCES = set(('rhypo', ))
-
-    def _compute_logarithmic_distance_term(self, C, mag, dists):
-        """
-        Compute and return fourth term in equations (2a)
-        and (2b), page 20.
-        """
-        return (
-            (C['a4'] + C['a5'] * (mag - self.c1)) *
-            np.log(np.sqrt(dists.rhypo ** 2 + C['a6'] ** 2))
-        )
+    REQUIRES_DISTANCES = {'rhypo'}
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
       IMT         a1       a2         a3         a4       a5    a6        a7        a8        a9     c1   Vcon  Vref     c     n         b1         b2    sigma      tau
