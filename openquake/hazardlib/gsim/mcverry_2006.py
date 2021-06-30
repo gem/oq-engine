@@ -107,7 +107,7 @@ def _compute_mean(kind, C, S, mag, rrup, rvol, hypo_depth, CN, CR, f4HW,
 _compute_mean_on_rock = CallableDict()
 
 
-@_compute_mean_on_rock.add("asc", "asc_sc", "vol", "vol_sc")
+@_compute_mean_on_rock.add("asc", "asc_sc", "vol", "vol_sc", "chch", "drop")
 def _compute_mean_on_rock_1(kind, C, mag, rrup, rvol, hypo_depth, CN, CR,
                             f4HW):
     """
@@ -304,7 +304,7 @@ def _get_deltas_1(kind, sites):
     return delta_C, delta_D
 
 
-@_get_deltas.add("asc_sc", "sinter_sc", "slab_sc", "vol_sc")
+@_get_deltas.add("asc_sc", "sinter_sc", "slab_sc", "vol_sc", "chch", "drop")
 def _get_deltas_2(kind, sites):
     """
     Return delta's for equation 4
@@ -362,7 +362,8 @@ def _get_site_class_1(kind, sites):
     return S
 
 
-@_get_site_class.add("asc_sc", "sinter_sc", "slab_sc", "vol_sc")
+@_get_site_class.add(
+    "asc_sc", "sinter_sc", "slab_sc", "vol_sc", "chch", "drop")
 def _get_site_class_2(kind, sites):
     """
     Return site class flag (0 if class A or B, that is rock, or 1 if
@@ -413,7 +414,7 @@ def _get_stddevs_1(kind, C, mag, stddev_types, sites):
 
 
 @_get_stddevs.add("asc_sc", "sinter_sc", "slab_sc", "vol_sc")
-def _get_stddevs_2(kind, C, mag, stddev_types, sites):
+def _get_stddevs_2(kind, C, mag, stddev_types, sites, additional_sigma=0.):
     """
     Return standard deviation as defined on page 29 in
     equation 8a,b,c and 9.
@@ -446,7 +447,8 @@ def _get_stddevs_2(kind, C, mag, stddev_types, sites):
     return std
 
 
-def _get_stddevs_chch(C, mag, stddev_types, sites, additional_sigma):
+@_get_stddevs.add("chch", "drop")
+def _get_stddevs_3(kind, C, mag, stddev_types, sites, additional_sigma):
     """
     Add additional 'epistemic' uncertainty to the total uncertainty, as
     specified in the Canterbury Seismic Hazard Model.
@@ -870,8 +872,8 @@ class McVerry2006Chch(McVerry2006AscSC):
 
         # Compute standard deviations
         C_STD = self.COEFFS_STD[imt]
-        stddevs = _get_stddevs_chch(
-            C_STD, rup.mag, stddev_types, sites, additional_sigma)
+        stddevs = _get_stddevs(
+            self.kind, C_STD, rup.mag, stddev_types, sites, additional_sigma)
 
         return mean, stddevs
 
