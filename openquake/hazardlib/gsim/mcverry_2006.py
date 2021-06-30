@@ -23,6 +23,7 @@ Module exports :class:`McVerry2006Asc`, :class:`McVerry2006SInter`,
 :class:`McVerry2006SSlabSC`, :class:`McVerry2006VolcSC`.
 """
 import numpy as np
+import shapely
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -104,9 +105,6 @@ class McVerry2006Asc(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         # Compute SA with primed coeffs and PGA with both unprimed and
         # primed coeffs
         C = self.COEFFS_PRIMED[imt]
@@ -742,6 +740,7 @@ class McVerry2006Chch(McVerry2006AscSC):
     #: This implementation is non-verified because the model has not been
     #: published, nor is independent code available.
     non_verified = True
+    additional_sigma = 0
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -749,9 +748,6 @@ class McVerry2006Chch(McVerry2006AscSC):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         # Compute SA with primed coeffs and PGA with both unprimed and
         # primed coeffs
         C = self.COEFFS_PRIMED[imt]
@@ -782,9 +778,9 @@ class McVerry2006Chch(McVerry2006AscSC):
         # located within the boundaries of the CSHM.
         in_cshm = self._check_in_cshm_polygon(rup)
         if in_cshm is True:
-            stress_drop_factor = self._compute_stress_drop_adjustment(SC,
-                                                                      rup.mag)
-            additional_sigma = self._compute_additional_sigma()
+            stress_drop_factor = self._compute_stress_drop_adjustment(
+                SC, rup.mag)
+            additional_sigma = self.additional_sigma
         else:
             stress_drop_factor = 0
             additional_sigma = 0
@@ -850,12 +846,6 @@ class McVerry2006Chch(McVerry2006AscSC):
         return std
 
     def _compute_stress_drop_adjustment(self, SC, mag):
-        """
-        No adjustment for base class
-        """
-        return 0
-
-    def _compute_additional_sigma(self):
         """
         No adjustment for base class
         """
@@ -949,11 +939,7 @@ class McVerry2006ChchAdditionalSigma(McVerry2006Chch):
     Z-factor and peak ground accelerations for Christchurch following the
     13 June 2011 earthquake", GNS Science Report 2011/45, 29p.
     """
-
-    def _compute_additional_sigma(self):
-        """
-        Additional "epistemic" uncertainty version of the model. The value
-        is not published, only available from G. McVerry
-        (pers. communication 9/8/18).
-        """
-        return 0.35
+    # Additional "epistemic" uncertainty version of the model. The value
+    # is not published, only available from G. McVerry
+    # (pers. communication 9/8/18).
+    additional_sigma = 0.35
