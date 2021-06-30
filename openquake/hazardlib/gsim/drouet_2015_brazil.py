@@ -22,10 +22,65 @@ Module exports :class:`DrouetBrazil2015`
 """
 import numpy as np
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from scipy.constants import g
+
+
+_compute_distance_term = CallableDict()
+
+
+@_compute_distance_term.add(False)
+def _compute_distance_term_1(depth, C, rup, rjb):
+    """
+    This computes the term f2 equation 8 Drouet & Cotton (2015)
+    """
+    return (C['c4'] + C['c5'] * rup.mag) * np.log(
+        np.sqrt(rjb ** 2. + C['c6'] ** 2.)) + C['c7'] * rjb
+
+
+@_compute_distance_term.add(True)
+def _compute_distance_term_2(depth, C, rup, rjb):
+    """
+    This computes the term f2 equation 8 Drouet & Cotton (2015)
+    """
+    return (C['c4'] + C['c5'] * rup.mag) * np.log(
+        np.sqrt(rjb ** 2. + rup.hypo_depth ** 2.)) + C['c6'] * rjb
+
+
+def _compute_magnitude_term(C, rup):
+    """
+    This computes the term f1 equation 8 Drouet & Cotton (2015)
+    """
+    return C['c2'] * (rup.mag - 8.0) + C['c3'] * (rup.mag - 8.0) ** 2
+
+
+def _compute_mean(depth, C, rup, rjb):
+    """
+    Compute mean value according to equation 30, page 1021.
+    """
+    mean = (C['c1'] +
+            _compute_magnitude_term(C, rup) +
+            _compute_distance_term(depth, C, rup, rjb))
+    return mean
+
+
+def _get_stddevs(C, stddev_types, mag, num_sites):
+    """
+    Return total standard deviation as for equation 35, page 1021.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            sigma_t = np.sqrt(C['sigma'] ** 2. + C['tau'] ** 2.)
+            stddevs.append(sigma_t + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['sigma'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+    return stddevs
 
 
 class DrouetBrazil2015(GMPE):
@@ -41,24 +96,17 @@ class DrouetBrazil2015(GMPE):
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see table 6, page 1022 (PGA is assumed
     #: to be equal to SA at 0.01 s)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of
-    #two : horizontal components
-    #:attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: two horizontal components
+    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total, see equation 35, page
     #: 1021
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: No site parameters are needed
     REQUIRES_SITES_PARAMETERS = set()
@@ -78,54 +126,15 @@ class DrouetBrazil2015(GMPE):
         for spec of input and result values.
         """
         C = self.COEFFS[imt]
-        mean = self._compute_mean(C, rup, dists.rjb)
+        depth = "hypo_depth" in self.REQUIRES_RUPTURE_PARAMETERS
+        mean = _compute_mean(depth, C, rup, dists.rjb)
         if imt.name in "SA PGA":  # Convert from m/s**2 to g
             mean -= np.log(g)
         elif imt.name == "PGV":  # Convert from m/s to cm/s
             mean += np.log(100.0)
-        stddevs = self._get_stddevs(C, stddev_types, rup.mag,
-                                    dists.rjb.shape)
+        stddevs = _get_stddevs(C, stddev_types, rup.mag, dists.rjb.shape)
 
         return mean, stddevs
-
-    def _compute_mean(self, C, rup, rjb):
-        """
-        Compute mean value according to equation 30, page 1021.
-        """
-        mean = (C['c1'] +
-                self._compute_magnitude_term(C, rup) +
-                self._compute_distance_term(C, rup, rjb))
-        return mean
-
-    def _get_stddevs(self, C, stddev_types, mag, num_sites):
-        """
-        Return total standard deviation as for equation 35, page 1021.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigma_t = np.sqrt(C['sigma'] ** 2. + C['tau'] ** 2.)
-                stddevs.append(sigma_t + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_magnitude_term(self, C, rup):
-        """
-        This computes the term f1 equation 8 Drouet & Cotton (2015)
-        """
-        return C['c2'] * (rup.mag - 8.0) + C['c3'] * (rup.mag - 8.0) ** 2
-
-    def _compute_distance_term(self, C, rup, rjb):
-        """
-        This computes the term f2 equation 8 Drouet & Cotton (2015)
-        """
-        return (C['c4'] + C['c5'] * rup.mag) * np.log(
-            np.sqrt(rjb ** 2. + C['c6'] ** 2.)) + C['c7'] * rjb
-
 
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper.
@@ -155,23 +164,18 @@ class DrouetBrazil2015(GMPE):
     3.000  1.292331   0.312316  -0.263539  -1.464213  0.130085  6.416692  -0.002621  0.512370  0.344082
     """)
 
+
 class DrouetBrazil2015withDepth(DrouetBrazil2015):
     """
     Implements GMPE developed by S. Drouet unpublished for Brazil based on the
     method described in Douet & Cotton (2015) BSSA doi: 10.1785/0120140240.
-    Model with magnitude-dependent depth distribution and depth-dependent 
+    Model with magnitude-dependent depth distribution and depth-dependent
     stress distribution
     """
+
     #: Required rupture parameter is only magnitude, see equation 30 page
     #: 1021.
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
-
-    def _compute_distance_term(self, C, rup, rjb):
-        """
-        This computes the term f2 equation 8 Drouet & Cotton (2015)
-        """
-        return (C['c4'] + C['c5'] * rup.mag) * np.log(
-            np.sqrt(rjb ** 2. + rup.hypo_depth ** 2.)) + C['c6'] * rjb
 
     #: Coefficient tables are constructed from the electronic supplements of
     #: the original paper.
