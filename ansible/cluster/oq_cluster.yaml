@@ -29,7 +29,7 @@
     - name: Ensure user openquake exist and generate ssh key
       user:
         name: openquake
-        home: /home/openquake
+        home: /home.dev/openquake
         shell: /bin/bash
         state: present
         generate_ssh_key: yes
@@ -46,7 +46,7 @@
       when: "'master' in group_names" 
 
     - name: Run install script from github repo  only on master node
-      shell: cd /usr/src/ && git clone -b opensuse --depth=1 https://github.com/gem/oq-engine.git && cd oq-engine && python3.8 ./install.py devel_server
+      shell: cd /home.dev/openquake && git clone https://github.com/gem/oq-engine.git && cd oq-engine && python3.8 ./install.py devel_server
       changed_when: false
       register: oq_install
       when: "'master' in group_names" 
