@@ -27,6 +27,66 @@ from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_johnston_96, mblg_to_mw_atkinson_boore_87, clip_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+from openquake.baselib.general import CallableDict
+
+_compute_finite_fault_correction = CallableDict()
+
+
+@_compute_finite_fault_correction.add("Mblg")
+def _compute_finite_fault_correction_Mblg(kind, mag):
+    """
+    Compute finite fault correction term as geometric mean of correction
+    terms obtained from Mw values calculated with Johnston 1996 and
+    Atkinson and Boore 1987 conversion equations.
+
+    Implement equations as in lines 1653 - 1658 in hazgridXnga2.f
+    """
+    mw_j96 = mblg_to_mw_johnston_96(mag)
+    mw_ab87 = mblg_to_mw_atkinson_boore_87(mag)
+
+    t1 = np.exp(-1.25 + 0.227 * mw_j96)
+    t2 = np.exp(-1.25 + 0.227 * mw_ab87)
+
+    return np.sqrt(t1 * t2)
+
+
+@_compute_finite_fault_correction.add("Mw")
+def _compute_finite_fault_correction_Mw(kind, mag):
+    """
+    Compute finite fault correction term.
+    """
+    return np.exp(-1.25 + 0.227 * mag)
+
+
+def _compute_mean(kind, C, mag, rjb):
+    """
+    Compute ground motion mean value.
+    """
+    # line 1686 in hazgridXnga2.f
+    ffc = _compute_finite_fault_correction(kind, mag)
+    d = np.sqrt(rjb ** 2 + (C['c7'] ** 2) * (ffc ** 2))
+
+    # lines 1663, 1694-1696 in hazgridXnga2.f
+    mean = (C['c1'] + C['c2'] * (mag - 6.) +
+            C['c3'] * ((mag - 6.) ** 2) -
+            C['c4'] * np.log(d) - C['c6'] * d)
+
+    factor = np.log(rjb / 100.)
+    idx = factor > 0
+    mean[idx] -= (C['c5'] - C['c4']) * factor[idx]
+
+    return mean
+
+
+def _compute_stddevs(C, num_sites, stddev_types):
+    """
+    Return total standard deviation.
+    """
+    stddevs = []
+    for _ in stddev_types:
+        stddevs.append(np.zeros(num_sites) + C['sigma'])
+
+    return stddevs
 
 
 class ToroEtAl1997MblgNSHMP2008(GMPE):
@@ -55,6 +115,8 @@ class ToroEtAl1997MblgNSHMP2008(GMPE):
 
     Coefficients are given for the B/C site conditions.
     """
+    kind = "Mblg"
+
     #: Supported tectonic region type is stable continental crust,
     #: given that the equations have been derived for central and eastern
     #: north America
@@ -62,20 +124,15 @@ class ToroEtAl1997MblgNSHMP2008(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of
-    #two : horizontal components
-    #:attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: two horizontal components
+    #: :attr:`~openquake.hazardlib.const.IMC.AVERAGE_HORIZONTAL`,
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: No site parameters required
     REQUIRES_SITES_PARAMETERS = set()
@@ -95,64 +152,14 @@ class ToroEtAl1997MblgNSHMP2008(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
 
-        mean = self._compute_mean(C, rup.mag, dists.rjb)
-        stddevs = self._compute_stddevs(C, dists.rjb.size, stddev_types)
+        mean = _compute_mean(self.kind, C, rup.mag, dists.rjb)
+        stddevs = _compute_stddevs(C, dists.rjb.size, stddev_types)
 
         mean = clip_mean(imt, mean)
 
         return mean, stddevs
-
-    def _compute_mean(self, C, mag, rjb):
-        """
-        Compute ground motion mean value.
-        """
-        # line 1686 in hazgridXnga2.f
-        ffc = self._compute_finite_fault_correction(mag)
-        d = np.sqrt(rjb ** 2 + (C['c7'] ** 2) * (ffc ** 2))
-
-        # lines 1663, 1694-1696 in hazgridXnga2.f
-        mean = (
-            C['c1'] + C['c2'] * (mag - 6.) +
-            C['c3'] * ((mag - 6.) ** 2) -
-            C['c4'] * np.log(d) - C['c6'] * d
-        )
-
-        factor = np.log(rjb / 100.)
-        idx = factor > 0
-        mean[idx] -= (C['c5'] - C['c4']) * factor[idx]
-
-        return mean
-
-    def _compute_finite_fault_correction(self, mag):
-        """
-        Compute finite fault correction term as geometric mean of correction
-        terms obtained from Mw values calculated with Johnston 1996 and
-        Atkinson and Boore 1987 conversion equations.
-
-        Implement equations as in lines 1653 - 1658 in hazgridXnga2.f
-        """
-        mw_j96 = mblg_to_mw_johnston_96(mag)
-        mw_ab87 = mblg_to_mw_atkinson_boore_87(mag)
-
-        t1 = np.exp(-1.25 + 0.227 * mw_j96)
-        t2 = np.exp(-1.25 + 0.227 * mw_ab87)
-
-        return np.sqrt(t1 * t2)
-
-    def _compute_stddevs(self, C, num_sites, stddev_types):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        for _ in stddev_types:
-            stddevs.append(np.zeros(num_sites) + C['sigma'])
-
-        return stddevs
 
     #: Coefficient table obtained from coefficient arrays (tb1, tb2, tb3, tb4,
     #: tb5, tb6, tbh) defined from line 1596 - 1614 in hazgridXnga2.f
@@ -176,11 +183,7 @@ class ToroEtAl1997MwNSHMP2008(ToroEtAl1997MblgNSHMP2008):
     Coefficients are Mw-specific and no magnitude conversion is considered to
     take into account finite-fault correction.
     """
-    def _compute_finite_fault_correction(self, mag):
-        """
-        Compute finite fault correction term.
-        """
-        return np.exp(-1.25 + 0.227 * mag)
+    kind = "Mw"
 
     #: Coefficient table obtained from coefficient arrays (tc1, tc2, tc3, tc4,
     #: tc5, tc6, th) defined in subroutine getToro in hazgridXnga2.f
