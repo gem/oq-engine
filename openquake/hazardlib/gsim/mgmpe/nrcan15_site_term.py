@@ -25,6 +25,118 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.baselib.general import CallableDict
+
+BA08_AB06 = CallableDict()
+
+
+@BA08_AB06.add("base")
+def BA08_AB06_base(kind, C, C2, vs30, imt, pgar):
+    """
+    Computes amplification factor similarly to what is done in the 2015
+    version of the Canada building code. An initial version of this code
+    was kindly provided by Michal Kolaj - Geological Survey of Canada
+
+    :param vs30:
+        Can be either a scalar or a :class:`~numpy.ndarray` instance
+    :param imt:
+        The intensity measure type
+    :param pgar:
+        The value of hazard on rock (vs30=760). Can be either a scalar or
+        a :class:`~numpy.ndarray` instance. Unit of measure is fractions
+        of gravity acceleration.
+    :return:
+        A scalar or a :class:`~numpy.ndarray` instance with the
+        amplification factor.
+    """
+    fa = np.ones_like(vs30)
+    if np.isscalar(vs30):
+        vs30 = np.array([vs30])
+    if np.isscalar(pgar):
+        pgar = np.array([pgar])
+    #
+    # Fixing vs30 for hard rock to 1999 m/s. Beyond this threshold the
+    # motion will not be deamplified further
+    vs = copy.copy(vs30)
+    vs[vs >= 2000] = 1999.
+    #
+    # Computing motion on rock
+    idx = np.where(vs30 > 760)
+    if np.size(idx) > 0:
+        """
+        # This is the original implementation - Since this code is
+        # experimental we keep it for possible further developments
+        # For values of Vs30 greater than 760 a linear interpolation is
+        # used between the gm factor at 2000 m/s and 760 m/s
+        fa[idx] = 10**(np.interp(np.log10(vs[idx]),
+                                 np.log10([760.0, 2000.0]),
+                                 np.log10([1.0, C2['c']])))
+        """
+        nl = BooreAtkinson2008()._get_site_amplification_non_linear(
+            vs[idx], pgar[idx], C)
+        lin = BooreAtkinson2008()._get_site_amplification_linear(
+            vs[idx], C)
+        tmp = np.exp(nl+lin)
+        fa[idx] = tmp
+    #
+    # For values of Vs30 lower than 760 the amplification is computed
+    # using the site term of Boore and Atkinson (2008)
+    idx = np.where(vs < 760.)
+    if np.size(idx) > 0:
+        nl = BooreAtkinson2008()._get_site_amplification_non_linear(
+            vs[idx], pgar[idx], C)
+        lin = BooreAtkinson2008()._get_site_amplification_linear(
+            vs[idx], C)
+        fa[idx] = np.exp(nl+lin)
+    return fa
+
+
+@BA08_AB06.add("linear")
+def BA08_AB06_linear(kind, C, C2, vs30, imt, pgar):
+    """
+    Computes amplification factor using an approach similar to the one used
+    for the 2015 Canada Buiding code. Michal Kolaj's help is acknoledged.
+
+    :param vs30:
+        an be either a scalar or a :class:`~numpy.ndarray` instance
+    :param imt:
+        The intensity measure type
+    :param pgar:
+        The value of hazard on rock (vs30=760). Can be either a scalar or
+        a :class:`~numpy.ndarray` instance. Unit of measure is fractions
+        of gravity acceleration.
+    :return:
+        A scalar or a :class:`~numpy.ndarray` instance with the
+        amplification factor.
+    """
+    fa = np.ones_like(vs30)
+    if np.isscalar(vs30):
+        vs30 = np.array([vs30])
+    if np.isscalar(pgar):
+        pgar = np.array([pgar])
+    #
+    # Fixing vs30 for hard rock to 1999 m/s. Beyond this threshold the
+    # motion will not be modified
+    vs = copy.copy(vs30)
+    vs[vs >= 2000] = 2000.
+    #
+    # Computing motion on rock
+    idx = np.where(vs30 > 760)
+    if np.size(idx) > 0:
+        fa[idx] = 1. / 10**(np.interp(np.log10(vs[idx]),
+                                      np.log10([760.0, 2000.0]),
+                                      np.log10([1.0, C2['c']])))
+    #
+    # For values of Vs30 lower than 760 the amplification is computed
+    # using the site term of Boore and Atkinson (2008)
+    idx = np.where(vs < 760.)
+    if np.size(idx) > 0:
+        nl = BooreAtkinson2008()._get_site_amplification_non_linear(
+            vs[idx], pgar[idx], C)
+        lin = BooreAtkinson2008()._get_site_amplification_linear(
+            vs[idx], C)
+        fa[idx] = np.exp(nl+lin)
+    return fa
 
 
 class NRCan15SiteTerm(GMPE):
@@ -35,6 +147,7 @@ class NRCan15SiteTerm(GMPE):
     :param gmpe_name:
         The name of a GMPE class
     """
+    kind = "base"
 
     # Parameters
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -77,77 +190,18 @@ class NRCan15SiteTerm(GMPE):
         # compute mean and standard deviation
         mean, stddvs = self.gmpe.get_mean_and_stddevs(sites_rock, rup, dists,
                                                       imt, stds_types)
-        if not str(imt) == 'PGA':
+        if imt.name != 'PGA':
             # compute mean and standard deviation on rock
             mean_rock, stddvs_rock = self.gmpe.get_mean_and_stddevs(
                 sites_rock, rup, dists, imt, stds_types)
         else:
             mean_rock = mean
-        fa = self.BA08_AB06(sites.vs30, imt, np.exp(mean_rock))
+
+        C = self.COEFFS_BA08[imt]
+        C2 = self.COEFFS_AB06r[imt]
+        fa = BA08_AB06(self.kind, C, C2, sites.vs30, imt, np.exp(mean_rock))
         mean = np.log(np.exp(mean) * fa)
         return mean, stddvs
-
-    def BA08_AB06(self, vs30, imt, pgar):
-        """
-        Computes amplification factor similarly to what is done in the 2015
-        version of the Canada building code. An initial version of this code
-        was kindly provided by Michal Kolaj - Geological Survey of Canada
-
-        :param vs30:
-            Can be either a scalar or a :class:`~numpy.ndarray` instance
-        :param imt:
-            The intensity measure type
-        :param pgar:
-            The value of hazard on rock (vs30=760). Can be either a scalar or
-            a :class:`~numpy.ndarray` instance. Unit of measure is fractions
-            of gravity acceleration.
-        :return:
-            A scalar or a :class:`~numpy.ndarray` instance with the
-            amplification factor.
-        """
-        fa = np.ones_like(vs30)
-        if np.isscalar(vs30):
-            vs30 = np.array([vs30])
-        if np.isscalar(pgar):
-            pgar = np.array([pgar])
-        #
-        # Fixing vs30 for hard rock to 1999 m/s. Beyond this threshold the
-        # motion will not be deamplified further
-        vs = copy.copy(vs30)
-        vs[vs >= 2000] = 1999.
-        #
-        # Computing motion on rock
-        idx = np.where(vs30 > 760)
-        if np.size(idx) > 0:
-            """
-            # This is the original implementation - Since this code is
-            # experimental we keep it for possible further developments
-            # For values of Vs30 greater than 760 a linear interpolation is
-            # used between the gm factor at 2000 m/s and 760 m/s
-            C2 = self.COEFFS_AB06r[imt]
-            fa[idx] = 10**(np.interp(np.log10(vs[idx]),
-                                     np.log10([760.0, 2000.0]),
-                                     np.log10([1.0, C2['c']])))
-            """
-            C = self.COEFFS_BA08[imt]
-            nl = BooreAtkinson2008()._get_site_amplification_non_linear(
-                vs[idx], pgar[idx], C)
-            lin = BooreAtkinson2008()._get_site_amplification_linear(
-                vs[idx], C)
-            tmp = np.exp(nl+lin)
-            fa[idx] = tmp
-        #
-        # For values of Vs30 lower than 760 the amplification is computed
-        # using the site term of Boore and Atkinson (2008)
-        idx = np.where(vs < 760.)
-        if np.size(idx) > 0:
-            C = self.COEFFS_BA08[imt]
-            nl = BooreAtkinson2008()._get_site_amplification_non_linear(
-                vs[idx], pgar[idx], C)
-            lin = BooreAtkinson2008()._get_site_amplification_linear(
-                vs[idx], C)
-            fa[idx] = np.exp(nl+lin)
-        return fa
 
     COEFFS_AB06r = CoeffsTable(sa_damping=5, table="""\
     IMT  c
@@ -218,54 +272,7 @@ class NRCan15SiteTermLinear(NRCan15SiteTerm):
     :param gmpe_name:
         The name of a GMPE class
     """
-
-    def BA08_AB06(self, vs30, imt, pgar):
-        """
-        Computes amplification factor using an approach similar to the one used
-        for the 2015 Canada Buiding code. Michal Kolaj's help is acknoledged.
-
-        :param vs30:
-            an be either a scalar or a :class:`~numpy.ndarray` instance
-        :param imt:
-            The intensity measure type
-        :param pgar:
-            The value of hazard on rock (vs30=760). Can be either a scalar or
-            a :class:`~numpy.ndarray` instance. Unit of measure is fractions
-            of gravity acceleration.
-        :return:
-            A scalar or a :class:`~numpy.ndarray` instance with the
-            amplification factor.
-        """
-        fa = np.ones_like(vs30)
-        if np.isscalar(vs30):
-            vs30 = np.array([vs30])
-        if np.isscalar(pgar):
-            pgar = np.array([pgar])
-        #
-        # Fixing vs30 for hard rock to 1999 m/s. Beyond this threshold the
-        # motion will not be modified
-        vs = copy.copy(vs30)
-        vs[vs >= 2000] = 2000.
-        #
-        # Computing motion on rock
-        idx = np.where(vs30 > 760)
-        if np.size(idx) > 0:
-            C2 = self.COEFFS_AB06r[imt]
-            fa[idx] = 1. / 10**(np.interp(np.log10(vs[idx]),
-                                          np.log10([760.0, 2000.0]),
-                                          np.log10([1.0, C2['c']])))
-        #
-        # For values of Vs30 lower than 760 the amplification is computed
-        # using the site term of Boore and Atkinson (2008)
-        idx = np.where(vs < 760.)
-        if np.size(idx) > 0:
-            C = self.COEFFS_BA08[imt]
-            nl = BooreAtkinson2008()._get_site_amplification_non_linear(
-                vs[idx], pgar[idx], C)
-            lin = BooreAtkinson2008()._get_site_amplification_linear(
-                vs[idx], C)
-            fa[idx] = np.exp(nl+lin)
-        return fa
+    kind = "linear"
 
     COEFFS_AB06r = CoeffsTable(sa_damping=5, table="""\
     IMT  c
