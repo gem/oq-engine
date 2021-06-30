@@ -46,6 +46,47 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 from scipy.constants import g
 
 
+def _compute_mean(C, mag, r):
+    """
+    Compute mean value according to equation 30, page 1021.
+    """
+    mean = (C['c1'] +
+            _compute_term1(C, mag) +
+            _compute_term2(C, mag, r))
+    return mean
+
+
+def _compute_term1(C, mag):
+    """
+    This computes the term f1 equation 8 Drouet & Cotton (2015)
+    """
+    return C['c2'] * (mag - 8.0) + C['c3'] * (mag - 8.0) ** 2
+
+
+def _compute_term2(C, mag, r):
+    """
+    This computes the term f2 equation 8 Drouet & Cotton (2015)
+    """
+    return (C['c4'] + C['c5'] * mag) * \
+        np.log(np.sqrt(r**2 + C['c6']**2)) + C['c7'] * r
+
+
+def _get_stddevs(C, stddev_types, mag, num_sites):
+    """
+    Return total standard deviation as for equation 35, page 1021.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            sigma_t = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
+            stddevs.append(sigma_t + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['sigma'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+    return stddevs
+
+
 class DrouetAlpes2015Rjb(GMPE):
     """
     Implements GMPE developed by Douet & Cotton (2015) BSSA doi:
@@ -63,11 +104,7 @@ class DrouetAlpes2015Rjb(GMPE):
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see table 6, page 1022 (PGA is assumed
     #: to be equal to SA at 0.01 s)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of
     #: two : horizontal components
@@ -76,11 +113,8 @@ class DrouetAlpes2015Rjb(GMPE):
 
     #: Supported standard deviation type is only total, see equation 35, page
     #: 1021
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     DEFINED_FOR_REFERENCE_VELOCITY = 800
 
@@ -101,58 +135,16 @@ class DrouetAlpes2015Rjb(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
-        mean = self._compute_mean(C, rup.mag, dists.rjb)
+        mean = _compute_mean(C, rup.mag, dists.rjb)
         if imt.name in 'SA PGA':
             # Convert from m/s**2 to g
             mean = mean - np.log(g)
         elif imt.name == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
-        stddevs = self._get_stddevs(C, stddev_types, rup.mag,
-                                    dists.rjb.shape[0])
-
+        stddevs = _get_stddevs(C, stddev_types, rup.mag,
+                               dists.rjb.shape[0])
         return mean, stddevs
-
-    def _compute_mean(self, C, mag, r):
-        """
-        Compute mean value according to equation 30, page 1021.
-        """
-        mean = (C['c1'] +
-                self._compute_term1(C, mag) +
-                self._compute_term2(C, mag, r))
-        return mean
-
-    def _get_stddevs(self, C, stddev_types, mag, num_sites):
-        """
-        Return total standard deviation as for equation 35, page 1021.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigma_t = np.sqrt(C['sigma'] ** 2 + C['tau'] ** 2)
-                stddevs.append(sigma_t + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_term1(self, C, mag):
-        """
-        This computes the term f1 equation 8 Drouet & Cotton (2015)
-        """
-        return C['c2'] * (mag - 8.0) + C['c3'] * (mag - 8.0) ** 2
-
-    def _compute_term2(self, C, mag, r):
-        """
-        This computes the term f2 equation 8 Drouet & Cotton (2015)
-        """
-        return (C['c4'] + C['c5'] * mag) * \
-            np.log(np.sqrt(r**2 + C['c6']**2)) + C['c7'] * r
 
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper.
@@ -199,19 +191,15 @@ class DrouetAlpes2015Rrup(DrouetAlpes2015Rjb):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
-        mean = self._compute_mean(C, rup.mag, dists.rrup)
+        mean = _compute_mean(C, rup.mag, dists.rrup)
         if imt.name in 'SA PGA':
             # Convert from m/s**2 to g
             mean = mean - np.log(g)
         elif imt.name == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
-        stddevs = self._get_stddevs(C, stddev_types, rup.mag,
-                                    dists.rrup.shape[0])
-
+        stddevs = _get_stddevs(C, stddev_types, rup.mag,
+                               dists.rrup.shape[0])
         return mean, stddevs
 
     #: Coefficient tables are constructed from the electronic suplements of
@@ -251,7 +239,7 @@ class DrouetAlpes2015Repi(DrouetAlpes2015Rjb):
     """
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
-    REQUIRES_DISTANCES = set(('repi', ))
+    REQUIRES_DISTANCES = {'repi'}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -259,19 +247,15 @@ class DrouetAlpes2015Repi(DrouetAlpes2015Rjb):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
-        mean = self._compute_mean(C, rup.mag, dists.repi)
+        mean = _compute_mean(C, rup.mag, dists.repi)
         if imt.name in 'SA PGA':
             # Convert from m/s**2 to g
             mean = mean - np.log(g)
         elif imt.name == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
-        stddevs = self._get_stddevs(C, stddev_types, rup.mag,
+        stddevs = _get_stddevs(C, stddev_types, rup.mag,
                                     dists.repi.shape[0])
-
         return mean, stddevs
 
     #: Coefficient tables are constructed from the electronic suplements of
@@ -319,18 +303,14 @@ class DrouetAlpes2015Rhyp(DrouetAlpes2015Rjb):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
-        mean = self._compute_mean(C, rup.mag, dists.rhyp)
+        mean = _compute_mean(C, rup.mag, dists.rhyp)
         if imt.name in 'SA PGA':  # Convert from m/s**2 to g
             mean = mean - np.log(g)
         elif imt.name == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
-        stddevs = self._get_stddevs(C, stddev_types, rup.mag,
-                                    dists.rhyp.shape[0])
-
+        stddevs = _get_stddevs(C, stddev_types, rup.mag,
+                               dists.rhyp.shape[0])
         return mean, stddevs
 
     #: Coefficient tables are constructed from the electronic suplements of
@@ -410,7 +390,7 @@ class DrouetAlpes2015RrupHR(DrouetAlpes2015Rrup):
     """
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
     DEFINED_FOR_REFERENCE_VELOCITY = 2000
 
     #: Coefficient tables are constructed from the electronic suplements of
@@ -452,7 +432,7 @@ class DrouetAlpes2015RepiHR(DrouetAlpes2015Repi):
     """
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
-    REQUIRES_DISTANCES = set(('repi', ))
+    REQUIRES_DISTANCES = {'repi'}
     DEFINED_FOR_REFERENCE_VELOCITY = 2000
 
     #: Coefficient tables are constructed from the electronic suplements of
@@ -727,7 +707,7 @@ class DrouetAlpes2015RrupHR_50bars(DrouetAlpes2015Rrup):
     """
     #: Required distance measure is closest distance to rupture, see equation
     #: 30 page 1021.
-    REQUIRES_DISTANCES = set(('rrup', ))
+    REQUIRES_DISTANCES = {'rrup'}
     DEFINED_FOR_REFERENCE_VELOCITY = 2000
 
     #: Coefficient table is not published

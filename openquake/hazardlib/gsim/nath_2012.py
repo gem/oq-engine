@@ -29,6 +29,31 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import SA, PGA, PGV
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
+CONSTS = {'ref_mag': 10.}
+
+
+def _compute_mean(rup, dists, coeffs):
+    """
+    Evaluate equation (11) on p. 484.
+    """
+    ln_p = coeffs['c1'] + coeffs['c2']*rup.mag + \
+        coeffs['c3']*(CONSTS['ref_mag'] - rup.mag)**3 + \
+        coeffs['c4']*np.log(
+            dists.rrup + coeffs['c5']*np.exp(coeffs['c6']*rup.mag))
+    return ln_p
+
+
+def _get_stddevs(coeffs, stddev_types):
+    """
+    Look up values from Table 5 on p. 483 and convert to natural logarithm.
+    Interpretation of "sigma_log(Y)" as the common logarithm is based on
+    the order of magnitude of the values and consistent use of "log" and
+    "ln" to denote common and natural logarithm elsewhere in the paper.
+    """
+    log_stddev = coeffs['sigma']
+    ln_stddev = log_stddev*np.log(10)
+    return ln_stddev
+
 
 class NathEtAl2012Lower(GMPE):
     # pylint: disable=too-few-public-methods, no-init
@@ -103,45 +128,17 @@ class NathEtAl2012Lower(GMPE):
         # obtain coefficients for required intensity measure type (IMT)
         # and add IMT-independent coefficients
         c = self.COEFFS_BEDROCK[imt]
-        coeffs = self.CONSTS.copy()
+        coeffs = CONSTS.copy()
         for n in c.dtype.names:
             coeffs[n] = c[n]
 
         # compute bedrock motion, equation (11)
-        ln_mean = self._compute_mean(rup, dists, coeffs)
+        ln_mean = _compute_mean(rup, dists, coeffs)
 
         # obtain standard deviation
-        ln_stddev = self._get_stddevs(coeffs, stddev_types)
+        ln_stddev = _get_stddevs(coeffs, stddev_types)
 
         return ln_mean, [ln_stddev]
-
-    def _compute_mean(self, rup, dists, coeffs):
-        """
-        Evaluate equation (11) on p. 484.
-        """
-
-        ln_p = coeffs['c1'] + coeffs['c2']*rup.mag + \
-            coeffs['c3']*(self.CONSTS['ref_mag'] - rup.mag)**3 +\
-            coeffs['c4']*np.log(dists.rrup +
-                                coeffs['c5']*np.exp(coeffs['c6']*rup.mag))
-
-        return ln_p
-
-    def _get_stddevs(self, coeffs, stddev_types):
-        """
-        Look up values from Table 5 on p. 483 and convert to natural logarithm.
-        Interpretation of "sigma_log(Y)" as the common logarithm is based on
-        the order of magnitude of the values and consistent use of "log" and
-        "ln" to denote common and natural logarithm elsewhere in the paper.
-        """
-
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-
-        log_stddev = coeffs['sigma']
-        ln_stddev = log_stddev*np.log(10)
-
-        return ln_stddev
 
     #: Coefficients taken from Table 5, p. 483.
     COEFFS_BEDROCK = CoeffsTable(sa_damping=5., table="""\
@@ -155,10 +152,6 @@ class NathEtAl2012Lower(GMPE):
        2 -0.8191  0.4950 -0.0247 -1.1763   1.4407  0.3910  0.4536
        4 -6.9619  0.9977 -0.0270 -0.8393   0.0000  1.9613  0.4614
     """)
-
-    CONSTS = {
-        'ref_mag': 10.,
-    }
 
 
 class NathEtAl2012Upper(NathEtAl2012Lower):
