@@ -27,23 +27,21 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-def _compute_mean(self, C, mag, rhypo, hypo_depth, mean, idx):
+def _compute_mean(C, mag, rrup, mean, idx):
     """
     Compute mean value according to equations 10 and 11 page 226.
     """
-    mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rhypo[idx] +
+    mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rrup[idx] +
                  C['C4'] * np.exp(C['C5'] * mag)))
-    return mean
 
 
-def _compute_std(self, C, stddevs, idx):
+def _compute_std(C, stddevs, idx):
     """
     Compute total standard deviation, see tables 3 and 4, pages 227 and
     228.
     """
     for stddev in stddevs:
         stddev[idx] += C['sigma']
-    return stddev
 
 
 class Lin2011hanging(GMPE):
@@ -74,11 +72,11 @@ class Lin2011hanging(GMPE):
 
     #: Required rupture parameters are magnitude, and focal depth, see
     #: equation 10 page 226.
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is hypocentral distance, see equation 10
     #: page 226.
-    REQUIRES_DISTANCES = {'rhypo'}
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Vs30 threshold value between rock sites (B, C) and soil sites (C, D).
     ROCK_VS30 = 360
@@ -100,15 +98,13 @@ class Lin2011hanging(GMPE):
 
         if idx_rock.any():
             C = self.COEFFS_ROCK[imt]
-            mean = _compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
-                                 idx_rock)
-            stddevs = _compute_std(C, stddevs, idx_rock)
+            _compute_mean(C, rup.mag, dists.rrup, mean, idx_rock)
+            _compute_std(C, stddevs, idx_rock)
 
         if idx_soil.any():
             C = self.COEFFS_SOIL[imt]
-            self._compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
-                               idx_soil)
-            self._compute_std(C, stddevs, idx_soil)
+            _compute_mean(C, rup.mag, dists.rrup, mean, idx_soil)
+            _compute_std(C, stddevs, idx_soil)
 
         return mean, stddevs
 
@@ -133,7 +129,7 @@ class Lin2011hanging(GMPE):
     5.00   -13.9140    1.958    -1.15600    0.00120    1.24100   0.7260
     """)
 
-     #: Coefficient table for soil sites, see table 4 page 153.
+    #: Coefficient table for soil sites, see table 4 page 153.
     COEFFS_SOIL = CoeffsTable(sa_damping=5, table="""\
     IMT      C1        C2         C3        C4         C5         sigma
     pga     -3.2480    0.943    -1.47100    0.10000    0.64800   0.6280
