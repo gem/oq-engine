@@ -27,6 +27,44 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _compute_mean(C, mag, rjb):
+    """
+    Compute mean value, see table 2.
+    """
+    m1 = 6.4
+    r1 = 50.
+    h = 6.
+    R = np.sqrt(rjb ** 2 + h ** 2)
+    R1 = np.sqrt(r1 ** 2 + h ** 2)
+    less_r1 = rjb < r1
+    ge_r1 = rjb >= r1
+
+    mean = (C['c1'] + C['c4'] * (mag - m1) * np.log(R) + C['c5'] * rjb +
+            C['c8'] * (8.5 - mag) ** 2)
+
+    mean[less_r1] += C['c3'] * np.log(R[less_r1])
+    mean[ge_r1] += (C['c3'] * np.log(R1) +
+                    C['c6'] * (np.log(R[ge_r1]) - np.log(R1)))
+
+    if mag < m1:
+        mean += C['c2'] * (mag - m1)
+    else:
+        mean += C['c7'] * (mag - m1)
+
+    return mean
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    stddevs = []
+    for _ in stddev_types:
+        stddevs.append(np.zeros(num_sites) + C['sigma'])
+
+    return stddevs
+
+
 class SomervilleEtAl2009NonCratonic(GMPE):
     """
     Implements GMPE developed by P. Somerville, R. Graves, N. Collins, S. G.
@@ -40,20 +78,14 @@ class SomervilleEtAl2009NonCratonic(GMPE):
 
     #: The supported intensity measure types are PGA, PGV, and SA, see table
     #: 3
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: The supported intensity measure component is set to 'average
     #: horizontal', however the original paper does not report this information
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: The supported standard deviations is total, see tables 3
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: no site parameters are defined, the GMPE is calibrated for Vs30 = 865
     #: m/s (provisionally set to 800 for compatibility with SiteTerm class)
@@ -78,46 +110,10 @@ class SomervilleEtAl2009NonCratonic(GMPE):
                    for stddev_type in stddev_types)
 
         C = self.COEFFS[imt]
-        mean = self._compute_mean(C, rup.mag, dists.rjb)
-        stddevs = self._get_stddevs(C, stddev_types, dists.rjb.shape[0])
+        mean = _compute_mean(C, rup.mag, dists.rjb)
+        stddevs = _get_stddevs(C, stddev_types, dists.rjb.shape[0])
 
         return mean, stddevs
-
-    def _compute_mean(self, C, mag, rjb):
-        """
-        Compute mean value, see table 2.
-        """
-        m1 = 6.4
-        r1 = 50.
-        h = 6.
-        R = np.sqrt(rjb ** 2 + h ** 2)
-        R1 = np.sqrt(r1 ** 2 + h ** 2)
-        less_r1 = rjb < r1
-        ge_r1 = rjb >= r1
-
-        mean = (C['c1'] + C['c4'] * (mag - m1) * np.log(R) + C['c5'] * rjb +
-                C['c8'] * (8.5 - mag) ** 2)
-
-        mean[less_r1] += C['c3'] * np.log(R[less_r1])
-        mean[ge_r1] += (C['c3'] * np.log(R1) +
-                        C['c6'] * (np.log(R[ge_r1]) - np.log(R1)))
-
-        if mag < m1:
-            mean += C['c2'] * (mag - m1)
-        else:
-            mean += C['c7'] * (mag - m1)
-
-        return mean
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        for _ in stddev_types:
-            stddevs.append(np.zeros(num_sites) + C['sigma'])
-
-        return stddevs
 
     #: Coefficients taken from table 3
     COEFFS = CoeffsTable(sa_damping=5, table="""\
