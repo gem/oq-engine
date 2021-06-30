@@ -57,14 +57,12 @@ def _convert_magnitude87(kind, mag):
     return mblg_to_mw_atkinson_boore_87(mag)
 
 
-
 @_convert_magnitude.add("Mblg96")
 def _convert_magnitude96(kind, mag):
     """
     Convert magnitude from Mblg to Mw using Johnston 1996 equation
     """
     return mblg_to_mw_johnston_96(mag)
-
 
 
 @_convert_magnitude.add("Mw")
@@ -133,12 +131,9 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
 
         mean = (
             C['c1'] + C['c2'] * mag + C['c10'] * (mag - 6) ** 2 +
-            (C['c6'] + C['c7'] * mag) * np.log(dists.rjb + np.exp(C['c4']))
-        )
+            (C['c6'] + C['c7'] * mag) * np.log(dists.rjb + np.exp(C['c4'])))
         mean = clip_mean(imt, mean)
-
         stddevs = _compute_stddevs(C, dists.rjb.size, stddev_types)
-
         return mean, stddevs
 
     #: Coefficient table obtained from coefficient arrays (c1, c2, c4, c6,
@@ -268,4 +263,3 @@ class SilvaEtAl2002SingleCornerSaturation(SilvaEtAl2002DoubleCornerSaturation):
     +0.0100000   +5.7388500   -0.12424     +2.9000000   +0.0000000 -3.43887  +0.2651000   +0.0000000 -.06699  +0.7079000   +0.8538000
     pga          +5.5345900   -0.11691     +2.9000000   +0.0000000 -3.42173  +0.2646100   +0.0000000 -.06810  +0.6998000   +0.8471000
     """)
-
