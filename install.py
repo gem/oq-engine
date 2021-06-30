@@ -182,7 +182,7 @@ def before_checks(inst, remove, usage):
                  '.'.join(map(str, sys.version_info)))
 
     # check platform
-    if inst is server or devel_server and sys.platform != 'linux':
+    if inst is (server or devel_server) and sys.platform != 'linux':
         sys.exit('Error: this installation method is meant for linux!')
 
     # check venv
@@ -191,11 +191,11 @@ def before_checks(inst, remove, usage):
 
     # check user
     user = getpass.getuser()
-    if inst is server or devel_server and user != 'root':
+    if inst is (server or devel_server) and user != 'root':
         sys.exit('Error: you cannot perform a server installation unless '
                  'you are root. If you do not have root permissions, you '
                  'can install the engine in user mode.\n\n' + usage)
-    elif inst is not server or devel_server and user == 'root':
+    elif inst is not (server or devel_server) and user == 'root':
         sys.exit('Error: you cannot perform a user or devel installation'
                  ' as root.')
 
@@ -216,9 +216,9 @@ def before_checks(inst, remove, usage):
                      (inst.DBPORT, cmd, inst.DBPORT))
 
     # check if there is an installation from packages
-    if inst is server or devel_server and os.path.exists('/etc/openquake/openquake.cfg'):
+    if inst is (server or devel_server) and os.path.exists('/etc/openquake/openquake.cfg'):
         sys.exit(PACKAGES)
-    if (inst is server or devel_server and os.path.exists(inst.OQ) and
+    if (inst is (server or devel_server) and os.path.exists(inst.OQ) and
             os.readlink(inst.OQ) != '%s/bin/oq' % inst.VENV):
         sys.exit('Error: there is already a link %s->%s; please remove it' %
                  (inst.OQ, os.readlink(inst.OQ)))
@@ -228,7 +228,7 @@ def install(inst, version):
     """
     Install the engine in one of the three possible modes
     """
-    if inst is server or devel_server:
+    if inst is (server or devel_server):
         import pwd
         # create the openquake user if necessary
         try:
@@ -240,7 +240,7 @@ def install(inst, version):
     # create the database
     if not os.path.exists(inst.OQDATA):
         os.makedirs(inst.OQDATA)
-        if inst is server or devel_server:
+        if inst is (server or devel_server):
             subprocess.check_call(['chown', 'openquake', inst.OQDATA])
 
     # create the openquake venv if necessary
@@ -266,7 +266,7 @@ def install(inst, version):
 
     subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
 
-    if inst is devel or devel_server:  # install from the local repo
+    if inst is (devel or devel_server):  # install from the local repo
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', '.'])
     elif version is None:  # install the stable version
         subprocess.check_call([pycmd, '-m', 'pip', 'install',
@@ -281,7 +281,7 @@ def install(inst, version):
     install_standalone(inst.VENV)
 
     # create openquake.cfg
-    if inst is server or devel_server:
+    if inst is (server or devel_server):
         if os.path.exists(inst.CFG):
             print('There is an old file %s; it will not be overwritten, '
                   'but consider updating it with\n%s' %
@@ -298,7 +298,7 @@ def install(inst, version):
     else:
         oqreal = '%s/bin/oq' % inst.VENV
 
-    if inst is server or devel_server and not os.path.exists(inst.OQ):
+    if inst is (server or devel_server) and not os.path.exists(inst.OQ):
         os.symlink(oqreal, inst.OQ)
     if inst is user:
         if sys.platform == 'win32':
@@ -312,7 +312,7 @@ def install(inst, version):
             print(f'Please activate the venv with source {inst.VENV}/bin/activate')
 
     # create systemd services
-    if inst is server or devel_server and os.path.exists('/usr/lib/systemd/system'):
+    if inst is (server or devel_server) and os.path.exists('/usr/lib/systemd/system'):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
             service_path = '/etc/systemd/system/multi-user.target.wants/' + service_name
@@ -347,7 +347,7 @@ def remove(inst):
     Remove the virtualenv directory. In case of a server installation, also
     remove the systemd services.
     """
-    if inst is server or devel_server:
+    if inst is (server or devel_server):
         for service in ['dbserver', 'webui']:
             service_name = 'openquake-%s.service' % service
             service_path = '/usr/lib/systemd/system/' + service_name
@@ -358,7 +358,7 @@ def remove(inst):
         subprocess.check_call(['systemctl', 'daemon-reload'])
     shutil.rmtree(inst.VENV)
     print('%s has been removed' % inst.VENV)
-    if inst is server or devel_server and os.path.exists(server.OQ):
+    if inst is (server or devel_server) and os.path.exists(server.OQ):
         os.remove(server.OQ)
         print('%s has been removed' % server.OQ)
 
