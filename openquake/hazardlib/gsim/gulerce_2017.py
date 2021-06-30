@@ -31,6 +31,16 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.imt import SA
 
+#: equation constants (that are IMT independent)
+CONSTS = {
+    # m1, m2 specified at section "Moderate-to-Large Magnitude Scaling"
+    'm1': 6.75,
+    'm2': 5.50,
+    # h1, h2, h3 specified at section "Hanging Wall Effects"
+    'h1': +0.25,
+    'h2': +1.50,
+    'h3': -0.75}
+
 
 class GulerceEtAl2017(GMPE):
     """
@@ -48,7 +58,6 @@ class GulerceEtAl2017(GMPE):
     Gulerce, Z., Kamai, R., Abrahamson, N., & Silva, W. (2017). Ground Motion
     Prediction Equations for the Vertical Ground Motion Component Based on the
     NGA-W2 Database. *Earthquake Spectra*, *33*(2), 499-528.
-
     """
 
     #: Supported tectonic region type is active shallow crust, as part of the
@@ -66,11 +75,8 @@ class GulerceEtAl2017(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Equations for Standard Deviation".
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is Vs30 only. Unlike in ASK14, the nonlinear
     #: site response and Z1.0 scaling is not incorporated; see the section
@@ -125,22 +131,22 @@ class GulerceEtAl2017(GMPE):
         # basic form, Equation 11
         base_term = C['a1'] * np.ones_like(dists.rrup) + C['a17'] * dists.rrup
 
-        if rup.mag >= self.CONSTS['m1']:
-            base_term += (C['a5'] * (rup.mag - self.CONSTS['m1']) +
+        if rup.mag >= CONSTS['m1']:
+            base_term += (C['a5'] * (rup.mag - CONSTS['m1']) +
                           C['a8'] * (8.5 - rup.mag)**2. +
-                          (C['a2'] + C['a3'] * (rup.mag - self.CONSTS['m1'])) *
+                          (C['a2'] + C['a3'] * (rup.mag - CONSTS['m1'])) *
                           np.log(R))
-        elif rup.mag >= self.CONSTS['m2']:
-            base_term += (C['a4'] * (rup.mag - self.CONSTS['m1']) +
+        elif rup.mag >= CONSTS['m2']:
+            base_term += (C['a4'] * (rup.mag - CONSTS['m1']) +
                           C['a8'] * (8.5 - rup.mag)**2. +
-                          (C['a2'] + C['a3'] * (rup.mag - self.CONSTS['m1'])) *
+                          (C['a2'] + C['a3'] * (rup.mag - CONSTS['m1'])) *
                           np.log(R))
         else:
-            base_term += (C['a4'] * (self.CONSTS['m2'] - self.CONSTS['m1']) +
-                          C['a8'] * (8.5 - self.CONSTS['m2'])**2. +
-                          C['a6'] * (rup.mag - self.CONSTS['m2']) +
-                          (C['a2'] + C['a3'] * (self.CONSTS['m2'] -
-                          self.CONSTS['m1'])) * np.log(R))
+            base_term += (C['a4'] * (CONSTS['m2'] - CONSTS['m1']) +
+                          C['a8'] * (8.5 - CONSTS['m2'])**2. +
+                          C['a6'] * (rup.mag - CONSTS['m2']) +
+                          (C['a2'] + C['a3'] * (CONSTS['m2'] -
+                          CONSTS['m1'])) * np.log(R))
         return base_term
 
     def _get_faulting_style_term(self, C, rup):
@@ -229,9 +235,9 @@ class GulerceEtAl2017(GMPE):
             r2 = 4. * r1
             #
             idx = dists.rx < r1
-            T3[idx] = (np.ones_like(dists.rx)[idx] * self.CONSTS['h1'] +
-                       self.CONSTS['h2'] * (dists.rx[idx] / r1) +
-                       self.CONSTS['h3'] * (dists.rx[idx] / r1)**2)
+            T3[idx] = (np.ones_like(dists.rx)[idx] * CONSTS['h1'] +
+                       CONSTS['h2'] * (dists.rx[idx] / r1) +
+                       CONSTS['h3'] * (dists.rx[idx] / r1)**2)
             #
             idx = ((dists.rx >= r1) & (dists.rx <= r2))
             T3[idx] = 1. - (dists.rx[idx] - r1) / (r2 - r1)
@@ -358,17 +364,6 @@ IMT      vlin    c       c4      a1         a2        a3       a4       a5      
 7.5      330     1.8     8.6     -2.9456    -0.704    0.109    1.78     0.9425    2.95     0       -0.3185    0.2405    -0.12    0        0.7       -0.19     -0.001     0          0          0         0.0004    -0.0018    0.1735    0.3015    0.4044    0.7       0.5337    0.19      0.72       0.184
 10       330     1.8     8.6     -4.0143    -0.6      0.1      1.95     1.15      2.95     0       -0.209     0.27      -0.12    0        0.8       -0.3      -0.001     0          0          0         0.0004    -0.0018    0.064     0.192     0.38      0.7       0.5337    0.19      0.72       0.184
     """)
-
-    #: equation constants (that are IMT independent)
-    CONSTS = {
-        # m1, m2 specified at section "Moderate-to-Large Magnitude Scaling"
-        'm1': 6.75,
-        'm2': 5.50,
-        # h1, h2, h3 specified at section "Hanging Wall Effects"
-        'h1': +0.25,
-        'h2': +1.50,
-        'h3': -0.75,
-    }
 
 
 class GulerceEtAl2017RegTWN(GulerceEtAl2017):
