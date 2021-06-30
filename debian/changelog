@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed a subtle bug: in presence of a nontrivial taxonomy mapping, loss
+    curves could be not computed due to duplicated event IDs in the event
+    loss table coming from a int->float conversion
   * Forced a name convention on the coefficient tables (must start with COEFFS)
   * Replaced IMT classes with factory functions
   * Changed the `minimum_distance` from a parameter of the GMPE to a
