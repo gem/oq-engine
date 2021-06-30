@@ -785,7 +785,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             if len(outs) > 1:
                 dic[lt] = stats.average_df(outs, weights)
                 # ARGHH! doing the average on the eid field produces floats!
-                dic[lt].eid = numpy.uint32(dic[lt].eid)
+                dic[lt].eid = U32(numpy.round(dic[lt].eid))
             else:
                 dic[lt] = outs[0]
         return dic
