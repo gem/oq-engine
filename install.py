@@ -156,7 +156,6 @@ DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
 STANDALONE = 'https://github.com/gem/oq-platform-%s/archive/master.zip'
 
-
 def install_standalone(venv):
     """
     Install the standalone Django applications if possible
@@ -170,7 +169,6 @@ def install_standalone(venv):
                                    '--upgrade', STANDALONE % app], env=env)
         except Exception as exc:
             print('%s: could not install %s' % (exc, STANDALONE % app))
-
 
 def before_checks(inst, remove, usage):
     """
