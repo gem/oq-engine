@@ -32,14 +32,6 @@ from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
-#: Equation constants that are IMT-independent
-CONSTS = {
-    "Mref": 4.5,
-    "Rref": 1.0,
-    "Vref": 760.0,
-    "f1": 0.0,
-    "f3": 0.1}
-
 
 class StewartEtAl2016(GMPE):
     """
@@ -140,11 +132,11 @@ class StewartEtAl2016(GMPE):
         delta_c3 = self._get_deltac3(C)
 
         # Calculate geometric spreading component of path scaling term
-        fp_geom = ((C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *
-                   np.log(rval / CONSTS["Rref"]))
+        fp_geom = ((C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *
+                   np.log(rval / self.CONSTS["Rref"]))
         # Calculate anelastic attenuation component of path scaling term, with
         # delta c3 accounting for regional effects
-        fp_atten = (C["c3"] + delta_c3) * (rval - CONSTS["Rref"])
+        fp_atten = (C["c3"] + delta_c3) * (rval - self.CONSTS["Rref"])
         return fp_geom + fp_atten
 
     def _get_deltac3(self, C):
@@ -216,6 +208,14 @@ class StewartEtAl2016(GMPE):
         else:
             phi = (C["phi1"] + (C["phi2"] - C["phi1"]) * (mag - 4.5))
         return phi
+
+    #: Equation constants that are IMT-independent
+    CONSTS = {
+        "Mref": 4.5,
+        "Rref": 1.0,
+        "Vref": 760.0,
+        "f1": 0.0,
+        "f3": 0.1}
 
     #: Table of period-dependent regression coefficients obtained from the
     #: supplementary material in EQS paper
