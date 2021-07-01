@@ -229,7 +229,7 @@ class ContextMaker(object):
         Compile the required jittable functions
         """
         mean = numpy.zeros((1, len(self.imts)))
-        stds = numpy.zeros((3, len(self.imts), 1))
+        stds = numpy.zeros((3, 1, len(self.imts)))
         self.fake = {}
         for g, gsim in enumerate(self.gsims):
             if hasattr(gsim, 'calc_mean_stds'):
@@ -549,7 +549,7 @@ class ContextMaker(object):
             else:
                 stypes = stdtypes
             arr = numpy.zeros((1 + len(stypes), N, M))
-            stds = numpy.zeros((3, M, N))
+            stds = numpy.zeros((3, N, M))
             gcls = gsim.__class__
             calc_ms = getattr(gcls, 'calc_mean_stds', None)
             if calc_ms:  # fast lane
@@ -561,11 +561,26 @@ class ContextMaker(object):
                             arr[0, slc], stds[:, :, slc])
                 for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
-                        arr[s] = stds[0].T
+                        arr[s] = stds[0]
                     elif stype == StdDev.INTER_EVENT:
-                        arr[s] = stds[1].T
+                        arr[s] = stds[1]
                     elif stype == StdDev.INTRA_EVENT:
-                        arr[s] = stds[2].T
+                        arr[s] = stds[2]
+            elif hasattr(gcls, 'get_mean_'):  # new lane
+                start = 0
+                for ctx in ctxs:
+                    stop = start + len(ctx.sids)
+                    for m, imt in enumerate(self.imts):
+                        arr[0, start:stop, m] = gsim.get_mean_(
+                            ctx, imt, stds[:, :, slc])
+                    start = stop
+                for s, stype in enumerate(stypes, 1):
+                    if stype == StdDev.TOTAL:
+                        arr[s] = stds[0]
+                    elif stype == StdDev.INTER_EVENT:
+                        arr[s] = stds[1]
+                    elif stype == StdDev.INTRA_EVENT:
+                        arr[s] = stds[2]
             else:  # slow lane
                 start = 0
                 for ctx in ctxs:

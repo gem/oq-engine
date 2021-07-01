@@ -84,4 +84,4 @@ class ExampleA2021(GMPE):
             sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
             sigma_epi = (0.36 + 0.07 * (mag - 6) if imt.period < 1
                          else 0.34 + 0.06 * (mag - 6))
-            stds[0, m] = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)
+            stds[0, :, m] = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)
