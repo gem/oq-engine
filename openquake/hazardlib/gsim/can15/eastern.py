@@ -15,7 +15,7 @@ from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.gsim.pezeshk_2011 import PezeshkEtAl2011
 from openquake.hazardlib.gsim.boore_atkinson_2011 import Atkinson2008prime
-from openquake.hazardlib.gsim.atkinson_boore_2006 import \
+from openquake.hazardlib.gsim.boore_atkinson_2008 import \
     AtkinsonBoore2006Modified2011
 from openquake.hazardlib.gsim.silva_2002 import (
     SilvaEtAl2002SingleCornerSaturation)
