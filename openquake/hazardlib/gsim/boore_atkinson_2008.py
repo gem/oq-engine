@@ -349,13 +349,13 @@ def _get_site_amplification_non_linear(vs30, pga4nl, C):
     return _compute_non_linear_term(pga4nl, bnl)
 
 
-def _get_stddevs(kind, C, stddev_types, num_sites):
+def _get_stddevs(clsname, C, stddev_types, num_sites):
     """
     Return standard deviations as defined in table 8, pag 121.
     """
-    if '2006' in kind:
+    if '2006' in clsname:
         return [np.zeros(num_sites) + std_total for _ in stddev_types]
-    elif 'Hawaii' in kind:
+    elif 'Hawaii' in clsname:
         # Using a frequency independent value of sigma as recommended
         # in the caption of Table 2 of Atkinson (2010)
         return [0.26/np.log10(np.e) + np.zeros(num_sites)]
