@@ -72,6 +72,8 @@ class BindiEtAl2011(GMPE):
     #: Required distance measure is RRup (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
 
+    sgn = 0
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -102,6 +104,10 @@ class BindiEtAl2011(GMPE):
         # Return stddevs in terms of natural log scaling
         stddevs = np.log(10.0 ** np.array(istddevs))
         # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
+
+        if self.sgn:
+            mean += self.sgn * self._get_delta(imt, rup.mag)
+
         return mean, stddevs
 
     def _get_stddevs(self, C, stddev_types, num_sites):
@@ -228,6 +234,12 @@ class BindiEtAl2011(GMPE):
             NS = 1
         return U, SS, NS, RS
 
+    def _get_delta(self, imt, mag):
+        # Get the coefficients needed to compute the delta used for scaling
+        coeffs = self.COEFFS_DELTA[imt]
+        tmp = coeffs['a']*mag**2. + coeffs['b']*mag + coeffs['c']
+        return tmp
+
     #: Coefficients from SA from Table 1
     #: Coefficients from PGA e PGV from Table 5
 
@@ -260,29 +272,6 @@ class BindiEtAl2011(GMPE):
     4.00    2.058    -1.0840    0.2000     4.876   -0.000843     0.6740    -0.00621    0.0    0.1950    0.300    0.350    0.230    0.02950    0.0255    -0.0550    0.0    0.197    0.300     0.359
     """)
 
-
-class BindiEtAl2011Ita19Low(BindiEtAl2011):
-    """
-    Implements the lower term of the ITA19 backbone model.
-    """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        delta = self._get_delta(imt, rup.mag)
-        return mean-delta, stddevs
-
-    def _get_delta(self, imt, mag):
-        # Get the coefficients needed to compute the delta used for scaling
-        coeffs = self.COEFFS_DELTA[imt]
-        tmp = coeffs['a']*mag**2. + coeffs['b']*mag + coeffs['c']
-        return tmp
-
     COEFFS_DELTA = CoeffsTable(sa_damping=5, table="""
     imt   a      b     c
     pga   0.101 -1.136 3.555
@@ -299,22 +288,18 @@ class BindiEtAl2011Ita19Low(BindiEtAl2011):
     2.00  0.041 -0.512 1.888
     3.00  0.050 -0.616 2.193
     4.00  0.076 -0.906 3.046
-        """)
+    """)
+
+
+class BindiEtAl2011Ita19Low(BindiEtAl2011):
+    """
+    Implements the lower term of the ITA19 backbone model.
+    """
+    sgn = -1
 
 
 class BindiEtAl2011Ita19Upp(BindiEtAl2011):
     """
     Implements the upper term of the ITA19 backbone model.
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        gmm = BindiEtAl2011Ita19Low()
-        mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
-                                                     stddev_types)
-        delta = gmm._get_delta(imt, rup.mag)
-        return mean+delta, stddevs
+    sgn = +1
