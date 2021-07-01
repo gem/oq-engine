@@ -494,7 +494,7 @@ class ContextMaker(object):
             ctx.mag = mag
             ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             try:
-                maxmean = max(ms[0].max() for ms in self.calc_mean_stds(
+                maxmean = max(ms[0].max() for ms in self.get_mean_stds(
                     [ctx], StdDev.TOTAL))
                 # shape NM
             except ValueError:  # magnitude outside of supported range
