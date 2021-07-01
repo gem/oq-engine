@@ -29,6 +29,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, PGD, PGV, SA
 
+CONSTANTS = {'mag_ref': 6.5, 'n': 2, 'vs30_ref': 760, 'rrup_ref': 0}
+
 
 class ChaoEtAl2020SInter(GMPE):
     """
@@ -39,21 +41,20 @@ class ChaoEtAl2020SInter(GMPE):
 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGD, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGD, PGV, SA}
 
     DEFINED_FOR_REFERENCE_VELOCITY = 1180
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     REQUIRES_DISTANCES = {'rrup'}
 
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
+
+    REQUIRES_ATTRIBUTES = {'manila', 'aftershocks', 'geology'}
 
     def __init__(self, manila=False, aftershocks=False, geology=True,
                  **kwargs):
@@ -80,7 +81,7 @@ class ChaoEtAl2020SInter(GMPE):
         # intensity measure type
         C = self.COEFFS[imt]
 
-        s = self.CONSTANTS
+        s = CONSTANTS
         med = np.zeros(len(sites.vs30))
 
         med += self._ftype(C, rup)
@@ -121,7 +122,6 @@ class ChaoEtAl2020SInter(GMPE):
         phi = math.sqrt(phis2s ** 2 + phiss ** 2)
 
         for stddev in stddev_types:
-            assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev == const.StdDev.TOTAL:
                 stddevs.append(math.sqrt(tau ** 2 + phi ** 2))
             elif stddev == const.StdDev.INTER_EVENT:
@@ -141,7 +141,7 @@ class ChaoEtAl2020SInter(GMPE):
         """
         C value factor [23].
         """
-        s = self.CONSTANTS
+        s = CONSTANTS
         if imt.name in ["PGD", "PGV"]:
             c = 2400
         else:
@@ -169,7 +169,7 @@ class ChaoEtAl2020SInter(GMPE):
         """
         Factors using `h` (coefficients 17-22).
         """
-        s = self.CONSTANTS
+        s = CONSTANTS
         h = self._hm(mag)
         hf = np.log((rrup ** s['n'] + h ** s['n']) ** (1 / s['n'])
                     / (s['rrup_ref'] ** s['n'] + h ** s['n']) ** (1 / s['n']))
@@ -235,8 +235,6 @@ class ChaoEtAl2020SInter(GMPE):
     pgd    2.4541041890538500  2.3782401415145500  2.2914153189502800  2.0838396593163400  1.9313699400126300 -0.2352916881091410  0.0713994939700537 1.5616444489691000 1.4936921369303000 -0.1676096441841540 -0.0000019923442846 -0.0000232740338163 -0.2069439338171460 -0.0032395363349413  0.0109930765184774  0.0052177204872172 -1.0191698911307200 -1.1559670502824900 0.2068132897445940 0.1789279177790470 -0.0018437138641425 -0.0013634189684089  0.0000000000000000 -0.7422544318623790 0.1490020084340320 -0.4228777481185350 -0.3833592619351370 -0.4612451842659720 -0.3050704862339770 -0.2043152093014790 0.6449844035380140 0.4977962177812710 0.5366022406101780 0.7130676587043830 0.7016130925807040 0.4750313723101500 0.5971604738380890 0.5707298418086840 0.3229783037503560
     """)
 
-    CONSTANTS = {'mag_ref': 6.5, 'n': 2, 'vs30_ref': 760, 'rrup_ref': 0}
-
     CONST_FAULT = {'C4': 0.3, 'href': 0}
 
     # subduction or crustal
@@ -249,11 +247,8 @@ class ChaoEtAl2020SSlab(ChaoEtAl2020SInter):
     """
     Chao et al. (2020) for Subduction Slab.
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
     CONST_FAULT = {'C4': 0.2, 'href': 35}
-
     SUFFIX = "_is"
 
 
@@ -261,7 +256,6 @@ class ChaoEtAl2020Asc(ChaoEtAl2020SInter):
     """
     Chao et al. (2020) for Crustal.
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     # add rake to determine fault style in _ftype()
@@ -271,7 +265,7 @@ class ChaoEtAl2020Asc(ChaoEtAl2020SInter):
         """
         Other fault specific factors.
         """
-        return ((mag - self.CONSTANTS['mag_ref']) ** 2 - (mag - self.MC) ** 2
+        return ((mag - CONSTANTS['mag_ref']) ** 2 - (mag - self.MC) ** 2
                 * np.heaviside(mag - self.MC, 0.5)) * C['c10']
 
     def _ftype(self, C, rup):
