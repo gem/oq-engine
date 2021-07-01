@@ -30,7 +30,6 @@ import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
 from math import log10
-import copy
 
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.utils import (
@@ -300,8 +299,6 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         """
         Return total standard deviation (see table 6, p. 2192).
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
         stddevs = [np.zeros(num_sites) + std_total for _ in stddev_types]
         return stddevs
 
