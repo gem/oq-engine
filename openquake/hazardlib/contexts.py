@@ -228,8 +228,8 @@ class ContextMaker(object):
         """
         Compile the required jittable functions
         """
-        M = len(self.imtls)
-        tot = (StdDev.TOTAL,)
+        mean = numpy.zeros((1, len(self.imts)))
+        stds = numpy.zeros((3, len(self.imts), 1))
         self.fake = {}
         for g, gsim in enumerate(self.gsims):
             if hasattr(gsim, 'calc_mean_stds'):
@@ -238,8 +238,7 @@ class ContextMaker(object):
                     ctx = numpy.ones(1, gsim.ctx_builder.dtype)
                 else:
                     ctx = hdf5.ArrayWrapper((), gsim.ctx_builder.dictarray(1))
-                out = numpy.zeros((2, 1, M))
-                gsim.__class__.calc_mean_stds(fake, ctx, self.imts, tot, out)
+                gsim.__class__.calc_mean_stds(fake, ctx, self.imts, mean, stds)
 
     def gen_triples(self, gsim, ctxs):
         """
@@ -550,6 +549,7 @@ class ContextMaker(object):
             else:
                 stypes = stdtypes
             arr = numpy.zeros((1 + len(stypes), N, M))
+            stds = numpy.zeros((3, M, N))
             gcls = gsim.__class__
             calc_ms = getattr(gcls, 'calc_mean_stds', None)
             if calc_ms:  # fast lane
@@ -557,7 +557,15 @@ class ContextMaker(object):
                     # single-site-optimization
                     ctxs = [self.multi(ctxs)]
                 for ctx, fake, slc in self.gen_triples(gsim, ctxs):
-                    calc_ms(fake, ctx, self.imts, stypes, arr[:, slc])
+                    calc_ms(fake, ctx, self.imts,
+                            arr[0, slc], stds[:, :, slc])
+                for s, stype in enumerate(stypes, 1):
+                    if stype == StdDev.TOTAL:
+                        arr[s] = stds[0].T
+                    elif stype == StdDev.INTER_EVENT:
+                        arr[s] = stds[1].T
+                    elif stype == StdDev.INTRA_EVENT:
+                        arr[s] = stds[2].T
             else:  # slow lane
                 start = 0
                 for ctx in ctxs:
