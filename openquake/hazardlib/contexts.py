@@ -213,7 +213,7 @@ class ContextMaker(object):
                     self.loglevels[imt] = numpy.log(imls)
 
         self.init_monitoring(monitor)
-        self.newapi = any(hasattr(gs, 'calc_mean_stds') for gs in self.gsims)
+        self.newapi = any(hasattr(gs, 'get_mean_stds') for gs in self.gsims)
         self.compile()
 
     def init_monitoring(self, monitor):
@@ -228,18 +228,16 @@ class ContextMaker(object):
         """
         Compile the required jittable functions
         """
-        M = len(self.imtls)
-        tot = (StdDev.TOTAL,)
+        stds = numpy.zeros((3, 1, 1))
         self.fake = {}
         for g, gsim in enumerate(self.gsims):
-            if hasattr(gsim, 'calc_mean_stds'):
+            if hasattr(gsim, 'get_mean_stds'):
                 self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
                 if numba:
                     ctx = numpy.ones(1, gsim.ctx_builder.dtype)
                 else:
                     ctx = hdf5.ArrayWrapper((), gsim.ctx_builder.dictarray(1))
-                out = numpy.zeros((2, 1, M))
-                gsim.__class__.calc_mean_stds(fake, ctx, self.imts, tot, out)
+                gsim.__class__.get_mean_stds(fake, ctx, 0, self.imts[0], stds)
 
     def gen_triples(self, gsim, ctxs):
         """
@@ -550,14 +548,24 @@ class ContextMaker(object):
             else:
                 stypes = stdtypes
             arr = numpy.zeros((1 + len(stypes), N, M))
+            stds = numpy.zeros((3, N, M))
             gcls = gsim.__class__
-            calc_ms = getattr(gcls, 'calc_mean_stds', None)
+            calc_ms = getattr(gcls, 'get_mean_stds', None)
             if calc_ms:  # fast lane
                 if all(len(ctx) == 1 for ctx in ctxs):
                     # single-site-optimization
                     ctxs = [self.multi(ctxs)]
                 for ctx, fake, slc in self.gen_triples(gsim, ctxs):
-                    calc_ms(fake, ctx, self.imts, stypes, arr[:, slc])
+                    for m, imt in enumerate(self.imts):
+                        arr[0, :, m] = calc_ms(
+                            fake, ctx, m, imt, stds[:, slc, m])[0]
+                for s, stype in enumerate(stypes):
+                    if stype == StdDev.TOTAL:
+                        arr[1 + s] = stds[0]
+                    elif stype == StdDev.INTER_EVENT:
+                        arr[1 + s] = stds[1]
+                    elif stype == StdDev.INTRA_EVENT:
+                        arr[1 + s] = stds[2]
             else:  # slow lane
                 start = 0
                 for ctx in ctxs:
