@@ -572,7 +572,7 @@ class ContextMaker(object):
                     stop = start + len(ctx.sids)
                     for m, imt in enumerate(self.imts):
                         arr[0, start:stop, m] = gsim.get_mean_(
-                            ctx, imt, stds[:, slc, m])
+                            ctx, imt, stds[:, start:stop, m])
                     start = stop
                 for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
