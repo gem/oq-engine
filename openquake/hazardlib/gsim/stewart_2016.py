@@ -27,7 +27,7 @@ Module exports :class:`StewartEtAl2016`,
 
 import numpy as np
 
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -78,6 +78,13 @@ class StewartEtAl2016(GMPE):
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
 
+    REQUIRES_ATTRIBUTES = {'region', 'sof'}
+
+    def __init__(self, region='CAL', sof=True, **kwargs):
+        super().__init__(**kwargs)
+        self.region = region
+        self.sof = sof
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -118,7 +125,7 @@ class StewartEtAl2016(GMPE):
         """
         Returns the style-of-faulting term component, defined in Equation 2
         """
-        if self.__class__.__name__.endswith('NoSOF'):
+        if not self.sof:
             return C["e0"]  # Unspecified style-of-faulting
         return BooreEtAl2014._get_style_of_faulting_term(self, C, rup)
 
@@ -134,6 +141,8 @@ class StewartEtAl2016(GMPE):
             delta_c3 = C['Dc3CH']
         elif self.region == "JPN":
             delta_c3 = C['Dc3JP']
+        else:
+            raise ValueError("region=%s" % self.region)
 
         # Calculate geometric spreading component of path scaling term
         fp_geom = ((C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *
@@ -325,44 +334,10 @@ class StewartEtAl2016(GMPE):
     """)
 
 
-class StewartEtAl2016RegCHN(StewartEtAl2016):
-    """
-    This class implements the Stewart et al. (2016) model considering the
-    correction to the path scaling term for High Q regions (e.g. China)
-    The modification is made to the "Dc3" coefficient
-    """
-    region = "CHN"
-
-
-class StewartEtAl2016RegJPN(StewartEtAl2016):
-    """
-    This class implements the Stewart et al. (2016) model considering the
-    correction to the path scaling term for Low Q regions (e.g. Japan)
-    The modification is made to the "Dc3" coefficient
-    """
-    region = "JPN"
-
-
-class StewartEtAl2016NoSOF(StewartEtAl2016):
-    """
-    The Stewart et al. (2016) GMPE can consider the case in which the
-    style-of-faulting is unspecified. In this case the GMPE is no longer
-    dependent on rake.
-    """
-
-
-class StewartEtAl2016RegCHNNoSOF(StewartEtAl2016RegCHN):
-    """
-    The Stewart et al. (2016) GMPE, implemented for High Q regional datasets,
-    (e.g. China) for the case in which the style-of-faulting is
-    unspecified. In this case the GMPE is no longer
-    dependent on rake.
-    """
-
-
-class StewartEtAl2016RegJPNNoSOF(StewartEtAl2016RegJPN):
-    """
-    The Stewart et al. (2016) GMPE, implemented for Low Q regional datasets,
-    (e.g. Japan) for the case in which the style-of-faulting is unspecified.
-    In this case the GMPE is no longer dependent on rake.
-    """
+gsim_aliases['StewartEtAl2016RegCHN'] = '[StewartEtAl2016]\nregion="CHN"'
+gsim_aliases['StewartEtAl2016RegJPN'] = '[StewartEtAl2016]\nregion="JPN"'
+gsim_aliases['StewartEtAl2016NoSOF'] = '[StewartEtAl2016]\nsof=false'
+gsim_aliases['StewartEtAl2016CHNNoSOF'] = \
+    '[StewartEtAl2016]\nregion="CHN"\nsof=false'
+gsim_aliases['StewartEtAl2016JPNNoSOF'] = \
+    '[StewartEtAl2016]\nregion="JPN"\nsof=false'
