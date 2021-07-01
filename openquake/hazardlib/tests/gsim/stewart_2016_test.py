@@ -26,7 +26,7 @@ http://www.daveboore.com/pubs_online/sbsa15_gm_tmr_programs_and_sample_files.zip
 Modified the .ctl input file for FORTRAN program to include additional test
 iterations for SOF and regional cases
 """
-import openquake.hazardlib.gsim.stewart_2016 as SBSA
+from openquake.hazardlib.gsim.stewart_2016 import StewartEtAl2016
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test Case A:
@@ -75,7 +75,9 @@ class StewartEtAl2016TestCaseA(BaseGSIMTestCase):
     Tests the Stewart et al. (2016) GMPE for the "global {default}" condition:
     Style of faulting included - "Global" Q model
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016
+    GSIM_CLASS = StewartEtAl2016
+    REGION = "CAL"
+    SOF = True
 
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_CAL_PERIOD_MEAN.csv"
@@ -88,19 +90,23 @@ class StewartEtAl2016TestCaseA(BaseGSIMTestCase):
 
     def test_mean(self):
         self.check(self.MEAN_FILE,
-                   max_discrep_percentage=MEAN_DISCREP)
+                   max_discrep_percentage=MEAN_DISCREP, region=self.REGION,
+                   sof=self.SOF)
 
     def test_std_total(self):
         self.check(self.STD_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+                   max_discrep_percentage=STDDEV_DISCREP, region=self.REGION,
+                   sof=self.SOF)
 
     def test_std_inter(self):
         self.check(self.INTER_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+                   max_discrep_percentage=STDDEV_DISCREP, region=self.REGION,
+                   sof=self.SOF)
 
     def test_std_intra(self):
         self.check(self.INTRA_FILE,
-                   max_discrep_percentage=STDDEV_DISCREP)
+                   max_discrep_percentage=STDDEV_DISCREP, region=self.REGION,
+                   sof=self.SOF)
 
 
 class StewartEtAl2016TestCaseB(StewartEtAl2016TestCaseA):
@@ -108,8 +114,6 @@ class StewartEtAl2016TestCaseB(StewartEtAl2016TestCaseA):
     Tests the Stewart et al. (2016) GMPE for the "global {default}" condition:
     Style of faulting included - "Global" Q model
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016
-
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_CAL_RJB_MEAN.csv"
     # File containing results for the total standard deviation
@@ -125,7 +129,8 @@ class StewartEtAl2016RegCHNTestCaseA(StewartEtAl2016TestCaseA):
     Tests the Stewart et al. (2016) GMPE for the conditions:
     Style of faulting included - High Q (China)
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016RegCHN
+    REGION = "CHN"
+    SOF = True
 
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_CHN_PERIOD_MEAN.csv"
@@ -142,7 +147,7 @@ class StewartEtAl2016RegCHNTestCaseB(StewartEtAl2016TestCaseA):
     Tests the Stewart et al. (2016) GMPE for the conditions:
     Style of faulting included - High Q (China)
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016RegCHN
+    REGION = "CHN"
 
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_CHN_RJB_MEAN.csv"
@@ -159,7 +164,7 @@ class StewartEtAl2016RegJPNTestCaseA(StewartEtAl2016TestCaseA):
     Tests the Stewart et al. (2016) GMPE for the conditions:
     Style of faulting included - Low Q (Japan)
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016RegJPN
+    REGION = "JPN"
 
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_JPN_PERIOD_MEAN.csv"
@@ -176,7 +181,7 @@ class StewartEtAl2016RegJPNTestCaseB(StewartEtAl2016TestCaseA):
     Tests the Stewart et al. (2016) GMPE for the conditions:
     Style of faulting included - Low Q (Japan)
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016RegJPN
+    REGION = "JPN"
 
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_JPN_RJB_MEAN.csv"
@@ -197,7 +202,7 @@ class StewartEtAl2016NoSOFTestCaseA(StewartEtAl2016TestCaseA):
     Tests the Stewart et al. (2016) GMPE for the conditions:
     No style of faulting - "Global" Q model
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016NoSOF
+    SOF = False
 
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_CAL_PERIOD_MEAN_NOSOF.csv"
@@ -214,7 +219,7 @@ class StewartEtAl2016NoSOFTestCaseB(StewartEtAl2016TestCaseA):
     Tests the Stewart et al. (2016) GMPE for the conditions:
     No style of faulting - "Global" Q model
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016NoSOF
+    SOF = False
 
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_CAL_RJB_MEAN_NOSOF.csv"
@@ -231,7 +236,8 @@ class StewartEtAl2016RegCHNNoSOFTestCaseA(StewartEtAl2016TestCaseA):
     Tests the Stewart et al. (2016) GMPE for the conditions:
     No style of faulting - High Q (China)
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016RegCHNNoSOF
+    REGION = "CHN"
+    SOF = False
 
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_CHN_PERIOD_MEAN_NOSOF.csv"
@@ -248,7 +254,8 @@ class StewartEtAl2016RegCHNNoSOFTestCaseB(StewartEtAl2016TestCaseA):
     Tests the Stewart et al. (2016) GMPE for the conditions:
     No style of faulting - High Q (China)
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016RegCHNNoSOF
+    REGION = "CHN"
+    SOF = False
 
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_CHN_RJB_MEAN_NOSOF.csv"
@@ -265,7 +272,8 @@ class StewartEtAl2016RegJPNNoSOFTestCaseA(StewartEtAl2016TestCaseA):
     Tests the Stewart et al. (2016) GMPE for the conditions:
     No style of faulting - Low Q (Japan)
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016RegJPNNoSOF
+    REGION = "JPN"
+    SOF = False
 
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_JPN_PERIOD_MEAN_NOSOF.csv"
@@ -282,7 +290,8 @@ class StewartEtAl2016RegJPNNoSOFTestCaseB(StewartEtAl2016TestCaseA):
     Tests the Stewart et al. (2016) GMPE for the conditions:
     No style of faulting - Low Q (Japan)
     """
-    GSIM_CLASS = SBSA.StewartEtAl2016RegJPNNoSOF
+    REGION = "JPN"
+    SOF = False
 
     # File containing results for the mean
     MEAN_FILE = "SBSA15/SBSA15_JPN_RJB_MEAN_NOSOF.csv"
