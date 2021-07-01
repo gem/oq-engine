@@ -181,11 +181,7 @@ class BindiEtAl2011(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -193,11 +189,8 @@ class BindiEtAl2011(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, page 1904
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is only Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
