@@ -27,6 +27,142 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def _compute_distance(rup, dists, C):
+    """
+    Compute the second term of the equation 1 described on paragraph 3:
+
+    ``c1 + c2 * (M-Mref) * log(sqrt(Rjb ** 2 + h ** 2)/Rref) -
+         c3*(sqrt(Rjb ** 2 + h ** 2)-Rref)``
+    """
+    mref = 5.0
+    rref = 1.0
+    rval = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
+    return (C['c1'] + C['c2'] * (rup.mag - mref)) *\
+        np.log10(rval / rref) - C['c3'] * (rval - rref)
+
+
+def _compute_magnitude(rup, C):
+    """
+    Compute the third term of the equation 1:
+
+    e1 + b1 * (M-Mh) + b2 * (M-Mh)**2 for M<=Mh
+    e1 + b3 * (M-Mh) otherwise
+    """
+    m_h = 6.75
+    b_3 = 0.0
+    if rup.mag <= m_h:
+        return C["e1"] + (C['b1'] * (rup.mag - m_h)) +\
+            (C['b2'] * (rup.mag - m_h) ** 2)
+    else:
+        return C["e1"] + (b_3 * (rup.mag - m_h))
+
+
+def _get_delta(coeffs, imt, mag):
+    # Get the coefficients needed to compute the delta used for scaling
+    tmp = coeffs['a']*mag**2. + coeffs['b']*mag + coeffs['c']
+    return tmp
+
+
+def _get_fault_type_dummy_variables(rup):
+    """
+    Fault type (Strike-slip, Normal, Thrust/reverse) is
+    derived from rake angle.
+    Rakes angles within 30 of horizontal are strike-slip,
+    angles from 30 to 150 are reverse, and angles from
+    -30 to -150 are normal.
+    Note that the 'Unspecified' case is not considered,
+    because rake is always given.
+    """
+    U, SS, NS, RS = 0, 0, 0, 0
+    if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+        # strike-slip
+        SS = 1
+    elif rup.rake > 30.0 and rup.rake < 150.0:
+        # reverse
+        RS = 1
+    else:
+        # normal
+        NS = 1
+    return U, SS, NS, RS
+
+
+def _get_mechanism(rup, C):
+    """
+    Compute the fifth term of the equation 1 described on paragraph :
+    Get fault type dummy variables, see Table 1
+    """
+    U, SS, NS, RS = _get_fault_type_dummy_variables(rup)
+
+    return C['f1'] * NS + C['f2'] * RS + C['f3'] * SS
+
+
+def _get_site_amplification(sites, C):
+    """
+    Compute the fourth term of the equation 1 described on paragraph :
+    The functional form Fs in Eq. (1) represents the site amplification and
+    it is given by FS = sj Cj , for j = 1,...,5, where sj are the
+    coefficients to be determined through the regression analysis,
+    while Cj are dummy variables used to denote the five different EC8
+    site classes
+    """
+    ssa, ssb, ssc, ssd, sse = _get_site_type_dummy_variables(sites)
+
+    return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sC'] * ssc) + \
+        (C['sD'] * ssd) + (C['sE'] * sse)
+
+
+def _get_site_type_dummy_variables(sites):
+    """
+    Get site type dummy variables, five different EC8 site classes
+    he recording sites are classified into 5 classes,
+    based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
+    according to the EC8 (CEN 2003):
+    class A: Vs30 > 800 m/s
+    class B: Vs30 = 360 − 800 m/s
+    class C: Vs30 = 180 - 360 m/s
+    class D: Vs30 < 180 m/s
+    class E: 5 to 20 m of C- or D-type alluvium underlain by
+    stiffer material with Vs30 > 800 m/s.
+    """
+    ssa = np.zeros(len(sites.vs30))
+    ssb = np.zeros(len(sites.vs30))
+    ssc = np.zeros(len(sites.vs30))
+    ssd = np.zeros(len(sites.vs30))
+    sse = np.zeros(len(sites.vs30))
+
+    # Class E Vs30 = 0 m/s. We fixed this value to define class E
+    idx = (np.fabs(sites.vs30) < 1E-10)
+    sse[idx] = 1.0
+    # Class D;  Vs30 < 180 m/s.
+    idx = (sites.vs30 >= 1E-10) & (sites.vs30 < 180.0)
+    ssd[idx] = 1.0
+    # SClass C; 180 m/s <= Vs30 <= 360 m/s.
+    idx = (sites.vs30 >= 180.0) & (sites.vs30 < 360.0)
+    ssc[idx] = 1.0
+    # Class B; 360 m/s <= Vs30 <= 800 m/s.
+    idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800)
+    ssb[idx] = 1.0
+    # Class A; Vs30 > 800 m/s.
+    idx = (sites.vs30 >= 800.0)
+    ssa[idx] = 1.0
+    return ssa, ssb, ssc, ssd, sse
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return standard deviations as defined in table 1.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(C['SigmaTot'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['SigmaW'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['SigmaB'] + np.zeros(num_sites))
+    return stddevs
+
+
 class BindiEtAl2011(GMPE):
     """
     Implements GMPE developed by D.Bindi, F.Pacor, L.Luzi, R.Puglia,
@@ -85,14 +221,12 @@ class BindiEtAl2011(GMPE):
 
         C = self.COEFFS[imt]
 
-        imean = (self._compute_magnitude(rup, C) +
-                 self._compute_distance(rup, dists, C) +
-                 self._get_site_amplification(sites, C) +
-                 self._get_mechanism(rup, C))
+        imean = (_compute_magnitude(rup, C) +
+                 _compute_distance(rup, dists, C) +
+                 _get_site_amplification(sites, C) +
+                 _get_mechanism(rup, C))
 
-        istddevs = self._get_stddevs(C,
-                                     stddev_types,
-                                     num_sites=len(sites.vs30))
+        istddevs = _get_stddevs(C, stddev_types, len(sites.vs30))
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
@@ -106,139 +240,9 @@ class BindiEtAl2011(GMPE):
         # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
 
         if self.sgn:
-            mean += self.sgn * self._get_delta(imt, rup.mag)
+            mean += self.sgn * _get_delta(self.COEFFS_DELTA[imt], imt, rup.mag)
 
         return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 1.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['SigmaTot'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['SigmaW'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['SigmaB'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_distance(self, rup, dists, C):
-        """
-        Compute the second term of the equation 1 described on paragraph 3:
-
-        ``c1 + c2 * (M-Mref) * log(sqrt(Rjb ** 2 + h ** 2)/Rref) -
-             c3*(sqrt(Rjb ** 2 + h ** 2)-Rref)``
-        """
-        mref = 5.0
-        rref = 1.0
-        rval = np.sqrt(dists.rjb ** 2 + C['h'] ** 2)
-        return (C['c1'] + C['c2'] * (rup.mag - mref)) *\
-            np.log10(rval / rref) - C['c3'] * (rval - rref)
-
-    def _compute_magnitude(self, rup, C):
-        """
-        Compute the third term of the equation 1:
-
-        e1 + b1 * (M-Mh) + b2 * (M-Mh)**2 for M<=Mh
-        e1 + b3 * (M-Mh) otherwise
-        """
-        m_h = 6.75
-        b_3 = 0.0
-        if rup.mag <= m_h:
-            return C["e1"] + (C['b1'] * (rup.mag - m_h)) +\
-                (C['b2'] * (rup.mag - m_h) ** 2)
-        else:
-            return C["e1"] + (b_3 * (rup.mag - m_h))
-
-    def _get_site_amplification(self, sites, C):
-        """
-        Compute the fourth term of the equation 1 described on paragraph :
-        The functional form Fs in Eq. (1) represents the site amplification and
-        it is given by FS = sj Cj , for j = 1,...,5, where sj are the
-        coefficients to be determined through the regression analysis,
-        while Cj are dummy variables used to denote the five different EC8
-        site classes
-        """
-        ssa, ssb, ssc, ssd, sse = self._get_site_type_dummy_variables(sites)
-
-        return (C['sA'] * ssa) + (C['sB'] * ssb) + (C['sC'] * ssc) + \
-            (C['sD'] * ssd) + (C['sE'] * sse)
-
-    def _get_site_type_dummy_variables(self, sites):
-        """
-        Get site type dummy variables, five different EC8 site classes
-        he recording sites are classified into 5 classes,
-        based on the shear wave velocity intervals in the uppermost 30 m, Vs30,
-        according to the EC8 (CEN 2003):
-        class A: Vs30 > 800 m/s
-        class B: Vs30 = 360 − 800 m/s
-        class C: Vs30 = 180 - 360 m/s
-        class D: Vs30 < 180 m/s
-        class E: 5 to 20 m of C- or D-type alluvium underlain by
-        stiffer material with Vs30 > 800 m/s.
-        """
-        ssa = np.zeros(len(sites.vs30))
-        ssb = np.zeros(len(sites.vs30))
-        ssc = np.zeros(len(sites.vs30))
-        ssd = np.zeros(len(sites.vs30))
-        sse = np.zeros(len(sites.vs30))
-
-        # Class E Vs30 = 0 m/s. We fixed this value to define class E
-        idx = (np.fabs(sites.vs30) < 1E-10)
-        sse[idx] = 1.0
-        # Class D;  Vs30 < 180 m/s.
-        idx = (sites.vs30 >= 1E-10) & (sites.vs30 < 180.0)
-        ssd[idx] = 1.0
-        # SClass C; 180 m/s <= Vs30 <= 360 m/s.
-        idx = (sites.vs30 >= 180.0) & (sites.vs30 < 360.0)
-        ssc[idx] = 1.0
-        # Class B; 360 m/s <= Vs30 <= 800 m/s.
-        idx = (sites.vs30 >= 360.0) & (sites.vs30 < 800)
-        ssb[idx] = 1.0
-        # Class A; Vs30 > 800 m/s.
-        idx = (sites.vs30 >= 800.0)
-        ssa[idx] = 1.0
-        return ssa, ssb, ssc, ssd, sse
-
-    def _get_mechanism(self, rup, C):
-        """
-        Compute the fifth term of the equation 1 described on paragraph :
-        Get fault type dummy variables, see Table 1
-        """
-        U, SS, NS, RS = self._get_fault_type_dummy_variables(rup)
-
-        return C['f1'] * NS + C['f2'] * RS + C['f3'] * SS
-
-    def _get_fault_type_dummy_variables(self, rup):
-        """
-        Fault type (Strike-slip, Normal, Thrust/reverse) is
-        derived from rake angle.
-        Rakes angles within 30 of horizontal are strike-slip,
-        angles from 30 to 150 are reverse, and angles from
-        -30 to -150 are normal.
-        Note that the 'Unspecified' case is not considered,
-        because rake is always given.
-        """
-        U, SS, NS, RS = 0, 0, 0, 0
-        if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
-            # strike-slip
-            SS = 1
-        elif rup.rake > 30.0 and rup.rake < 150.0:
-            # reverse
-            RS = 1
-        else:
-            # normal
-            NS = 1
-        return U, SS, NS, RS
-
-    def _get_delta(self, imt, mag):
-        # Get the coefficients needed to compute the delta used for scaling
-        coeffs = self.COEFFS_DELTA[imt]
-        tmp = coeffs['a']*mag**2. + coeffs['b']*mag + coeffs['c']
-        return tmp
 
     #: Coefficients from SA from Table 1
     #: Coefficients from PGA e PGV from Table 5
