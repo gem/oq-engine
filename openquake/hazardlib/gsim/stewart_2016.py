@@ -121,6 +121,8 @@ class StewartEtAl2016(GMPE):
         """
         Returns the style-of-faulting term component, defined in Equation 2
         """
+        if self.__class__.__name__.endswith('NoSOF'):
+            return C["e0"]  # Unspecified style-of-faulting
         return BooreEtAl2014._get_style_of_faulting_term(self, C, rup)
 
     def _get_path_scaling(self, C, rjb, mag):
@@ -365,14 +367,6 @@ class StewartEtAl2016NoSOF(StewartEtAl2016):
     style-of-faulting is unspecified. In this case the GMPE is no longer
     dependent on rake.
     """
-    #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the coefficient of the "Unspecified" style-of-faulting
-        """
-        return C["e0"]
 
 
 class StewartEtAl2016RegCHNNoSOF(StewartEtAl2016RegCHN):
@@ -382,14 +376,6 @@ class StewartEtAl2016RegCHNNoSOF(StewartEtAl2016RegCHN):
     unspecified. In this case the GMPE is no longer
     dependent on rake.
     """
-    #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the coefficient of the "Unspecified" style-of-faulting
-        """
-        return C["e0"]
 
 
 class StewartEtAl2016RegJPNNoSOF(StewartEtAl2016RegJPN):
@@ -398,11 +384,3 @@ class StewartEtAl2016RegJPNNoSOF(StewartEtAl2016RegJPN):
     (e.g. Japan) for the case in which the style-of-faulting is unspecified.
     In this case the GMPE is no longer dependent on rake.
     """
-    #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the coefficient of the "Unspecified" style-of-faulting
-        """
-        return C["e0"]
