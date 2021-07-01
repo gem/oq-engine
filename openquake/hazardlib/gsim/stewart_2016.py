@@ -27,10 +27,18 @@ Module exports :class:`StewartEtAl2016`,
 
 import numpy as np
 
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+#: Equation constants that are IMT-independent
+CONSTS = {
+    "Mref": 4.5,
+    "Rref": 1.0,
+    "Vref": 760.0,
+    "f1": 0.0,
+    "f3": 0.1}
 
 
 class StewartEtAl2016(GMPE):
@@ -55,11 +63,7 @@ class StewartEtAl2016(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration; see title.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the
     #: :attr:`~openquake.hazardlib.const.IMC.Vertical` direction component;
@@ -68,11 +72,8 @@ class StewartEtAl2016(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Aleatory-Uncertainty Function".
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -82,6 +83,11 @@ class StewartEtAl2016(GMPE):
 
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
+
+    def __init__(self, region='CAL', sof=True, **kwargs):
+        super().__init__(**kwargs)
+        self.region = region
+        self.sof = sof
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -134,11 +140,11 @@ class StewartEtAl2016(GMPE):
         delta_c3 = self._get_deltac3(C)
 
         # Calculate geometric spreading component of path scaling term
-        fp_geom = ((C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *
-                   np.log(rval / self.CONSTS["Rref"]))
+        fp_geom = ((C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *
+                   np.log(rval / CONSTS["Rref"]))
         # Calculate anelastic attenuation component of path scaling term, with
         # delta c3 accounting for regional effects
-        fp_atten = (C["c3"] + delta_c3) * (rval - self.CONSTS["Rref"])
+        fp_atten = (C["c3"] + delta_c3) * (rval - CONSTS["Rref"])
         return fp_geom + fp_atten
 
     def _get_deltac3(self, C):
@@ -323,14 +329,6 @@ class StewartEtAl2016(GMPE):
     9.500    -4.689000    -4.800000    -4.605000    -4.509000    2.221000    0.000000     1.158000     6.200000    -1.013000    0.157900    0.000000     0.000888    0.000000     6.130000    -0.284000    771.660000     0.000000     -0.001363    0.48988    0.41800    0.37895    0.59272
     10.00    -4.870000    -4.989000    -4.795000    -4.668000    2.187000    0.000000     1.158000     6.200000    -1.015000    0.160100    0.000000     0.000896    0.000000     5.930000    -0.276700    775.000000     0.000000     -0.001360    0.48361    0.41840    0.37531    0.58136
     """)
-
-    #: Equation constants that are IMT-independent
-    CONSTS = {
-        "Mref": 4.5,
-        "Rref": 1.0,
-        "Vref": 760.0,
-        "f1": 0.0,
-        "f3": 0.1}
 
 
 class StewartEtAl2016RegCHN(StewartEtAl2016):
