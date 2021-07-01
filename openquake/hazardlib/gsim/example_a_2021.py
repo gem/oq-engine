@@ -65,23 +65,25 @@ class ExampleA2021(GMPE):
     """)
 
     @jittable
-    def get_mean_stds(fake, ctx, m, imt, stds):
+    def get_mean_stds(fake, ctx, imts, stds):
         mag, rjb = ctx.mag, ctx.rjb
-        C = fake.COEFFS[m]
-        mean = C['c1'] + _compute_term1(C, mag) + \
-            _compute_term2(C, mag, rjb)
-        if imt.period == 3.0:
-            mean /= 0.612
-        elif imt.period == 4.0:
-            mean /= 0.559
+        mean = np.zeros((len(imts), len(ctx)))
+        for m, imt in enumerate(imts):
+            C = fake.COEFFS[m]
+            mean[m] = C['c1'] + _compute_term1(C, mag) + \
+                _compute_term2(C, mag, rjb)
+            if imt.period == 3.0:
+                mean[m] /= 0.612
+            elif imt.period == 4.0:
+                mean[m] /= 0.559
 
-        sigma_ale_m = np.interp(
-            mag, [5.0, 5.5, 8.0],
-            [C['m50'], C['m55'], C['m80']])
-        sigma_ale_rjb = np.interp(
-            rjb, [5.0, 20.0], [C['r5'], C['r20']])
-        sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
-        sigma_epi = (0.36 + 0.07 * (mag - 6) if imt.period < 1
-                     else 0.34 + 0.06 * (mag - 6))
-        stds[0] = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)
-        return mean, stds
+            sigma_ale_m = np.interp(
+                mag, [5.0, 5.5, 8.0],
+                [C['m50'], C['m55'], C['m80']])
+            sigma_ale_rjb = np.interp(
+                rjb, [5.0, 20.0], [C['r5'], C['r20']])
+            sigma_ale = np.sqrt(sigma_ale_m ** 2 + sigma_ale_rjb ** 2)
+            sigma_epi = (0.36 + 0.07 * (mag - 6) if imt.period < 1
+                         else 0.34 + 0.06 * (mag - 6))
+            stds[0, m] = np.sqrt(sigma_ale ** 2 + sigma_epi ** 2)
+        return mean

@@ -228,7 +228,7 @@ class ContextMaker(object):
         """
         Compile the required jittable functions
         """
-        stds = numpy.zeros((3, 1, 1))
+        stds = numpy.zeros((3, len(self.imts), 1))
         self.fake = {}
         for g, gsim in enumerate(self.gsims):
             if hasattr(gsim, 'get_mean_stds'):
@@ -237,7 +237,7 @@ class ContextMaker(object):
                     ctx = numpy.ones(1, gsim.ctx_builder.dtype)
                 else:
                     ctx = hdf5.ArrayWrapper((), gsim.ctx_builder.dictarray(1))
-                gsim.__class__.get_mean_stds(fake, ctx, 0, self.imts[0], stds)
+                gsim.__class__.get_mean_stds(fake, ctx, self.imts, stds)
 
     def gen_triples(self, gsim, ctxs):
         """
@@ -548,7 +548,7 @@ class ContextMaker(object):
             else:
                 stypes = stdtypes
             arr = numpy.zeros((1 + len(stypes), N, M))
-            stds = numpy.zeros((3, N, M))
+            stds = numpy.zeros((3, M, N))
             gcls = gsim.__class__
             calc_ms = getattr(gcls, 'get_mean_stds', None)
             if calc_ms:  # fast lane
@@ -556,16 +556,15 @@ class ContextMaker(object):
                     # single-site-optimization
                     ctxs = [self.multi(ctxs)]
                 for ctx, fake, slc in self.gen_triples(gsim, ctxs):
-                    for m, imt in enumerate(self.imts):
-                        arr[0, :, m] = calc_ms(
-                            fake, ctx, m, imt, stds[:, slc, m])[0]
-                for s, stype in enumerate(stypes):
+                    arr[0, slc] = calc_ms(
+                        fake, ctx, self.imts, stds[:, :, slc]).T
+                for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
-                        arr[1 + s] = stds[0]
+                        arr[s] = stds[0].T
                     elif stype == StdDev.INTER_EVENT:
-                        arr[1 + s] = stds[1]
+                        arr[s] = stds[1].T
                     elif stype == StdDev.INTRA_EVENT:
-                        arr[1 + s] = stds[2]
+                        arr[s] = stds[2].T
             else:  # slow lane
                 start = 0
                 for ctx in ctxs:
