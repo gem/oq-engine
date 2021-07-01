@@ -213,7 +213,7 @@ class ContextMaker(object):
                     self.loglevels[imt] = numpy.log(imls)
 
         self.init_monitoring(monitor)
-        self.newapi = any(hasattr(gs, 'get_mean_stds') for gs in self.gsims)
+        self.newapi = any(hasattr(gs, 'calc_mean_stds') for gs in self.gsims)
         self.compile()
 
     def init_monitoring(self, monitor):
@@ -228,16 +228,17 @@ class ContextMaker(object):
         """
         Compile the required jittable functions
         """
+        mean = numpy.zeros((1, len(self.imts)))
         stds = numpy.zeros((3, len(self.imts), 1))
         self.fake = {}
         for g, gsim in enumerate(self.gsims):
-            if hasattr(gsim, 'get_mean_stds'):
+            if hasattr(gsim, 'calc_mean_stds'):
                 self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
                 if numba:
                     ctx = numpy.ones(1, gsim.ctx_builder.dtype)
                 else:
                     ctx = hdf5.ArrayWrapper((), gsim.ctx_builder.dictarray(1))
-                gsim.__class__.get_mean_stds(fake, ctx, self.imts, stds)
+                gsim.__class__.calc_mean_stds(fake, ctx, self.imts, mean, stds)
 
     def gen_triples(self, gsim, ctxs):
         """
@@ -493,7 +494,7 @@ class ContextMaker(object):
             ctx.mag = mag
             ctx.width = .01  # 10 meters to avoid warnings in abrahamson_2014
             try:
-                maxmean = max(ms[0].max() for ms in self.get_mean_stds(
+                maxmean = max(ms[0].max() for ms in self.calc_mean_stds(
                     [ctx], StdDev.TOTAL))
                 # shape NM
             except ValueError:  # magnitude outside of supported range
@@ -527,7 +528,7 @@ class ContextMaker(object):
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
-    def get_mean_stds(self, ctxs, *stdtypes):
+    def calc_mean_stds(self, ctxs, *stdtypes):
         """
         :param ctxs: a list of contexts
         :param stdtypes: tuple of standard deviation types
@@ -550,14 +551,14 @@ class ContextMaker(object):
             arr = numpy.zeros((1 + len(stypes), N, M))
             stds = numpy.zeros((3, M, N))
             gcls = gsim.__class__
-            calc_ms = getattr(gcls, 'get_mean_stds', None)
+            calc_ms = getattr(gcls, 'calc_mean_stds', None)
             if calc_ms:  # fast lane
                 if all(len(ctx) == 1 for ctx in ctxs):
                     # single-site-optimization
                     ctxs = [self.multi(ctxs)]
                 for ctx, fake, slc in self.gen_triples(gsim, ctxs):
-                    arr[0, slc] = calc_ms(
-                        fake, ctx, self.imts, stds[:, :, slc]).T
+                    calc_ms(fake, ctx, self.imts,
+                            arr[0, slc], stds[:, :, slc])
                 for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
                         arr[s] = stds[0].T
@@ -588,7 +589,7 @@ class ContextMaker(object):
         N = nsites.sum()
         poes = numpy.zeros((N, self.loglevels.size, len(self.gsims)))
         with self.gmf_mon:
-            mean_stdt = self.get_mean_stds(ctxs, StdDev.TOTAL)
+            mean_stdt = self.calc_mean_stds(ctxs, StdDev.TOTAL)
         with self.poe_mon:
             for g, gsim in enumerate(self.gsims):
                 # builds poes of shape (N, L, G)
