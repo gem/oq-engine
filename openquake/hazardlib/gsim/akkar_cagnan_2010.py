@@ -48,11 +48,7 @@ class AkkarCagnan2010(BooreAtkinson2008):
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see paragraph
     # 'Functional Form', p. 2981
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components :
@@ -62,11 +58,8 @@ class AkkarCagnan2010(BooreAtkinson2008):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see Table 3, p. 2985.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30.
     #: See paragraph 'Functionl Form', p. 2981.

@@ -29,9 +29,8 @@ Module exports
 """
 import numpy as np
 from scipy.constants import g
-from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.edwards_fah_2013a import (
-    EdwardsFah2013Alpine10Bars)
+    EdwardsFah2013Alpine10Bars, _compute_mean, _get_stddevs)
 from openquake.hazardlib.gsim.edwards_fah_2013f_coeffs import (
     COEFFS_FORELAND_10Bars,
     COEFFS_FORELAND_20Bars,
@@ -42,6 +41,31 @@ from openquake.hazardlib.gsim.edwards_fah_2013f_coeffs import (
     COEFFS_FORELAND_90Bars,
     COEFFS_FORELAND_120Bars)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _compute_C1_term
+
+#: Fixed magnitude terms
+M1 = 5.00
+M2 = 4.70
+
+
+def _compute_term_d(C, mag, rrup):
+    """
+    Compute distance term: original implementation from Carlo Cauzzi
+    if M > 5.5     rmin = 0.55;
+    elseif M > 4.7 rmin = -2.067.*M +11.92;
+    else           rmin = -0.291.*M + 3.48;
+    end
+    d = log10(max(R,rmin));
+    """
+    if mag > M1:
+        rrup_min = 0.55
+    elif mag > M2:
+        rrup_min = -2.067 * mag + 11.92
+    else:
+        rrup_min = -0.291 * mag + 3.48
+
+    R = np.maximum(rrup_min, rrup)
+
+    return np.log10(R)
 
 
 class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):
@@ -61,9 +85,9 @@ class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):
         compute mean for Foreland
         """
         COEFFS = self.COEFFS[imt]
-        R = self._compute_term_d(COEFFS, rup.mag, dists.rrup)
+        R = _compute_term_d(COEFFS, rup.mag, dists.rrup)
 
-        mean = 10 ** (self._compute_mean(COEFFS, rup.mag, R))
+        mean = 10 ** _compute_mean(COEFFS, rup.mag, R)
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
@@ -75,36 +99,12 @@ class EdwardsFah2013Foreland10Bars(EdwardsFah2013Alpine10Bars):
 
         c1_rrup = _compute_C1_term(COEFFS, dists.rrup)
         log_phi_ss = 1.00
-        stddevs = self._get_stddevs(COEFFS, stddev_types, sites.vs30.shape[0],
-                                    rup.mag, c1_rrup, log_phi_ss,
-                                    COEFFS['mean_phi_ss'])
+        stddevs = _get_stddevs(COEFFS, stddev_types, sites.vs30.shape[0],
+                               rup.mag, c1_rrup, log_phi_ss,
+                               COEFFS['mean_phi_ss'])
 
         return mean, stddevs
 
-    def _compute_term_d(self, C, mag, rrup):
-        """
-        Compute distance term: original implementation from Carlo Cauzzi
-        if M > 5.5     rmin = 0.55;
-        elseif M > 4.7 rmin = -2.067.*M +11.92;
-        else           rmin = -0.291.*M + 3.48;
-        end
-        d = log10(max(R,rmin));
-        """
-        if mag > self.M1:
-            rrup_min = 0.55
-        elif mag > self.M2:
-            rrup_min = -2.067 * mag + 11.92
-        else:
-            rrup_min = -0.291 * mag + 3.48
-
-        R = np.maximum(rrup_min, rrup)
-
-        return np.log10(R)
-
-    #: Fixed magnitude terms
-
-    M1 = 5.00
-    M2 = 4.70
     COEFFS = COEFFS_FORELAND_10Bars
 
 
