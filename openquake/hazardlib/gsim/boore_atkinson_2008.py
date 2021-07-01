@@ -26,6 +26,197 @@ from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+from openquake.baselib.general import CallableDict
+
+
+def _compute_distance_scaling(ctx, C):
+    """
+    Compute distance-scaling term, equations (3) and (4), pag 107.
+    """
+    Mref = 4.5
+    Rref = 1.0
+    R = np.sqrt(ctx.rjb ** 2 + C['h'] ** 2)
+    return (C['c1'] + C['c2'] * (ctx.mag - Mref)) * np.log(R / Rref) + \
+        C['c3'] * (R - Rref)
+
+
+def _compute_magnitude_scaling(ctx, C):
+    """
+    Compute magnitude-scaling term, equations (5a) and (5b), pag 107.
+    """
+    return _compute_ms(ctx, C)
+
+
+def _compute_ms(rup, C):
+    U, SS, NS, RS = _get_fault_type_dummy_variables(rup)
+    if rup.mag <= C['Mh']:
+        return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
+            C['e5'] * (rup.mag - C['Mh']) + \
+            C['e6'] * (rup.mag - C['Mh']) ** 2
+    else:
+        return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
+            C['e7'] * (rup.mag - C['Mh'])
+
+
+def _compute_non_linear_slope(vs30, C):
+    """
+    Compute non-linear slope factor,
+    equations (13a) to (13d), pag 108-109.
+    """
+    V1 = 180.0
+    V2 = 300.0
+    Vref = 760.0
+
+    # equation (13d), values are zero for vs30 >= Vref = 760.0
+    bnl = np.zeros(vs30.shape)
+
+    # equation (13a)
+    bnl[vs30 <= V1] = C['b1']
+
+    # equation (13b)
+    idx = np.where((vs30 > V1) & (vs30 <= V2))
+    bnl[idx] = (C['b1'] - C['b2']) * \
+        np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
+
+    # equation (13c)
+    idx = np.where((vs30 > V2) & (vs30 < Vref))
+    bnl[idx] = C['b2'] * np.log(vs30[idx] / Vref) / np.log(V2 / Vref)
+    return bnl
+
+
+def _compute_non_linear_term(pga4nl, bnl):
+    """
+    Compute non-linear term,
+    equation (8a) to (8c), pag 108.
+    """
+
+    fnl = np.zeros(pga4nl.shape)
+    if len(bnl) < len(fnl):  # single site case, fix shape
+        bnl = np.repeat(bnl, len(fnl))
+    a1 = 0.03
+    a2 = 0.09
+    pga_low = 0.06
+
+    # equation (8a)
+    idx = pga4nl <= a1
+    fnl[idx] = bnl[idx] * np.log(pga_low / 0.1)
+
+    # equation (8b)
+    idx = np.where((pga4nl > a1) & (pga4nl <= a2))
+    delta_x = np.log(a2 / a1)
+    delta_y = bnl[idx] * np.log(a2 / pga_low)
+    c = (3 * delta_y - bnl[idx] * delta_x) / delta_x ** 2
+    d = -(2 * delta_y - bnl[idx] * delta_x) / delta_x ** 3
+    fnl[idx] = bnl[idx] * np.log(pga_low / 0.1) +\
+        c * (np.log(pga4nl[idx] / a1) ** 2) + \
+        d * (np.log(pga4nl[idx] / a1) ** 3)
+
+    # equation (8c)
+    idx = pga4nl > a2
+    fnl[idx] = np.squeeze(bnl[idx]) * np.log(pga4nl[idx] / 0.1)
+
+    return fnl
+
+
+def _get_fault_type_dummy_variables(rup):
+    """
+    Get fault type dummy variables, see Table 2, pag 107.
+    Fault type (Strike-slip, Normal, Thrust/reverse) is
+    derived from rake angle.
+    Rakes angles within 30 of horizontal are strike-slip,
+    angles from 30 to 150 are reverse, and angles from
+    -30 to -150 are normal. See paragraph 'Predictor Variables'
+    pag 103.
+    Note that the 'Unspecified' case is not considered,
+    because rake is always given.
+    """
+    U, SS, NS, RS = 0, 0, 0, 0
+    if rup.rake == 'undefined':
+        U = 1
+    elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+        # strike-slip
+        SS = 1
+    elif rup.rake > 30.0 and rup.rake < 150.0:
+        # reverse
+        RS = 1
+    else:
+        # normal
+        NS = 1
+
+    return U, SS, NS, RS
+
+
+def _get_pga_on_rock(ctx, _C, C_pga):
+    """
+    Compute and return PGA on rock conditions (that is vs30 = 760.0 m/s).
+    This is needed to compute non-linear site amplification term
+    """
+    # Median PGA in g for Vref = 760.0, without site amplification,
+    # that is equation (1) pag 106, without the third and fourth terms
+    # Mref and Rref values are given in the caption to table 6, pag 119
+    # Note that in the original paper, the caption reads:
+    # "Distance-scaling coefficients (Mref=4.5 and Rref=1.0 km for all
+    # periods, except Rref=5.0 km for pga4nl)". However this is a mistake
+    # as reported in http://www.daveboore.com/pubs_online.php:
+    # ERRATUM: 27 August 2008. Tom Blake pointed out that the caption to
+    # Table 6 should read "Distance-scaling coefficients (Mref=4.5 and
+    # Rref=1.0 km for all periods)".
+    pga4nl = np.exp(_compute_magnitude_scaling(ctx, C_pga) +
+                    _compute_distance_scaling(ctx, C_pga))
+
+    return pga4nl
+
+
+def _get_site_amplification_linear(vs30, C):
+    """
+    Compute site amplification linear term,
+    equation (7), pag 107.
+    """
+    return C['blin'] * np.log(vs30 / 760.0)
+
+
+def _get_site_amplification_non_linear(vs30, pga4nl, C):
+    """
+    Compute site amplification non-linear term,
+    equations (8a) to (13d), pag 108-109.
+    """
+    # non linear slope
+    bnl = _compute_non_linear_slope(vs30, C)
+    # compute the actual non-linear term
+    return _compute_non_linear_term(pga4nl, bnl)
+
+
+_get_stddevs = CallableDict()
+
+
+@_get_stddevs.add("base")
+def _get_stddevs_1(kind, C, stddev_types, num_sites):
+    """
+    Return standard deviations as defined in table 8, pag 121.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(C['std'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['sigma'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+    return stddevs
+
+
+@_get_stddevs.add("hawaii")
+def _get_stddevs_2(kind, C, stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    # Using a frequency independent value of sigma as recommended
+    # in the caption of Table 2 of Atkinson (2010)
+    stddevs = [0.26/np.log10(np.e) + np.zeros(num_sites)]
+
+    return stddevs
+
+
 class BooreAtkinson2008(GMPE):
     """
     Implements GMPE developed by David M. Boore and Gail M. Atkinson
@@ -34,6 +225,8 @@ class BooreAtkinson2008(GMPE):
     at Spectral Periods between 0.01 and 10.0 s" (2008, Earthquake Spectra,
     Volume 24, No. 1, pages 99-138).
     """
+    kind = "base"
+
     #: Supported tectonic region type is active shallow crust, see
     #: paragraph 'Introduction', page 99.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -78,12 +271,13 @@ class BooreAtkinson2008(GMPE):
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
+        C_pga = self.COEFFS[PGA()]
         C_SR = self.COEFFS_SOIL_RESPONSE[imt]
 
         # compute PGA on rock conditions - needed to compute non-linear
         # site amplification term
         vars(rup).update(contexts.get_dists(dists))  # update distances
-        pga4nl = self._get_pga_on_rock(rup, C)
+        pga4nl = _get_pga_on_rock(rup, C, C_pga)
 
         # equation 1, pag 106, without sigma term, that is only the first 3
         # terms. The third term (site amplification) is computed as given in
@@ -93,183 +287,19 @@ class BooreAtkinson2008(GMPE):
         if imt == PGA():
             # avoid recomputing PGA on rock, just add site terms
             mean = np.log(pga4nl) + \
-                self._get_site_amplification_linear(sites.vs30, C_SR) + \
-                self._get_site_amplification_non_linear(sites.vs30, pga4nl,
-                                                        C_SR)
+                _get_site_amplification_linear(sites.vs30, C_SR) + \
+                _get_site_amplification_non_linear(sites.vs30, pga4nl,
+                                                   C_SR)
         else:
-            mean = self._compute_magnitude_scaling(rup, C) + \
-                self._compute_distance_scaling(rup, C) + \
-                self._get_site_amplification_linear(sites.vs30, C_SR) + \
-                self._get_site_amplification_non_linear(sites.vs30, pga4nl,
-                                                        C_SR)
+            mean = _compute_magnitude_scaling(rup, C) + \
+                _compute_distance_scaling(rup, C) + \
+                _get_site_amplification_linear(sites.vs30, C_SR) + \
+                _get_site_amplification_non_linear(sites.vs30, pga4nl,
+                                                   C_SR)
 
-        stddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
+        stddevs = _get_stddevs(self.kind, C, stddev_types, len(sites.vs30))
 
         return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 8, pag 121.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['std'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_distance_scaling(self, ctx, C):
-        """
-        Compute distance-scaling term, equations (3) and (4), pag 107.
-        """
-        Mref = 4.5
-        Rref = 1.0
-        R = np.sqrt(ctx.rjb ** 2 + C['h'] ** 2)
-        return (C['c1'] + C['c2'] * (ctx.mag - Mref)) * np.log(R / Rref) + \
-            C['c3'] * (R - Rref)
-
-    def _compute_magnitude_scaling(self, ctx, C):
-        """
-        Compute magnitude-scaling term, equations (5a) and (5b), pag 107.
-        """
-        return self._compute_ms(ctx, C)
-
-    def _compute_ms(self, rup, C):
-        U, SS, NS, RS = self._get_fault_type_dummy_variables(rup)
-        if rup.mag <= C['Mh']:
-            return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-                C['e5'] * (rup.mag - C['Mh']) + \
-                C['e6'] * (rup.mag - C['Mh']) ** 2
-        else:
-            return C['e1'] * U + C['e2'] * SS + C['e3'] * NS + C['e4'] * RS + \
-                C['e7'] * (rup.mag - C['Mh'])
-
-    def _get_fault_type_dummy_variables(self, rup):
-        """
-        Get fault type dummy variables, see Table 2, pag 107.
-        Fault type (Strike-slip, Normal, Thrust/reverse) is
-        derived from rake angle.
-        Rakes angles within 30 of horizontal are strike-slip,
-        angles from 30 to 150 are reverse, and angles from
-        -30 to -150 are normal. See paragraph 'Predictor Variables'
-        pag 103.
-        Note that the 'Unspecified' case is not considered,
-        because rake is always given.
-        """
-        U, SS, NS, RS = 0, 0, 0, 0
-        if rup.rake == 'undefined':
-            U = 1
-        elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
-            # strike-slip
-            SS = 1
-        elif rup.rake > 30.0 and rup.rake < 150.0:
-            # reverse
-            RS = 1
-        else:
-            # normal
-            NS = 1
-
-        return U, SS, NS, RS
-
-    def _get_site_amplification_linear(self, vs30, C):
-        """
-        Compute site amplification linear term,
-        equation (7), pag 107.
-        """
-        return C['blin'] * np.log(vs30 / 760.0)
-
-    def _get_pga_on_rock(self, ctx, _C):
-        """
-        Compute and return PGA on rock conditions (that is vs30 = 760.0 m/s).
-        This is needed to compute non-linear site amplification term
-        """
-        # Median PGA in g for Vref = 760.0, without site amplification,
-        # that is equation (1) pag 106, without the third and fourth terms
-        # Mref and Rref values are given in the caption to table 6, pag 119
-        # Note that in the original paper, the caption reads:
-        # "Distance-scaling coefficients (Mref=4.5 and Rref=1.0 km for all
-        # periods, except Rref=5.0 km for pga4nl)". However this is a mistake
-        # as reported in http://www.daveboore.com/pubs_online.php:
-        # ERRATUM: 27 August 2008. Tom Blake pointed out that the caption to
-        # Table 6 should read "Distance-scaling coefficients (Mref=4.5 and
-        # Rref=1.0 km for all periods)".
-        C_pga = self.COEFFS[PGA()]
-        pga4nl = np.exp(self._compute_magnitude_scaling(ctx, C_pga) +
-                        self._compute_distance_scaling(ctx, C_pga))
-
-        return pga4nl
-
-    def _get_site_amplification_non_linear(self, vs30, pga4nl, C):
-        """
-        Compute site amplification non-linear term,
-        equations (8a) to (13d), pag 108-109.
-        """
-        # non linear slope
-        bnl = self._compute_non_linear_slope(vs30, C)
-        # compute the actual non-linear term
-        return self._compute_non_linear_term(pga4nl, bnl)
-
-    def _compute_non_linear_slope(self, vs30, C):
-        """
-        Compute non-linear slope factor,
-        equations (13a) to (13d), pag 108-109.
-        """
-        V1 = 180.0
-        V2 = 300.0
-        Vref = 760.0
-
-        # equation (13d), values are zero for vs30 >= Vref = 760.0
-        bnl = np.zeros(vs30.shape)
-
-        # equation (13a)
-        bnl[vs30 <= V1] = C['b1']
-
-        # equation (13b)
-        idx = np.where((vs30 > V1) & (vs30 <= V2))
-        bnl[idx] = (C['b1'] - C['b2']) * \
-            np.log(vs30[idx] / V2) / np.log(V1 / V2) + C['b2']
-
-        # equation (13c)
-        idx = np.where((vs30 > V2) & (vs30 < Vref))
-        bnl[idx] = C['b2'] * np.log(vs30[idx] / Vref) / np.log(V2 / Vref)
-        return bnl
-
-    def _compute_non_linear_term(self, pga4nl, bnl):
-        """
-        Compute non-linear term,
-        equation (8a) to (8c), pag 108.
-        """
-
-        fnl = np.zeros(pga4nl.shape)
-        if len(bnl) < len(fnl):  # single site case, fix shape
-            bnl = np.repeat(bnl, len(fnl))
-        a1 = 0.03
-        a2 = 0.09
-        pga_low = 0.06
-
-        # equation (8a)
-        idx = pga4nl <= a1
-        fnl[idx] = bnl[idx] * np.log(pga_low / 0.1)
-
-        # equation (8b)
-        idx = np.where((pga4nl > a1) & (pga4nl <= a2))
-        delta_x = np.log(a2 / a1)
-        delta_y = bnl[idx] * np.log(a2 / pga_low)
-        c = (3 * delta_y - bnl[idx] * delta_x) / delta_x ** 2
-        d = -(2 * delta_y - bnl[idx] * delta_x) / delta_x ** 3
-        fnl[idx] = bnl[idx] * np.log(pga_low / 0.1) +\
-            c * (np.log(pga4nl[idx] / a1) ** 2) + \
-            d * (np.log(pga4nl[idx] / a1) ** 3)
-
-        # equation (8c)
-        idx = pga4nl > a2
-        fnl[idx] = np.squeeze(bnl[idx]) * np.log(pga4nl[idx] / 0.1)
-
-        return fnl
 
     #: Coefficient table is constructed from values in tables 6, 7 and 8
     #: (pages 119, 120, 121). Spectral acceleration is defined for damping
@@ -361,6 +391,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
     from a Referenced Empirical Approach", Bulletin of the Seismological
     Society of America, Vol. 100, No. 2, pp. 751–761
     """
+    kind = "hawaii"
 
     #: Supported tectonic region type is active volcanic, see
     #: paragraph 'Introduction', page 99.
@@ -372,9 +403,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
 
     #: Supported standard deviation types is total
     #: see equation 2, pag 106.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     # Adding hypocentral depth as required rupture parameter
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
@@ -413,16 +442,3 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
         mean += (x0 + x1*np.log10(rjb))/np.log10(np.e)
 
         return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
-        # Using a frequency independent value of sigma as recommended
-        # in the caption of Table 2 of Atkinson (2010)
-        stddevs = [0.26/np.log10(np.e) + np.zeros(num_sites)]
-
-        return stddevs
