@@ -104,6 +104,8 @@ class AtkinsonBoore2006(BooreAtkinson2008):
 
     REQUIRES_ATTRIBUTES = {'mag_eq', 'scale_fac'}
 
+    CUTOFF_RRUP = 0.
+
     def __init__(self, mag_eq="NA", scale_fac=0, **kwargs):
         assert mag_eq in "Mblg87 Mblg96 Mw NA", mag_eq
         super().__init__(**kwargs)
@@ -122,15 +124,35 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         elif self.mag_eq == 'Mw':
             return mag
 
+    # used in the "Modified" version
+    def _get_stress_drop_scaling_factor(self, magnitude):
+        """
+        Returns the magnitude dependent stress drop scaling factor defined in
+        equation 6 (page 1128) of Atkinson & Boore (2011)
+        """
+        stress_drop = 10.0 ** (3.45 - 0.2 * magnitude)
+        cap = 10.0 ** (3.45 - 0.2 * 5.0)
+        if stress_drop > cap:
+            stress_drop = cap
+        return log10(stress_drop / 140.0) / log10(2.0)
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+        if self.CUTOFF_RRUP:  # for SGS subclass
+            dists.rrup[dists.rrup <= self.CUTOFF_RRUP] = self.CUTOFF_RRUP
+
         if self.mag_eq == "NA":
+            if 'Modified' in self.__class__.__name__:
+                # stress drop scaling factor is now a property of magnitude
+                scale_fac = self._get_stress_drop_scaling_factor(rup.mag)
+            else:
+                scale_fac = 0
             mean = self._get_mean(
-                sites.vs30, rup.mag, dists.rrup, imt, scale_fac=0)
+                sites.vs30, rup.mag, dists.rrup, imt, scale_fac=scale_fac)
             stddevs = self._get_stddevs(None, stddev_types, sites.vs30.size)
         else:
             mag = self._convert_magnitude(rup.mag)
@@ -421,29 +443,6 @@ class AtkinsonBoore2006Modified2011(AtkinsonBoore2006):
     Ground-Motion Prediciton Equations in Light of New Data. Bulletin of the
     Seismological Society of America, 101(3), 1121 - 1135
     """
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        """
-        # Stress drop scaling factor is now a property of magnitude
-        scale_fac = self._get_stress_drop_scaling_factor(rup.mag)
-        mean = self._get_mean(sites.vs30, rup.mag, dists.rrup, imt, scale_fac)
-        stddevs = self._get_stddevs(None, stddev_types, sites.vs30.size)
-
-        return mean, stddevs
-
-    def _get_stress_drop_scaling_factor(self, magnitude):
-        """
-        Returns the magnitude dependent stress drop scaling factor defined in
-        equation 6 (page 1128) of Atkinson & Boore (2011)
-        """
-        stress_drop = 10.0 ** (3.45 - 0.2 * magnitude)
-        cap = 10.0 ** (3.45 - 0.2 * 5.0)
-        if stress_drop > cap:
-            stress_drop = cap
-        return log10(stress_drop / 140.0) / log10(2.0)
 
 
 class AtkinsonBoore2006SGS(AtkinsonBoore2006):
@@ -453,12 +452,4 @@ class AtkinsonBoore2006SGS(AtkinsonBoore2006):
     by introducing a distance filter for the near field, as implemented
     by SGS for the national PSHA model for Saudi Arabia.
     """
-
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Using a minimum distance of 5km for the calculation.
-        """
-        dists_mod = copy.deepcopy(dists)
-        dists_mod.rrup[dists.rrup <= 5.] = 5.
-        return super().get_mean_and_stddevs(
-                sites, rup, dists_mod, imt, stddev_types)
+    CUTOFF_RRUP = 5.
