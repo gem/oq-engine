@@ -28,6 +28,68 @@ from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+CONSTS = {"r0": 10.0, "r1": 50.0, "r2": 100.0}
+
+
+def _get_distance_segment_coefficients(rval):
+    """
+    Returns the coefficients describing the distance attenuation shape
+    for three different distance bins, equations 12a - 12c
+    """
+    # Get distance segment ends
+    # Equation 12a
+    f_0 = np.log10(CONSTS["r0"] / rval)
+    f_0[rval > CONSTS["r0"]] = 0.0
+
+    # Equation 12b
+    f_1 = np.log10(rval)
+    f_1[rval > CONSTS["r1"]] = np.log10(CONSTS["r1"])
+    # Equation 12c
+    f_2 = np.log10(rval / CONSTS["r2"])
+    f_2[rval <= CONSTS["r2"]] = 0.0
+    return f_0, f_1, f_2
+
+
+def _get_distance_term(C, rjb, mag):
+    """
+    Returns the distance scaling component of the model
+    Equation 10, Page 63
+    """
+    # Depth adjusted distance, equation 11 (Page 63)
+    rval = np.sqrt(rjb ** 2.0 + C["c11"] ** 2.0)
+    f_0, f_1, f_2 = _get_distance_segment_coefficients(rval)
+    return ((C["c4"] + C["c5"] * mag) * f_0 +
+            (C["c6"] + C["c7"] * mag) * f_1 +
+            (C["c8"] + C["c9"] * mag) * f_2 +
+            (C["c10"] * rval))
+
+
+def _get_magnitude_term(C, mag):
+    """
+    Returns the magnitude scaling component of the model
+    Equation 10, Page 63
+    """
+    return (C["c2"] * mag) + (C["c3"] * (mag ** 2.0))
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Returns the standard deviation. Original standard deviations are in
+    logarithms of base 10. Converts to natural logarithm.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.log(10.0 **
+                                  (C["total"] + np.zeros(num_sites))))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(np.log(10.0 **
+                                  (C["phi"] + np.zeros(num_sites))))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(np.log(10.0 **
+                                  (C["tau"] + np.zeros(num_sites))))
+    return stddevs
+
 
 class RietbrockEdwards2019Mean(GMPE):
     """
@@ -43,11 +105,7 @@ class RietbrockEdwards2019Mean(GMPE):
 
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground acceleration and peak ground velocity.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -55,11 +113,8 @@ class RietbrockEdwards2019Mean(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event and
     #: total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT, const.StdDev.TOTAL}
 
     #: No site parameter is required
     REQUIRES_SITES_PARAMETERS = set()
@@ -79,75 +134,17 @@ class RietbrockEdwards2019Mean(GMPE):
         # extract dictionaries of coefficients specific to required
         # intensity measure type
         C = self.COEFFS[imt]
-        imean = C["c1"] + (self._get_magnitude_term(C, rup.mag) +
-                           self._get_distance_term(C, dists.rjb, rup.mag))
+        imean = C["c1"] + (_get_magnitude_term(C, rup.mag) +
+                           _get_distance_term(C, dists.rjb, rup.mag))
         # Converting from log10 to log
         if imt.name in "SA PGA":
-            #mean = np.log(10.0**(imean - 2.0)/9.8066)
-            mean = np.log(10.0**(imean)/980.665)
+            mean = np.log(10.0**(imean) / 980.665)
         else:
             mean = np.log(10 ** imean)
 
-        stddevs = self._get_stddevs(C, stddev_types, dists.rjb.shape[0])
+        stddevs = _get_stddevs(C, stddev_types, dists.rjb.shape[0])
 
         return mean, stddevs
-
-    def _get_magnitude_term(self, C, mag):
-        """
-        Returns the magnitude scaling component of the model
-        Equation 10, Page 63
-        """
-        return (C["c2"] * mag) + (C["c3"] * (mag ** 2.0))
-
-    def _get_distance_term(self, C, rjb, mag):
-        """
-        Returns the distance scaling component of the model
-        Equation 10, Page 63
-        """
-        # Depth adjusted distance, equation 11 (Page 63)
-        rval = np.sqrt(rjb ** 2.0 + C["c11"] ** 2.0)
-        f_0, f_1, f_2 = self._get_distance_segment_coefficients(rval)
-        return ((C["c4"] + C["c5"] * mag) * f_0 +
-                (C["c6"] + C["c7"] * mag) * f_1 +
-                (C["c8"] + C["c9"] * mag) * f_2 +
-                (C["c10"] * rval))
-
-    def _get_distance_segment_coefficients(self, rval):
-        """
-        Returns the coefficients describing the distance attenuation shape
-        for three different distance bins, equations 12a - 12c
-        """
-        # Get distance segment ends
-        # Equation 12a
-        f_0 = np.log10(self.CONSTS["r0"] / rval)
-        f_0[rval > self.CONSTS["r0"]] = 0.0
-
-        # Equation 12b
-        f_1 = np.log10(rval)
-        f_1[rval > self.CONSTS["r1"]] = np.log10(self.CONSTS["r1"])
-        # Equation 12c
-        f_2 = np.log10(rval / self.CONSTS["r2"])
-        f_2[rval <= self.CONSTS["r2"]] = 0.0
-        return f_0, f_1, f_2
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Returns the standard deviation. Original standard deviations are in
-        logarithms of base 10. Converts to natural logarithm.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.log(10.0 **
-                                      (C["total"] + np.zeros(num_sites))))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(np.log(10.0 **
-                                      (C["phi"] + np.zeros(num_sites))))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(np.log(10.0 **
-                                      (C["tau"] + np.zeros(num_sites))))
-        return stddevs
 
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -178,10 +175,6 @@ class RietbrockEdwards2019Mean(GMPE):
     4 -6.4512  1.8930 -0.0918 -1.4444  0.1782 -1.5462  0.1501 -2.4088  0.0503 -0.000098  2.5430  0.2440  0.1423  0.1982
     5 -6.3504  1.7758 -0.0801 -1.5184  0.1896 -1.6103  0.1596 -2.4808  0.0678 -0.000161  2.6018  0.2407  0.1339  0.2001
     """)
-
-    CONSTS = {"r0": 10.0,
-              "r1": 50.0,
-              "r2": 100.0}
 
 
 class RietbrockEdwards2019Low(RietbrockEdwards2019Mean):

@@ -37,11 +37,9 @@ class BooreAtkinson2008(GMPE):
     #: Supported tectonic region type is active shallow crust, see
     #: paragraph 'Introduction', page 99.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see table 3
     #: pag. 110
-
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent

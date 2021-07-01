@@ -26,6 +26,23 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _compute_mean(C, mag, rhypo, hypo_depth, mean, idx):
+    """
+    Compute mean value according to equations 10 and 11 page 226.
+    """
+    mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rhypo[idx] +
+                 C['C4'] * np.exp(C['C5'] * mag)) + C['C6'] * hypo_depth)
+
+
+def _compute_std(C, stddevs, idx):
+    """
+    Compute total standard deviation, see tables 3 and 4, pages 227 and
+    228.
+    """
+    for stddev in stddevs:
+        stddev[idx] += C['sigma']
+
+
 class LinLee2008SInter(GMPE):
     """
     Implements GMPE developed by Po-Shen Lin and Chyi-Tyi Lee and published as
@@ -84,32 +101,17 @@ class LinLee2008SInter(GMPE):
 
         if idx_rock.any():
             C = self.COEFFS_ROCK[imt]
-            self._compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
-                               idx_rock)
-            self._compute_std(C, stddevs, idx_rock)
+            _compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
+                          idx_rock)
+            _compute_std(C, stddevs, idx_rock)
 
         if idx_soil.any():
             C = self.COEFFS_SOIL[imt]
-            self._compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
-                               idx_soil)
-            self._compute_std(C, stddevs, idx_soil)
+            _compute_mean(C, rup.mag, dists.rhypo, rup.hypo_depth, mean,
+                          idx_soil)
+            _compute_std(C, stddevs, idx_soil)
 
         return mean, stddevs
-
-    def _compute_mean(self, C, mag, rhypo, hypo_depth, mean, idx):
-        """
-        Compute mean value according to equations 10 and 11 page 226.
-        """
-        mean[idx] = (C['C1'] + C['C2'] * mag + C['C3'] * np.log(rhypo[idx] +
-                     C['C4'] * np.exp(C['C5'] * mag)) + C['C6'] * hypo_depth)
-
-    def _compute_std(self, C, stddevs, idx):
-        """
-        Compute total standard deviation, see tables 3 and 4, pages 227 and
-        228.
-        """
-        for stddev in stddevs:
-            stddev[idx] += C['sigma']
 
     #: Coefficient table for rock sites, see table 3 page 227.
     COEFFS_ROCK = CoeffsTable(sa_damping=5, table="""\

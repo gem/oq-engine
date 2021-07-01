@@ -189,7 +189,7 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
         for spec of input and result values.
         """
         C = self.COEFFS[imt]
-        C_SIG = self.SIGMA_COEFFS[imt]
+        C_SIG = self.COEFFS_SIGMA[imt]
 
         mean = (get_magnitude_scaling_term(C, rup.mag) +
                 get_distance_scaling_term(C, dists.rhypo))
@@ -225,7 +225,7 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
           0.500000    1.238325   2.390165   -0.382327   -0.030766   -1.110481   -0.009430   0.000000   0.107816
          """)
 
-    SIGMA_COEFFS = CoeffsTable(sa_damping=5, table="""
+    COEFFS_SIGMA = CoeffsTable(sa_damping=5, table="""
                                IMT         phi       tau_s       tau_b
                                pgv  0.53545879  0.65762034  0.55823845
                                pga  0.57602321  0.90206692  0.63679205

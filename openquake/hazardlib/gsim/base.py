@@ -29,7 +29,7 @@ import numpy
 from scipy.special import ndtr
 from scipy.stats import norm
 
-from openquake.baselib.general import DeprecationWarning, DType
+from openquake.baselib.general import DeprecationWarning, RecordBuilder
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib import const
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
@@ -39,11 +39,10 @@ from openquake.hazardlib.contexts import *  # for backward compatibility
 ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
                            'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT']
 ADMITTED_FLOAT_PARAMETERS = ['DEFINED_FOR_REFERENCE_VELOCITY']
-ADMITTED_TABLE_PARAMETERS = ['COEFFS_STRESS', 'COEFFS_HARD_ROCK',
-                             'COEFFS_SITE_RESPONSE']
 ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                            'REQUIRES_DISTANCES',
+                           'REQUIRES_ATTRIBUTES',
                            'REQUIRES_SITES_PARAMETERS',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
@@ -69,19 +68,6 @@ class AdaptedWarning(UserWarning):
     Raised for GMPEs that are intended for experimental use or maybe subject
     to changes in future version.
     """
-
-
-def gsim_imt_dt(sorted_gsims, sorted_imts):
-    """
-    Build a numpy dtype as a nested record with keys 'idx' and nested
-    (gsim, imt).
-
-    :param sorted_gsims: a list of GSIM instances, sorted lexicographically
-    :param sorted_imts: a list of intensity measure type strings
-    """
-    dtlist = [(imt, numpy.float32) for imt in sorted_imts]
-    imt_dt = numpy.dtype(dtlist)
-    return numpy.dtype([(str(gsim), imt_dt) for gsim in sorted_gsims])
 
 
 # this is the critical function for the performance of the classical calculator
@@ -196,6 +182,225 @@ def _get_poes_site(mean_std, loglevels, truncation_level, ampfun, ctxs):
     return out_s
 
 
+class CoeffsTable(object):
+    r"""
+    Instances of :class:`CoeffsTable` encapsulate tables of coefficients
+    corresponding to different IMTs.
+
+    Tables are defined in a space-separated tabular form in a simple string
+    literal (heading and trailing whitespace does not matter). The first column
+    in the table must be named "IMT" (or "imt") and thus should represent IMTs:
+
+    >>> CoeffsTable(table='''imf z
+    ...                      pga 1''')
+    Traceback (most recent call last):
+        ...
+    ValueError: first column in a table must be IMT
+
+    Names of other columns are used as coefficients dicts keys. The values
+    in the first column should correspond to real intensity measure types,
+    see :mod:`openquake.hazardlib.imt`:
+
+    >>> CoeffsTable(table='''imt  z
+    ...                      pgx  2''')
+    Traceback (most recent call last):
+        ...
+    KeyError: 'PGX'
+
+    Note that :class:`CoeffsTable` only accepts keyword argumets:
+
+    >>> CoeffsTable()
+    Traceback (most recent call last):
+        ...
+    TypeError: __init__() missing 1 required positional argument: 'table'
+
+    >>> CoeffsTable(table='', foo=1)
+    Traceback (most recent call last):
+        ...
+    TypeError: CoeffsTable got unexpected kwargs: {'foo': 1}
+
+    If there are :class:`~openquake.hazardlib.imt.SA` IMTs in the table, they
+    are not referenced by name, because they require parametrization:
+
+    >>> CoeffsTable(table='''imt  x
+    ...                      sa   15''')
+    Traceback (most recent call last):
+        ...
+    ValueError: specify period as float value to declare SA IMT
+
+    So proper table defining SA looks like this:
+
+    >>> ct = CoeffsTable(sa_damping=5, table='''
+    ...     imt   a    b     c   d
+    ...     pga   1    2.4  -5   0.01
+    ...     pgd  7.6  12     0  44.1
+    ...     0.1  10   20    30  40
+    ...     1.0   1    2     3   4
+    ...     10    2    4     6   8
+    ... ''')
+
+    Table objects could be indexed by IMT objects (this returns a dictionary
+    of coefficients):
+
+    >>> from openquake.hazardlib import imt
+    >>> ct[imt.PGA()]
+    (1., 2.4, -5., 0.01)
+    >>> ct[imt.PGD()]
+    (7.6, 12., 0., 44.1)
+    >>> ct[imt.SA(damping=5, period=0.1)]
+    (10., 20., 30., 40.)
+    >>> ct[imt.PGV()]
+    Traceback (most recent call last):
+        ...
+    KeyError: PGV
+    >>> ct[imt.SA(1.0, 4)]
+    Traceback (most recent call last):
+        ...
+    KeyError: SA(1.0, 4)
+
+    Table of coefficients for spectral acceleration could be indexed
+    by instances of :class:`openquake.hazardlib.imt.SA` with period
+    value that is not specified in the table. The coefficients then
+    get interpolated between the ones for closest higher and closest
+    lower period. That scaling of coefficients works in a logarithmic
+    scale of periods and only within the same damping:
+
+    >>> '%.5f' % ct[imt.SA(period=0.2, damping=5)]['a']
+    '7.29073'
+    >>> '%.5f' % ct[imt.SA(period=0.9, damping=5)]['c']
+    '4.23545'
+    >>> '%.5f' % ct[imt.SA(period=5, damping=5)]['c']
+    '5.09691'
+    >>> ct[imt.SA(period=0.9, damping=15)]
+    Traceback (most recent call last):
+        ...
+    KeyError: SA(0.9, 15)
+
+    Extrapolation is not possible:
+
+    >>> ct[imt.SA(period=0.01, damping=5)]
+    Traceback (most recent call last):
+        ...
+    KeyError: SA(0.01)
+
+    It is also possible to instantiate a table from a tuple of dictionaries,
+    corresponding to the SA coefficients and non-SA coefficients:
+
+    >>> coeffs = {imt.SA(0.1): {"a": 1.0, "b": 2.0},
+    ...           imt.SA(1.0): {"a": 3.0, "b": 4.0},
+    ...           imt.PGA(): {"a": 0.1, "b": 1.0},
+    ...           imt.PGV(): {"a": 0.5, "b": 10.0}}
+    >>> ct = CoeffsTable.fromdict(coeffs)
+    """
+
+    @classmethod
+    def fromdict(cls, ddic, logratio=True):
+        """
+        :param ddic: a dictionary of dictionaries
+        :param logratio: flag (default True)
+        """
+        firstdic = ddic[next(iter(ddic))]
+        self = object.__new__(cls)
+        self.rb = RecordBuilder(**firstdic)
+        self._coeffs = {imt: self.rb(**dic) for imt, dic in ddic.items()}
+        self.logratio = logratio
+        return self
+
+    def __init__(self, table, **kwargs):
+        self._coeffs = {}  # cache
+        self.logratio = kwargs.pop('logratio', True)
+        sa_damping = kwargs.pop('sa_damping', None)
+        if kwargs:
+            raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
+        self.rb = self._setup_table_from_str(table, sa_damping)
+
+    def _setup_table_from_str(self, table, sa_damping):
+        """
+        Builds the input tables from a string definition
+        """
+        lines = table.strip().splitlines()
+        header = lines.pop(0).split()
+        if not header[0].upper() == "IMT":
+            raise ValueError('first column in a table must be IMT')
+        dt = RecordBuilder(**{name: 0. for name in header[1:]})
+        for line in lines:
+            row = line.split()
+            imt_name_or_period = row[0].upper()
+            if imt_name_or_period == 'SA':  # protect against stupid mistakes
+                raise ValueError('specify period as float value '
+                                 'to declare SA IMT')
+            imt = imt_module.from_string(imt_name_or_period, sa_damping)
+            self._coeffs[imt] = dt(*row[1:])
+        return dt
+
+    @property
+    def sa_coeffs(self):
+        return {imt: self._coeffs[imt] for imt in self._coeffs
+                if imt.name == 'SA'}
+
+    @property
+    def non_sa_coeffs(self):
+        return {imt: self._coeffs[imt] for imt in self._coeffs
+                if imt.name != 'SA'}
+
+    def to_array(self, imts):
+        """
+        :param imts: a tuple of IMT tuples
+        :returns: a structured array with the coefficients for each IMT
+        """
+        arr = numpy.zeros(len(imts), self.rb.dtype)
+        for m, imt in enumerate(imts):
+            arr[m] = self[imt]
+        return arr
+
+    def __getitem__(self, imt):
+        """
+        Return a dictionary of coefficients corresponding to ``imt``
+        from this table (if there is a line for requested IMT in it),
+        or the dictionary of interpolated coefficients, if ``imt`` is
+        of type :class:`~openquake.hazardlib.imt.SA` and interpolation
+        is possible.
+
+        :raises KeyError:
+            If ``imt`` is not available in the table and no interpolation
+            can be done.
+        """
+        try:  # see if already in cache
+            return self._coeffs[imt]
+        except KeyError:  # populate the cache
+            pass
+
+        max_below = min_above = None
+        for unscaled_imt in list(self.sa_coeffs):
+            if unscaled_imt.damping != getattr(imt, 'damping', None):
+                pass
+            elif unscaled_imt.period > imt.period:
+                if min_above is None or unscaled_imt.period < min_above.period:
+                    min_above = unscaled_imt
+            elif unscaled_imt.period < imt.period:
+                if max_below is None or unscaled_imt.period > max_below.period:
+                    max_below = unscaled_imt
+        if max_below is None or min_above is None:
+            raise KeyError(imt)
+        if self.logratio:  # regular case
+            # ratio tends to 1 when target period tends to a minimum
+            # known period above and to 0 if target period is close
+            # to maximum period below.
+            ratio = ((math.log(imt.period) - math.log(max_below.period)) /
+                     (math.log(min_above.period) - math.log(max_below.period)))
+        else:  # in the ACME project
+            ratio = ((imt.period - max_below.period) /
+                     (min_above.period - max_below.period))
+        below = self.sa_coeffs[max_below]
+        above = self.sa_coeffs[min_above]
+        lst = [(above[n] - below[n]) * ratio + below[n] for n in self.rb.names]
+        self._coeffs[imt] = c = self.rb(*lst)
+        return c
+
+    def __repr__(self):
+        return '<%s %s>' % (self.__class__.__name__, ' '.join(self.rb.names))
+
+
 class MetaGSIM(abc.ABCMeta):
     """
     A metaclass converting set class attributes into frozensets, to avoid
@@ -258,9 +463,8 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: this GSIM can calculate.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = abc.abstractproperty()
 
-    #: optional dictionary param_name -> param_type for the GSIM
-    #: instantiation parameters; used only for jittable GSIMs
-    REQUIRES_PARAMETERS = {}
+    #: Set of required GSIM attributes
+    REQUIRES_ATTRIBUTES = set()
 
     #: Set of site parameters names this GSIM needs. The set should include
     #: strings that match names of the attributes of a :class:`site
@@ -324,12 +528,17 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     @classmethod
     def __init_subclass__(cls):
         stddevtypes = cls.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-        if not isinstance(stddevtypes, abc.abstractproperty):  # concrete class
-            if const.StdDev.TOTAL not in stddevtypes:
-                raise ValueError('%s.DEFINED_FOR_STANDARD_DEVIATION_TYPES is '
-                                 'not defined for const.StdDev.TOTAL' %
-                                 cls.__name__)
-            registry[cls.__name__] = cls
+        if isinstance(stddevtypes, abc.abstractproperty):  # in GMPE
+            return
+        elif const.StdDev.TOTAL not in stddevtypes:
+            raise ValueError(
+                '%s.DEFINED_FOR_STANDARD_DEVIATION_TYPES is '
+                'not defined for const.StdDev.TOTAL' % cls.__name__)
+        for attr, ctable in vars(cls).items():
+            if isinstance(ctable, CoeffsTable):
+                if not attr.startswith('COEFFS'):
+                    raise NameError('%s does not start with COEFFS' % attr)
+        registry[cls.__name__] = cls
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -600,228 +809,3 @@ class GMPE(GroundShakingIntensityModel):
                 # when 0 ignore the contribution: see _build_trts_branches
                 arr[:, loglevels(imt)] = 0
         return arr
-
-
-class CoeffsTable(object):
-    r"""
-    Instances of :class:`CoeffsTable` encapsulate tables of coefficients
-    corresponding to different IMTs.
-
-    Tables are defined in a space-separated tabular form in a simple string
-    literal (heading and trailing whitespace does not matter). The first column
-    in the table must be named "IMT" (or "imt") and thus should represent IMTs:
-
-    >>> CoeffsTable(table='''imf z
-    ...                      pga 1''')
-    Traceback (most recent call last):
-        ...
-    ValueError: first column in a table must be IMT
-
-    Names of other columns are used as coefficients dicts keys. The values
-    in the first column should correspond to real intensity measure types,
-    see :mod:`openquake.hazardlib.imt`:
-
-    >>> CoeffsTable(table='''imt  z
-    ...                      pgx  2''')
-    Traceback (most recent call last):
-        ...
-    KeyError: 'PGX'
-
-    Note that :class:`CoeffsTable` only accepts keyword argumets:
-
-    >>> CoeffsTable()
-    Traceback (most recent call last):
-        ...
-    TypeError: __init__() missing 1 required positional argument: 'table'
-
-    >>> CoeffsTable(table='', foo=1)
-    Traceback (most recent call last):
-        ...
-    TypeError: CoeffsTable got unexpected kwargs: {'foo': 1}
-
-    If there are :class:`~openquake.hazardlib.imt.SA` IMTs in the table, they
-    are not referenced by name, because they require parametrization:
-
-    >>> CoeffsTable(table='''imt  x
-    ...                      sa   15''')
-    Traceback (most recent call last):
-        ...
-    ValueError: specify period as float value to declare SA IMT
-
-    So proper table defining SA looks like this:
-
-    >>> ct = CoeffsTable(sa_damping=5, table='''
-    ...     imt   a    b     c   d
-    ...     pga   1    2.4  -5   0.01
-    ...     pgd  7.6  12     0  44.1
-    ...     0.1  10   20    30  40
-    ...     1.0   1    2     3   4
-    ...     10    2    4     6   8
-    ... ''')
-
-    Table objects could be indexed by IMT objects (this returns a dictionary
-    of coefficients):
-
-    >>> from openquake.hazardlib import imt
-    >>> ct[imt.PGA()]
-    (1., 2.4, -5., 0.01)
-    >>> ct[imt.PGD()]
-    (7.6, 12., 0., 44.1)
-    >>> ct[imt.SA(damping=5, period=0.1)]
-    (10., 20., 30., 40.)
-    >>> ct[imt.PGV()]
-    Traceback (most recent call last):
-        ...
-    KeyError: PGV
-    >>> ct[imt.SA(1.0, 4)]
-    Traceback (most recent call last):
-        ...
-    KeyError: SA(1.0, 4)
-
-    Table of coefficients for spectral acceleration could be indexed
-    by instances of :class:`openquake.hazardlib.imt.SA` with period
-    value that is not specified in the table. The coefficients then
-    get interpolated between the ones for closest higher and closest
-    lower period. That scaling of coefficients works in a logarithmic
-    scale of periods and only within the same damping:
-
-    >>> '%.5f' % ct[imt.SA(period=0.2, damping=5)]['a']
-    '7.29073'
-    >>> '%.5f' % ct[imt.SA(period=0.9, damping=5)]['c']
-    '4.23545'
-    >>> '%.5f' % ct[imt.SA(period=5, damping=5)]['c']
-    '5.09691'
-    >>> ct[imt.SA(period=0.9, damping=15)]
-    Traceback (most recent call last):
-        ...
-    KeyError: SA(0.9, 15)
-
-    Extrapolation is not possible:
-
-    >>> ct[imt.SA(period=0.01, damping=5)]
-    Traceback (most recent call last):
-        ...
-    KeyError: SA(0.01)
-
-    It is also possible to instantiate a table from a tuple of dictionaries,
-    corresponding to the SA coefficients and non-SA coefficients:
-
-    >>> coeffs = {imt.SA(0.1): {"a": 1.0, "b": 2.0},
-    ...           imt.SA(1.0): {"a": 3.0, "b": 4.0},
-    ...           imt.PGA(): {"a": 0.1, "b": 1.0},
-    ...           imt.PGV(): {"a": 0.5, "b": 10.0}}
-    >>> ct = CoeffsTable.fromdict(coeffs)
-    """
-
-    @classmethod
-    def fromdict(cls, ddic, logratio=True):
-        """
-        :param ddic: a dictionary of dictionaries
-        :param logratio: flag (default True)
-        """
-        firstdic = ddic[next(iter(ddic))]
-        self = object.__new__(cls)
-        self.tt = DType(list(firstdic), float)
-        self._coeffs = {imt: self.tt(**dic) for imt, dic in ddic.items()}
-        self.logratio = logratio
-        self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
-                              [(name, float) for name in self.tt.dtype.names])
-        return self
-
-    def __init__(self, table, **kwargs):
-        self._coeffs = {}  # cache
-        self.logratio = kwargs.pop('logratio', True)
-        sa_damping = kwargs.pop('sa_damping', None)
-        if kwargs:
-            raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
-        self.tt = self._setup_table_from_str(table, sa_damping)
-        self.dt = numpy.dtype([('imt', 'S12'), ('period', float)] +
-                              [(name, float) for name in self.tt.dtype.names])
-
-    def _setup_table_from_str(self, table, sa_damping):
-        """
-        Builds the input tables from a string definition
-        """
-        lines = table.strip().splitlines()
-        header = lines.pop(0).split()
-        if not header[0].upper() == "IMT":
-            raise ValueError('first column in a table must be IMT')
-        tt = DType(header[1:], float)
-        for line in lines:
-            row = line.split()
-            imt_name_or_period = row[0].upper()
-            if imt_name_or_period == 'SA':  # protect against stupid mistakes
-                raise ValueError('specify period as float value '
-                                 'to declare SA IMT')
-            imt = imt_module.from_string(imt_name_or_period, sa_damping)
-            self._coeffs[imt] = tt(*row[1:])
-        return tt
-
-    @property
-    def sa_coeffs(self):
-        return {imt: self._coeffs[imt] for imt in self._coeffs
-                if imt.name == 'SA'}
-
-    @property
-    def non_sa_coeffs(self):
-        return {imt: self._coeffs[imt] for imt in self._coeffs
-                if imt.name != 'SA'}
-
-    def on(self, imts):
-        """
-        :param imts: a list of IMTs
-        :returns: a structured array with the coefficients for each IMT
-        """
-        arr = numpy.zeros(len(imts), self.dt)
-        for m, imt in enumerate(imts):
-            arr[m]['imt'] = imt.name
-            arr[m]['period'] = imt.period
-            rec = self[imt]
-            for n in self.dt.names[2:]:
-                arr[m][n] = rec[n]
-        return arr
-
-    def __getitem__(self, imt):
-        """
-        Return a dictionary of coefficients corresponding to ``imt``
-        from this table (if there is a line for requested IMT in it),
-        or the dictionary of interpolated coefficients, if ``imt`` is
-        of type :class:`~openquake.hazardlib.imt.SA` and interpolation
-        is possible.
-
-        :raises KeyError:
-            If ``imt`` is not available in the table and no interpolation
-            can be done.
-        """
-        try:  # see if already in cache
-            return self._coeffs[imt]
-        except KeyError:  # populate the cache
-            pass
-
-        max_below = min_above = None
-        for unscaled_imt in list(self.sa_coeffs):
-            if unscaled_imt.damping != getattr(imt, 'damping', None):
-                pass
-            elif unscaled_imt.period > imt.period:
-                if min_above is None or unscaled_imt.period < min_above.period:
-                    min_above = unscaled_imt
-            elif unscaled_imt.period < imt.period:
-                if max_below is None or unscaled_imt.period > max_below.period:
-                    max_below = unscaled_imt
-        if max_below is None or min_above is None:
-            raise KeyError(imt)
-        if self.logratio:  # regular case
-            # ratio tends to 1 when target period tends to a minimum
-            # known period above and to 0 if target period is close
-            # to maximum period below.
-            ratio = ((math.log(imt.period) - math.log(max_below.period)) /
-                     (math.log(min_above.period) - math.log(max_below.period)))
-        else:  # in the ACME project
-            ratio = ((imt.period - max_below.period) /
-                     (min_above.period - max_below.period))
-        below = self.sa_coeffs[max_below]
-        above = self.sa_coeffs[min_above]
-        lst = [(above[n] - below[n]) * ratio + below[n]
-               for n in self.tt.dtype.names]
-        self._coeffs[imt] = c = self.tt(*lst)
-        return c

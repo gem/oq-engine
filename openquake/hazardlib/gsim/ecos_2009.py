@@ -28,6 +28,33 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI
 
 
+def _compute_mean(C, rup, dists, num_sites):
+    """
+    Compute mean value.
+    """
+    c0 = C['alpha'] * (C['a']*np.log(30/C['hypo_depth']) +
+                       C['b']*(30-C['hypo_depth'])) + C['beta']
+    c1 = C['alpha']
+    c2 = -(C['a']) * C['alpha']
+    c3 = -(C['b']) * C['alpha']
+
+    log_term = np.log(dists.rhypo / C['hypo_depth'])
+    dist_term = c3 * (dists.rhypo-C['hypo_depth'])
+
+    return (rup.mag - c2 * log_term - dist_term - c0) / c1
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        stddevs.append((C['sigma']) + np.zeros(num_sites))
+
+    return stddevs
+
+
 class ECOS2009(GMPE):
     """
     Implements the Intensity Prediction Equation of
@@ -68,36 +95,10 @@ class ECOS2009(GMPE):
         # extract dictionaries of coefficients specific to required
         # intensity measure type
         C = self.COEFFS[imt]
-        mean = self._compute_mean(C, rup, dists, imt)
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=dists.rhypo.shape)
+        mean = _compute_mean(C, rup, dists, imt)
+        stddevs = _get_stddevs(C, stddev_types, num_sites=dists.rhypo.shape)
 
         return mean, stddevs
-
-    def _compute_mean(self, C, rup, dists, num_sites):
-        """
-        Compute mean value.
-        """
-        c0 = C['alpha'] * (C['a']*np.log(30/C['hypo_depth']) +
-                           C['b']*(30-C['hypo_depth'])) + C['beta']
-        c1 = C['alpha']
-        c2 = -(C['a']) * C['alpha']
-        c3 = -(C['b']) * C['alpha']
-
-        log_term = np.log(dists.rhypo / C['hypo_depth'])
-        dist_term = c3 * (dists.rhypo-C['hypo_depth'])
-
-        return (rup.mag - c2 * log_term - dist_term - c0) / c1
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            stddevs.append((C['sigma']) + np.zeros(num_sites))
-
-        return stddevs
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper.
@@ -121,13 +122,12 @@ class ECOS2009Highest(ECOS2009):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-
         C = self.COEFFS[imt]
-        mean = self._compute_mean(C, rup, dists, imt)
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=dists.rhypo.shape)
+        mean = _compute_mean(C, rup, dists, imt)
+        stddevs = _get_stddevs(C, stddev_types, num_sites=dists.rhypo.shape)
         return mean, stddevs
 
-    COEFFS = CoeffsTable(table="""\
+    COEFFS = CoeffsTable(sa_damping=5.0, table="""\
     IMT             a          b    alpha      beta   hypo_depth   sigma
     MMI       -0.4834   -0.00179    0.732     1.132      10.0      0.36474
-        """)
+    """)

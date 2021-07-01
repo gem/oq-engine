@@ -49,7 +49,6 @@ class YenierAtkinson2015ACME2019(YenierAtkinson2015BSSA):
 
     It also fixes vs30 to 760 m/s
     """
-
     adapted = True
 
     def __init__(self):
@@ -68,7 +67,6 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
     - Centered Ztor = 0
     - Centered Dpp = 0
     """
-
     adapted = True
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -251,7 +249,7 @@ class AlAtikSigmaModel(GMPE):
                                        TAU_SETUP[self.tau_model]["STD"],
                                        self.tau_quantile)
         # setup phi
-        PHI_SETUP['global_linear'] = self.PHI_SS_GLOBAL_LINEAR
+        PHI_SETUP['global_linear'] = self.COEFFS_PHI_SS_GLOBAL_LINEAR
         self.PHI_SS = get_phi_ss_at_quantile_ACME(PHI_SETUP[self.phi_model],
                                                   self.phi_ss_quantile)
         # if required setup phis2ss
@@ -261,7 +259,7 @@ class AlAtikSigmaModel(GMPE):
                     PHI_S2SS_MODEL[self.phi_s2ss_model],
                     self.phi_s2ss_quantile)
             elif self.phi_s2ss_model == 'brb':
-                self.PHI_S2SS = self.PHI_S2SS_BRB
+                self.PHI_S2SS = self.COEFFS_PHI_S2SS_BRB
             else:
                 opts = "'cena', 'brb', or 'None'"
                 raise ValueError('phi_s2ss_model can be {}'.format(opts))
@@ -297,7 +295,7 @@ class AlAtikSigmaModel(GMPE):
             else:
                 set_highest = periods
         except AttributeError:
-            coeffs = gmpe.TAB2.sa_coeffs
+            coeffs = gmpe.COEFFS_TAB2.sa_coeffs
             imts = [*coeffs]
             periods = [imt.period for imt in imts]
             if gmpe.__class__.__name__ == 'BindiEtAl2014Rjb':
@@ -463,7 +461,7 @@ class AlAtikSigmaModel(GMPE):
         return phi
 
     # PHI_SS2S coefficients, table 2.2 HID
-    PHI_S2SS_BRB = CoeffsTable(logratio=False, sa_damping=5., table="""\
+    COEFFS_PHI_S2SS_BRB = CoeffsTable(logratio=False, sa_damping=5., table="""\
         imt   phi_s2ss
         PGA     0.0000
         0.001   0.0000
@@ -476,7 +474,7 @@ class AlAtikSigmaModel(GMPE):
         """)
 
     # Phi_ss coefficients for the global model
-    PHI_SS_GLOBAL_LINEAR = CoeffsTable(logratio=False, sa_damping=5., table="""\
+    COEFFS_PHI_SS_GLOBAL_LINEAR = CoeffsTable(logratio=False, sa_damping=5., table="""\
     imt     mean_a   var_a  mean_b  var_bs
     pgv     0.5034  0.0609  0.3585  0.0316
     pga     0.5477  0.0731  0.3505  0.0412

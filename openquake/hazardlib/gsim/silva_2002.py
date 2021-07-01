@@ -32,6 +32,45 @@ from openquake.hazardlib.gsim.utils import (
     clip_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+from openquake.baselib.general import CallableDict
+
+
+def _compute_stddevs(C, num_sites, stddev_types):
+    """
+    Return total standard deviation.
+    """
+    stddevs = []
+    for _ in stddev_types:
+        stddevs.append(np.zeros(num_sites) + C['sigma'])
+    return stddevs
+
+
+_convert_magnitude = CallableDict()
+
+
+@_convert_magnitude.add("Mblg87")
+def _convert_magnitude87(kind, mag):
+    """
+    Convert magnitude from Mblg to Mw using Atkinson and Boore 1987
+    equation
+    """
+    return mblg_to_mw_atkinson_boore_87(mag)
+
+
+@_convert_magnitude.add("Mblg96")
+def _convert_magnitude96(kind, mag):
+    """
+    Convert magnitude from Mblg to Mw using Johnston 1996 equation
+    """
+    return mblg_to_mw_johnston_96(mag)
+
+
+@_convert_magnitude.add("Mw")
+def _convert_magnitudeMw(kind, mag):
+    """
+    Return magnitude value unchanged
+    """
+    return mag
 
 
 class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
@@ -51,6 +90,7 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
 
     Coefficients are given for the B/C site conditions.
     """
+    kind = "Mblg87"
 
     #: Supported tectonic region type is stable continental crust,
     #: given that the equations have been derived for central and eastern
@@ -59,19 +99,14 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the average horizontal
     #: component
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: No site parameters required
     REQUIRES_SITES_PARAMETERS = set()
@@ -85,44 +120,21 @@ class SilvaEtAl2002MblgAB1987NSHMP2008(GMPE):
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
 
-
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
-        mag = self._convert_magnitude(rup.mag)
+        mag = _convert_magnitude(self.kind, rup.mag)
 
         mean = (
             C['c1'] + C['c2'] * mag + C['c10'] * (mag - 6) ** 2 +
-            (C['c6'] + C['c7'] * mag) * np.log(dists.rjb + np.exp(C['c4']))
-        )
+            (C['c6'] + C['c7'] * mag) * np.log(dists.rjb + np.exp(C['c4'])))
         mean = clip_mean(imt, mean)
-
-        stddevs = self._compute_stddevs(C, dists.rjb.size, stddev_types)
-
+        stddevs = _compute_stddevs(C, dists.rjb.size, stddev_types)
         return mean, stddevs
-
-    def _convert_magnitude(self, mag):
-        """
-        Convert magnitude from Mblg to Mw using Atkinson and Boore 1987
-        equation
-        """
-        return mblg_to_mw_atkinson_boore_87(mag)
-
-    def _compute_stddevs(self, C, num_sites, stddev_types):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        for _ in stddev_types:
-            stddevs.append(np.zeros(num_sites) + C['sigma'])
-        return stddevs
 
     #: Coefficient table obtained from coefficient arrays (c1, c2, c4, c6,
     #: c7, c10, sigma) defined in suroutine getSilva in hazgridXnga2.f
@@ -144,11 +156,7 @@ class SilvaEtAl2002MblgJ1996NSHMP2008(SilvaEtAl2002MblgAB1987NSHMP2008):
     Extend :class:`SilvaEtAl2002MblgAB1987NSHMP2008` but uses Johnston
     1996 equation for converting Mblg to Mw.
     """
-    def _convert_magnitude(self, mag):
-        """
-        Convert magnitude from Mblg to Mw using Johnston 1996 equation
-        """
-        return mblg_to_mw_johnston_96(mag)
+    kind = "Mblg96"
 
 
 class SilvaEtAl2002MwNSHMP2008(SilvaEtAl2002MblgAB1987NSHMP2008):
@@ -156,11 +164,7 @@ class SilvaEtAl2002MwNSHMP2008(SilvaEtAl2002MblgAB1987NSHMP2008):
     Extend :class:`SilvaEtAl2002MblgAB1987NSHMP2008` but assumes magnitude
     to be in Mw scale, therefore no conversion is applied
     """
-    def _convert_magnitude(self, mag):
-        """
-        Return magnitude value unchanged
-        """
-        return mag
+    kind = "Mw"
 
 
 class SilvaEtAl2002DoubleCornerSaturation(SilvaEtAl2002MwNSHMP2008):
@@ -175,20 +179,20 @@ class SilvaEtAl2002DoubleCornerSaturation(SilvaEtAl2002MwNSHMP2008):
     of an independent code - we digitized values from figures included in the
     report.
     """
+    kind = "Mw"
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
                    for stddev_type in stddev_types)
 
         C = self.COEFFS[imt]
-        mag = self._convert_magnitude(rup.mag)
+        mag = _convert_magnitude(self.kind, rup.mag)
         mean = (
             C['c1'] + C['c2'] * mag + C['c10'] * (mag - 6) ** 2 +
             (C['c6'] + C['c7'] * mag) * np.log(dists.rjb + np.exp(C['c4']))
         )
-        stddevs = self._compute_stddevs(C, dists.rjb.size, stddev_types)
+        stddevs = _compute_stddevs(C, dists.rjb.size, stddev_types)
         return mean, stddevs
-
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
         IMT      c1           c2           c4           c5         c6        c7           c8         c10      sigma_par    sigma
@@ -227,6 +231,8 @@ class SilvaEtAl2002SingleCornerSaturation(SilvaEtAl2002DoubleCornerSaturation):
     This implements the Silva et al. (2002) GMPE for the single corner model
     with saturation.
     """
+    kind = 'Mw'
+
     COEFFS = CoeffsTable(sa_damping=5, table="""\
         IMT      c1           c2           c4           c5         c6        c7           c8         c10      sigma_par    sigma
     +10.0000000  -17.69763    +2.3387700   +2.3000000   +0.0000000 -1.75359  +0.1107100   +0.0000000 -.28005  +0.4204000   +1.3431000
@@ -257,4 +263,3 @@ class SilvaEtAl2002SingleCornerSaturation(SilvaEtAl2002DoubleCornerSaturation):
     +0.0100000   +5.7388500   -0.12424     +2.9000000   +0.0000000 -3.43887  +0.2651000   +0.0000000 -.06699  +0.7079000   +0.8538000
     pga          +5.5345900   -0.11691     +2.9000000   +0.0000000 -3.42173  +0.2646100   +0.0000000 -.06810  +0.6998000   +0.8471000
     """)
-

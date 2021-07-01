@@ -28,6 +28,14 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
+def _get_stddevs(stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    stddevs = [np.zeros(num_sites) + 0.69 for _ in stddev_types]
+    return stddevs
+
+
 class AtkinsonBoore1995GSCBest(GMPE):
     """
     Implement equation used by the Geological Survey of Canada (GSC) for
@@ -94,18 +102,9 @@ class AtkinsonBoore1995GSCBest(GMPE):
             (C['c6'] + C['c7'] * mag) * f2 +
             C['c8'] * rhypo)
 
-        stddevs = self._get_stddevs(stddev_types,  dists.rhypo.shape[0])
+        stddevs = _get_stddevs(stddev_types,  dists.rhypo.shape[0])
 
         return mean, stddevs
-
-    def _get_stddevs(self, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-        stddevs = [np.zeros(num_sites) + 0.69 for _ in stddev_types]
-        return stddevs
 
     #: coefficient table provided by GSC
     COEFFS = CoeffsTable(sa_damping=5, table="""\
