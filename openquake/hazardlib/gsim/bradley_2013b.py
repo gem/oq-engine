@@ -403,13 +403,12 @@ class Bradley2013AdditionalSigma(Bradley2013LHC):
         NL = b * y_ref / (y_ref + c)
         sigma = (
             # first line of eq. 20
-                (C['sig1']
-                 + 0.5 * (C['sig2'] - C['sig1']) * mag_test
-                 + C['sig4'] * AS)
-                # second line
-                * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
-                          + (1 + NL) ** 2)
-        )
+            (C['sig1']
+             + 0.5 * (C['sig2'] - C['sig1']) * mag_test
+             + C['sig4'] * AS)
+            # second line
+            * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
+                      + (1 + NL) ** 2))
 
         # Add 'additional sigma' specified in the Canterbury Seismic
         # Hazard Model to total sigma

@@ -25,9 +25,148 @@ import math
 
 import numpy as np
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, PGD, PGV, SA
+
+CONSTANTS = {'mag_ref': 6.5, 'n': 2, 'vs30_ref': 760, 'rrup_ref': 0}
+
+
+def _fc(C, imt, vs30, sa1180):
+    """
+    C value factor [23].
+    """
+    s = CONSTANTS
+    if imt.name in ["PGD", "PGV"]:
+        c = 2400
+    else:
+        c = 2.4
+
+    return (-1.5 * np.log(vs30 / s['vs30_ref']) - np.log(sa1180 + c)
+            + np.log(sa1180 + c * (vs30 / s['vs30_ref']) ** 1.5)) \
+        * np.heaviside(s['vs30_ref'] - vs30, 0.5) * C['c23']
+
+
+_ffault = CallableDict()
+
+
+@_ffault.add(const.TRT.SUBDUCTION_INTERFACE, const.TRT.SUBDUCTION_INTRASLAB)
+def _ffault_1(trt, MC, SUFFIX, C, mag):
+    """
+    Other fault specific factors.
+    """
+    return (6 - mag) * np.heaviside(6 - mag, 0.5) * C['c13'] \
+        + (mag - MC) * np.heaviside(mag - MC, 0.5) \
+        * C['c29' + SUFFIX]
+
+
+@_ffault.add(const.TRT.ACTIVE_SHALLOW_CRUST)
+def _ffault_2(trt, MC, SUFFIX, C, mag):
+    """
+    Other fault specific factors.
+    """
+    return ((mag - CONSTANTS['mag_ref']) ** 2 - (mag - MC) ** 2
+            * np.heaviside(mag - MC, 0.5)) * C['c10']
+
+
+def _fh(trt, SBCR, MC, C4, C, mag, rrup):
+    """
+    Factors using `h` (coefficients 17-22).
+    """
+    s = CONSTANTS
+    if trt == const.TRT.SUBDUCTION_INTERFACE:
+        # H factor for coefficients 17-22
+        h = 10 * np.exp(C4 * (mag - MC) * np.heaviside(mag - MC, 0.5))
+    else:  # ASC
+        h = 10.
+    hf = np.log((rrup ** s['n'] + h ** s['n']) ** (1 / s['n'])
+                / (s['rrup_ref'] ** s['n'] + h ** s['n']) ** (1 / s['n']))
+
+    if trt == const.TRT.ACTIVE_SHALLOW_CRUST:
+        c19 = mag
+    else:
+        c19 = min(mag, MC)
+    return hf * C['c17' + SBCR] + hf * C['c19' + SBCR] * (c19 - s['mag_ref'])
+
+
+_ftype = CallableDict()
+
+
+@_ftype.add(const.TRT.SUBDUCTION_INTERFACE, const.TRT.SUBDUCTION_INTRASLAB)
+def _ftype_1(trt, suffix, C, rup):
+    """
+    Factor based on the type of fault.
+    """
+    return C['c4' + suffix]
+
+
+@_ftype.add(const.TRT.ACTIVE_SHALLOW_CRUST)
+def _ftype_2(trt, suffix, C, rup):
+    """
+    Factor based on the type of fault.
+    """
+    # use fault.rake to determine fault type
+    if 30 <= rup.rake <= 150:
+        # reverse
+        return C['c1']
+    if -150 <= rup.rake <= -30:
+        # normal
+        return C['c3']
+    # strike-slip
+    return C['c2']
+
+
+def _fvs30(geology, C, sites):
+    """
+    Source of Vs30 factor.
+    vs30measured available for Kuo17 (measured)
+    self.geology True for KS17 (inferred)
+    self.geology False for Receiver Function (inferred)
+    """
+    return np.where(sites.vs30measured, C['c26'],
+                    C['c27'] if geology else C['c28'])
+
+
+def _fz1pt0(C, sites):
+    """
+    z1pt0 factor.
+    """
+    result = np.zeros_like(sites.z1pt0)
+    idx = sites.z1pt0 >= 0
+    if sum(idx) == 0:
+        return result
+
+    z1pt0_ref = np.exp(-4.08 / 2 * np.log((sites.vs30 ** 2 + 355.4 ** 2)
+                                          / (1750 ** 2 + 355.4 ** 2)))
+    result[idx] = np.log(sites.z1pt0[idx] / z1pt0_ref) * C['c25']
+    return result
+
+
+def get_stddevs(f, C, mag, stddev_types):
+    """
+    Standard deviation.
+    tau: between event stddev ln(g)
+    phis2s: between site stddev in ln(g)
+    phiss: single station stddev in ln(g)
+    """
+    stddevs = []
+    f_mag = 0.5 * (min(6.5, max(4.5, mag)) - 4.5)
+
+    tau = C[f'tau1{f}'] + (C[f'tau2{f}'] - C[f'tau1{f}']) * f_mag
+    phiss = C[f'phiss1{f}'] + (C[f'phiss2{f}'] - C[f'phiss1{f}']) * f_mag
+    phis2s = C['phis2s']
+    phi = math.sqrt(phis2s ** 2 + phiss ** 2)
+
+    for stddev in stddev_types:
+        if stddev == const.StdDev.TOTAL:
+            stddevs.append(math.sqrt(tau ** 2 + phi ** 2))
+        elif stddev == const.StdDev.INTER_EVENT:
+            stddevs.append(tau)
+        elif stddev == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi)
+
+    return stddevs
 
 
 class ChaoEtAl2020SInter(GMPE):
@@ -39,21 +178,20 @@ class ChaoEtAl2020SInter(GMPE):
 
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGD, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGD, PGV, SA}
 
     DEFINED_FOR_REFERENCE_VELOCITY = 1180
 
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     REQUIRES_DISTANCES = {'rrup'}
 
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
+
+    REQUIRES_ATTRIBUTES = {'manila', 'aftershocks', 'geology'}
 
     def __init__(self, manila=False, aftershocks=False, geology=True,
                  **kwargs):
@@ -76,138 +214,35 @@ class ChaoEtAl2020SInter(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+        trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
         # extract dictionary of coefficients specific to required
         # intensity measure type
         C = self.COEFFS[imt]
 
-        s = self.CONSTANTS
+        s = CONSTANTS
         med = np.zeros(len(sites.vs30))
 
-        med += self._ftype(C, rup)
+        med += _ftype(trt, self.SUFFIX, C, rup)
         med += (rup.ztor - self.CONST_FAULT['href']) * C['c14' + self.SUFFIX]
         med += (rup.mag - s['mag_ref']) * C['c8' + self.SBCR]
         med += (5 - rup.mag) * np.heaviside(5 - rup.mag, 0.5) \
             * C['c11' + self.SBCR]
-        med += self._fh(C, rup.mag, dists.rrup)
+        med += _fh(trt, self.SBCR, self.MC, self.CONST_FAULT['C4'],
+                   C, rup.mag, dists.rrup)
 
         med += (dists.rrup - s['rrup_ref']) * C['c21' + self.SBCR]
-        med += self._ffault(C, rup.mag)
+        med += _ffault(trt, self.MC, self.SUFFIX, C, rup.mag)
         med += C['c6'] * self.aftershocks + C['c7'] * self.manila
-        med += self._fvs30(C, sites)
+        med += _fvs30(self.geology, C, sites)
 
         sa1180 = np.exp(med + math.log(1180/s['vs30_ref']) * C['c24'])
-        med += self._fc(C, imt, sites.vs30, sa1180)
+        med += _fc(C, imt, sites.vs30, sa1180)
         med += np.log(sites.vs30 / s['vs30_ref']) * C['c24']
-        med += self._fz1pt0(C, sites)
+        med += _fz1pt0(C, sites)
 
-        stddevs = self.get_stddevs(C, rup.mag, stddev_types)
+        stddevs = get_stddevs(self.SBCR, C, rup.mag, stddev_types)
 
         return med, stddevs
-
-    def get_stddevs(self, C, mag, stddev_types):
-        """
-        Standard deviation.
-        tau: between event stddev ln(g)
-        phis2s: between site stddev in ln(g)
-        phiss: single station stddev in ln(g)
-        """
-        stddevs = []
-        f = self.SBCR
-        f_mag = 0.5 * (min(6.5, max(4.5, mag)) - 4.5)
-
-        tau = C[f'tau1{f}'] + (C[f'tau2{f}'] - C[f'tau1{f}']) * f_mag
-        phiss = C[f'phiss1{f}'] + (C[f'phiss2{f}'] - C[f'phiss1{f}']) * f_mag
-        phis2s = C['phis2s']
-        phi = math.sqrt(phis2s ** 2 + phiss ** 2)
-
-        for stddev in stddev_types:
-            assert stddev in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev == const.StdDev.TOTAL:
-                stddevs.append(math.sqrt(tau ** 2 + phi ** 2))
-            elif stddev == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-            elif stddev == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-
-        return stddevs
-
-    def _c19a(self, mag):
-        """
-        First input into 19th/20th multiplier.
-        """
-        return min(mag, self.MC)
-
-    def _fc(self, C, imt, vs30, sa1180):
-        """
-        C value factor [23].
-        """
-        s = self.CONSTANTS
-        if imt.name in ["PGD", "PGV"]:
-            c = 2400
-        else:
-            c = 2.4
-
-        return (-1.5 * np.log(vs30 / s['vs30_ref']) - np.log(sa1180 + c)
-                + np.log(sa1180 + c * (vs30 / s['vs30_ref']) ** 1.5)) \
-            * np.heaviside(s['vs30_ref'] - vs30, 0.5) * C['c23']
-
-    def _ffault(self, C, mag):
-        """
-        Other fault specific factors.
-        """
-        return (6 - mag) * np.heaviside(6 - mag, 0.5) * C['c13'] \
-            + (mag - self.MC) * np.heaviside(mag - self.MC, 0.5) \
-            * C['c29' + self.SUFFIX]
-
-    def _ftype(self, C, rup):
-        """
-        Factor based on the type of fault.
-        """
-        return C['c4' + self.SUFFIX]
-
-    def _fh(self, C, mag, rrup):
-        """
-        Factors using `h` (coefficients 17-22).
-        """
-        s = self.CONSTANTS
-        h = self._hm(mag)
-        hf = np.log((rrup ** s['n'] + h ** s['n']) ** (1 / s['n'])
-                    / (s['rrup_ref'] ** s['n'] + h ** s['n']) ** (1 / s['n']))
-
-        return hf * C['c17' + self.SBCR] \
-            + hf * C['c19' + self.SBCR] * (self._c19a(mag) - s['mag_ref'])
-
-    def _fvs30(self, C, sites):
-        """
-        Source of Vs30 factor.
-        vs30measured available for Kuo17 (measured)
-        self.geology True for KS17 (inferred)
-        self.geology False for Receiver Function (inferred)
-        """
-
-        return np.where(sites.vs30measured, C['c26'],
-                        C['c27'] if self.geology else C['c28'])
-
-    def _fz1pt0(self, C, sites):
-        """
-        z1pt0 factor.
-        """
-        result = np.zeros_like(sites.z1pt0)
-        idx = sites.z1pt0 >= 0
-        if sum(idx) == 0:
-            return result
-
-        z1pt0_ref = np.exp(-4.08 / 2 * np.log((sites.vs30 ** 2 + 355.4 ** 2)
-                                              / (1750 ** 2 + 355.4 ** 2)))
-        result[idx] = np.log(sites.z1pt0[idx] / z1pt0_ref) * C['c25']
-        return result
-
-    def _hm(self, mag):
-        """
-        H factor for coefficients 17-22.
-        """
-        return 10 * np.exp(self.CONST_FAULT['C4'] * (mag - self.MC)
-                           * np.heaviside(mag - self.MC, 0.5))
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
     imt    c1                  c2                  c3                  c4_if               c4_is               c6                  c7                 c8_cr              c8_sb               c10                 c11_cr              c11_sb              c13                 c14_cr              c14_if              c14_is              c17_cr              c17_sb             c19_cr             c19_sb              c21_cr              c21_sb              c23                 c24                c25                 c26                 c27                 c28                 c29_if              c29_is             tau1_cr            tau2_cr            tau1_sb            tau2_sb            phiss1_cr          phiss2_cr          phiss1_sb          phiss2_sb          phis2s
@@ -235,8 +270,6 @@ class ChaoEtAl2020SInter(GMPE):
     pgd    2.4541041890538500  2.3782401415145500  2.2914153189502800  2.0838396593163400  1.9313699400126300 -0.2352916881091410  0.0713994939700537 1.5616444489691000 1.4936921369303000 -0.1676096441841540 -0.0000019923442846 -0.0000232740338163 -0.2069439338171460 -0.0032395363349413  0.0109930765184774  0.0052177204872172 -1.0191698911307200 -1.1559670502824900 0.2068132897445940 0.1789279177790470 -0.0018437138641425 -0.0013634189684089  0.0000000000000000 -0.7422544318623790 0.1490020084340320 -0.4228777481185350 -0.3833592619351370 -0.4612451842659720 -0.3050704862339770 -0.2043152093014790 0.6449844035380140 0.4977962177812710 0.5366022406101780 0.7130676587043830 0.7016130925807040 0.4750313723101500 0.5971604738380890 0.5707298418086840 0.3229783037503560
     """)
 
-    CONSTANTS = {'mag_ref': 6.5, 'n': 2, 'vs30_ref': 760, 'rrup_ref': 0}
-
     CONST_FAULT = {'C4': 0.3, 'href': 0}
 
     # subduction or crustal
@@ -249,11 +282,8 @@ class ChaoEtAl2020SSlab(ChaoEtAl2020SInter):
     """
     Chao et al. (2020) for Subduction Slab.
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
     CONST_FAULT = {'C4': 0.2, 'href': 35}
-
     SUFFIX = "_is"
 
 
@@ -261,47 +291,12 @@ class ChaoEtAl2020Asc(ChaoEtAl2020SInter):
     """
     Chao et al. (2020) for Crustal.
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     # add rake to determine fault style in _ftype()
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'ztor'}
 
-    def _ffault(self, C, mag):
-        """
-        Other fault specific factors.
-        """
-        return ((mag - self.CONSTANTS['mag_ref']) ** 2 - (mag - self.MC) ** 2
-                * np.heaviside(mag - self.MC, 0.5)) * C['c10']
-
-    def _ftype(self, C, rup):
-        """
-        Factor based on the type of fault.
-        """
-        # use fault.rake to determine fault type
-        if 30 <= rup.rake <= 150:
-            # reverse
-            return C['c1']
-        if -150 <= rup.rake <= -30:
-            # normal
-            return C['c3']
-        # strike-slip
-        return C['c2']
-
-    def _c19a(self, mag):
-        """
-        First input into 19th/20th multiplier.
-        """
-        return mag
-
-    def _hm(self, mag):
-        """
-        H factor for coefficients 17-22.
-        """
-        # constant for crustal
-        return 10
-
-    CONST_FAULT = {'href': 0}
+    CONST_FAULT = {'C4': 0, 'href': 0}
 
     # subduction or crustal
     SBCR = "_cr"

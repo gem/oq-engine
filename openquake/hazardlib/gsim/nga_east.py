@@ -349,6 +349,112 @@ def get_phi_ss(imt, mag, params):
     return phi
 
 
+# ############################ helper functions ########################
+
+def _get_f760(C_F760, vs30, CONSTANTS, is_stddev=False):
+    """
+    Returns very hard rock to hard rock (Vs30 760 m/s) adjustment factor
+    taken as the Vs30-dependent weighted mean of two reference condition
+    factors: for impedence and for gradient conditions. The weighting
+    model is described by equations 5 - 7 of Stewart et al. (2019)
+    """
+    wimp = (CONSTANTS["wt1"] - CONSTANTS["wt2"]) *\
+        (np.log(vs30 / CONSTANTS["vw2"]) /
+         np.log(CONSTANTS["vw1"] / CONSTANTS["vw2"])) + CONSTANTS["wt2"]
+    wimp[vs30 >= CONSTANTS["vw1"]] = CONSTANTS["wt1"]
+    wimp[vs30 < CONSTANTS["vw2"]] = CONSTANTS["wt2"]
+    wgr = 1.0 - wimp
+    if is_stddev:
+        return wimp * C_F760["f760is"] + wgr * C_F760["f760gs"]
+    else:
+        return wimp * C_F760["f760i"] + wgr * C_F760["f760g"]
+
+
+def _get_fv(C_LIN, sites, f760, CONSTANTS):
+    """
+    Returns the Vs30-dependent component of the mean linear amplification
+    model, as defined in equation 3 of Stewart et al. (2019)
+    """
+    const1 = C_LIN["c"] * np.log(C_LIN["v1"] / CONSTANTS["vref"])
+    const2 = C_LIN["c"] * np.log(C_LIN["v2"] / CONSTANTS["vref"])
+    f_v = C_LIN["c"] * np.log(sites.vs30 / CONSTANTS["vref"])
+    f_v[sites.vs30 <= C_LIN["v1"]] = const1
+    f_v[sites.vs30 > C_LIN["v2"]] = const2
+    idx = sites.vs30 > CONSTANTS["vU"]
+    if np.any(idx):
+        const3 = np.log(3000. / CONSTANTS["vU"])
+        f_v[idx] = const2 - (const2 + f760[idx]) *\
+            (np.log(sites.vs30[idx] / CONSTANTS["vU"]) / const3)
+    idx = sites.vs30 >= 3000.
+    if np.any(idx):
+        f_v[idx] = -f760[idx]
+    return f_v + f760
+
+
+def get_fnl(C_NL, pga_rock, vs30, period):
+    """
+    Returns the nonlinear mean amplification according to equation 2
+    of Hashash et al. (2019)
+    """
+    if period <= 0.4:
+        vref = 760.
+    else:
+        vref = 3000.
+    f_nl = np.zeros(vs30.shape)
+    f_rk = np.log((pga_rock + C_NL["f3"]) / C_NL["f3"])
+    idx = vs30 < C_NL["Vc"]
+    if np.any(idx):
+        # f2 term of the mean nonlinear amplification model
+        # according to equation 3 of Hashash et al., (2019)
+        c_vs = np.copy(vs30[idx])
+        c_vs[c_vs > vref] = vref
+        f_2 = C_NL["f4"] * (np.exp(C_NL["f5"] * (c_vs - 360.)) -
+                            np.exp(C_NL["f5"] * (vref - 360.)))
+        f_nl[idx] = f_2 * f_rk[idx]
+    return f_nl, f_rk
+
+
+def get_linear_stddev(C_LIN, vs30, CONSTANTS):
+    """
+    Returns the standard deviation of the linear amplification function,
+    as defined in equation 4 of Stewart et al., (2019)
+    """
+    sigma_v = C_LIN["sigma_vc"] + np.zeros(vs30.shape)
+    idx = vs30 < C_LIN["vf"]
+    if np.any(idx):
+        dsig = C_LIN["sigma_L"] - C_LIN["sigma_vc"]
+        d_v = (vs30[idx] - CONSTANTS["vL"]) /\
+            (C_LIN["vf"] - CONSTANTS["vL"])
+        sigma_v[idx] = C_LIN["sigma_L"] - (2. * dsig * d_v) +\
+            dsig * (d_v ** 2.)
+    idx = np.logical_and(vs30 > C_LIN["v2"], vs30 <= CONSTANTS["vU"])
+    if np.any(idx):
+        d_v = (vs30[idx] - C_LIN["v2"]) / (CONSTANTS["vU"] - C_LIN["v2"])
+        sigma_v[idx] = C_LIN["sigma_vc"] + \
+            (C_LIN["sigma_U"] - C_LIN["sigma_vc"]) * (d_v ** 2.)
+    idx = vs30 >= CONSTANTS["vU"]
+    if np.any(idx):
+        sigma_v[idx] = C_LIN["sigma_U"] *\
+            (1. - (np.log(vs30[idx] / CONSTANTS["vU"]) /
+                   np.log(3000. / CONSTANTS["vU"])))
+    sigma_v[vs30 > 3000.] = 0.0
+    return sigma_v
+
+
+def get_nonlinear_stddev(C_NL, vs30):
+    """
+    Returns the standard deviation of the nonlinear amplification function,
+    as defined in equation 2.5 of Hashash et al. (2017)
+    """
+    sigma_f2 = np.zeros(vs30.shape)
+    sigma_f2[vs30 < 300.] = C_NL["sigma_c"]
+    idx = np.logical_and(vs30 >= 300, vs30 < 1000)
+    if np.any(idx):
+        sigma_f2[idx] = (-C_NL["sigma_c"] / np.log(1000. / 300.)) *\
+            np.log(vs30[idx] / 300.) + C_NL["sigma_c"]
+    return sigma_f2
+
+
 class NGAEastGMPE(GMPETable):
     """
     A generalised base class for the implementation of a GMPE in which the
@@ -425,11 +531,10 @@ class NGAEastGMPE(GMPETable):
         in the site amplification model
     """
     PATH = os.path.join(os.path.dirname(__file__), "nga_east_tables")
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,
-                                                const.StdDev.INTER_EVENT,
-                                                const.StdDev.INTRA_EVENT))
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
     # Requires Vs30 only - common to all models
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     def __init__(self, **kwargs):
         """
@@ -501,7 +606,7 @@ class NGAEastGMPE(GMPETable):
         pga_r = self.get_hard_rock_mean(rctx, dctx, rock_imt, stddev_types)
 
         # Get the desired spectral acceleration on rock
-        if not str(imt) == "PGA":
+        if imt.name != "PGA":
             # Calculate the ground motion at required spectral period for
             # the reference rock
             mean = self.get_hard_rock_mean(rctx, dctx, imt, stddev_types)
@@ -535,9 +640,9 @@ class NGAEastGMPE(GMPETable):
         (Hashash et al., 2019) amplification terms
         """
         # Get the coefficients for the IMT
-        C_LIN = self.LINEAR_COEFFS[imt]
-        C_F760 = self.F760[imt]
-        C_NL = self.NONLINEAR_COEFFS[imt]
+        C_LIN = self.COEFFS_LINEAR[imt]
+        C_F760 = self.COEFFS_F760[imt]
+        C_NL = self.COEFFS_NONLINEAR[imt]
         if str(imt).startswith("PGA"):
             period = 0.01
         elif str(imt).startswith("PGV"):
@@ -545,11 +650,11 @@ class NGAEastGMPE(GMPETable):
         else:
             period = imt.period
         # Get f760
-        f760 = self._get_f760(C_F760, sites.vs30, self.CONSTANTS)
+        f760 = _get_f760(C_F760, sites.vs30, self.CONSTANTS)
         # Get the linear amplification factor
-        f_lin = self._get_fv(C_LIN, sites, f760, self.CONSTANTS)
+        f_lin = _get_fv(C_LIN, sites, f760, self.CONSTANTS)
         # Get the nonlinear amplification from Hashash et al., (2017)
-        f_nl, f_rk = self.get_fnl(C_NL, pga_r, sites.vs30, period)
+        f_nl, f_rk = get_fnl(C_NL, pga_r, sites.vs30, period)
         # Mean amplification
         ampl = f_lin + f_nl
 
@@ -569,119 +674,15 @@ class NGAEastGMPE(GMPETable):
         # In the case of the linear model sigma_f760 and sigma_fv are
         # assumed independent and the resulting sigma_flin is the root
         # sum of squares (SRSS)
-        f760_stddev = self._get_f760(C_F760, sites.vs30,
-                                     self.CONSTANTS, is_stddev=True)
+        f760_stddev = _get_f760(C_F760, sites.vs30,
+                                self.CONSTANTS, is_stddev=True)
         f_lin_stddev = np.sqrt(
             f760_stddev ** 2. +
-            self.get_linear_stddev(C_LIN, sites.vs30, self.CONSTANTS) ** 2)
+            get_linear_stddev(C_LIN, sites.vs30, self.CONSTANTS) ** 2)
         # Likewise, the epistemic uncertainty on the linear and nonlinear
         # model are assumed independent and the SRSS is taken
-        f_nl_stddev = self.get_nonlinear_stddev(C_NL, sites.vs30) * f_rk
+        f_nl_stddev = get_nonlinear_stddev(C_NL, sites.vs30) * f_rk
         return np.sqrt(f_lin_stddev ** 2. + f_nl_stddev ** 2.)
-
-    @staticmethod
-    def _get_f760(C_F760, vs30, CONSTANTS, is_stddev=False):
-        """
-        Returns very hard rock to hard rock (Vs30 760 m/s) adjustment factor
-        taken as the Vs30-dependent weighted mean of two reference condition
-        factors: for impedence and for gradient conditions. The weighting
-        model is described by equations 5 - 7 of Stewart et al. (2019)
-        """
-        wimp = (CONSTANTS["wt1"] - CONSTANTS["wt2"]) *\
-            (np.log(vs30 / CONSTANTS["vw2"]) /
-             np.log(CONSTANTS["vw1"] / CONSTANTS["vw2"])) + CONSTANTS["wt2"]
-        wimp[vs30 >= CONSTANTS["vw1"]] = CONSTANTS["wt1"]
-        wimp[vs30 < CONSTANTS["vw2"]] = CONSTANTS["wt2"]
-        wgr = 1.0 - wimp
-        if is_stddev:
-            return wimp * C_F760["f760is"] + wgr * C_F760["f760gs"]
-        else:
-            return wimp * C_F760["f760i"] + wgr * C_F760["f760g"]
-
-    @staticmethod
-    def _get_fv(C_LIN, sites, f760, CONSTANTS):
-        """
-        Returns the Vs30-dependent component of the mean linear amplification
-        model, as defined in equation 3 of Stewart et al. (2019)
-        """
-        const1 = C_LIN["c"] * np.log(C_LIN["v1"] / CONSTANTS["vref"])
-        const2 = C_LIN["c"] * np.log(C_LIN["v2"] / CONSTANTS["vref"])
-        f_v = C_LIN["c"] * np.log(sites.vs30 / CONSTANTS["vref"])
-        f_v[sites.vs30 <= C_LIN["v1"]] = const1
-        f_v[sites.vs30 > C_LIN["v2"]] = const2
-        idx = sites.vs30 > CONSTANTS["vU"]
-        if np.any(idx):
-            const3 = np.log(3000. / CONSTANTS["vU"])
-            f_v[idx] = const2 - (const2 + f760[idx]) *\
-                (np.log(sites.vs30[idx] / CONSTANTS["vU"]) / const3)
-        idx = sites.vs30 >= 3000.
-        if np.any(idx):
-            f_v[idx] = -f760[idx]
-        return f_v + f760
-
-    @staticmethod
-    def get_fnl(C_NL, pga_rock, vs30, period):
-        """
-        Returns the nonlinear mean amplification according to equation 2
-        of Hashash et al. (2019)
-        """
-        if period <= 0.4:
-            vref = 760.
-        else:
-            vref = 3000.
-        f_nl = np.zeros(vs30.shape)
-        f_rk = np.log((pga_rock + C_NL["f3"]) / C_NL["f3"])
-        idx = vs30 < C_NL["Vc"]
-        if np.any(idx):
-            # f2 term of the mean nonlinear amplification model
-            # according to equation 3 of Hashash et al., (2019)
-            c_vs = np.copy(vs30[idx])
-            c_vs[c_vs > vref] = vref
-            f_2 = C_NL["f4"] * (np.exp(C_NL["f5"] * (c_vs - 360.)) -
-                                np.exp(C_NL["f5"] * (vref - 360.)))
-            f_nl[idx] = f_2 * f_rk[idx]
-        return f_nl, f_rk
-
-    @staticmethod
-    def get_linear_stddev(C_LIN, vs30, CONSTANTS):
-        """
-        Returns the standard deviation of the linear amplification function,
-        as defined in equation 4 of Stewart et al., (2019)
-        """
-        sigma_v = C_LIN["sigma_vc"] + np.zeros(vs30.shape)
-        idx = vs30 < C_LIN["vf"]
-        if np.any(idx):
-            dsig = C_LIN["sigma_L"] - C_LIN["sigma_vc"]
-            d_v = (vs30[idx] - CONSTANTS["vL"]) /\
-                (C_LIN["vf"] - CONSTANTS["vL"])
-            sigma_v[idx] = C_LIN["sigma_L"] - (2. * dsig * d_v) +\
-                dsig * (d_v ** 2.)
-        idx = np.logical_and(vs30 > C_LIN["v2"], vs30 <= CONSTANTS["vU"])
-        if np.any(idx):
-            d_v = (vs30[idx] - C_LIN["v2"]) / (CONSTANTS["vU"] - C_LIN["v2"])
-            sigma_v[idx] = C_LIN["sigma_vc"] + \
-                (C_LIN["sigma_U"] - C_LIN["sigma_vc"]) * (d_v ** 2.)
-        idx = vs30 >= CONSTANTS["vU"]
-        if np.any(idx):
-            sigma_v[idx] = C_LIN["sigma_U"] *\
-                (1. - (np.log(vs30[idx] / CONSTANTS["vU"]) /
-                       np.log(3000. / CONSTANTS["vU"])))
-        sigma_v[vs30 > 3000.] = 0.0
-        return sigma_v
-
-    @staticmethod
-    def get_nonlinear_stddev(C_NL, vs30):
-        """
-        Returns the standard deviation of the nonlinear amplification function,
-        as defined in equation 2.5 of Hashash et al. (2017)
-        """
-        sigma_f2 = np.zeros(vs30.shape)
-        sigma_f2[vs30 < 300.] = C_NL["sigma_c"]
-        idx = np.logical_and(vs30 >= 300, vs30 < 1000)
-        if np.any(idx):
-            sigma_f2[idx] = (-C_NL["sigma_c"] / np.log(1000. / 300.)) *\
-                np.log(vs30[idx] / 300.) + C_NL["sigma_c"]
-        return sigma_f2
 
     def get_stddevs(self, mag, imt, stddev_types, num_sites):
         """
@@ -724,7 +725,7 @@ class NGAEastGMPE(GMPETable):
 
     # Coefficients for the linear model, taken from the electronic supplement
     # to Stewart et al., (2017)
-    LINEAR_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_LINEAR = CoeffsTable(sa_damping=5, table="""\
     imt           c      v1       v2      vf  sigma_vc  sigma_L  sigma_U
     pgv      -0.449   331.0    760.0   314.0     0.251    0.306    0.334
     pga      -0.290   319.0    760.0   345.0     0.300    0.345    0.480
@@ -753,7 +754,7 @@ class NGAEastGMPE(GMPETable):
 
     # Coefficients for the nonlinear model, taken from Table 2.1 of
     # Hashash et al., (2017)
-    NONLINEAR_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_NONLINEAR = CoeffsTable(sa_damping=5, table="""\
     imt          f3         f4         f5     Vc   sigma_c
     pgv     0.06089   -0.08344   -0.00667   2257.0   0.120
     pga     0.07520   -0.43755   -0.00131   2990.0   0.120
@@ -784,7 +785,7 @@ class NGAEastGMPE(GMPETable):
     # to those needed in order to reproduce Figure 5 of Petersen et al. (2019)
     # The original f760i was 0.674 +/- 0.366, and the values below are taken
     # from the US NSHMP software
-    F760 = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_F760 = CoeffsTable(sa_damping=5, table="""\
     imt       f760i     f760g   f760is   f760gs
     pgv      0.3753     0.297    0.313    0.117
     pga      0.1850     0.121    0.434    0.248
@@ -843,7 +844,7 @@ class NGAEastGMPETotalSigma(NGAEastGMPE):
         Keys for the tau values corresponding to the selected standard
         deviation model
     """
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     def __init__(self, **kwargs):
         """

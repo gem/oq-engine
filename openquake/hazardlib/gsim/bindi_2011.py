@@ -279,11 +279,11 @@ class BindiEtAl2011Ita19Low(BindiEtAl2011):
 
     def _get_delta(self, imt, mag):
         # Get the coefficients needed to compute the delta used for scaling
-        coeffs = self.DELTACOEFF[imt]
+        coeffs = self.COEFFS_DELTA[imt]
         tmp = coeffs['a']*mag**2. + coeffs['b']*mag + coeffs['c']
         return tmp
 
-    DELTACOEFF = CoeffsTable(sa_damping=5, table="""
+    COEFFS_DELTA = CoeffsTable(sa_damping=5, table="""
     imt   a      b     c
     pga   0.101 -1.136 3.555
     pgv   0.066 -0.741 2.400

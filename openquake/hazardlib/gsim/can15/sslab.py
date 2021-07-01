@@ -57,14 +57,14 @@ class SSlabCan15Mid(ZhaoEtAl2006SSlab):
         dists.rrup = rrup
         mean, stddevs = super().get_mean_and_stddevs(sites, rup, dists, imt,
                                                      stddev_types)
-        cff = self.SITE_COEFFS[imt]
+        cff = self.COEFFS_SITE[imt]
         mean_adj = np.log(np.exp(mean) * 10**cff['mf'])
         stddevs = [np.ones(len(dists.rrup))*get_sigma(imt)]
         return mean_adj, stddevs
 
     # These are the coefficients included in Table 1 of Atkinson and Adams
     # (2013)
-    SITE_COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""\
     IMT        mf
     pgv     1.000
     pga    -0.301

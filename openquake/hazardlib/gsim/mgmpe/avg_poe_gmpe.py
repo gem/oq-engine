@@ -100,7 +100,7 @@ class AvgPoeGMPE(GMPE):
             self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = def_for_stddevs[0]
         self.weights = numpy.array(weights)
 
-    def calc_mean_stds(out, ctx, stdtypes):
+    def calc_mean_stds(fake, ctx, imts, mean, stds):
         """Do nothing: the work is done in get_poes"""
 
     def get_poes(self, mean_std, cmaker, ctxs):

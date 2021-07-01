@@ -31,9 +31,95 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.akkar_bommer_2010_swiss_coeffs import (
     COEFFS_FS_ROCK_SWISS01,
     COEFFS_FS_ROCK_SWISS04,
-    COEFFS_FS_ROCK_SWISS08
-)
+    COEFFS_FS_ROCK_SWISS08)
 from openquake.hazardlib.gsim.utils_swiss_gmpe import _apply_adjustments
+
+
+def _compute_distance(rup, dists, imt, C):
+    """
+    Compute the second term of the equation described on p. 199:
+
+    ``(b4 + b5 * M) * log(sqrt(Rjb ** 2 + b6 ** 2))``
+    """
+    return (((C['b4'] + C['b5'] * rup.mag)
+             * np.log10((np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0)))))
+
+
+def _compute_magnitude(rup, C):
+    """
+    Compute the first term of the equation described on p. 199:
+
+    ``b1 + b2 * M + b3 * M**2``
+    """
+    return C['b1'] + (C['b2'] * rup.mag) + (C['b3'] * (rup.mag ** 2))
+
+
+def _get_fault_type_dummy_variables(sites, rup, imt):
+    """
+    Same classification of SadighEtAl1997. Akkar and Bommer 2010 is based
+    on Akkar and Bommer 2007b; read Strong-Motion Dataset and Record
+    Processing on p. 514 (Akkar and Bommer 2007b).
+    """
+
+    Fn, Fr = 0, 0
+    if rup.rake >= -135 and rup.rake <= -45:
+        # normal
+        Fn = 1
+    elif rup.rake >= 45 and rup.rake <= 135:
+        # reverse
+        Fr = 1
+    return Fn, Fr
+
+
+def _get_mechanism(sites, rup, imt, C):
+    """
+    Compute the fourth term of the equation described on p. 199:
+
+    ``b9 * Fn + b10 * Fr``
+    """
+    Fn, Fr = _get_fault_type_dummy_variables(sites, rup, imt)
+    return (C['b9'] * Fn) + (C['b10'] * Fr)
+
+
+def _get_site_amplification(sites, imt, C):
+    """
+    Compute the third term of the equation described on p. 199:
+
+    ``b7 * Ss + b8 * Sa``
+    """
+    Ss, Sa = _get_site_type_dummy_variables(sites)
+    return (C['b7'] * Ss) + (C['b8'] * Sa)
+
+
+def _get_site_type_dummy_variables(sites):
+    """
+    Get site type dummy variables, ``Ss`` (for soft and stiff soil sites)
+    and ``Sa`` (for rock sites).
+    """
+    Ss = np.zeros((len(sites.vs30),))
+    Sa = np.zeros((len(sites.vs30),))
+    # Soft soil; Vs30 < 360 m/s. Page 199.
+    idxSs = (sites.vs30 < 360.0)
+    # Stiff soil Class A; 360 m/s <= Vs30 <= 750 m/s. Page 199.
+    idxSa = (sites.vs30 >= 360.0) & (sites.vs30 <= 750.0)
+    Ss[idxSs] = 1
+    Sa[idxSa] = 1
+    return Ss, Sa
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return standard deviations as defined in table 1, p. 200.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(C['SigmaTot'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['Sigma1'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+    return stddevs
 
 
 class AkkarBommer2010(GMPE):
@@ -98,10 +184,10 @@ class AkkarBommer2010(GMPE):
         # intensity measure type.
         C = self.COEFFS[imt]
 
-        imean = (self._compute_magnitude(rup, C) +
-                 self._compute_distance(rup, dists, imt, C) +
-                 self._get_site_amplification(sites, imt, C) +
-                 self._get_mechanism(sites, rup, imt, C))
+        imean = (_compute_magnitude(rup, C) +
+                 _compute_distance(rup, dists, imt, C) +
+                 _get_site_amplification(sites, imt, C) +
+                 _get_mechanism(sites, rup, imt, C))
 
         # Convert units to g,
         # but only for PGA and SA (not PGV):
@@ -115,94 +201,13 @@ class AkkarBommer2010(GMPE):
         if imt.name == 'SA' and imt.period == 4.0:
             mean /= 0.8
 
-        istddevs = self._get_stddevs(
+        istddevs = _get_stddevs(
             C, stddev_types, num_sites=len(sites.vs30)
         )
 
         stddevs = np.log(10 ** np.array(istddevs))
 
         return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 1, p. 200.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['SigmaTot'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['Sigma1'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
-
-    def _compute_magnitude(self, rup, C):
-        """
-        Compute the first term of the equation described on p. 199:
-
-        ``b1 + b2 * M + b3 * M**2``
-        """
-        return C['b1'] + (C['b2'] * rup.mag) + (C['b3'] * (rup.mag ** 2))
-
-    def _compute_distance(self, rup, dists, imt, C):
-        """
-        Compute the second term of the equation described on p. 199:
-
-        ``(b4 + b5 * M) * log(sqrt(Rjb ** 2 + b6 ** 2))``
-        """
-        return (((C['b4'] + C['b5'] * rup.mag)
-                 * np.log10((np.sqrt(dists.rjb ** 2.0 + C['b6'] ** 2.0)))))
-
-    def _get_site_amplification(self, sites, imt, C):
-        """
-        Compute the third term of the equation described on p. 199:
-
-        ``b7 * Ss + b8 * Sa``
-        """
-        Ss, Sa = self._get_site_type_dummy_variables(sites)
-        return (C['b7'] * Ss) + (C['b8'] * Sa)
-
-    def _get_site_type_dummy_variables(self, sites):
-        """
-        Get site type dummy variables, ``Ss`` (for soft and stiff soil sites)
-        and ``Sa`` (for rock sites).
-        """
-        Ss = np.zeros((len(sites.vs30),))
-        Sa = np.zeros((len(sites.vs30),))
-        # Soft soil; Vs30 < 360 m/s. Page 199.
-        idxSs = (sites.vs30 < 360.0)
-        # Stiff soil Class A; 360 m/s <= Vs30 <= 750 m/s. Page 199.
-        idxSa = (sites.vs30 >= 360.0) & (sites.vs30 <= 750.0)
-        Ss[idxSs] = 1
-        Sa[idxSa] = 1
-        return Ss, Sa
-
-    def _get_mechanism(self, sites, rup, imt, C):
-        """
-        Compute the fourth term of the equation described on p. 199:
-
-        ``b9 * Fn + b10 * Fr``
-        """
-        Fn, Fr = self._get_fault_type_dummy_variables(sites, rup, imt)
-        return (C['b9'] * Fn) + (C['b10'] * Fr)
-
-    def _get_fault_type_dummy_variables(self, sites, rup, imt):
-        """
-        Same classification of SadighEtAl1997. Akkar and Bommer 2010 is based
-        on Akkar and Bommer 2007b; read Strong-Motion Dataset and Record
-        Processing on p. 514 (Akkar and Bommer 2007b).
-        """
-
-        Fn, Fr = 0, 0
-        if rup.rake >= -135 and rup.rake <= -45:
-            # normal
-            Fn = 1
-        elif rup.rake >= 45 and rup.rake <= 135:
-            # reverse
-            Fr = 1
-        return Fn, Fr
 
     #: For PGA and SA up to 0.05 seconds, coefficients are taken from table 5,
     #: page 385 of 'Extending ground-motion prediction equations for spectral

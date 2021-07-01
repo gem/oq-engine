@@ -24,6 +24,7 @@ Module exports :class:`Campbell2003`, :class:`Campbell2003SHARE`,
 """
 import numpy as np
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87,
@@ -31,6 +32,121 @@ from openquake.hazardlib.gsim.utils import (
     clip_mean)
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
+_compute_mean = CallableDict()
+
+
+@_compute_mean.add("base")
+def _compute_mean_1(kind, C, mag, rrup):
+    """
+    Compute mean value according to equation 30, page 1021.
+    """
+    mean = (C['c1'] +
+            _compute_term1(C, mag) +
+            _compute_term2(C, mag, rrup) +
+            _compute_term3(C, rrup))
+    return mean
+
+
+@_compute_mean.add("Mblg87", "Mblg96", "Mw")
+def _compute_mean_2(kind, C, mag, rrup):
+    """
+    Compute mean value (Equation 30 in USGS report)
+    """
+    mean = np.zeros_like(rrup)
+
+    mean += C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2
+
+    idx = rrup > 70.
+    mean[idx] += C['c7'] * (np.log(rrup[idx]) - np.log(70.))
+
+    idx = rrup > 130.
+    mean[idx] += C['c8'] * (np.log(rrup[idx]) - np.log(130.))
+
+    R = np.sqrt(
+        rrup ** 2 + (C['c5'] * np.exp(C['c6'] * mag)) ** 2)
+    mean += C['c4'] * np.log(R) + (C['c9'] + C['c10'] * mag) * rrup
+
+    return mean
+
+
+def _compute_term1(C, mag):
+    """
+    This computes the term f1 in equation 31, page 1021
+    """
+    return (C['c2'] * mag) + C['c3'] * (8.5 - mag) ** 2
+
+
+def _compute_term2(C, mag, rrup):
+    """
+    This computes the term f2 in equation 32, page 1021
+    """
+    c78_factor = (C['c7'] * np.exp(C['c8'] * mag)) ** 2
+    R = np.sqrt(rrup ** 2 + c78_factor)
+
+    return C['c4'] * np.log(R) + (C['c5'] + C['c6'] * mag) * rrup
+
+
+def _compute_term3(C, rrup):
+    """
+    This computes the term f3 in equation 34, page 1021 but corrected
+    according to the erratum.
+    """
+    f3 = np.zeros_like(rrup)
+
+    idx_between_70_130 = (rrup > 70) & (rrup <= 130)
+    idx_greater_130 = rrup > 130
+
+    f3[idx_between_70_130] = (
+        C['c9'] * (np.log(rrup[idx_between_70_130]) - np.log(70)))
+
+    f3[idx_greater_130] = (
+        C['c9'] * (np.log(rrup[idx_greater_130]) - np.log(70)) +
+        C['c10'] * (np.log(rrup[idx_greater_130]) - np.log(130)))
+
+    return f3
+
+
+_convert_magnitude = CallableDict()
+
+@_convert_magnitude.add("Mblg87")
+def _convert_magnitude_1(kind, mag):
+    """
+    Convert magnitude from Mblg to Mw using Atkinson and Boore 1987
+    equation.
+    """
+    return mblg_to_mw_atkinson_boore_87(mag)
+
+
+@_convert_magnitude.add("Mblg96")
+def _convert_magnitude_2(kind, mag):
+    """
+    Convert magnitude from Mblg to Mw using Johnston 1996 equation.
+    """
+    return mblg_to_mw_johnston_96(mag)
+
+
+@_convert_magnitude.add("Mw")
+def _convert_magnitude_3(kind, mag):
+    """
+    Return magnitude value unchanged
+    """
+    return mag
+
+
+def _get_stddevs(C, stddev_types, mag, num_sites):
+    """
+    Return total standard deviation as for equation 35, page 1021.
+    """
+    stddevs = []
+    for _ in stddev_types:
+        if mag < 7.16:
+            sigma = C['c11'] + C['c12'] * mag
+        elif mag >= 7.16:
+            sigma = C['c13']
+        stddevs.append(np.zeros(num_sites) + sigma)
+
+    return stddevs
 
 
 class Campbell2003(GMPE):
@@ -42,6 +158,7 @@ class Campbell2003(GMPE):
     Number 3, pages 1012-1033, 2003). The class implements also the corrections
     given in the erratum (2004).
     """
+    kind = "base"
 
     #: Supported tectonic region type is stable continental crust given that
     #: the equations have been derived for Eastern North America.
@@ -82,71 +199,11 @@ class Campbell2003(GMPE):
                    for stddev_type in stddev_types), stddev_types
 
         C = self.COEFFS[imt]
-        mean = self._compute_mean(C, rup.mag, dists.rrup)
-        stddevs = self._get_stddevs(C, stddev_types, rup.mag,
-                                    dists.rrup.shape[0])
+        mean = _compute_mean(self.kind, C, rup.mag, dists.rrup)
+        stddevs = _get_stddevs(C, stddev_types, rup.mag,
+                               dists.rrup.shape[0])
 
         return mean, stddevs
-
-    def _compute_mean(self, C, mag, rrup):
-        """
-        Compute mean value according to equation 30, page 1021.
-        """
-        mean = (C['c1'] +
-                self._compute_term1(C, mag) +
-                self._compute_term2(C, mag, rrup) +
-                self._compute_term3(C, rrup))
-        return mean
-
-    def _get_stddevs(self, C, stddev_types, mag, num_sites):
-        """
-        Return total standard deviation as for equation 35, page 1021.
-        """
-        stddevs = []
-        for _ in stddev_types:
-            if mag < 7.16:
-                sigma = C['c11'] + C['c12'] * mag
-            elif mag >= 7.16:
-                sigma = C['c13']
-            stddevs.append(np.zeros(num_sites) + sigma)
-
-        return stddevs
-
-    def _compute_term1(self, C, mag):
-        """
-        This computes the term f1 in equation 31, page 1021
-        """
-        return (C['c2'] * mag) + C['c3'] * (8.5 - mag) ** 2
-
-    def _compute_term2(self, C, mag, rrup):
-        """
-        This computes the term f2 in equation 32, page 1021
-        """
-        c78_factor = (C['c7'] * np.exp(C['c8'] * mag)) ** 2
-        R = np.sqrt(rrup ** 2 + c78_factor)
-
-        return C['c4'] * np.log(R) + (C['c5'] + C['c6'] * mag) * rrup
-
-    def _compute_term3(self, C, rrup):
-        """
-        This computes the term f3 in equation 34, page 1021 but corrected
-        according to the erratum.
-        """
-        f3 = np.zeros_like(rrup)
-
-        idx_between_70_130 = (rrup > 70) & (rrup <= 130)
-        idx_greater_130 = rrup > 130
-
-        f3[idx_between_70_130] = (
-            C['c9'] * (np.log(rrup[idx_between_70_130]) - np.log(70))
-        )
-
-        f3[idx_greater_130] = (
-            C['c9'] * (np.log(rrup[idx_greater_130]) - np.log(70)) +
-            C['c10'] * (np.log(rrup[idx_greater_130]) - np.log(130))
-        )
-
-        return f3
 
     #: Coefficient tables are constructed from the electronic suplements of
     #: the original paper.
@@ -268,10 +325,10 @@ class Campbell2003MblgAB1987NSHMP2008(Campbell2003):
 
     Coefficients are given for the B/C (firm rock) conditions.
     """
+    kind = "Mblg87"
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
-
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -279,46 +336,15 @@ class Campbell2003MblgAB1987NSHMP2008(Campbell2003):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
         C = self.COEFFS[imt]
-        mag = self._convert_magnitude(rup.mag)
+        mag = _convert_magnitude(self.kind, rup.mag)
 
-        mean = self._compute_mean(C, mag, dists.rrup)
+        mean = _compute_mean(self.kind, C, mag, dists.rrup)
         mean = clip_mean(imt, mean)
 
-        stddevs = self._get_stddevs(C, stddev_types, mag, dists.rrup.size)
+        stddevs = _get_stddevs(C, stddev_types, mag, dists.rrup.size)
 
         return mean, stddevs
-
-    def _convert_magnitude(self, mag):
-        """
-        Convert magnitude from Mblg to Mw using Atkinson and Boore 1987
-        equation.
-        """
-        return mblg_to_mw_atkinson_boore_87(mag)
-
-    def _compute_mean(self, C, mag, rrup):
-        """
-        Compute mean value (Equation 30 in USGS report)
-        """
-        mean = np.zeros_like(rrup)
-
-        mean += C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2
-
-        idx = rrup > 70.
-        mean[idx] += C['c7'] * (np.log(rrup[idx]) - np.log(70.))
-
-        idx = rrup > 130.
-        mean[idx] += C['c8'] * (np.log(rrup[idx]) - np.log(130.))
-
-        R = np.sqrt(
-            rrup ** 2 + (C['c5'] * np.exp(C['c6'] * mag)) ** 2
-        )
-        mean += C['c4'] * np.log(R) + (C['c9'] + C['c10'] * mag) * rrup
-
-        return mean
 
     #: Coefficient tables extracted from ``subroutine getCampCEUS`` in
     #: ``hazgridXnga2.f``
@@ -339,11 +365,7 @@ class Campbell2003MblgJ1996NSHMP2008(Campbell2003MblgAB1987NSHMP2008):
     Extend :class:`Campbell2003MblgAB1987NSHMP2008` but uses Johnston 1996
     equation for converting Mblg to Mw
     """
-    def _convert_magnitude(self, mag):
-        """
-        Convert magnitude from Mblg to Mw using Johnston 1996 equation.
-        """
-        return mblg_to_mw_johnston_96(mag)
+    kind = "Mblg96"
 
 
 class Campbell2003MwNSHMP2008(Campbell2003MblgAB1987NSHMP2008):
@@ -351,9 +373,4 @@ class Campbell2003MwNSHMP2008(Campbell2003MblgAB1987NSHMP2008):
     Extend :class:`Campbell2003MblgAB1987NSHMP2008` but assumes magnitude
     to be in Mw scale, so no converion is applied.
     """
-
-    def _convert_magnitude(self, mag):
-        """
-        Return magnitude value unchanged
-        """
-        return mag
+    kind = "Mw"

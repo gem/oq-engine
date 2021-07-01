@@ -63,6 +63,51 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
+def get_distance_scaling_term(C, rhyp):
+    """
+    Returns the distance scaling term (equation 1)
+    """
+    rval = rhyp + C['bh']
+    return C['b5'] * np.log(rval) + C['b6'] * rval
+
+
+def get_magnitude_scaling_term(C, mag):
+    """
+    Returns the magnitude scaling term (equation 1)
+    """
+    mval = mag - 3.0
+    return C['b1'] + C['b2'] * mval + C['b3'] * (mval ** 2.0) +\
+        C['b4'] * (mval ** 3.0)
+
+
+def get_stddevs(C_SIG, stddev_types, num_sites):
+    """
+    Returns the standard deviations
+
+    N.B. In the paper, and with confirmation from the author, the
+    aleatory variability terms from the empirical model are used in
+    conjunction with the median coefficients from the stochastic model.
+    In the empirical model, coefficients for a single-station intra-event
+    sigma are derived. These are labeled as "phi". Inter-event coefficients
+    corresponding to two observed geothermal sequences (Soultz-Sous-Forets
+    and Basel) are also derived. The inter-event standard deviation is
+    therefore taken as the ordinary mean of the two inter-event
+    sigma terms
+    """
+    stddevs = []
+    intra = C_SIG['phi']
+    inter = (C_SIG['tau_s'] + C_SIG['tau_b']) / 2.0
+    total = sqrt(intra ** 2.0 + inter ** 2.0)
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(total + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(inter + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(intra + np.zeros(num_sites))
+    return stddevs
+
+
 class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
     """
     Implements the GMPE for induced seismicity in Geothermal Areas derived
@@ -114,11 +159,7 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
 
     #: The supported intensity measure types are PGA, PGV, and SA, see table
     #: 4.a, pages 22-23
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: The supported intensity measure component is 'average horizontal', see
     #: section entitiled "Empirical Analysis", paragraph 1
@@ -126,11 +167,8 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
 
     #: The supported standard deviations are total, inter and intra event, see
     #: table 4.a, pages 22-23
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT, const.StdDev.TOTAL}
 
     #: No additional site term is defined
     REQUIRES_SITES_PARAMETERS = set()
@@ -151,12 +189,12 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
         for spec of input and result values.
         """
         C = self.COEFFS[imt]
-        C_SIG = self.SIGMA_COEFFS[imt]
+        C_SIG = self.COEFFS_SIGMA[imt]
 
-        mean = (self.get_magnitude_scaling_term(C, rup.mag) +
-                self.get_distance_scaling_term(C, dists.rhypo))
+        mean = (get_magnitude_scaling_term(C, rup.mag) +
+                get_distance_scaling_term(C, dists.rhypo))
 
-        std_devs = self.get_stddevs(C_SIG, stddev_types, len(dists.rhypo))
+        std_devs = get_stddevs(C_SIG, stddev_types, len(dists.rhypo))
 
         #: Mean ground motions initially returned in cm/s/s (for PGA, SA)
         #: and cm/s for PGV
@@ -165,49 +203,6 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
             mean = np.log(np.exp(mean) / (100. * g))
 
         return mean, std_devs
-
-    def get_magnitude_scaling_term(self, C, mag):
-        """
-        Returns the magnitude scaling term (equation 1)
-        """
-        mval = mag - 3.0
-        return C['b1'] + C['b2'] * mval + C['b3'] * (mval ** 2.0) +\
-            C['b4'] * (mval ** 3.0)
-
-    def get_distance_scaling_term(self, C, rhyp):
-        """
-        Returns the distance scaling term (equation 1)
-        """
-        rval = rhyp + C['bh']
-        return C['b5'] * np.log(rval) + C['b6'] * rval
-
-    def get_stddevs(self, C_SIG, stddev_types, num_sites):
-        """
-        Returns the standard deviations
-
-        N.B. In the paper, and with confirmation from the author, the
-        aleatory variability terms from the empirical model are used in
-        conjunction with the median coefficients from the stochastic model.
-        In the empirical model, coefficients for a single-station intra-event
-        sigma are derived. These are labeled as "phi". Inter-event coefficients
-        corresponding to two observed geothermal sequences (Soultz-Sous-Forets
-        and Basel) are also derived. The inter-event standard deviation is
-        therefore taken as the ordinary mean of the two inter-event
-        sigma terms
-        """
-        stddevs = []
-        intra = C_SIG['phi']
-        inter = (C_SIG['tau_s'] + C_SIG['tau_b']) / 2.0
-        total = sqrt(intra ** 2.0 + inter ** 2.0)
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(total + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(inter + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(intra + np.zeros(num_sites))
-        return stddevs
 
     # IMT > 0.5 seconds removed from the present implementation
     # For median values, PGA is assumed equivalent to Sa (0.005 s)
@@ -230,7 +225,7 @@ class DouglasEtAl2013StochasticSD001Q200K005(GMPE):
           0.500000    1.238325   2.390165   -0.382327   -0.030766   -1.110481   -0.009430   0.000000   0.107816
          """)
 
-    SIGMA_COEFFS = CoeffsTable(sa_damping=5, table="""
+    COEFFS_SIGMA = CoeffsTable(sa_damping=5, table="""
                                IMT         phi       tau_s       tau_b
                                pgv  0.53545879  0.65762034  0.55823845
                                pga  0.57602321  0.90206692  0.63679205

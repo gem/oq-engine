@@ -16,9 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.abrahamson_2014 import (
-    AbrahamsonEtAl2014, AbrahamsonEtAl2014RegTWN, AbrahamsonEtAl2014RegCHN,
-    AbrahamsonEtAl2014RegJPN)
+from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 # Test data have been generated from the Matlab implementation available as
@@ -53,11 +51,11 @@ class Abrahamson2014EtAlRegTWNTestCase(BaseGSIMTestCase):
     default model.
     """
 
-    GSIM_CLASS = AbrahamsonEtAl2014RegTWN
+    GSIM_CLASS = AbrahamsonEtAl2014
 
     def test_mean(self):
         self.check('ASK14/ASK14_ResMEAN_RegTWN.csv',
-                   max_discrep_percentage=0.3)
+                   max_discrep_percentage=0.3, region='TWN')
 
 
 class Abrahamson2014EtAlRegCHNTestCase(BaseGSIMTestCase):
@@ -67,11 +65,11 @@ class Abrahamson2014EtAlRegCHNTestCase(BaseGSIMTestCase):
     default model.
     """
 
-    GSIM_CLASS = AbrahamsonEtAl2014RegCHN
+    GSIM_CLASS = AbrahamsonEtAl2014
 
     def test_mean(self):
         self.check('ASK14/ASK14_ResMEAN_RegCHN.csv',
-                   max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1, region='CHN')
 
 
 class Abrahamson2014EtAlRegJPNTestCase(BaseGSIMTestCase):
@@ -80,16 +78,16 @@ class Abrahamson2014EtAlRegJPNTestCase(BaseGSIMTestCase):
     Standard deviation model is not tested since it's the same used for the
     default model.
     """
-    GSIM_CLASS = AbrahamsonEtAl2014RegJPN
+    GSIM_CLASS = AbrahamsonEtAl2014
 
     def test_mean(self):
         self.check('ASK14/ASK14_ResMEAN_RegJPN.csv',
-                   max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1, region='JPN')
 
     def test_std_total(self):
         self.check('ASK14/ASK14_ResStdTot_RegJPN.csv',
-                   max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1, region='JPN')
 
     def test_std_intra(self):
         self.check('ASK14/ASK14_ResStdPhi_RegJPN.csv',
-                   max_discrep_percentage=0.1)
+                   max_discrep_percentage=0.1, region='JPN')

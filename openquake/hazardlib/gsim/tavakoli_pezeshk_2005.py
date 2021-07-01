@@ -33,6 +33,60 @@ from openquake.hazardlib.gsim.utils import (
     clip_mean)
 
 
+def _compute_anelastic_attenuation_term(C, rrup, mag):
+    """
+    Compute magnitude-distance scaling term as defined in equation 21,
+    page 2291 (Tavakoli and Pezeshk, 2005)
+    """
+    r = (rrup**2. + (C['c5'] * np.exp(C['c6'] * mag +
+                                      C['c7'] * (8.5 - mag)**2.5))**2.)**.5
+    f3 = ((C['c4'] + C['c13'] * mag) * np.log(r) +
+          (C['c8'] + C['c12'] * mag) * r)
+    return f3
+
+
+def _compute_geometrical_spreading_term(C, rrup):
+    """
+    Compute magnitude scaling term as defined in equation 19, page 2291
+    (Tavakoli and Pezeshk, 2005)
+    """
+    f2 = np.ones_like(rrup)
+    idx1 = np.nonzero(rrup <= 70.)
+    idx2 = np.nonzero((rrup > 70.) & (rrup <= 130.))
+    idx3 = np.nonzero(rrup > 130.)
+
+    f2[idx1] = (C['c9'] * np.log(rrup[idx1] + 4.5))
+    f2[idx2] = (C['c10'] * np.log(rrup[idx2]/70.) +
+                C['c9'] * np.log(rrup[idx2] + 4.5))
+    f2[idx3] = (C['c11'] * np.log(rrup[idx3]/130.) +
+                C['c10'] * np.log(rrup[idx3]/70.) +
+                C['c9'] * np.log(rrup[idx3] + 4.5))
+    return f2
+
+
+def _compute_magnitude_scaling_term(C, mag):
+    """
+    Compute magnitude scaling term as defined in equation 19, page 2291
+    (Tavakoli and Pezeshk, 2005)
+    """
+    if mag > 8.5:
+        raise ValueError('Magnitude %s > 8.5' % mag)
+    return C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2.5
+
+
+def _get_stddevs(C, stddev_types, num_sites, mag):
+    """
+    Returns standard deviation as defined in equation 23, page 2291
+    (Tavakoli and Pezeshk, 2005)
+    """
+    stddevs = []
+    sigma = (C['c14'] + C['c15'] * mag) if mag < 7.2 else C['c16']
+    vals = sigma * np.ones((num_sites))
+    for _ in stddev_types:
+        stddevs.append(vals)
+    return stddevs
+
+
 class TavakoliPezeshk2005(GMPE):
     """
     Implements the GMPE developed by B. Tavakoli and S. Pezeshk in 2005
@@ -65,6 +119,8 @@ class TavakoliPezeshk2005(GMPE):
     #: See equation 18 page page 2291
     REQUIRES_DISTANCES = {'rrup'}
 
+    kind = 'base'
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -74,92 +130,33 @@ class TavakoliPezeshk2005(GMPE):
         # extracting dictionary of coefficients
         C = self.COEFFS[imt]
 
-        mag = self._convert_magnitude(rup.mag)
+        if self.kind == 'Mblg':
+            mag = mblg_to_mw_johnston_96(rup.mag)
+        elif self.kind == 'Mblg2008':
+            mag = mblg_to_mw_atkinson_boore_87(rup.mag)
+        else:
+            mag = rup.mag
 
         # computing the magnitude term. Equation 19, page 2291
-        f1 = self._compute_magnitude_scaling_term(C, mag)
+        f1 = _compute_magnitude_scaling_term(C, mag)
 
         # computing the geometrical spreading term. Equation 20, page 2291
-        f2 = self._compute_geometrical_spreading_term(C, dists.rrup)
+        f2 = _compute_geometrical_spreading_term(C, dists.rrup)
 
         # computing the anelastic attenuation term. Equation 21, page 2291
-        f3 = self._compute_anelastic_attenuation_term(C, dists.rrup, mag)
+        f3 = _compute_anelastic_attenuation_term(C, dists.rrup, mag)
 
         # computing the mean ln(IMT) using equation 18 at page 2290
         mean = f1 + f2 + f3
 
-        mean = self._clip_mean(imt, mean)
+        if self.kind != 'base':  # in subclasses
+            mean = clip_mean(imt, mean)
 
         # computing the total standard deviation
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=len(dists.rrup),
-                                    mag=mag)
+        stddevs = _get_stddevs(C, stddev_types, num_sites=len(dists.rrup),
+                               mag=mag)
 
         return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites, mag):
-        """
-        Returns standard deviation as defined in equation 23, page 2291
-        (Tavakoli and Pezeshk, 2005)
-        """
-        stddevs = []
-        sigma = (C['c14'] + C['c15'] * mag) if mag < 7.2 else C['c16']
-        vals = sigma * np.ones((num_sites))
-        for _ in stddev_types:
-            stddevs.append(vals)
-        return stddevs
-
-    def _convert_magnitude(self, mag):
-        """
-        Return magnitude value unchanged. This is a dummy method that
-        subclasses can change to incorporate magnitude conversion
-        equations.
-        """
-        return mag
-
-    def _clip_mean(self, imt, mean):
-        """
-        Return mean values unchanged. This is a dummy method that subclasses
-        can change to incorporate clipping of mean values.
-        """
-        return mean
-
-    def _compute_magnitude_scaling_term(self, C, mag):
-        """
-        Compute magnitude scaling term as defined in equation 19, page 2291
-        (Tavakoli and Pezeshk, 2005)
-        """
-        if mag > 8.5:
-            raise ValueError('Magnitude %s > 8.5' % mag)
-        return C['c1'] + C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2.5
-
-    def _compute_geometrical_spreading_term(self, C, rrup):
-        """
-        Compute magnitude scaling term as defined in equation 19, page 2291
-        (Tavakoli and Pezeshk, 2005)
-        """
-        f2 = np.ones_like(rrup)
-        idx1 = np.nonzero(rrup <= 70.)
-        idx2 = np.nonzero((rrup > 70.) & (rrup <= 130.))
-        idx3 = np.nonzero(rrup > 130.)
-
-        f2[idx1] = (C['c9'] * np.log(rrup[idx1] + 4.5))
-        f2[idx2] = (C['c10'] * np.log(rrup[idx2]/70.) +
-                    C['c9'] * np.log(rrup[idx2] + 4.5))
-        f2[idx3] = (C['c11'] * np.log(rrup[idx3]/130.) +
-                    C['c10'] * np.log(rrup[idx3]/70.) +
-                    C['c9'] * np.log(rrup[idx3] + 4.5))
-        return f2
-
-    def _compute_anelastic_attenuation_term(self, C, rrup, mag):
-        """
-        Compute magnitude-distance scaling term as defined in equation 21,
-        page 2291 (Tavakoli and Pezeshk, 2005)
-        """
-        r = (rrup**2. + (C['c5'] * np.exp(C['c6'] * mag +
-                                          C['c7'] * (8.5 - mag)**2.5))**2.)**.5
-        f3 = ((C['c4'] + C['c13'] * mag) * np.log(r) +
-              (C['c8'] + C['c12'] * mag) * r)
-        return f3
 
     #: Coefficient table is constructed from an excel spreadsheet available
     #: on Pezeshk's website http://www.ce.memphis.edu/pezeshk
@@ -197,23 +194,10 @@ class TavakoliPezeshk2005MblgAB1987NSHMP2008(TavakoliPezeshk2005):
 
     Coefficients are given for the B/C site conditions.
     """
+    kind = 'Mblg2008'
 
     #: Shear-wave velocity for reference soil conditions in [m s-1]
     DEFINED_FOR_REFERENCE_VELOCITY = 760.
-
-
-    def _convert_magnitude(self, mag):
-        """
-        Convert Mblg to Mw using Atkinson and Boore 1987 conversion equation
-        """
-        return mblg_to_mw_atkinson_boore_87(mag)
-
-    def _clip_mean(self, imt, mean):
-        """
-        Return mean values unchanged. This is a dummy method that subclasses
-        can change to incorporate clipping of mean values.
-        """
-        return clip_mean(imt, mean)
 
     #: Coefficient table is constructed using the values included in
     #: hazgridXnga2.f
@@ -242,23 +226,12 @@ class TavakoliPezeshk2005MblgJ1996NSHMP2008(
     Extend :class:`TavakoliPezeshk2005MblgAB1987NSHMP2008` but uses Johnston
     1996 equation to convert Mblg to Mw
     """
-    def _convert_magnitude(self, mag):
-        """
-        Convert Mblg to Mw using Johnston 1996 conversion equation
-        """
-        return mblg_to_mw_johnston_96(mag)
+    kind = 'Mblg'
 
 
-class TavakoliPezeshk2005MwNSHMP2008(
-        TavakoliPezeshk2005MblgAB1987NSHMP2008):
+class TavakoliPezeshk2005MwNSHMP2008(TavakoliPezeshk2005MblgAB1987NSHMP2008):
     """
     Extend :class:`TavakoliPezeshk2005MblgAB1987NSHMP2008` but assumes
     magnitude to be in Mw scale, and therefore no conversion is applied
     """
-
-
-    def _convert_magnitude(self, mag):
-        """
-        Return magnitude value unchanged
-        """
-        return mag
+    kind = '2008'

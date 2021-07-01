@@ -27,7 +27,7 @@ Module exports :class:`StewartEtAl2016`,
 
 import numpy as np
 
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -50,16 +50,14 @@ class StewartEtAl2016(GMPE):
     Equations for Predicting Vertical-Component PGA, PGV, and 5%-Damped PSA
     from Shallow Crustal Earthquakes. *Earthquake Spectra*, *32*(2), 1005-1031.
     """
+    region = "CAL"
+
     #: Supported tectonic region type is active shallow crust; see title.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration; see title.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the
     #: :attr:`~openquake.hazardlib.const.IMC.Vertical` direction component;
@@ -68,11 +66,8 @@ class StewartEtAl2016(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total; see the section for "Aleatory-Uncertainty Function".
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -82,6 +77,13 @@ class StewartEtAl2016(GMPE):
 
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
+
+    REQUIRES_ATTRIBUTES = {'region', 'sof'}
+
+    def __init__(self, region='CAL', sof=True, **kwargs):
+        super().__init__(**kwargs)
+        self.region = region
+        self.sof = sof
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -123,6 +125,8 @@ class StewartEtAl2016(GMPE):
         """
         Returns the style-of-faulting term component, defined in Equation 2
         """
+        if not self.sof:
+            return C["e0"]  # Unspecified style-of-faulting
         return BooreEtAl2014._get_style_of_faulting_term(self, C, rup)
 
     def _get_path_scaling(self, C, rjb, mag):
@@ -131,7 +135,14 @@ class StewartEtAl2016(GMPE):
         """
         # Calculate R in Equation 4
         rval = np.sqrt((rjb ** 2.0) + (C["h"] ** 2.0))
-        delta_c3 = self._get_deltac3(C)
+        if self.region == "CAL":
+            delta_c3 = 0
+        elif self.region == "CHN":
+            delta_c3 = C['Dc3CH']
+        elif self.region == "JPN":
+            delta_c3 = C['Dc3JP']
+        else:
+            raise ValueError("region=%s" % self.region)
 
         # Calculate geometric spreading component of path scaling term
         fp_geom = ((C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *
@@ -140,16 +151,6 @@ class StewartEtAl2016(GMPE):
         # delta c3 accounting for regional effects
         fp_atten = (C["c3"] + delta_c3) * (rval - self.CONSTS["Rref"])
         return fp_geom + fp_atten
-
-    def _get_deltac3(self, C):
-        """
-        Returns the regional dependent delta_c3 in the path scaling term in
-        Equation 3
-
-        We assume California as the default region or average Q case, hence
-        here the regional delta c3 is assumed = 0.
-        """
-        return 0.
 
     def _get_site_scaling(self, C, pga_rock, sites, rjb):
         """
@@ -210,6 +211,14 @@ class StewartEtAl2016(GMPE):
         else:
             phi = (C["phi1"] + (C["phi2"] - C["phi1"]) * (mag - 4.5))
         return phi
+
+    #: Equation constants that are IMT-independent
+    CONSTS = {
+        "Mref": 4.5,
+        "Rref": 1.0,
+        "Vref": 760.0,
+        "f1": 0.0,
+        "f3": 0.1}
 
     #: Table of period-dependent regression coefficients obtained from the
     #: supplementary material in EQS paper
@@ -324,87 +333,11 @@ class StewartEtAl2016(GMPE):
     10.00    -4.870000    -4.989000    -4.795000    -4.668000    2.187000    0.000000     1.158000     6.200000    -1.015000    0.160100    0.000000     0.000896    0.000000     5.930000    -0.276700    775.000000     0.000000     -0.001360    0.48361    0.41840    0.37531    0.58136
     """)
 
-    #: Equation constants that are IMT-independent
-    CONSTS = {
-        "Mref": 4.5,
-        "Rref": 1.0,
-        "Vref": 760.0,
-        "f1": 0.0,
-        "f3": 0.1}
 
-
-class StewartEtAl2016RegCHN(StewartEtAl2016):
-    """
-    This class implements the Stewart et al. (2016) model considering the
-    correction to the path scaling term for High Q regions (e.g. China)
-    The modification is made to the "Dc3" coefficient
-    """
-    def _get_deltac3(self, C):
-        """
-        Returns the regional dependent delta_c3 in the path scaling term in
-        Equation 3
-        """
-        return C['Dc3CH']
-
-
-class StewartEtAl2016RegJPN(StewartEtAl2016):
-    """
-    This class implements the Stewart et al. (2016) model considering the
-    correction to the path scaling term for Low Q regions (e.g. Japan)
-    The modification is made to the "Dc3" coefficient
-    """
-    def _get_deltac3(self, C):
-        """
-        Returns the regional dependent delta_c3 in the path scaling term in
-        Equation 3
-        """
-        return C['Dc3JP']
-
-
-class StewartEtAl2016NoSOF(StewartEtAl2016):
-    """
-    The Stewart et al. (2016) GMPE can consider the case in which the
-    style-of-faulting is unspecified. In this case the GMPE is no longer
-    dependent on rake.
-    """
-    #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the coefficient of the "Unspecified" style-of-faulting
-        """
-        return C["e0"]
-
-
-class StewartEtAl2016RegCHNNoSOF(StewartEtAl2016RegCHN):
-    """
-    The Stewart et al. (2016) GMPE, implemented for High Q regional datasets,
-    (e.g. China) for the case in which the style-of-faulting is
-    unspecified. In this case the GMPE is no longer
-    dependent on rake.
-    """
-    #: Required rupture parameter is magnitude
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the coefficient of the "Unspecified" style-of-faulting
-        """
-        return C["e0"]
-
-
-class StewartEtAl2016RegJPNNoSOF(StewartEtAl2016RegJPN):
-    """
-    The Stewart et al. (2016) GMPE, implemented for Low Q regional datasets,
-    (e.g. Japan) for the case in which the style-of-faulting is unspecified.
-    In this case the GMPE is no longer dependent on rake.
-    """
-    #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the coefficient of the "Unspecified" style-of-faulting
-        """
-        return C["e0"]
+gsim_aliases['StewartEtAl2016RegCHN'] = '[StewartEtAl2016]\nregion="CHN"'
+gsim_aliases['StewartEtAl2016RegJPN'] = '[StewartEtAl2016]\nregion="JPN"'
+gsim_aliases['StewartEtAl2016NoSOF'] = '[StewartEtAl2016]\nsof=false'
+gsim_aliases['StewartEtAl2016CHNNoSOF'] = \
+    '[StewartEtAl2016]\nregion="CHN"\nsof=false'
+gsim_aliases['StewartEtAl2016JPNNoSOF'] = \
+    '[StewartEtAl2016]\nregion="JPN"\nsof=false'
