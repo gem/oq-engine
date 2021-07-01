@@ -528,7 +528,7 @@ class ContextMaker(object):
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
-    def calc_mean_stds(self, ctxs, *stdtypes):
+    def get_mean_stds(self, ctxs, *stdtypes):
         """
         :param ctxs: a list of contexts
         :param stdtypes: tuple of standard deviation types
@@ -589,7 +589,7 @@ class ContextMaker(object):
         N = nsites.sum()
         poes = numpy.zeros((N, self.loglevels.size, len(self.gsims)))
         with self.gmf_mon:
-            mean_stdt = self.calc_mean_stds(ctxs, StdDev.TOTAL)
+            mean_stdt = self.get_mean_stds(ctxs, StdDev.TOTAL)
         with self.poe_mon:
             for g, gsim in enumerate(self.gsims):
                 # builds poes of shape (N, L, G)
