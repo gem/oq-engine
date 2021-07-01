@@ -27,7 +27,7 @@ Module exports :class:`StewartEtAl2016`,
 
 import numpy as np
 
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -50,6 +50,8 @@ class StewartEtAl2016(GMPE):
     Equations for Predicting Vertical-Component PGA, PGV, and 5%-Damped PSA
     from Shallow Crustal Earthquakes. *Earthquake Spectra*, *32*(2), 1005-1031.
     """
+    region = "CAL"
+
     #: Supported tectonic region type is active shallow crust; see title.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
@@ -75,11 +77,6 @@ class StewartEtAl2016(GMPE):
 
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
-
-    def __init__(self, region='CAL', sof=True, **kwargs):
-        super().__init__(**kwargs)
-        self.region = region
-        self.sof = sof
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -131,7 +128,12 @@ class StewartEtAl2016(GMPE):
         """
         # Calculate R in Equation 4
         rval = np.sqrt((rjb ** 2.0) + (C["h"] ** 2.0))
-        delta_c3 = self._get_deltac3(C)
+        if self.region == "CAL":
+            delta_c3 = 0
+        elif self.region == "CHN":
+            delta_c3 = C['Dc3CH']
+        elif self.region == "JPN":
+            delta_c3 = C['Dc3JP']
 
         # Calculate geometric spreading component of path scaling term
         fp_geom = ((C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *
@@ -140,16 +142,6 @@ class StewartEtAl2016(GMPE):
         # delta c3 accounting for regional effects
         fp_atten = (C["c3"] + delta_c3) * (rval - self.CONSTS["Rref"])
         return fp_geom + fp_atten
-
-    def _get_deltac3(self, C):
-        """
-        Returns the regional dependent delta_c3 in the path scaling term in
-        Equation 3
-
-        We assume California as the default region or average Q case, hence
-        here the regional delta c3 is assumed = 0.
-        """
-        return 0.
 
     def _get_site_scaling(self, C, pga_rock, sites, rjb):
         """
@@ -339,12 +331,7 @@ class StewartEtAl2016RegCHN(StewartEtAl2016):
     correction to the path scaling term for High Q regions (e.g. China)
     The modification is made to the "Dc3" coefficient
     """
-    def _get_deltac3(self, C):
-        """
-        Returns the regional dependent delta_c3 in the path scaling term in
-        Equation 3
-        """
-        return C['Dc3CH']
+    region = "CHN"
 
 
 class StewartEtAl2016RegJPN(StewartEtAl2016):
@@ -353,12 +340,7 @@ class StewartEtAl2016RegJPN(StewartEtAl2016):
     correction to the path scaling term for Low Q regions (e.g. Japan)
     The modification is made to the "Dc3" coefficient
     """
-    def _get_deltac3(self, C):
-        """
-        Returns the regional dependent delta_c3 in the path scaling term in
-        Equation 3
-        """
-        return C['Dc3JP']
+    region = "JPN"
 
 
 class StewartEtAl2016NoSOF(StewartEtAl2016):
