@@ -36,8 +36,7 @@ from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.utils import (
     mblg_to_mw_atkinson_boore_87,
     mblg_to_mw_johnston_96,
-    clip_mean
-)
+    clip_mean)
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -208,9 +207,7 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         return scale_fac * np.minimum(
             SC['delta'] + 0.05,
             0.05 + SC['delta'] * (
-                np.maximum(mag - SC['M1'], 0) / (SC['Mh'] - SC['M1'])
-            )
-        )
+                np.maximum(mag - SC['M1'], 0) / (SC['Mh'] - SC['M1'])))
 
     def _compute_mean(self, C, f0, f1, f2, SC, mag, rrup, idxs, mean,
                       scale_fac):
@@ -247,8 +244,6 @@ class AtkinsonBoore2006(BooreAtkinson2008):
         """
         Return total standard deviation (see table 6, p. 2192).
         """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
         stddevs = [np.zeros(num_sites) +
                    self.COEFFS_IMT_INDEPENDENT['std_total']
                    for _ in stddev_types]
