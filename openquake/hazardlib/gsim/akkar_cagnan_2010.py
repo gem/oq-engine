@@ -23,8 +23,7 @@ import numpy as np
 # standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
-from openquake.hazardlib.gsim.boore_atkinson_2008 import (
-    _get_site_amplification_linear)
+from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -60,7 +59,7 @@ class AkkarCagnan2010(BooreAtkinson2008):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see Table 3, p. 2985.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT,  const.StdDev.INTRA_EVENT}
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30.
     #: See paragraph 'Functionl Form', p. 2981.
