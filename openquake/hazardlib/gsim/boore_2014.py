@@ -55,11 +55,7 @@ class BooreEtAl2014(GMPE):
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is orientation-independent
     #: measure :attr:`~openquake.hazardlib.const.IMC.RotD50`
@@ -67,11 +63,8 @@ class BooreEtAl2014(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see equation 2, pag 106.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -81,6 +74,8 @@ class BooreEtAl2014(GMPE):
 
     #: Required distance measure is Rjb
     REQUIRES_DISTANCES = {'rjb'}
+
+    region = "nobasin"
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -185,7 +180,16 @@ class BooreEtAl2014(GMPE):
         In the case of the base model the basin depth term is switched off.
         Therefore we return an array of zeros.
         """
-        return np.zeros(len(sites.vs30), dtype=float)
+        if self.region == "nobasin" or period < 0.65:  # switched off
+            return np.zeros(len(sites.vs30), dtype=float)
+        bmodel = (japan_basin_model(sites.vs30) if self.region == "JPN"
+                  else california_basin_model(sites.vs30))
+        f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
+        f_ratio = C["f7"] / C["f6"]
+        dz1 = (sites.z1pt0 / 1000.0) - bmodel
+        idx = dz1 <= f_ratio
+        f_dz1[idx] = C["f6"] * dz1[idx]
+        return f_dz1
 
     def _get_stddevs(self, C, rup, dists, sites, stddev_types):
         """
@@ -201,7 +205,6 @@ class BooreEtAl2014(GMPE):
                                         sites.vs30,
                                         num_sites)
         for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(np.sqrt((tau ** 2.0) + (phi ** 2.0)))
             elif stddev_type == const.StdDev.INTRA_EVENT:
@@ -631,7 +634,7 @@ class BooreEtAl2014CaliforniaBasin(BooreEtAl2014):
     """
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
 
     def _get_basin_depth_term(self, C, sites, period):
         """
@@ -657,22 +660,8 @@ class BooreEtAl2014HighQCaliforniaBasin(BooreEtAl2014HighQ):
     """
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - california_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
+    region = "CAL"
 
 
 class BooreEtAl2014LowQCaliforniaBasin(BooreEtAl2014LowQ):
@@ -684,21 +673,7 @@ class BooreEtAl2014LowQCaliforniaBasin(BooreEtAl2014LowQ):
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - california_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    region = "CAL"
 
 
 def japan_basin_model(vs30):
@@ -722,21 +697,7 @@ class BooreEtAl2014JapanBasin(BooreEtAl2014):
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - japan_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    region = "JPN"
 
 
 class BooreEtAl2014HighQJapanBasin(BooreEtAl2014HighQ):
@@ -747,22 +708,8 @@ class BooreEtAl2014HighQJapanBasin(BooreEtAl2014HighQ):
     """
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - japan_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
+    region = "JPN"
 
 
 class BooreEtAl2014LowQJapanBasin(BooreEtAl2014LowQ):
@@ -773,22 +720,8 @@ class BooreEtAl2014LowQJapanBasin(BooreEtAl2014LowQ):
     """
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - japan_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
+    region = "JPN"
 
 
 class BooreEtAl2014NoSOF(BooreEtAl2014):
@@ -845,22 +778,8 @@ class BooreEtAl2014CaliforniaBasinNoSOF(BooreEtAl2014NoSOF):
     """
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - california_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
+    region = "CAL"
 
 
 class BooreEtAl2014HighQCaliforniaBasinNoSOF(BooreEtAl2014HighQNoSOF):
@@ -871,22 +790,8 @@ class BooreEtAl2014HighQCaliforniaBasinNoSOF(BooreEtAl2014HighQNoSOF):
     """
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - california_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
+    region = "CAL"
 
 
 class BooreEtAl2014LowQCaliforniaBasinNoSOF(BooreEtAl2014LowQNoSOF):
@@ -897,22 +802,8 @@ class BooreEtAl2014LowQCaliforniaBasinNoSOF(BooreEtAl2014LowQNoSOF):
     """
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - california_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
+    region = "CAL"
 
 
 class BooreEtAl2014JapanBasinNoSOF(BooreEtAl2014NoSOF):
@@ -924,21 +815,7 @@ class BooreEtAl2014JapanBasinNoSOF(BooreEtAl2014NoSOF):
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - japan_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    region = "JPN"
 
 
 class BooreEtAl2014HighQJapanBasinNoSOF(BooreEtAl2014HighQNoSOF):
@@ -950,21 +827,7 @@ class BooreEtAl2014HighQJapanBasinNoSOF(BooreEtAl2014HighQNoSOF):
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - japan_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    region = "JPN"
 
 
 class BooreEtAl2014LowQJapanBasinNoSOF(BooreEtAl2014LowQNoSOF):
@@ -976,18 +839,4 @@ class BooreEtAl2014LowQJapanBasinNoSOF(BooreEtAl2014LowQNoSOF):
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - japan_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    region = "JPN"
