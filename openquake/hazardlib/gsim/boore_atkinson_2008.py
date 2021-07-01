@@ -21,12 +21,10 @@ Module exports :class:`BooreAtkinson2008`.
 """
 import numpy as np
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const, contexts
 from openquake.hazardlib.imt import PGA, PGV, SA
-
-
-from openquake.baselib.general import CallableDict
 
 
 def _compute_distance_scaling(ctx, C):
