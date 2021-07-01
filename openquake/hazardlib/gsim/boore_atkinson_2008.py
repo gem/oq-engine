@@ -109,9 +109,13 @@ class BooreAtkinson2008(GMPE):
         """
         Return standard deviations as defined in table 8, pag 121.
         """
+        if 'Hawaii' in self.__class__.__name__:
+            # Using a frequency independent value of sigma as recommended
+            # in the caption of Table 2 of Atkinson (2010)
+            return [0.26/np.log10(np.e) + np.zeros(num_sites)]
+
         stddevs = []
         for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(C['std'] + np.zeros(num_sites))
             elif stddev_type == const.StdDev.INTRA_EVENT:
@@ -370,9 +374,7 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
 
     #: Supported standard deviation types is total
     #: see equation 2, pag 106.
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     # Adding hypocentral depth as required rupture parameter
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake', 'hypo_depth'}
@@ -411,16 +413,3 @@ class Atkinson2010Hawaii(BooreAtkinson2008):
         mean += (x0 + x1*np.log10(rjb))/np.log10(np.e)
 
         return mean, stddevs
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-                   for stddev_type in stddev_types)
-
-        # Using a frequency independent value of sigma as recommended
-        # in the caption of Table 2 of Atkinson (2010)
-        stddevs = [0.26/np.log10(np.e) + np.zeros(num_sites)]
-
-        return stddevs
