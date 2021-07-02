@@ -434,4 +434,42 @@ class AmeriEtAl2017RepiStressDropTestCase(unittest.TestCase):
                         P = imt.SA(period=np.float_(per), damping=damp)
                     std = gmpe.get_mean_and_stddevs(sctx, rctx, dctx, P,
                                                     stddev_types)[1][0]
-                    np.testing.assert_almost_equal(std, value, decimal=STDDEV_DECIMAL)
+                    np.testing.assert_almost_equal(std, value,
+                                                   decimal=STDDEV_DECIMAL)
+
+# Discrepancy percentages to be applied to all tests
+MEAN_DISCREP = 0.01
+STDDEV_DISCREP = 0.01
+
+
+class Ameri2014TestCase(BaseGSIMTestCase):
+    """
+    Tests the Ameri (2014) GMPE for the case in which Joyner-Boore
+    distance is the preferred distance metric, and standard deviation
+    is provided using the homoskedastic formulation
+    """
+    GSIM_CLASS = gsim.ameri_2017.Ameri2014Rjb
+    # File containing the results for the Mean
+    MEAN_FILE = "ameri14/Ameri_2014_mean.csv"
+    # File contaning the results for the Total Standard Deviation
+    STD_FILE = "ameri14/Ameri_2014_total_stddev.csv"
+    # File contaning the results for the Inter-Event Standard Deviation
+    INTER_FILE = "ameri14/Ameri_2014_inter_event_stddev.csv"
+    # File contaning the results for the Intra-Event Standard Deviation
+    INTRA_FILE = "ameri14/Ameri_2014_intra_event_stddev.csv"
+
+    def test_mean(self):
+        self.check(self.MEAN_FILE,
+                   max_discrep_percentage=MEAN_DISCREP)
+
+    def test_std_total(self):
+        self.check(self.STD_FILE,
+                   max_discrep_percentage=STDDEV_DISCREP)
+
+    def test_std_inter(self):
+        self.check(self.INTER_FILE,
+                   max_discrep_percentage=STDDEV_DISCREP)
+
+    def test_std_intra(self):
+        self.check(self.INTRA_FILE,
+                   max_discrep_percentage=STDDEV_DISCREP)
