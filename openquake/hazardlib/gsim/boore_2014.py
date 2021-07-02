@@ -749,12 +749,7 @@ class BooreEtAl2014LowQNoSOF(BooreEtAl2014LowQ):
     """
     #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the coefficients of the "Unspecified" style-of-faulting
-        """
-        return C["e0"]
+    sof = False
 
 
 class BooreEtAl2014CaliforniaBasinNoSOF(BooreEtAl2014NoSOF):
@@ -916,14 +911,6 @@ class StewartEtAl2016(BooreEtAl2014):
         Returns the magnitude scaling term component, defined in Equation 2
         """
         return BooreEtAl2014._get_magnitude_scaling_term(self, C, rup)
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the style-of-faulting term component, defined in Equation 2
-        """
-        if not self.sof:
-            return C["e0"]  # Unspecified style-of-faulting
-        return super()._get_style_of_faulting_term(C, rup)
 
     def _get_path_scaling(self, C, rjb, mag):
         """
