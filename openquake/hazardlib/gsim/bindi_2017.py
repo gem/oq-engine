@@ -15,11 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Module exports :class:`BindiEtAl2017Rjb`,
                :class:`BindiEtAl2017Rhypo`
-
 """
 import numpy as np
 from scipy.constants import g

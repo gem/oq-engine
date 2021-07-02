@@ -59,11 +59,7 @@ class BindiEtAl2014Rjb(GMPE):
     #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        PGV,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -71,11 +67,8 @@ class BindiEtAl2014Rjb(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is only Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -85,6 +78,8 @@ class BindiEtAl2014Rjb(GMPE):
 
     #: Required distance measure is Rjb (eq. 1).
     REQUIRES_DISTANCES = {'rjb'}
+
+    sof = True
 
     def __init__(self, adjustment_factor=1.0, **kwargs):
         super().__init__(adjustment_factor=adjustment_factor, **kwargs)
@@ -117,10 +112,10 @@ class BindiEtAl2014Rjb(GMPE):
         """
         Returns the mean ground motion
         """
+        sof = self._get_style_of_faulting_term(C, rup) if self.sof else 0.
         return (self._get_magnitude_scaling_term(C, rup.mag) +
                 self._get_distance_scaling_term(C, dists.rjb, rup.mag) +
-                self._get_style_of_faulting_term(C, rup) +
-                self._get_site_amplification_term(C, sites.vs30))
+                self._get_site_amplification_term(C, sites.vs30) + sof)
 
     def _get_magnitude_scaling_term(self, C, mag):
         """
@@ -286,15 +281,7 @@ class BindiEtAl2014RjbEC8NoSOF(BindiEtAl2014RjbEC8):
     """
     #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _get_mean(self, C, rup, dists, sites):
-        """
-        Returns the mean value of ground motion - noting that in this case
-        the style-of-faulting term is neglected
-        """
-        return (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, dists.rjb, rup.mag) +
-                self._get_site_amplification_term(C, sites.vs30))
+    sof = False
 
 
 class BindiEtAl2014Rhyp(BindiEtAl2014Rjb):
@@ -406,12 +393,4 @@ class BindiEtAl2014RhypEC8NoSOF(BindiEtAl2014RhypEC8):
     """
     #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _get_mean(self, C, rup, dists, sites):
-        """
-        Returns the mean value of ground motion - noting that in this case
-        the style-of-faulting term is neglected
-        """
-        return (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, dists.rhypo, rup.mag) +
-                self._get_site_amplification_term(C, sites.vs30))
+    sof = False
