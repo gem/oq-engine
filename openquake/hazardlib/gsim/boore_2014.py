@@ -909,12 +909,6 @@ class StewartEtAl2016(BooreEtAl2014):
         return np.exp(self._get_magnitude_scaling_term(C, rup) +
                       self._get_path_scaling(C, dists.rjb, rup.mag))
 
-    def _get_magnitude_scaling_term(self, C, rup):
-        """
-        Returns the magnitude scaling term component, defined in Equation 2
-        """
-        return BooreEtAl2014._get_magnitude_scaling_term(self, C, rup)
-
     def _get_path_scaling(self, C, rjb, mag):
         """
         Returns the path scaling term defined in Equation 3
