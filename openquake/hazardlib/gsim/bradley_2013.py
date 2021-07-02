@@ -37,14 +37,14 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
 
-def _adjust_mean_model(kind, in_cshm, in_cbd, imt_per, b13_mean):
+def _adjust_mean_model(region, in_cshm, in_cbd, imt_per, b13_mean):
 
     dL2L = dS2S = np.array(np.zeros(np.shape(b13_mean)))
     # If the site is in the CBD polygon, get dL2L and dS2S terms
     if in_cshm is True:
         # Only apply the dL2L term only to sites located in the CBD.
         dL2L[in_cbd == 1] = _get_dL2L(imt_per)
-        dS2S[in_cbd == 1] = _get_dS2S(kind, imt_per)
+        dS2S[in_cbd == 1] = _get_dS2S(region, imt_per)
 
     mean = b13_mean + dL2L + dS2S
 
@@ -145,13 +145,10 @@ def _get_SRF_tau(imt_per):
     return srf
 
 
-_get_adjusted_stddevs = CallableDict()
+def _get_adjusted_stddevs(
+        clsname, additional_sigma, sites, rup, C, stddev_types, ln_y_ref,
+        exp1, exp2, in_cshm, in_cbd, imt_per):
 
-
-@_get_adjusted_stddevs.add("Bradley2013bChchCBD")
-def _get_adjusted_stddevs_1(kind, additional_sigma, sites, rup, C,
-                            stddev_types, ln_y_ref,
-                            exp1, exp2, imt_per):
     # aftershock flag is zero, we consider only main shock.
     AS = 0
     Fmeasured = sites.vs30measured
@@ -176,6 +173,39 @@ def _get_adjusted_stddevs_1(kind, additional_sigma, sites, rup, C,
         # second line
         * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
                   + (1 + NL) ** 2))
+    if "Maps" in clsname:
+
+        # Get sigma reduction factors if site is in CBD polygon.
+        srf_sigma = np.array(np.ones(np.shape(in_cbd)))
+        srf_phi = np.array(np.ones(np.shape(in_cbd)))
+        srf_tau = np.array(np.ones(np.shape(in_cbd)))
+        if in_cshm is True:
+            srf_sigma[in_cbd == 1] = _get_SRF_sigma(imt_per)
+            srf_phi[in_cbd == 1] = _get_SRF_phi(imt_per)
+            # The tau reduction term is not used in this implementation
+            # srf_tau[in_cbd == True] = _get_SRF_tau(imt_per)
+
+        # Add 'additional sigma' specified in the Canterbury Seismic
+        # Hazard Model to total sigma
+
+        ret = []
+        for stddev_type in stddev_types:
+            if stddev_type == const.StdDev.TOTAL:
+                # eq. 21
+                scaled_sigma = np.sqrt(((1 + NL) ** 2) *
+                                       (tau ** 2) + (sigma ** 2)) * srf_sigma
+                ret += [np.sqrt(scaled_sigma ** 2 + additional_sigma ** 2)]
+            elif stddev_type == const.StdDev.INTRA_EVENT:
+                scaled_phi = sigma * srf_phi
+                ret.append(np.sqrt(
+                    scaled_phi ** 2 + additional_sigma ** 2 / 2))
+            elif stddev_type == const.StdDev.INTER_EVENT:
+                # this is implied in eq. 21
+                scaled_tau = (np.abs((1 + NL) * tau)) * srf_tau
+                ret.append(np.sqrt(
+                    scaled_tau ** 2 + additional_sigma ** 2 / 2))
+
+        return ret
 
     # Get sigma reduction factors
     srf_sigma = _get_SRF_sigma(imt_per)
@@ -204,68 +234,6 @@ def _get_adjusted_stddevs_1(kind, additional_sigma, sites, rup, C,
     return ret
 
 
-@_get_adjusted_stddevs.add("Bradley2013bChchMaps")
-def _get_adjusted_stddevs_2(kind, additional_sigma, sites, rup, C,
-                            stddev_types, ln_y_ref, exp1, exp2,
-                            in_cshm, in_cbd, imt_per):
-    # aftershock flag is zero, we consider only main shock.
-    AS = 0
-    Fmeasured = sites.vs30measured
-    Finferred = 1 - sites.vs30measured
-
-    # eq. 19 to calculate inter-event standard error
-    mag_test = min(max(rup.mag, 5.0), 7.0) - 5.0
-    tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
-
-    # b and c coeffs from eq. 10
-    b = C['phi2'] * (exp1 - exp2)
-    c = C['phi4']
-
-    y_ref = np.exp(ln_y_ref)
-    # eq. 20
-    NL = b * y_ref / (y_ref + c)
-    sigma = (
-        # first line of eq. 20
-        (C['sig1']
-         + 0.5 * (C['sig2'] - C['sig1']) * mag_test
-         + C['sig4'] * AS)
-        # second line
-        * np.sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured)
-                  + (1 + NL) ** 2))
-
-    # Get sigma reduction factors if site is in CBD polygon.
-    srf_sigma = np.array(np.ones(np.shape(in_cbd)))
-    srf_phi = np.array(np.ones(np.shape(in_cbd)))
-    srf_tau = np.array(np.ones(np.shape(in_cbd)))
-    if in_cshm is True:
-        srf_sigma[in_cbd == 1] = _get_SRF_sigma(imt_per)
-        srf_phi[in_cbd == 1] = _get_SRF_phi(imt_per)
-        # The tau reduction term is not used in this implementation
-        # srf_tau[in_cbd == True] = _get_SRF_tau(imt_per)
-
-    # Add 'additional sigma' specified in the Canterbury Seismic
-    # Hazard Model to total sigma
-
-    ret = []
-    for stddev_type in stddev_types:
-        if stddev_type == const.StdDev.TOTAL:
-            # eq. 21
-            scaled_sigma = np.sqrt(((1 + NL) ** 2) *
-                                   (tau ** 2) + (sigma ** 2)) * srf_sigma
-            ret += [np.sqrt(scaled_sigma ** 2 + additional_sigma ** 2)]
-        elif stddev_type == const.StdDev.INTRA_EVENT:
-            scaled_phi = sigma * srf_phi
-            ret.append(np.sqrt(
-                scaled_phi ** 2 + additional_sigma ** 2 / 2))
-        elif stddev_type == const.StdDev.INTER_EVENT:
-            # this is implied in eq. 21
-            scaled_tau = (np.abs((1 + NL) * tau)) * srf_tau
-            ret.append(np.sqrt(
-                scaled_tau ** 2 + additional_sigma ** 2 / 2))
-
-    return ret
-
-
 def _get_dL2L(imt_per):
     """
     Table 3 and equation 19 of 2013 report.
@@ -286,7 +254,7 @@ _get_dS2S = CallableDict()
 
 
 @_get_dS2S.add("CBD")
-def _get_dS2S_1(kind, imt_per):
+def _get_dS2S_1(region, imt_per):
     """
     Table 4 of 2013 report
     """
@@ -309,7 +277,7 @@ def _get_dS2S_1(kind, imt_per):
 
 
 @_get_dS2S.add("West")
-def _get_dS2S_2(kind, imt_per):
+def _get_dS2S_2(region, imt_per):
     """
     The parameters of this function have been digitised from Figure 8a
     of the Bradley (2013b) report, as the actual parameters are not
@@ -335,7 +303,7 @@ def _get_dS2S_2(kind, imt_per):
 
 
 @_get_dS2S.add("East")
-def _get_dS2S_3(kind, imt_per):
+def _get_dS2S_3(region, imt_per):
     """
     The parameters of this function have been digitised from Figure 9a
     of the Bradley (2013b) report, as the actual parameters are not
@@ -355,7 +323,7 @@ def _get_dS2S_3(kind, imt_per):
 
 
 @_get_dS2S.add("North")
-def _get_dS2S_4(kind, imt_per):
+def _get_dS2S_4(region, imt_per):
     """
     The parameters of this function have been digitised from Figure 10a
     of the Bradley (2013b) report, as the actual parameters are not
@@ -700,7 +668,7 @@ class Bradley2013LHC(Bradley2013):
         mean = _get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
         mean += convert_to_LHC(imt)
 
-        stddevs = _get_stddevs(self.kind, self.additional_sigma,
+        stddevs = _get_stddevs(self.__class__.__name__, self.additional_sigma,
                                sites, rup, C, stddev_types,
                                ln_y_ref, exp1, exp2)
         return mean, stddevs
@@ -799,11 +767,11 @@ class Bradley2013bChchCBD(Bradley2013LHC):
         # Get log-mean from regular unadjusted model
         b13a_mean = _get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
         # Adjust mean and standard deviation
-        mean = b13a_mean + _get_dL2L(imt_per) + _get_dS2S(self.kind, imt_per)
+        mean = b13a_mean + _get_dL2L(imt_per) + _get_dS2S(self.region, imt_per)
         mean += convert_to_LHC(imt)
         stddevs = _get_adjusted_stddevs(
-            self.kind, self.additional_sigma, sites, rup, C, stddev_types,
-            ln_y_ref, exp1, exp2, imt_per)
+            self.__class__.__name__, self.additional_sigma, sites, rup,
+            C, stddev_types, ln_y_ref, exp1, exp2, 0, 0, imt_per)
 
         return mean, stddevs
 
@@ -929,6 +897,7 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         for spec of input and result values.
         """
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
+        name = self.__class__.__name__
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
         C = self.COEFFS[imt]
@@ -953,11 +922,11 @@ class Bradley2013bChchMaps(Bradley2013bChchCBD):
         b13_mean = _get_mean(sites, C, ln_y_ref, exp1, exp2, v1)
         # Adjust mean and standard deviation
         mean = _adjust_mean_model(
-            self.kind, in_cshm, in_cbd, imt_per, b13_mean)
+            self.region, in_cshm, in_cbd, imt_per, b13_mean)
         mean += convert_to_LHC(imt)
         stddevs = _get_adjusted_stddevs(
-            self.kind, self.additional_sigma, sites, rup, C, stddev_types,
-            ln_y_ref, exp1, exp2, in_cshm, in_cbd, imt_per)
+            name, self.additional_sigma, sites, rup,
+            C, stddev_types, ln_y_ref, exp1, exp2, in_cshm, in_cbd, imt_per)
 
         return mean, stddevs
 
