@@ -941,7 +941,6 @@ class StewartEtAl2016(BooreEtAl2014):
         tau = self._get_inter_event_tau(C, rup.mag)
         phi = self._get_intra_event_phi(C, rup.mag)
         for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(np.sqrt((tau ** 2.0) + (phi ** 2.0)) +
                                np.zeros(num_sites))
