@@ -31,6 +31,11 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+CONSTS = {"Mref": 5.5,
+          "Mh": 6.75,
+          "Rref": 1.0,
+          "Vref": 800.0}
+
 
 class BindiEtAl2014Rjb(GMPE):
     """
@@ -122,8 +127,8 @@ class BindiEtAl2014Rjb(GMPE):
         Returns the magnitude scaling term of the GMPE described in
         equation 3
         """
-        dmag = mag - self.CONSTS["Mh"]
-        if mag < self.CONSTS["Mh"]:
+        dmag = mag - CONSTS["Mh"]
+        if mag < CONSTS["Mh"]:
             return C["e1"] + (C["b1"] * dmag) + (C["b2"] * (dmag ** 2.0))
         else:
             return C["e1"] + (C["b3"] * dmag)
@@ -134,9 +139,9 @@ class BindiEtAl2014Rjb(GMPE):
         """
         r_adj = np.sqrt(rval ** 2.0 + C["h"] ** 2.0)
         return (
-            (C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *
-            np.log10(r_adj / self.CONSTS["Rref"]) -
-            (C["c3"] * (r_adj - self.CONSTS["Rref"])))
+            (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *
+            np.log10(r_adj / CONSTS["Rref"]) -
+            (C["c3"] * (r_adj - CONSTS["Rref"])))
 
     def _get_style_of_faulting_term(self, C, rup):
         """
@@ -166,7 +171,7 @@ class BindiEtAl2014Rjb(GMPE):
         Returns the site amplification term for the case in which Vs30
         is used directly
         """
-        return C["gamma"] * np.log10(vs30 / self.CONSTS["Vref"])
+        return C["gamma"] * np.log10(vs30 / CONSTS["Vref"])
 
     def _get_stddevs(self, C, stddev_types, num_sites):
         """
@@ -213,11 +218,6 @@ class BindiEtAl2014Rjb(GMPE):
     2.60   2.390670000   -0.977532000   0.211831000   5.395170000   0.000000000    0.357514000   -0.122539000   0.000000000   -0.769609000    0.008734600    0.023314200   -0.032048600   0.170280000   0.320626000   0.210193000   0.363037000
     3.00   2.253990000   -0.940373000   0.227241000   5.741730000   0.000000000    0.385526000   -0.111445000   0.000000000   -0.732072000    0.022989300   -0.020662000   -0.002327150   0.176546000   0.314165000   0.207247000   0.360373000
     """)
-
-    CONSTS = {"Mref": 5.5,
-              "Mh": 6.75,
-              "Rref": 1.0,
-              "Vref": 800.0}
 
 
 class BindiEtAl2014RjbEC8(BindiEtAl2014Rjb):
