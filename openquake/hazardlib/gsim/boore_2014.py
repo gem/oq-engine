@@ -49,6 +49,16 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
+#: Equation constants that are IMT-independent
+CONSTS = {
+    "Mref": 4.5,
+    "Rref": 1.0,
+    "Vref": 760.0,
+    "f1": 0.0,
+    "f3": 0.1,
+    "v1": 225.0,
+    "v2": 300.0}
+
 
 class BooreEtAl2014(GMPE):
     """
@@ -151,9 +161,9 @@ class BooreEtAl2014(GMPE):
         Returns the path scaling term given by equation (3)
         """
         rval = np.sqrt((dists.rjb ** 2.0) + (C["h"] ** 2.0))
-        scaling = (C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *\
-            np.log(rval / self.CONSTS["Rref"])
-        return scaling + ((C["c3"] + C["Dc3"]) * (rval - self.CONSTS["Rref"]))
+        scaling = (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *\
+            np.log(rval / CONSTS["Rref"])
+        return scaling + ((C["c3"] + C["Dc3"]) * (rval - CONSTS["Rref"]))
 
     def _get_site_scaling(self, C, pga_rock, sites, period, rjb):
         """
@@ -169,8 +179,8 @@ class BooreEtAl2014(GMPE):
         """
         Returns the linear site scaling term (equation 6)
         """
-        flin = vs30 / self.CONSTS["Vref"]
-        flin[vs30 > C["Vc"]] = C["Vc"] / self.CONSTS["Vref"]
+        flin = vs30 / CONSTS["Vref"]
+        flin[vs30 > C["Vc"]] = C["Vc"] / CONSTS["Vref"]
         return C["c"] * np.log(flin)
 
     def _get_nonlinear_site_term(self, C, vs30, pga_rock):
@@ -182,8 +192,8 @@ class BooreEtAl2014(GMPE):
         # Nonlinear controlling parameter (equation 8)
         f_2 = C["f4"] * (np.exp(C["f5"] * (v_s - 360.)) -
                          np.exp(C["f5"] * 400.))
-        fnl = self.CONSTS["f1"] + f_2 * np.log((pga_rock + self.CONSTS["f3"]) /
-                                               self.CONSTS["f3"])
+        fnl = CONSTS["f1"] + f_2 * np.log((pga_rock + CONSTS["f3"]) /
+                                          CONSTS["f3"])
         return fnl
 
     def _get_basin_depth_term(self, C, sites, period):
@@ -210,11 +220,8 @@ class BooreEtAl2014(GMPE):
         stddevs = []
         num_sites = len(sites.vs30)
         tau = self._get_inter_event_tau(C, rup.mag, num_sites)
-        phi = self._get_intra_event_phi(C,
-                                        rup.mag,
-                                        dists.rjb,
-                                        sites.vs30,
-                                        num_sites)
+        phi = self._get_intra_event_phi(
+            C, rup.mag, dists.rjb, sites.vs30, num_sites)
         for stddev_type in stddev_types:
             if stddev_type == const.StdDev.TOTAL:
                 stddevs.append(np.sqrt((tau ** 2.0) + (phi ** 2.0)))
@@ -257,13 +264,13 @@ class BooreEtAl2014(GMPE):
         base_vals[idx2] += (C["DfR"] * (np.log(rjb[idx2] / C["R1"]) /
                                         np.log(C["R2"] / C["R1"])))
         # Site-dependent phi (Equation 15)
-        idx1 = vs30 <= self.CONSTS["v1"]
+        idx1 = vs30 <= CONSTS["v1"]
         base_vals[idx1] -= C["DfV"]
-        idx2 = np.logical_and(vs30 >= self.CONSTS["v1"],
-                              vs30 <= self.CONSTS["v2"])
+        idx2 = np.logical_and(vs30 >= CONSTS["v1"],
+                              vs30 <= CONSTS["v2"])
         base_vals[idx2] -= (
-            C["DfV"] * (np.log(self.CONSTS["v2"] / vs30[idx2]) /
-                        np.log(self.CONSTS["v2"] / self.CONSTS["v1"])))
+            C["DfV"] * (np.log(CONSTS["v2"] / vs30[idx2]) /
+                        np.log(CONSTS["v2"] / CONSTS["v1"])))
         return base_vals
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -376,15 +383,6 @@ class BooreEtAl2014(GMPE):
     9.500   -2.976900   -2.863400   -3.278500   -3.076000   1.918900   -0.143640    1.056700   6.200000   -1.313000   0.147810    0.000000   9.660000   0.000000   -0.678500    771.550000   -0.000060   -0.001360    1.217900    0.729250   130.260000   220.020000   0.060000   0.000000   0.509000   0.604000   0.492000   0.239000
     10.00   -3.070200   -2.953700   -3.377600   -3.172600   1.883700   -0.150960    1.065100   6.200000   -1.325300   0.151830    0.000000   9.660000   0.000000   -0.655750    775.000000    0.000000   -0.001360    1.182900    0.703000   130.000000   210.000000   0.060000   0.000000   0.510000   0.604000   0.487000   0.239000
     """)
-
-    CONSTS = {
-        "Mref": 4.5,
-        "Rref": 1.0,
-        "Vref": 760.0,
-        "f1": 0.0,
-        "f3": 0.1,
-        "v1": 225.0,
-        "v2": 300.0}
 
 
 class BooreEtAl2014HighQ(BooreEtAl2014):
@@ -928,11 +926,11 @@ class StewartEtAl2016(BooreEtAl2014):
             raise ValueError("region=%s" % self.region)
 
         # Calculate geometric spreading component of path scaling term
-        fp_geom = ((C["c1"] + C["c2"] * (mag - self.CONSTS["Mref"])) *
-                   np.log(rval / self.CONSTS["Rref"]))
+        fp_geom = ((C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *
+                   np.log(rval / CONSTS["Rref"]))
         # Calculate anelastic attenuation component of path scaling term, with
         # delta c3 accounting for regional effects
-        fp_atten = (C["c3"] + delta_c3) * (rval - self.CONSTS["Rref"])
+        fp_atten = (C["c3"] + delta_c3) * (rval - CONSTS["Rref"])
         return fp_geom + fp_atten
 
     def _get_basin_depth_term(self, C, sites, period):
@@ -988,14 +986,6 @@ class StewartEtAl2016(BooreEtAl2014):
         else:
             phi = (C["phi1"] + (C["phi2"] - C["phi1"]) * (mag - 4.5))
         return phi
-
-    #: Equation constants that are IMT-independent
-    CONSTS = {
-        "Mref": 4.5,
-        "Rref": 1.0,
-        "Vref": 760.0,
-        "f1": 0.0,
-        "f3": 0.1}
 
     #: Table of period-dependent regression coefficients obtained from the
     #: supplementary material in EQS paper
