@@ -893,28 +893,18 @@ class StewartEtAl2016(BooreEtAl2014):
         pga_rock = self._get_pga_on_rock(C_PGA, rup, dists)
         # SBSA15 Functional Form, Equation 1 (in natural log units)
         mean = (self._get_magnitude_scaling_term(C, rup) +
-                self._get_path_scaling(C, dists.rjb, rup.mag) +
+                self._get_path_scaling(C, dists, rup.mag) +
                 self._get_site_scaling(C, pga_rock, sites, None, dists.rjb))
         # SBSA15 Std Dev Model, Equations 9 to 11 (in natural log units)
         stddevs = self._get_stddevs(C, rup, dists, sites, stddev_types)
         return mean, stddevs
 
-    def _get_pga_on_rock(self, C, rup, dists):
-        """
-        Returns the median PGA on rock (in g units), PGAr, which is a sum of
-        the magnitude and distance scaling. Precisely, it is obtained by
-        evaluating Equation 1 for the given magnitude, fault mechanism, and Rjb
-        with Vs30=760 m∕s.
-        """
-        return np.exp(self._get_magnitude_scaling_term(C, rup) +
-                      self._get_path_scaling(C, dists.rjb, rup.mag))
-
-    def _get_path_scaling(self, C, rjb, mag):
+    def _get_path_scaling(self, C, dists, mag):
         """
         Returns the path scaling term defined in Equation 3
         """
         # Calculate R in Equation 4
-        rval = np.sqrt((rjb ** 2.0) + (C["h"] ** 2.0))
+        rval = np.sqrt((dists.rjb ** 2.0) + (C["h"] ** 2.0))
         if self.region == "CAL":
             delta_c3 = 0
         elif self.region == "CHN":
