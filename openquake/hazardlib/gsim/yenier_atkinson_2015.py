@@ -23,7 +23,7 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
-from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014, CONSTS
 
 
 def get_sof_adjustment(rake, imt):
@@ -210,7 +210,9 @@ def _get_mean_on_soil(adapted, region, focal_depth, gmm, C2, C3, C4,
     # Compute the mean on soil
     mean = _get_mean_on_rock(
         region, focal_depth, C2, C3, C4, sctx, rctx, dctx, imt, stddev_types)
-    mean += get_fs_SeyhanStewart2014(gmm, imt, pga_rock, vs30)
+    # coefficients of BooreEtAl2014
+    C = gmm.COEFFS[imt]
+    mean += get_fs_SeyhanStewart2014(C, imt, pga_rock, vs30)
     if adapted:
         # acme_2019 considers the SoF correction
         famp = get_sof_adjustment(rctx.rake, imt)
@@ -236,7 +238,7 @@ def _get_stress_drop_adjstment(region, focal_depth, C, imt, m):
         raise ValueError(msg)
 
 
-def get_fs_SeyhanStewart2014(gmm, imt, pga_rock, vs30):
+def get_fs_SeyhanStewart2014(C, imt, pga_rock, vs30):
     """
     Implements eq. 11 and 12 at page 1992 in Yenier and Atkinson (2015)
 
@@ -244,11 +246,9 @@ def get_fs_SeyhanStewart2014(gmm, imt, pga_rock, vs30):
         Median peak ground horizontal acceleration for reference
     :param vs30:
     """
-    # coefficients of BooreEtAl2014
-    C = gmm.COEFFS[imt]
     # Linear term
-    flin = vs30 / gmm.CONSTS['Vref']
-    flin[vs30 > C['Vc']] = C['Vc'] / gmm.CONSTS['Vref']
+    flin = vs30 / CONSTS['Vref']
+    flin[vs30 > C['Vc']] = C['Vc'] / CONSTS['Vref']
     fl = C['c'] * np.log(flin)
     # Non-linear term
     v_s = np.copy(vs30)
@@ -256,8 +256,7 @@ def get_fs_SeyhanStewart2014(gmm, imt, pga_rock, vs30):
     # parameter (equation 8 of BSSA 2014)
     f_2 = C['f4'] * (np.exp(C['f5'] * (v_s - 360.)) -
                      np.exp(C['f5'] * 400.))
-    fnl = gmm.CONSTS['f1'] + f_2 * np.log((pga_rock + gmm.CONSTS['f3']) /
-                                          gmm.CONSTS['f3'])
+    fnl = CONSTS['f1'] + f_2 * np.log((pga_rock + CONSTS['f3']) / CONSTS['f3'])
     return fl + fnl
 
 
