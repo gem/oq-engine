@@ -85,7 +85,8 @@ def _get_magnitude_scaling_term(C, mag):
 _get_site_amplification_term = CallableDict()
 
 
-@_get_site_amplification_term.add("CauzziEtAl2014", "CauzziEtAl2014NoSOF")
+@_get_site_amplification_term.add(
+    "CauzziEtAl2014", "CauzziEtAl2014NoSOF", "CauzziEtAl2014Armenia")
 def _get_site_amplification_term_1(kind, sof, C, vs30):
     """
     Returns the site amplification scaling term assuming
