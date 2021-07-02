@@ -84,6 +84,7 @@ class BooreEtAl2014(GMPE):
 
     region = "nobasin"
     kind = "base"
+    sof = True
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -133,7 +134,7 @@ class BooreEtAl2014(GMPE):
         Note that the 'Unspecified' case is not considered here as
         rake is always given.
         """
-        if self.kind == "stewart" and not self.sof:
+        if not self.sof:
             return C["e0"]  # Unspecified style-of-faulting
         elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
             # strike-slip
@@ -728,12 +729,7 @@ class BooreEtAl2014NoSOF(BooreEtAl2014):
     """
     #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the coefficients of the "Unspecified" style-of-faulting
-        """
-        return C["e0"]
+    sof = False
 
 
 class BooreEtAl2014HighQNoSOF(BooreEtAl2014HighQ):
@@ -743,12 +739,7 @@ class BooreEtAl2014HighQNoSOF(BooreEtAl2014HighQ):
     """
     #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the coefficients of the "Unspecified" style-of-faulting
-        """
-        return C["e0"]
+    sof = False
 
 
 class BooreEtAl2014LowQNoSOF(BooreEtAl2014LowQ):
@@ -884,8 +875,6 @@ class StewartEtAl2016(BooreEtAl2014):
     REQUIRES_DISTANCES = {'rjb'}
 
     REQUIRES_ATTRIBUTES = {'region', 'sof'}
-
-    kind = "stewart"
 
     def __init__(self, region='CAL', sof=True, **kwargs):
         super().__init__(**kwargs)
