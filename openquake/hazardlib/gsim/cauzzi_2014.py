@@ -86,7 +86,8 @@ _get_site_amplification_term = CallableDict()
 
 
 @_get_site_amplification_term.add(
-    "CauzziEtAl2014", "CauzziEtAl2014NoSOF", "CauzziEtAl2014Armenia")
+    "CauzziEtAl2014", "CauzziEtAl2014NoSOF", "CauzziEtAl2014Armenia",
+    "CauzziEtAl2014RhypoGermany")
 def _get_site_amplification_term_1(kind, sof, C, vs30):
     """
     Returns the site amplification scaling term assuming
