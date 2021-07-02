@@ -27,13 +27,13 @@ Module exports :class:`StewartEtAl2016`,
 
 import numpy as np
 
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, gsim_aliases
+from openquake.hazardlib.gsim.base import CoeffsTable, gsim_aliases
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
 
-class StewartEtAl2016(GMPE):
+class StewartEtAl2016(BooreEtAl2014):
     """
     Implements the SBSA15 GMPE by Stewart et al. (2016) for vertical-component
     ground motions from the PEER NGA-West2 Project.
@@ -100,7 +100,7 @@ class StewartEtAl2016(GMPE):
         # SBSA15 Functional Form, Equation 1 (in natural log units)
         mean = (self._get_magnitude_scaling_term(C, rup) +
                 self._get_path_scaling(C, dists.rjb, rup.mag) +
-                self._get_site_scaling(C, pga_rock, sites, dists.rjb))
+                self._get_site_scaling(C, pga_rock, sites, None, dists.rjb))
         # SBSA15 Std Dev Model, Equations 9 to 11 (in natural log units)
         stddevs = self._get_stddevs(C, rup, sites, stddev_types)
         return mean, stddevs
@@ -127,7 +127,7 @@ class StewartEtAl2016(GMPE):
         """
         if not self.sof:
             return C["e0"]  # Unspecified style-of-faulting
-        return BooreEtAl2014._get_style_of_faulting_term(self, C, rup)
+        return super()._get_style_of_faulting_term(C, rup)
 
     def _get_path_scaling(self, C, rjb, mag):
         """
@@ -152,18 +152,12 @@ class StewartEtAl2016(GMPE):
         fp_atten = (C["c3"] + delta_c3) * (rval - self.CONSTS["Rref"])
         return fp_geom + fp_atten
 
-    def _get_site_scaling(self, C, pga_rock, sites, rjb):
+    def _get_basin_depth_term(self, C, sites, period):
         """
-        Returns the site-scaling term in Equation 5, broken down into a
-        linear and a nonlinear component
-
         Unlike in BSSA14, basin depth effects are not accounted for in this
         model.
         """
-        flin = BooreEtAl2014._get_linear_site_term(self, C, sites.vs30)
-        fnl = BooreEtAl2014._get_nonlinear_site_term(self, C,
-                                                     sites.vs30, pga_rock)
-        return flin + fnl
+        return 0.
 
     def _get_stddevs(self, C, rup, sites, stddev_types):
         """
