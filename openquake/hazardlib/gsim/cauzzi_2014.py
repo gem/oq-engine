@@ -82,6 +82,13 @@ class CauzziEtAl2014(GMPE):
     #: unclear in the paper so we assume a value of 800 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 800.0
 
+    #: style of faulting term
+    sof = True
+
+    def __init__(self, adjustment_factor=1.0, **kwargs):
+        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+        self.adjustment_factor = np.log(adjustment_factor)
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -102,10 +109,22 @@ class CauzziEtAl2014(GMPE):
         """
         Returns the mean ground motion acceleration and velocity
         """
+        if self.sof:
+            sof_term = self._get_style_of_faulting_term(C, rup.rake)
+        else:
+            sof_term = 0.
+        if self.__class__.__name__.endswith("Germany"):
+            if rup.width > 1.0E-3:
+                # Finite rupture source used
+                rrup = np.copy(dists.rrup)
+            else:
+                # Point source MSR used - convert rhypo to rrup
+                rrup = rhypo_to_rrup(dists.rhypo, rup.mag)
+        else:
+            rrup = dists.rrup
         mean = (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, rup.mag, dists.rrup) +
-                self._get_style_of_faulting_term(C, rup.rake) +
-                self._get_site_amplification_term(C, sites.vs30))
+                self._get_distance_scaling_term(C, rup.mag, rrup) +
+                sof_term + self._get_site_amplification_term(C, sites.vs30))
         # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
         # is already in cm/s) and also convert from base 10 to base e.
         if imt.name == "PGA":
@@ -117,7 +136,7 @@ class CauzziEtAl2014(GMPE):
         else:
             mean = np.log(10 ** mean)
 
-        return mean
+        return mean + self.adjustment_factor
 
     def _get_magnitude_scaling_term(self, C, mag):
         """
@@ -395,26 +414,6 @@ class CauzziEtAl2014NoSOF(CauzziEtAl2014):
     #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
-    def _compute_mean(self, C, rup, dists, sites, imt):
-        """
-        Returns the mean ground motion acceleration and velocity
-        """
-        mean = (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, rup.mag, dists.rrup) +
-                self._get_site_amplification_term(C, sites.vs30))
-        # convert from cm/s**2 to g for SA and from m/s**2 to g for PGA (PGV
-        # is already in cm/s) and also convert from base 10 to base e.
-        if imt.name == "PGA":
-            mean = np.log((10 ** mean) * ((2 * np.pi / 0.01) ** 2) *
-                          1e-2 / g)
-        elif imt.name == "SA":
-            mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
-                          1e-2 / g)
-        else:
-            mean = np.log(10 ** mean)
-
-        return mean
-
     def _get_stddevs(self, C, stddev_types, num_sites):
         """
         Returns the standard deviation terms assuming no style-of-faulting
@@ -531,37 +530,6 @@ class CauzziEtAl2014RhypoGermany(CauzziEtAl2014):
     """
     REQUIRES_DISTANCES = {"rhypo", "rrup"}
     REQUIRES_RUPTURE_PARAMETERS = {"rake", "mag", "width"}
-
-    def __init__(self, adjustment_factor=1.0, **kwargs):
-        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
-        self.adjustment_factor = np.log(adjustment_factor)
-
-    def _compute_mean(self, C, rup, dists, sites, imt):
-        """
-        Returns the mean ground motion acceleration and velocity
-        """
-        if rup.width > 1.0E-3:
-            # Finite rupture source used
-            rrup = np.copy(dists.rrup)
-        else:
-            # Point source MSR used - convert rhypo to rrup
-            rrup = rhypo_to_rrup(dists.rhypo, rup.mag)
-        mean = (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, rup.mag, rrup) +
-                self._get_style_of_faulting_term(C, rup.rake) +
-                self._get_site_amplification_term(C, sites.vs30))
-        # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
-        # is already in cm/s) and also convert from base 10 to base e.
-        if imt.name == 'PGA':
-            mean = np.log((10 ** mean) * ((2 * np.pi / 0.01) ** 2) *
-                          1e-2 / g)
-        elif imt.name == 'SA':
-            mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
-                          1e-2 / g)
-        else:
-            mean = np.log(10 ** mean)
-
-        return mean + self.adjustment_factor
 
 
 class CauzziEtAl2014Eurocode8scaled(CauzziEtAl2014Eurocode8):
