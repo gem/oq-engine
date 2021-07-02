@@ -645,21 +645,7 @@ class BooreEtAl2014CaliforniaBasin(BooreEtAl2014):
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        In the case of the base model the basin depth term is switched off.
-        Therefore we return an array of zeros.
-        """
-        if period < 0.65:
-            f_dz1 = np.zeros(len(sites.vs30), dtype=float)
-        else:
-            f_dz1 = C["f7"] + np.zeros(len(sites.vs30), dtype=float)
-            f_ratio = C["f7"] / C["f6"]
-            dz1 = (sites.z1pt0 / 1000.0) - california_basin_model(sites.vs30)
-            idx = dz1 <= f_ratio
-            f_dz1[idx] = C["f6"] * dz1[idx]
-        return f_dz1
+    region = "CAL"
 
 
 class BooreEtAl2014HighQCaliforniaBasin(BooreEtAl2014HighQ):
@@ -682,7 +668,7 @@ class BooreEtAl2014LowQCaliforniaBasin(BooreEtAl2014LowQ):
     """
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
     region = "CAL"
 
 
@@ -706,7 +692,7 @@ class BooreEtAl2014JapanBasin(BooreEtAl2014):
     """
     #: Required site parameters are Vs30 and depth (in metres!) to 1 km/s
     #: shear-wave velocity layer
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
     region = "JPN"
 
 
