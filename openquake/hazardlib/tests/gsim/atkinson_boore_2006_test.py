@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.atkinson_boore_2006 import (
+from openquake.hazardlib.gsim.boore_atkinson_2008 import (
     AtkinsonBoore2006, AtkinsonBoore2006Modified2011)
 from openquake.hazardlib.gsim.base import (SitesContext, RuptureContext,
                                            DistancesContext)
