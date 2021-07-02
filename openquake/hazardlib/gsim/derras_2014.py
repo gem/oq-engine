@@ -154,6 +154,31 @@ def get_pn_germany(region, rup, sites, dists, sof):
     return p_n
 
 
+def get_mean(region, W_1, B_1, C, rup, sites, dists):
+    """
+    Returns the mean ground motion in terms of log10 m/s/s, implementing
+    equation 2 (page 502)
+    """
+    # W2 needs to be a 1 by 5 matrix (not a vector
+    w_2 = np.array([
+        [C["W_21"], C["W_22"], C["W_23"], C["W_24"], C["W_25"]]])
+    # Gets the style of faulting dummy variable
+    sof = _get_sof_dummy_variable(rup.rake)
+    # Get the normalised coefficients
+    p_n = get_pn(region,  rup, sites, dists, sof)
+    mean = np.zeros_like(dists.rhypo if region == "germany" else dists.rjb)
+    # Need to loop over sites - maybe this can be improved in future?
+    # ndenumerate is used to allow for application to 2-D arrays
+    for idx, rval in np.ndenumerate(p_n[0]):
+        # Place normalised coefficients into a single array
+        p_n_i = np.array([rval, p_n[1], p_n[2][idx], p_n[3], p_n[4]])
+        # Executes the main ANN model
+        mean_i = np.dot(w_2, np.tanh(np.dot(W_1, p_n_i) + B_1))
+        mean[idx] = (0.5 * (mean_i + C["B_2"] + 1.0) *
+                     (C["tmax"] - C["tmin"])) + C["tmin"]
+    return mean
+
+
 def get_stddevs(C, n_sites, stddev_types):
     """
     Returns the standard deviations - originally given
@@ -202,11 +227,8 @@ class DerrasEtAl2014(GMPE):
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: The supported standard deviations are total, inter and intra event
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: The required site parameter is vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -225,7 +247,8 @@ class DerrasEtAl2014(GMPE):
         """
         C = self.COEFFS[imt]
         # Get the mean
-        mean = self.get_mean(C, rup, sites, dists)
+        mean = get_mean(self.region, self.W_1, self.B_1,
+                        C, rup, sites, dists)
         if imt.name == "PGV":
             # Convert from log10 m/s to ln cm/s
             mean = np.log((10.0 ** mean) * 100.)
@@ -236,31 +259,6 @@ class DerrasEtAl2014(GMPE):
         # Get the standard deviations
         stddevs = get_stddevs(C, mean.shape, stddev_types)
         return mean, stddevs
-
-    def get_mean(self, C, rup, sites, dists):
-        """
-        Returns the mean ground motion in terms of log10 m/s/s, implementing
-        equation 2 (page 502)
-        """
-        # W2 needs to be a 1 by 5 matrix (not a vector
-        w_2 = np.array([
-            [C["W_21"], C["W_22"], C["W_23"], C["W_24"], C["W_25"]]
-            ])
-        # Gets the style of faulting dummy variable
-        sof = _get_sof_dummy_variable(rup.rake)
-        # Get the normalised coefficients
-        p_n = get_pn(self.region,  rup, sites, dists, sof)
-        mean = np.zeros_like(dists.rjb)
-        # Need to loop over sites - maybe this can be improved in future?
-        # ndenumerate is used to allow for application to 2-D arrays
-        for idx, rval in np.ndenumerate(p_n[0]):
-            # Place normalised coefficients into a single array
-            p_n_i = np.array([rval, p_n[1], p_n[2][idx], p_n[3], p_n[4]])
-            # Executes the main ANN model
-            mean_i = np.dot(w_2, np.tanh(np.dot(self.W_1, p_n_i) + self.B_1))
-            mean[idx] = (0.5 * (mean_i + C["B_2"] + 1.0) *
-                         (C["tmax"] - C["tmin"])) + C["tmin"]
-        return mean
 
     # Coefficients for the normalised output parameters and the standard
     # deviations. The former are taken from the Electronic Supplement to the
@@ -348,3 +346,41 @@ class DerrasEtAl2014(GMPE):
                     0.5910890088019860,
                     -0.1266226880549210,
                     -0.4157212218401920])
+
+
+# Derras et al 2014
+class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
+    """
+    Re-calibration of the Derras et al. (2014) GMPE taking hypocentral
+    distance as an input and converting to Rjb
+    """
+    region = "germany"
+
+    #: The required distance parameter is hypocentral distance
+    REQUIRES_DISTANCES = {'rjb', 'rhypo'}
+    REQUIRES_RUPTURE_PARAMETERS = {"rake", "mag", "hypo_depth", "width"}
+
+    def __init__(self, adjustment_factor=1.0, **kwargs):
+        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+        self.adjustment_factor = np.log(adjustment_factor)
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        C = self.COEFFS[imt]
+        # Get the mean
+        mean = get_mean(self.region, self.W_1, self.B_1,
+                        C, rup, sites, dists)
+        if imt.name == "PGV":
+            # Convert from log10 m/s to ln cm/s
+            mean = np.log((10.0 ** mean) * 100.)
+        else:
+            # convert from log10 m/s/s to ln g
+            mean = np.log((10.0 ** mean) / g)
+
+        # Get the standard deviations
+        stddevs = get_stddevs(C, mean.shape, stddev_types)
+        return mean + self.adjustment_factor, stddevs

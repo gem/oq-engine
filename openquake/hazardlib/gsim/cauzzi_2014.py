@@ -517,3 +517,54 @@ class CauzziEtAl2014Eurocode8NoSOF(CauzziEtAl2014NoSOF):
         s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
         s_d[vs30 < 180.] = 1.0
         return s_b, s_c, s_d
+
+
+def rhypo_to_rrup(rhypo, mag):
+    """
+    Converts hypocentral distance to an equivalent rupture distance
+    dependent on the magnitude
+    """
+    rrup = rhypo - (0.7108 + 2.496E-6 * (mag ** 7.982))
+    rrup[rrup < 3.0] = 3.0
+    return rrup
+
+
+# Cauzzi et al. 2014 - Converted from Rhypo
+class CauzziEtAl2014RhypoGermany(CauzziEtAl2014):
+    """
+    Implements the Cauzzi et al. (2015) GMPE applying the rhypo to rrup
+    adjustment factor adopted for Germany
+    """
+    REQUIRES_DISTANCES = {"rhypo", "rrup"}
+    REQUIRES_RUPTURE_PARAMETERS = {"rake", "mag", "width"}
+
+    def __init__(self, adjustment_factor=1.0, **kwargs):
+        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+        self.adjustment_factor = np.log(adjustment_factor)
+
+    def _compute_mean(self, C, rup, dists, sites, imt):
+        """
+        Returns the mean ground motion acceleration and velocity
+        """
+        if rup.width > 1.0E-3:
+            # Finite rupture source used
+            rrup = np.copy(dists.rrup)
+        else:
+            # Point source MSR used - convert rhypo to rrup
+            rrup = rhypo_to_rrup(dists.rhypo, rup.mag)
+        mean = (self._get_magnitude_scaling_term(C, rup.mag) +
+                self._get_distance_scaling_term(C, rup.mag, rrup) +
+                self._get_style_of_faulting_term(C, rup.rake) +
+                self._get_site_amplification_term(C, sites.vs30))
+        # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
+        # is already in cm/s) and also convert from base 10 to base e.
+        if imt.name == 'PGA':
+            mean = np.log((10 ** mean) * ((2 * np.pi / 0.01) ** 2) *
+                          1e-2 / g)
+        elif imt.name == 'SA':
+            mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
+                          1e-2 / g)
+        else:
+            mean = np.log(10 ** mean)
+
+        return mean + self.adjustment_factor
