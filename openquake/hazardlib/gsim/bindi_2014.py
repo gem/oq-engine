@@ -27,6 +27,7 @@ Module exports :class:`BindiEtAl2014Rjb`,
 import numpy as np
 from scipy.constants import g
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -35,6 +36,108 @@ CONSTS = {"Mref": 5.5,
           "Mh": 6.75,
           "Rref": 1.0,
           "Vref": 800.0}
+
+
+def _get_distance_scaling_term(C, rval, mag):
+    """
+    Returns the distance scaling term of the GMPE described in equation 2
+    """
+    r_adj = np.sqrt(rval ** 2.0 + C["h"] ** 2.0)
+    return (
+        (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *
+        np.log10(r_adj / CONSTS["Rref"]) -
+        (C["c3"] * (r_adj - CONSTS["Rref"])))
+
+
+def _get_magnitude_scaling_term(C, mag):
+    """
+    Returns the magnitude scaling term of the GMPE described in
+    equation 3
+    """
+    dmag = mag - CONSTS["Mh"]
+    if mag < CONSTS["Mh"]:
+        return C["e1"] + (C["b1"] * dmag) + (C["b2"] * (dmag ** 2.0))
+    else:
+        return C["e1"] + (C["b3"] * dmag)
+
+
+def _get_mean(kind, sof, C, rup, dists, sites):
+    """
+    Returns the mean ground motion
+    """
+    sof_term = _get_style_of_faulting_term(C, rup) if sof else 0.
+    return (_get_magnitude_scaling_term(C, rup.mag) +
+            _get_distance_scaling_term(C, dists, rup.mag) +
+            _get_site_amplification_term(kind, C, sites.vs30) + sof_term)
+
+
+_get_site_amplification_term = CallableDict()
+
+
+@_get_site_amplification_term.add("base")
+def _get_site_amplification_term_1(kind, C, vs30):
+    """
+    Returns the site amplification term for the case in which Vs30
+    is used directly
+    """
+    return C["gamma"] * np.log10(vs30 / CONSTS["Vref"])
+
+
+@_get_site_amplification_term.add("EC8")
+def _get_site_amplification_term_2(kind, C, vs30):
+    """
+    Returns the site amplification given Eurocode 8 site classification
+    """
+    f_s = np.zeros_like(vs30)
+    # Site class B
+    idx = np.logical_and(vs30 < 800.0, vs30 >= 360.0)
+    f_s[idx] = C["eB"]
+    # Site Class C
+    idx = np.logical_and(vs30 < 360.0, vs30 >= 180.0)
+    f_s[idx] = C["eC"]
+    # Site Class D
+    idx = vs30 < 180.0
+    f_s[idx] = C["eD"]
+    return f_s
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return standard deviations as defined in table 2.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(C['sigma'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(C['phi'] + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(C['tau'] + np.zeros(num_sites))
+    return stddevs
+
+
+def _get_style_of_faulting_term(C, rup):
+    """
+    Returns the style-of-faulting term.
+    Fault type (Strike-slip, Normal, Thrust/reverse) is
+    derived from rake angle.
+    Rakes angles within 30 of horizontal are strike-slip,
+    angles from 30 to 150 are reverse, and angles from
+    -30 to -150 are normal.
+    Note that the 'Unspecified' case is not considered in this class
+    as rake is required as an input variable
+    """
+    SS, NS, RS = 0.0, 0.0, 0.0
+    if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+        # strike-slip
+        SS = 1.0
+    elif rup.rake > 30.0 and rup.rake < 150.0:
+        # reverse
+        RS = 1.0
+    else:
+        # normal
+        NS = 1.0
+    return (C["sofN"] * NS) + (C["sofR"] * RS) + (C["sofS"] * SS)
 
 
 class BindiEtAl2014Rjb(GMPE):
@@ -58,6 +161,8 @@ class BindiEtAl2014Rjb(GMPE):
     coefficients tables were taken from the Electronic Supplementary
     material of the original paper, which are indicated as being unaffected.
     """
+    kind = "base"
+
     #: Supported tectonic region type is 'active shallow crust'
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
@@ -101,7 +206,8 @@ class BindiEtAl2014Rjb(GMPE):
         # intensity measure type.
 
         C = self.COEFFS[imt]
-        imean = self._get_mean(C, rup, dists, sites)
+        imean = _get_mean(self.kind, self.sof, C, rup,
+                          getattr(dists, self.dist_type), sites)
         if imt.name in "SA PGA":
             # Convert units to g,
             # but only for PGA and SA (not PGV):
@@ -110,85 +216,9 @@ class BindiEtAl2014Rjb(GMPE):
             # PGV:
             mean = np.log(10.0 ** imean)
 
-        istddevs = self._get_stddevs(C, stddev_types, len(sites.vs30))
+        istddevs = _get_stddevs(C, stddev_types, len(sites.vs30))
         stddevs = np.log(10.0 ** np.array(istddevs))
         return mean + self.adjustment_factor, stddevs
-
-    def _get_mean(self, C, rup, dists, sites):
-        """
-        Returns the mean ground motion
-        """
-        dists = getattr(dists, self.dist_type)
-        sof = self._get_style_of_faulting_term(C, rup) if self.sof else 0.
-        return (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, dists, rup.mag) +
-                self._get_site_amplification_term(C, sites.vs30) + sof)
-
-    def _get_magnitude_scaling_term(self, C, mag):
-        """
-        Returns the magnitude scaling term of the GMPE described in
-        equation 3
-        """
-        dmag = mag - CONSTS["Mh"]
-        if mag < CONSTS["Mh"]:
-            return C["e1"] + (C["b1"] * dmag) + (C["b2"] * (dmag ** 2.0))
-        else:
-            return C["e1"] + (C["b3"] * dmag)
-
-    def _get_distance_scaling_term(self, C, rval, mag):
-        """
-        Returns the distance scaling term of the GMPE described in equation 2
-        """
-        r_adj = np.sqrt(rval ** 2.0 + C["h"] ** 2.0)
-        return (
-            (C["c1"] + C["c2"] * (mag - CONSTS["Mref"])) *
-            np.log10(r_adj / CONSTS["Rref"]) -
-            (C["c3"] * (r_adj - CONSTS["Rref"])))
-
-    def _get_style_of_faulting_term(self, C, rup):
-        """
-        Returns the style-of-faulting term.
-        Fault type (Strike-slip, Normal, Thrust/reverse) is
-        derived from rake angle.
-        Rakes angles within 30 of horizontal are strike-slip,
-        angles from 30 to 150 are reverse, and angles from
-        -30 to -150 are normal.
-        Note that the 'Unspecified' case is not considered in this class
-        as rake is required as an input variable
-        """
-        SS, NS, RS = 0.0, 0.0, 0.0
-        if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
-            # strike-slip
-            SS = 1.0
-        elif rup.rake > 30.0 and rup.rake < 150.0:
-            # reverse
-            RS = 1.0
-        else:
-            # normal
-            NS = 1.0
-        return (C["sofN"] * NS) + (C["sofR"] * RS) + (C["sofS"] * SS)
-
-    def _get_site_amplification_term(self, C, vs30):
-        """
-        Returns the site amplification term for the case in which Vs30
-        is used directly
-        """
-        return C["gamma"] * np.log10(vs30 / CONSTS["Vref"])
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return standard deviations as defined in table 2.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(C['sigma'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(C['phi'] + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(C['tau'] + np.zeros(num_sites))
-        return stddevs
 
     #: Coefficients from Table 2
 
@@ -227,22 +257,7 @@ class BindiEtAl2014RjbEC8(BindiEtAl2014Rjb):
     Implements the Bindi et al (2014) GMPE for the case where Joyner-Boore
     distance is specified but Eurocode 8 Site classification is used.
     """
-
-    def _get_site_amplification_term(self, C, vs30):
-        """
-        Returns the site amplification given Eurocode 8 site classification
-        """
-        f_s = np.zeros_like(vs30)
-        # Site class B
-        idx = np.logical_and(vs30 < 800.0, vs30 >= 360.0)
-        f_s[idx] = C["eB"]
-        # Site Class C
-        idx = np.logical_and(vs30 < 360.0, vs30 >= 180.0)
-        f_s[idx] = C["eC"]
-        # Site Class D
-        idx = vs30 < 180.0
-        f_s[idx] = C["eD"]
-        return f_s
+    kind = "EC8"
 
     #: Coefficients from Table 1
     COEFFS = CoeffsTable(sa_damping=5, table="""
