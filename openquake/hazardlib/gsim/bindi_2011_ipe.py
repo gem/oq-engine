@@ -27,6 +27,32 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import MMI
 
 
+def _compute_mean(C, mag, repi, hypo_depth):
+    """
+    Compute mean value for MSK-64.
+    """
+    return (C['a1'] * mag + C['a2'] +
+            _get_term01(C, repi, hypo_depth))
+
+
+def _get_stddevs(C, stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        stddevs.append(C['sigma'] + np.zeros(num_sites))
+
+    return stddevs
+
+
+def _get_term01(C, repi, hypo_depth):
+    h = hypo_depth
+    term_repi = np.sqrt((repi**2+h**2)/h**2)
+    term_h = np.sqrt(repi**2+h**2)-h
+    return -C['a3']*np.log10(term_repi)-(C['a4']*term_h)
+
+
 class BindiEtAl2011Repi(GMPE):
     """
     Implements IPE developed by Dino Bindi et al. 2011 and published
@@ -49,6 +75,8 @@ class BindiEtAl2011Repi(GMPE):
 
     REQUIRES_DISTANCES = {'repi'}
 
+    fixedh = None
+
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
@@ -58,35 +86,13 @@ class BindiEtAl2011Repi(GMPE):
         # extract dictionaries of coefficients specific to required
         # intensity measure type
         C = self.COEFFS[imt]
+        if self.fixedh:
+            rup.hypo_depth = self.fixedh
 
-        mean = self._compute_mean(C, rup.mag, dists.repi, rup.hypo_depth)
-        stddevs = self._get_stddevs(C, stddev_types, num_sites=dists.repi.shape)
+        mean = _compute_mean(C, rup.mag, dists.repi, rup.hypo_depth)
+        stddevs = _get_stddevs(C, stddev_types, dists.repi.shape)
 
         return mean, stddevs
-
-    def _compute_mean(self, C, mag, repi, hypo_depth):
-        """
-        Compute mean value for MSK-64.
-        """
-        return (C['a1'] * mag + C['a2'] +
-                self._get_term01(C, repi, hypo_depth))
-
-    def _get_term01(self, C, repi, hypo_depth):
-        h = hypo_depth
-        term_repi = np.sqrt((repi**2+h**2)/h**2)
-        term_h = np.sqrt(repi**2+h**2)-h
-        return -C['a3']*np.log10(term_repi)-(C['a4']*term_h)
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            stddevs.append(C['sigma'] + np.zeros(num_sites))
-
-        return stddevs
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper.Table 1 .page 331
@@ -113,22 +119,11 @@ class BindiEtAl2011RepiFixedH(BindiEtAl2011Repi):
 
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        Extends the Bindietal2011 IPE for Repi without a fixed
-        depth of 15Km
-        """
-        C = self.COEFFS[imt]
-        rup.hypo_depth = 15.
-
-        mean, stddevs = super(BindiEtAl2011RepiFixedH, self).\
-            get_mean_and_stddevs(sites, rup, dists, imt, stddev_types)
-
-        return mean,  stddevs
+    fixedh = 15.
 
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper.
     COEFFS = CoeffsTable(table="""\
     IMT         a1     a2     a3          a4    sigma
     MMI      1.049  0.686  2.706   0.0001811    0.689
-        """)
+    """)
