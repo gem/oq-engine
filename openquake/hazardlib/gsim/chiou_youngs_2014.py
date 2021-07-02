@@ -187,7 +187,7 @@ get_far_field_distance_scaling = CallableDict()
 def get_far_field_distance_scaling_1(region, C, mag, rrup):
     """
     Returns the far-field distance scaling term - both magnitude and
-    distance
+    distance - for California and other regions
     """
     # Get the attenuation distance scaling
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
@@ -201,7 +201,7 @@ def get_far_field_distance_scaling_1(region, C, mag, rrup):
 def get_far_field_distance_scaling_2(region, C, mag, rrup):
     """
     Returns the far-field distance scaling term - both magnitude and
-    distance
+    distance - for Japan
     """
     # Get the attenuation distance scaling
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
@@ -220,7 +220,7 @@ def get_far_field_distance_scaling_2(region, C, mag, rrup):
 def get_far_field_distance_scaling_3(region, C, mag, rrup):
     """
     Returns the far-field distance scaling term - both magnitude and
-    distance
+    distance - for Italy
     """
     # Get the attenuation distance scaling
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
@@ -239,7 +239,7 @@ def get_far_field_distance_scaling_3(region, C, mag, rrup):
 def get_far_field_distance_scaling_4(region, C, mag, rrup):
     """
     Returns the far-field distance scaling term - both magnitude and
-    distance
+    distance - for Wenchuan
     """
     # Get the attenuation distance scaling
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
