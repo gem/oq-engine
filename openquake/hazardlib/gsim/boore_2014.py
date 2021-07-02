@@ -172,7 +172,10 @@ class BooreEtAl2014(GMPE):
         """
         flin = self._get_linear_site_term(C, sites.vs30)
         fnl = self._get_nonlinear_site_term(C, sites.vs30, pga_rock)
-        fbd = self._get_basin_depth_term(C, sites, period)
+        if self.kind == 'stewart':
+            fbd = 0.  # there is no basin term in the Stewart models
+        else:
+            fbd = self._get_basin_depth_term(C, sites, period)
         return flin + fnl + fbd
 
     def _get_linear_site_term(self, C, vs30):
@@ -841,6 +844,8 @@ class StewartEtAl2016(BooreEtAl2014):
     """
     region = "CAL"
 
+    kind = "stewart"
+
     #: Supported tectonic region type is active shallow crust; see title.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
@@ -932,13 +937,6 @@ class StewartEtAl2016(BooreEtAl2014):
         # delta c3 accounting for regional effects
         fp_atten = (C["c3"] + delta_c3) * (rval - CONSTS["Rref"])
         return fp_geom + fp_atten
-
-    def _get_basin_depth_term(self, C, sites, period):
-        """
-        Unlike in BSSA14, basin depth effects are not accounted for in this
-        model.
-        """
-        return 0.
 
     def _get_stddevs(self, C, rup, sites, stddev_types):
         """
