@@ -89,6 +89,7 @@ class BindiEtAl2014Rjb(GMPE):
     def __init__(self, adjustment_factor=1.0, **kwargs):
         super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(adjustment_factor)
+        [self.dist_type] = self.REQUIRES_DISTANCES
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -117,9 +118,10 @@ class BindiEtAl2014Rjb(GMPE):
         """
         Returns the mean ground motion
         """
+        dists = getattr(dists, self.dist_type)
         sof = self._get_style_of_faulting_term(C, rup) if self.sof else 0.
         return (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, dists.rjb, rup.mag) +
+                self._get_distance_scaling_term(C, dists, rup.mag) +
                 self._get_site_amplification_term(C, sites.vs30) + sof)
 
     def _get_magnitude_scaling_term(self, C, mag):
@@ -290,21 +292,10 @@ class BindiEtAl2014Rhyp(BindiEtAl2014Rjb):
     distance is preferred, style-of-faulting is specfieid and for which the
     site amplification is dependent directly on Vs30
     """
-
     #: Required distance measure is Rhypo (eq. 1).
-    REQUIRES_DISTANCES = set(('rhypo', ))
-
-    def _get_mean(self, C, rup, dists, sites):
-        """
-        Returns the mean value of ground motion
-        """
-        return (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, dists.rhypo, rup.mag) +
-                self._get_style_of_faulting_term(C, rup) +
-                self._get_site_amplification_term(C, sites.vs30))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     #: Coefficients from Table 4
-
     COEFFS = CoeffsTable(sa_damping=5, table="""
     imt             e1             c1             c2             h             c3            b1             b2            b3          gamma           sofN           sofR           sofS           tau           phi        phis2s         sigma
     pgv    3.242490000   -1.575560000    0.079177400   4.389180000   0.0000000000   0.472433000   -0.072548400   0.436952000   -0.508833000   -0.015719500    0.071385900   -0.055666000   0.193206000   0.295126000   0.178867000   0.352744000
@@ -342,16 +333,7 @@ class BindiEtAl2014RhypEC8(BindiEtAl2014RjbEC8):
     is characterised according to the Eurocode 8 site class
     """
     #: Required distance measure is Rhypo
-    REQUIRES_DISTANCES = set(('rhypo', ))
-
-    def _get_mean(self, C, rup, dists, sites):
-        """
-        Returns the mean value of ground motion
-        """
-        return (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, dists.rhypo, rup.mag) +
-                self._get_style_of_faulting_term(C, rup) +
-                self._get_site_amplification_term(C, sites.vs30))
+    REQUIRES_DISTANCES = {'rhypo'}
 
     #: Coefficients from Table 3
     COEFFS = CoeffsTable(sa_damping=5, table="""
