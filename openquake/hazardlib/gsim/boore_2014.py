@@ -222,7 +222,7 @@ class BooreEtAl2014(GMPE):
         """
         stddevs = []
         num_sites = len(sites.vs30)
-        tau = self._get_inter_event_tau(C, rup.mag, num_sites)
+        tau = self._get_inter_event_tau(C, rup.mag)
         phi = self._get_intra_event_phi(
             C, rup.mag, dists.rjb, sites.vs30, num_sites)
         for stddev_type in stddev_types:
@@ -234,18 +234,18 @@ class BooreEtAl2014(GMPE):
                 stddevs.append(tau)
         return stddevs
 
-    def _get_inter_event_tau(self, C, mag, num_sites):
+    def _get_inter_event_tau(self, C, mag):
         """
         Returns the inter-event standard deviation (tau), which is dependent
         on magnitude
         """
-        base_vals = np.zeros(num_sites)
         if mag <= 4.5:
-            return base_vals + C["t1"]
+            tau = C["tau1"]
         elif mag >= 5.5:
-            return base_vals + C["t2"]
+            tau = C["tau2"]
         else:
-            return base_vals + C["t1"] + (C["t2"] - C["t1"]) * (mag - 4.5)
+            tau = C["tau1"] + (C["tau2"] - C["tau1"]) * (mag - 4.5)
+        return tau
 
     def _get_intra_event_phi(self, C, mag, rjb, vs30, num_sites):
         """
@@ -277,7 +277,7 @@ class BooreEtAl2014(GMPE):
         return base_vals
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2         t1         t2
+    IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2         tau1         tau2
     pgv      5.037000    5.078000    4.849000    5.033000   1.073000   -0.153600    0.225200   6.200000   -1.243000   0.148900   -0.003440   5.300000   0.000000   -0.840000   1300.000000   -0.100000   -0.008440   -9.900000   -9.900000   105.000000   272.000000   0.082000   0.080000   0.644000   0.552000   0.401000   0.346000
     pga      0.447300    0.485600    0.245900    0.453900   1.431000    0.050530   -0.166200   5.500000   -1.134000   0.191700   -0.008088   4.500000   0.000000   -0.600000   1500.000000   -0.150000   -0.007010   -9.900000   -9.900000   110.000000   270.000000   0.100000   0.070000   0.695000   0.495000   0.398000   0.348000
     0.010    0.453400    0.491600    0.251900    0.459900   1.421000    0.049320   -0.165900   5.500000   -1.134000   0.191600   -0.008088   4.500000   0.000000   -0.603720   1500.200000   -0.148330   -0.007010   -9.900000   -9.900000   111.670000   270.000000   0.096000   0.070000   0.698000   0.499000   0.402000   0.345000
@@ -396,7 +396,7 @@ class BooreEtAl2014HighQ(BooreEtAl2014):
     The modification is made to the "Dc3" coefficient
     """
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2         t1         t2
+    IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2         tau1         tau2
     pgv      5.037000    5.078000    4.849000    5.033000   1.073000   -0.153600    0.225200   6.200000   -1.243000   0.148900   -0.003440   5.300000   0.004345   -0.840000   1300.000000   -0.100000   -0.008440   -9.900000   -9.900000   105.000000   272.000000   0.082000   0.080000   0.644000   0.552000   0.401000   0.346000
     pga      0.447300    0.485600    0.245900    0.453900   1.431000    0.050530   -0.166200   5.500000   -1.134000   0.191700   -0.008088   4.500000   0.002858   -0.600000   1500.000000   -0.150000   -0.007010   -9.900000   -9.900000   110.000000   270.000000   0.100000   0.070000   0.695000   0.495000   0.398000   0.348000
     0.010    0.453400    0.491600    0.251900    0.459900   1.421000    0.049320   -0.165900   5.500000   -1.134000   0.191600   -0.008088   4.500000   0.002816   -0.603720   1500.200000   -0.148330   -0.007010   -9.900000   -9.900000   111.670000   270.000000   0.096000   0.070000   0.698000   0.499000   0.402000   0.345000
@@ -515,7 +515,7 @@ class BooreEtAl2014LowQ(BooreEtAl2014):
     The modification is made to the "Dc3" coefficient
     """
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT            e0          e1          e2          e3         e4          e5          e6     Mh          c1         c2          c3      h          Dc3           c        Vc          f4          f5       f6       f7        R1        R2     DfR     DfV      f1      f2      t1      t2
+    IMT            e0          e1          e2          e3         e4          e5          e6     Mh          c1         c2          c3      h          Dc3           c        Vc          f4          f5       f6       f7        R1        R2     DfR     DfV      f1      f2      tau1      tau2
     pgv      5.037000    5.078000    4.849000    5.033000   1.073000   -0.153600    0.225200   6.20   -1.243000   0.148900   -0.003440   5.30   -0.0003300   -0.840000   1300.00   -0.100000   -0.008440   -9.900   -9.900   105.000   272.000   0.082   0.080   0.644   0.552   0.401   0.346
     pga      0.447300    0.485600    0.245900    0.453900   1.431000    0.050530   -0.166200   5.50   -1.134000   0.191700   -0.008088   4.50   -0.0025500   -0.600000   1500.00   -0.150000   -0.007010   -9.900   -9.900   110.000   270.000   0.100   0.070   0.695   0.495   0.398   0.348
     0.010    0.453400    0.491600    0.251900    0.459900   1.421000    0.049320   -0.165900   5.50   -1.134000   0.191600   -0.008088   4.50   -0.0024367   -0.603720   1500.20   -0.148330   -0.007010   -9.900   -9.900   111.670   270.000   0.096   0.070   0.698   0.499   0.402   0.345
@@ -951,19 +951,6 @@ class StewartEtAl2016(BooreEtAl2014):
                 stddevs.append(tau + np.zeros(num_sites))
         # return std dev values for each stddev type in site collection
         return stddevs
-
-    def _get_inter_event_tau(self, C, mag):
-        """
-        Returns the inter-event standard deviation (tau), which is dependent
-        on magnitude
-        """
-        if mag <= 4.5:
-            tau = C["tau1"]
-        elif mag >= 5.5:
-            tau = C["tau2"]
-        else:
-            tau = C["tau1"] + (C["tau2"] - C["tau1"]) * (mag - 4.5)
-        return tau
 
     def _get_intra_event_phi(self, C, mag):
         """
