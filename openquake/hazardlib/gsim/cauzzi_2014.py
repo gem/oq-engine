@@ -25,12 +25,199 @@ Module exports :class:`CauzziEtAl2014`,
                :class:`CauzziEtAl2014Eurocode8scaled`
 """
 import numpy as np
-# standard acceleration of gravity in m/s**2
 from scipy.constants import g
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+
+def _compute_mean(clsname, sof, adjustment_factor, C, rup, dists, sites, imt):
+    """
+    Returns the mean ground motion acceleration and velocity
+    """
+    if sof:
+        sof_term = _get_style_of_faulting_term(C, rup.rake)
+    else:
+        sof_term = 0.
+    if clsname.endswith("Germany"):
+        if rup.width > 1.0E-3:
+            # Finite rupture source used
+            rrup = np.copy(dists.rrup)
+        else:
+            # Point source MSR used - convert rhypo to rrup
+            rrup = rhypo_to_rrup(dists.rhypo, rup.mag)
+    else:
+        rrup = dists.rrup
+    mean = (_get_magnitude_scaling_term(C, rup.mag) +
+            _get_distance_scaling_term(C, rup.mag, rrup) +
+            sof_term + _get_site_amplification_term(
+                clsname, sof, C, sites.vs30))
+    # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
+    # is already in cm/s) and also convert from base 10 to base e.
+    if imt.name == "PGA":
+        mean = np.log((10 ** mean) * ((2 * np.pi / 0.01) ** 2) *
+                      1e-2 / g)
+    elif imt.name == "SA":
+        mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
+                      1e-2 / g)
+    else:
+        mean = np.log(10 ** mean)
+
+    return mean + adjustment_factor
+
+
+def _get_distance_scaling_term(C, mag, rrup):
+    """
+    Returns the distance scaling parameter
+    """
+    return (C["r1"] + C["r2"] * mag) * np.log10(rrup + C["r3"])
+
+
+def _get_magnitude_scaling_term(C, mag):
+    """
+    Returns the magnitude term
+    """
+    return C["c1"] + (C["m1"] * mag) + (C["m2"] * (mag ** 2.))
+
+
+_get_site_amplification_term = CallableDict()
+
+
+@_get_site_amplification_term.add("CauzziEtAl2014", "CauzziEtAl2014NoSOF")
+def _get_site_amplification_term_1(kind, sof, C, vs30):
+    """
+    Returns the site amplification scaling term assuming
+    period dependent reference vs30
+    """
+    return C["bV"] * np.log10(vs30 / C["VA"])
+
+
+@_get_site_amplification_term.add(
+    "CauzziEtAl2014FixedVs30", "CauzziEtAl2014FixedVs30NoSOF")
+def _get_site_amplification_term_2(kind, sof, C, vs30):
+    """
+    Returns the site amplification scaling term assuming
+    period dependent reference vs30
+    """
+    return C["bV800"] * np.log10(vs30 / 800.)
+
+
+@_get_site_amplification_term.add("CauzziEtAl2014Eurocode8")
+def _get_site_amplification_term_4(kind, sof, C, vs30):
+    """
+    Returns the site amplification term on the basis of Eurocode 8
+    site class
+    """
+    s_b, s_c, s_d = _get_site_dummy_variables(sof, vs30)
+    return (C["sB"] * s_b) + (C["sC"] * s_c) + (C["sD"] * s_d)
+
+
+@_get_site_amplification_term.add("CauzziEtAl2014Eurocode8NoSOF")
+def _get_site_amplification_term_5(kind, sof, C, vs30):
+    """
+    Returns the site amplification term on the basis of Eurocode 8
+    site class
+    """
+    s_b, s_c, s_d = _get_site_dummy_variables(sof, vs30)
+    return (C["sB"] * s_b) + (C["sC"] * s_c) + (C["sD"] * s_d)
+
+
+@_get_site_amplification_term.add("CauzziEtAl2014Eurocode8scaled")
+def _get_site_amplification_term_6(kind, sof, C, vs30):
+    """
+    Returns the site amplification term on the basis of Eurocode 8
+    site class
+    """
+    s_b = np.zeros_like(vs30)
+    s_c = np.zeros_like(vs30)
+    s_d = np.zeros_like(vs30)
+    s_b[np.logical_and(vs30 >= 360., vs30 < 800.)] = 1.0
+    s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
+    s_d[vs30 < 180] = 1.0
+    return C["sB"] * s_b + C["sC"] * s_c + C["sD"] * s_d
+
+
+_get_site_dummy_variables = CallableDict()
+
+
+@_get_site_dummy_variables.add(True)
+def _get_site_dummy_variables_1(sof, vs30):
+    """
+    Returns the Eurocode 8 site class dummy variable
+    """
+    s_b = np.zeros_like(vs30)
+    s_c = np.zeros_like(vs30)
+    s_d = np.zeros_like(vs30)
+    s_b[np.logical_and(vs30 >= 360., vs30 < 800.)] = 1.0
+    s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
+    s_d[vs30 < 180] = 1.0
+    return s_b, s_c, s_d
+
+
+@_get_site_dummy_variables.add(False)
+def _get_site_dummy_variables_2(sof, vs30):
+    """
+    Returns the Eurocode 8 site class dummy variable
+    """
+    s_b = np.zeros_like(vs30)
+    s_c = np.zeros_like(vs30)
+    s_d = np.zeros_like(vs30)
+    s_b[np.logical_and(vs30 >= 360., vs30 < 800.)] = 1.0
+    s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
+    s_d[vs30 < 180.] = 1.0
+    return s_b, s_c, s_d
+
+
+_get_stddevs = CallableDict()
+
+
+@_get_stddevs.add(True)
+def _get_stddevs_1(sof, C, stddev_types, num_sites):
+    """
+    Return total standard deviation.
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.log(10.0 ** C['sM']) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(np.log(10.0 ** C['f']) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(np.log(10.0 ** C["tM"]) + np.zeros(num_sites))
+    return stddevs
+
+
+@_get_stddevs.add(False)
+def _get_stddevs_2(sof, C, stddev_types, num_sites):
+    """
+    Returns the standard deviation terms assuming no style-of-faulting
+    is known
+    """
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            stddevs.append(np.log(10.0 ** C['s']) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(np.log(10.0 ** C['f']) + np.zeros(num_sites))
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(np.log(10.0 ** C["t"]) + np.zeros(num_sites))
+    return stddevs
+
+
+def _get_style_of_faulting_term(C, rake):
+    """
+    Returns the style of faulting term. Cauzzi et al. determind SOF from
+    the plunge of the B-, T- and P-axes. For consistency with existing
+    GMPEs the Wells & Coppersmith model is preferred
+    """
+    if rake > -150.0 and rake <= -30.0:
+        return C['fN']
+    elif rake > 30.0 and rake <= 150.0:
+        return C['fR']
+    else:
+        return C['fSS']
 
 
 class CauzziEtAl2014(GMPE):
@@ -99,91 +286,13 @@ class CauzziEtAl2014(GMPE):
         # intensity measure type
         C = self.COEFFS[imt]
 
-        mean = self._compute_mean(C, rup, dists, sites, imt)
+        mean = _compute_mean(
+            self.__class__.__name__, self.sof, self.adjustment_factor,
+            C, rup, dists, sites, imt)
 
-        stddevs = self._get_stddevs(C, stddev_types, sites.vs30.shape[0])
+        stddevs = _get_stddevs(self.sof, C, stddev_types, sites.vs30.shape[0])
 
         return mean, stddevs
-
-    def _compute_mean(self, C, rup, dists, sites, imt):
-        """
-        Returns the mean ground motion acceleration and velocity
-        """
-        if self.sof:
-            sof_term = self._get_style_of_faulting_term(C, rup.rake)
-        else:
-            sof_term = 0.
-        if self.__class__.__name__.endswith("Germany"):
-            if rup.width > 1.0E-3:
-                # Finite rupture source used
-                rrup = np.copy(dists.rrup)
-            else:
-                # Point source MSR used - convert rhypo to rrup
-                rrup = rhypo_to_rrup(dists.rhypo, rup.mag)
-        else:
-            rrup = dists.rrup
-        mean = (self._get_magnitude_scaling_term(C, rup.mag) +
-                self._get_distance_scaling_term(C, rup.mag, rrup) +
-                sof_term + self._get_site_amplification_term(C, sites.vs30))
-        # convert from cm/s**2 to g for SA and from cm/s**2 to g for PGA (PGV
-        # is already in cm/s) and also convert from base 10 to base e.
-        if imt.name == "PGA":
-            mean = np.log((10 ** mean) * ((2 * np.pi / 0.01) ** 2) *
-                          1e-2 / g)
-        elif imt.name == "SA":
-            mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
-                          1e-2 / g)
-        else:
-            mean = np.log(10 ** mean)
-
-        return mean + self.adjustment_factor
-
-    def _get_magnitude_scaling_term(self, C, mag):
-        """
-        Returns the magnitude term
-        """
-        return C["c1"] + (C["m1"] * mag) + (C["m2"] * (mag ** 2.))
-
-    def _get_distance_scaling_term(self, C, mag, rrup):
-        """
-        Returns the distance scaling parameter
-        """
-        return (C["r1"] + C["r2"] * mag) * np.log10(rrup + C["r3"])
-
-    def _get_style_of_faulting_term(self, C, rake):
-        """
-        Returns the style of faulting term. Cauzzi et al. determind SOF from
-        the plunge of the B-, T- and P-axes. For consistency with existing
-        GMPEs the Wells & Coppersmith model is preferred
-        """
-        if rake > -150.0 and rake <= -30.0:
-            return C['fN']
-        elif rake > 30.0 and rake <= 150.0:
-            return C['fR']
-        else:
-            return C['fSS']
-
-    def _get_site_amplification_term(self, C, vs30):
-        """
-        Returns the site amplification scaling term assuming
-        period dependent reference vs30
-        """
-        return C["bV"] * np.log10(vs30 / C["VA"])
-
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Return total standard deviation.
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.log(10.0 ** C['sM']) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(np.log(10.0 ** C['f']) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(np.log(10.0 ** C["tM"]) + np.zeros(num_sites))
-        return stddevs
 
     #: Coefficient table constructed from the electronic suplements of the
 
@@ -414,35 +523,12 @@ class CauzziEtAl2014NoSOF(CauzziEtAl2014):
     #: Required rupture parameters are magnitude
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
-    def _get_stddevs(self, C, stddev_types, num_sites):
-        """
-        Returns the standard deviation terms assuming no style-of-faulting
-        is known
-        """
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.log(10.0 ** C['s']) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(np.log(10.0 ** C['f']) + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(np.log(10.0 ** C["t"]) + np.zeros(num_sites))
-        return stddevs
-
 
 class CauzziEtAl2014FixedVs30(CauzziEtAl2014):
     """
     Implements the Cauzzi et al (2014) model for the case in which
     the reference Vs30 in the site amplification term is fixed at 800 m/s
     """
-
-    def _get_site_amplification_term(self, C, vs30):
-        """
-        Returns the site amplification scaling term assuming
-        period dependent reference vs30
-        """
-        return C["bV800"] * np.log10(vs30 / 800.)
 
 
 class CauzziEtAl2014FixedVs30NoSOF(CauzziEtAl2014NoSOF):
@@ -451,38 +537,12 @@ class CauzziEtAl2014FixedVs30NoSOF(CauzziEtAl2014NoSOF):
     the reference Vs30 in the site amplification term is fixed at 800 m/s
     """
 
-    def _get_site_amplification_term(self, C, vs30):
-        """
-        Returns the site amplification scaling term assuming the reference
-        Vs30 is fixed at 800 m/s
-        """
-        return C["bV800"] * np.log10(vs30 / 800.)
-
 
 class CauzziEtAl2014Eurocode8(CauzziEtAl2014):
     """
     Implmements the Cauzzi et al. (2014) GMPE for the case in which
     the Eurocode 8 site classification is preferred
     """
-    def _get_site_amplification_term(self, C, vs30):
-        """
-        Returns the site amplification term on the basis of Eurocode 8
-        site class
-        """
-        s_b, s_c, s_d = self._get_site_dummy_variables(vs30)
-        return (C["sB"] * s_b) + (C["sC"] * s_c) + (C["sD"] * s_d)
-
-    def _get_site_dummy_variables(self, vs30):
-        """
-        Returns the Eurocode 8 site class dummy variable
-        """
-        s_b = np.zeros_like(vs30)
-        s_c = np.zeros_like(vs30)
-        s_d = np.zeros_like(vs30)
-        s_b[np.logical_and(vs30 >= 360., vs30 < 800.)] = 1.0
-        s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
-        s_d[vs30 < 180] = 1.0
-        return s_b, s_c, s_d
 
 
 class CauzziEtAl2014Eurocode8NoSOF(CauzziEtAl2014NoSOF):
@@ -491,25 +551,6 @@ class CauzziEtAl2014Eurocode8NoSOF(CauzziEtAl2014NoSOF):
     the Eurocode 8 site classification is preferred and style of faulting
     is not specified.
     """
-    def _get_site_amplification_term(self, C, vs30):
-        """
-        Returns the site amplification term on the basis of Eurocode 8
-        site class
-        """
-        s_b, s_c, s_d = self._get_site_dummy_variables(vs30)
-        return (C["sB"] * s_b) + (C["sC"] * s_c) + (C["sD"] * s_d)
-
-    def _get_site_dummy_variables(self, vs30):
-        """
-        Returns the Eurocode 8 site class dummy variable
-        """
-        s_b = np.zeros_like(vs30)
-        s_c = np.zeros_like(vs30)
-        s_d = np.zeros_like(vs30)
-        s_b[np.logical_and(vs30 >= 360., vs30 < 800.)] = 1.0
-        s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
-        s_d[vs30 < 180.] = 1.0
-        return s_b, s_c, s_d
 
 
 def rhypo_to_rrup(rhypo, mag):
@@ -546,19 +587,6 @@ class CauzziEtAl2014Eurocode8scaled(CauzziEtAl2014Eurocode8):
 
         SA = DSR * (2 * π / T) ** 2
     """
-    def _get_site_amplification_term(self, C, vs30):
-        """
-        Returns the site amplification term on the basis of Eurocode 8
-        site class
-        """
-        s_b = np.zeros_like(vs30)
-        s_c = np.zeros_like(vs30)
-        s_d = np.zeros_like(vs30)
-        s_b[np.logical_and(vs30 >= 360., vs30 < 800.)] = 1.0
-        s_c[np.logical_and(vs30 >= 180., vs30 < 360.)] = 1.0
-        s_d[vs30 < 180] = 1.0
-        return C["sB"] * s_b + C["sC"] * s_c + C["sD"] * s_d
-
     #: Coefficient table constructed from the electronic suplements of the
     #: original paper.
     COEFFS = CoeffsTable(sa_damping=5, table="""\
