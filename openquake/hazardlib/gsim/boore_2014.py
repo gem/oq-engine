@@ -76,6 +76,7 @@ class BooreEtAl2014(GMPE):
     REQUIRES_DISTANCES = {'rjb'}
 
     region = "nobasin"
+    kind = "base"
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -125,7 +126,9 @@ class BooreEtAl2014(GMPE):
         Note that the 'Unspecified' case is not considered here as
         rake is always given.
         """
-        if np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
+        if self.kind == "stewart" and not self.sof:
+            return C["e0"]  # Unspecified style-of-faulting
+        elif np.abs(rup.rake) <= 30.0 or (180.0 - np.abs(rup.rake)) <= 30.0:
             # strike-slip
             return C["e1"]
         elif rup.rake > 30.0 and rup.rake < 150.0:

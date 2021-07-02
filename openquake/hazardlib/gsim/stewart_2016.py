@@ -80,6 +80,8 @@ class StewartEtAl2016(BooreEtAl2014):
 
     REQUIRES_ATTRIBUTES = {'region', 'sof'}
 
+    kind = "stewart"
+
     def __init__(self, region='CAL', sof=True, **kwargs):
         super().__init__(**kwargs)
         self.region = region
