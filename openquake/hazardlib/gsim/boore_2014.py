@@ -111,8 +111,7 @@ class BooreEtAl2014(GMPE):
         mean = (self._get_magnitude_scaling_term(C, rup) +
                 self._get_path_scaling(C, dists, rup.mag) +
                 self._get_site_scaling(C, pga_rock, sites, imt_per, dists.rjb))
-        stddevs = self._get_stddevs(C, rup, dists, sites, dists.rjb,
-                                    stddev_types)
+        stddevs = self._get_stddevs(C, rup, dists, sites, stddev_types)
         return mean, stddevs
 
     def _get_pga_on_rock(self, C, rup, dists):
@@ -216,7 +215,7 @@ class BooreEtAl2014(GMPE):
         f_dz1[idx] = C["f6"] * dz1[idx]
         return f_dz1
 
-    def _get_stddevs(self, C, rup, dists, sites, rjb, stddev_types):
+    def _get_stddevs(self, C, rup, dists, sites, stddev_types):
         """
         Returns the aleatory uncertainty terms described in equations (13) to
         (17)
@@ -897,7 +896,7 @@ class StewartEtAl2016(BooreEtAl2014):
                 self._get_path_scaling(C, dists.rjb, rup.mag) +
                 self._get_site_scaling(C, pga_rock, sites, None, dists.rjb))
         # SBSA15 Std Dev Model, Equations 9 to 11 (in natural log units)
-        stddevs = self._get_stddevs(C, rup, sites, dists.rjb, stddev_types)
+        stddevs = self._get_stddevs(C, rup, dists, sites, stddev_types)
         return mean, stddevs
 
     def _get_pga_on_rock(self, C, rup, dists):
@@ -932,26 +931,6 @@ class StewartEtAl2016(BooreEtAl2014):
         # delta c3 accounting for regional effects
         fp_atten = (C["c3"] + delta_c3) * (rval - CONSTS["Rref"])
         return fp_geom + fp_atten
-
-    def _get_stddevs(self, C, rup, sites, rjb, stddev_types):
-        """
-        Returns the aleatory uncertainty terms described in Equations 9 to 11
-        """
-        stddevs = []
-        num_sites = len(sites.vs30)
-        tau = self._get_inter_event_tau(C, rup.mag)
-        phi = self._get_intra_event_phi(C, rup.mag, rjb, sites.vs30,
-                                        len(sites.vs30))
-        for stddev_type in stddev_types:
-            if stddev_type == const.StdDev.TOTAL:
-                stddevs.append(np.sqrt((tau ** 2.0) + (phi ** 2.0)) +
-                               np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi + np.zeros(num_sites))
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau + np.zeros(num_sites))
-        # return std dev values for each stddev type in site collection
-        return stddevs
 
     def _get_intra_event_phi(self, C, mag, rjb, vs30, num_sites):
         """
