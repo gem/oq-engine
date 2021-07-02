@@ -88,7 +88,7 @@ _get_site_amplification_term = CallableDict()
 @_get_site_amplification_term.add(
     "CauzziEtAl2014", "CauzziEtAl2014NoSOF", "CauzziEtAl2014Armenia",
     "CauzziEtAl2014RhypoGermany")
-def _get_site_amplification_term_1(kind, sof, C, vs30):
+def _get_site_amplification_term_1(clsname, sof, C, vs30):
     """
     Returns the site amplification scaling term assuming
     period dependent reference vs30
@@ -98,7 +98,7 @@ def _get_site_amplification_term_1(kind, sof, C, vs30):
 
 @_get_site_amplification_term.add(
     "CauzziEtAl2014FixedVs30", "CauzziEtAl2014FixedVs30NoSOF")
-def _get_site_amplification_term_2(kind, sof, C, vs30):
+def _get_site_amplification_term_2(clsname, sof, C, vs30):
     """
     Returns the site amplification scaling term assuming
     period dependent reference vs30
@@ -107,7 +107,7 @@ def _get_site_amplification_term_2(kind, sof, C, vs30):
 
 
 @_get_site_amplification_term.add("CauzziEtAl2014Eurocode8")
-def _get_site_amplification_term_4(kind, sof, C, vs30):
+def _get_site_amplification_term_4(clsname, sof, C, vs30):
     """
     Returns the site amplification term on the basis of Eurocode 8
     site class
@@ -117,7 +117,7 @@ def _get_site_amplification_term_4(kind, sof, C, vs30):
 
 
 @_get_site_amplification_term.add("CauzziEtAl2014Eurocode8NoSOF")
-def _get_site_amplification_term_5(kind, sof, C, vs30):
+def _get_site_amplification_term_5(clsname, sof, C, vs30):
     """
     Returns the site amplification term on the basis of Eurocode 8
     site class
@@ -127,7 +127,7 @@ def _get_site_amplification_term_5(kind, sof, C, vs30):
 
 
 @_get_site_amplification_term.add("CauzziEtAl2014Eurocode8scaled")
-def _get_site_amplification_term_6(kind, sof, C, vs30):
+def _get_site_amplification_term_6(clsname, sof, C, vs30):
     """
     Returns the site amplification term on the basis of Eurocode 8
     site class
