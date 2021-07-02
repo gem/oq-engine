@@ -38,8 +38,9 @@ class ChiouYoungs2014(GMPE):
     NGA Model for the Average Horizontal Component of Peak Ground Motion and
     Response Spectra, Earthquake Spectra, 30(3), 1117 - 1153,
     DOI: 10.1193/072813EQS219M
-
     """
+    adapted = False  # overridden in acme_2019
+
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
@@ -436,13 +437,9 @@ class ChiouYoungs2014PEER(ChiouYoungs2014):
     tests. In this version the total standard deviation is fixed at 0.65
     """
     #: Only the total standars deviation is defined
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     #: The PEER tests requires only PGA
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA}
 
     def get_stddevs(self, C, sites, mag, y_ref, f_nl_scaling, stddev_types):
         """
@@ -462,7 +459,6 @@ class ChiouYoungs2014NearFaultEffect(ChiouYoungs2014):
     This implements the Chiou & Youngs (2014) GMPE include the near fault
     effect prediction. In this version, we add the distance measure, rcdpp
     for directivity prediction.
-
     """
     #: Required distance measures are RRup, Rjb, Rx, and Rcdpp
     REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'rcdpp'))
@@ -471,6 +467,107 @@ class ChiouYoungs2014NearFaultEffect(ChiouYoungs2014):
         """
         Get directivity prediction parameter centered on the avgerage
         directivity prediction parameter.
-
         """
         return dists.rcdpp
+
+
+class ChiouYoungs2014ACME2019(ChiouYoungs2014):
+    """
+    Implements a modified version of the CY2014 GMM. Main changes:
+    - Hanging wall term excluded
+    - Centered Ztor = 0
+    - Centered Dpp = 0
+    """
+    adapted = True
+
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extracting dictionary of coefficients specific to required
+        # intensity measure type.
+        C = self.COEFFS[imt]
+        # intensity on a reference soil is used for both mean
+        # and stddev calculations.
+        ln_y_ref = self._get_ln_y_ref(rup, dists, C)
+        # exp1 and exp2 are parts of eq. 12 and eq. 13,
+        # calculate it once for both.
+        exp1 = np.exp(C['phi3'] * (sites.vs30.clip(-np.inf, 1130) - 360))
+        exp2 = np.exp(C['phi3'] * (1130 - 360))
+        mean = self._get_mean(sites, C, ln_y_ref, exp1, exp2)
+        stddevs = np.zeros_like(mean)
+        return mean, stddevs
+
+    def _get_mean(self, sites, C, ln_y_ref, exp1, exp2):
+        """
+        Add site effects to an intensity. Implements eq. 13b.
+        """
+        eta = epsilon = 0.
+        ln_y = (
+            # first line of eq. 12
+            ln_y_ref + eta
+            # second line
+            + C['phi1'] * np.log(sites.vs30 / 1130).clip(-np.inf, 0)
+            # third line
+            + C['phi2'] * (exp1 - exp2)
+            * np.log((np.exp(ln_y_ref) * np.exp(eta) + C['phi4']) / C['phi4'])
+            # fourth line - removed
+            # fifth line
+            + epsilon
+        )
+        return ln_y
+
+    def _get_ln_y_ref(self, rup, dists, C):
+        """
+        Get an intensity on a reference soil.
+        Implements eq. 13a.
+        """
+        # Reverse faulting flag
+        Frv = 1. if 30 <= rup.rake <= 150 else 0.
+        # Normal faulting flag
+        Fnm = 1. if -120 <= rup.rake <= -60 else 0.
+        # A part in eq. 11
+        mag_test1 = np.cosh(2. * max(rup.mag - 4.5, 0))
+        # Centered DPP
+        centered_dpp = 0
+        # Centered Ztor
+        centered_ztor = 0
+        #
+        dist_taper = np.fmax(1 - (np.fmax(dists.rrup - 40,
+                                  np.zeros_like(dists)) / 30.),
+                             np.zeros_like(dists))
+        dist_taper = dist_taper.astype(np.float64)
+        ln_y_ref = (
+            # first part of eq. 11
+            C['c1']
+            + (C['c1a'] + C['c1c'] / mag_test1) * Frv
+            + (C['c1b'] + C['c1d'] / mag_test1) * Fnm
+            + (C['c7'] + C['c7b'] / mag_test1) * centered_ztor
+            + (C['c11'] + C['c11b'] / mag_test1) *
+            np.cos(np.radians(rup.dip)) ** 2
+            # second part
+            + C['c2'] * (rup.mag - 6)
+            + ((C['c2'] - C['c3']) / C['cn'])
+            * np.log(1 + np.exp(C['cn'] * (C['cm'] - rup.mag)))
+            # third part
+            + C['c4']
+            * np.log(dists.rrup + C['c5']
+                     * np.cosh(C['c6'] * max(rup.mag - C['chm'], 0)))
+            + (C['c4a'] - C['c4'])
+            * np.log(np.sqrt(dists.rrup ** 2 + C['crb'] ** 2))
+            # forth part
+            + (C['cg1'] + C['cg2'] / (np.cosh(max(rup.mag - C['cg3'], 0))))
+            * dists.rrup
+            # fifth part
+            + C['c8'] * dist_taper
+            * min(max(rup.mag - 5.5, 0) / 0.8, 1.0)
+            * np.exp(-1 * C['c8a'] * (rup.mag - C['c8b']) ** 2) * centered_dpp
+            # sixth part
+            # + C['c9'] * Fhw * np.cos(math.radians(rup.dip)) *
+            # (C['c9a'] + (1 - C['c9a']) * np.tanh(dists.rx / C['c9b']))
+            # * (1 - np.sqrt(dists.rjb ** 2 + rup.ztor ** 2)
+            #   / (dists.rrup + 1.0))
+        )
+        return ln_y_ref
