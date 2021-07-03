@@ -537,20 +537,22 @@ class ContextMaker(object):
         if probmap is None:  # return the new pmap
             return ~pmap if rup_indep else pmap
 
-    def get_mean_stds(self, ctxs, *stdtypes):
+    def get_mean_stds(self, ctxs, stdtype):
         """
         :param ctxs: a list of contexts
-        :param stdtypes: tuple of standard deviation types
+        :param stdtype: a standard deviation type
         :returns: a list of G arrays of shape (O, N, M) with mean and stddevs
         """
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(self.imts)
-        if self.trunclevel == 0:
+        if stdtype is None or self.trunclevel == 0:
             stdtypes = ()
+        else:
+            stdtypes = (stdtype,)
         out = []
         for g, gsim in enumerate(self.gsims):
-            if stdtypes == (StdDev.EVENT,):
+            if stdtype == (StdDev.EVENT,):
                 if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
                     stypes = StdDev.TOTAL,
                 else:
