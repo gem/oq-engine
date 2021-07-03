@@ -154,7 +154,7 @@ def fake_gsim(gsim, imts):
                 td[imt] = ctable[imt]
             dic[attr] = td
     typedic = {a: numba.typeof(dic[a]) for a in dic}
-    cls = type('GSIM', (), dict(__init__=lambda self: None))
+    cls = type(gsim.__class__.__name__, (), dict(__init__=lambda self: None))
     jcls = numba.experimental.jitclass(typedic)(cls)
     obj = jcls()
     for a in dic:
@@ -545,7 +545,6 @@ class ContextMaker(object):
         """
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
-        G = len(self.gsims)
         M = len(self.imts)
         if self.trunclevel == 0:
             stdtypes = ()
@@ -559,24 +558,23 @@ class ContextMaker(object):
             else:
                 stypes = stdtypes
             arr = numpy.zeros((1 + len(stypes), N, M))
-            stds = numpy.zeros((3, M, N))
             gcls = gsim.__class__
             calc_ms = getattr(gcls, 'calc_all', None)
             if calc_ms:  # fast lane
                 if all(len(ctx) == 1 for ctx in ctxs):
                     # single-site-optimization
                     ctxs = [self.multi(ctxs)]
-                inner = numpy.zeros((4, M, N))
+                outs = numpy.zeros((4, M, N))
                 for ctx, fake, slc in self.gen_triples(gsim, ctxs):
-                    calc_ms(fake, ctx, self.imts, *inner[:, :, slc])
-                arr[0] = inner[0].T
+                    calc_ms(fake, ctx, self.imts, *outs[:, :, slc])
+                arr[0] = outs[0].T
                 for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
-                        arr[s] = inner[1].T
+                        arr[s] = outs[1].T
                     elif stype == StdDev.INTER_EVENT:
-                        arr[s] = inner[2].T
+                        arr[s] = outs[2].T
                     elif stype == StdDev.INTRA_EVENT:
-                        arr[s] = inner[3].T
+                        arr[s] = outs[3].T
             else:  # slow lane
                 start = 0
                 for ctx in ctxs:
