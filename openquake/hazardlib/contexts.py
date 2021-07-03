@@ -221,7 +221,7 @@ class ContextMaker(object):
                     self.loglevels[imt] = numpy.log(imls)
 
         self.init_monitoring(monitor)
-        self.newapi = any(hasattr(gs, 'calc_mean_stds') for gs in self.gsims)
+        self.newapi = any(hasattr(gs, 'calc_all') for gs in self.gsims)
         self.compile()
 
     def init_monitoring(self, monitor):
@@ -236,17 +236,18 @@ class ContextMaker(object):
         """
         Compile the required jittable functions
         """
-        mean = numpy.zeros((1, len(self.imts)))
-        stds = numpy.zeros((3, len(self.imts), 1))
+        G = len(self.gsims)
+        M = len(self.imts)
+        out = numpy.zeros((G, 4, M, 1))
         self.fake = {}
         for g, gsim in enumerate(self.gsims):
-            if hasattr(gsim, 'calc_mean_stds'):
+            if hasattr(gsim, 'calc_all'):
                 self.fake[gsim] = fake = fake_gsim(gsim, self.imts)
                 if numba:
                     ctx = numpy.ones(1, gsim.ctx_builder.dtype)
                 else:
                     ctx = hdf5.ArrayWrapper((), gsim.ctx_builder.dictarray(1))
-                gsim.__class__.calc_mean_stds(fake, ctx, self.imts, mean, stds)
+                gsim.__class__.calc_all(fake, ctx, self.imts, *out[g])
 
     def gen_triples(self, gsim, ctxs):
         """
@@ -544,6 +545,7 @@ class ContextMaker(object):
         """
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
+        G = len(self.gsims)
         M = len(self.imts)
         if self.trunclevel == 0:
             stdtypes = ()
@@ -559,21 +561,22 @@ class ContextMaker(object):
             arr = numpy.zeros((1 + len(stypes), N, M))
             stds = numpy.zeros((3, M, N))
             gcls = gsim.__class__
-            calc_ms = getattr(gcls, 'calc_mean_stds', None)
+            calc_ms = getattr(gcls, 'calc_all', None)
             if calc_ms:  # fast lane
                 if all(len(ctx) == 1 for ctx in ctxs):
                     # single-site-optimization
                     ctxs = [self.multi(ctxs)]
+                inner = numpy.zeros((4, M, N))
                 for ctx, fake, slc in self.gen_triples(gsim, ctxs):
-                    calc_ms(fake, ctx, self.imts,
-                            arr[0, slc], stds[:, :, slc])
+                    calc_ms(fake, ctx, self.imts, *inner[:, :, slc])
+                arr[0] = inner[0].T
                 for s, stype in enumerate(stypes, 1):
                     if stype == StdDev.TOTAL:
-                        arr[s] = stds[0].T
+                        arr[s] = inner[1].T
                     elif stype == StdDev.INTER_EVENT:
-                        arr[s] = stds[1].T
+                        arr[s] = inner[2].T
                     elif stype == StdDev.INTRA_EVENT:
-                        arr[s] = stds[2].T
+                        arr[s] = inner[3].T
             else:  # slow lane
                 start = 0
                 for ctx in ctxs:
