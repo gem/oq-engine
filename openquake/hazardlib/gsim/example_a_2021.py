@@ -65,10 +65,10 @@ class ExampleA2021(GMPE):
     """)
 
     @jittable
-    def calc_mean_stds(fake, ctx, imts, mean, stds):
+    def calc_mean_stds(self, ctx, imts, mean, stds):
         mag, rjb = ctx.mag, ctx.rjb
         for m, imt in enumerate(imts):
-            C = fake.COEFFS[imt]
+            C = self.COEFFS[imt]
             mean[:, m] = C['c1'] + _compute_term1(C, mag) + \
                 _compute_term2(C, mag, rjb)
             if imt.period == 3.0:

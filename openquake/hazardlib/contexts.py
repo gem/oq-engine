@@ -39,6 +39,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tom import registry
+from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.calc.filters import MagDepDistance
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface import PlanarSurface
@@ -142,7 +143,8 @@ def fake_gsim(gsim, imts):
         return gsim
     dic = {attr: getattr(gsim, attr) for attr in gsim.REQUIRES_ATTRIBUTES}
     for attr in dir(gsim):
-        if attr.startswith('COEFFS'):
+        value = getattr(gsim, attr)
+        if isinstance(value, CoeffsTable):
             imt0 = imts[0]
             ctable = getattr(gsim, attr)
             td = numba.typed.Dict.empty(
