@@ -136,8 +136,10 @@ def get_num_distances(gsims):
 
 def fake_gsim(gsim, imts):
     """
-    :returns: a fake object emulating a GSIM data structure
+    :returns: a numba object emulating the gsim, or the gsim as is
     """
+    if not numba:
+        return gsim
     dic = {attr: getattr(gsim, attr) for attr in gsim.REQUIRES_ATTRIBUTES}
     for attr in dir(gsim):
         if attr.startswith('COEFFS'):
@@ -149,16 +151,13 @@ def fake_gsim(gsim, imts):
             for imt in imts:  # populate td
                 td[imt] = ctable[imt]
             dic[attr] = td
-    if numba:
-        typedic = {a: numba.typeof(dic[a]) for a in dic}
-        cls = type('GSIM', (), dict(__init__=lambda self: None))
-        jcls = numba.experimental.jitclass(typedic)(cls)
-        obj = jcls()
-        for a in dic:
-            setattr(obj, a, dic[a])
-        return obj
-    else:
-        return hdf5.ArrayWrapper((), dic)
+    typedic = {a: numba.typeof(dic[a]) for a in dic}
+    cls = type('GSIM', (), dict(__init__=lambda self: None))
+    jcls = numba.experimental.jitclass(typedic)(cls)
+    obj = jcls()
+    for a in dic:
+        setattr(obj, a, dic[a])
+    return obj
 
 
 class ContextMaker(object):
