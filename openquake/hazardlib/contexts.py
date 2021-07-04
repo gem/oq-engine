@@ -585,7 +585,6 @@ class ContextMaker(object):
                         arr[0, start:stop, m] = mean
                         for s, std in enumerate(stds, 1):
                             arr[s, start:stop, m] = std
-                        
                     start = stop
             out.append(arr)
         return out
