@@ -76,8 +76,7 @@ def check_gsim(gsim, datafile, max_discrep_percentage, debug=False):
         set_read_only(ctx)
         imtls = {str(imt): [] for imt in expected_results}
         cmaker = ContextMaker('*', [gsim], dict(imtls=imtls))
-        stds = (stddev_type,) if stddev_type else ()
-        [ms] = cmaker.get_mean_stds([ctx], *stds)
+        [ms] = cmaker.get_mean_stds([ctx], stddev_type)
         for m, imt in enumerate(expected_results):
             expected_result = expected_results[imt]
             mean = ms[0, :, m]

@@ -40,7 +40,7 @@ from openquake.hazardlib import const
 
 class AkkarEtAlRjb2014Armenia(AkkarEtAlRjb2014):
     """
-    A
+    Adjustment of Akkar et al based on Armenian data
     """
     COEFFS_ADJUST = CoeffsTable(sa_damping=5, table="""\
     IMT            a          b        tau_adj        sig_adj
@@ -61,8 +61,6 @@ class AkkarEtAlRjb2014Armenia(AkkarEtAlRjb2014):
     """)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        """
         C_ADJ = self.COEFFS_ADJUST[imt]
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
@@ -106,8 +104,6 @@ class BindiEtAl2014RjbArmenia(BindiEtAl2014Rjb):
     """)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        """
         C_ADJ = self.COEFFS_ADJUST[imt]
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
@@ -150,8 +146,6 @@ class BooreEtAl2014LowQArmenia(BooreEtAl2014LowQ):
     """)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        """
         C_ADJ = self.COEFFS_ADJUST[imt]
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, [const.StdDev.INTER_EVENT,
@@ -194,8 +188,6 @@ class CauzziEtAl2014Armenia(CauzziEtAl2014):
     """)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
-        """
-        """
         C_ADJ = self.COEFFS_ADJUST[imt]
         mean, stddevs = super().get_mean_and_stddevs(
             sites, rup, dists, imt, [const.StdDev.INTER_EVENT,

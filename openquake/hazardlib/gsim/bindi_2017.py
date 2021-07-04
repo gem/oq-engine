@@ -15,19 +15,89 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Module exports :class:`BindiEtAl2017Rjb`,
                :class:`BindiEtAl2017Rhypo`
-
 """
 import numpy as np
-
 from scipy.constants import g
 
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+
+CONSTANTS = {"mref": 4.5, "mh": 6.5,  "rref": 1.0}
+
+
+def _get_distance_scaling(dist_type, C, dists, mag):
+    """
+    Implements the distance scaling function F(M, R) presented in equations
+    2 and 3. In the case of Joyner-Boore distance then the fixed-depth
+    term h is required
+    """
+    r_h = _get_rh(dist_type, C, dists)
+    return (C["c1"] + C["c2"] * (mag - CONSTANTS["mref"])) *\
+        np.log(r_h / CONSTANTS["rref"]) +\
+        C["c3"] * (r_h - CONSTANTS["rref"])
+
+
+def _get_magnitude_scaling(C, mag):
+    """
+    Implements the magnitude scaling function F(M) presented in equation 4
+    """
+    if mag < CONSTANTS["mh"]:
+        return C["e1"] + C["b1"] * (mag - CONSTANTS["mref"]) +\
+            C["b2"] * ((mag - CONSTANTS["mref"]) ** 2.)
+    else:
+        d_m = CONSTANTS["mh"] - CONSTANTS["mref"]
+        return C["e1"] + C["b3"] * (mag - CONSTANTS["mh"]) +\
+            (C["b1"] * d_m) + C["b2"] * (d_m ** 2.)
+
+
+_get_rh = CallableDict()
+
+
+@_get_rh.add("rjb")
+def _get_rh_1(kind, C, dists):
+    """
+    Returns the distance incorporating the fixed depth term, h
+    """
+    return np.sqrt(dists.rjb ** 2. + C["h"] ** 2.)
+
+
+@_get_rh.add("rhypo")
+def _get_rh_2(kind, C, dists):
+    """
+    In this case only the hypocentral distance is needed - return this
+    directly
+    """
+    return dists.rhypo
+
+
+def _get_site_term(C, vs30):
+    """
+    Returns the linear site amplification term given in equation 5
+    """
+    return C["sA"] * np.log(vs30 / 800.0)
+
+
+def get_stddevs(C, n_sites, stddev_types):
+    """
+    Returns the standard deviations
+    """
+    tau = C["tau"] + np.zeros(n_sites)
+    phi = C["phi"] + np.zeros(n_sites)
+    stddevs = []
+    for stddev_type in stddev_types:
+        if stddev_type == const.StdDev.TOTAL:
+            sigma = np.sqrt(tau ** 2. + phi ** 2.)
+            stddevs.append(sigma)
+        elif stddev_type == const.StdDev.INTRA_EVENT:
+            stddevs.append(phi)
+        elif stddev_type == const.StdDev.INTER_EVENT:
+            stddevs.append(tau)
+    return stddevs
 
 
 class BindiEtAl2017Rjb(GMPE):
@@ -46,10 +116,7 @@ class BindiEtAl2017Rjb(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
 
     #: GMPE is defined only for PGA and SA (PGV coefficients not made public)
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
-        PGA,
-        SA
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
     #: Supported intensity measure component is the geometric mean of two
     #: horizontal components
@@ -57,11 +124,8 @@ class BindiEtAl2017Rjb(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT
-    ])
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is only Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
@@ -82,71 +146,20 @@ class BindiEtAl2017Rjb(GMPE):
         <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
+        [dist_type] = self.REQUIRES_DISTANCES
+
         # extracting dictionary of coefficients specific to required
         # intensity measure type.
-
         C = self.COEFFS[imt]
-        mean = (self._get_magnitude_scaling(C, rup.mag) +
-                self._get_distance_scaling(C, dists, rup.mag) +
-                self._get_site_term(C, sites.vs30))
+
+        mean = (_get_magnitude_scaling(C, rup.mag) +
+                _get_distance_scaling(dist_type, C, dists, rup.mag) +
+                _get_site_term(C, sites.vs30))
 
         # Mean is returned in terms of m/s^2. Need to convert to g
         mean -= np.log(g)
-        stddevs = self.get_stddevs(C, sites.vs30.shape, stddev_types)
+        stddevs = get_stddevs(C, sites.vs30.shape, stddev_types)
         return mean + self.adjustment_factor, stddevs
-
-    def _get_magnitude_scaling(self, C, mag):
-        """
-        Implements the magnitude scaling function F(M) presented in equation 4
-        """
-        if mag < self.CONSTANTS["mh"]:
-            return C["e1"] + C["b1"] * (mag - self.CONSTANTS["mref"]) +\
-                C["b2"] * ((mag - self.CONSTANTS["mref"]) ** 2.)
-        else:
-            d_m = self.CONSTANTS["mh"] - self.CONSTANTS["mref"]
-            return C["e1"] + C["b3"] * (mag - self.CONSTANTS["mh"]) +\
-                (C["b1"] * d_m) + C["b2"] * (d_m ** 2.)
-
-    def _get_distance_scaling(self, C, dists, mag):
-        """
-        Implements the distance scaling function F(M, R) presented in equations
-        2 and 3. In the case of Joyner-Boore distance then the fixed-depth
-        term h is required
-        """
-        r_h = self._get_rh(C, dists)
-        return (C["c1"] + C["c2"] * (mag - self.CONSTANTS["mref"])) *\
-            np.log(r_h / self.CONSTANTS["rref"]) +\
-            C["c3"] * (r_h - self.CONSTANTS["rref"])
-
-    def _get_rh(self, C, dists):
-        """
-        Returns the distance incorporating the fixed depth term, h
-        """
-        return np.sqrt(dists.rjb ** 2. + C["h"] ** 2.)
-
-    def _get_site_term(self, C, vs30):
-        """
-        Returns the linear site amplification term given in equation 5
-        """
-        return C["sA"] * np.log(vs30 / 800.0)
-
-    def get_stddevs(self, C, n_sites, stddev_types):
-        """
-        Returns the standard deviations
-        """
-        tau = C["tau"] + np.zeros(n_sites)
-        phi = C["phi"] + np.zeros(n_sites)
-        stddevs = []
-        for stddev_type in stddev_types:
-            assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
-            if stddev_type == const.StdDev.TOTAL:
-                sigma = np.sqrt(tau ** 2. + phi ** 2.)
-                stddevs.append(sigma)
-            elif stddev_type == const.StdDev.INTRA_EVENT:
-                stddevs.append(phi)
-            elif stddev_type == const.StdDev.INTER_EVENT:
-                stddevs.append(tau)
-        return stddevs
 
     # Joyner-Boore
     COEFFS = CoeffsTable(sa_damping=5, table="""\
@@ -244,10 +257,6 @@ class BindiEtAl2017Rjb(GMPE):
     4.0000  -3.719730  2.410756  -0.062210   0.581531  -1.020870  0.075380  -0.001280  7.944414  -0.617710  0.530623  0.568737
     """)
 
-    CONSTANTS = {"mref": 4.5,
-                 "mh": 6.5,
-                 "rref": 1.0}
-
 
 class BindiEtAl2017Rhypo(BindiEtAl2017Rjb):
     """
@@ -255,13 +264,6 @@ class BindiEtAl2017Rhypo(BindiEtAl2017Rjb):
     """
     #: Required distance measure is Rhypo (eq. 1).
     REQUIRES_DISTANCES = set(('rhypo', ))
-
-    def _get_rh(self, C, dists):
-        """
-        In this case only the hypocentral distance is needed - return this
-        directly
-        """
-        return dists.rhypo
 
     # Hypocentral
     COEFFS = CoeffsTable(sa_damping=5, table="""\
