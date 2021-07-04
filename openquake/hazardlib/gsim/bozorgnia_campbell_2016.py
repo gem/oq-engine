@@ -102,7 +102,7 @@ class BozorgniaCampbell2016(GMPE):
         C_PGA = self.COEFFS[PGA()]
         # Get mean and standard deviations for IMT
         mean = self.get_mean_values(C, sites, rup, dists)
-        if imt.name == "SA" and imt.period < 0.25:
+        if imt.string[:2] == "SA" and imt.period < 0.25:
             # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
             # Get PGA on given sites
             pga = self.get_mean_values(C_PGA, sites, rup, dists)

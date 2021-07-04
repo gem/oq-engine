@@ -109,7 +109,7 @@ def get_FENA(Cadj, rup, dists, imt):
              _get_C3_term(Cadj, dists.rjb))
 
     # Convert from log10 to ln
-    if imt.name in "SA PGA":
+    if imt.string.startswith(("SA", "PGA")):
         FENA = np.log(10.0 ** imean)
     else:
         FENA = np.log(10.0 ** imean)
@@ -170,7 +170,7 @@ class ZalachorisRathje2019(BooreEtAl2014):
         Cadj = self.COEFFS_HA15[imt]
         C_ZR19 = self.COEFFS_ZR19[imt]
 
-        imt_per = 0 if imt.name == 'PGV' else imt.period
+        imt_per = 0 if imt.string == 'PGV' else imt.period
         pga_rock = _get_pga_on_rock(self.kind, self.region, self.sof,
                                     C_PGA, rup, dists)
         mean_BSSA14 = (

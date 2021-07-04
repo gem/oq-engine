@@ -215,7 +215,7 @@ class KothaEtAl2020(GMPE):
                 self.get_distance_term(C, rup, dists.rjb, imt, sites) +
                 self.get_site_amplification(C, sites, imt))
         # GMPE originally in cm/s/s - convert to g
-        if imt.name in "PGA SA":
+        if imt.string.startswith(('PGA', 'SA')):
             mean -= np.log(100.0 * g)
         stddevs = self.get_stddevs(C, dists.rjb.shape, stddev_types,
                                    sites, imt, rup.mag)

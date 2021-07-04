@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.imt` defines different intensity measure
 types.
 """
 import re
-import ast
 import collections
 import numpy
 
@@ -54,7 +53,8 @@ def imt2tup(string):
             raise ValueError('Missing period in SA')
         # no parenthesis, PGA is considered the same as PGA()
         return (s,)
-    return (name, float(rest[0][:-1]))
+    period = float(rest[0][:-1])
+    return ('SA(%s)' % period, period)
 
 
 def from_string(imt, _damping=5.0):
@@ -70,15 +70,12 @@ def from_string(imt, _damping=5.0):
 
 
 def repr(self):
-    if self.period:
-        if self.damping == 5.0:
-            return '%s(%s)' % (self.name, self.period)
-        else:
-            return '%s(%s, %s)' % (self.name, self.period, self.damping)
-    return self.name
+    if self.period and self.damping != 5.0:
+        return 'SA(%s, %s)' % (self.period, self.damping)
+    return self.string
 
 
-IMT = collections.namedtuple('IMT', 'name period damping')
+IMT = collections.namedtuple('IMT', 'string period damping')
 IMT.__new__.__defaults__ = (0., 5.0)
 IMT.__repr__ = repr
 
@@ -111,7 +108,8 @@ def SA(period, damping=5.0):
     single-degree-of-freedom harmonic oscillator. Units are ``g``, times
     of gravitational acceleration.
     """
-    return IMT('SA', float(period), damping)
+    period = float(period)
+    return IMT('SA(%s)' % period, period, damping)
 
 
 def AvgSA():

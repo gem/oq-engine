@@ -163,9 +163,9 @@ class CauzziFaccioli2008(GMPE):
 
         # convert from cm/s**2 to g for SA and from m/s**2 to g for PGA (PGV
         # is already in cm/s) and also convert from base 10 to base e.
-        if imt.name == "PGA":
+        if imt.string == "PGA":
             mean = np.log((10 ** mean) / g)
-        elif imt.name == "SA":
+        elif imt.string[:2] == "SA":
             mean = np.log((10 ** mean) * ((2 * np.pi / imt.period) ** 2) *
                           1e-2 / g)
         else:

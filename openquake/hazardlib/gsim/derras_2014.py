@@ -249,7 +249,7 @@ class DerrasEtAl2014(GMPE):
         # Get the mean
         mean = get_mean(self.region, self.W_1, self.B_1,
                         C, rup, sites, dists)
-        if imt.name == "PGV":
+        if imt.string == "PGV":
             # Convert from log10 m/s to ln cm/s
             mean = np.log((10.0 ** mean) * 100.)
         else:
@@ -374,7 +374,7 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
         # Get the mean
         mean = get_mean(self.region, self.W_1, self.B_1,
                         C, rup, sites, dists)
-        if imt.name == "PGV":
+        if imt.string == "PGV":
             # Convert from log10 m/s to ln cm/s
             mean = np.log((10.0 ** mean) * 100.)
         else:

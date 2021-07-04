@@ -208,7 +208,7 @@ class BindiEtAl2014Rjb(GMPE):
         C = self.COEFFS[imt]
         imean = _get_mean(self.kind, self.sof, C, rup,
                           getattr(dists, self.dist_type), sites)
-        if imt.name in "SA PGA":
+        if imt.string.startswith(('PGA', 'SA')):
             # Convert units to g,
             # but only for PGA and SA (not PGV):
             mean = np.log((10.0 ** (imean - 2.0)) / g)

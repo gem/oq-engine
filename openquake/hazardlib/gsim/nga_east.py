@@ -104,7 +104,7 @@ def global_tau(imt, mag, params):
     'Global' model of inter-event variability, as presented in equation 5.6
     (p103)
     """
-    if imt.name == "PGV":
+    if imt.string == "PGV":
         C = params["PGV"]
     else:
         C = params["SA"]
@@ -124,7 +124,7 @@ def cena_constant_tau(imt, mag, params):
     """
     Returns the inter-event tau for the constant tau case
     """
-    if imt.name == "PGV":
+    if imt.string == "PGV":
         return params["PGV"]["tau"]
     else:
         return params["SA"]["tau"]
@@ -134,7 +134,7 @@ def cena_tau(imt, mag, params):
     """
     Returns the inter-event standard deviation, tau, for the CENA case
     """
-    if imt.name == "PGV":
+    if imt.string == "PGV":
         C = params["PGV"]
     else:
         C = params["SA"]
@@ -606,7 +606,7 @@ class NGAEastGMPE(GMPETable):
         pga_r = self.get_hard_rock_mean(rctx, dctx, rock_imt, stddev_types)
 
         # Get the desired spectral acceleration on rock
-        if imt.name != "PGA":
+        if imt.string != "PGA":
             # Calculate the ground motion at required spectral period for
             # the reference rock
             mean = self.get_hard_rock_mean(rctx, dctx, imt, stddev_types)

@@ -137,10 +137,10 @@ class DrouetAlpes2015Rjb(GMPE):
         """
         C = self.COEFFS[imt]
         mean = _compute_mean(C, rup.mag, dists.rjb)
-        if imt.name in 'SA PGA':
+        if imt.string.startswith(("PGA", "SA")):
             # Convert from m/s**2 to g
             mean = mean - np.log(g)
-        elif imt.name == 'PGV':  # Convert from m/s to cm/s
+        elif imt.string == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
         stddevs = _get_stddevs(C, stddev_types, rup.mag,
                                dists.rjb.shape[0])
@@ -193,10 +193,10 @@ class DrouetAlpes2015Rrup(DrouetAlpes2015Rjb):
         """
         C = self.COEFFS[imt]
         mean = _compute_mean(C, rup.mag, dists.rrup)
-        if imt.name in 'SA PGA':
+        if imt.string.startswith(("PGA", "SA")):
             # Convert from m/s**2 to g
             mean = mean - np.log(g)
-        elif imt.name == 'PGV':  # Convert from m/s to cm/s
+        elif imt.string == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
         stddevs = _get_stddevs(C, stddev_types, rup.mag,
                                dists.rrup.shape[0])
@@ -249,13 +249,13 @@ class DrouetAlpes2015Repi(DrouetAlpes2015Rjb):
         """
         C = self.COEFFS[imt]
         mean = _compute_mean(C, rup.mag, dists.repi)
-        if imt.name in 'SA PGA':
+        if imt.string.startswith(("PGA", "SA")):
             # Convert from m/s**2 to g
             mean = mean - np.log(g)
-        elif imt.name == 'PGV':  # Convert from m/s to cm/s
+        elif imt.string == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
         stddevs = _get_stddevs(C, stddev_types, rup.mag,
-                                    dists.repi.shape[0])
+                               dists.repi.shape[0])
         return mean, stddevs
 
     #: Coefficient tables are constructed from the electronic suplements of
@@ -305,9 +305,9 @@ class DrouetAlpes2015Rhyp(DrouetAlpes2015Rjb):
         """
         C = self.COEFFS[imt]
         mean = _compute_mean(C, rup.mag, dists.rhyp)
-        if imt.name in 'SA PGA':  # Convert from m/s**2 to g
+        if imt.string.startswith(('PGA', 'SA')):  # Convert from m/s**2 to g
             mean = mean - np.log(g)
-        elif imt.name == 'PGV':  # Convert from m/s to cm/s
+        elif imt.string == 'PGV':  # Convert from m/s to cm/s
             mean = mean + np.log(100.0)
         stddevs = _get_stddevs(C, stddev_types, rup.mag,
                                dists.rhyp.shape[0])

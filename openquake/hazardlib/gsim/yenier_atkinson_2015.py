@@ -38,11 +38,12 @@ def get_sof_adjustment(rake, imt):
     :return:
         The adjustment factor
     """
-    if imt.name == 'PGA' or (imt.name == 'SA' and imt.period <= 0.4):
+    im2 = imt.string[:2]
+    if imt.string == 'PGA' or (im2 == 'SA' and imt.period <= 0.4):
         f_r_ss = 1.2
-    elif imt.name == 'SA' and imt.period > 0.4 and imt.period < 3.0:
+    elif im2 == 'SA' and imt.period > 0.4 and imt.period < 3.0:
         f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(imt.period/0.4)
-    elif imt.name == 'SA' and imt.period >= 3.0:
+    elif im2 == 'SA' and imt.period >= 3.0:
         f_r_ss = 1.2 - (0.3/np.log10(3.0/0.4))*np.log10(3.0/0.4)
     else:
         raise ValueError('Unsupported IMT')
@@ -71,9 +72,9 @@ def _get_c_e(region, imt):
     """
     if region == 'CENA':
         # See equation 23 page 2003 of Yenier and Atkinson
-        if imt.name == 'PGA':
+        if imt.string == 'PGA':
             return -0.25
-        elif imt.name == 'PGV':
+        elif imt.string == 'PGV':
             return -0.21
         elif imt.period <= 10.:
             return -0.25 + np.max([0, 0.39*np.log(imt.period/2)])
@@ -93,9 +94,9 @@ def _get_c_p(region, imt, rrup, m):
     """
     if region == 'CENA':
         # See equations 24 and 25 page 2003 of Yenier and Atkinson
-        if imt.name == 'PGA':
+        if imt.string == 'PGA':
             delta_b3 = 0.030
-        elif imt.name == 'PGV':
+        elif imt.string == 'PGV':
             delta_b3 = 0.052
         elif imt.period <= 10.:
             tmp = 0.095*np.log(imt.period/0.065)

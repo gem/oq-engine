@@ -38,7 +38,7 @@ def _fc(C, imt, vs30, sa1180):
     C value factor [23].
     """
     s = CONSTANTS
-    if imt.name in ["PGD", "PGV"]:
+    if imt.string in ["PGD", "PGV"]:
         c = 2400
     else:
         c = 2.4

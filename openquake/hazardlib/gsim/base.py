@@ -402,9 +402,10 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         """
         names = set(f.__name__
                     for f in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
-        if imt.name not in names:
+        name = "SA" if imt.string[:2] == "SA" else imt.string
+        if name not in names:
             raise ValueError('imt %s is not supported by %s' %
-                             (imt.name, type(self).__name__))
+                             (name, type(self).__name__))
 
     def __lt__(self, other):
         """
