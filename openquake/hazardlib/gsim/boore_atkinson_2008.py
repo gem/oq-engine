@@ -358,7 +358,8 @@ def _get_stddevs(clsname, C, stddev_types, num_sites):
     elif 'Hawaii' in clsname:
         # Using a frequency independent value of sigma as recommended
         # in the caption of Table 2 of Atkinson (2010)
-        return [0.26/np.log10(np.e) + np.zeros(num_sites)]
+        return [0.26/np.log10(np.e) + np.zeros(num_sites)
+                for _ in stddev_types]
 
     stddevs = []
     for stddev_type in stddev_types:
