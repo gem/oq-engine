@@ -583,8 +583,8 @@ class ContextMaker(object):
                         mean, stds = gsim.get_mean_and_stddevs(
                             ctx, ctx, ctx, imt, stypes)
                         arr[0, start:stop, m] = mean
-                        for s, stdtype in enumerate(stypes):
-                            arr[1 + s, start:stop, m] = stds[s]
+                        for s, std in enumerate(stds, 1):
+                            arr[s, start:stop, m] = std
                     start = stop
             out.append(arr)
         return out
