@@ -557,7 +557,8 @@ class ContextMaker(object):
                     stypes = (StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
             else:
                 stypes = (stdtype,)
-            arr = numpy.zeros((1 + len(stypes), N, M))
+            S = len(stypes)
+            arr = numpy.zeros((1 + S, N, M))
             gcls = gsim.__class__
             calc_ms = getattr(gcls, 'calc_all', None)
             if calc_ms:  # fast lane
@@ -583,8 +584,8 @@ class ContextMaker(object):
                         mean, stds = gsim.get_mean_and_stddevs(
                             ctx, ctx, ctx, imt, stypes)
                         arr[0, start:stop, m] = mean
-                        for s, std in enumerate(stds, 1):
-                            arr[s, start:stop, m] = std
+                        for s in range(S):
+                            arr[1 + s, start:stop, m] = stds[s]
                     start = stop
             out.append(arr)
         return out
