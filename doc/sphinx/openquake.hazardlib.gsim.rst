@@ -449,6 +449,14 @@ climent_1994
     :undoc-members:
     :show-inheritance:
 
+coeffs_table
+------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.base
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 convertito_2012
 -----------------------------------------------
 

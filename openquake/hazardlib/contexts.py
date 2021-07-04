@@ -546,19 +546,17 @@ class ContextMaker(object):
         ctxs = [ctx.roundup(self.minimum_distance) for ctx in ctxs]
         N = sum(len(ctx.sids) for ctx in ctxs)
         M = len(self.imts)
-        if stdtype is None or self.trunclevel == 0:
-            stdtypes = ()
-        else:
-            stdtypes = (stdtype,)
         out = []
         for g, gsim in enumerate(self.gsims):
-            if stdtype == (StdDev.EVENT,):
+            if stdtype is None or self.trunclevel == 0:
+                stypes = ()
+            elif stdtype == StdDev.EVENT:
                 if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
-                    stypes = StdDev.TOTAL,
+                    stypes = (StdDev.TOTAL,)
                 else:
-                    stypes = StdDev.INTER_EVENT, StdDev.INTRA_EVENT
+                    stypes = (StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
             else:
-                stypes = stdtypes
+                stypes = (stdtype,)
             arr = numpy.zeros((1 + len(stypes), N, M))
             gcls = gsim.__class__
             calc_ms = getattr(gcls, 'calc_all', None)
