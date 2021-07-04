@@ -1445,23 +1445,21 @@ class RecordBuilder(object):
     >>> rb()
     (0, 1., b'2')
     """
-    @classmethod
-    def dtlist(cls, defaults):
-        dtlist = []
+    def __init__(self, **defaults):
+        self.names = []
+        self.values = []
+        dtypes = []
         for name, value in defaults.items():
+            self.names.append(name)
+            self.values.append(value)
             if isinstance(value, (str, bytes)):
                 tp = (numpy.string_, len(value))
             elif isinstance(value, numpy.ndarray):
                 tp = value.dtype
             else:
                 tp = type(value)
-            dtlist.append((name, tp))
-        return dtlist
-
-    def __init__(self, **defaults):
-        dtlist = self.dtlist(defaults)
-        self.names, self.values = zip(*dtlist)
-        self.dtype = numpy.dtype([(n, dt) for n, dt in dtlist])
+            dtypes.append(tp)
+        self.dtype = numpy.dtype([(n, d) for n, d in zip(self.names, dtypes)])
 
     def zeros(self, shape):
         return numpy.zeros(shape, self.dtype)
